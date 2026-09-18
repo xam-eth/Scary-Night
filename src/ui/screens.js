@@ -1,0 +1,967 @@
+/* LAST NIGHT — menus & screens
+ *
+ * Immediate-mode UI. Buttons register themselves into game.ui each frame, which
+ * gives us mouse, touch and keyboard navigation from one place.
+ *
+ * The menu is not a flat image: it is a small procedurally drawn diorama of the
+ * mansion interior (moonlight, fog, candle, the vampire in the foreground) so it
+ * uses exactly the same visual language as the game itself.
+ */
+
+import { clamp, lerp, damp, TAU, rand, chance, fmtClock, hash2, fmtBar } from '../core/util.js';
+import { PAL } from '../core/render.js';
+import { UPGRADES, upgradeLevel, DIFFICULTY, CODEX, NIGHT_DURATION } from '../core/config.js';
+
+const SERIF = 'Georgia, "Palatino Linotype", "Times New Roman", serif';
+const SANS = '"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+const MONO = 'Consolas, "SF Mono", Menlo, monospace';
+
+/* ================= UI primitives ================= */
+
+function uiButton(game, { x, y, w, h, label, sub, onClick, disabled, small, align = 'center', accent = '#a8833c' }) {
+  const idx = game.ui.length;
+  const input = game.input;
+  const mx = input.touchSeen ? -9999 : input.mouse.x;
+  const my = input.touchSeen ? -9999 : input.mouse.y;
+  const hover = !disabled && mx > x && mx < x + w && my > y && my < y + h;
+  if (hover && game.uiHoverIdx !== idx) { game.uiHoverIdx = idx; game.audio.play('uiHover', { vol: 0.35 }); }
+  const selected = game.uiIndex === idx;
+  const active = (hover || selected) && !disabled;
+  const b = { x, y, w, h, label, onClick: disabled ? null : onClick, disabled, idx };
+  game.ui.push(b);
+  return { b, active, hover, selected };
+}
+
+function buttonVisual(ctx, { x, y, w, h }, { active, disabled, label, sub, small, accent }) {
+  ctx.save();
+  const a = active ? 1 : 0.72;
+  // backing
+  const g = ctx.createLinearGradient(x, y, x + w, y);
+  g.addColorStop(0, active ? 'rgba(60,42,20,0.55)' : 'rgba(16,16,22,0.55)');
+  g.addColorStop(1, active ? 'rgba(30,20,10,0.35)' : 'rgba(10,10,14,0.45)');
+  ctx.fillStyle = g;
+  ctx.fillRect(x, y, w, h);
+  // frame
+  ctx.strokeStyle = disabled ? 'rgba(90,88,84,0.35)' : `rgba(${accent === '#a8833c' ? '168,131,60' : '140,150,190'},${active ? 0.85 : 0.35})`;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+  if (active) {
+    ctx.strokeStyle = `rgba(${accent === '#a8833c' ? '168,131,60' : '140,150,190'},0.25)`;
+    ctx.strokeRect(x + 3.5, y + 3.5, w - 7, h - 7);
+  }
+  // text
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `${small ? 500 : 500} ${small ? 15 : 19}px ${SERIF}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = small ? '2px' : '4px';
+  ctx.fillStyle = disabled ? 'rgba(140,138,132,0.5)' : active ? '#f2ead6' : 'rgba(214,206,190,' + a + ')';
+  if (active) {
+    ctx.shadowColor = 'rgba(255,200,120,0.35)';
+    ctx.shadowBlur = 12;
+  }
+  ctx.fillText(label, x + w / 2, y + h / 2 + (sub ? -5 : 0));
+  ctx.shadowBlur = 0;
+  if (sub) {
+    ctx.font = `400 11px ${SANS}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '1px';
+    ctx.fillStyle = 'rgba(190,182,168,0.6)';
+    ctx.fillText(sub, x + w / 2, y + h / 2 + 14);
+  }
+  if (active) {
+    // left/right ticks
+    ctx.fillStyle = `rgba(${accent === '#a8833c' ? '200,160,80' : '160,175,220'},0.9)`;
+    ctx.beginPath(); ctx.moveTo(x - 10, y + h / 2); ctx.lineTo(x - 4, y + h / 2 - 4); ctx.lineTo(x - 4, y + h / 2 + 4); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x + w + 10, y + h / 2); ctx.lineTo(x + w + 4, y + h / 2 - 4); ctx.lineTo(x + w + 4, y + h / 2 + 4); ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+}
+
+/* ================= menu scene ================= */
+
+export function drawMenuScene(game, ctx, w, h, t) {
+  // ---- the hall, seen from the floor ----
+  // back wall
+  const wallG = ctx.createLinearGradient(0, 0, 0, h * 0.72);
+  wallG.addColorStop(0, '#0a0c14'); wallG.addColorStop(0.5, '#12131c'); wallG.addColorStop(1, '#080910');
+  ctx.fillStyle = wallG;
+  ctx.fillRect(0, 0, w, h * 0.72);
+  // floor
+  const floorG = ctx.createLinearGradient(0, h * 0.7, 0, h);
+  floorG.addColorStop(0, '#161219'); floorG.addColorStop(1, '#08070a');
+  ctx.fillStyle = floorG;
+  ctx.fillRect(0, h * 0.7, w, h * 0.3);
+
+  // ---- tall gothic window with moonlight ----
+  const wx = w * 0.66, wy = h * 0.1, ww = w * 0.2, wh = h * 0.5;
+  ctx.save();
+  ctx.fillStyle = '#070a12';
+  ctx.fillRect(wx - 10, wy - 10, ww + 20, wh + 20);
+  const glass = ctx.createLinearGradient(wx, wy, wx, wy + wh);
+  glass.addColorStop(0, '#1d2a44'); glass.addColorStop(0.55, '#2a3b5c'); glass.addColorStop(1, '#16203a');
+  ctx.fillStyle = glass;
+  ctx.fillRect(wx, wy, ww, wh);
+  // arched top
+  ctx.beginPath();
+  ctx.moveTo(wx - 10, wy);
+  ctx.quadraticCurveTo(wx + ww / 2, wy - wh * 0.22, wx + ww + 10, wy);
+  ctx.lineTo(wx + ww + 10, wy - 20); ctx.lineTo(wx - 10, wy - 20);
+  ctx.closePath();
+  ctx.fillStyle = '#0a0c14';
+  ctx.fill();
+  // mullions
+  ctx.strokeStyle = '#0b0b10'; ctx.lineWidth = 7;
+  ctx.beginPath();
+  ctx.moveTo(wx + ww / 2, wy); ctx.lineTo(wx + ww / 2, wy + wh);
+  ctx.moveTo(wx, wy + wh * 0.34); ctx.lineTo(wx + ww, wy + wh * 0.34);
+  ctx.moveTo(wx, wy + wh * 0.67); ctx.lineTo(wx + ww, wy + wh * 0.67);
+  ctx.stroke();
+  // the moon
+  ctx.globalAlpha = 0.8;
+  const mg = ctx.createRadialGradient(wx + ww * 0.62, wy + wh * 0.22, 0, wx + ww * 0.62, wy + wh * 0.22, 66);
+  mg.addColorStop(0, 'rgba(226,238,255,0.95)');
+  mg.addColorStop(0.22, 'rgba(180,205,240,0.45)');
+  mg.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = mg;
+  ctx.beginPath(); ctx.arc(wx + ww * 0.62, wy + wh * 0.22, 66, 0, TAU); ctx.fill();
+  ctx.globalAlpha = 1;
+  // light shaft onto the floor
+  ctx.globalCompositeOperation = 'screen';
+  const shaft = ctx.createLinearGradient(wx, wy + wh, wx + ww * 0.2, h);
+  shaft.addColorStop(0, 'rgba(140,175,235,0.16)');
+  shaft.addColorStop(0.6, 'rgba(110,145,205,0.07)');
+  shaft.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = shaft;
+  ctx.beginPath();
+  ctx.moveTo(wx, wy + wh);
+  ctx.lineTo(wx + ww, wy + wh);
+  ctx.lineTo(wx + ww * 1.9, h);
+  ctx.lineTo(wx - ww * 0.9, h);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  // ---- dust motes in the shaft ----
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  for (let i = 0; i < 40; i++) {
+    const s = hash2(i, 7, 3);
+    const px = wx + (hash2(i, 3, 9) - 0.2) * ww * 2 + Math.sin(t * 0.3 + i) * 14;
+    const py = wy + hash2(i, 11, 5) * wh * 1.6 + ((t * 6 * (0.3 + s) + i * 30) % (h - wy));
+    const a = 0.10 + 0.16 * Math.sin(t * 2 + i);
+    ctx.fillStyle = `rgba(200,220,255,${clamp(a, 0, 0.3)})`;
+    ctx.beginPath(); ctx.arc(px, py % h, 1.4 + s * 1.6, 0, TAU); ctx.fill();
+  }
+  ctx.restore();
+
+  // ---- chandelier ----
+  const chx = w * 0.3, chy = h * 0.2;
+  ctx.save();
+  ctx.strokeStyle = '#101018'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(chx, 0); ctx.lineTo(chx, chy); ctx.stroke();
+  const flick = 0.75 + 0.25 * Math.sin(t * 5.2) + 0.08 * Math.sin(t * 17);
+  ctx.globalCompositeOperation = 'screen';
+  const cg = ctx.createRadialGradient(chx, chy, 0, chx, chy, 260 * flick);
+  cg.addColorStop(0, 'rgba(255,208,150,0.5)');
+  cg.addColorStop(0.4, 'rgba(255,150,60,0.16)');
+  cg.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = cg;
+  ctx.beginPath(); ctx.arc(chx, chy, 260 * flick, 0, TAU); ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * TAU;
+    const px = chx + Math.cos(a) * 54, py = chy + Math.sin(a) * 16;
+    ctx.fillStyle = '#d8cfb8';
+    ctx.fillRect(px - 1.5, py - 12, 3, 12);
+    ctx.globalCompositeOperation = 'screen';
+    const fg = ctx.createRadialGradient(px, py - 14, 0, px, py - 14, 16);
+    fg.addColorStop(0, `rgba(255,225,170,${0.8 * flick})`);
+    fg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = fg;
+    ctx.beginPath(); ctx.arc(px, py - 14, 16, 0, TAU); ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  ctx.fillStyle = '#191922';
+  ctx.beginPath(); ctx.ellipse(chx, chy, 62, 16, 0, 0, TAU); ctx.fill();
+  ctx.restore();
+
+  // ---- fog bank ----
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  for (let i = 0; i < 7; i++) {
+    const fx = ((t * (12 + i * 5) + i * 400) % (w + 700)) - 350;
+    const fy = h * (0.6 + hash2(i, 2, 4) * 0.34);
+    const fr = 240 + hash2(i, 5, 6) * 260;
+    const fg = ctx.createRadialGradient(fx, fy, 0, fx, fy, fr);
+    fg.addColorStop(0, 'rgba(70,84,116,0.075)');
+    fg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = fg;
+    ctx.beginPath(); ctx.arc(fx, fy, fr, 0, TAU); ctx.fill();
+  }
+  ctx.restore();
+
+  // ---- the vampire, in the foreground, back to us ----
+  const px = w * 0.16, py = h * 0.86;
+  const br = Math.sin(t * 1.1) * 2.6;
+  ctx.save();
+  ctx.translate(px, py + br);
+  const scale = h / 760;
+  ctx.scale(scale, scale);
+  // long shadow
+  ctx.save();
+  ctx.globalAlpha = 0.55;
+  const sg = ctx.createLinearGradient(0, 0, 120, -140);
+  sg.addColorStop(0, 'rgba(0,0,0,0.75)'); sg.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = sg;
+  ctx.beginPath();
+  ctx.moveTo(-16, 6); ctx.lineTo(10, 6); ctx.lineTo(150, -120); ctx.lineTo(120, -150);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+  // coat
+  const coatG = ctx.createLinearGradient(0, -180, 0, 10);
+  coatG.addColorStop(0, '#1a1b26'); coatG.addColorStop(0.6, '#101119'); coatG.addColorStop(1, '#07080c');
+  ctx.fillStyle = coatG;
+  ctx.beginPath();
+  ctx.moveTo(-34, 8);
+  ctx.quadraticCurveTo(-46, -70, -30, -118);
+  ctx.quadraticCurveTo(-16, -150, 0, -152);
+  ctx.quadraticCurveTo(16, -150, 30, -118);
+  ctx.quadraticCurveTo(46, -70, 34, 8);
+  ctx.quadraticCurveTo(0, 16, -34, 8);
+  ctx.closePath();
+  ctx.fill();
+  // shoulders + arms
+  ctx.fillStyle = '#14151f';
+  ctx.beginPath(); ctx.ellipse(0, -128, 34, 22, 0, 0, TAU); ctx.fill();
+  // collar
+  ctx.fillStyle = '#0c0d14';
+  ctx.beginPath();
+  ctx.moveTo(-16, -146); ctx.lineTo(0, -122); ctx.lineTo(16, -146);
+  ctx.quadraticCurveTo(0, -152, -16, -146);
+  ctx.fill();
+  // hair
+  ctx.fillStyle = '#05060a';
+  ctx.beginPath();
+  ctx.moveTo(-15, -150);
+  ctx.quadraticCurveTo(-22, -176, -10, -192);
+  ctx.quadraticCurveTo(6, -200, 15, -184);
+  ctx.quadraticCurveTo(22, -168, 15, -150);
+  ctx.quadraticCurveTo(0, -158, -15, -150);
+  ctx.fill();
+  // the hint of a red lining
+  ctx.strokeStyle = 'rgba(120,20,32,0.6)'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-30, -110); ctx.quadraticCurveTo(-40, -50, -30, 4);
+  ctx.moveTo(30, -110); ctx.quadraticCurveTo(40, -50, 30, 4);
+  ctx.stroke();
+  ctx.restore();
+
+  // ---- lightning flash ----
+  if (game.menuLightning > 0) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    ctx.fillStyle = `rgba(190,215,255,${clamp(game.menuLightning, 0, 0.5)})`;
+    ctx.fillRect(0, 0, w, h);
+    ctx.restore();
+  }
+
+  // ---- vignette ----
+  ctx.save();
+  const vg = ctx.createRadialGradient(w / 2, h / 2, h * 0.2, w / 2, h / 2, h * 0.95);
+  vg.addColorStop(0, 'rgba(0,0,0,0)');
+  vg.addColorStop(1, 'rgba(0,0,0,0.9)');
+  ctx.fillStyle = vg;
+  ctx.fillRect(0, 0, w, h);
+  ctx.restore();
+}
+
+export function drawTitle(game, ctx, w, h, t) {
+  const cx = w / 2;
+  const ty = h * 0.2;
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  // title
+  ctx.font = `400 ${clamp(w * 0.075, 42, 96)}px ${SERIF}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '14px';
+  const g = ctx.createLinearGradient(cx, ty - 50, cx, ty + 50);
+  g.addColorStop(0, '#f4ecd8');
+  g.addColorStop(0.5, '#cfc4a8');
+  g.addColorStop(1, '#8d7f5f');
+  ctx.fillStyle = g;
+  ctx.shadowColor = 'rgba(0,0,0,0.9)'; ctx.shadowBlur = 22;
+  ctx.fillText('LAST NIGHT', cx, ty);
+  ctx.shadowBlur = 0;
+  // blood underline
+  ctx.strokeStyle = 'rgba(140,26,36,0.75)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(cx - 150, ty + 52); ctx.lineTo(cx + 150, ty + 52);
+  ctx.stroke();
+  // subtitle
+  ctx.font = `400 ${clamp(w * 0.014, 13, 18)}px ${SANS}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '8px';
+  ctx.fillStyle = 'rgba(200,190,172,0.75)';
+  ctx.fillText('SURVIVE UNTIL DAWN.', cx, ty + 86);
+  ctx.restore();
+}
+
+/* ================= main menu ================= */
+
+export function drawMenu(game, ctx, w, h) {
+  const t = game.time;
+  drawMenuScene(game, ctx, w, h, t);
+  drawTitle(game, ctx, w, h, t);
+
+  const bw = clamp(w * 0.2, 210, 300);
+  const bh = 50;
+  const bx = w / 2 - bw / 2;
+  let by = h * 0.44;
+
+  const B = game.save;
+  const canUpgrade = (B.shards || 0) > 0;
+
+  const defs = [
+    { label: 'PLAY', sub: 'ONE NIGHT. FIVE MINUTES.', onClick: () => game.beginNight() },
+    { label: 'UPGRADES', sub: canUpgrade ? `${B.shards} BLOOD SHARDS` : 'NO SHARDS YET', onClick: () => game.setScreen('upgrades') },
+    { label: 'COLLECTION', sub: `${Object.keys(B.seen || {}).length}/${CODEX.length} RECORDED`, onClick: () => game.setScreen('collection') },
+    { label: 'SETTINGS', sub: DIFFICULTY[B.settings.difficulty]?.label || 'STANDARD', onClick: () => game.setScreen('settings') },
+  ];
+  game.uiIndex = clamp(game.uiIndex, 0, defs.length - 1);
+  defs.forEach((d, i) => {
+    const r = uiButton(game, { x: bx, y: by, w: bw, h: bh, label: d.label, sub: d.sub, onClick: d.onClick });
+    buttonVisual(ctx, r.b, { active: r.hover || (game.usingKeyboard && game.uiIndex === i), label: d.label, sub: d.sub, accent: i === 0 ? '#a8833c' : '#6a6a80' });
+    by += bh + 12;
+  });
+
+  // stats footer
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.font = `400 12px ${SANS}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
+  ctx.fillStyle = 'rgba(180,172,158,0.6)';
+  const best = B.bestTime > 0 ? fmtClock(B.bestTime) : '--:--';
+  ctx.fillText(`NIGHTS SURVIVED ${B.nightsSurvived}     BEST ${best}     SHARDS ${B.shards}`, w / 2, h - 34);
+  ctx.font = `400 10px ${SANS}`;
+  ctx.fillStyle = 'rgba(140,134,124,0.45)';
+  ctx.fillText('WASD / ARROWS  ·  SHIFT DASH  ·  CLICK OR F CLAW  ·  E INTERACT  ·  R REPAIR  ·  B BARRICADE  ·  ESC PAUSE', w / 2, h - 16);
+  ctx.restore();
+}
+
+/* ================= intro card ================= */
+
+export function drawIntro(game, ctx, w, h) {
+  const t = game.introT;
+  const a = clamp(t / 0.6, 0, 1) * clamp((game.introLen - t) / 0.8, 0, 1);
+  ctx.save();
+  ctx.fillStyle = `rgba(3,4,8,${clamp(1 - t / 0.4, 0, 1) * 0.85})`;
+  ctx.fillRect(0, 0, w, h);
+  ctx.globalAlpha = a;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const lines = [
+    { s: 'LAST NIGHT', f: 40, style: SERIF, ls: 10, y: 0.3, c: '#efe7d4' },
+    { s: 'You are a vampire. You cannot cross the threshold.', f: 15, style: SANS, ls: 2, y: 0.4, c: 'rgba(200,192,176,0.8)' },
+    { s: 'Something outside wants in.', f: 15, style: SANS, ls: 2, y: 0.445, c: 'rgba(200,192,176,0.8)' },
+    { s: 'SURVIVE UNTIL DAWN.', f: 24, style: SERIF, ls: 7, y: 0.53, c: '#c8a04a' },
+    { s: '00:00  →  05:00', f: 20, style: MONO, ls: 4, y: 0.59, c: 'rgba(220,214,198,0.9)' },
+  ];
+  for (const l of lines) {
+    ctx.font = `400 ${l.f}px ${l.style}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = l.ls + 'px';
+    ctx.fillStyle = l.c;
+    ctx.fillText(l.s, w / 2, h * l.y);
+  }
+  ctx.globalAlpha = a * 0.6;
+  ctx.font = `400 12px ${SANS}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
+  ctx.fillStyle = 'rgba(190,182,168,0.9)';
+  ctx.fillText('BREATHE. LISTEN. REPAIR WHAT YOU CAN.', w / 2, h * 0.7);
+  ctx.restore();
+}
+
+/* ================= pause ================= */
+
+export function drawPause(game, ctx, w, h) {
+  ctx.save();
+  ctx.fillStyle = 'rgba(4,5,9,0.82)';
+  ctx.fillRect(0, 0, w, h);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `400 34px ${SERIF}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '10px';
+  ctx.fillStyle = '#e8e0cc';
+  ctx.fillText('PAUSED', w / 2, h * 0.24);
+  ctx.restore();
+
+  const bw = 240, bh = 46;
+  let by = h * 0.36;
+  const items = [
+    { label: 'RESUME', onClick: () => game.togglePause(false) },
+    { label: 'RESTART NIGHT', onClick: () => game.beginNight() },
+    { label: 'SETTINGS', onClick: () => game.setScreen('settings', 'pause') },
+    { label: 'HOW TO SURVIVE', onClick: () => game.setScreen('help', 'pause') },
+    { label: 'ABANDON', onClick: () => game.toMenu() },
+  ];
+  items.forEach((it, i) => {
+    const r = uiButton(game, { x: w / 2 - bw / 2, y: by, w: bw, h: bh, label: it.label, onClick: it.onClick, small: true, accent: '#6a6a80' });
+    buttonVisual(ctx, r.b, { active: r.hover || (game.usingKeyboard && game.uiIndex === i), label: it.label, small: true, accent: '#6a6a80' });
+    by += bh + 10;
+  });
+}
+
+/* ================= settings ================= */
+
+export function drawSettings(game, ctx, w, h) {
+  const back = game.settingsReturn || 'menu';
+  const s = game.save.settings;
+  ctx.save();
+  ctx.fillStyle = 'rgba(4,5,9,0.9)';
+  ctx.fillRect(0, 0, w, h);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `400 30px ${SERIF}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '8px';
+  ctx.fillStyle = '#e8e0cc';
+  ctx.fillText('SETTINGS', w / 2, h * 0.14);
+  ctx.restore();
+
+  const rowH = 46;
+  let y = h * 0.24;
+  const labelW = 200;
+  const cx = w / 2;
+
+  const slider = (label, key, min, max, fmt) => {
+    const x = cx - labelW / 2 - 60;
+    const wdt = 300;
+    const val = s[key];
+    ctx.save();
+    ctx.textAlign = 'right';
+    ctx.font = `500 13px ${SANS}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+    ctx.fillStyle = 'rgba(205,196,180,0.85)';
+    ctx.fillText(label, cx - labelW / 2 - 20, y);
+    ctx.textAlign = 'left';
+    ctx.font = `400 13px ${MONO}`;
+    ctx.fillStyle = 'rgba(205,196,180,0.7)';
+    ctx.fillText(fmt ? fmt(val) : Math.round(val * 100) + '%', x + wdt + 16, y);
+    // track
+    const tx = x, tw = wdt, th = 6;
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(tx - 1, y - th / 2 - 1, tw + 2, th + 2);
+    ctx.fillStyle = 'rgba(120,116,108,0.35)';
+    ctx.fillRect(tx, y - th / 2, tw, th);
+    const k = (val - min) / (max - min);
+    const g = ctx.createLinearGradient(tx, 0, tx + tw, 0);
+    g.addColorStop(0, '#6a1a22'); g.addColorStop(1, '#c09a4a');
+    ctx.fillStyle = g;
+    ctx.fillRect(tx, y - th / 2, tw * k, th);
+    ctx.fillStyle = '#e8ddc4';
+    ctx.fillRect(tx + tw * k - 1.5, y - 9, 3, 18);
+    ctx.restore();
+    // register hit area
+    const b = { x: tx - 10, y: y - 16, w: tw + 20, h: 32, slider: { key, min, max, x: tx, w: tw }, idx: game.ui.length };
+    game.ui.push(b);
+    const input = game.input;
+    const mx = input.mouse.x, my = input.mouse.y;
+    if (input.mouse.down && mx > b.x && mx < b.x + b.w && my > b.y && my < b.y + b.h) {
+      s[key] = clamp(min + ((mx - tx) / tw) * (max - min), min, max);
+      game.applySettings();
+    }
+    const tpm = game.touchAim;
+    if (tpm && tpm.slider && tpm.slider.key === key) {
+      s[key] = clamp(min + ((tpm.x - tx) / tw) * (max - min), min, max);
+      game.applySettings();
+    }
+    y += rowH;
+  };
+
+  slider('MASTER VOLUME', 'master', 0, 1);
+  slider('MUSIC', 'music', 0, 1);
+  slider('SOUND EFFECTS', 'sfx', 0, 1);
+  slider('CAMERA SHAKE', 'shake', 0, 1);
+  slider('FLASH EFFECTS', 'flashes', 0, 1);
+
+  // toggles
+  const toggle = (label, key, fmt) => {
+    const on = !!s[key];
+    const bw = 130, bh = 34;
+    const bx = cx + 90;
+    const r = uiButton(game, {
+      x: bx, y: y - bh / 2, w: bw, h: bh, label: on ? (fmt ? fmt(true) : 'ON') : (fmt ? fmt(false) : 'OFF'),
+      small: true, onClick: () => { s[key] = on ? 0 : 1; game.applySettings(); },
+    });
+    ctx.save();
+    ctx.textAlign = 'right';
+    ctx.font = `500 13px ${SANS}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+    ctx.fillStyle = 'rgba(205,196,180,0.85)';
+    ctx.fillText(label, bx - 20, y);
+    ctx.restore();
+    buttonVisual(ctx, r.b, { active: r.hover, label: on ? (fmt ? fmt(true) : 'ON') : (fmt ? fmt(false) : 'OFF'), small: true, accent: '#6a6a80' });
+    y += rowH;
+  };
+  toggle('SCREEN CAPTIONS', 'captions');
+  toggle('INVERT PANIC FLASH', 'invertPanic');
+
+  // difficulty
+  ctx.save();
+  ctx.textAlign = 'right';
+  ctx.font = `500 13px ${SANS}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+  ctx.fillStyle = 'rgba(205,196,180,0.85)';
+  ctx.fillText('DIFFICULTY', cx + 90 - 20, y);
+  ctx.restore();
+  const diffKeys = Object.keys(DIFFICULTY);
+  const bw2 = 130, bh2 = 34, bx2 = cx + 90;
+  const r = uiButton(game, {
+    x: bx2, y: y - bh2 / 2, w: bw2, h: bh2, label: DIFFICULTY[s.difficulty].label, small: true,
+    onClick: () => {
+      const i = diffKeys.indexOf(s.difficulty);
+      s.difficulty = diffKeys[(i + 1) % diffKeys.length];
+      game.applySettings();
+    },
+  });
+  buttonVisual(ctx, r.b, { active: r.hover, label: DIFFICULTY[s.difficulty].label, small: true, accent: '#6a6a80' });
+  y += rowH + 10;
+
+  const backBtn = uiButton(game, { x: cx - 110, y: h - 90, w: 220, h: 46, label: 'BACK', small: true, accent: '#6a6a80', onClick: () => game.setScreen(back) });
+  buttonVisual(ctx, backBtn.b, { active: backBtn.hover, label: 'BACK', small: true, accent: '#6a6a80' });
+}
+
+/* ================= upgrades ================= */
+
+export function drawUpgrades(game, ctx, w, h) {
+  const B = game.save;
+  ctx.save();
+  ctx.fillStyle = 'rgba(4,5,9,0.92)';
+  ctx.fillRect(0, 0, w, h);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `400 30px ${SERIF}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '8px';
+  ctx.fillStyle = '#e8e0cc';
+  ctx.fillText('BLOOD SHARDS', w / 2, h * 0.12);
+  ctx.font = `400 14px ${SANS}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
+  ctx.fillStyle = 'rgba(200,160,74,0.9)';
+  ctx.fillText(`◆ ${B.shards} AVAILABLE`, w / 2, h * 0.175);
+  ctx.restore();
+
+  const rowH = 64;
+  let y = h * 0.24;
+  const bx = w / 2 - 280;
+  UPGRADES.forEach((u, i) => {
+    const lvl = upgradeLevel(B, u.id);
+    const maxed = lvl >= u.max;
+    const cost = maxed ? 0 : u.costs[lvl];
+    const afford = !maxed && B.shards >= cost;
+    ctx.save();
+    // row backing
+    ctx.fillStyle = 'rgba(12,12,18,0.7)';
+    ctx.fillRect(bx, y, 560, rowH - 10);
+    ctx.strokeStyle = 'rgba(140,120,70,0.28)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(bx + 0.5, y + 0.5, 559, rowH - 11);
+    // icon
+    ctx.translate(bx + 40, y + (rowH - 10) / 2);
+    drawUpgradeIcon(ctx, u.icon, lvl);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.textAlign = 'left';
+    ctx.font = `500 16px ${SERIF}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
+    ctx.fillStyle = '#ded4bc';
+    ctx.fillText(u.name, bx + 78, y + 22);
+    ctx.font = `400 12px ${SANS}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '1px';
+    ctx.fillStyle = 'rgba(180,172,158,0.7)';
+    ctx.fillText(u.desc, bx + 78, y + 40);
+    // pips
+    for (let k = 0; k < u.max; k++) {
+      const px = bx + 78 + k * 20;
+      ctx.fillStyle = k < lvl ? '#b8202e' : 'rgba(120,116,110,0.3)';
+      ctx.beginPath();
+      ctx.moveTo(px + 6, y + 52 - 6);
+      ctx.lineTo(px + 12, y + 52);
+      ctx.lineTo(px + 6, y + 52 + 6);
+      ctx.lineTo(px, y + 52);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+    // buy button
+    const bw = 130, bh = 36;
+    const r = uiButton(game, {
+      x: bx + 560 - bw - 14, y: y + (rowH - 10) / 2 - bh / 2, w: bw, h: bh,
+      label: maxed ? 'MASTERED' : `◆ ${cost}`, small: true,
+      disabled: maxed || !afford,
+      accent: '#a8833c',
+      onClick: () => game.buyUpgrade(u.id),
+    });
+    buttonVisual(ctx, r.b, { active: r.hover, label: maxed ? 'MASTERED' : `◆ ${cost}`, small: true, disabled: maxed || !afford, accent: '#a8833c' });
+    y += rowH;
+  });
+
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.font = `400 12px ${SANS}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+  ctx.fillStyle = 'rgba(170,162,150,0.6)';
+  ctx.fillText('BLOOD SHARDS ARE EARNED BY SURVIVING. THE LONGER YOU LAST, THE MORE YOU KEEP.', w / 2, h - 128);
+  ctx.restore();
+
+  const backBtn = uiButton(game, { x: w / 2 - 110, y: h - 88, w: 220, h: 44, label: 'BACK', small: true, accent: '#6a6a80', onClick: () => game.setScreen(game.settingsReturn || 'menu') });
+  buttonVisual(ctx, backBtn.b, { active: backBtn.hover, label: 'BACK', small: true, accent: '#6a6a80' });
+}
+
+function drawUpgradeIcon(ctx, kind, lvl) {
+  ctx.save();
+  ctx.globalAlpha = 0.25 + lvl * 0.25;
+  ctx.strokeStyle = '#c09040';
+  ctx.fillStyle = '#c09040';
+  ctx.lineWidth = 2;
+  switch (kind) {
+    case 'blood':
+      ctx.beginPath();
+      ctx.moveTo(0, -14);
+      ctx.quadraticCurveTo(11, 2, 0, 13);
+      ctx.quadraticCurveTo(-11, 2, 0, -14);
+      ctx.fill();
+      break;
+    case 'boot':
+      ctx.beginPath();
+      ctx.moveTo(-6, -14); ctx.lineTo(4, -14); ctx.lineTo(4, 4); ctx.lineTo(12, 8);
+      ctx.lineTo(12, 14); ctx.lineTo(-6, 14); ctx.closePath();
+      ctx.stroke();
+      break;
+    case 'plank':
+      ctx.beginPath(); ctx.rect(-14, -6, 28, 12); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-8, -6); ctx.lineTo(-8, 6); ctx.moveTo(6, -6); ctx.lineTo(6, 6); ctx.stroke();
+      break;
+    case 'claw':
+      for (let i = -1; i <= 1; i++) {
+        ctx.beginPath();
+        ctx.moveTo(-9, i * 7 - 4);
+        ctx.quadraticCurveTo(0, i * 7 + 8, 10, i * 7 + 1);
+        ctx.stroke();
+      }
+      break;
+    case 'fangs':
+      ctx.beginPath();
+      ctx.moveTo(-8, -8); ctx.lineTo(-2, 12); ctx.lineTo(-1, -8); ctx.closePath(); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(8, -8); ctx.lineTo(2, 12); ctx.lineTo(1, -8); ctx.closePath(); ctx.fill();
+      break;
+  }
+  ctx.restore();
+}
+
+/* ================= collection ================= */
+
+export function drawCollection(game, ctx, w, h) {
+  const B = game.save;
+  ctx.save();
+  ctx.fillStyle = 'rgba(4,5,9,0.93)';
+  ctx.fillRect(0, 0, w, h);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `400 30px ${SERIF}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '8px';
+  ctx.fillStyle = '#e8e0cc';
+  ctx.fillText('COLLECTION', w / 2, h * 0.13);
+  ctx.restore();
+
+  const cols = Math.min(3, Math.max(1, Math.floor(w / 380)));
+  const cw = Math.min(340, (w - 120) / cols - 20);
+  const ch = 170;
+  const x0 = w / 2 - (cols * (cw + 20) - 20) / 2;
+  let y = h * 0.24;
+  CODEX.forEach((c, i) => {
+    const col = i % cols, row = Math.floor(i / cols);
+    const x = x0 + col * (cw + 20);
+    const yy = y + row * (ch + 16);
+    const known = !!B.seen[c.id];
+    ctx.save();
+    ctx.fillStyle = known ? 'rgba(14,14,20,0.75)' : 'rgba(8,8,12,0.6)';
+    ctx.fillRect(x, yy, cw, ch);
+    ctx.strokeStyle = known ? 'rgba(150,125,70,0.35)' : 'rgba(80,78,74,0.22)';
+    ctx.strokeRect(x + 0.5, yy + 0.5, cw - 1, ch - 1);
+    ctx.textAlign = 'left';
+    ctx.font = `500 16px ${SERIF}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
+    ctx.fillStyle = known ? '#ded4bc' : 'rgba(120,116,110,0.6)';
+    ctx.fillText(known ? c.name : '???', x + 18, yy + 30);
+    ctx.font = `400 12px ${SANS}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '1px';
+    ctx.fillStyle = known ? 'rgba(190,182,166,0.8)' : 'rgba(110,106,100,0.5)';
+    const txt = known ? c.text : 'Not yet encountered.';
+    wrapText(ctx, txt, x + 18, yy + 56, cw - 36, 17);
+    ctx.restore();
+  });
+
+  const backBtn = uiButton(game, { x: w / 2 - 110, y: h - 84, w: 220, h: 44, label: 'BACK', small: true, accent: '#6a6a80', onClick: () => game.setScreen(game.settingsReturn || 'menu') });
+  buttonVisual(ctx, backBtn.b, { active: backBtn.hover, label: 'BACK', small: true, accent: '#6a6a80' });
+}
+
+function wrapText(ctx, text, x, y, maxW, lh) {
+  let yy = y;
+  for (const para of String(text).split('\n')) {
+    const words = para.split(' ');
+    let line = '';
+    for (const word of words) {
+      const test = line ? line + ' ' + word : word;
+      if (ctx.measureText(test).width > maxW && line) {
+        ctx.fillText(line, x, yy); yy += lh; line = word;
+      } else line = test;
+    }
+    ctx.fillText(line, x, yy); yy += lh;
+  }
+  return yy;
+}
+
+/* ================= help ================= */
+
+export function drawHelp(game, ctx, w, h) {
+  ctx.save();
+  ctx.fillStyle = 'rgba(4,5,9,0.93)';
+  ctx.fillRect(0, 0, w, h);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `400 28px ${SERIF}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '7px';
+  ctx.fillStyle = '#e8e0cc';
+  ctx.fillText('HOW TO SURVIVE', w / 2, h * 0.12);
+
+  const lines = [
+    ['YOU ARE NOT A SOLDIER.', 'You are a wounded predator in a locked house. You do not have to kill anything.'],
+    ['DOORS ARE YOUR LIFE.', 'Every entrance has durability. Hold R to repair (up to half), press B to barricade (needs 3 planks).'],
+    ['BLOOD IS EVERYTHING.', 'It drains with time, running and clawing. Damage costs blood. Kill or drink to refill it.'],
+    ['LISTEN.', 'Knocking, breathing, breaking glass — the house tells you where they are before you see them.'],
+    ['THE KNOCK', 'A knock is a question. [E] opens the door. Sometimes there is a gift outside. Sometimes there is not.'],
+    ['DAWN IS AT 05:00.', 'Five minutes. Do not spend them fighting. Spend them surviving.'],
+  ];
+  let y = h * 0.22;
+  ctx.textAlign = 'left';
+  const x = Math.max(60, w / 2 - 330);
+  for (const [head, body] of lines) {
+    ctx.font = `500 15px ${SERIF}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
+    ctx.fillStyle = '#c8a04a';
+    ctx.fillText(head, x, y);
+    ctx.font = `400 13px ${SANS}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '0.5px';
+    ctx.fillStyle = 'rgba(198,190,176,0.85)';
+    ctx.fillText(body, x, y + 20);
+    y += 58;
+  }
+  ctx.restore();
+
+  const backBtn = uiButton(game, { x: w / 2 - 110, y: h - 80, w: 220, h: 44, label: 'BACK', small: true, accent: '#6a6a80', onClick: () => game.setScreen(game.settingsReturn || 'menu') });
+  buttonVisual(ctx, backBtn.b, { active: backBtn.hover, label: 'BACK', small: true, accent: '#6a6a80' });
+}
+
+/* ================= death ================= */
+
+export function drawDeath(game, ctx, w, h) {
+  const t = game.deathScreenT;
+  const a = clamp(t / 1.6, 0, 1);
+  ctx.save();
+  ctx.fillStyle = `rgba(2,3,6,${0.55 + a * 0.4})`;
+  ctx.fillRect(0, 0, w, h);
+  // the vampire's blood pooling on the floor
+  ctx.globalAlpha = clamp(t / 4, 0, 0.8);
+  const g = ctx.createRadialGradient(w / 2, h * 0.72, 10, w / 2, h * 0.72, 260);
+  g.addColorStop(0, 'rgba(90,8,16,0.75)');
+  g.addColorStop(0.5, 'rgba(50,4,10,0.5)');
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.ellipse(w / 2, h * 0.72, 260, 90, 0, 0, TAU); ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.restore();
+
+  const fade = clamp((t - 1.2) / 1.4, 0, 1);
+  ctx.save();
+  ctx.globalAlpha = fade;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `400 ${clamp(w * 0.035, 26, 44)}px ${SERIF}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '10px';
+  ctx.fillStyle = '#8e1622';
+  ctx.shadowColor = 'rgba(180,20,30,0.4)'; ctx.shadowBlur = 24;
+  ctx.fillText('THE NIGHT CLAIMED YOU', w / 2, h * 0.3);
+  ctx.shadowBlur = 0;
+
+  const stats = game.stats;
+  const rows = [
+    ['SURVIVED', fmtClock(game.time)],
+    ['BEST', game.save.bestTime > 0 ? fmtClock(game.save.bestTime) : '--:--'],
+    ['NIGHTS SURVIVED', String(game.save.nightsSurvived)],
+  ];
+  let y = h * 0.43;
+  for (const [k, v] of rows) {
+    ctx.font = `500 12px ${SANS}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '4px';
+    ctx.fillStyle = 'rgba(170,162,150,0.7)';
+    ctx.fillText(k, w / 2, y);
+    ctx.font = `400 22px ${MONO}`;
+    ctx.fillStyle = '#e2dac6';
+    ctx.fillText(v, w / 2, y + 26);
+    y += 62;
+  }
+  // shards earned
+  if (game.shardsEarned > 0) {
+    ctx.font = `500 13px ${SANS}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
+    ctx.fillStyle = 'rgba(200,160,74,0.9)';
+    ctx.fillText(`◆ +${game.shardsEarned} BLOOD SHARDS`, w / 2, y + 6);
+  }
+  ctx.restore();
+
+  if (fade > 0.9) {
+    const bw = 220, bh = 48;
+    let by = h * 0.76;
+    const items = [
+      { label: 'TRY AGAIN', onClick: () => game.beginNight(), accent: '#a8833c' },
+      { label: 'UPGRADES', onClick: () => game.setScreen('upgrades', 'death'), accent: '#6a6a80' },
+      { label: 'MAIN MENU', onClick: () => game.toMenu(), accent: '#6a6a80' },
+    ];
+    items.forEach((it, i) => {
+      const r = uiButton(game, { x: w / 2 - bw / 2, y: by, w: bw, h: bh, label: it.label, onClick: it.onClick, accent: it.accent, small: true });
+      buttonVisual(ctx, r.b, { active: r.hover || (game.usingKeyboard && game.uiIndex === i), label: it.label, small: true, accent: it.accent });
+      by += bh + 8;
+    });
+  }
+}
+
+/* ================= victory ================= */
+
+export function drawVictory(game, ctx, w, h) {
+  const t = game.victoryScreenT;
+  const dawnA = clamp(t / 2.5, 0, 1);
+  ctx.save();
+  // dawn flooding the room
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, `rgba(232,168,96,${0.30 * dawnA})`);
+  g.addColorStop(0.5, `rgba(150,92,80,${0.22 * dawnA})`);
+  g.addColorStop(1, `rgba(20,16,26,${0.5 + 0.3 * dawnA})`);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+  // sun shafts
+  ctx.globalCompositeOperation = 'screen';
+  for (let i = 0; i < 5; i++) {
+    const x = w * (0.15 + i * 0.18);
+    const sg = ctx.createLinearGradient(x, 0, x + 260, h);
+    sg.addColorStop(0, `rgba(255,214,150,${0.10 * dawnA})`);
+    sg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = sg;
+    ctx.beginPath();
+    ctx.moveTo(x, 0); ctx.lineTo(x + 90, 0); ctx.lineTo(x + 420, h); ctx.lineTo(x + 240, h);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+
+  const fade = clamp((t - 0.8) / 1.2, 0, 1);
+  ctx.save();
+  ctx.globalAlpha = fade;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `400 ${clamp(w * 0.026, 20, 34)}px ${SERIF}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '12px';
+  ctx.fillStyle = 'rgba(226,218,200,0.85)';
+  ctx.fillText('LAST NIGHT', w / 2, h * 0.14);
+  ctx.font = `400 ${clamp(w * 0.05, 36, 64)}px ${SERIF}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '14px';
+  ctx.fillStyle = '#f0e6c8';
+  ctx.shadowColor = 'rgba(255,200,120,0.45)'; ctx.shadowBlur = 30;
+  ctx.fillText('SURVIVED', w / 2, h * 0.23);
+  ctx.shadowBlur = 0;
+  ctx.restore();
+
+  if (game.newRecord && fade > 0.6) {
+    const p = 0.5 + 0.5 * Math.sin(t * 3);
+    ctx.save();
+    ctx.globalAlpha = fade * (0.6 + p * 0.4);
+    ctx.textAlign = 'center';
+    ctx.font = `500 15px ${SANS}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '6px';
+    ctx.fillStyle = '#e0b45c';
+    ctx.fillText('NEW RECORD', w / 2, h * 0.315);
+    ctx.restore();
+  }
+
+  const s = game.stats;
+  const rows = [
+    ['SURVIVAL TIME', fmtClock(game.nightDuration)],
+    ['BLOOD REMAINING', Math.round((game.player.blood / game.player.bloodMax) * 100) + '%'],
+    ['DOORS SURVIVING', `${s.doorsSurviving}/${s.doorsTotal}`],
+    ['ENEMIES DEFEATED', String(s.kills)],
+    ['NEAREST OF DEATH', s.closestCall > 0 ? Math.round(s.closestCall * 100) + '% BLOOD' : '—'],
+  ];
+  ctx.save();
+  ctx.globalAlpha = fade;
+  const cx = w / 2;
+  let y = h * 0.40;
+  ctx.textAlign = 'left';
+  for (const [k, v] of rows) {
+    ctx.font = `500 12px ${SANS}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '4px';
+    ctx.fillStyle = 'rgba(168,160,148,0.75)';
+    ctx.fillText(k, cx - 200, y);
+    ctx.textAlign = 'right';
+    ctx.font = `400 19px ${MONO}`;
+    ctx.fillStyle = '#eae1c8';
+    ctx.fillText(v, cx + 200, y);
+    ctx.textAlign = 'left';
+    // dotted leader
+    ctx.strokeStyle = 'rgba(140,132,118,0.18)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(cx - 40, y - 4); ctx.lineTo(cx + 40, y - 4); ctx.stroke();
+    y += 34;
+  }
+  ctx.font = `500 13px ${SANS}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(200,160,74,0.95)';
+  ctx.fillText(`◆ +${game.shardsEarned} BLOOD SHARDS`, cx, y + 12);
+  ctx.restore();
+
+  if (fade > 0.9) {
+    const bw = 220, bh = 46;
+    let by = h - 150;
+    const items = [
+      { label: 'UPGRADES', onClick: () => game.setScreen('upgrades', 'victory'), accent: '#a8833c' },
+      { label: 'ANOTHER NIGHT', onClick: () => game.beginNight(), accent: '#a8833c' },
+      { label: 'MAIN MENU', onClick: () => game.toMenu(), accent: '#6a6a80' },
+    ];
+    items.forEach((it, i) => {
+      const r = uiButton(game, { x: w / 2 - bw / 2, y: by, w: bw, h: bh, label: it.label, onClick: it.onClick, accent: it.accent, small: true });
+      buttonVisual(ctx, r.b, { active: r.hover || (game.usingKeyboard && game.uiIndex === i), label: it.label, small: true, accent: it.accent });
+      by += bh + 8;
+    });
+  }
+}
+
+/* ================= in-run tutorial hints ================= */
+
+export function drawTutorial(game, ctx, w, h) {
+  if (game.save.tutorialSeen && !game.showTutorialHints) return;
+  const t = game.time;
+  const hints = [
+    { at: 8, life: 7, text: 'HOLD SHIFT TO RUN · IT COSTS BLOOD', y: 0.62 },
+    { at: 16, life: 8, text: 'DRINK WHEN YOU CAN. THE HUNGER NEVER STOPS.', y: 0.62 },
+  ];
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (const hnt of hints) {
+    const dt = t - hnt.at;
+    if (dt < 0 || dt > hnt.life) continue;
+    const a = clamp(dt / 0.6, 0, 1) * clamp((hnt.life - dt) / 1.2, 0, 1);
+    ctx.globalAlpha = a * 0.8;
+    ctx.font = `500 12px ${SANS}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
+    ctx.fillStyle = '#cfc4a8';
+    ctx.shadowColor = 'rgba(0,0,0,0.9)'; ctx.shadowBlur = 8;
+    ctx.fillText(hnt.text, w / 2, h * hnt.y);
+  }
+  ctx.restore();
+}

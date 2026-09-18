@@ -1,0 +1,125 @@
+/* LAST NIGHT — page shell
+ * The game is a canvas; the page exists only to frame it and get out of the way.
+ */
+
+:root {
+  --ink: #05060b;
+  --ash: #cfc6b0;
+  --blood: #7d1220;
+  --gold: #a8833c;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #04050a;
+  color: var(--ash);
+  font-family: Georgia, "Palatino Linotype", "Times New Roman", serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+#stage {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(120% 90% at 50% 0%, #0b0e16 0%, #04050a 55%, #000 100%);
+}
+
+canvas#game {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  touch-action: none;
+  image-rendering: auto;
+  cursor: crosshair;
+  background: #04050a;
+}
+
+/* ---------------- fullscreen button ---------------- */
+
+#fullscreen {
+  position: fixed;
+  right: max(10px, env(safe-area-inset-right));
+  top: max(10px, env(safe-area-inset-top));
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  color: rgba(200, 190, 172, 0.45);
+  background: rgba(8, 9, 14, 0.5);
+  border: 1px solid rgba(168, 131, 60, 0.25);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color .25s, border-color .25s, background .25s;
+  z-index: 20;
+}
+#fullscreen:hover {
+  color: rgba(240, 232, 214, 0.9);
+  border-color: rgba(168, 131, 60, 0.7);
+  background: rgba(14, 12, 10, 0.8);
+}
+
+/* ---------------- loading veil ---------------- */
+
+#veil {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(90% 70% at 50% 45%, #0a0b12 0%, #04050a 60%, #000 100%);
+  transition: opacity .8s ease;
+}
+#veil.gone { opacity: 0; pointer-events: none; }
+
+.veil-inner { text-align: center; }
+.veil-title {
+  font-size: clamp(28px, 7vw, 62px);
+  letter-spacing: .28em;
+  color: #e8e0cc;
+  text-shadow: 0 0 30px rgba(125, 18, 32, .55);
+  animation: veilPulse 3.4s ease-in-out infinite;
+}
+.veil-sub {
+  margin-top: .9em;
+  font-size: clamp(11px, 2.4vw, 14px);
+  letter-spacing: .42em;
+  color: rgba(200, 190, 172, .5);
+  text-transform: uppercase;
+  font-family: "Segoe UI", Roboto, sans-serif;
+}
+.veil-bar {
+  margin: 2.2em auto 0;
+  width: min(240px, 60vw);
+  height: 2px;
+  background: rgba(200, 190, 172, .12);
+  overflow: hidden;
+}
+.veil-bar span {
+  display: block;
+  height: 100%;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, var(--blood), transparent);
+  animation: veilSlide 1.6s ease-in-out infinite;
+}
+
+@keyframes veilPulse {
+  0%, 100% { opacity: .92; }
+  50% { opacity: 1; text-shadow: 0 0 44px rgba(125, 18, 32, .75); }
+}
+@keyframes veilSlide {
+  0% { transform: translateX(-110%); }
+  100% { transform: translateX(320%); }
+}
+
+@media (max-width: 640px) {
+  #fullscreen { display: none; }
+}
