@@ -374,6 +374,7 @@ export class Game {
 
     // global easing
     this.hbPulse = Math.max(0, this.hbPulse - rawDt * 3.4);
+    this.renderer.decayFlash(rawDt);
     this.lightningFlash = Math.max(0, this.lightningFlash - rawDt * 2.2);
     this.fadeFromBlack = Math.max(0, this.fadeFromBlack - rawDt * 0.9);
     if (this.screen !== 'playing') this.player.anim(rawDt);

@@ -389,6 +389,79 @@ if (MODE === 'combat') {
   process.exit(0);
 }
 
+/* ---------------- HUD zoom sheet ----------------
+ * Renders one busy gameplay frame and blows up each HUD element so the
+ * hand-drawn (code-drawn) interface can actually be inspected.
+ */
+if (args.hud) {
+  const { createCanvas } = await import('@napi-rs/canvas');
+  // build a believable "everything is happening" moment
+  game.freshRun(); game.screen = 'playing';
+  const botRun = args.bot ? parseInt(args.bot, 10) : 12000;
+  // play until the night is busy but still alive, so the HUD is in its
+  // interesting state rather than showing a results screen
+  for (let i = 0; i < botRun; i++) {
+    bot.think(game, dt);
+    game.update(dt);
+    if (game.screen !== 'playing') { game.freshRun(); game.screen = 'playing'; }
+    if (game.time > 130 && game.enemies.length >= 3) break;
+  }
+  const p = game.player;
+  p.planks = 3;
+  p.blood = p.bloodMax * 0.34;
+  p.dashCd = 1.2;
+  p.attackCd = 0.4;
+  game.messages.length = 0;
+  game.showMessage('BAY WINDOW IS UNDER ATTACK.', { tone: 'danger', life: 6 });
+  game.showMessage('A CROSSBOW BOLT CLATTERS AGAINST THE GLASS.', { tone: 'cold', life: 6 });
+  const door = game.mansion.doors.find((d) => !d.broken) || game.mansion.doors[0];
+  p.x = door.inside.x; p.y = door.inside.y + 26;
+  door.hp = door.hpMax * 0.42;
+  door.attackers = 1;
+  const d2 = game.mansion.doors.find((d) => d !== door);
+  if (d2) { d2.hp = 0; d2.broken = true; }
+  game.updateInteraction();
+  // let the messages finish fading in and the frame settle before capturing
+  for (let i = 0; i < 40; i++) game.update(dt);
+  game.render();
+
+  const regions = [
+    ['CLOCK  (atas tengah)', 405, 0, 470, 96],
+    ['BLOOD  (kiri bawah)', 0, 588, 300, 132],
+    ['ACTIONS  (kanan bawah)', 975, 588, 305, 132],
+    ['DOORS  (kanan atas)', 940, 84, 340, 92],
+    ['PROMPTS + PESAN  (tengah bawah)', 300, 460, 680, 260],
+  ];
+  const scale = 2.1, capH = 30, pad = 10;
+  const outW = Math.max(...regions.map((r) => Math.round(r[3] * scale))) + pad * 2;
+  const outH = regions.reduce((a, r) => a + Math.round(r[4] * scale) + capH + pad, pad);
+  const out = createCanvas(outW, outH);
+  const octx = out.getContext('2d');
+  octx.fillStyle = '#0a0b10'; octx.fillRect(0, 0, outW, outH);
+  let y = pad;
+  for (const [label, rx, ry, rw, rh] of regions) {
+    octx.fillStyle = 'rgba(200,190,170,0.85)';
+    octx.font = '600 15px monospace';
+    octx.fillText(label, pad, y + 18);
+    y += capH;
+    const dw = Math.round(rw * scale), dh = Math.round(rh * scale);
+    octx.imageSmoothingEnabled = false;
+    octx.drawImage(canvas, rx, ry, rw, rh, pad, y, dw, dh);
+    octx.strokeStyle = 'rgba(120,110,95,0.35)';
+    octx.strokeRect(pad + 0.5, y + 0.5, dw - 1, dh - 1);
+    y += dh + pad;
+  }
+  const cctx = canvas.getContext('2d');
+  const px = cctx.getImageData(640, 300, 1, 1).data;
+  const lum = (px[0] + px[1] + px[2]) / 3;
+  console.log(`frame check: renderer.flash=${game.renderer.flash.toFixed(3)} luminance=${lum.toFixed(0)} ${lum < 150 ? 'OK (dark)' : 'FAIL (washed out)'}`);
+  fs.mkdirSync(SHOT_DIR, { recursive: true });
+  fs.writeFileSync(path.join(SHOT_DIR, 'hud-zoom.png'), out.toBuffer('image/png'));
+  fs.writeFileSync(path.join(SHOT_DIR, 'hud-full.png'), canvas.toBuffer('image/png'));
+  console.log('hud-zoom.png + hud-full.png written');
+  process.exit(0);
+}
+
 /* ---------------- touch / small screen smoke test ---------------- */
 if (args.touch) {
   console.log('touch layout check:');

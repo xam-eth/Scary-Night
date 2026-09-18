@@ -120,6 +120,14 @@ export class Renderer {
   set shakeEnabled(v) { this._shake = v; }
   addFlash(v, color = '#ffffff') { this.flash = Math.min(1.4, this.flash + v); this.flashColor = color; }
 
+  /**
+   * The impact flash is a FLASH, and it has to decay on the simulation clock.
+   * Decaying it per rendered frame meant a slow frame (or a long frame gap)
+   * left it stuck on screen; before this existed at all, it accumulated over a
+   * whole night and washed the screen out permanently.
+   */
+  decayFlash(dt) { this.flash = Math.max(0, this.flash - dt * 3.4); }
+
   screenToWorld(sx, sy) {
     const c = this.cam;
     return {
