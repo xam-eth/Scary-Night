@@ -202,8 +202,9 @@ export class Player {
     this.stepTimer -= dt;
     const sp = this.speed;
     if (sp > 20 && this.stepTimer <= 0) {
-      this.stepTimer = clamp(38 / sp, 0.16, 0.5);
-      game.onPlayerStep(sp > 150);
+      const hz = this.locomotionHz();
+      this.stepTimer = hz > 0 ? 0.5 / hz : 0.46;
+      game.onPlayerStep(sp > 160 || this.dashT > 0);
     }
 
     // ---------- attack ----------
@@ -752,11 +753,25 @@ export class Player {
     ctx.restore();
   }
 
+  /**
+   * Full clip cycles per second. One turn of stepPhase is one GLB loop.
+   * The walk clip is a slow 2.33s cycle; the old rate (6 + speed*0.045)
+   * played it at about 4×, so walking looked like running in place.
+   */
+  locomotionHz() {
+    const sp = this.speed;
+    if (sp <= 14) return 0;
+    const running = sp > 160 || this.dashT > 0;
+    // Root travel of one cycle, in screen pixels at the billboard scale.
+    const stride = running ? 200 : 112;
+    return clamp(sp / stride, 0.32, running ? 1.35 : 1.15);
+  }
+
   /** Advance the walk cycle. Called from the game loop with the frame dt. */
   anim(dt) {
-    const sp = this.speed;
-    if (sp > 14) this.stepPhase += dt * (6 + sp * 0.045);
-    else this.stepPhase += dt * 1.2;
+    const hz = this.locomotionHz();
+    if (hz > 0) this.stepPhase += dt * hz * TAU;
+    else this.stepPhase += dt * 0.35;
     if (this.blink <= 0 && chance(0.004)) this.blink = 0.12;
   }
 

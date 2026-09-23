@@ -428,10 +428,17 @@ export class Game {
     // Stick only exists while you are in the night. Menu clicks must never
     // start a drag-to-move, or PLAY/settings sliders fight the joystick.
     this.input.gameplay = this.screen === 'playing' || this.screen === 'dying';
+    const b = this.input.buttons;
     if (!this.input.gameplay) {
-      const b = this.input.buttons;
       b.attack.hidden = b.dash.hidden = b.interact.hidden = true;
       b.repair.hidden = b.barricade.hidden = true;
+    } else {
+      // Menu hides these and used to leave them hidden for the whole night,
+      // so CLAW / DASH / USE never came back. FIX and BOARD stay contextual.
+      b.attack.hidden = false;
+      b.dash.hidden = false;
+      b.interact.hidden = false;
+      this.input.layout(this.renderer.w, this.renderer.h);
     }
     this.input.update(rawDt);
     this.handleUIInput();
