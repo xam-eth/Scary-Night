@@ -158,7 +158,7 @@ export class Game {
     this.shardsEarned = 0;
     this.newRecord = false;
     this.introT = 0;
-    this.introLen = 4.6;
+    this.introLen = 3.2;
     this.deathScreenT = 0;
     this.victoryScreenT = 0;
     this.dawnT = 0;
@@ -312,8 +312,10 @@ export class Game {
     this.timeouts.length = 0;
     this.knocks.length = 0;
     // ---- player ----
-    this.player = new Player(620, 1210);
+    // Wake at the dining table, facing the servant door. The hall can wait.
+    this.player = new Player(400, 520);
     this.player.applyUpgrades(this.save);
+    this.player.blood = this.player.bloodMax * 0.48;
     this.player.planks = 2;
     this.player.angle = -Math.PI / 2;
     // ---- director ----
@@ -329,7 +331,11 @@ export class Game {
     this.hbPulse = 0;
     this.countdown = null;
     this.countdownShown = 0;
-    this.stats = { kills: 0, doorsSurviving: 4, doorsTotal: 4, closestCall: 0, waveCount: 0, hits: 0, bloodMin: 100 };
+    const doorN = this.mansion.doors.length;
+    this.stats = { kills: 0, doorsSurviving: doorN, doorsTotal: doorN, closestCall: 0, waveCount: 0, hits: 0, bloodMin: 100, roomsVisited: 0, roomsSeen: {} };
+    this.larderUsed = false;
+    this._lastRoom = null;
+    if (this.mansion.studyWard) { this.mansion.studyWard.until = 0; this.mansion.studyWard.readyAt = 0; }
     // ---- night purpose + living house + IAP consumables ----
     this.usedRevive = false;
     this.lastNightGoals = null;
@@ -366,6 +372,8 @@ export class Game {
       { r: ROOM.DINING, planks: 2, blood: 2 },
       { r: ROOM.LIBRARY, planks: 2, blood: 2 },
       { r: ROOM.BASEMENT, planks: 1, blood: 2 },
+      { r: ROOM.KITCHEN, planks: 1, blood: 1 },
+      { r: ROOM.STUDY, planks: 1, blood: 1 },
     ];
     let totalPlanks = 0, totalBlood = 0;
     for (const spec of rooms) {
@@ -390,7 +398,7 @@ export class Game {
       for (const e of this.mansion.entrances) if (dist(x, y, e.x, e.y) < 70) ok = false;
       for (const p of this.pickups) if (dist(x, y, p.x, p.y) < 60) ok = false;
       // not right under the player's nose at the start
-      if (dist(x, y, 620, 1210) < 140 && room.id === ROOM.HALL) ok = false;
+      if (dist(x, y, 400, 520) < 120 && room.id === ROOM.DINING) ok = false;
       if (ok) return { x, y };
     }
     return null;
@@ -509,11 +517,25 @@ export class Game {
   updateIntro(dt) {
     this.introT += dt;
     this.mansion.update(dt, this);
-    if (this.introT > this.introLen || this.input.attackPressed || this.input.interactPressed || this.input.keys.confirm) {
-      this.screen = 'playing';
-      this.audio.play('uiConfirm', { vol: 0.6 });
-      if (!this.save.tutorialSeen) { this.save.tutorialSeen = true; this.showTutorialHints = true; writeSave(this.save); }
+    // The tap that pressed PLAY must not also skip the card. After a beat,
+    // any tap, claw, or confirm wakes her — including a phone with no keyboard.
+    const armed = this.introT > 0.45;
+    const tap = !!(this.input.uiTap || this._introTap);
+    if (this.introT > this.introLen || (armed && (tap || this.input.attackPressed || this.input.interactPressed || this.input.keys.confirm))) {
+      this.input.uiTap = null;
+      this._introTap = false;
+      this.finishIntro();
     }
+  }
+
+  finishIntro() {
+    this.screen = 'playing';
+    this.audio.play('uiConfirm', { vol: 0.6 });
+    if (!this.save.tutorialSeen) { this.save.tutorialSeen = true; this.showTutorialHints = true; writeSave(this.save); }
+    this.showMessage('THE SERVANT DOOR IS ALREADY SHAKING. BAR IT, OR FEED.', { tone: 'gold', life: 5.4, key: 'hook' });
+    this.director.scheduleKnock(this, {
+      force: true, entranceId: 'diningDoor', outcome: 'crawler', wait: 18, mustEnter: true, known: true,
+    });
   }
 
   /* ---------------- the night ---------------- */
@@ -603,7 +625,8 @@ export class Game {
     const p = this.player;
     const lookX = clamp(p.vx * 0.22, -70, 70);
     const lookY = clamp(p.vy * 0.22, -70, 70);
-    this.renderer.followCamera(p.x, p.y, dt, lookX, lookY, { x: 20, y: 10, w: 1240, h: 1520 });
+    this.noteRoom(p);
+    this.renderer.followCamera(p.x, p.y, dt, lookX, lookY, this.mansion.camBounds);
 
     // ---- stats / codex ----
     this.stats.bloodMin = Math.min(this.stats.bloodMin, p.bloodPct * 100);
@@ -704,13 +727,83 @@ export class Game {
         dist: basinD,
       };
       if (!this.basinUsed && input.interactPressed) this.startDrink(basin);
+    } else {
+      const larder = this.mansion.props.find((pr) => pr.type === 'larder');
+      const ward = this.mansion.props.find((pr) => pr.type === 'ward');
+      const larderD = larder ? dist(p.x, p.y, larder.x, larder.y) : 1e9;
+      const wardD = ward ? dist(p.x, p.y, ward.x, ward.y) : 1e9;
+      if (larder && larderD < 64 && larderD <= wardD) {
+        this.interactTarget = {
+          ent: { x: larder.x, y: larder.y, name: 'LARDER', w: 80, h: 50, facing: 'south', hp: 1, hpMax: 1, barricade: 0 },
+          actions: this.larderUsed ? [] : [{ key: 'E', label: 'DRINK — THEY WILL HEAR', act: 'larder' }],
+          dist: larderD,
+        };
+        if (!this.larderUsed && input.interactPressed) this.drinkLarder(larder);
+      } else if (ward && wardD < 64) {
+        const ready = this.time >= (this.mansion.studyWard.readyAt || 0);
+        const lit = this.time < this.mansion.studyWard.until;
+        this.interactTarget = {
+          ent: { x: ward.x, y: ward.y, name: 'STUDY LAMP', w: 40, h: 40, facing: 'south', hp: 1, hpMax: 1, barricade: 0 },
+          actions: lit ? [] : [{ key: 'E', label: ready ? 'LIGHT THE WARD' : 'THE WARD IS COLD', act: 'ward' }],
+          dist: wardD,
+        };
+        if (input.interactPressed) this.lightWard();
+      }
     }
 
-    // contextual mobile buttons
-    const touching = input.touchSeen;
-    input.buttons.repair.hidden = !touching || !this.interactTarget;
-    input.buttons.barricade.hidden = !touching || !this.interactTarget
-      || !this.interactTarget.actions.some((a) => a.act === 'barricade');
+    // FIX / BOARD appear whenever the action exists, not only after a touch.
+    const acts = (this.interactTarget && this.interactTarget.actions) || [];
+    input.buttons.repair.hidden = !acts.some((a) => a.act === 'repair');
+    input.buttons.barricade.hidden = !acts.some((a) => a.act === 'barricade');
+  }
+
+  noteRoom(p) {
+    const id = this.mansion.findRoom(p.x, p.y);
+    if (!id || id === ROOM.OUTSIDE || id === this._lastRoom) return;
+    this._lastRoom = id;
+    const seen = this.stats.roomsSeen || (this.stats.roomsSeen = {});
+    if (seen[id]) return;
+    seen[id] = true;
+    this.stats.roomsVisited = Object.keys(seen).length;
+    const lines = {
+      kitchen: 'KITCHEN. THE LARDER FEEDS YOU. THE WEST DOOR WILL NOT HOLD.',
+      study: 'STUDY. LIGHT THE LAMP TO SLOW THEM. THE WINDOW IS THE PRICE.',
+      chapel: 'CHAPEL. THE ALTAR LIGHT SLOWS THEM. IT DOES NOT STOP THEM.',
+      dining: 'DINING ROOM. THE SERVANT DOOR IS NORTH.',
+    };
+    const named = this.mansion.room(id);
+    this.showMessage(lines[id] || (named && named.name) || id, { tone: 'calm', life: 3.2, key: 'room:' + id });
+  }
+
+  drinkLarder(larder) {
+    this.larderUsed = true;
+    this.player.heal(20, this);
+    this.audio.play('drink', { vol: 0.55 });
+    this.showMessage('THE LARDER IS COLD. SOMETHING HEARD THE LATCH.', { tone: 'cold', life: 3.6 });
+    this.makeNoise(larder.x, larder.y, 280);
+    this.timeouts.push({
+      t: 1.3,
+      fn: () => {
+        this.director.spawnWave(this, ['crawler'], { entranceId: 'kitchenDoor', reveal: true });
+        this.showMessage('THE KITCHEN DOOR. IT SMELLED THE BLOOD.', { tone: 'danger' });
+      },
+    });
+  }
+
+  lightWard() {
+    const w = this.mansion.studyWard;
+    if (!w) return;
+    if (this.time < w.until) return;
+    if (this.time < (w.readyAt || 0)) {
+      this.showCombatText('COLD', w.x, w.y - 24, '#9a9488');
+      return;
+    }
+    w.until = this.time + 18;
+    w.readyAt = this.time + 48;
+    this.objectives.notify(this, 'wardLit');
+    this.audio.play('chandelier', { vol: 0.35 });
+    this.showMessage('THE LAMP HOLDS THEM. EIGHTEEN SECONDS. NOT SAFETY.', { tone: 'gold', life: 3.4 });
+    this.makeNoise(w.x, w.y, 180);
   }
 
   toggleDoor(e) {
@@ -1211,7 +1304,7 @@ export class Game {
     this.player.anim(d);
     this.director.updateAudioState(dt, this);
     // the camera drifts up and away
-    this.renderer.followCamera(this.player.x, this.player.y - this.dyingT * 8, dt, 0, 0, { x: 20, y: 10, w: 1240, h: 1520 });
+    this.renderer.followCamera(this.player.x, this.player.y - this.dyingT * 8, dt, 0, 0, this.mansion.camBounds);
     if (this.dyingT > 4.2) {
       this.screen = 'death';
       this.deathScreenT = 0;
@@ -1283,7 +1376,7 @@ export class Game {
     this.mansion.update(dt, this);
     this.player.update(dt, this);
     this.player.anim(dt);
-    this.renderer.followCamera(this.player.x, this.player.y, dt, 0, 0, { x: 20, y: 10, w: 1240, h: 1520 });
+    this.renderer.followCamera(this.player.x, this.player.y, dt, 0, 0, this.mansion.camBounds);
     if (this.dawnT > 5.6) {
       this.screen = 'victory';
       this.victoryScreenT = 0;
@@ -1571,7 +1664,8 @@ export class Game {
       const seed = i * 37.1;
       const room = this.mansion.findRoom(p.x, p.y);
       if (room === ROOM.OUTSIDE) break;
-      const rm = this.mansion.rooms[room];
+      const rm = this.mansion.room(room);
+      if (!rm) break;
       const x = rm.x + ((seed * 7.3 + this.now * (6 + i % 5)) % rm.w);
       const y = rm.y + ((seed * 3.7 + Math.sin(this.now * 0.4 + i) * 40 + rm.h * 0.5) % rm.h);
       if (!r.isVisible(x, y, 40)) continue;
@@ -1595,7 +1689,7 @@ export class Game {
       const inA = clamp(m.t / 0.5, 0, 1);
       const outA = clamp((m.life - m.t) / 0.8, 0, 1);
       const a = inA * outA;
-      const tone = m.tone === 'danger' ? '#e2685c' : m.tone === 'warm' ? '#e0c48a' : m.tone === 'calm' ? '#a8b0c0' : '#cfc6b0';
+      const tone = m.tone === 'danger' ? '#e2685c' : m.tone === 'gold' ? '#e0c070' : m.tone === 'warm' ? '#e0c48a' : m.tone === 'calm' ? '#a8b0c0' : '#cfc6b0';
       // wrap to the viewport — a 390px phone must read every whisper too
       const baseLines = String(m.text).split('\n');
       const fontLine = `500 ${m.whisper ? 15 : 14}px ${m.whisper ? 'Georgia, serif' : '"Segoe UI", Roboto, sans-serif'}`;
@@ -1725,7 +1819,11 @@ export class Game {
       else if (this.screen === 'paused') this.togglePause(false);
     }
     if (!input.keys.pause) this._pauseHeld = false;
-    const inMenu = this.screen !== 'playing' && this.screen !== 'dying' && this.screen !== 'dawn' && this.screen !== 'intro';
+    if (this.screen === 'intro') {
+      if (input.uiTap) { this._introTap = true; input.uiTap = null; }
+      return;
+    }
+    const inMenu = this.screen !== 'playing' && this.screen !== 'dying' && this.screen !== 'dawn';
     if (!inMenu) { this.uiIndex = 0; input.uiTap = null; return; }  // taps spent during play must not pop a menu button later
     // keyboard navigation
     if (input.keys.up && !this._navUp) { this.uiIndex = Math.max(0, this.uiIndex - 1); this.usingKeyboard = true; this.audio.play('uiHover', { vol: 0.3 }); }
@@ -1753,7 +1851,5 @@ export class Game {
     if (!input.keys.confirm) this._confirmHeld = false;
   }
 }
-
-
 
 function dtSafe(game) { return game.dt; }

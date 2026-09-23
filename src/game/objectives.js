@@ -89,6 +89,48 @@ export const GOALS = [
     progress: (g, st) => (st.flags.stalkerKilled ? 1 : 0),
     reward: { shards: 30, blood: 14 },
   },
+  {
+    id: 'firstMinute', label: 'THE FIRST MINUTE', hint: 'hold the servant door, or feed',
+    par: (g) => {
+      const door = g.mansion.entranceById('diningDoor');
+      const held = door && !door.broken && door.hp / door.hpMax >= 0.5;
+      return g.time >= 50 && (held || g.stats.kills >= 1);
+    },
+    progress: (g) => {
+      const door = g.mansion.entranceById('diningDoor');
+      const held = door ? clamp((door.hp / door.hpMax) / 0.5, 0, 1) : 0;
+      const fed = clamp(g.stats.kills, 0, 1);
+      return clamp(Math.max(held, fed) * 0.75 + clamp(g.time / 50, 0, 1) * 0.25, 0, 1);
+    },
+    reward: { shards: 18, blood: 10 },
+    pinned: true,
+  },
+  {
+    id: 'wings', label: 'LEARN THE HOUSE', hint: 'set foot in four rooms',
+    par: (g) => (g.stats.roomsVisited || 0) >= 4,
+    progress: (g) => clamp((g.stats.roomsVisited || 0) / 4, 0, 1),
+    reward: { shards: 16, planks: 1 },
+  },
+  {
+    id: 'scullery', label: 'THE WEAK DOOR', hint: 'kitchen door still shut at 2:00',
+    par: (g) => {
+      const door = g.mansion.entranceById('kitchenDoor');
+      return g.time >= 120 && door && !door.broken;
+    },
+    progress: (g) => {
+      const door = g.mansion.entranceById('kitchenDoor');
+      if (!door) return 0;
+      return clamp((door.broken ? 0 : door.hp / door.hpMax) * clamp(g.time / 120, 0.2, 1), 0, 1);
+    },
+    reward: { shards: 22, planks: 1 },
+  },
+  {
+    id: 'ward', label: 'LIGHT THE STUDY', hint: 'the lamp holds them, briefly',
+    event: 'wardLit',
+    par: (g, st) => !!st.flags.wardLit,
+    progress: (g, st) => (st.flags.wardLit ? 1 : 0),
+    reward: { shards: 14, blood: 8 },
+  },
 ];
 
 const eastGlass = (game) => game.mansion.entrances.filter((e) => e.id === 'glassNorth' || e.id === 'glassEast' || e.id === 'chapelWindow');
@@ -116,7 +158,9 @@ export class Objectives {
     this.completed = new Set();
     const seed = game.runSeed ?? game.time ?? 1;
     const pick = [];
-    const pool = [...GOALS];
+    const pool = GOALS.filter((g) => !g.pinned);
+    const pinned = GOALS.find((g) => g.pinned);
+    if (pinned) pick.push(pinned);
     let r = (seed * 2654435761) % 4294967296;
     const rnd = () => ((r = (r * 1664525 + 1013904223) >>> 0) / 4294967296);
     while (pick.length < GOALS_PER_NIGHT && pool.length) {
@@ -133,6 +177,7 @@ export class Objectives {
     if (evt === 'knockAnswered') this.flags.knockAnswered = game.time;
     if (evt === 'drank') this.flags.drank = true;
     if (evt === 'stalkerKilled') this.flags.stalkerKilled = true;
+    if (evt === 'wardLit') this.flags.wardLit = true;
   }
 
   update(dt, game) {

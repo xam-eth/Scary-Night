@@ -35,6 +35,8 @@ export const ROOM = {
   BASEMENT: 'basement',
   CONSERV: 'conservatory',
   CHAPEL: 'chapel',
+  KITCHEN: 'kitchen',
+  STUDY: 'study',
   OUTSIDE: 'outside',
 };
 
@@ -42,7 +44,9 @@ const WALL_T = 26;
 
 export class Mansion {
   constructor() {
-    this.bounds = { x: -340, y: -340, w: 2800, h: 2300 };
+    this.bounds = { x: -540, y: -520, w: 3140, h: 2480 };
+    // Camera must be able to follow into the new wings, not stop at the old hall.
+    this.camBounds = { x: -460, y: -420, w: 2860, h: 2020 };
     this.solids = [];          // {x,y,w,h,type,solid}
     this.furniture = [];
     this.props = [];
@@ -81,7 +85,11 @@ export class Mansion {
     // and the Chapel (an altar light the house itself seems to respect).
     const CONSERV = this.rooms.conserv = { id: ROOM.CONSERV, name: 'CONSERVATORY', x: 1746, y: 60, w: 554, h: 580, floor: 'glass', dark: 0.42 };
     const CHAPEL = this.rooms.chapel = { id: ROOM.CHAPEL, name: 'CHAPEL', x: 1793, y: 806, w: 507, h: 694, floor: 'tile', dark: 0.68 };
-    this.roomList = [DINING, LIBRARY, HALL, BASEMENT, CONSERV, CHAPEL];
+    // West scullery: a weak door and a larder. You cannot watch it from the hall.
+    const KITCHEN = this.rooms.kitchen = { id: ROOM.KITCHEN, name: 'KITCHEN', x: -300, y: 90, w: 354, h: 500, floor: 'stone', dark: 0.7 };
+    // North of the library: a lamp that can hold them, and a window that cannot.
+    const STUDY = this.rooms.study = { id: ROOM.STUDY, name: 'STUDY', x: 980, y: -280, w: 720, h: 320, floor: 'wood', dark: 0.66 };
+    this.roomList = [DINING, LIBRARY, HALL, BASEMENT, CONSERV, CHAPEL, KITCHEN, STUDY];
 
     /* ---- outer + inner walls ----
      * gaps = [[start,end,name]] along the wall's axis, turned into entrances below.
@@ -91,12 +99,12 @@ export class Mansion {
 
     // Dining room shell
     H(54, 886, 40, [[340, 470, 'diningWindow'], [640, 760, 'diningDoor']]);   // north
-    V(14, 666, 54, []);                                                        // west
+    V(14, 666, 54, [[250, 390, null]]);                                        // west — passage into the kitchen
     H(54, 886, 640, [[300, 462, null]]);                                       // south (passage to hall)
     V(40, 666, 860, []);                                                       // east (party wall)
 
     // Library shell
-    H(914, 1746, 40, []);                                                      // north
+    H(914, 1746, 40, [[1510, 1650, null]]);                                    // north — passage into the study, east of the shelves
     V(14, 666, 914, []);                                                       // west (party wall)
     H(914, 1746, 640, [[1024, 1164, null]]);                                   // south (passage to hall)
     V(40, 666, 1720, [[262, 424, null], [500, 600, null]]);                   // east — the gothic window now opens INSIDE, into the glass house
@@ -123,6 +131,15 @@ export class Mansion {
     H(1246, 2320, 794, []);                                                    // north
     H(1246, 1806, 1500, [[1400, 1516, 'cellarDoor']]);                         // south
     V(794, 1526, 1780, [[1058, 1180, null]]);                                  // east → chapel passage
+
+    // Kitchen shell — west of the dining room. The west door is the sacrifice door.
+    H(-326, 67, 64, [[-160, -40, 'kitchenWindow']]);
+    V(38, 616, -326, [[240, 360, 'kitchenDoor']]);
+    H(-326, 67, 616, []);
+    // Study shell — north of the library. One glass window, no second exit.
+    H(954, 1726, -306, [[1240, 1380, 'studyWindow']]);
+    V(-332, 66, 954, []);
+    V(-332, 66, 1726, []);
 
     // passage side walls (make passages read as corridors)
     H(280, 300, 640, []); H(462, 482, 640, []);   // dining passage shoulders
@@ -155,6 +172,10 @@ export class Mansion {
     this.glassEast = E(this.makeWindow('glassEast', 'PANE WALL', 240, 420, 2320, 'v', 'east', ROOM.CONSERV));
     this.chapelDoor = E(this.makeDoor('chapelDoor', 'CHAPEL DOOR', 1960, 2086, 1500, 'h', 'south', ROOM.CHAPEL));
     this.chapelWindow = E(this.makeWindow('chapelWindow', 'ROSE WINDOW', 980, 1140, 2320, 'v', 'east', ROOM.CHAPEL));
+    this.kitchenDoor = E(this.makeDoor('kitchenDoor', 'KITCHEN DOOR', 240, 360, -326, 'v', 'west', ROOM.KITCHEN));
+    this.kitchenDoor.hp = this.kitchenDoor.hpMax = this.kitchenDoor.baseHpMax = 78;
+    this.kitchenWindow = E(this.makeWindow('kitchenWindow', 'SCULLERY WINDOW', -160, -40, 64, 'h', 'north', ROOM.KITCHEN));
+    this.studyWindow = E(this.makeWindow('studyWindow', 'STUDY WINDOW', 1240, 1380, -306, 'h', 'north', ROOM.STUDY));
     // the old gothic window is now an interior arch between library and glass house
     this.libraryArch = { x: 1720, y: 343, w: WALL_T, h: 162 };
 
@@ -165,6 +186,8 @@ export class Mansion {
       { a: ROOM.BASEMENT, b: ROOM.HALL, x: 1240, y: 1130, r: 58 },
       { a: ROOM.LIBRARY, b: ROOM.CONSERV, x: 1733, y: 550, r: 62 },
       { a: ROOM.BASEMENT, b: ROOM.CHAPEL, x: 1800, y: 1119, r: 62 },
+      { a: ROOM.KITCHEN, b: ROOM.DINING, x: 54, y: 320, r: 58 },
+      { a: ROOM.STUDY, b: ROOM.LIBRARY, x: 1580, y: 40, r: 58 },
     ];
 
     this.furnish();
@@ -183,10 +206,10 @@ export class Mansion {
    * ================================================================= */
   buildNav() {
     this.navCell = 40;
-    this.navX0 = -240;
-    this.navY0 = -260;
-    this.navX1 = 2460;
-    this.navY1 = 1820;
+    this.navX0 = -500;
+    this.navY0 = -480;
+    this.navX1 = 2520;
+    this.navY1 = 1880;
     this.navW = Math.ceil((this.navX1 - this.navX0) / this.navCell);
     this.navH = Math.ceil((this.navY1 - this.navY0) / this.navCell);
     this.nav = new Uint8Array(this.navW * this.navH);
@@ -300,7 +323,7 @@ export class Mansion {
 
   /** A walking loop around the outside of the mansion. */
   buildRing() {
-    const x0 = -170, y0 = -190, x1 = 2420, y1 = 1720;
+    const x0 = -480, y0 = -460, x1 = 2480, y1 = 1780;
     const step = 250;
     const pts = [];
     for (let x = x0; x < x1; x += step) pts.push({ x, y: y0 });
@@ -439,12 +462,15 @@ export class Mansion {
     this.addP('cobweb', 866, 70, { room: R.dining.id });
 
     /* ---------- LIBRARY ---------- */
-    // bookshelves create lanes (narrow corridors)
+    // bookshelves create lanes. The south pair is short so the study door
+    // can cross to the hall passage instead of dead-ending behind the desk.
     for (let i = 0; i < 4; i++) this.addF(980 + i * 150, 80, 60, 230, 'shelf', { room: R.library.id });
-    for (let i = 0; i < 3; i++) this.addF(980 + i * 150, 420, 60, 200, 'shelf', { room: R.library.id });
-    this.addF(1560, 80, 60, 200, 'shelf', { room: R.library.id });
+    this.addF(980, 420, 60, 200, 'shelf', { room: R.library.id });
+    this.addF(1130, 560, 60, 70, 'shelf', { room: R.library.id });
+    this.addF(1280, 560, 60, 70, 'shelf', { room: R.library.id });
+    this.addF(1668, 120, 48, 160, 'shelf', { room: R.library.id });
     this.addF(1000, 300, 420, 76, 'desk', { room: R.library.id });
-    this.addF(1460, 400, 120, 120, 'armchair', { room: R.library.id });
+    this.addF(1320, 470, 90, 80, 'armchair', { room: R.library.id });
     this.addF(1640, 430, 70, 150, 'cabinet', { room: R.library.id });
     this.addP('fireplace', 1120, 646, { room: R.library.id, w: 220, h: 70 });
     this.addP('carpet', 1200, 480, { w: 420, h: 300, color: 'dark', seed: 13, room: R.library.id });
@@ -505,6 +531,32 @@ export class Mansion {
     this.addP('urn', 1820, 860, { room: R.chapel.id });
     this.addP('bones', 2250, 1420, { room: R.chapel.id });
     this.addP('cobweb', 2290, 830, { room: R.chapel.id });
+
+    /* ---------- KITCHEN ----------
+     * Counters make a lane. The larder is the refill. The west door is thin
+     * on purpose: boarding it is a choice, not a default. */
+    this.addF(-250, 140, 160, 54, 'cabinet', { room: R.kitchen.id });
+    this.addF(-80, 140, 110, 54, 'cabinet', { room: R.kitchen.id });
+    this.addF(-260, 430, 70, 70, 'barrel', { room: R.kitchen.id });
+    this.addF(-160, 470, 70, 70, 'barrel', { room: R.kitchen.id });
+    this.addF(-40, 400, 70, 140, 'sideTable', { room: R.kitchen.id });
+    this.addP('larder', -150, 300, { room: R.kitchen.id, w: 86, h: 54 });
+    this.addP('candleStand', -220, 200, { room: R.kitchen.id, light: true });
+    this.addP('candleStand', -60, 480, { room: R.kitchen.id, light: true, dim: true });
+    this.addP('cobweb', -290, 110, { room: R.kitchen.id });
+
+    /* ---------- STUDY ----------
+     * One desk, one lamp. Lighting the ward slows whatever is in the circle.
+     * The north window is the price of using it. */
+    this.addF(1040, -220, 200, 70, 'desk', { room: R.study.id });
+    this.addF(1500, -230, 50, 180, 'shelf', { room: R.study.id });
+    this.addF(1120, -80, 90, 90, 'armchair', { room: R.study.id });
+    this.addP('ward', 1320, -120, { room: R.study.id });
+    this.addP('deskLamp', 1180, -180, { room: R.study.id, light: true });
+    this.addP('candleStand', 1560, -80, { room: R.study.id, light: true, dim: true });
+    this.addP('books', 1080, -190, { room: R.study.id });
+    this.addP('portrait', 1400, -292, { room: R.study.id });
+    this.studyWard = { x: 1320, y: -120, r: 150, until: 0, readyAt: 0 };
   }
 
   makeLights() {
@@ -544,6 +596,8 @@ export class Mansion {
     L({ x: this.frontDoor.inside.x, y: this.frontDoor.inside.y, r: 190, i: 0.35, color: [140, 175, 235], flick: 0, room: ROOM.HALL, type: 'moon' });
     // basement: one weak lamp, a lot of dark
     L({ x: 1500, y: 1160, r: 210, i: 0.3, color: [255, 160, 90], flick: 0.6, room: ROOM.BASEMENT, type: 'lamp' });
+    L({ x: -150, y: 320, r: 220, i: 0.45, color: [255, 170, 110], flick: 0.2, room: ROOM.KITCHEN, type: 'lamp' });
+    L({ x: 1320, y: -120, r: 200, i: 0.4, color: [210, 190, 150], flick: 0.08, room: ROOM.STUDY, type: 'lamp' });
   }
 
   makeSpawns() {
@@ -559,6 +613,9 @@ export class Mansion {
     S(2023, 1740, 'chapelDoor'); S(2160, 1690, 'chapelDoor');
     S(2440, 950, 'chapelWindow'); S(2440, 1250, 'chapelWindow');
     S(1460, 1750, 'cellarDoor'); S(1220, 1690, 'cellarDoor'); S(1700, 1700, 'cellarDoor');
+    S(-460, 300, 'kitchenDoor'); S(-450, 200, 'kitchenDoor'); S(-440, 420, 'kitchenDoor');
+    S(-100, -80, 'kitchenWindow');
+    S(1310, -430, 'studyWindow'); S(1180, -420, 'studyWindow'); S(1460, -410, 'studyWindow');
     // dark wanderers (behind the house, in the fog)
     S(-250, 300, null); S(2520, 700, null); S(900, 2050, null); S(300, 2050, null); S(2350, 1900, null);
   }
@@ -691,29 +748,51 @@ export class Mansion {
     }
     return ROOM.OUTSIDE;
   }
-  room(id) { return this.rooms[id]; }
+  room(id) {
+    if (!id) return null;
+    if (this.rooms[id]) return this.rooms[id];
+    for (const r of this.roomList) if (r.id === id) return r;
+    return null;
+  }
   roomCenter(id) {
-    const r = this.rooms[id];
-    if (!r) return { x: 0, y: 0 };
+    const r = this.room(id);
+    if (!r) return null;
     return { x: r.x + r.w / 2, y: r.y + r.h / 2 };
   }
 
-  /** Route between rooms (through the hall). Returns list of waypoints. */
+  /** Route between rooms along the passage graph. Returns waypoints. */
   route(fromRoom, toRoom) {
     if (fromRoom === toRoom || fromRoom === ROOM.OUTSIDE || toRoom === ROOM.OUTSIDE) return [];
-    const path = [];
-    const hub = ROOM.HALL;
-    if (fromRoom !== hub) {
-      const p = this.passages.find((pp) => (pp.a === fromRoom && pp.b === hub) || (pp.b === fromRoom && pp.a === hub));
-      if (p) path.push({ x: p.x, y: p.y });
-    }
-    if (toRoom !== hub) {
-      const p = this.passages.find((pp) => (pp.a === toRoom && pp.b === hub) || (pp.b === toRoom && pp.a === hub));
-      if (p) path.push({ x: p.x, y: p.y });
+    const adj = new Map();
+    const link = (a, b, p) => {
+      if (!adj.has(a)) adj.set(a, []);
+      adj.get(a).push({ to: b, p });
+    };
+    for (const p of this.passages) { link(p.a, p.b, p); link(p.b, p.a, p); }
+    const q = [fromRoom];
+    const prev = new Map([[fromRoom, null]]);
+    while (q.length) {
+      const cur = q.shift();
+      if (cur === toRoom) break;
+      for (const e of adj.get(cur) || []) {
+        if (prev.has(e.to)) continue;
+        prev.set(e.to, { room: cur, p: e.p });
+        q.push(e.to);
+      }
     }
     const c = this.roomCenter(toRoom);
-    path.push(c);
-    return path;
+    if (!prev.has(toRoom)) return c ? [c] : [];
+    const pts = [];
+    let cur = toRoom;
+    while (cur && cur !== fromRoom) {
+      const step = prev.get(cur);
+      if (!step) break;
+      pts.push({ x: step.p.x, y: step.p.y });
+      cur = step.room;
+    }
+    pts.reverse();
+    if (c) pts.push(c);
+    return pts;
   }
 
   entranceById(id) { return this.entrances.find((e) => e.id === id); }
@@ -786,12 +865,12 @@ export class Mansion {
   /* ================= baked floor + walls ================= */
 
   bake() {
-    const W = 2800, H = 2000;
+    const W = 3400, H = 2400;
     const c = document.createElement('canvas');
     c.width = W; c.height = H;
     const g = c.getContext('2d');
     this.floorCanvas = c;
-    this.bakeOx = -300; this.bakeOy = -300;   // offset: world (-300,-300) maps to (0,0)
+    this.bakeOx = -520; this.bakeOy = -500;   // world (-520,-500) maps to (0,0)
     g.translate(-this.bakeOx, -this.bakeOy);
 
     // ---- exterior ground: dark gravel + dead grass
@@ -1180,6 +1259,34 @@ export class Mansion {
           }
           ctx.fillStyle = '#3a3c46';
           ctx.fillRect(-w / 2 - 4, -6, 8, 12); ctx.fillRect(w / 2 - 4, -6, 8, 12);
+          ctx.restore();
+          break;
+        }
+        case 'larder': {
+          ctx.save(); ctx.translate(p.x, p.y);
+          ctx.fillStyle = '#3a2a1c';
+          ctx.fillRect(-40, -22, 80, 44);
+          ctx.strokeStyle = 'rgba(180,140,80,0.35)'; ctx.strokeRect(-40, -22, 80, 44);
+          ctx.fillStyle = game.larderUsed ? '#2a140f' : '#6a1020';
+          ctx.fillRect(-28, -8, 16, 18); ctx.fillRect(-6, -8, 16, 18); ctx.fillRect(16, -8, 12, 18);
+          ctx.restore();
+          break;
+        }
+        case 'ward': {
+          const lit = game.mansion.studyWard && game.time < game.mansion.studyWard.until;
+          ctx.save(); ctx.translate(p.x, p.y);
+          ctx.fillStyle = '#2a2418';
+          ctx.beginPath(); ctx.arc(0, 0, 16, 0, TAU); ctx.fill();
+          ctx.fillStyle = lit ? '#e6c27a' : '#6a5a40';
+          ctx.beginPath(); ctx.arc(0, -6, 6, 0, TAU); ctx.fill();
+          if (lit) {
+            ctx.globalCompositeOperation = 'screen';
+            const rg = ctx.createRadialGradient(0, 0, 8, 0, 0, 150);
+            rg.addColorStop(0, 'rgba(230,200,130,0.28)');
+            rg.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = rg;
+            ctx.beginPath(); ctx.arc(0, 0, 150, 0, TAU); ctx.fill();
+          }
           ctx.restore();
           break;
         }

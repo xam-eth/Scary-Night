@@ -139,6 +139,11 @@ export class Enemy {
       const ad = Math.hypot(this.x - altar.x, this.y - altar.y);
       if (ad < altar.r) speed *= lerp(0.45, 1, clamp((ad - altar.r * 0.3) / (altar.r * 0.7), 0, 1));
     }
+    const ward = game.mansion.studyWard;
+    if (ward && game.time < ward.until) {
+      const wd = Math.hypot(this.x - ward.x, this.y - ward.y);
+      if (wd < ward.r) speed *= lerp(0.5, 1, clamp(wd / ward.r, 0, 1));
+    }
     // gentle wall-following: nudge the desired angle if the last frame was blocked
     let ang = a;
     if (this.stuckT > 0.25) ang += Math.sin(game.time * 2.2 + this.id) * 0.9 * clamp(this.stuckT, 0, 1);

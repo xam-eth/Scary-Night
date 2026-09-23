@@ -5,9 +5,10 @@ house, and the Blood Market (IAP skeleton).*
 
 **Survive until dawn.**
 
-A 2D top-down vampire survival horror game about psychological tension, defensive
+A 3/4 vampire survival horror game about psychological tension, defensive
 decision-making, resource management and sound. One night lasts five minutes: you
-start at 00:00 and you only have to still be alive at 05:00.
+start at 00:00 and you only have to still be alive at 05:00. You wake hungry, and
+the servant door is already shaking — bar it, or open it and feed.
 
 You are not a soldier. You do not have to kill anything.
 

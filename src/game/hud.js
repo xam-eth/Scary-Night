@@ -37,9 +37,12 @@ function drawGoals(game, ctx, w, h) {
   const st = game.objectives && game.objectives.hudState();
   if (!st) return;
   const narrow = w < 620;
-  // phones have no spare width beside the clock plate — the panel moves
-  // below it and gets the full screen width instead of a clipped sliver
-  const x = 14, y = narrow ? h * 0.125 : 16;
+  // The clock plate owns the top centre. If the goal panel would crawl into
+  // it (phones, short landscape), drop the list under the rail instead.
+  const x = 14;
+  const clockClear = h * 0.055 + 52;
+  const collide = x + 190 > w / 2 - 120;
+  const y = (narrow || collide) ? Math.max(clockClear, 78) : 16;
   ctx.save();
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
@@ -63,11 +66,7 @@ function drawGoals(game, ctx, w, h) {
     ctx.fillRect(x, ly + 7, maxW * 0.5, 2.5);
     ctx.fillStyle = 'rgba(200,160,74,0.6)';
     ctx.fillRect(x, ly + 7, maxW * 0.5 * g.progress, 2.5);
-    if (g.progress >= 0.999) {
-      ctx.fillStyle = 'rgba(200,160,74,0.9)';
-      ctx.fillText('ALMOST', x + maxW * 0.5 + 8, ly + 8);
-    }
-    ly += 24;
+    ly += 22;
   }
   if (st.bank > 0) {
     ctx.font = `400 9px ${MONO}`;
@@ -279,20 +278,23 @@ function drawDoorStatus(game, ctx, w, h) {
   const doors = game.mansion.doors;
   const shown = doors.filter((d) => d.hp < d.hpMax - 1 || d.attackers > 0 || d.broken || game.time - (d.lastTouched || -99) < 6);
   if (!shown.length) return;
-  const x = w - 34;
-  let y = 96;
+  const rank = (d) => (d.attackers > 0 ? 4 : 0) + (d.broken ? 2 : 0) + (1 - d.hp / Math.max(1, d.hpMax));
+  shown.sort((a, b) => rank(b) - rank(a));
+  const list = shown.slice(0, 4);
+  const x = w - 18;
+  let y = Math.max(88, h * 0.14);
   ctx.save();
   ctx.textAlign = 'right';
   ctx.textBaseline = 'middle';
   ctx.font = `500 11px ${SANS}`;
   setLetter(ctx, 2);
-  for (const d of shown) {
+  const barW = Math.min(76, w * 0.16);
+  for (const d of list) {
     const pct = clamp(d.hp / d.hpMax, 0, 1);
-    const barW = 76, barH = 5;
+    const barH = 5;
     const bw = x - barW;
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
     ctx.fillRect(bw - 1, y - 1, barW + 2, barH + 2);
-    const dmg = 1 - pct;
     const col = d.broken ? '#2a2a30' : pct > 0.6 ? '#6a6a52' : pct > 0.3 ? '#8a6a2a' : '#9c1a26';
     ctx.fillStyle = col;
     ctx.fillRect(bw, y, barW * pct, barH);
@@ -304,7 +306,10 @@ function drawDoorStatus(game, ctx, w, h) {
     }
     ctx.fillStyle = d.broken ? 'rgba(200,80,80,0.85)' : 'rgba(190,180,165,0.75)';
     const bear = bearing(game, d.x, d.y);
-    ctx.fillText((d.broken ? `${d.name} — BROKEN` : d.name) + `  ${bear.card}`, bw - 22, y + 2);
+    let name = d.broken ? `${d.name} BROKEN` : d.name;
+    const maxName = Math.max(72, bw - 36);
+    while (ctx.measureText(name + '  ' + bear.card).width > maxName && name.length > 4) name = name.slice(0, -1);
+    ctx.fillText(name + `  ${bear.card}`, bw - 22, y + 2);
     // wedge points the way to run — letters alone are a translation step
     ctx.save();
     ctx.translate(bw - 12, y + 2);

@@ -325,15 +325,19 @@ export class Director {
     let cands = doors.filter((e) => !e.broken);
     if (!cands.length) cands = doors;
     const p = game.player;
-    // prefer doors the player is near-ish (so they can act) but not right on top
-    const scored = cands.map((e) => {
-      const d = dist(e.x, e.y, p.x, p.y);
-      let s = d < 900 ? 1 : 0.2;
-      if (d < 120) s *= 0.4;
-      if (e.id === this.lastKnockDoor) s *= 0.35;
-      return { e, s: s * rand(0.6, 1.4) };
-    }).sort((a, b) => b.s - a.s);
-    const ent = scored[0].e;
+    let ent = opts.entranceId ? game.mansion.entranceById(opts.entranceId) : null;
+    if (!ent) {
+      // prefer doors the player is near-ish (so they can act) but not right on top
+      const scored = cands.map((e) => {
+        const d = dist(e.x, e.y, p.x, p.y);
+        let s = d < 900 ? 1 : 0.2;
+        if (d < 120) s *= 0.4;
+        if (e.id === this.lastKnockDoor) s *= 0.35;
+        return { e, s: s * rand(0.6, 1.4) };
+      }).sort((a, b) => b.s - a.s);
+      ent = scored[0] && scored[0].e;
+    }
+    if (!ent) return null;
 
     // weighted outcome table, shifted by how late it is
     let table = KNOCKS.outcomes.map((o) => {
@@ -348,17 +352,23 @@ export class Director {
     let r = Math.random() * total, outcome = table[0];
     for (const o of table) { r -= o.w; if (r <= 0) { outcome = o; break; } }
 
+    if (opts.outcome) {
+      const forced = KNOCKS.outcomes.find((o) => o.id === opts.outcome) || { id: opts.outcome, label: opts.outcome };
+      outcome = forced;
+    }
+    const wait = opts.wait ?? rand(KNOCKS.timeToAnswer[0], KNOCKS.timeToAnswer[1]);
     this.knock = {
       entranceId: ent.id,
       outcome: outcome.id,
       label: outcome.label,
       t: game.time,
-      deadline: game.time + rand(KNOCKS.timeToAnswer[0], KNOCKS.timeToAnswer[1]),
+      deadline: game.time + wait,
       opened: false,
       resolved: false,
       knockCount: 0,
-      nextKnockAt: game.time + 0.2,
-      known: false,
+      nextKnockAt: game.time + 0.15,
+      known: !!opts.known,
+      mustEnter: !!opts.mustEnter,
     };
     this.lastKnock = game.time;
     this.lastKnockDoor = ent.id;
@@ -449,14 +459,23 @@ export class Director {
       // ignored for too long: usually safe, sometimes very much not
       k.resolved = true;
       this.knock = null;
-      const impatient = k.outcome !== 'nothing' && k.outcome !== 'gift' && chance(0.42);
+      const impatient = k.mustEnter || (k.outcome !== 'nothing' && k.outcome !== 'gift' && chance(0.42));
       if (impatient) {
         if (k.outcome === 'fake') {
           game.showMessage('THE KNOCKING STOPS.', { tone: 'calm' });
           game.audio.play('creak', { x: e.x, y: e.y, cam: game.renderer.cam, vol: 0.8 });
         } else {
-          const spawned = this.spawnWave(game, [k.outcome], { entranceId: e.id });
-          game.showMessage('WHATEVER IT WAS, IT STOPPED WAITING.', { tone: 'danger' });
+          const spawned = this.spawnWave(game, [k.outcome], { entranceId: e.id, reveal: !!k.mustEnter });
+          if (k.mustEnter && spawned[0]) {
+            spawned[0].x = e.outside.x;
+            spawned[0].y = e.outside.y;
+            spawned[0].state = 'approach';
+            spawned[0].seenPlayer = spawned[0].type.loseSight;
+            spawned[0].lastKnown = { x: p.x, y: p.y };
+            e.hp = Math.min(e.hp, e.hpMax * 0.42);
+            e.attackers = Math.max(e.attackers || 0, 1);
+          }
+          game.showMessage(k.mustEnter ? 'IT IS COMING THROUGH THE SERVANT DOOR.' : 'WHATEVER IT WAS, IT STOPPED WAITING.', { tone: 'danger' });
         }
       } else {
         game.showMessage('THE KNOCKING STOPS.', { tone: 'calm' });

@@ -330,12 +330,12 @@ export function drawMenu(game, ctx, w, h) {
   // Short landscape phones used to push MAIN-equivalent rows off the bottom.
   // Fit the stack between the title and the footer instead of hoping h*0.41 works.
   const nButtons = 5;
-  const footerH = 58;
-  const titleBottom = h * 0.2 + clamp(86, 64, 110);
-  const startY = Math.max(titleBottom, h < 520 ? h * 0.30 : h * 0.38);
-  const avail = Math.max(160, h - footerH - startY);
-  const gap = avail < nButtons * 48 ? 6 : 10;
-  const bh = clamp((avail - gap * (nButtons - 1)) / nButtons, 34, 50);
+  const footerH = 78;
+  const titleBottom = h * 0.18 + 72;
+  const startY = Math.max(titleBottom, h < 520 ? h * 0.28 : h * 0.36);
+  const avail = Math.max(120, h - footerH - startY);
+  const gap = avail < nButtons * 40 ? 4 : 8;
+  const bh = clamp((avail - gap * (nButtons - 1)) / nButtons, 28, 48);
   const bw = clamp(w * 0.22, 188, 300);
   const bx = w / 2 - bw / 2;
   let by = startY;
@@ -407,8 +407,8 @@ export function drawIntro(game, ctx, w, h) {
   };
   const bodyFont = `400 ${15 * sc}px ${SANS}`;
   const body = [
-    ...wrap('You are a vampire. You cannot cross the threshold.', bodyFont),
-    ...wrap('Something outside wants in.', bodyFont),
+    ...wrap('You woke hungry. The servant door is already shaking.', bodyFont),
+    ...wrap('Bar it, or open it and feed. You cannot do both.', bodyFont),
   ];
   const draw = (text, { f, style, ls, y, c }) => {
     ctx.font = `400 ${f}px ${style}`;
@@ -420,14 +420,14 @@ export function drawIntro(game, ctx, w, h) {
   let fy = 0.36;
   for (const b of body) { draw(b, { f: 15 * sc, style: SANS, ls: 2 * sc, y: fy, c: 'rgba(200,192,176,0.8)' }); fy += 0.042; }
   fy = Math.max(0.55, fy + 0.03);
-  draw('SURVIVE UNTIL DAWN.', { f: 24 * sc, style: SERIF, ls: 7 * sc, y: fy, c: '#c8a04a' });
+  draw('SURVIVE UNTIL DAWN.', { f: 22 * sc, style: SERIF, ls: 6 * sc, y: fy, c: '#c8a04a' });
   draw('00:00  →  05:00', { f: 20 * sc, style: MONO, ls: 4 * sc, y: fy + 0.06, c: 'rgba(220,214,198,0.9)' });
   const hintY = fy + 0.12;
   ctx.globalAlpha = a * 0.6;
   ctx.font = `400 12px ${SANS}`;
   if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
   ctx.fillStyle = 'rgba(190,182,168,0.9)';
-  ctx.fillText('BREATHE. LISTEN. REPAIR WHAT YOU CAN.', w / 2, h * hintY);
+  ctx.fillText('TAP TO WAKE', w / 2, h * hintY);
   ctx.restore();
 }
 
@@ -442,11 +442,11 @@ export function drawPause(game, ctx, w, h) {
   ctx.font = `400 34px ${SERIF}`;
   if ('letterSpacing' in ctx) ctx.letterSpacing = '10px';
   ctx.fillStyle = '#e8e0cc';
-  ctx.fillText('PAUSED', w / 2, h * 0.24);
+  const titleY = h * 0.2;
+  ctx.fillText('PAUSED', w / 2, titleY);
   ctx.restore();
 
-  const bw = 240, bh = 46;
-  let by = h * 0.36;
+  const bw = Math.min(240, w * 0.7);
   const items = [
     { label: 'RESUME', onClick: () => game.togglePause(false) },
     { label: 'RESTART NIGHT', onClick: () => game.beginNight() },
@@ -454,10 +454,15 @@ export function drawPause(game, ctx, w, h) {
     { label: 'HOW TO SURVIVE', onClick: () => game.setScreen('help', 'paused') }, // same black-hole as the SETTINGS row above
     { label: 'ABANDON', onClick: () => game.toMenu() },
   ];
+  const gap = h < 520 ? 4 : 8;
+  const bh = clamp((h * 0.62 - gap * (items.length - 1)) / items.length, 28, 46);
+  const stack = (bh + gap) * items.length - gap;
+  const centered = (h - stack) / 2;
+  let by = Math.max(titleY + 36, Math.min(centered, h - stack - 12));
   items.forEach((it, i) => {
     const r = uiButton(game, { x: w / 2 - bw / 2, y: by, w: bw, h: bh, label: it.label, onClick: it.onClick, small: true, accent: '#6a6a80' });
     buttonVisual(ctx, r.b, { active: r.hover || (game.usingKeyboard && game.uiIndex === i), label: it.label, small: true, accent: '#6a6a80' });
-    by += bh + 10;
+    by += bh + gap;
   });
 }
 
@@ -800,8 +805,8 @@ export function drawHelp(game, ctx, w, h) {
   const lines = [
     ['WHICH WAY.', 'Drag the left stick — she walks the way you push. The floor mark shows where the claw will go. WASD still works.'],
     ['YOU ARE NOT A SOLDIER.', 'You are a wounded predator in a locked house. You do not have to kill anything.'],
-    ['DOORS ARE YOUR LIFE.', 'Every entrance has durability. Hold FIX / R to repair. BOARD / B spends planks. The wedge says which way to run.'],
-    ['BLOOD IS EVERYTHING.', 'It drains with time, running and clawing. Damage costs blood. Kill or drink to refill it.'],
+    ['DOORS ARE YOUR LIFE.', 'You cannot hold every door. The kitchen door is weak on purpose. FIX repairs. BOARD spends planks.'],
+    ['BLOOD IS EVERYTHING.', 'It drains with time. The larder feeds you and calls the kitchen door. The study lamp and the altar only slow them.'],
     ['LISTEN.', 'A knock you cannot see leaves a chevron on the screen edge. It points at the door. It does not say what is there.'],
     ['DAWN IS AT 05:00.', 'Five minutes. Do not spend them fighting. Spend them surviving.'],
   ];
@@ -986,26 +991,32 @@ export function drawVictory(game, ctx, w, h) {
     ['ENEMIES DEFEATED', String(s.kills)],
     ['NEAREST OF DEATH', s.closestCall > 0 ? Math.round(s.closestCall * 100) + '% BLOOD' : '—'],
   ];
+  const gap = h < 640 ? 5 : 8;
+  const bh = h < 520 ? 36 : 46;
+  const buttonStack = (bh + gap) * 3 - gap;
+  const buttonTop = h - buttonStack - 12;
+  const rowH = h < 520 ? 18 : 34;
   ctx.save();
   ctx.globalAlpha = fade;
   const cx = w / 2;
-  let y = h * 0.40;
+  let y = Math.min(h * 0.38, buttonTop - rowH * rows.length - 36);
   ctx.textAlign = 'left';
   for (const [k, v] of rows) {
     ctx.font = `500 12px ${SANS}`;
     if ('letterSpacing' in ctx) ctx.letterSpacing = '4px';
     ctx.fillStyle = 'rgba(168,160,148,0.75)';
-    ctx.fillText(k, cx - 200, y);
+    const half = Math.min(200, w * 0.38);
+    ctx.fillText(k, cx - half, y);
     ctx.textAlign = 'right';
-    ctx.font = `400 19px ${MONO}`;
+    ctx.font = `400 ${w < 520 ? 14 : 19}px ${MONO}`;
     ctx.fillStyle = '#eae1c8';
-    ctx.fillText(v, cx + 200, y);
+    ctx.fillText(v, cx + half, y);
     ctx.textAlign = 'left';
     // dotted leader
     ctx.strokeStyle = 'rgba(140,132,118,0.18)';
     ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(cx - 40, y - 4); ctx.lineTo(cx + 40, y - 4); ctx.stroke();
-    y += 34;
+    y += rowH;
   }
   ctx.font = `500 13px ${SANS}`;
   if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
@@ -1017,25 +1028,25 @@ export function drawVictory(game, ctx, w, h) {
     ctx.font = `400 11px ${SANS}`;
     if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
     ctx.fillStyle = 'rgba(190,184,170,0.8)';
-    ctx.fillText(`GOALS ${done.length}/${game.lastNightGoals.length} — ` + game.lastNightGoals.map((g) => (g.state === 'done' ? '✓' : '·') + ' ' + g.label).join('   '), cx, y + 34);
+    const goalLine = w < 640
+      ? `GOALS ${done.length}/${game.lastNightGoals.length}`
+      : `GOALS ${done.length}/${game.lastNightGoals.length} — ` + game.lastNightGoals.map((g) => (g.state === 'done' ? '✓' : '·') + ' ' + g.label).join('   ');
+    ctx.fillText(goalLine, cx, Math.min(y + 28, buttonTop - 16));
   }
   ctx.restore();
 
   if (fade > 0.9) {
-    const bw = 220, bh = 46;
+    const bw = Math.min(220, w * 0.72);
     const items = [
       { label: 'UPGRADES', onClick: () => game.setScreen('upgrades', 'victory'), accent: '#a8833c' },
       { label: 'ANOTHER NIGHT', onClick: () => game.beginNight(), accent: '#a8833c' },
       { label: 'MAIN MENU', onClick: () => game.toMenu(), accent: '#6a6a80' },
     ];
-    // v1.0 (QA P0-2): anchor the stack to the bottom and compress to fit —
-    // 1280x720 and small landscape phones both land inside the viewport.
-    const gap = h < 640 ? 5 : 8;
-    let by = Math.min(h - (bh + gap) * items.length - 16, h * 0.74);
+    let by = buttonTop;
     items.forEach((it, i) => {
       const r = uiButton(game, { x: w / 2 - bw / 2, y: by, w: bw, h: bh, label: it.label, onClick: it.onClick, accent: it.accent, small: true });
       buttonVisual(ctx, r.b, { active: r.hover || (game.usingKeyboard && game.uiIndex === i), label: it.label, small: true, accent: it.accent });
-      by += bh + 8;
+      by += bh + gap;
     });
   }
 }
@@ -1045,9 +1056,10 @@ export function drawVictory(game, ctx, w, h) {
 export function drawTutorial(game, ctx, w, h) {
   if (game.save.tutorialSeen && !game.showTutorialHints) return;
   const t = game.time;
+  const touch = game.input && (game.input.touchSeen || w < 900);
   const hints = [
-    { at: 8, life: 7, text: 'HOLD SHIFT TO RUN · IT COSTS BLOOD', y: 0.62 },
-    { at: 16, life: 8, text: 'DRINK WHEN YOU CAN. THE HUNGER NEVER STOPS.', y: 0.62 },
+    { at: 14, life: 6, text: touch ? 'CLAW FEEDS YOU. DASH COSTS BLOOD.' : 'F CLAWS. SHIFT DASHES. BOTH COST BLOOD.' },
+    { at: 24, life: 6, text: 'YOU CANNOT HOLD EVERY DOOR. PICK ONE TO ABANDON.' },
   ];
   ctx.save();
   ctx.textAlign = 'center';
@@ -1056,12 +1068,23 @@ export function drawTutorial(game, ctx, w, h) {
     const dt = t - hnt.at;
     if (dt < 0 || dt > hnt.life) continue;
     const a = clamp(dt / 0.6, 0, 1) * clamp((hnt.life - dt) / 1.2, 0, 1);
-    ctx.globalAlpha = a * 0.8;
+    ctx.globalAlpha = a * 0.85;
     ctx.font = `500 12px ${SANS}`;
-    if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '1px';
     ctx.fillStyle = '#cfc4a8';
     ctx.shadowColor = 'rgba(0,0,0,0.9)'; ctx.shadowBlur = 8;
-    ctx.fillText(hnt.text, w / 2, h * hnt.y);
+    const maxW = w * 0.86;
+    const words = hnt.text.split(' ');
+    const lines = [];
+    let cur = '';
+    for (const word of words) {
+      const next = cur ? cur + ' ' + word : word;
+      if (ctx.measureText(next).width > maxW && cur) { lines.push(cur); cur = word; }
+      else cur = next;
+    }
+    if (cur) lines.push(cur);
+    const y0 = h * 0.22;
+    lines.forEach((ln, i) => ctx.fillText(ln, w / 2, y0 + i * 16));
   }
   ctx.restore();
 }
