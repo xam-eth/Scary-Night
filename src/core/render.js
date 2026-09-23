@@ -2,9 +2,9 @@
  * Camera, layered compositing, dynamic 2D lighting (multiply lightmap + additive glow),
  * particles, decals, fog and post-processing.
  *
- * The look: everything is drawn dark and cold, then light is *subtracted*. Warm light
- * (candles, fireplace, lanterns) is added back on top with screen blending. That one
- * trick does most of the heavy lifting for the gothic horror atmosphere.
+ * The look: rooms are painted as faded dusk, then a multiply lightmap shapes
+ * the pools. A screen wash lifts the black point so the house stays "terang
+ * pudar" — dim and washed, never a solid black void. Candles still glow warmer.
  */
 
 import { clamp, lerp, damp, TAU, rand, randInt, hash2 } from './util.js';
@@ -142,6 +142,15 @@ export class Renderer {
     };
   }
 
+  /** Inverse of the world camera (shake ignored — HUD cues must not jitter). */
+  worldToScreen(x, y) {
+    const c = this.cam;
+    return {
+      x: this.w / 2 + (x - c.x) * c.zoom,
+      y: this.h / 2 + (y - c.y) * c.zoom * this.tilt,
+    };
+  }
+
   /* ---------------- world drawing ---------------- */
   beginWorld() {
     const ctx = this.ctx, c = this.cam;
@@ -173,7 +182,8 @@ export class Renderer {
   /* ---------------- lighting ---------------- */
   lightBegin(ambient) {
     const lc = this.lightCtx;
-    const a = ambient ?? [120, 125, 140];  // v1.2: MUCH brighter (was [45,50,65], user still says 'hitam pekat')
+    // Faded dusk, not a black multiply. Callers should pass mansion.ambientFor.
+    const a = ambient ?? [164, 170, 184];
     lc.setTransform(1, 0, 0, 1, 0, 0);
     lc.globalCompositeOperation = 'source-over';
     lc.fillStyle = `rgb(${a[0]},${a[1]},${a[2]})`;
@@ -251,6 +261,16 @@ export class Renderer {
     ctx.globalCompositeOperation = 'multiply';
     ctx.imageSmoothingEnabled = true;
     ctx.drawImage(this.light, 0, 0, this.w, this.h);
+    // Multiply can only darken. Props painted near-black would still read
+    // as a void, so screen a cool dusk and lift the black point to "pudar".
+    const lift = this.fadeLift ?? 1;
+    if (lift > 0.02) {
+      ctx.globalCompositeOperation = 'screen';
+      ctx.globalAlpha = 0.26 * lift;
+      ctx.fillStyle = this.fadeColor || '#8490a4';
+      ctx.fillRect(0, 0, this.w, this.h);
+      ctx.globalAlpha = 1;
+    }
     ctx.restore();
   }
 
@@ -298,8 +318,8 @@ export class Renderer {
     // colour grade: cold pressure (multiply) + blood pulsing
     if (danger > 0.02 || lowBlood > 0.02) {
       ctx.globalCompositeOperation = 'multiply';
-      ctx.fillStyle = `rgba(${255 - danger * 60 | 0},${255 - danger * 90 | 0},${255 - danger * 40 | 0},1)`;
-      ctx.globalAlpha = clamp(danger * 0.5 + lowBlood * 0.4, 0, 0.75);
+      ctx.fillStyle = `rgba(${255 - danger * 36 | 0},${255 - danger * 64 | 0},${255 - danger * 24 | 0},1)`;
+      ctx.globalAlpha = clamp(danger * 0.26 + lowBlood * 0.16, 0, 0.34);
       ctx.fillRect(0, 0, this.w, this.h);
       ctx.globalAlpha = 1;
     }
@@ -316,11 +336,11 @@ export class Renderer {
     // heartbeat pulse ring + vignette breath
     const pulse = heartbeat;
     // vignette
-    const v = clamp(vignette + danger * 0.28 + lowBlood * 0.3 + pulse * 0.07, 0, 1.35);
-    const g2 = ctx.createRadialGradient(this.w / 2, this.h * 0.5, this.h * (0.30 - pulse * 0.02), this.w / 2, this.h * 0.5, this.h * (0.95));
+    const v = clamp(vignette + danger * 0.1 + lowBlood * 0.14 + pulse * 0.04, 0, 0.8);
+    const g2 = ctx.createRadialGradient(this.w / 2, this.h * 0.5, this.h * (0.42 - pulse * 0.02), this.w / 2, this.h * 0.5, this.h * 1.05);
     g2.addColorStop(0, 'rgba(0,0,0,0)');
-    g2.addColorStop(0.55, `rgba(2,3,8,${0.22 * v})`);
-    g2.addColorStop(1, `rgba(1,2,6,${clamp(0.3 * v, 0, 0.4)})`);  // v1.2: reduced vignette (was 0.92, user says still too dark)
+    g2.addColorStop(0.7, `rgba(10,14,24,${0.06 * v})`);
+    g2.addColorStop(1, `rgba(8,10,18,${clamp(0.14 * v, 0, 0.24)})`);
     ctx.fillStyle = g2;
     ctx.fillRect(0, 0, this.w, this.h);
 

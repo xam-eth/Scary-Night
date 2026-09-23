@@ -327,10 +327,18 @@ export function drawMenu(game, ctx, w, h) {
   ctx.fillText('v' + GAME_VERSION, 12, 16);   // v1.0: the BETA flag retires with the version bump
   ctx.restore();
 
-  const bw = clamp(w * 0.2, 210, 300);
-  const bh = clamp(h * 0.072, 42, 50);
+  // Short landscape phones used to push MAIN-equivalent rows off the bottom.
+  // Fit the stack between the title and the footer instead of hoping h*0.41 works.
+  const nButtons = 5;
+  const footerH = 58;
+  const titleBottom = h * 0.2 + clamp(86, 64, 110);
+  const startY = Math.max(titleBottom, h < 520 ? h * 0.30 : h * 0.38);
+  const avail = Math.max(160, h - footerH - startY);
+  const gap = avail < nButtons * 48 ? 6 : 10;
+  const bh = clamp((avail - gap * (nButtons - 1)) / nButtons, 34, 50);
+  const bw = clamp(w * 0.22, 188, 300);
   const bx = w / 2 - bw / 2;
-  let by = h * 0.41;
+  let by = startY;
 
   const B = game.save;
   const canUpgrade = (B.shards || 0) > 0;
@@ -347,7 +355,7 @@ export function drawMenu(game, ctx, w, h) {
   defs.forEach((d, i) => {
     const r = uiButton(game, { x: bx, y: by, w: bw, h: bh, label: d.label, sub: d.sub, onClick: d.onClick });
     buttonVisual(ctx, r.b, { active: r.hover || (game.usingKeyboard && game.uiIndex === i), label: d.label, sub: d.sub, accent: i === 0 ? '#a8833c' : '#6a6a80' });
-    by += bh + 12;
+    by += bh + gap;
   });
 
   // stats footer
@@ -361,7 +369,10 @@ export function drawMenu(game, ctx, w, h) {
   ctx.fillText(goalLine, w / 2, h - 48);
   ctx.font = `400 10px ${SANS}`;
   ctx.fillStyle = 'rgba(140,134,124,0.45)';
-  ctx.fillText('WASD / ARROWS  ·  SHIFT DASH  ·  CLICK OR F CLAW  ·  E INTERACT  ·  R REPAIR  ·  B BARRICADE  ·  ESC PAUSE', w / 2, h - 16);
+  const hint = w < 720
+    ? 'DRAG LEFT TO MOVE  ·  BUTTONS ON THE RIGHT  ·  ESC PAUSE'
+    : 'DRAG LEFT TO MOVE  ·  RIGHT BUTTONS ACT  ·  WASD STILL WORKS  ·  F CLAW  ·  E USE  ·  ESC PAUSE';
+  ctx.fillText(hint, w / 2, h - 16);
   ctx.restore();
 }
 
@@ -787,26 +798,28 @@ export function drawHelp(game, ctx, w, h) {
   ctx.fillText('HOW TO SURVIVE', w / 2, h * 0.12);
 
   const lines = [
+    ['WHICH WAY.', 'Drag the left stick — she walks the way you push. The floor mark shows where the claw will go. WASD still works.'],
     ['YOU ARE NOT A SOLDIER.', 'You are a wounded predator in a locked house. You do not have to kill anything.'],
-    ['DOORS ARE YOUR LIFE.', 'Every entrance has durability. Hold R to repair (up to half), press B to barricade (needs 3 planks).'],
+    ['DOORS ARE YOUR LIFE.', 'Every entrance has durability. Hold FIX / R to repair. BOARD / B spends planks. The wedge says which way to run.'],
     ['BLOOD IS EVERYTHING.', 'It drains with time, running and clawing. Damage costs blood. Kill or drink to refill it.'],
-    ['LISTEN.', 'Knocking, breathing, breaking glass — the house tells you where they are before you see them.'],
-    ['THE KNOCK', 'A knock is a question. [E] opens the door. Sometimes there is a gift outside. Sometimes there is not.'],
+    ['LISTEN.', 'A knock you cannot see leaves a chevron on the screen edge. It points at the door. It does not say what is there.'],
     ['DAWN IS AT 05:00.', 'Five minutes. Do not spend them fighting. Spend them surviving.'],
   ];
-  let y = h * 0.22;
+  let y = h * 0.2;
   ctx.textAlign = 'left';
-  const x = Math.max(60, w / 2 - 330);
+  const x = Math.max(20, w / 2 - Math.min(330, w * 0.42));
+  const maxW = Math.min(660, w - x - 20);
+  const slot = Math.max(46, (h - 96 - y) / lines.length);
   for (const [head, body] of lines) {
-    ctx.font = `500 15px ${SERIF}`;
-    if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
+    ctx.font = `500 ${slot < 52 ? 13 : 15}px ${SERIF}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
     ctx.fillStyle = '#c8a04a';
     ctx.fillText(head, x, y);
-    ctx.font = `400 13px ${SANS}`;
-    if ('letterSpacing' in ctx) ctx.letterSpacing = '0.5px';
+    ctx.font = `400 ${slot < 52 ? 12 : 13}px ${SANS}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '0.4px';
     ctx.fillStyle = 'rgba(198,190,176,0.85)';
-    ctx.fillText(body, x, y + 20);
-    y += 58;
+    wrapText(ctx, body, x, y + 16, maxW, slot < 52 ? 14 : 16);
+    y += slot;
   }
   ctx.restore();
 

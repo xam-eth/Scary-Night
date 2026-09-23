@@ -25,17 +25,19 @@ export const DIFFICULTY = {
 
 /* ---------------- timeline ----------------
  * Each phase controls the tension director and the global light grade.
- * `danger` drives music, vignette, heartbeat floor and colour grading.
+ * `ambient` is the multiply lightmap base (0–255). It stays in a faded
+ * dusk range: night, not noon, and never a near-zero crush that turns
+ * the rooms solid black. `danger` drives music, vignette and heartbeat.
  */
 export const PHASES = [
-  { t: 0, id: 'calm', label: 'THE HOUSE IS QUIET', danger: 0.06, spawn: 0.0, ambient: [10, 13, 25], red: 0 },
-  { t: 55, id: 'warning', label: 'SOMETHING IS OUT THERE', danger: 0.22, spawn: 0.55, ambient: [10, 13, 25], red: 0 },
-  { t: 120, id: 'pressure', label: 'THEY KNOW YOU ARE HERE', danger: 0.44, spawn: 1.0, ambient: [9, 12, 24], red: 0.06 },
-  { t: 180, id: 'heavy', label: 'THE HOUSE IS WAKING UP', danger: 0.62, spawn: 1.3, ambient: [8, 11, 22], red: 0.12 },
-  { t: 240, id: 'final', label: 'DAWN IN 60 SECONDS', danger: 0.78, spawn: 1.7, ambient: [10, 10, 19], red: 0.22 },
-  { t: 270, id: 'panic', label: 'PANIC', danger: 1.0, spawn: 2.15, ambient: [15, 8, 14], red: 0.42 },
-  { t: 290, id: 'silence', label: 'DAWN IN 10', danger: 1.0, spawn: 1.7, ambient: [15, 8, 14], red: 0.42 },
-  { t: 300, id: 'dawn', label: 'DAWN', danger: 0, spawn: 0, ambient: [10, 13, 25], red: 0 },
+  { t: 0, id: 'calm', label: 'THE HOUSE IS QUIET', danger: 0.06, spawn: 0.0, ambient: [164, 170, 184], red: 0 },
+  { t: 55, id: 'warning', label: 'SOMETHING IS OUT THERE', danger: 0.22, spawn: 0.55, ambient: [158, 164, 178], red: 0 },
+  { t: 120, id: 'pressure', label: 'THEY KNOW YOU ARE HERE', danger: 0.44, spawn: 1.0, ambient: [152, 158, 172], red: 0.06 },
+  { t: 180, id: 'heavy', label: 'THE HOUSE IS WAKING UP', danger: 0.62, spawn: 1.3, ambient: [148, 152, 166], red: 0.12 },
+  { t: 240, id: 'final', label: 'DAWN IN 60 SECONDS', danger: 0.78, spawn: 1.7, ambient: [156, 144, 152], red: 0.22 },
+  { t: 270, id: 'panic', label: 'PANIC', danger: 1.0, spawn: 2.15, ambient: [174, 132, 136], red: 0.42 },
+  { t: 290, id: 'silence', label: 'DAWN IN 10', danger: 1.0, spawn: 1.7, ambient: [174, 132, 136], red: 0.42 },
+  { t: 300, id: 'dawn', label: 'DAWN', danger: 0, spawn: 0, ambient: [198, 186, 164], red: 0 },
 ];
 
 export function phaseAt(t) {

@@ -26,6 +26,7 @@ export function drawHUD(game, ctx, w, h) {
   drawBlood(game, ctx, w, h, pulse);
   drawActions(game, ctx, w, h);
   drawDoorStatus(game, ctx, w, h);
+  drawBearings(game, ctx, w, h);
   drawThreat(game, ctx, w, h);
   drawGoals(game, ctx, w, h);
 }
@@ -175,65 +176,66 @@ function drawClock(game, ctx, w, h, pulse) {
 
 function drawBlood(game, ctx, w, h, pulse) {
   const p = game.player;
-  // touch layout keeps the bottom thumb zone clear for the stick
-  const x = 34, y = (game.input && game.input.touchSeen ? h - 258 : h - 52);
-  const cells = 10;
-  const cw = 11, gap = 2.5;  // v1.2: smaller cells for mobile (was 15/3.5)
+  // Thumbs own the bottom (Vampire Survivors / Hades mobile). Blood sits just
+  // above the stick well so the hunger readout is never under the finger.
+  const stick = game.input && game.input.stick;
+  const stickTop = stick ? (stick.homeY || h - 120) - (stick.r || 52) : h - 80;
+  const x = 22;
+  const y = game.input && game.input.gameplay ? Math.min(h - 48, stickTop - 36) : h - 52;
   const pct = p.bloodPct;
   const low = p.lowBlood;
   const critical = pct < 0.14;
+  // One readable vial, not ten 11px cells. Darkwood's health bar is the
+  // reference: you must know if you can take a hit without squinting.
+  const barW = Math.min(168, Math.max(120, w * 0.28));
+  const barH = 12;
 
   ctx.save();
   ctx.textBaseline = 'middle';
-  ctx.font = `500 10px ${SANS}`;  // v1.2: smaller text (was 12px)
+  ctx.font = `500 11px ${SANS}`;
   setLetter(ctx, 3);
-  ctx.fillStyle = low ? `rgba(220,${120 - 60 * Math.sin(game.time * 5)},110,0.95)` : 'rgba(190,180,165,0.75)';
+  ctx.fillStyle = low ? `rgba(220,${120 - 60 * Math.sin(game.time * 5)},110,0.95)` : 'rgba(190,180,165,0.8)';
   ctx.textAlign = 'left';
   ctx.fillText('BLOOD', x, y - 16);
 
-  ctx.font = `400 10px ${MONO}`;  // v1.2: smaller text (was 12px)
-  ctx.fillStyle = 'rgba(190,180,165,0.5)';
+  ctx.font = `400 11px ${MONO}`;
+  ctx.fillStyle = 'rgba(190,180,165,0.7)';
   ctx.textAlign = 'right';
-  ctx.fillText(Math.round(pct * 100) + '%', x + cells * (cw + gap) - gap, y - 20);
+  ctx.fillText(Math.round(pct * 100) + '%', x + barW, y - 16);
 
-  // cells
-  const scale = 1 + pulse * 0.08 * (low ? 1.6 : 0.6);
+  const scale = 1 + pulse * 0.06 * (low ? 1.8 : 0.4);
   ctx.translate(x, y);
   ctx.scale(scale, scale);
-  for (let i = 0; i < cells; i++) {
-    const fill = clamp(pct * cells - i, 0, 1);
-    const cx = i * (cw + gap);
-    // frame
-    ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    ctx.fillRect(cx - 1, -1, cw + 2, 15);  // v1.2: smaller height (was 20)
-    ctx.fillStyle = 'rgba(120,110,100,0.18)';
-    ctx.fillRect(cx, 0, cw, 13);  // v1.2: smaller height (was 18)
-    if (fill > 0) {
-      const gg = ctx.createLinearGradient(cx, 0, cx, 18);
-      if (critical) { gg.addColorStop(0, '#ff3a44'); gg.addColorStop(1, '#7d0f18'); }
-      else if (low) { gg.addColorStop(0, '#c8323c'); gg.addColorStop(1, '#5e0d16'); }
-      else { gg.addColorStop(0, '#9c1a26'); gg.addColorStop(1, '#4a0a12'); }
-      ctx.fillStyle = gg;
-      ctx.fillRect(cx, 13 * (1 - fill), cw, 13 * fill);  // v1.2: smaller height (was 18)
-      // highlight
-      ctx.fillStyle = 'rgba(255,180,180,0.18)';
-      ctx.fillRect(cx, 13 * (1 - fill), cw, 1.5);  // v1.2: smaller height (was 18)
-    }
-    ctx.strokeStyle = fill > 0 ? 'rgba(255,90,90,0.18)' : 'rgba(255,255,255,0.05)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(cx + 0.5, 0.5, cw - 1, 12);  // v1.2: smaller height (was 17)
+  ctx.fillStyle = 'rgba(0,0,0,0.62)';
+  ctx.fillRect(-2, -2, barW + 4, barH + 4);
+  ctx.fillStyle = 'rgba(40,16,20,0.85)';
+  ctx.fillRect(0, 0, barW, barH);
+  if (pct > 0) {
+    const gg = ctx.createLinearGradient(0, 0, 0, barH);
+    if (critical) { gg.addColorStop(0, '#ff4a50'); gg.addColorStop(1, '#6e0c14'); }
+    else if (low) { gg.addColorStop(0, '#d03842'); gg.addColorStop(1, '#5a0c14'); }
+    else { gg.addColorStop(0, '#a81e2c'); gg.addColorStop(1, '#4a0a12'); }
+    ctx.fillStyle = gg;
+    ctx.fillRect(0, 0, barW * pct, barH);
+    ctx.fillStyle = 'rgba(255,190,190,0.22)';
+    ctx.fillRect(0, 0, barW * pct, 2);
   }
+  ctx.strokeStyle = 'rgba(200,170,140,0.28)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(0.5, 0.5, barW - 1, barH - 1);
+  // quarter ticks — you can read "about half" without the number
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  for (let i = 1; i < 4; i++) ctx.fillRect(barW * i / 4, 0, 1, barH);
   ctx.scale(1 / scale, 1 / scale);
   ctx.translate(-x, -y);
 
-  // warning text
   if (low) {
     const a = 0.5 + 0.5 * Math.sin(game.time * (critical ? 8 : 4));
-    ctx.font = `500 10px ${SANS}`;  // v1.2: smaller text (was 12px)
+    ctx.font = `500 10px ${SANS}`;
     setLetter(ctx, 2);
     ctx.textAlign = 'left';
     ctx.fillStyle = `rgba(230,60,60,${a})`;
-    ctx.fillText(critical ? 'THE HUNGER IS TAKING YOU' : 'YOU NEED BLOOD', x, y + 30);  // v1.2: closer (was +40)
+    ctx.fillText(critical ? 'THE HUNGER IS TAKING YOU' : 'YOU NEED BLOOD', x, y + 26);
   }
   ctx.restore();
 }
@@ -242,27 +244,26 @@ function drawBlood(game, ctx, w, h, pulse) {
 
 function drawActions(game, ctx, w, h) {
   const p = game.player;
-  const x = w - 40, y = h - 48;
+  const input = game.input;
+  const live = !!(input && input.gameplay);
+  // Planks sit above the right thumb cluster, never on top of CLAW.
+  // The previous build referenced an undeclared `touch` and threw every frame,
+  // which killed the HUD — and the loop — the moment the night started.
+  const clusterTop = live && input.buttons.interact
+    ? input.buttons.interact.y - input.buttons.interact.r - 18
+    : h - 78;
+  const px = w - 18;
+  const py = live ? clusterTop : h - 36;
   ctx.save();
   ctx.textAlign = 'right';
   ctx.textBaseline = 'middle';
-
-  // v1.2: mobile-first — no desktop-specific DASH/CLAW indicators
-  // Virtual buttons are shown for all devices (touch + desktop with joystick)
-
-  // planks — on touch, ride the blood row instead of the CLAW thumb zone
-  ctx.textAlign = 'right';
-  ctx.font = `500 13px ${SANS}`;
-  setLetter(ctx, 3);
-  ctx.fillStyle = p.planks > 0 ? 'rgba(205,180,140,0.9)' : 'rgba(130,120,110,0.6)';
-  // v1.0 fix (browser QA): the icons must follow the label's anchor — on touch
-  // they were still drawn at the desktop origin and clipped the CLAW button.
-  const px = touch ? w - 16 : x;
-  const py = touch ? h - 246 : y - 32;
-  ctx.fillText(`PLANKS  ${p.planks}`, px, touch ? h - 262 : y - 46);
+  ctx.font = `500 11px ${SANS}`;
+  setLetter(ctx, 2);
+  ctx.fillStyle = p.planks > 0 ? 'rgba(205,180,140,0.9)' : 'rgba(130,120,110,0.55)';
+  ctx.fillText(`PLANKS  ${p.planks}`, px, py - 14);
   for (let i = 0; i < Math.min(p.planks, 6); i++) {
     ctx.fillStyle = 'rgba(120,86,48,0.9)';
-    ctx.fillRect(px - 6 - i * 9, py, 6, 16);
+    ctx.fillRect(px - 6 - i * 9, py, 6, 14);
     ctx.fillStyle = 'rgba(190,150,100,0.18)';
     ctx.fillRect(px - 6 - i * 9, py, 6, 2);
   }
@@ -302,7 +303,15 @@ function drawDoorStatus(game, ctx, w, h) {
       ctx.strokeRect(bw - 1.5, y - 1.5, barW + 3, barH + 3);
     }
     ctx.fillStyle = d.broken ? 'rgba(200,80,80,0.85)' : 'rgba(190,180,165,0.75)';
-    ctx.fillText(d.broken ? `${d.name} — BROKEN` : d.name, bw - 10, y + 2);
+    const bear = bearing(game, d.x, d.y);
+    ctx.fillText((d.broken ? `${d.name} — BROKEN` : d.name) + `  ${bear.card}`, bw - 22, y + 2);
+    // wedge points the way to run — letters alone are a translation step
+    ctx.save();
+    ctx.translate(bw - 12, y + 2);
+    ctx.rotate(bear.screen);
+    ctx.fillStyle = d.attackers > 0 ? 'rgba(220,70,60,0.95)' : 'rgba(210,200,180,0.8)';
+    ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(-4, -3.5); ctx.lineTo(-4, 3.5); ctx.closePath(); ctx.fill();
+    ctx.restore();
     y += 22;
   }
   ctx.restore();
@@ -333,15 +342,16 @@ function drawThreat(game, ctx, w, h) {
 export function drawWorldPrompts(game, ctx) {
   const p = game.player;
   const t = game.time;
-  const cam = game.renderer.cam;
-
   // --- interaction prompt for the nearest entrance ---
   const target = game.interactTarget;
   if (target) {
     const e = target.ent;
     const defs = target.actions;
-    const y = e.y + (e.facing === 'north' ? -58 : 58);
+    const anchor = promptAnchor(e);
+    const y = anchor.y;
+    const ax = anchor.x;
     ctx.save();
+    if (game.renderer.upright) game.renderer.upright(ctx, ax, y);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     const label = `${e.name}`;
@@ -349,13 +359,13 @@ export function drawWorldPrompts(game, ctx) {
     if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
     ctx.fillStyle = 'rgba(230,225,210,0.85)';
     ctx.shadowColor = 'rgba(0,0,0,0.9)'; ctx.shadowBlur = 8;
-    ctx.fillText(label, e.x, y - 16);
+    ctx.fillText(label, ax, y - 16);
     ctx.shadowBlur = 0;
     ctx.font = `400 12px ${MONO}`;
     if ('letterSpacing' in ctx) ctx.letterSpacing = '1px';
-    const parts = defs.map((d) => `[${d.key}] ${d.label}${d.cost ? ` (${d.cost} plank${d.cost > 1 ? 's' : ''})` : ''}`);
+    const parts = defs.map((d) => `${verbFor(d)}${d.cost ? ` (${d.cost} plank${d.cost > 1 ? 's' : ''})` : ''}`);
     ctx.fillStyle = target.disabled ? 'rgba(150,140,130,0.55)' : 'rgba(215,205,185,0.92)';
-    ctx.fillText(parts.join('   '), e.x, y);
+    ctx.fillText(parts.join('   '), ax, y);
     ctx.restore();
 
     // durability bar above the door (only while you are close to it)
@@ -363,7 +373,7 @@ export function drawWorldPrompts(game, ctx) {
     if (hpPct < 1 || e.barricade) {
       const bw = 84;
       ctx.save();
-      ctx.translate(e.x - bw / 2, y + 20);
+      ctx.translate(ax - bw / 2, y + 20);
       ctx.fillStyle = 'rgba(0,0,0,0.6)';
       ctx.fillRect(-2, -2, bw + 4, 9);
       ctx.fillStyle = 'rgba(90,80,70,0.4)';
@@ -411,94 +421,182 @@ export function drawWorldPrompts(game, ctx) {
       ctx.fillStyle = `rgba(220,215,200,${0.35 + a * 0.45})`;
       ctx.fillText('?', e.x, e.y - 60 + bob);
       ctx.restore();
-    } else {
-      // edge arrow pointing at it
-      const cx = cam.x, cy = cam.y;
-      const ang = Math.atan2(e.y - cy, e.x - cx);
-      const rad = Math.min(cam.viewW, cam.viewH) * 0.42;
-      const sx = (e.x - cx) / (cam.viewW / 2), sy = (e.y - cy) / (cam.viewH / 2);
-      ctx.save();
-      ctx.translate(Math.cos(ang) * rad, Math.sin(ang) * rad);
-      ctx.rotate(ang);
-      const a = 0.3 + 0.4 * Math.abs(Math.sin(t * 4));
-      ctx.fillStyle = `rgba(215,205,190,${a})`;
-      ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(-6, -6); ctx.lineTo(-6, 6); ctx.closePath(); ctx.fill();
-      ctx.restore();
     }
   }
 }
 
-/* ================= touch controls (mobile) ================= */
+/* ================= direction helpers ================= */
+
+const CARDS = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
+
+function bearing(game, x, y) {
+  const p = game.player;
+  const tilt = (game.renderer && game.renderer.tilt) || 1;
+  const dx = x - p.x;
+  const dy = y - p.y;
+  const world = Math.atan2(dy, dx);
+  const screen = Math.atan2(dy * tilt, dx);
+  const idx = Math.round(((world % TAU) + TAU) % TAU / (Math.PI / 4)) % 8;
+  return { world, screen, card: CARDS[idx] };
+}
+
+function promptAnchor(e) {
+  const d = 54;
+  if (e.facing === 'north') return { x: e.x, y: e.y - d };
+  if (e.facing === 'south') return { x: e.x, y: e.y + d };
+  if (e.facing === 'east') return { x: e.x + d, y: e.y };
+  if (e.facing === 'west') return { x: e.x - d, y: e.y };
+  return { x: e.x, y: e.y - d };
+}
+
+function verbFor(d) {
+  if (d.act === 'repair') return 'HOLD FIX';
+  if (d.act === 'barricade') return 'BOARD';
+  if (d.act === 'drink') return 'HOLD USE';
+  if (d.act === 'open') return 'USE';
+  return d.label;
+}
+
+/** Screen-edge chevrons. Hades-style: if it is off camera, the edge points at it. */
+function drawBearings(game, ctx, w, h) {
+  if (!game.knocks || !game.knocks.length || !game.renderer.worldToScreen) return;
+  const margin = 36;
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `500 10px ${SANS}`;
+  setLetter(ctx, 2);
+  for (const k of game.knocks) {
+    const e = game.mansion.entranceById(k.entranceId);
+    if (!e) continue;
+    const sp = game.renderer.worldToScreen(e.x, e.y);
+    if (sp.x > margin && sp.x < w - margin && sp.y > 64 && sp.y < h - margin) continue;
+    const cx = w / 2, cy = h / 2;
+    const ang = Math.atan2(sp.y - cy, sp.x - cx);
+    const dx = Math.cos(ang), dy = Math.sin(ang);
+    const hx = w / 2 - 46, hy = h / 2 - 52;
+    const tx = Math.abs(dx) > 0.001 ? hx / Math.abs(dx) : 1e9;
+    const ty = Math.abs(dy) > 0.001 ? hy / Math.abs(dy) : 1e9;
+    const t = Math.min(tx, ty);
+    const x = cx + dx * t, y = cy + dy * t;
+    const pulse = 0.55 + 0.45 * Math.abs(Math.sin(game.time * 4));
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.globalAlpha = pulse;
+    ctx.rotate(ang);
+    ctx.fillStyle = '#e6dcc4';
+    ctx.beginPath(); ctx.moveTo(11, 0); ctx.lineTo(-7, -6); ctx.lineTo(-7, 6); ctx.closePath(); ctx.fill();
+    ctx.rotate(-ang);
+    ctx.fillStyle = 'rgba(230,220,196,0.9)';
+    ctx.fillText('KNOCK', 0, 16);
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+/* ================= touch controls =================
+ * Visible on every device during the night. Vampire Survivors players
+ * learned the hard way that an invisible joystick makes direction feel
+ * random; Hades puts a cooldown on the button itself, not in a manual.
+ */
 
 export function drawTouchControls(game, ctx, w, h) {
   const input = game.input;
+  if (!input || !input.gameplay) return;
   const alive = game.screen === 'playing' || game.screen === 'dying';
-  if (!input.touchSeen) return;
+  const p = game.player;
   ctx.save();
   ctx.globalAlpha = alive ? 1 : 0.28;
 
-  // ---- virtual stick ----
-  if (input.stick.active) {
-    const s = input.stick;
+  const s = input.stick;
+  if (s.active) {
     ctx.save();
-    ctx.strokeStyle = 'rgba(200,195,180,0.18)';
+    ctx.strokeStyle = 'rgba(200,195,180,0.28)';
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(s.ox, s.oy, s.r, 0, TAU); ctx.stroke();
-    ctx.fillStyle = 'rgba(10,10,16,0.28)';
+    ctx.fillStyle = 'rgba(10,10,16,0.32)';
     ctx.beginPath(); ctx.arc(s.ox, s.oy, s.r, 0, TAU); ctx.fill();
-    // knob
+    // cardinal ticks so "up" is obvious
+    ctx.strokeStyle = 'rgba(200,195,180,0.28)';
+    ctx.beginPath();
+    ctx.moveTo(s.ox, s.oy - s.r + 6); ctx.lineTo(s.ox, s.oy - s.r + 12);
+    ctx.stroke();
     const kx = s.ox + s.dx * s.r * s.mag, ky = s.oy + s.dy * s.r * s.mag;
-    const kg = ctx.createRadialGradient(kx, ky, 0, kx, ky, 26);
-    kg.addColorStop(0, 'rgba(220,215,200,0.5)');
-    kg.addColorStop(1, 'rgba(120,116,110,0.12)');
+    if (s.mag > 0.08) {
+      ctx.strokeStyle = 'rgba(200,210,230,0.55)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(s.ox, s.oy); ctx.lineTo(kx, ky); ctx.stroke();
+    }
+    const kg = ctx.createRadialGradient(kx, ky, 0, kx, ky, 22);
+    kg.addColorStop(0, 'rgba(230,224,208,0.72)');
+    kg.addColorStop(1, 'rgba(120,116,110,0.16)');
     ctx.fillStyle = kg;
-    ctx.beginPath(); ctx.arc(kx, ky, 26, 0, TAU); ctx.fill();
-    ctx.strokeStyle = 'rgba(220,215,200,0.35)';
-    ctx.beginPath(); ctx.arc(kx, ky, 26, 0, TAU); ctx.stroke();
+    ctx.beginPath(); ctx.arc(kx, ky, 22, 0, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(230,224,208,0.55)';
+    ctx.beginPath(); ctx.arc(kx, ky, 22, 0, TAU); ctx.stroke();
     ctx.restore();
   } else {
-    // hint circle where the stick will appear
+    const hx = s.homeX || w * 0.16, hy = s.homeY || h - 120, hr = s.r || 52;
     ctx.save();
-    ctx.globalAlpha *= 0.5;
-    ctx.strokeStyle = 'rgba(200,195,180,0.10)';
-    ctx.setLineDash([6, 8]);
-    ctx.beginPath(); ctx.arc(w * 0.18, h - 130, 62, 0, TAU); ctx.stroke();
+    ctx.globalAlpha *= 0.85;
+    ctx.strokeStyle = 'rgba(200,195,180,0.22)';
+    ctx.setLineDash([5, 7]);
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(hx, hy, hr, 0, TAU); ctx.stroke();
     ctx.setLineDash([]);
     ctx.font = `500 10px ${SANS}`;
     if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
-    ctx.fillStyle = 'rgba(200,195,180,0.25)';
+    ctx.fillStyle = 'rgba(200,195,180,0.4)';
     ctx.textAlign = 'center';
-    ctx.fillText('MOVE', w * 0.18, h - 130);
+    ctx.textBaseline = 'middle';
+    ctx.fillText('MOVE', hx, hy);
     ctx.restore();
   }
 
-  // ---- buttons ----
-  const drawBtn = (b, label, icon, big) => {
-    if (b.hidden) return;
+  const drawBtn = (b, label, hint, opts = {}) => {
+    if (!b || b.hidden) return;
     ctx.save();
     ctx.translate(b.x, b.y);
-    const p = b.down ? 1 : 0;
-    const r = b.r * (1 - p * 0.06) + b.pulse * 4;
+    const pressed = b.down ? 1 : 0;
+    const hot = b.hot ? 1 : 0;
+    const r = b.r * (1 - pressed * 0.06) + (b.pulse || 0) * 3;
+    const cd = opts.cd || 0;
     const g = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
-    g.addColorStop(0, `rgba(${big ? '90,20,30' : '28,30,42'},${0.55 + p * 0.2})`);
-    g.addColorStop(1, 'rgba(8,9,14,0.35)');
+    g.addColorStop(0, `rgba(${opts.big ? '96,22,32' : '28,30,42'},${0.62 + pressed * 0.2 + hot * 0.08})`);
+    g.addColorStop(1, 'rgba(8,9,14,0.4)');
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.fill();
-    ctx.strokeStyle = `rgba(${big ? '200,80,90' : '170,175,200'},${0.35 + p * 0.35})`;
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = `rgba(${opts.big ? '210,90,98' : hot ? '210,186,120' : '170,175,200'},${0.4 + pressed * 0.35 + hot * 0.25})`;
+    ctx.lineWidth = hot ? 2.5 : 1.6;
     ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.stroke();
-    ctx.font = `500 ${big ? 12 : 11}px ${SANS}`;
+    if (cd > 0.02) {
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, r - 3, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - cd));
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.fill();
+    }
+    ctx.font = `500 ${r < 28 ? 9 : 11}px ${SANS}`;
     if ('letterSpacing' in ctx) ctx.letterSpacing = '1px';
-    ctx.fillStyle = 'rgba(225,220,205,0.85)';
+    ctx.fillStyle = cd > 0.02 ? 'rgba(180,174,160,0.55)' : 'rgba(232,226,210,0.92)';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(label, 0, 0);
+    ctx.fillText(label, 0, hint && w > 720 ? -2 : 0);
+    if (hint && w > 720) {
+      ctx.font = `400 8px ${MONO}`;
+      if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+      ctx.fillStyle = 'rgba(190,182,168,0.55)';
+      ctx.fillText(hint, 0, 10);
+    }
     ctx.restore();
   };
-  drawBtn(input.buttons.attack, 'CLAW');
-  drawBtn(input.buttons.dash, 'DASH');
-  drawBtn(input.buttons.interact, 'E');
-  drawBtn(input.buttons.repair, 'REPAIR');
-  drawBtn(input.buttons.barricade, 'BOARD');
+  const dashCd = p && PLAYER.dashCooldown ? clamp(p.dashCd / PLAYER.dashCooldown, 0, 1) : 0;
+  const atkCd = p && PLAYER.attackCooldown ? clamp(p.attackCd / PLAYER.attackCooldown, 0, 1) : 0;
+  drawBtn(input.buttons.attack, 'CLAW', 'F', { big: true, cd: atkCd });
+  drawBtn(input.buttons.dash, 'DASH', 'SHIFT', { cd: dashCd });
+  drawBtn(input.buttons.interact, 'USE', 'E');
+  drawBtn(input.buttons.repair, 'FIX', 'R');
+  drawBtn(input.buttons.barricade, 'BOARD', 'B');
   ctx.restore();
 }

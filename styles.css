@@ -29,18 +29,27 @@ html, body {
   inset: 0;
   display: grid;
   place-items: center;
+  padding:
+    env(safe-area-inset-top, 0px)
+    env(safe-area-inset-right, 0px)
+    env(safe-area-inset-bottom, 0px)
+    env(safe-area-inset-left, 0px);
   background:
     radial-gradient(120% 90% at 50% 0%, #0b0e16 0%, #04050a 55%, #000 100%);
 }
 
 canvas#game {
   display: block;
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   touch-action: none;
   image-rendering: auto;
   cursor: crosshair;
   background: #04050a;
+}
+
+@media (pointer: coarse) {
+  canvas#game { cursor: default; }
 }
 
 /* ---------------- fullscreen button ---------------- */

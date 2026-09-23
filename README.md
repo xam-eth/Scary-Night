@@ -34,13 +34,14 @@ interact, repair and barricade buttons, and the layout adapts.
 
 | | |
 |---|---|
-| **WASD / arrows** | move |
-| **Mouse** | aim (keyboard and touch get light aim assist) |
-| **Click / F** | claw (costs blood; hold to keep swinging) |
-| **Shift** | dash (costs blood, your only real escape) |
-| **E** | interact: open/close a door, answer a knock, drink from the basin |
-| **R** (hold) | repair an entrance — by hand at first, faster with planks |
-| **B** | barricade: planks raise a door's maximum durability |
+| **Drag left / virtual stick** | move — she walks the way you push on screen |
+| **WASD / arrows** | move (same direction rules; still there if you prefer keys) |
+| **Mouse on the right** | aim, if you are not dragging the stick |
+| **CLAW / click right / F** | claw (costs blood; hold to keep swinging) |
+| **DASH / Shift** | dash (costs blood, your only real escape) |
+| **USE / E** | interact: open/close a door, answer a knock, drink from the basin |
+| **FIX / R** (hold) | repair an entrance — by hand at first, faster with planks |
+| **BOARD / B** | barricade: planks raise a door's maximum durability |
 | **Esc** | pause |
 
 ### The rules that matter

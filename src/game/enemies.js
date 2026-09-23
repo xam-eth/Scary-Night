@@ -12,7 +12,7 @@
  * real strategy here — the player is not supposed to kill everything.
  */
 
-import { clamp, lerp, damp, TAU, rand, randInt, chance, dist, dist2, approachAngle, angDiff, Rng } from '../core/util.js';
+import { clamp, lerp, damp, TAU, rand, randInt, chance, dist, dist2, approachAngle, angDiff, visualAngle, Rng } from '../core/util.js';
 import { ENEMY_TYPES, VARIANTS } from '../core/config.js';
 import { ROOM } from './mansion.js';
 
@@ -616,7 +616,7 @@ export class Crawler extends Enemy {
     // shadow
     ctx.fillStyle = 'rgba(0,0,0,0.45)';
     ctx.beginPath(); ctx.ellipse(0, 6, 13, 6, 0, 0, TAU); ctx.fill();
-    ctx.rotate(this.angle);
+    ctx.rotate(visualAngle(this.angle, game.renderer.tilt));
     if (dying) { ctx.rotate(k * 1.2); ctx.translate(k * 4, 0); ctx.scale(1, 1 - k * 0.5); }
 
     const lurch = Math.sin(t * 12 + this.id) * 0.5 + 0.5;
@@ -810,7 +810,7 @@ export class Hunter extends Enemy {
     ctx.globalAlpha = this.alpha;
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
     ctx.beginPath(); ctx.ellipse(0, 7, 14, 7, 0, 0, TAU); ctx.fill();
-    ctx.rotate(this.angle + (dying ? k * 1.35 : 0));
+    ctx.rotate(visualAngle(this.angle, game.renderer.tilt) + (dying ? k * 1.35 : 0));
     if (dying) { ctx.scale(1, 1 - k * 0.6); ctx.translate(k * 6, 0); }
 
     const walk = Math.sin(t * 7 + this.id) * (Math.hypot(this.vx, this.vy) > 20 ? 4 : 1.2);
@@ -1080,7 +1080,7 @@ export class Werewolf extends Enemy {
     ctx.globalAlpha = this.alpha;
     ctx.fillStyle = 'rgba(0,0,0,0.55)';
     ctx.beginPath(); ctx.ellipse(0, 12, 26, 12, 0, 0, TAU); ctx.fill();
-    ctx.rotate(this.angle + (dying ? k * 1.2 : 0));
+    ctx.rotate(visualAngle(this.angle, game.renderer.tilt) + (dying ? k * 1.2 : 0));
     if (dying) { ctx.rotate(k * 0.5); ctx.translate(k * 6, 0); ctx.scale(1, 1 - k * 0.55); }
 
     const stride = Math.sin(t * (charging ? 18 : 7) + this.id) * (Math.hypot(this.vx, this.vy) > 20 ? 6 : 1.5);
@@ -1279,7 +1279,7 @@ export class Stalker extends Enemy {
       // the freeze: dead stop, no tremble — the stillness IS the tell
       this.vx = damp(this.vx, 0, 16, dt); this.vy = damp(this.vy, 0, 16, dt);
       this.x += this.vx * dt; this.y += this.vy * dt;
-      this.angle = Math.atan2(p.y - this.y, p.x - p.x);
+      this.angle = Math.atan2(p.y - this.y, p.x - this.x);
       return;
     }
     this.blinkCd -= dt;
@@ -1478,7 +1478,7 @@ export class Bolt {
     game.particles.burst('spark', this.x, this.y, 6, { color: 'rgba(220,220,240,0.8)', sizeMin: 1, sizeMax: 2.5, speedMin: 20, speedMax: 90, lifeMin: 0.1, lifeMax: 0.3, glow: true });
     if (wall) game.decals.splat(this.x, this.y, 3, 'rgba(30,30,40,0.35)', 2);
   }
-  draw(ctx) {
+  draw(ctx, game) {
     ctx.save();
     ctx.globalAlpha = 0.5;
     ctx.strokeStyle = 'rgba(200,200,220,0.35)';
@@ -1491,7 +1491,7 @@ export class Bolt {
     ctx.stroke();
     ctx.globalAlpha = 1;
     ctx.translate(this.x, this.y);
-    ctx.rotate(this.angle);
+    ctx.rotate(visualAngle(this.angle, game && game.renderer ? game.renderer.tilt : 1));
     ctx.fillStyle = '#2b2016';
     ctx.fillRect(-7, -1.2, 14, 2.4);
     ctx.fillStyle = '#c8c8d4';

@@ -25,6 +25,35 @@ export function approachAngle(a, b, step) {
   const d = angDiff(a, b);
   return a + clamp(d, -step, step);
 }
+
+/**
+ * World heading → the angle an upright() billboard should face.
+ * The floor is drawn with Y scaled by `tilt`, then actors are counter-scaled
+ * so they stand tall. A raw world angle painted inside that counter-scale
+ * points ~15° off the way the feet actually travel on screen (diagonals).
+ * Project the heading the same way the camera does and the nose, the claw
+ * and the stick agree.
+ */
+export function visualAngle(angle, tilt = 1) {
+  if (!tilt || Math.abs(tilt - 1) < 0.001) return angle;
+  return Math.atan2(Math.sin(angle) * tilt, Math.cos(angle));
+}
+
+/**
+ * Screen-space stick/key vector → world direction.
+ * Pushing the stick up-right must walk up-right on screen, not along the
+ * squashed floor diagonal. `mag` stays the stick deflection (0–1) so analog
+ * walk speed is unchanged; only the heading is corrected.
+ */
+export function screenDirToWorld(sx, sy, tilt = 1) {
+  const mag = Math.hypot(sx, sy);
+  if (mag < 1e-6) return { x: 0, y: 0, mag: 0, angle: 0 };
+  const t = tilt > 0.05 ? tilt : 1;
+  const wx = sx;
+  const wy = sy / t;
+  const wlen = Math.hypot(wx, wy) || 1;
+  return { x: wx / wlen, y: wy / wlen, mag: Math.min(1, mag), angle: Math.atan2(wy, wx) };
+}
 export function approach(a, b, step) {
   if (a < b) return Math.min(a + step, b);
   return Math.max(a - step, b);

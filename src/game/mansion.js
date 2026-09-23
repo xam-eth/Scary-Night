@@ -795,7 +795,7 @@ export class Mansion {
     g.translate(-this.bakeOx, -this.bakeOy);
 
     // ---- exterior ground: dark gravel + dead grass
-    g.fillStyle = '#080a10';
+    g.fillStyle = '#1c2636';
     g.fillRect(this.bakeOx, this.bakeOy, W, H);
     const rng = new Rng(1337);
     for (let i = 0; i < 2600; i++) {
@@ -803,11 +803,11 @@ export class Mansion {
       const room = this.findRoom(x, y);
       if (room !== ROOM.OUTSIDE) continue;
       const v = rng.float(0, 1);
-      g.fillStyle = v > 0.7 ? 'rgba(30,36,48,0.5)' : v > 0.4 ? 'rgba(18,22,32,0.6)' : 'rgba(12,14,20,0.7)';
+      g.fillStyle = v > 0.7 ? 'rgba(62,72,90,0.45)' : v > 0.4 ? 'rgba(40,48,64,0.5)' : 'rgba(28,34,48,0.55)';
       g.beginPath(); g.ellipse(x, y, rng.float(2, 9), rng.float(1.5, 6), rng.float(0, TAU), 0, TAU); g.fill();
     }
     // pale gravel path to the front door
-    g.fillStyle = 'rgba(46,50,60,0.35)';
+    g.fillStyle = 'rgba(96,102,118,0.4)';
     g.fillRect(560, 1500, 140, 420);
 
     // ---- rooms
@@ -832,7 +832,7 @@ export class Mansion {
     g.save();
     g.beginPath(); g.rect(r.x, r.y, r.w, r.h); g.clip();
     if (r.floor === 'wood') {
-      const base = r.id === ROOM.LIBRARY ? '#241a16' : '#2a1d15';
+      const base = r.id === ROOM.LIBRARY ? '#5e4236' : '#704e3a';
       g.fillStyle = base; g.fillRect(r.x, r.y, r.w, r.h);
       const plankH = 34;
       for (let y = r.y; y < r.y + r.h; y += plankH) {
@@ -842,24 +842,24 @@ export class Mansion {
           const tone = 0.82 + v * 0.36;
           g.fillStyle = shade(base, tone);
           g.fillRect(x, y, 120 - 2, plankH - 2);
-          if (v > 0.85) { g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(x, y, 120 - 2, plankH - 2); }
+          if (v > 0.85) { g.fillStyle = 'rgba(28,16,10,0.2)'; g.fillRect(x, y, 120 - 2, plankH - 2); }
         }
       }
       // grain
       g.globalAlpha = 0.12;
       for (let i = 0; i < 260; i++) {
         const y = r.y + rng.float(0, r.h), x = r.x + rng.float(0, r.w);
-        g.strokeStyle = rng.chance(0.5) ? '#0d0906' : '#3c2a1c';
+        g.strokeStyle = rng.chance(0.5) ? '#3a281c' : '#8a6848';
         g.lineWidth = 1;
         g.beginPath(); g.moveTo(x, y); g.lineTo(x + rng.float(20, 70), y + rng.float(-2, 2)); g.stroke();
       }
       g.globalAlpha = 1;
     } else if (r.floor === 'marble') {
-      g.fillStyle = '#25262e'; g.fillRect(r.x, r.y, r.w, r.h);
+      g.fillStyle = '#6e7282'; g.fillRect(r.x, r.y, r.w, r.h);
       const s = 96;
       for (let y = r.y; y < r.y + r.h; y += s) for (let x = r.x; x < r.x + r.w; x += s) {
         const v = hash2(x, y, 21);
-        g.fillStyle = v > 0.6 ? '#2b2d36' : v > 0.3 ? '#232429' : '#1e1f25';
+        g.fillStyle = v > 0.6 ? '#7c8090' : v > 0.3 ? '#686c7c' : '#5c6070';
         g.fillRect(x + 1, y + 1, s - 2, s - 2);
         // veins
         g.strokeStyle = 'rgba(120,128,145,0.10)'; g.lineWidth = 1;
@@ -871,18 +871,18 @@ export class Mansion {
       // checker centrepiece
       g.globalAlpha = 0.18;
       for (let y = r.y + 200; y < r.y + r.h - 140; y += 64) for (let x = r.x + 360; x < r.x + r.w - 260; x += 64) {
-        if (((x / 64 | 0) + (y / 64 | 0)) % 2 === 0) { g.fillStyle = '#0c0d12'; g.fillRect(x, y, 64, 64); }
+        if (((x / 64 | 0) + (y / 64 | 0)) % 2 === 0) { g.fillStyle = '#3a3e4a'; g.fillRect(x, y, 64, 64); }
       }
       g.globalAlpha = 1;
     } else if (r.floor === 'stone') {
       // stone
-      g.fillStyle = '#1a1b21'; g.fillRect(r.x, r.y, r.w, r.h);
+      g.fillStyle = '#4c505c'; g.fillRect(r.x, r.y, r.w, r.h);
       const s = 74;
       for (let y = r.y; y < r.y + r.h; y += s) {
         const off = ((y / s) | 0) % 2 ? s / 2 : 0;
         for (let x = r.x - s; x < r.x + r.w; x += s) {
           const v = hash2(x + off, y, 33);
-          g.fillStyle = shade('#1a1b21', 0.8 + v * 0.5);
+          g.fillStyle = shade('#4c505c', 0.82 + v * 0.36);
           g.fillRect(x + off + 2, y + 2, s - 4, s - 4);
           if (v > 0.88) { g.fillStyle = 'rgba(90,60,40,0.2)'; g.fillRect(x + off + 6, y + 6, s - 12, 8); }
         }
@@ -892,19 +892,19 @@ export class Mansion {
       for (let i = 0; i < 30; i++) {
         const x = r.x + rng.float(0, r.w), y = r.y + rng.float(0, r.h);
         const rg = g.createRadialGradient(x, y, 0, x, y, rng.float(30, 100));
-        rg.addColorStop(0, 'rgba(20,26,30,0.7)'); rg.addColorStop(1, 'rgba(0,0,0,0)');
+        rg.addColorStop(0, 'rgba(36,44,52,0.4)'); rg.addColorStop(1, 'rgba(0,0,0,0)');
         g.fillStyle = rg; g.beginPath(); g.arc(x, y, 100, 0, TAU); g.fill();
       }
       g.globalAlpha = 1;
     } else if (r.floor === 'glass') {
       // v1.0 conservatory: worn flagstone gone mossy in the grout, the glass
       // roof's light lattice baked in, leaves nobody rakes anymore.
-      g.fillStyle = '#1d2620'; g.fillRect(r.x, r.y, r.w, r.h);
+      g.fillStyle = '#3e5248'; g.fillRect(r.x, r.y, r.w, r.h);
       {
         const s = 64;
         for (let y = r.y; y < r.y + r.h; y += s) for (let x = r.x; x < r.x + r.w; x += s) {
           const v = hash2(x, y, 71);
-          g.fillStyle = shade('#232c26', 0.85 + v * 0.4);
+          g.fillStyle = shade('#4a6256', 0.86 + v * 0.28);
           g.fillRect(x + 2, y + 2, s - 4, s - 4);
           if (v > 0.72) { g.fillStyle = 'rgba(52,84,54,0.35)'; g.fillRect(x + 4, y + s - 12, s - 8, 8); }
         }
@@ -923,7 +923,7 @@ export class Mansion {
         for (let y = r.y, row = 0; y < r.y + r.h; y += s, row++) for (let x = r.x, col = 0; x < r.x + r.w; x += s, col++) {
           const light = ((row + col) & 1) === 0;
           const v = hash2(x, y, 83);
-          g.fillStyle = shade(light ? '#4a4740' : '#17181d', 0.9 + v * 0.24);
+          g.fillStyle = shade(light ? '#8c8678' : '#3e424e', 0.92 + v * 0.16);
           g.fillRect(x, y, s, s);
         }
       }
@@ -936,13 +936,13 @@ export class Mansion {
     }
     // room-side shadow (ambient occlusion against walls)
     const ao = g.createLinearGradient(r.x, r.y, r.x, r.y + 90);
-    ao.addColorStop(0, 'rgba(0,0,0,0.55)'); ao.addColorStop(1, 'rgba(0,0,0,0)');
+    ao.addColorStop(0, 'rgba(8,10,16,0.22)'); ao.addColorStop(1, 'rgba(0,0,0,0)');
     g.fillStyle = ao; g.fillRect(r.x, r.y, r.w, 90);
     const ao2 = g.createLinearGradient(r.x, r.y + r.h, r.x, r.y + r.h - 70);
-    ao2.addColorStop(0, 'rgba(0,0,0,0.4)'); ao2.addColorStop(1, 'rgba(0,0,0,0)');
+    ao2.addColorStop(0, 'rgba(8,10,16,0.16)'); ao2.addColorStop(1, 'rgba(0,0,0,0)');
     g.fillStyle = ao2; g.fillRect(r.x, r.y + r.h - 70, r.w, 70);
     const ao3 = g.createLinearGradient(r.x, r.y, r.x + 70, r.y);
-    ao3.addColorStop(0, 'rgba(0,0,0,0.4)'); ao3.addColorStop(1, 'rgba(0,0,0,0)');
+    ao3.addColorStop(0, 'rgba(8,10,16,0.16)'); ao3.addColorStop(1, 'rgba(0,0,0,0)');
     g.fillStyle = ao3; g.fillRect(r.x, r.y, 70, r.h);
     const ao4 = g.createLinearGradient(r.x + r.w, r.y, r.x + r.w - 70, r.y);
     ao4.addColorStop(0, 'rgba(0,0,0,0.4)'); ao4.addColorStop(1, 'rgba(0,0,0,0)');
@@ -952,15 +952,15 @@ export class Mansion {
 
   drawWallRect(g, s) {
     // shadow cast on the floor
-    g.fillStyle = 'rgba(0,0,0,0.5)';
+    g.fillStyle = 'rgba(8,10,16,0.32)';
     g.fillRect(s.x + 6, s.y + 8, s.w, s.h);
-    // wall body
-    g.fillStyle = '#2b2c36';
+    // wall body — faded stone, not a black bar
+    g.fillStyle = '#5e6272';
     g.fillRect(s.x, s.y, s.w, s.h);
     const grad = g.createLinearGradient(s.x, s.y, s.x, s.y + s.h);
-    grad.addColorStop(0, 'rgba(120,128,150,0.25)');
-    grad.addColorStop(0.3, 'rgba(0,0,0,0)');
-    grad.addColorStop(1, 'rgba(0,0,0,0.5)');
+    grad.addColorStop(0, 'rgba(180,188,206,0.28)');
+    grad.addColorStop(0.35, 'rgba(0,0,0,0)');
+    grad.addColorStop(1, 'rgba(8,10,16,0.22)');
     g.fillStyle = grad;
     g.fillRect(s.x, s.y, s.w, s.h);
     // stone courses
@@ -971,7 +971,7 @@ export class Mansion {
       for (let y = s.y + 40; y < s.y + s.h; y += 40) { g.beginPath(); g.moveTo(s.x, y); g.lineTo(s.x + s.w, y); g.stroke(); }
     }
     // top highlight for a chunky 3D read
-    g.fillStyle = 'rgba(150,158,180,0.10)';
+    g.fillStyle = 'rgba(190,198,214,0.22)';
     g.fillRect(s.x, s.y, s.w, 3);
     const rng = new Rng(Math.floor(s.x * 7 + s.y * 13));
     g.globalAlpha = 0.18;
@@ -1518,6 +1518,17 @@ export class Mansion {
 
   /** Feed all lights into the renderer's lightmap. */
   submitLights(renderer, game) {
+    // Even faded wash across each room, so corners aren't a black frame
+    // around the candle pools. Basement stays a step dimmer.
+    const out = game.blackoutT > 0 ? 0.45 : 1;
+    for (const room of this.roomList) {
+      const stone = room.floor === 'stone';
+      const glass = room.floor === 'glass';
+      const reach = Math.hypot(room.w, room.h) * 0.58;
+      const i = (glass ? 0.26 : stone ? 0.14 : 0.2) * out;
+      const col = stone ? [148, 156, 174] : glass ? [180, 198, 216] : [178, 186, 202];
+      renderer.addLight(room.x + room.w / 2, room.y + room.h / 2, reach, i, col);
+    }
     for (const l of this.lights) {
       const i = l.curI ?? l.i;
       if (i <= 0.01) continue;
@@ -1540,20 +1551,23 @@ export class Mansion {
     // player's candle-lantern-ish self light is submitted by the player.
   }
 
-  /** Ambient light level driven by the phase (darker in the basement, blood moon red). */
+  /** Faded room wash. The lightmap is multiply, so a near-zero ambient
+   *  turns every floor into solid black. Stay in dusk: readable, not noon. */
   ambientFor(game) {
-    const base = [9, 12, 22];
-    let a = base.slice();
-    // blood moon grade
+    const phase = game.phase?.ambient;
+    let a = phase ? phase.slice() : [164, 170, 184];
     const b = this.bloodMoon;
     if (b > 0) {
-      a[0] = a[0] * (1 - b * 0.3) + 46 * b;
-      a[1] = a[1] * (1 - b * 0.55);
-      a[2] = a[2] * (1 - b * 0.5) + 8 * b;
+      a[0] = a[0] * (1 - b * 0.2) + 176 * b;
+      a[1] = a[1] * (1 - b * 0.4) + 100 * b;
+      a[2] = a[2] * (1 - b * 0.35) + 108 * b;
     }
-    if (game.blackoutT > 0) { a = a.map((v) => v * 0.55); }
-    if (game.lightningFlash > 0.2) { const f = game.lightningFlash; a = a.map((v) => v + 90 * f); }
-    return a;
+    if (game.blackoutT > 0) a = a.map((v) => v * 0.8);
+    if (game.lightningFlash > 0.2) {
+      const f = game.lightningFlash;
+      a = a.map((v) => v + 60 * f);
+    }
+    return a.map((v) => clamp(v, 120, 236));
   }
 }
 

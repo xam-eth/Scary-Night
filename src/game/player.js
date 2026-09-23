@@ -10,7 +10,7 @@
  * one long shadow. Deliberately slight — never a superhero.
  */
 
-import { clamp, lerp, damp, dist, TAU, rand, randInt, angDiff, approachAngle, chance } from '../core/util.js';
+import { clamp, lerp, damp, dist, TAU, rand, randInt, angDiff, approachAngle, chance, visualAngle, screenDirToWorld } from '../core/util.js';
 import { PLAYER, TUNING } from '../core/config.js';
 import { PAL } from '../core/render.js';
 import { Valen3D } from './valen3d.js';
@@ -115,8 +115,13 @@ export class Player {
     }
 
     // ---------- movement intent ----------
-    let mx = input.move.x, my = input.move.y;
-    const mag = Math.hypot(mx, my);
+    // Stick and keys are screen-space. The oblique camera squashes world Y,
+    // so a raw stick vector walks a different direction than the thumb pushed.
+    // Convert once, here, and use that world heading for velocity, dash and aim.
+    const tilt = game.renderer.tilt || 1;
+    const intent = screenDirToWorld(input.move.x, input.move.y, tilt);
+    let mx = intent.x * intent.mag, my = intent.y * intent.mag;
+    const mag = intent.mag;
     const wantRun = input.dashDown && mag > 0.3;
 
     // blood-instability: the weaker you are, the more you drift
@@ -177,12 +182,16 @@ export class Player {
     this.clampToBounds(game);
 
     // ---------- facing ----------
-    if (input.mouse.moved && !input.touchSeen) {
+    // Joystick / touch owns the heading: the cursor sits on the stick, so
+    // mouse-aim would glue her face to the left thumb instead of the way she
+    // walks. Keyboard + mouse keeps classic aim (the cursor is a real aim).
+    const stickDrive = input.stick.active || input.touchSeen;
+    if (!stickDrive && input.mouse.moved && !input.touchSeen) {
       const w = game.renderer.screenToWorld(input.mouse.x, input.mouse.y);
       this.angle = Math.atan2(w.y - this.y, w.x - this.x);
     } else if (mag > 0.15) {
       const target = Math.atan2(my, mx);
-      this.angle = approachAngle(this.angle, target, dt * 12);
+      this.angle = approachAngle(this.angle, target, dt * 14);
     }
     if (this.attackT > 0) {
       // during the swing, lock facing to the swing direction
@@ -336,7 +345,9 @@ export class Player {
     const attackProgress = this.attackT > 0 ? clamp(1 - this.attackT / attackDuration, 0, 1) : 0;
     this._valenFrame = Valen3D.render({
       state: dead ? PSTATE.IDLE : this.state,
-      angle: this.angle,
+      // Billboards are counter-scaled upright, so feed the projected heading
+      // or she looks 15° off every diagonal she walks.
+      angle: visualAngle(this.angle, game.renderer.tilt || 1),
       speed: dead ? 0 : sp,
       stepPhase: this.stepPhase,
       attackProgress,
@@ -400,7 +411,7 @@ export class Player {
       ctx.translate(this.x, this.y);
       if (dead) {
         const k = clamp(this.deathT / 1.1, 0, 1);
-        ctx.rotate(this.angle + Math.PI / 2);
+        ctx.rotate(visualAngle(this.angle, game.renderer.tilt || 1) + Math.PI / 2);
         ctx.rotate(k * 0.35);
         ctx.translate(0, k * 8);
         ctx.globalAlpha = clamp(1 - (this.deathT - 2.6) / 1.6, 0, 1);
@@ -426,37 +437,43 @@ export class Player {
       ctx.restore();
     }
 
-    // attack arc
-    if (this.attackT > 0) {
-      const total = PLAYER.attackWindup + PLAYER.attackActive;
-      const p = 1 - this.attackT / total;
-      const a = this.swingAngle;
-      ctx.save();
-      ctx.translate(this.x, this.y);
-      ctx.globalCompositeOperation = 'screen';
-      const arcA = PLAYER.attackArc;
-      const sweep = lerp(-arcA / 2, arcA / 2, p);
-      const alpha = Math.sin(p * Math.PI) * 0.75;
-      const g = ctx.createRadialGradient(0, 0, 18, 0, 0, PLAYER.attackRange);
-      g.addColorStop(0, `rgba(255,60,80,${0.0 * alpha})`);
-      g.addColorStop(0.55, `rgba(190,30,50,${0.30 * alpha})`);
-      g.addColorStop(1, `rgba(255,120,140,${0.55 * alpha})`);
-      ctx.fillStyle = g;
+  }
+
+  /**
+   * Claw arc on the FLOOR, in world space (call before upright()).
+   * Drawn in the same projection as movement and hit tests, so the red
+   * sweep covers exactly the cone that connects — not a screen-space circle
+   * that misses the thing she is facing.
+   */
+  drawSwing(ctx) {
+    if (this.attackT <= 0) return;
+    const total = PLAYER.attackWindup + PLAYER.attackActive;
+    const p = 1 - this.attackT / total;
+    const a = this.swingAngle;
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.globalCompositeOperation = 'screen';
+    const arcA = PLAYER.attackArc;
+    const sweep = lerp(-arcA / 2, arcA / 2, p);
+    const alpha = Math.sin(p * Math.PI) * 0.75;
+    const g = ctx.createRadialGradient(0, 0, 18, 0, 0, PLAYER.attackRange);
+    g.addColorStop(0, `rgba(255,60,80,${0.0 * alpha})`);
+    g.addColorStop(0.55, `rgba(190,30,50,${0.30 * alpha})`);
+    g.addColorStop(1, `rgba(255,120,140,${0.55 * alpha})`);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.arc(0, 0, PLAYER.attackRange, a + sweep - 0.35, a + sweep + 0.35);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = `rgba(255,200,210,${0.5 * alpha})`;
+    ctx.lineWidth = 2;
+    for (let i = -1; i <= 1; i++) {
       ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.arc(0, 0, PLAYER.attackRange, a + sweep - 0.35, a + sweep + 0.35);
-      ctx.closePath();
-      ctx.fill();
-      // claw streaks
-      ctx.strokeStyle = `rgba(255,200,210,${0.5 * alpha})`;
-      ctx.lineWidth = 2;
-      for (let i = -1; i <= 1; i++) {
-        ctx.beginPath();
-        ctx.arc(0, 0, PLAYER.attackRange * (0.7 + i * 0.14), a + sweep - 0.3, a + sweep + 0.3);
-        ctx.stroke();
-      }
-      ctx.restore();
+      ctx.arc(0, 0, PLAYER.attackRange * (0.7 + i * 0.14), a + sweep - 0.3, a + sweep + 0.3);
+      ctx.stroke();
     }
+    ctx.restore();
   }
 
   /**

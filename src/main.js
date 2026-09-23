@@ -20,7 +20,9 @@ Ads.init(game);
 
 /* ---------- sizing ---------- */
 function resize() {
-  const w = window.innerWidth, h = window.innerHeight;
+  const stage = canvas.parentElement;
+  const w = stage ? stage.clientWidth : window.innerWidth;
+  const h = stage ? stage.clientHeight : window.innerHeight;
   game.renderer.resize(w, h, window.devicePixelRatio || 1);
   input.layout(w, h);
 }
@@ -104,10 +106,10 @@ function frame(now) {
   }
   if (guard === 0) game.update(0);
   game.render();
-  if (input.touchSeen) {
-    game.renderer.resetForUI();
-    drawTouchControls(game, game.renderer.ctx, game.renderer.w, game.renderer.h);
-  }
+  // Controls are part of the night HUD on every device — an invisible stick
+  // is how "the direction feels wrong" starts.
+  game.renderer.resetForUI();
+  drawTouchControls(game, game.renderer.ctx, game.renderer.w, game.renderer.h);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

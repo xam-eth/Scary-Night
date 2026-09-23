@@ -425,6 +425,14 @@ export class Game {
     // buttons drawn last frame. (This one predates v1.0 — it was in the base
     // checkout; keyboard nav worked, mouse/touch never did.)
 
+    // Stick only exists while you are in the night. Menu clicks must never
+    // start a drag-to-move, or PLAY/settings sliders fight the joystick.
+    this.input.gameplay = this.screen === 'playing' || this.screen === 'dying';
+    if (!this.input.gameplay) {
+      const b = this.input.buttons;
+      b.attack.hidden = b.dash.hidden = b.interact.hidden = true;
+      b.repair.hidden = b.barricade.hidden = true;
+    }
     this.input.update(rawDt);
     this.handleUIInput();
 
@@ -1406,7 +1414,7 @@ export class Game {
     // ---------- bolts ----------
     for (const b of this.bolts) if (r.isVisible(b.x, b.y, 60)) {
       ctx.save(); r.upright(ctx, b.x, b.y);
-      b.draw(ctx);
+      b.draw(ctx, this);
       ctx.restore();
     }
 
@@ -1447,6 +1455,8 @@ export class Game {
     }
 
     // ---------- lighting ----------
+    r.fadeLift = this.blackoutT > 0 ? 0.7 : 1;
+    r.fadeColor = this.bloodMoon > 0.3 ? '#9a8088' : '#8490a4';
     r.lightBegin(m.ambientFor(this));
     p.submitLight(r, this);
     m.submitLights(r, this);
@@ -1480,7 +1490,7 @@ export class Game {
     // ---------- post ----------
     const lb = clamp(1 - p.bloodPct / 0.32, 0, 1);
     r.post({
-      vignette: 0.5 + this.danger * 0.35 + (this.bloodMoon) * 0.2,
+      vignette: 0.18 + this.danger * 0.08 + (this.bloodMoon) * 0.05,
       danger: this.danger,
       lowBlood: lb,
       heartbeat: this.hbPulse,
@@ -1517,11 +1527,31 @@ export class Game {
 
   /** The vampire is drawn in the entity sort so enemies can occlude it. */
   drawPlayerLayer(ctx) {
-    // the character stands; the floor recedes — oblique-camera billboarding
-    ctx.save(); this.renderer.upright(ctx, this.player.x, this.player.y);
-    this.player.draw(ctx, this);
-    if (this.screen === 'playing' || this.screen === 'dying' || this.screen === 'intro') drawWorldPrompts(this, ctx);
+    const p = this.player;
+    // Floor cues live in the tilted world, so they point the way she actually
+    // walks. Prompts are drawn AFTER upright is popped — they were previously
+    // counter-scaled around her feet, which shoved door labels and knock
+    // arrows off their targets.
+    if (p.alive) {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.angle);
+      ctx.globalAlpha = 0.7;
+      ctx.fillStyle = 'rgba(176, 198, 232, 0.55)';
+      ctx.beginPath();
+      ctx.moveTo(15, 0);
+      ctx.lineTo(32, -5);
+      ctx.lineTo(28, 0);
+      ctx.lineTo(32, 5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+    p.drawSwing(ctx);
+    ctx.save(); this.renderer.upright(ctx, p.x, p.y);
+    p.draw(ctx, this);
     ctx.restore();
+    if (this.screen === 'playing' || this.screen === 'dying' || this.screen === 'intro') drawWorldPrompts(this, ctx);
   }
 
   drawAmbientMotes(ctx) {
