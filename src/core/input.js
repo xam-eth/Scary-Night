@@ -69,12 +69,25 @@ export class Input {
       const r = c.getBoundingClientRect();
       this.mouse.x = e.clientX - r.left; this.mouse.y = e.clientY - r.top;
       this.mouse.moved = true;
+      // v1.2: mobile-first desktop — update joystick if active
+      if (this.stick.active && this.mouse.down) {
+        this.stick.x = this.mouse.x;
+        this.stick.y = this.mouse.y;
+      }
     });
     c.addEventListener('mousedown', (e) => {
       if (e.button !== 0 && e.button !== 2) return;
       this._fireGesture();
       this.mouse.down = true; this.mouse.clicked = true;
       if (e.button === 2) { this.mouse.right = true; return; }
+      // v1.2: mobile-first desktop — activate joystick if clicking in left 62% of screen
+      if (!this.stick.active && this.mouse.x < c.clientWidth * 0.62 && this.mouse.y > c.clientHeight * 0.3) {
+        this.stick.active = true;
+        this.stick.ox = this.mouse.x;
+        this.stick.oy = this.mouse.y;
+        this.stick.x = this.mouse.x;
+        this.stick.y = this.mouse.y;
+      }
       // v1.0 FIX (live click test): menus consumed `mouse.clicked`, but
       // input.update() clears it before handleUIInput ever runs — every real
       // mouse click on a button was silently eaten. Left-press now posts the
@@ -85,7 +98,19 @@ export class Input {
       this.mouse.x = e.clientX - r.left; this.mouse.y = e.clientY - r.top;
       this.uiTap = { x: this.mouse.x, y: this.mouse.y };
     });
-    addEventListener('mouseup', (e) => { if (e.button === 0) this.mouse.down = false; if (e.button === 2) this.mouse.right = false; });
+    addEventListener('mouseup', (e) => {
+      if (e.button === 0) {
+        this.mouse.down = false;
+        // v1.2: mobile-first desktop — deactivate joystick
+        if (this.stick.active) {
+          this.stick.active = false;
+          this.stick.dx = 0;
+          this.stick.dy = 0;
+          this.stick.mag = 0;
+        }
+      }
+      if (e.button === 2) this.mouse.right = false;
+    });
     c.addEventListener('contextmenu', (e) => e.preventDefault());
 
     // ---- touch ----
