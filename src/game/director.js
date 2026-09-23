@@ -18,7 +18,7 @@ import {
   PHASES, phaseAt, nextPhase, BEATS, DIRECTOR, KNOCKS, NIGHT_DURATION,
   SPAWN_WARMUP, PANIC_AT, SILENCE_AT, COUNTDOWN_AT, ENEMY_TYPES, TUNING,
 } from '../core/config.js';
-import { Crawler, Hunter, Werewolf } from './enemies.js';
+import { Crawler, Hunter, Werewolf, Stalker, Ghoul, applyVariant } from './enemies.js';
 import { ROOM } from './mansion.js';
 
 export const MOOD = {
@@ -186,6 +186,16 @@ export class Director {
       this.quietUntil = t + breath;
     }
     const quiet = t < this.quietUntil;
+    // v1.0 — the stalker owns the quiet. Pressure waves never carry it; being
+    // unbothered is what it hunts. One per long while, on its own schedule.
+    this.stalkerCd = (this.stalkerCd ?? 40) - dt;
+    if (quiet && !TUNING.noSpawns && this.stalkerCd <= 0 && t > 95 && game.danger > 0.12 && game.danger < 0.72
+        && !game.enemies.some((x) => x.key === 'stalker' && !x.dead)) {
+      this.stalkerCd = rand(55, 95);
+      const sEnt = game.mansion.entrances[(rand(0, game.mansion.entrances.length)) | 0];
+      this.spawnWave(game, ['stalker'], { entranceId: sEnt ? sEnt.id : undefined });
+      game.showMessage('THE QUIET GREW A SECOND SET OF FOOTSTEPS.', { tone: 'cold', whisper: true, life: 4.5 });
+    }
     const tooSoon = t - this.lastWaveT < lerp(DIRECTOR.waveGap[1], DIRECTOR.waveGap[0], game.danger);
     const wavesReady = !quiet && (!tooSoon || game.danger > 0.75);
     if (TUNING.noSpawns) return;
@@ -207,7 +217,9 @@ export class Director {
       pool.push({ k: 'crawler', w: 5 });
       if (game.time > 110) pool.push({ k: 'hunter', w: 2.4 });
       if (game.time > 170) pool.push({ k: 'werewolf', w: 0.55 + d * 0.8 });
-      if (phase.id === 'panic') pool.push({ k: 'crawler', w: 4 }, { k: 'werewolf', w: 1.0 }, { k: 'hunter', w: 1.4 });
+      // v1.0: the ghoul comes when the doors matter; the pack answers the panic
+      if (game.time > 150) pool.push({ k: 'ghoul', w: 0.45 + d * 0.7 });
+      if (phase.id === 'panic') pool.push({ k: 'crawler', w: 4 }, { k: 'werewolf', w: 1.0 }, { k: 'hunter', w: 1.4 }, { k: 'ghoul', w: 0.8 });
       const totalW = pool.reduce((a, b) => a + b.w, 0);
       let guard = 0;
       while (budgetLeft > 1.0 && guard++ < 12) {
@@ -244,7 +256,7 @@ export class Director {
       const cands = game.mansion.entrances.filter((e) => {
         const cd = this.spawnEntranceCd.get(e.id) || 0;
         if (e.id === this.lastSpawnEntrance && game.time - cd < DIRECTOR.spawnPointCooldown * 2) return false;
-        if (e.kind === 'window' && picks.includes('werewolf')) return false;
+        if (e.kind === 'window' && (picks.includes('werewolf') || picks.includes('ghoul'))) return false;
         return true;
       });
       const pool = cands.length ? cands : game.mansion.entrances;
@@ -284,7 +296,16 @@ export class Director {
       let e;
       if (key === 'crawler') e = new Crawler(pos.x, pos.y, o);
       else if (key === 'hunter') e = new Hunter(pos.x, pos.y, o);
+      else if (key === 'stalker') e = new Stalker(pos.x, pos.y, o);
+      else if (key === 'ghoul') e = new Ghoul(pos.x, pos.y, o);
       else e = new Werewolf(pos.x, pos.y, o);
+      // v1.0 variant rolls — the late night does not repeat the early one
+      if (key !== 'stalker' && game.time > 165) {
+        const vr = Math.random();
+        if (key === 'crawler' && game.phase.id === 'panic' && vr < 0.34) applyVariant(e, 'frenzy');
+        else if (key === 'hunter' && vr < 0.18) applyVariant(e, 'marksman');
+        else if ((key === 'werewolf' || key === 'ghoul') && vr < 0.16) applyVariant(e, 'alpha');
+      }
       e.waveId = this.waveCount;
       game.enemies.push(e);
       spawned.push(e);

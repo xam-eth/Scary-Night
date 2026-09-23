@@ -23,6 +23,12 @@ import { Mansion, ROOM } from './mansion.js';
 import { Player, PSTATE } from './player.js';
 import { Enemy, Crawler, Hunter, Werewolf, Bolt } from './enemies.js';
 import { Director, MOOD } from './director.js';
+import { Objectives } from './objectives.js';
+import { House } from './house.js';
+import { Haunts } from './haunts.js';
+import { Ads } from '../shop/ads.js';
+import { Valen3D } from './valen3d.js';
+import { IAP } from '../shop/iap.js';
 import { drawHUD, drawWorldPrompts } from './hud.js';
 import * as UI from '../ui/screens.js';
 
@@ -177,6 +183,9 @@ export class Game {
     this.mansion = new Mansion();
     this.player = new Player(620, 1200);
     this.director = new Director();
+    this.objectives = new Objectives();   // the night's purpose (src/game/objectives.js)
+    this.house = new House();             // ambient life: flicker, cat, piano, drafts
+    this.haunts = new Haunts();           // v1.0: whispers, watchers — the psychology layer
     this.player.applyUpgrades(this.save);
     this.applySettings();
     this.decals.canvas.getContext('2d');
@@ -192,6 +201,43 @@ export class Game {
     this.audio.setVolumes({ master: s.master, music: s.music, sfx: s.sfx });
     writeSave(this.save);
   }
+  /* ---- The Blood Market (see src/shop/iap.js) ----
+   * Thin wrappers: IAP owns the rules, these own the feedback (audio,
+   * messages, save writes). The store never touches gameplay numbers.
+   */
+  purchaseSku(id) {
+    if (IAP.busy) return;
+    this.audio.play('uiClick', { vol: 0.5 });
+    IAP.buy(this.save, id, () => { writeSave(this.save); this.player && this.player.applyUpgrades(this.save); })
+      .then((r) => {
+        if (r.ok) {
+          this.audio.play('chandelier', { vol: 0.7 });
+          this.showMessage('THE MARKET REMEMBERS. IT IS GRATEFUL.', { tone: 'gold', life: 4 });
+        } else {
+          this.audio.play('uiBack', { vol: 0.5 });
+          this.showMessage('THE HANDS CAME BACK EMPTY: ' + String(r.error || 'unavailable').toUpperCase(), { tone: 'cold', life: 4 });
+        }
+      });
+  }
+  buySkuWithShards(id) {
+    const r = IAP.buyWithShards(this.save, id);
+    if (r.ok) {
+      writeSave(this.save);
+      this.player && this.player.applyUpgrades(this.save);
+      this.audio.play('shard', { vol: 0.8 });
+      this.showMessage('PAID IN SHARDS. NO DEBT OUTSIDE.', { tone: 'gold', life: 3.4 });
+    } else {
+      this.audio.play('uiBack', { vol: 0.5 });
+      this.showMessage((r.error || 'NOT POSSIBLE').replace(/-/g, ' ').toUpperCase(), { tone: 'cold', life: 3 });
+    }
+  }
+  restorePurchases() {
+    this.audio.play('uiClick', { vol: 0.4 });
+    IAP.restore(this.save, () => writeSave(this.save)).then((r) => {
+      this.showMessage(r.ok ? `THE LEDGER RECOUNTS ${r.restored} SALE${r.restored === 1 ? '' : 'S'}.` : 'THE LEDGER IS OUT OF REACH HERE.', { tone: r.ok ? 'gold' : 'cold', life: 4 });
+    });
+  }
+
   buyUpgrade(id) {
     const u = UPGRADES.find((x) => x.id === id);
     if (!u) return;
@@ -216,7 +262,7 @@ export class Game {
     this.uiIndex = 0;
     this.ui = [];
     if (s !== 'playing') this.audio.play('uiClick', { vol: 0.5 });
-    if (s === 'settings' || s === 'upgrades' || s === 'collection' || s === 'help') {
+    if (s === 'settings' || s === 'upgrades' || s === 'collection' || s === 'help' || s === 'shop') {
       this.settingsReturn = from || (prev === 'paused' ? 'paused' : prev === 'death' ? 'death' : prev === 'victory' ? 'victory' : 'menu');
     }
   }
@@ -284,6 +330,22 @@ export class Game {
     this.countdown = null;
     this.countdownShown = 0;
     this.stats = { kills: 0, doorsSurviving: 4, doorsTotal: 4, closestCall: 0, waveCount: 0, hits: 0, bloodMin: 100 };
+    // ---- night purpose + living house + IAP consumables ----
+    this.usedRevive = false;
+    this.lastNightGoals = null;
+    this.runSeed = ((rand(0, 2 ** 31) | 0) ^ (this.time * 1000)) >>> 0;
+    this.lightMul = 1;
+    // carpenter's pouch (IAP consumable): +3 planks tonight, consumed at dusk
+    const pouch = IAP.takePouch(this.save);
+    if (pouch) {
+      this.player.planks += pouch;
+      this.showMessage('A CARPENTER LEFT PLANKS ON THE PORCH.', { tone: 'cold', life: 4 });
+      writeSave(this.save);
+    }
+    this.house.beginNight(this);
+    this.haunts.beginNight(this);
+    Ads.beginNight(this.night || 1);
+    this.objectives.beginNight(this);
     this.shardsEarned = 0;
     this.newRecord = false;
     this.dyingT = 0;
@@ -335,14 +397,17 @@ export class Game {
   }
 
   beginNight() {
-    Audio.unlock().then(() => {
-      this.freshRun();
-      this.screen = 'intro';
-      this.introT = 0;
-      this.fadeFromBlack = 1;
-      this.renderer.snapCamera(this.player.x, this.player.y);
-      Audio.setAmbienceVolume(1);
-    });
+    // v1.0 FIX (live click test): the whole night-start used to sit inside
+    // `Audio.unlock().then(...)`. A suspended/hanging AudioContext (audio-less
+    // browsers, some WebViews, autoplay quirks) then silently swallowed the
+    // transition and TRY AGAIN/PLAY/RESTART were dead buttons. The game state
+    // machine must never wait on audio — unlock is fire-and-forget polish.
+    this.freshRun();
+    this.screen = 'intro';
+    this.introT = 0;
+    this.fadeFromBlack = 1;
+    this.renderer.snapCamera(this.player.x, this.player.y);
+    Audio.unlock().then(() => { this.applySettings(); Audio.setAmbienceVolume(1); }).catch(() => { });
   }
 
   /* ================= update ================= */
@@ -352,7 +417,13 @@ export class Game {
     this.dt = dt * this.timeScale;
     this.now += rawDt;
     this.fpsSmooth = lerp(this.fpsSmooth, 1 / Math.max(rawDt, 0.0001), 0.05);
-    this.ui.length = 0;
+    // v1.0 FIX (live click test): ui was cleared HERE at the top of update(),
+    // but immediate-mode buttons register during render() — which runs AFTER
+    // update in the frame loop. handleUIInput therefore hit-tested against an
+    // empty array and every real click/tap on a menu button was swallowed.
+    // The reset now lives at the top of render(), so update() always sees the
+    // buttons drawn last frame. (This one predates v1.0 — it was in the base
+    // checkout; keyboard nav worked, mouse/touch never did.)
 
     this.input.update(rawDt);
     this.handleUIInput();
@@ -362,7 +433,7 @@ export class Game {
 
     switch (this.screen) {
       case 'menu': this.updateMenu(dt); break;
-      case 'settings': case 'upgrades': case 'collection': case 'help': break;
+      case 'settings': case 'upgrades': case 'collection': case 'help': case 'shop': break;
       case 'intro': this.updateIntro(dt); break;
       case 'playing': this.updatePlaying(this.dt); break;
       case 'paused': break;
@@ -489,6 +560,24 @@ export class Game {
 
     // ---- director ----
     this.director.update(dt, this);
+    // ---- the house lives; the night has goals ----
+    this.house.update(dt, this);
+    this.haunts.update(dt, this);
+    // the watched feeling decays; the altar is where you recover from it
+    this.feelWatched = Math.max(0, (this.feelWatched ?? 0) - dt * 0.22);
+    {
+      const altar = this.mansion.chapelAltar;
+      const p0 = this.player;
+      if (altar && p0.alive && Math.hypot(p0.x - altar.x, p0.y - altar.y) < altar.r) {
+        this.stats.altarSeconds = (this.stats.altarSeconds || 0) + dt;
+      }
+    }
+    this.objectives.update(dt, this);
+    // first-use legend for the door list (QA P1-7): teach it while it matters
+    if (!this.compassLegendShown && this.mansion.doors.some((d) => d.attackers > 0)) {
+      this.compassLegendShown = true;
+      this.showMessage('THE TOP-RIGHT LIST POINTS AT THE DOOR IT IS TOUCHING.', { tone: 'calm', life: 5 });
+    }
     // keep the HUD knock markers in sync
     this.knocks = this.director.knock ? [this.director.knock] : [];
 
@@ -641,6 +730,7 @@ export class Game {
    */
   onKnockAnswered(k, e) {
     if (!k) return;
+    this.objectives.notify(this, 'knockAnswered');
     if (!this.save.seen.knock) { this.save.seen.knock = true; writeSave(this.save); }
     this.audio.play('creak', { x: e.x, y: e.y, cam: this.renderer.cam, vol: 0.75 });
     this.makeNoise(e.x, e.y, 260);
@@ -756,6 +846,7 @@ export class Game {
   }
 
   onPlayerHurt(dmg, fromX, fromY, kind) {
+    this.objectives.onHurt();
     const p = this.player;
     this.lastHurtT = this.time;
     this.stats.hits++;
@@ -802,7 +893,7 @@ export class Game {
       e.hurt(dmg, this, player.x, player.y);
       hits++;
       // knockback
-      const kb = e.key === 'werewolf' ? 30 : 110;
+      const kb = e.key === 'werewolf' ? 30 : e.key === 'ghoul' ? 48 : e.key === 'stalker' ? 60 : 110;
       e.vx += Math.cos(a) * kb; e.vy += Math.sin(a) * kb;
     }
     this.stats.clawSwings = (this.stats.clawSwings || 0) + 1;
@@ -834,6 +925,15 @@ export class Game {
       this.audio.play('stinger', { vol: 0.5 });
       this.showMessage('THE WEREWOLF FALLS. IT WILL NOT STAY DOWN LONG.', { tone: 'cold' });
     }
+    if (enemy.key === 'ghoul') {
+      this.renderer.shake(0.3);
+      this.showMessage('THE GHOUL STOPS TASTING THE DOOR.', { tone: 'cold' });
+    }
+    if (enemy.key === 'stalker') {
+      this.objectives.notify(this, 'stalkerKilled');
+      this.showMessage('IT TURNS OUT THEY BLEED TOO.', { tone: 'cold' });
+    }
+    if (enemy.variant) this.stats.variantsKilled = (this.stats.variantsKilled || 0) + 1;
   }
 
   damageEntrance(e, amount, source) {
@@ -903,7 +1003,8 @@ export class Game {
 
   onEnemyEntered(e) {
     e.lastTouched = this.time;
-    if (e.key === 'werewolf') this.renderer.shake(0.4);
+    if (e.key === 'werewolf' || e.key === 'ghoul') this.renderer.shake(e.key === 'werewolf' ? 0.4 : 0.28);
+    if (e.key === 'stalker') { this.audio.play('breath', { vol: 0.4 }); this.feelWatched = 1.6; }
   }
 
   onEnemyGivesUp(e) {
@@ -1007,8 +1108,61 @@ export class Game {
 
   killPlayer(reason) {
     if (this.player.state === PSTATE.DEAD) return;
+    // ---- SECOND BLOOD ---- (IAP entitlement or shard-bought; once per night)
+    // It does not make you stronger: it hands back one dawn and drops you in
+    // the same dark, mid-swing, at 45% blood. Cap is enforced by the ledger.
+    if (!this.usedRevive && IAP.takeRevive(this.save)) {
+      this.usedRevive = true;
+      this.reviveIntoNight();
+      writeSave(this.save);
+      return;
+    }
     this.player.die(this);
     this.deathReason = reason;
+  }
+
+  /** Hand back one dawn. Same dark, same danger, 45% blood — the cap is the
+   *  whole design: this is mercy, not power. Used by IAP and rewarded ads. */
+  reviveIntoNight() {
+    const p = this.player;
+    if (p.state !== PSTATE.DEAD) { /* mid-death-screen revive */ }
+    p.state = PSTATE.IDLE;
+    p.deathT = 0;
+    p.blood = Math.max(p.blood, p.bloodMax * 0.45);
+    p.starveT = 0;
+    p.iframes = 2.8;
+    for (const e of this.enemies) {
+      if (e.dead) continue;
+      const a = Math.atan2(e.y - p.y, e.x - p.x);
+      e.vx += Math.cos(a) * 260; e.vy += Math.sin(a) * 260;
+    }
+    this.renderer.shake(0.9);
+    this.audio.play('chandelier', { vol: 0.9 });
+    this.showMessage('SECOND BLOOD. THE NIGHT ALLOWS ONE DO-OVER.', { tone: 'gold', life: 5 });
+    if (this.screen === 'death') this.setScreen('playing');
+  }
+
+  /** Rewarded-ad revival from the death screen — opt-in, once per night. */
+  async requestAdRevive() {
+    if (this.usedRevive) return;
+    const res = await Ads.watch('revive');
+    if (!res.ok) {
+      this.showMessage(res.error === 'user-cancelled' ? 'THE RITUAL WAS DECLINED.' : 'THE RITUAL DID NOT ANSWER.', { tone: 'cold', life: 3.2 });
+      return;
+    }
+    this.usedRevive = true;
+    this.reviveIntoNight();
+    if (res.mock) this.showMessage('(simulated grant)', { tone: 'cold', life: 2.2 });
+  }
+
+  /** Rewarded crate: +2 planks, once per day, from the shop. */
+  async requestAdCrate() {
+    const res = await Ads.watch('crate');
+    if (!res.ok) { this.showMessage(res.error === 'user-cancelled' ? 'NOT TODAY.' : 'NO CRATE TONIGHT.', { tone: 'cold', life: 2.6 }); return res; }
+    this.player.planks += 2;
+    this.showMessage('A CRATE, OUTSIDE THE DOOR. WOOD SMELLS LIKE TIME.', { tone: 'gold', life: 4 });
+    writeSave(this.save);
+    return res;
   }
 
   beginDying() {
@@ -1021,8 +1175,9 @@ export class Game {
     this.audio.duck(0.25, 3);
     this.showMessage('', {});
     this.messages.length = 0;
-    // the night keeps its stats
+    // the night keeps its stats (objectives pay out with it, partial credit)
     this.finalizeShards(this.time);
+    this.settleNight(this.time);
     this.save.nightsAttempted = (this.save.nightsAttempted || 0) + 1;
     this.save.bestTime = Math.max(this.save.bestTime, this.time);
     const kills = this.stats.kills;
@@ -1049,6 +1204,20 @@ export class Game {
       this.audio.setHeartbeat(0, 0);
       writeSave(this.save);
     }
+  }
+
+  after(seconds, fn) { this.timeouts.push({ t: seconds, fn }); }
+
+  /** Merge objective payout into the night's shards and remember the board. */
+  settleNight(survived) {
+    const won = survived >= NIGHT_DURATION;
+    const night = this.objectives.settle(this, won);
+    this.lastNightGoals = night.list;
+    this.save.goals = this.save.goals || { done: 0, nights: 0 };
+    this.save.goals.done += night.done;
+    this.save.goals.nights += 1;
+    this.shardsEarned = Math.max(0, this.shardsEarned + night.shards);
+    if (night.done) this.showMessage(night.done + ' OF ' + night.list.length + ' GOALS MET', { tone: 'gold', life: 4.2 });
   }
 
   finalizeShards(survived) {
@@ -1082,6 +1251,7 @@ export class Game {
     this.showMessage('THE SUN IS COMING UP.', { tone: 'warm' });
     // results
     this.finalizeShards(NIGHT_DURATION);
+    this.settleNight(NIGHT_DURATION);
     this.save.nightsSurvived++;
     this.save.nightsAttempted = (this.save.nightsAttempted || 0) + 1;
     this.newRecord = NIGHT_DURATION > this.save.bestTime;
@@ -1112,6 +1282,9 @@ export class Game {
     const ctx = r.ctx;
     const w = r.w, h = r.h;
 
+    // fresh immediate-mode registration surface (see update() note)
+    this.ui.length = 0;
+
     r.clear(PAL.void);
 
     if (this.screen === 'menu') {
@@ -1125,8 +1298,16 @@ export class Game {
     }
 
     // ---- the world is drawn for every in-run screen (so pause/death keep it) ----
-    const gameVisible = ['playing', 'paused', 'intro', 'dying', 'dawn', 'settings', 'upgrades', 'collection', 'help'].includes(this.screen);
-    if (gameVisible) r.beginWorld();
+    const gameVisible = ['playing', 'paused', 'intro', 'dying', 'dawn', 'settings', 'upgrades', 'collection', 'help', 'shop'].includes(this.screen);
+    if (gameVisible) {
+      // v1.1 — if the purchased GLB never loaded, the player sees this once
+      // and the placeholder announces itself every frame after that.
+      if (Valen3D.failed && !this._valenWarned) {
+        this._valenWarned = true;
+        this.showMessage('THE BODY REFUSES TO RISE — CHARACTER ASSET FAILED TO LOAD. RELOAD THE PAGE.', { tone: 'red', life: 9 });
+      }
+      r.beginWorld();
+    }
     if (gameVisible) this.renderWorld(dtSafe(this));
     r.resetForUI();
 
@@ -1144,6 +1325,7 @@ export class Game {
       case 'upgrades': UI.drawUpgrades(this, ctx, w, h); break;
       case 'collection': UI.drawCollection(this, ctx, w, h); break;
       case 'help': UI.drawHelp(this, ctx, w, h); break;
+      case 'shop': UI.drawShop(this, ctx, w, h); break;
       case 'death': UI.drawDeath(this, ctx, w, h); break;
       case 'victory': UI.drawVictory(this, ctx, w, h); break;
     }
@@ -1184,10 +1366,18 @@ export class Game {
     this.decals.draw(ctx);
     // ---------- props under entities ----------
     m.drawProps(ctx, this);
-    // ---------- dust motes ----------
+    this.house.draw(ctx, this);   // the cat, the drafts — before the actors
+    this.haunts.drawWatchers(ctx, this);   // the things at the edge of the light
+    // ---------- dust motes (air, not floor — billboard around the view) ----------
+    ctx.save(); r.upright(ctx, this.renderer.cam.x, this.renderer.cam.y);
     this.drawAmbientMotes(ctx);
-    // ---------- pickups ----------
-    for (const pk of this.pickups) pk.draw(ctx, this);
+    ctx.restore();
+    // ---------- pickups (stand tall like everything alive) ----------
+    for (const pk of this.pickups) {
+      ctx.save(); r.upright(ctx, pk.x, pk.y);
+      pk.draw(ctx, this);
+      ctx.restore();
+    }
 
     // ---------- entities (sorted by y for a pseudo-3D read) ----------
     const ents = [];
@@ -1198,12 +1388,27 @@ export class Game {
     for (const e of ents) {
       if (!playerDrawn && e.y > p.y) { this.drawPlayerLayer(ctx); playerDrawn = true; }
       if (!r.isVisible(e.x, e.y, 120)) continue;
+      ctx.save(); r.upright(ctx, e.x, e.y);
       e.draw(ctx, this);
+      ctx.restore();
+      // v1.0 variant tell: a cold tint ring — readable at a glance in the dark
+      if (e.variant && e.tint && !e.dead) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+        ctx.globalAlpha = 0.15;
+        ctx.strokeStyle = e.tint; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.ellipse(e.x, e.y + 8, e.radius * 1.5, e.radius * 0.62, 0, 0, Math.PI * 2); ctx.stroke();
+        ctx.restore();
+      }
     }
     if (!playerDrawn) this.drawPlayerLayer(ctx);
 
     // ---------- bolts ----------
-    for (const b of this.bolts) if (r.isVisible(b.x, b.y, 60)) b.draw(ctx);
+    for (const b of this.bolts) if (r.isVisible(b.x, b.y, 60)) {
+      ctx.save(); r.upright(ctx, b.x, b.y);
+      b.draw(ctx);
+      ctx.restore();
+    }
 
     // ---------- furniture + architecture above the floor ----------
     m.drawFurniture(ctx, this);
@@ -1211,7 +1416,9 @@ export class Game {
     m.drawLightFixtures(ctx, this);
 
     // ---------- particles ----------
+    ctx.save(); r.upright(ctx, this.renderer.cam.x, this.renderer.cam.y);
     this.particles.draw(ctx);
+    ctx.restore();
 
     // ---------- the shadow that is not quite there ----------
     if (this.director.shadow) {
@@ -1249,6 +1456,9 @@ export class Game {
     // muzzle flashes / impacts
     for (const b of this.bolts) r.addLight(b.x, b.y, 70, 0.3, [255, 220, 170]);
     r.lightEnd();
+
+    // ---------- character self-light (moonlight on the GLB frame) ----------
+    this.player.drawAfterDark(ctx, this);
 
     // ---------- warm additive pass ----------
     r.glowBegin();
@@ -1307,8 +1517,11 @@ export class Game {
 
   /** The vampire is drawn in the entity sort so enemies can occlude it. */
   drawPlayerLayer(ctx) {
+    // the character stands; the floor recedes — oblique-camera billboarding
+    ctx.save(); this.renderer.upright(ctx, this.player.x, this.player.y);
     this.player.draw(ctx, this);
     if (this.screen === 'playing' || this.screen === 'dying' || this.screen === 'intro') drawWorldPrompts(this, ctx);
+    ctx.restore();
   }
 
   drawAmbientMotes(ctx) {
@@ -1337,14 +1550,43 @@ export class Game {
     ctx.save();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    let y = h * 0.72;
+    const touch = this.input && this.input.touchSeen;
+    // phones keep the thumb zone and the blood bar clear of text
+    let y = h * (touch ? 0.32 : 0.72);
     for (let i = 0; i < msgs.length; i++) {
       const m = msgs[i];
       const inA = clamp(m.t / 0.5, 0, 1);
       const outA = clamp((m.life - m.t) / 0.8, 0, 1);
       const a = inA * outA;
       const tone = m.tone === 'danger' ? '#e2685c' : m.tone === 'warm' ? '#e0c48a' : m.tone === 'calm' ? '#a8b0c0' : '#cfc6b0';
-      const lines = String(m.text).split('\n');
+      // wrap to the viewport — a 390px phone must read every whisper too
+      const baseLines = String(m.text).split('\n');
+      const fontLine = `500 ${m.whisper ? 15 : 14}px ${m.whisper ? 'Georgia, serif' : '"Segoe UI", Roboto, sans-serif'}`;
+      ctx.font = fontLine;
+      if ('letterSpacing' in ctx) ctx.letterSpacing = '4px';
+      const maxW = w * 0.9;
+      const lines = [];
+      for (const base of baseLines) {
+        let cur = '';
+        for (const word of base.split(' ')) {
+          const next = cur ? cur + ' ' + word : word;
+          if (ctx.measureText(next).width > maxW && cur) { lines.push(cur); cur = word; }
+          else cur = next;
+        }
+        lines.push(cur);
+      }
+      // v1.0 (QA P1-5) — a soft scrim so captions never fight the rug: the
+      // text keeps its glow, the floor keeps its darkness, both are readable.
+      let maxLw = 0;
+      for (const ln of lines) maxLw = Math.max(maxLw, ctx.measureText(ln).width);
+      ctx.save();
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = a * 0.42;
+      ctx.fillStyle = 'rgba(2,3,6,1)';
+      const scrW = Math.min(w * 0.94, maxLw + 58);
+      const scrH = lines.length * 20 + 13;
+      ctx.fillRect(w / 2 - scrW / 2, y - scrH / 2, scrW, scrH);
+      ctx.restore();
       ctx.globalAlpha = a * (m.whisper ? 0.75 : 0.95);
       ctx.font = `${m.whisper ? 'italic ' : ''}500 ${m.whisper ? 15 : 14}px ${m.whisper ? 'Georgia, serif' : '"Segoe UI", Roboto, sans-serif'}`;
       if ('letterSpacing' in ctx) ctx.letterSpacing = '4px';
@@ -1437,26 +1679,33 @@ export class Game {
 
   handleUIInput() {
     const input = this.input;
+    // pause toggle FIRST — it exists precisely for the 'playing' screen, so it
+    // cannot live behind the menu guard below. (v1.0 FIX, live click test:
+    // ESC during play had been unreachable since the base checkout.)
+    if (input.keys.pause && !this._pauseHeld) {
+      this._pauseHeld = true;
+      if (this.screen === 'playing') this.togglePause(true);
+      else if (this.screen === 'paused') this.togglePause(false);
+    }
+    if (!input.keys.pause) this._pauseHeld = false;
     const inMenu = this.screen !== 'playing' && this.screen !== 'dying' && this.screen !== 'dawn' && this.screen !== 'intro';
-    if (!inMenu) { this.uiIndex = 0; return; }
+    if (!inMenu) { this.uiIndex = 0; input.uiTap = null; return; }  // taps spent during play must not pop a menu button later
     // keyboard navigation
     if (input.keys.up && !this._navUp) { this.uiIndex = Math.max(0, this.uiIndex - 1); this.usingKeyboard = true; this.audio.play('uiHover', { vol: 0.3 }); }
     if (input.keys.down && !this._navDown) { this.uiIndex = Math.min(99, this.uiIndex + 1); this.usingKeyboard = true; this.audio.play('uiHover', { vol: 0.3 }); }
     this._navUp = input.keys.up; this._navDown = input.keys.down;
-    // clicking (mouse or touch tap)
+    // clicking — one channel for mouse and touch (input posts uiTap on both)
     {
       const tap = input.uiTap;
-      const mx = input.mouse.clicked ? input.mouse.x : (tap ? tap.x : null);
-      const my = input.mouse.clicked ? input.mouse.y : (tap ? tap.y : null);
-      if (mx !== null && my !== null) {
+      if (tap) {
+        input.uiTap = null;
         let hit = null;
         for (const b of this.ui) {
           if (b.slider) continue;
           if (b.disabled) continue;
-          if (mx > b.x && mx < b.x + b.w && my > b.y && my < b.y + b.h) { hit = b; }
+          if (tap.x > b.x && tap.x < b.x + b.w && tap.y > b.y && tap.y < b.y + b.h) { hit = b; }
         }
-        if (hit && hit.onClick) { this.audio.play('uiConfirm', { vol: 0.4 }); hit.onClick(); input.uiTap = null; }
-        else if (tap) input.uiTap = null;
+        if (hit && hit.onClick) { this.audio.play('uiConfirm', { vol: 0.4 }); hit.onClick(); }
       }
     }
     if (input.keys.confirm && !this._confirmHeld) {
@@ -1465,13 +1714,6 @@ export class Game {
       if (b && b.onClick && !b.disabled) { this.audio.play('uiConfirm', { vol: 0.5 }); b.onClick(); }
     }
     if (!input.keys.confirm) this._confirmHeld = false;
-    // pause toggle
-    if (input.keys.pause && !this._pauseHeld) {
-      this._pauseHeld = true;
-      if (this.screen === 'playing') this.togglePause(true);
-      else if (this.screen === 'paused') this.togglePause(false);
-    }
-    if (!input.keys.pause) this._pauseHeld = false;
   }
 }
 

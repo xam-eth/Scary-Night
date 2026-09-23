@@ -3,3 +3,7 @@ tools/node_modules/
 tools/shots/
 *.log
 .DS_Store
+shots-browser/
+tools/.cache/
+server/data.json
+server/data.test.json

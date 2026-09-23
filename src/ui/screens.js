@@ -10,7 +10,10 @@
 
 import { clamp, lerp, damp, TAU, rand, chance, fmtClock, hash2, fmtBar } from '../core/util.js';
 import { PAL } from '../core/render.js';
-import { UPGRADES, upgradeLevel, DIFFICULTY, CODEX, NIGHT_DURATION } from '../core/config.js';
+import { UPGRADES, upgradeLevel, DIFFICULTY, CODEX, NIGHT_DURATION, GAME_VERSION } from '../core/config.js';
+import { Valen3D } from '../game/valen3d.js';
+import { IAP, CATALOG } from '../shop/iap.js';
+import { Ads } from '../shop/ads.js';
 
 const SERIF = 'Georgia, "Palatino Linotype", "Times New Roman", serif';
 const SANS = '"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
@@ -199,14 +202,18 @@ export function drawMenuScene(game, ctx, w, h, t) {
   }
   ctx.restore();
 
-  // ---- the vampire, in the foreground, back to us ----
+  // ---- the character, in the foreground, three-quarter to camera ----
+  // Industry rule for a hero screen: the menu shows WHAT YOU PLAY, so the
+  // loaded GLB itself stands in the hall (its rest pose, evaluated once).
+  // The procedural figure survives only while the GLB is unavailable.
   const px = w * 0.16, py = h * 0.86;
   const br = Math.sin(t * 1.1) * 2.6;
+  const vframe = Valen3D.renderMenu();
   ctx.save();
   ctx.translate(px, py + br);
   const scale = h / 760;
   ctx.scale(scale, scale);
-  // long shadow
+  // long shadow (kept for both renderers: it is the same hall light)
   ctx.save();
   ctx.globalAlpha = 0.55;
   const sg = ctx.createLinearGradient(0, 0, 120, -140);
@@ -216,43 +223,43 @@ export function drawMenuScene(game, ctx, w, h, t) {
   ctx.moveTo(-16, 6); ctx.lineTo(10, 6); ctx.lineTo(150, -120); ctx.lineTo(120, -150);
   ctx.closePath(); ctx.fill();
   ctx.restore();
-  // coat
-  const coatG = ctx.createLinearGradient(0, -180, 0, 10);
-  coatG.addColorStop(0, '#1a1b26'); coatG.addColorStop(0.6, '#101119'); coatG.addColorStop(1, '#07080c');
-  ctx.fillStyle = coatG;
-  ctx.beginPath();
-  ctx.moveTo(-34, 8);
-  ctx.quadraticCurveTo(-46, -70, -30, -118);
-  ctx.quadraticCurveTo(-16, -150, 0, -152);
-  ctx.quadraticCurveTo(16, -150, 30, -118);
-  ctx.quadraticCurveTo(46, -70, 34, 8);
-  ctx.quadraticCurveTo(0, 16, -34, 8);
-  ctx.closePath();
-  ctx.fill();
-  // shoulders + arms
-  ctx.fillStyle = '#14151f';
-  ctx.beginPath(); ctx.ellipse(0, -128, 34, 22, 0, 0, TAU); ctx.fill();
-  // collar
-  ctx.fillStyle = '#0c0d14';
-  ctx.beginPath();
-  ctx.moveTo(-16, -146); ctx.lineTo(0, -122); ctx.lineTo(16, -146);
-  ctx.quadraticCurveTo(0, -152, -16, -146);
-  ctx.fill();
-  // hair
-  ctx.fillStyle = '#05060a';
-  ctx.beginPath();
-  ctx.moveTo(-15, -150);
-  ctx.quadraticCurveTo(-22, -176, -10, -192);
-  ctx.quadraticCurveTo(6, -200, 15, -184);
-  ctx.quadraticCurveTo(22, -168, 15, -150);
-  ctx.quadraticCurveTo(0, -158, -15, -150);
-  ctx.fill();
-  // the hint of a red lining
-  ctx.strokeStyle = 'rgba(120,20,32,0.6)'; ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(-30, -110); ctx.quadraticCurveTo(-40, -50, -30, 4);
-  ctx.moveTo(30, -110); ctx.quadraticCurveTo(40, -50, 30, 4);
-  ctx.stroke();
+  if (vframe) {
+    Valen3D.draw(ctx, vframe, h * 0.46 / scale, { footInset: 8 });
+  } else {
+    // coat
+    const coatG = ctx.createLinearGradient(0, -180, 0, 10);
+    coatG.addColorStop(0, '#1a1b26'); coatG.addColorStop(0.6, '#101119'); coatG.addColorStop(1, '#07080c');
+    ctx.fillStyle = coatG;
+    ctx.beginPath();
+    ctx.moveTo(-34, 8);
+    ctx.quadraticCurveTo(-46, -70, -30, -118);
+    ctx.quadraticCurveTo(-16, -150, 0, -152);
+    ctx.quadraticCurveTo(16, -150, 30, -118);
+    ctx.quadraticCurveTo(46, -70, 34, 8);
+    ctx.quadraticCurveTo(0, 16, -34, 8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#14151f';
+    ctx.beginPath(); ctx.ellipse(0, -128, 34, 22, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#0c0d14';
+    ctx.beginPath();
+    ctx.moveTo(-16, -146); ctx.lineTo(0, -122); ctx.lineTo(16, -146);
+    ctx.quadraticCurveTo(0, -152, -16, -146);
+    ctx.fill();
+    ctx.fillStyle = '#05060a';
+    ctx.beginPath();
+    ctx.moveTo(-15, -150);
+    ctx.quadraticCurveTo(-22, -176, -10, -192);
+    ctx.quadraticCurveTo(6, -200, 15, -184);
+    ctx.quadraticCurveTo(22, -168, 15, -150);
+    ctx.quadraticCurveTo(0, -158, -15, -150);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(120,20,32,0.6)'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-30, -110); ctx.quadraticCurveTo(-40, -50, -30, 4);
+    ctx.moveTo(30, -110); ctx.quadraticCurveTo(40, -50, 30, 4);
+    ctx.stroke();
+  }
   ctx.restore();
 
   // ---- lightning flash ----
@@ -311,18 +318,28 @@ export function drawMenu(game, ctx, w, h) {
   const t = game.time;
   drawMenuScene(game, ctx, w, h, t);
   drawTitle(game, ctx, w, h, t);
+  // build stamp — small, honest, visible: v1.0.0-beta line
+  ctx.save();
+  ctx.textAlign = 'left';
+  ctx.font = `400 10px ${MONO}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '1px';
+  ctx.fillStyle = 'rgba(140,134,124,0.4)';
+  ctx.fillText('v' + GAME_VERSION, 12, 16);   // v1.0: the BETA flag retires with the version bump
+  ctx.restore();
 
   const bw = clamp(w * 0.2, 210, 300);
-  const bh = 50;
+  const bh = clamp(h * 0.072, 42, 50);
   const bx = w / 2 - bw / 2;
-  let by = h * 0.44;
+  let by = h * 0.41;
 
   const B = game.save;
   const canUpgrade = (B.shards || 0) > 0;
 
+  const goalLine = B.goals && B.goals.done ? `${B.goals.done} GOALS MET ACROSS ${B.goals.nights} NIGHTS` : 'THE NIGHT HAS GOALS NOW';
   const defs = [
-    { label: 'PLAY', sub: 'ONE NIGHT. FIVE MINUTES.', onClick: () => game.beginNight() },
+    { label: 'PLAY', sub: 'ONE NIGHT. FIVE MINUTES. THREE GOALS.', onClick: () => game.beginNight() },
     { label: 'UPGRADES', sub: canUpgrade ? `${B.shards} BLOOD SHARDS` : 'NO SHARDS YET', onClick: () => game.setScreen('upgrades') },
+    { label: 'BLOOD MARKET', sub: IAP.mode === 'disabled' ? 'STORE OFFLINE' : IAP.mode === 'sandbox' ? 'SANDBOX STORE' : 'STORE READY', onClick: () => game.setScreen('shop') },
     { label: 'COLLECTION', sub: `${Object.keys(B.seen || {}).length}/${CODEX.length} RECORDED`, onClick: () => game.setScreen('collection') },
     { label: 'SETTINGS', sub: DIFFICULTY[B.settings.difficulty]?.label || 'STANDARD', onClick: () => game.setScreen('settings') },
   ];
@@ -341,6 +358,7 @@ export function drawMenu(game, ctx, w, h) {
   ctx.fillStyle = 'rgba(180,172,158,0.6)';
   const best = B.bestTime > 0 ? fmtClock(B.bestTime) : '--:--';
   ctx.fillText(`NIGHTS SURVIVED ${B.nightsSurvived}     BEST ${best}     SHARDS ${B.shards}`, w / 2, h - 34);
+  ctx.fillText(goalLine, w / 2, h - 48);
   ctx.font = `400 10px ${SANS}`;
   ctx.fillStyle = 'rgba(140,134,124,0.45)';
   ctx.fillText('WASD / ARROWS  ·  SHIFT DASH  ·  CLICK OR F CLAW  ·  E INTERACT  ·  R REPAIR  ·  B BARRICADE  ·  ESC PAUSE', w / 2, h - 16);
@@ -358,24 +376,47 @@ export function drawIntro(game, ctx, w, h) {
   ctx.globalAlpha = a;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  const lines = [
-    { s: 'LAST NIGHT', f: 40, style: SERIF, ls: 10, y: 0.3, c: '#efe7d4' },
-    { s: 'You are a vampire. You cannot cross the threshold.', f: 15, style: SANS, ls: 2, y: 0.4, c: 'rgba(200,192,176,0.8)' },
-    { s: 'Something outside wants in.', f: 15, style: SANS, ls: 2, y: 0.445, c: 'rgba(200,192,176,0.8)' },
-    { s: 'SURVIVE UNTIL DAWN.', f: 24, style: SERIF, ls: 7, y: 0.53, c: '#c8a04a' },
-    { s: '00:00  →  05:00', f: 20, style: MONO, ls: 4, y: 0.59, c: 'rgba(220,214,198,0.9)' },
+  // Mobile-safe: the intro type scales with the shorter axis and the body
+  // copy re-wraps inside the viewport, flowing top-down so narrow screens
+  // can never make two lines collide. A launch card that clips off-screen
+  // reads as a broken game before the game has even started.
+  const sc = clamp(Math.min(w / 900, h / 620), 0.58, 1);
+  const maxW = w * 0.86;
+  const wrap = (text, font) => {
+    ctx.font = font;
+    const words = text.split(' ');
+    const out = []; let cur = '';
+    for (const word of words) {
+      const next = cur ? cur + ' ' + word : word;
+      if (ctx.measureText(next).width > maxW && cur) { out.push(cur); cur = word; }
+      else cur = next;
+    }
+    if (cur) out.push(cur);
+    return out;
+  };
+  const bodyFont = `400 ${15 * sc}px ${SANS}`;
+  const body = [
+    ...wrap('You are a vampire. You cannot cross the threshold.', bodyFont),
+    ...wrap('Something outside wants in.', bodyFont),
   ];
-  for (const l of lines) {
-    ctx.font = `400 ${l.f}px ${l.style}`;
-    if ('letterSpacing' in ctx) ctx.letterSpacing = l.ls + 'px';
-    ctx.fillStyle = l.c;
-    ctx.fillText(l.s, w / 2, h * l.y);
-  }
+  const draw = (text, { f, style, ls, y, c }) => {
+    ctx.font = `400 ${f}px ${style}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = ls + 'px';
+    ctx.fillStyle = c;
+    ctx.fillText(text, w / 2, h * y);
+  };
+  draw('LAST NIGHT', { f: 40 * sc, style: SERIF, ls: 10 * sc, y: 0.24, c: '#efe7d4' });
+  let fy = 0.36;
+  for (const b of body) { draw(b, { f: 15 * sc, style: SANS, ls: 2 * sc, y: fy, c: 'rgba(200,192,176,0.8)' }); fy += 0.042; }
+  fy = Math.max(0.55, fy + 0.03);
+  draw('SURVIVE UNTIL DAWN.', { f: 24 * sc, style: SERIF, ls: 7 * sc, y: fy, c: '#c8a04a' });
+  draw('00:00  →  05:00', { f: 20 * sc, style: MONO, ls: 4 * sc, y: fy + 0.06, c: 'rgba(220,214,198,0.9)' });
+  const hintY = fy + 0.12;
   ctx.globalAlpha = a * 0.6;
   ctx.font = `400 12px ${SANS}`;
   if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
   ctx.fillStyle = 'rgba(190,182,168,0.9)';
-  ctx.fillText('BREATHE. LISTEN. REPAIR WHAT YOU CAN.', w / 2, h * 0.7);
+  ctx.fillText('BREATHE. LISTEN. REPAIR WHAT YOU CAN.', w / 2, h * hintY);
   ctx.restore();
 }
 
@@ -398,8 +439,8 @@ export function drawPause(game, ctx, w, h) {
   const items = [
     { label: 'RESUME', onClick: () => game.togglePause(false) },
     { label: 'RESTART NIGHT', onClick: () => game.beginNight() },
-    { label: 'SETTINGS', onClick: () => game.setScreen('settings', 'pause') },
-    { label: 'HOW TO SURVIVE', onClick: () => game.setScreen('help', 'pause') },
+    { label: 'SETTINGS', onClick: () => game.setScreen('settings', 'paused') }, // v1.0 FIX: 'pause' was no real screen — BACK from settings black-holed the game
+    { label: 'HOW TO SURVIVE', onClick: () => game.setScreen('help', 'paused') }, // same black-hole as the SETTINGS row above
     { label: 'ABANDON', onClick: () => game.toMenu() },
   ];
   items.forEach((it, i) => {
@@ -431,15 +472,18 @@ export function drawSettings(game, ctx, w, h) {
   const cx = w / 2;
 
   const slider = (label, key, min, max, fmt) => {
-    const x = cx - labelW / 2 - 60;
-    const wdt = 300;
+    // v1.0 (QA P0-3): a fixed label column and a track that starts after it.
+    // Labels are right-aligned to `x - 26` so the longest ("SOUND EFFECTS")
+    // keeps 26px of air before the bar, on every screen width this layout ships.
+    const wdt = Math.min(300, Math.max(160, w * 0.3));
+    const x = cx - wdt / 2 + 92;
     const val = s[key];
     ctx.save();
     ctx.textAlign = 'right';
     ctx.font = `500 13px ${SANS}`;
     if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
     ctx.fillStyle = 'rgba(205,196,180,0.85)';
-    ctx.fillText(label, cx - labelW / 2 - 20, y);
+    ctx.fillText(label, x - 26, y);
     ctx.textAlign = 'left';
     ctx.font = `400 13px ${MONO}`;
     ctx.fillStyle = 'rgba(205,196,180,0.7)';
@@ -689,11 +733,22 @@ export function drawCollection(game, ctx, w, h) {
     ctx.font = `500 16px ${SERIF}`;
     if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
     ctx.fillStyle = known ? '#ded4bc' : 'rgba(120,116,110,0.6)';
-    ctx.fillText(known ? c.name : '???', x + 18, yy + 30);
+    ctx.fillText(known ? c.name : '??? ' + c.name.slice(0, 2) + '· · ·', x + 18, yy + 30);
+    if (!known) {
+      // blind-box teaser: the initials, a silhouette, and nothing else
+      ctx.save();
+      ctx.globalAlpha = 0.16;
+      ctx.fillStyle = '#9aa4bd';
+      ctx.beginPath(); ctx.ellipse(x + cw - 44, yy + ch - 52, 16, 22, 0, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.arc(x + cw - 44, yy + ch - 82, 7, 0, TAU); ctx.fill();
+      ctx.restore();
+    }
     ctx.font = `400 12px ${SANS}`;
     if ('letterSpacing' in ctx) ctx.letterSpacing = '1px';
     ctx.fillStyle = known ? 'rgba(190,182,166,0.8)' : 'rgba(110,106,100,0.5)';
-    const txt = known ? c.text : 'Not yet encountered.';
+    const txt = known ? c.text
+      : 'A shape the house has not handed over yet. ' +
+        'Every night keeps its names in a different room.';
     wrapText(ctx, txt, x + 18, yy + 56, cw - 36, 17);
     ctx.restore();
   });
@@ -789,6 +844,13 @@ export function drawDeath(game, ctx, w, h) {
   ctx.shadowColor = 'rgba(180,20,30,0.4)'; ctx.shadowBlur = 24;
   ctx.fillText('THE NIGHT CLAIMED YOU', w / 2, h * 0.3);
   ctx.shadowBlur = 0;
+  // v1.0 (QA P2-9): the death screen teaches. What actually got you.
+  if (game.deathReason) {
+    ctx.font = `italic 400 15px ${SERIF}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+    ctx.fillStyle = 'rgba(178,120,110,0.85)';
+    ctx.fillText(String(game.deathReason).toUpperCase(), w / 2, h * 0.365);
+  }
 
   const stats = game.stats;
   const rows = [
@@ -814,20 +876,35 @@ export function drawDeath(game, ctx, w, h) {
     ctx.fillStyle = 'rgba(200,160,74,0.9)';
     ctx.fillText(`◆ +${game.shardsEarned} BLOOD SHARDS`, w / 2, y + 6);
   }
+  // tonight's goals board — partial credit, shown honestly
+  if (game.lastNightGoals && game.lastNightGoals.length) {
+    ctx.font = `400 11px ${SANS}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+    const done = game.lastNightGoals.filter((g) => g.state === 'done');
+    ctx.fillStyle = 'rgba(160,154,142,0.75)';
+    ctx.fillText(`GOALS ${done.length}/${game.lastNightGoals.length} — ` + game.lastNightGoals.map((g) => (g.state === 'done' ? '✓' : '·') + ' ' + g.label).join('   '), w / 2, y + 30);
+  }
   ctx.restore();
 
   if (fade > 0.9) {
     const bw = 220, bh = 48;
-    let by = h * 0.76;
     const items = [
       { label: 'TRY AGAIN', onClick: () => game.beginNight(), accent: '#a8833c' },
       { label: 'UPGRADES', onClick: () => game.setScreen('upgrades', 'death'), accent: '#6a6a80' },
       { label: 'MAIN MENU', onClick: () => game.toMenu(), accent: '#6a6a80' },
     ];
+    // v1.0 — rewarded revive offer, opt-in, once per night (src/shop/ads.js).
+    if (!game.usedRevive && Ads.isAvailable('revive')) {
+      items.unshift({ label: Ads.label('revive'), onClick: () => game.requestAdRevive(), accent: '#6a2230' });
+    }
+    // v1.0 (QA P0-2): stack from the bottom edge upward — landscape phones
+    // never clip the last button, whatever the row count.
+    const gap = h < 640 ? 6 : 8;
+    let by = Math.min(h * 0.76, h - (items.length * (bh + gap)) - 14);
     items.forEach((it, i) => {
       const r = uiButton(game, { x: w / 2 - bw / 2, y: by, w: bw, h: bh, label: it.label, onClick: it.onClick, accent: it.accent, small: true });
       buttonVisual(ctx, r.b, { active: r.hover || (game.usingKeyboard && game.uiIndex === i), label: it.label, small: true, accent: it.accent });
-      by += bh + 8;
+      by += bh + gap;
     });
   }
 }
@@ -922,16 +999,26 @@ export function drawVictory(game, ctx, w, h) {
   ctx.textAlign = 'center';
   ctx.fillStyle = 'rgba(200,160,74,0.95)';
   ctx.fillText(`◆ +${game.shardsEarned} BLOOD SHARDS`, cx, y + 12);
+  if (game.lastNightGoals && game.lastNightGoals.length) {
+    const done = game.lastNightGoals.filter((g) => g.state === 'done');
+    ctx.font = `400 11px ${SANS}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+    ctx.fillStyle = 'rgba(190,184,170,0.8)';
+    ctx.fillText(`GOALS ${done.length}/${game.lastNightGoals.length} — ` + game.lastNightGoals.map((g) => (g.state === 'done' ? '✓' : '·') + ' ' + g.label).join('   '), cx, y + 34);
+  }
   ctx.restore();
 
   if (fade > 0.9) {
     const bw = 220, bh = 46;
-    let by = h - 150;
     const items = [
       { label: 'UPGRADES', onClick: () => game.setScreen('upgrades', 'victory'), accent: '#a8833c' },
       { label: 'ANOTHER NIGHT', onClick: () => game.beginNight(), accent: '#a8833c' },
       { label: 'MAIN MENU', onClick: () => game.toMenu(), accent: '#6a6a80' },
     ];
+    // v1.0 (QA P0-2): anchor the stack to the bottom and compress to fit —
+    // 1280x720 and small landscape phones both land inside the viewport.
+    const gap = h < 640 ? 5 : 8;
+    let by = Math.min(h - (bh + gap) * items.length - 16, h * 0.74);
     items.forEach((it, i) => {
       const r = uiButton(game, { x: w / 2 - bw / 2, y: by, w: bw, h: bh, label: it.label, onClick: it.onClick, accent: it.accent, small: true });
       buttonVisual(ctx, r.b, { active: r.hover || (game.usingKeyboard && game.uiIndex === i), label: it.label, small: true, accent: it.accent });
@@ -964,4 +1051,132 @@ export function drawTutorial(game, ctx, w, h) {
     ctx.fillText(hnt.text, w / 2, h * hnt.y);
   }
   ctx.restore();
+}
+
+/* ================= the Blood Market (IAP) — src/shop/iap.js =================
+ * Catalog policy lives in iap.js; this screen is only its face. Every card
+ * states plainly what it is, every item is also shard-buyable, the sandbox
+ * mark (⌁) tells beta testers no real money moves. No ads anywhere in the
+ * game — that is a feature, and it is written on the wall.
+ */
+export function drawShop(game, ctx, w, h) {
+  const back = game.settingsReturn || 'menu';
+  const B = game.save;
+  ctx.save();
+  ctx.fillStyle = 'rgba(4,5,9,0.94)';
+  ctx.fillRect(0, 0, w, h);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `400 ${clamp(w * 0.03, 22, 32)}px ${SERIF}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '8px';
+  ctx.fillStyle = '#e8e0cc';
+  ctx.fillText('BLOOD MARKET', w / 2, h * 0.075);
+  ctx.font = `400 13px ${MONO}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+  ctx.fillStyle = 'rgba(200,160,74,0.95)';
+  ctx.fillText(`◆ ${B.shards} SHARDS   ·   SECOND BLOOD: ${(B.iap && B.iap.revives) | 0}/NIGHT   ·   POUCHES: ${(B.iap && B.iap.pouches) | 0}`, w / 2, h * 0.125);
+  // v1.0 — the daily rewarded crate (opt-in, capped, invisible when no ad
+  // network is configured). AdMob SSV is required before real keys: docs/IAP.md.
+  if (Ads.isAvailable('crate')) {
+    const aw = Math.min(260, w * 0.42), ah = 30;
+    const ar = uiButton(game, { x: w / 2 - aw / 2, y: h * 0.155, w: aw, h: ah, label: Ads.label('crate'), onClick: () => game.requestAdCrate(), small: true, accent: '#6a2230' });
+    buttonVisual(ctx, ar.b, { active: ar.hover, label: Ads.label('crate'), small: true, accent: '#6a2230' });
+  }
+  ctx.restore();
+
+  const wide = w > 860;
+  const cols = wide ? 2 : 1;
+  const gap = 12;
+  const padX = wide ? 60 : 16;
+  const cardW = (w - padX * 2 - gap * (cols - 1)) / cols;
+  const rows = Math.ceil(CATALOG.length / cols);
+  const gridTop = h * 0.175;
+  const footY = h - (wide ? 66 : 52) - 10;               // reserve for buttons
+  const cardH = clamp((footY - gridTop - 46 - gap * (rows - 1)) / rows, 52, 92);
+  let cy = gridTop;
+  let cx = padX;
+  const iapBag = (B.iap && B.iap.owned) || {};
+
+  CATALOG.forEach((sku) => {
+    if (wide && cx > padX) { /* keep */ }
+    const owned = sku.kind === 'cosmetic' && iapBag[sku.gives.owned] === true;
+    const bundleOwned = sku.kind === 'bundle' && sku.gives.owned.every((o) => iapBag[o]);
+    const isOwned = owned || bundleOwned;
+    // card body
+    ctx.save();
+    ctx.fillStyle = isOwned ? 'rgba(20,22,30,0.5)' : 'rgba(14,14,20,0.72)';
+    ctx.fillRect(cx, cy, cardW, cardH);
+    ctx.strokeStyle = sku.tag ? 'rgba(200,160,74,0.6)' : 'rgba(90,88,110,0.35)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(cx + 0.5, cy + 0.5, cardW - 1, cardH - 1);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.font = `500 15px ${SERIF}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+    ctx.fillStyle = '#e6dcc4';
+    ctx.fillText(sku.name, cx + 14, cy + 24);
+    if (sku.tag) {
+      const nameW = ctx.measureText(sku.name).width;
+      ctx.font = `500 9px ${SANS}`;
+      ctx.fillStyle = 'rgba(200,160,74,0.95)';
+      ctx.fillText(sku.tag, cx + 14 + nameW + 10, cy + 23);
+    }
+    ctx.font = `400 11px ${SANS}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '0.4px';
+    ctx.fillStyle = 'rgba(178,172,160,0.75)';
+    // the button column owns the right side of the card: clip the blurb
+    const blurbMax = cardW - (isOwned ? 30 : (clamp(cardW * 0.3, 86, 120) * 2 + 34)) - 28;
+    let blurb = sku.blurb;
+    while (ctx.measureText(blurb).width > blurbMax && blurb.length > 8) blurb = blurb.slice(0, -2);
+    if (blurb !== sku.blurb) blurb = blurb.replace(/[,.;]$/, '') + '…';
+    ctx.fillText(blurb, cx + 14, cy + 44);
+    ctx.font = `400 11px ${MONO}`;
+    ctx.fillStyle = 'rgba(150,146,136,0.6)';
+    ctx.fillText(isOwned ? 'ALREADY YOURS' : `${IAP.priceLabel(sku)}   or   ${sku.shardPrice ? '◆' + sku.shardPrice : 'shard lane n/a'}`, cx + 14, cy + cardH - 14);
+    ctx.restore();
+    // actions
+    if (!isOwned) {
+      const bw2 = clamp(cardW * 0.3, 86, 120), bh2 = 30;
+      const busy = IAP.busy === sku.id;
+      const r1 = uiButton(game, {
+        x: cx + cardW - bw2 * 2 - 22, y: cy + cardH / 2 - bh2 / 2, w: bw2, h: bh2,
+        label: busy ? '…' : 'STORE', small: true, disabled: busy || IAP.mode === 'disabled',
+        onClick: () => game.purchaseSku(sku.id),
+      });
+      buttonVisual(ctx, r1.b, { active: r1.hover || r1.selected, label: busy ? '…' : 'STORE', small: true, accent: '#a8833c' });
+      const canShard = sku.shardPrice && B.shards >= sku.shardPrice;
+      const r2 = uiButton(game, {
+        x: cx + cardW - bw2 - 12, y: cy + cardH / 2 - bh2 / 2, w: bw2, h: bh2,
+        label: '◆ SHARDS', small: true, disabled: !canShard,
+        onClick: () => game.buySkuWithShards(sku.id),
+      });
+      buttonVisual(ctx, r2.b, { active: r2.hover || r2.selected, label: '◆ SHARDS', small: true, accent: '#6a6a80', disabled: !canShard });
+    }
+    cx += cardW + gap;
+    if (cx + cardW > w - padX / 2) { cx = padX; cy += cardH + gap; }
+  });
+
+  // policy line + actions — pinned above the buttons, never on top of cards
+  const rowsEnd = cx === padX ? cy : cy + cardH;
+  const policyY = Math.min(rowsEnd + 26, h - (wide ? 96 : 88));
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.font = `400 10px ${SANS}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '1.4px';
+  ctx.fillStyle = 'rgba(140,134,124,0.55)';
+  const policy = ['EVERYTHING HERE IS EARNABLE BY PLAYING · NO PAY-TO-WIN · REWARDED ADS ARE OPT-IN AND HARD-CAPPED · COSMETICS NEVER ALTER THE MODEL FILES',
+    IAP.mode === 'sandbox' ? 'SANDBOX STORE — ⌁ NO REAL MONEY MOVES · V1.0'
+      : IAP.mode === 'midtrans' ? 'MIDTRANS SNAP — IDR PRICES · SETTLEMENT CONFIRMED BY THE SERVER'
+      : 'STORE CONNECTED TO THE PLATFORM BILLING BRIDGE'];
+  const pLines = wide ? policy : [policy[0].split(' · ').slice(0, 3).join(' · ') + ' · ' + (IAP.mode === 'sandbox' ? '⌁ NO REAL MONEY MOVES' : 'BRIDGE CONNECTED')];
+  pLines.forEach((line, i) => ctx.fillText(line, w / 2, policyY + i * 16));
+  ctx.restore();
+
+  const restoreLabel = wide ? 'RESTORE PURCHASES' : 'RESTORE';
+  const backLabel = wide ? 'BACK TO THE HOUSE' : 'BACK';
+  const bw = wide ? 224 : Math.min(160, w * 0.4), bh = wide ? 42 : 34;
+  const r3 = uiButton(game, { x: w / 2 - bw - 8, y: h - (wide ? 66 : 52), w: bw, h: bh, label: restoreLabel, onClick: () => game.restorePurchases(), small: true, accent: '#6a6a80' });
+  buttonVisual(ctx, r3.b, { active: r3.hover || r3.selected, label: restoreLabel, small: true, accent: '#6a6a80' });
+  const r4 = uiButton(game, { x: w / 2 + 8, y: h - (wide ? 66 : 52), w: bw, h: bh, label: backLabel, onClick: () => game.setScreen(back, 'shop'), small: true, accent: '#a8833c' });
+  buttonVisual(ctx, r4.b, { active: r4.hover || r4.selected, label: backLabel, small: true, accent: '#a8833c' });
 }

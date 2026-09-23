@@ -27,13 +27,13 @@ export class Input {
     this.prevKeys = Object.create(null);
     this.mouse = { x: 0, y: 0, wx: 0, wy: 0, down: false, clicked: false, moved: false };
     this.move = { x: 0, y: 0 };
-    this.stick = { active: false, id: -1, ox: 0, oy: 0, x: 0, y: 0, r: 62, dx: 0, dy: 0, mag: 0 };
+    this.stick = { active: false, id: -1, ox: 0, oy: 0, x: 0, y: 0, r: 48, dx: 0, dy: 0, mag: 0 };  // v1.2: smaller joystick (was 62)
     this.buttons = {
-      attack: { x: 0, y: 0, r: 42, down: false, pulse: 0, hidden: false },
-      dash: { x: 0, y: 0, r: 32, down: false, pulse: 0, hidden: false },
-      interact: { x: 0, y: 0, r: 32, down: false, pulse: 0, hidden: false },
-      repair: { x: 0, y: 0, r: 28, down: false, pulse: 0, hidden: true },
-      barricade: { x: 0, y: 0, r: 28, down: false, pulse: 0, hidden: true },
+      attack: { x: 0, y: 0, r: 32, down: false, pulse: 0, hidden: false },  // v1.2: smaller (was 42)
+      dash: { x: 0, y: 0, r: 24, down: false, pulse: 0, hidden: false },  // v1.2: smaller (was 32)
+      interact: { x: 0, y: 0, r: 24, down: false, pulse: 0, hidden: false },  // v1.2: smaller (was 32)
+      repair: { x: 0, y: 0, r: 20, down: false, pulse: 0, hidden: true },  // v1.2: smaller (was 28)
+      barricade: { x: 0, y: 0, r: 20, down: false, pulse: 0, hidden: true },  // v1.2: smaller (was 28)
     };
     this.touchSeen = false;
     this.firstGesture = [];
@@ -74,7 +74,16 @@ export class Input {
       if (e.button !== 0 && e.button !== 2) return;
       this._fireGesture();
       this.mouse.down = true; this.mouse.clicked = true;
-      if (e.button === 2) this.mouse.right = true;
+      if (e.button === 2) { this.mouse.right = true; return; }
+      // v1.0 FIX (live click test): menus consumed `mouse.clicked`, but
+      // input.update() clears it before handleUIInput ever runs — every real
+      // mouse click on a button was silently eaten. Left-press now posts the
+      // same uiTap the touch path posts, so mouse and touch share one
+      // consume-once channel. Coordinates are refreshed here too, so a click
+      // never reads stale mousemove values.
+      const r = c.getBoundingClientRect();
+      this.mouse.x = e.clientX - r.left; this.mouse.y = e.clientY - r.top;
+      this.uiTap = { x: this.mouse.x, y: this.mouse.y };
     });
     addEventListener('mouseup', (e) => { if (e.button === 0) this.mouse.down = false; if (e.button === 2) this.mouse.right = false; });
     c.addEventListener('contextmenu', (e) => e.preventDefault());

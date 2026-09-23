@@ -27,6 +27,69 @@ export function drawHUD(game, ctx, w, h) {
   drawActions(game, ctx, w, h);
   drawDoorStatus(game, ctx, w, h);
   drawThreat(game, ctx, w, h);
+  drawGoals(game, ctx, w, h);
+}
+
+/* ---------------- top left: tonight's goals (the night's purpose) ---------------- */
+
+function drawGoals(game, ctx, w, h) {
+  const st = game.objectives && game.objectives.hudState();
+  if (!st) return;
+  const narrow = w < 620;
+  // phones have no spare width beside the clock plate — the panel moves
+  // below it and gets the full screen width instead of a clipped sliver
+  const x = 14, y = narrow ? h * 0.125 : 16;
+  ctx.save();
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.font = `500 10px ${SANS}`;
+  setLetter(ctx, 3);
+  ctx.fillStyle = 'rgba(200,160,74,0.75)';
+  ctx.fillText(`GOALS ${st.done}/${st.total}`, x, y);
+  let ly = y + 16;
+  for (const g of (narrow ? st.open.slice(0, 2) : st.open)) {
+    const maxW = narrow ? w - 30 : Math.min(210, w * 0.3);
+    ctx.font = `400 10px ${SANS}`;
+    setLetter(ctx, 1);
+    ctx.fillStyle = 'rgba(178,172,160,0.6)';
+    let label = g.label;
+    // never let the goal panel crawl under the clock plate (desktop)
+    const safe = narrow ? maxW : Math.min(maxW, w * 0.5 - 130 - x);
+    while (ctx.measureText(label).width > safe && label.length > 6) label = label.slice(0, -2);
+    ctx.fillText(label, x, ly);
+    // micro progress bar
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillRect(x, ly + 7, maxW * 0.5, 2.5);
+    ctx.fillStyle = 'rgba(200,160,74,0.6)';
+    ctx.fillRect(x, ly + 7, maxW * 0.5 * g.progress, 2.5);
+    if (g.progress >= 0.999) {
+      ctx.fillStyle = 'rgba(200,160,74,0.9)';
+      ctx.fillText('ALMOST', x + maxW * 0.5 + 8, ly + 8);
+    }
+    ly += 24;
+  }
+  if (st.bank > 0) {
+    ctx.font = `400 9px ${MONO}`;
+    ctx.fillStyle = 'rgba(200,160,74,0.45)';
+    ctx.fillText(`◆ ${st.bank} BANKED`, x, ly + 2);
+  }
+  ctx.restore();
+
+  // completion banner under the clock
+  const b = game.objectives.banner;
+  if (b) {
+    const a = b.t < 0.4 ? b.t / 0.4 : clamp(1 - (b.t - 3.2) / 0.8, 0, 1);
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.textAlign = 'center';
+    ctx.font = `500 15px ${SERIF}`;
+    setLetter(ctx, 5);
+    ctx.fillStyle = '#c8a04a';
+    ctx.shadowColor = 'rgba(0,0,0,0.9)';
+    ctx.shadowBlur = 8;
+    ctx.fillText('✓ ' + b.text, w / 2, h * 0.145);
+    ctx.restore();
+  }
 }
 
 /* ---------------- top centre: the night clock ---------------- */
@@ -40,6 +103,20 @@ function drawClock(game, ctx, w, h, pulse) {
   ctx.save();
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
+
+  // readability plate: clock digits never fight chandeliers or moonlight —
+  // one soft dark ellipse, industry-standard HUD grounding
+  const plate = ctx.createRadialGradient(cx, y - 4, 10, cx, y - 4, 150);
+  plate.addColorStop(0, 'rgba(2,3,7,0.62)');
+  plate.addColorStop(0.7, 'rgba(2,3,7,0.28)');
+  plate.addColorStop(1, 'rgba(2,3,7,0)');
+  ctx.save();
+  ctx.translate(cx, y - 4);
+  ctx.scale(1.5, 0.62);
+  ctx.translate(-cx, -(y - 4));
+  ctx.fillStyle = plate;
+  ctx.beginPath(); ctx.arc(cx, y - 4, 150, 0, TAU); ctx.fill();
+  ctx.restore();
 
   // label
   ctx.font = `500 13px ${SANS}`;
@@ -98,22 +175,23 @@ function drawClock(game, ctx, w, h, pulse) {
 
 function drawBlood(game, ctx, w, h, pulse) {
   const p = game.player;
-  const x = 34, y = h - 52;
+  // touch layout keeps the bottom thumb zone clear for the stick
+  const x = 34, y = (game.input && game.input.touchSeen ? h - 258 : h - 52);
   const cells = 10;
-  const cw = 15, gap = 3.5;
+  const cw = 11, gap = 2.5;  // v1.2: smaller cells for mobile (was 15/3.5)
   const pct = p.bloodPct;
   const low = p.lowBlood;
   const critical = pct < 0.14;
 
   ctx.save();
   ctx.textBaseline = 'middle';
-  ctx.font = `500 12px ${SANS}`;
-  setLetter(ctx, 4);
+  ctx.font = `500 10px ${SANS}`;  // v1.2: smaller text (was 12px)
+  setLetter(ctx, 3);
   ctx.fillStyle = low ? `rgba(220,${120 - 60 * Math.sin(game.time * 5)},110,0.95)` : 'rgba(190,180,165,0.75)';
   ctx.textAlign = 'left';
-  ctx.fillText('BLOOD', x, y - 20);
+  ctx.fillText('BLOOD', x, y - 16);
 
-  ctx.font = `400 12px ${MONO}`;
+  ctx.font = `400 10px ${MONO}`;  // v1.2: smaller text (was 12px)
   ctx.fillStyle = 'rgba(190,180,165,0.5)';
   ctx.textAlign = 'right';
   ctx.fillText(Math.round(pct * 100) + '%', x + cells * (cw + gap) - gap, y - 20);
@@ -127,23 +205,23 @@ function drawBlood(game, ctx, w, h, pulse) {
     const cx = i * (cw + gap);
     // frame
     ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    ctx.fillRect(cx - 1, -1, cw + 2, 20);
+    ctx.fillRect(cx - 1, -1, cw + 2, 15);  // v1.2: smaller height (was 20)
     ctx.fillStyle = 'rgba(120,110,100,0.18)';
-    ctx.fillRect(cx, 0, cw, 18);
+    ctx.fillRect(cx, 0, cw, 13);  // v1.2: smaller height (was 18)
     if (fill > 0) {
       const gg = ctx.createLinearGradient(cx, 0, cx, 18);
       if (critical) { gg.addColorStop(0, '#ff3a44'); gg.addColorStop(1, '#7d0f18'); }
       else if (low) { gg.addColorStop(0, '#c8323c'); gg.addColorStop(1, '#5e0d16'); }
       else { gg.addColorStop(0, '#9c1a26'); gg.addColorStop(1, '#4a0a12'); }
       ctx.fillStyle = gg;
-      ctx.fillRect(cx, 18 * (1 - fill), cw, 18 * fill);
+      ctx.fillRect(cx, 13 * (1 - fill), cw, 13 * fill);  // v1.2: smaller height (was 18)
       // highlight
       ctx.fillStyle = 'rgba(255,180,180,0.18)';
-      ctx.fillRect(cx, 18 * (1 - fill), cw, 1.5);
+      ctx.fillRect(cx, 13 * (1 - fill), cw, 1.5);  // v1.2: smaller height (was 18)
     }
     ctx.strokeStyle = fill > 0 ? 'rgba(255,90,90,0.18)' : 'rgba(255,255,255,0.05)';
     ctx.lineWidth = 1;
-    ctx.strokeRect(cx + 0.5, 0.5, cw - 1, 17);
+    ctx.strokeRect(cx + 0.5, 0.5, cw - 1, 12);  // v1.2: smaller height (was 17)
   }
   ctx.scale(1 / scale, 1 / scale);
   ctx.translate(-x, -y);
@@ -151,11 +229,11 @@ function drawBlood(game, ctx, w, h, pulse) {
   // warning text
   if (low) {
     const a = 0.5 + 0.5 * Math.sin(game.time * (critical ? 8 : 4));
-    ctx.font = `500 12px ${SANS}`;
-    setLetter(ctx, 3);
+    ctx.font = `500 10px ${SANS}`;  // v1.2: smaller text (was 12px)
+    setLetter(ctx, 2);
     ctx.textAlign = 'left';
     ctx.fillStyle = `rgba(230,60,60,${a})`;
-    ctx.fillText(critical ? 'THE HUNGER IS TAKING YOU' : 'YOU NEED BLOOD', x, y + 40);
+    ctx.fillText(critical ? 'THE HUNGER IS TAKING YOU' : 'YOU NEED BLOOD', x, y + 30);  // v1.2: closer (was +40)
   }
   ctx.restore();
 }
@@ -169,54 +247,24 @@ function drawActions(game, ctx, w, h) {
   ctx.textAlign = 'right';
   ctx.textBaseline = 'middle';
 
-  const touch = game.input.touchSeen;
+  // v1.2: mobile-first — no desktop-specific DASH/CLAW indicators
+  // Virtual buttons are shown for all devices (touch + desktop with joystick)
 
-  // dash cooldown ring
-  const cd = clamp(1 - p.dashCd / PLAYER.dashCooldown, 0, 1);
-  const r = 26;
-  ctx.save();
-  ctx.translate(x - 132, y);
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = 'rgba(140,150,180,0.22)';
-  ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.stroke();
-  ctx.strokeStyle = cd >= 1 ? 'rgba(180,200,240,0.85)' : 'rgba(120,140,190,0.6)';
-  ctx.beginPath(); ctx.arc(0, 0, r, -Math.PI / 2, -Math.PI / 2 + TAU * cd); ctx.stroke();
-  ctx.font = `500 10px ${SANS}`; setLetter(ctx, 2);
-  ctx.fillStyle = 'rgba(200,205,220,0.75)';
-  ctx.textAlign = 'center';
-  ctx.fillText('DASH', 0, 0);
-  ctx.restore();
-
-  // claw readiness
-  ctx.save();
-  ctx.translate(x - 132 + 74, y);
-  const ready = p.attackCd <= 0 && p.blood > 1;
-  ctx.strokeStyle = ready ? 'rgba(200,140,150,0.7)' : 'rgba(120,90,100,0.35)';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  for (let i = -1; i <= 1; i++) {
-    ctx.moveTo(-6, i * 7 - 3);
-    ctx.quadraticCurveTo(2, i * 7 + 5, 9, i * 7 + 1);
-  }
-  ctx.stroke();
-  ctx.font = `500 10px ${SANS}`; setLetter(ctx, 2);
-  ctx.fillStyle = 'rgba(200,205,220,0.75)';
-  ctx.textAlign = 'center';
-  ctx.fillText('CLAW', 0, 26);
-  ctx.restore();
-
-  // planks
+  // planks — on touch, ride the blood row instead of the CLAW thumb zone
   ctx.textAlign = 'right';
   ctx.font = `500 13px ${SANS}`;
   setLetter(ctx, 3);
   ctx.fillStyle = p.planks > 0 ? 'rgba(205,180,140,0.9)' : 'rgba(130,120,110,0.6)';
-  ctx.fillText(`PLANKS  ${p.planks}`, x, y - 46);
-  // little plank icons
+  // v1.0 fix (browser QA): the icons must follow the label's anchor — on touch
+  // they were still drawn at the desktop origin and clipped the CLAW button.
+  const px = touch ? w - 16 : x;
+  const py = touch ? h - 246 : y - 32;
+  ctx.fillText(`PLANKS  ${p.planks}`, px, touch ? h - 262 : y - 46);
   for (let i = 0; i < Math.min(p.planks, 6); i++) {
     ctx.fillStyle = 'rgba(120,86,48,0.9)';
-    ctx.fillRect(x - 6 - i * 9, y - 32, 6, 16);
+    ctx.fillRect(px - 6 - i * 9, py, 6, 16);
     ctx.fillStyle = 'rgba(190,150,100,0.18)';
-    ctx.fillRect(x - 6 - i * 9, y - 32, 6, 2);
+    ctx.fillRect(px - 6 - i * 9, py, 6, 2);
   }
   ctx.restore();
 }

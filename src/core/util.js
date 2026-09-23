@@ -93,6 +93,8 @@ export const defaultSave = () => ({
   bestDefeated: 0,
   upgrades: { blood: 0, speed: 0, repair: 0, damage: 0, recovery: 0 },
   seen: {},                 // collection unlocks
+  iap: { owned: {}, revives: 0, pouches: 0 },   // store entitlements (see src/shop/iap.js)
+  goals: { done: 0, nights: 0 },                // lifetime objectives
   settings: {
     master: 0.85, music: 0.7, sfx: 0.9,
     shake: 1, flashes: 1, captions: 1, difficulty: 'standard',

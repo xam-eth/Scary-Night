@@ -13,7 +13,7 @@
  */
 
 import { clamp, lerp, damp, TAU, rand, randInt, chance, dist, dist2, approachAngle, angDiff, Rng } from '../core/util.js';
-import { ENEMY_TYPES } from '../core/config.js';
+import { ENEMY_TYPES, VARIANTS } from '../core/config.js';
 import { ROOM } from './mansion.js';
 
 export const ESTATE = {
@@ -81,7 +81,7 @@ export class Enemy {
     const p = game.player;
     let best = null, bestScore = -1e9;
     for (const e of game.mansion.entrances) {
-      if (e.kind === 'window' && this.key === 'werewolf') continue;
+      if (e.kind === 'window' && (this.key === 'werewolf' || this.key === 'ghoul')) continue;
       if (e.kind === 'window' && this.key === 'hunter' && chance(0.5)) continue;
       const d = dist(e.outside.x, e.outside.y, p.x, p.y);
       let score = -d * 0.01;
@@ -131,6 +131,14 @@ export class Enemy {
   steer(dt, tx, ty, speed, game, opts = {}) {
     const a = Math.atan2(ty - this.y, tx - this.x);
     const accel = opts.accel ?? 7;
+    // v1.0 — the chapel altar: light as refuge, not as wall. Everything inside
+    // the circle moves like it is wading through the night itself. Stand in it
+    // to breathe; it never makes you safe.
+    const altar = game.mansion.chapelAltar;
+    if (altar) {
+      const ad = Math.hypot(this.x - altar.x, this.y - altar.y);
+      if (ad < altar.r) speed *= lerp(0.45, 1, clamp((ad - altar.r * 0.3) / (altar.r * 0.7), 0, 1));
+    }
     // gentle wall-following: nudge the desired angle if the last frame was blocked
     let ang = a;
     if (this.stuckT > 0.25) ang += Math.sin(game.time * 2.2 + this.id) * 0.9 * clamp(this.stuckT, 0, 1);
@@ -192,7 +200,7 @@ export class Enemy {
       const sameRoom = this.roomId === game.mansion.findRoom(p.x, p.y);
       const los = game.mansion.hasLOS(this.x, this.y, p.x, p.y);
       // predators sense blood
-      const smellRange = this.key === 'werewolf' ? 300 : 150;
+      const smellRange = (this.key === 'werewolf' || this.key === 'ghoul') ? 300 : 150;
       if (los && (sameRoom || d < range * 0.6)) sees = true;
       else if (d < smellRange && game.player.lowBlood) sees = true;
       else if (d < smellRange * 0.6) sees = true;
@@ -350,7 +358,7 @@ export class Enemy {
   /** Cross the threshold. Slow for windows: that is the player's window of opportunity. */
   climb(dt, game, e) {
     this.climbT += dt;
-    const need = e.kind === 'window' ? (this.key === 'crawler' ? 1.35 : 2.0) : (this.key === 'werewolf' ? 1.0 : 0.75);
+    const need = e.kind === 'window' ? (this.key === 'crawler' ? 1.35 : 2.0) : ((this.key === 'werewolf' || this.key === 'ghoul') ? 1.0 : 0.75);
     const t = clamp(this.climbT / need, 0, 1);
     const from = e.outside, to = e.inside;
     this.x = lerp(from.x, to.x, t);
@@ -360,7 +368,7 @@ export class Enemy {
     if (t >= 1) {
       this.state = ESTATE.HUNT;
       this.climbT = 0;
-      if (chance(0.5)) game.audio.play(this.key === 'werewolf' ? 'snarl' : 'breath', { x: this.x, y: this.y, cam: game.renderer.cam, vol: 0.5 });
+      if (chance(0.5)) game.audio.play((this.key === 'werewolf' || this.key === 'ghoul') ? 'snarl' : 'breath', { x: this.x, y: this.y, cam: game.renderer.cam, vol: 0.5 });
       game.onEnemyEntered(this);
     }
   }
@@ -1201,6 +1209,222 @@ export class Werewolf extends Enemy {
 /* =====================================================================
  * CROSSBOW BOLT
  * ===================================================================== */
+
+/* ---------------- STALKER (v1.0) ----------------
+ * The attention predator. It only moves while it is outside what the player
+ * is watching — the cone of her aim, her own carried light. Face it and it
+ * freezes mid-stride with the unsettling composure of something that has all
+ * the time in the world. Turn away and it closes. It never attacks a door;
+ * it waits for one to open, or blinks between dark corners when unseen.
+ * Designed to be survived, not killed; damage on a brush-past only.
+ */
+export class Stalker extends Enemy {
+  constructor(x, y, opts) {
+    super('stalker', x, y, opts);
+    this.blinkCd = this.type.blinkCd ?? 7;
+    this.waitT = 0;
+    this.frozen = 0;
+    this.stalkBeat = rand(2, 5);
+  }
+
+  watchedBy(game) {
+    const p = game.player;
+    const d = dist(this.x, this.y, p.x, p.y);
+    if (d > 460 || p.state === 'death') return false;
+    if (!game.mansion.hasLOS(p.x, p.y, this.x, this.y)) return false;
+    const toIt = Math.atan2(this.y - p.y, this.x - p.x);
+    const off = Math.abs(angDiff(toIt, p.angle));
+    if (off < 0.85) return true;
+    // her own carried light counts: it cannot move inside the moon she wears
+    const lightR = (p.lightR ?? 150) * 0.85;
+    return d < lightR;
+  }
+
+  speak(dt, game) {
+    this.stalkBeat -= dt;
+    if (this.stalkBeat <= 0) {
+      this.stalkBeat = rand(2.6, 6.5);
+      const d = dist(this.x, this.y, game.player.x, game.player.y);
+      if (d < 900) game.audio.play('breath', { x: this.x, y: this.y, cam: game.renderer.cam, vol: clamp(0.5 - d / 2400, 0.12, 0.5) });
+    }
+  }
+
+  blink(game) {
+    // vanish to a dark spot across the room — only ever when unseen
+    const p = game.player;
+    for (let i = 0; i < 14; i++) {
+      const a = rand(0, TAU);
+      const r = rand(230, 430);
+      const nx = p.x + Math.cos(a) * r, ny = p.y + Math.sin(a) * r;
+      if (game.mansion.solidAt(nx, ny)) continue;
+      if (game.mansion.hasLOS(p.x, p.y, nx, ny)) {
+        const toIt = Math.atan2(ny - p.y, nx - p.x);
+        if (Math.abs(angDiff(toIt, p.angle)) < 1.1 && dist(nx, ny, p.x, p.y) < 460) continue;   // would land in view
+      }
+      game.particles.burst('mist', this.x, this.y, 7, { color: 'rgba(90,80,120,0.14)', sizeMin: 9, sizeMax: 20, speedMin: 6, speedMax: 34, lifeMin: 0.3, lifeMax: 0.8 });
+      this.x = nx; this.y = ny;
+      game.audio.play('draft', { vol: 0.10, x: nx, y: ny, cam: game.renderer.cam });
+      this.path = []; this.pathT = 0;
+      return;
+    }
+  }
+
+  behave(dt, game, sees) {
+    const p = game.player;
+    const e = this.entrance(game);
+    const watched = this.watchedBy(game);
+    this.frozen = watched ? Math.min(1, this.frozen + dt * 8) : Math.max(0, this.frozen - dt * 5);
+
+    if (watched) {
+      // the freeze: dead stop, no tremble — the stillness IS the tell
+      this.vx = damp(this.vx, 0, 16, dt); this.vy = damp(this.vy, 0, 16, dt);
+      this.x += this.vx * dt; this.y += this.vy * dt;
+      this.angle = Math.atan2(p.y - this.y, p.x - p.x);
+      return;
+    }
+    this.blinkCd -= dt;
+    if (this.blinkCd <= 0 && this.insideHouse && this.state === ESTATE.HUNT && dist(this.x, this.y, p.x, p.y) > 320) {
+      this.blinkCd = this.type.blinkCd ?? 7;
+      this.blink(game);
+    }
+
+    switch (this.state) {
+      case ESTATE.APPROACH: {
+        if (this.insideHouse) { if (this.canReachPlayer(game)) { this.state = ESTATE.HUNT; break; } this.pursue(dt, game, 1); break; }
+        if (e) {
+          const closedDoor = e.kind === 'door' && !e.open && !e.broken;
+          const intactWindow = e.kind === 'window' && !e.broken;
+          if (closedDoor || intactWindow) {
+            // it does not knock. it waits beside the wood, which is worse.
+            this.waitT += dt;
+            this.moveOutside(dt, game, e.outside.x, e.outside.y, 0.6);
+            const leaveAt = game.difficulty.spawn < 1 ? 42 : 30;
+            if (this.waitT > leaveAt) { this.leaving = true; game.onEnemyGivesUp(this); }
+            break;
+          }
+          const target = (e.broken || (e.kind === 'door' && e.open)) ? e.inside : e.outside;
+          this.moveOutside(dt, game, target.x, target.y, 0.85);
+          if (dist(this.x, this.y, e.inside.x, e.inside.y) < 46) { this.state = ESTATE.CLIMB; this.climbT = 0; }
+        } else this.advance(dt, game);
+        break;
+      }
+      case ESTATE.BREACH: this.state = ESTATE.APPROACH; break;   // it never breaks anything
+      case ESTATE.CLIMB: this.climb(dt, game, e); break;
+      case ESTATE.HUNT: {
+        const d = dist(this.x, this.y, p.x, p.y);
+        if (this.seenPlayer <= 0 && d > 90) { this.pursue(dt, game, 1); break; }
+        // stalk pace: fast until close, then a walk you hear before you see
+        this.pursue(dt, game, d < 150 ? 0.62 : 1);
+        if (d < this.type.attackRange && this.attackCd <= 0) {
+          this.attackCd = this.type.attackInterval;
+          game.enemyHitPlayer(this, this.type.contactDamage, 'claw');
+          game.audio.play('snarl', { x: this.x, y: this.y, cam: game.renderer.cam, vol: 0.5 });
+          this.blinkCd = 2.2;   // after it touches you it is somewhere else soon
+        }
+        break;
+      }
+      case ESTATE.SEARCH: {
+        this.pursue(dt, game, 0.8);
+        if (this.seenPlayer > 0) this.state = ESTATE.HUNT;
+        break;
+      }
+      default: this.advance(dt, game);
+    }
+    this.attackCd -= dt;
+    this.speak(dt, game);
+  }
+
+  draw(ctx, game) {
+    const t = game.time;
+    const frozen = this.frozen;
+    const walking = (1 - frozen) * (Math.hypot(this.vx, this.vy) > 16 ? 1 : 0.2);
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.globalAlpha = this.alpha * (frozen > 0.5 ? 0.92 : 1);
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.beginPath(); ctx.ellipse(0, 10, 12, 6, 0, 0, TAU); ctx.fill();
+    const sway = Math.sin(t * 6) * 3 * walking;
+    // the coat: too long for the body inside it
+    ctx.fillStyle = '#0a0a10';
+    ctx.beginPath();
+    ctx.moveTo(-7, 12); ctx.quadraticCurveTo(-11, -8 + sway * 0.4, -5, -22);
+    ctx.lineTo(5, -22); ctx.quadraticCurveTo(11, -8 - sway * 0.4, 7, 12);
+    ctx.closePath(); ctx.fill();
+    // too-long arms, always slightly out of tune with the walk
+    ctx.strokeStyle = '#0d0d14'; ctx.lineWidth = 3.2; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-5, -14); ctx.quadraticCurveTo(-13 + sway, -4, -11 - sway, 10); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(5, -14); ctx.quadraticCurveTo(13 - sway, -6, -sway, 12); ctx.stroke();
+    // head: no face, just the memory of one — a pale tilt toward you
+    ctx.fillStyle = '#c9c2b4';
+    ctx.beginPath(); ctx.ellipse(0, -26 + sway * 0.2, 4.6, 5.6, frozen > 0.5 ? 0 : sway * 0.03, 0, TAU); ctx.fill();
+    if (frozen < 0.4) {
+      // only moving stalkers show eyes — the freeze has nothing to see you with
+      ctx.globalCompositeOperation = 'screen';
+      ctx.fillStyle = 'rgba(200,60,50,0.75)';
+      ctx.fillRect(-2.4, -27, 1.6, 1.2); ctx.fillRect(1.0, -27, 1.6, 1.2);
+    }
+    ctx.restore();
+  }
+}
+
+/* ---------------- GHOUL (v1.0) ----------------
+ * The werewolf's gaunt cousin: half the mass, twice the appetite for wood.
+ * Built on the wolf's machine with its own stats (see ENEMY_TYPES.ghoul) and
+ * a thinner, hungrier draw. Its purpose in the night: when doors are being
+ * defended everywhere, one gets eaten while nobody is looking.
+ */
+export class Ghoul extends Werewolf {
+  constructor(x, y, opts) {
+    super(x, y, opts);
+    this.type = ENEMY_TYPES.ghoul;
+    this.key = 'ghoul';
+    this.radius = this.type.radius;
+    this.hp = this.type.hp * (opts.hpMul ?? 1);
+    this.hpMax = this.hp;
+    this.chargeCd = 1e9;           // no charge — it just chews
+  }
+
+  draw(ctx, game) {
+    // reuse the wolf's shape pass with a starving silhouette: narrower, taller
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.scale(0.82, 1.12);
+    ctx.translate(-this.x, -this.y);
+    super.draw(ctx, game);
+    ctx.restore();
+    // hunger shimmer: ribs catch a light the wolf never shows
+    if (!this.dead && this.alpha > 0.4) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      ctx.globalAlpha = this.alpha * 0.16;
+      ctx.strokeStyle = this.tint || '#8f86b8';
+      ctx.lineWidth = 1;
+      for (let i = -1; i <= 1; i++) {
+        ctx.beginPath();
+        ctx.ellipse(this.x, this.y + i * 4, 12, 5, 0, -1.1, 1.1);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+}
+
+/* ---------------- variants (v1.0) ----------------
+ * Multipliers + a palette hint only — no new behaviour, no new art pipeline.
+ * The director rolls them on established enemies in the harder phases so the
+ * late night never repeats the shape of the early one.
+ */
+export function applyVariant(e, name) {
+  const V = VARIANTS[name];
+  if (!V || !e) return e;
+  e.variant = name;
+  if (V.hpMul) { e.hpMax *= V.hpMul; e.hp = e.hpMax; }
+  if (V.speedMul) e.speedMul *= V.speedMul;
+  if (V.damageMul) e.damageMul *= V.damageMul;
+  if (V.keepAdd) e.type = { ...e.type, keepDistance: (e.type.keepDistance || 0) + V.keepAdd, boltCooldown: (e.type.boltCooldown || 2) * (V.boltCdMul || 1) };
+  e.tint = V.tint || null;
+  return e;
+}
 
 export class Bolt {
   constructor(x, y, angle, speed, damage, owner) {

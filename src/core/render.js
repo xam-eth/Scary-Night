@@ -44,6 +44,12 @@ export class Renderer {
     this.lightScale = 0.5;
     this.w = 1280; this.h = 720;
     this.dpr = 1;
+    // v1.1 — 3/4 oblique camera. The ground plane is drawn foreshortened
+    // (world Y scaled by this factor); upright actors are counter-scaled
+    // around their foot anchor by renderer.upright(), which turns flat
+    // top-down staging into a Diablo-style angled read without touching
+    // gameplay math (aim, movement and collision stay pure top-down).
+    this.tilt = 0.58;  // v1.1: more dramatic 3/4 view (was 0.66, user said 'masih top down')
     this.cam = { x: 0, y: 0, tx: 0, ty: 0, zoom: 1, viewW: 1280, viewH: 720, shake: 0, sx: 0, sy: 0, rot: 0 };
     this.grain = this._makeGrain();
     this.flash = 0;
@@ -83,7 +89,7 @@ export class Renderer {
     this.light.height = Math.max(2, Math.floor(this.h * this.lightScale));
     this.cam.zoom = clamp(this.w / 1010, 0.72, 1.9);
     this.cam.viewW = this.w / this.cam.zoom;
-    this.cam.viewH = this.h / this.cam.zoom;
+    this.cam.viewH = this.h / (this.cam.zoom * this.tilt);
   }
 
   /* ---------------- camera ---------------- */
@@ -132,7 +138,7 @@ export class Renderer {
     const c = this.cam;
     return {
       x: c.x + (sx - this.w / 2) / c.zoom,
-      y: c.y + (sy - this.h / 2) / c.zoom,
+      y: c.y + (sy - this.h / 2) / (c.zoom * this.tilt),
     };
   }
 
@@ -142,8 +148,21 @@ export class Renderer {
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     const sh = this._shake === false ? 0 : 1;
     ctx.translate(this.w / 2 + c.sx * sh, this.h / 2 + c.sy * sh);
-    ctx.scale(c.zoom, c.zoom);
+    ctx.scale(c.zoom, c.zoom * this.tilt);
     ctx.translate(-c.x, -c.y);
+  }
+
+  /**
+   * Counter-scale the oblique squash around an actor's foot anchor, so that
+   * body keeps standing tall while the floor beneath it stays foreshortened.
+   * Call between ctx.save()/restore() right before drawing the actor at
+   * world position (x, y=feet).
+   */
+  upright(ctx, x, y) {
+    if (this.tilt === 1) return;
+    ctx.translate(x, y);
+    ctx.scale(1, 1 / this.tilt);
+    ctx.translate(-x, -y);
   }
 
   isVisible(x, y, pad = 80) {
@@ -154,7 +173,7 @@ export class Renderer {
   /* ---------------- lighting ---------------- */
   lightBegin(ambient) {
     const lc = this.lightCtx;
-    const a = ambient ?? [11, 14, 26];
+    const a = ambient ?? [120, 125, 140];  // v1.2: MUCH brighter (was [45,50,65], user still says 'hitam pekat')
     lc.setTransform(1, 0, 0, 1, 0, 0);
     lc.globalCompositeOperation = 'source-over';
     lc.fillStyle = `rgb(${a[0]},${a[1]},${a[2]})`;
@@ -162,7 +181,7 @@ export class Renderer {
     const c = this.cam;
     const s = this.lightScale * c.zoom;
     lc.globalCompositeOperation = 'lighter';
-    lc.setTransform(s, 0, 0, s, this.light.width / 2 - c.x * s, this.light.height / 2 - c.y * s);
+    lc.setTransform(s, 0, 0, s * this.tilt, this.light.width / 2 - c.x * s, this.light.height / 2 - c.y * s * this.tilt);
   }
 
   /** Radial light. color/intensity are multiplied into the lightmap. */
@@ -301,7 +320,7 @@ export class Renderer {
     const g2 = ctx.createRadialGradient(this.w / 2, this.h * 0.5, this.h * (0.30 - pulse * 0.02), this.w / 2, this.h * 0.5, this.h * (0.95));
     g2.addColorStop(0, 'rgba(0,0,0,0)');
     g2.addColorStop(0.55, `rgba(2,3,8,${0.22 * v})`);
-    g2.addColorStop(1, `rgba(1,2,6,${clamp(0.92 * v, 0, 0.97)})`);
+    g2.addColorStop(1, `rgba(1,2,6,${clamp(0.3 * v, 0, 0.4)})`);  // v1.2: reduced vignette (was 0.92, user says still too dark)
     ctx.fillStyle = g2;
     ctx.fillRect(0, 0, this.w, this.h);
 

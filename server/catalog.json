@@ -1,0 +1,11 @@
+{
+  "shards_s": { "priceIdr": 49000,  "label": "PUDDLE — 200 blood shards" },
+  "shards_m": { "priceIdr": 99000,  "label": "POOL — 550 + 55 bonus shards" },
+  "shards_l": { "priceIdr": 199000, "label": "TIDE — 1200 + 300 bonus shards" },
+  "revive1":  { "priceIdr": 19000,  "label": "SECOND BLOOD — one dawn given back" },
+  "revive5":  { "priceIdr": 69000,  "label": "FIVE SECOND BLOODS" },
+  "pouch":    { "priceIdr": 19000,  "label": "CARPENTER'S POUCH — +3 planks per night" },
+  "coat_bloodmoon":  { "priceIdr": 29000, "label": "BLOODMOON COAT" },
+  "coat_moonsilver": { "priceIdr": 29000, "label": "MOONSILVER COAT" },
+  "dawnbreaker":     { "priceIdr": 149000, "label": "DAWNBREAKER EDITION" }
+}

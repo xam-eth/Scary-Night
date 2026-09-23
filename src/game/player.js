@@ -13,6 +13,7 @@
 import { clamp, lerp, damp, dist, TAU, rand, randInt, angDiff, approachAngle, chance } from '../core/util.js';
 import { PLAYER, TUNING } from '../core/config.js';
 import { PAL } from '../core/render.js';
+import { Valen3D } from './valen3d.js';
 
 export const PSTATE = {
   IDLE: 'idle', WALK: 'walk', RUN: 'run', ATTACK: 'attack', HURT: 'hurt',
@@ -226,7 +227,7 @@ export class Player {
     // ---------- anim state ----------
     if (this.attackT <= 0 && this.state !== PSTATE.DRINK) {
       if (sp < 14) this.state = this.lowBlood && game.danger > 0.6 ? PSTATE.PANIC : PSTATE.IDLE;
-      else if (sp > 150) this.state = PSTATE.RUN;
+      else if (sp > 160) this.state = PSTATE.RUN;  // v1.1: clearer threshold (walk=122, run=196, midpoint=159)
       else this.state = PSTATE.WALK;
       if (this.hurtT > 0.2) this.state = PSTATE.HURT;
     }
@@ -237,9 +238,13 @@ export class Player {
       if (this.trail[i].t <= 0) this.trail.splice(i, 1);
     }
 
-    // self light flickers with hunger
-    this.lightR = 150 * lerp(0.55, 1, this.bloodPct) * (game.blackoutT > 0 ? 0.85 : 1);
-    this.lightI = lerp(0.32, 0.5, this.bloodPct);
+    // self light flickers with hunger. Readability budget: the world may be
+    // dark, but the player's immediate floor must always read (industry rule:
+    // atmosphere is allowed, disorientation is not). Blackout still wins, but
+    // less brutally than before.
+    const mul = (game.blackoutT > 0 ? 0.85 : 1) * (game.lightMul ?? 1);
+    this.lightR = 172 * lerp(0.62, 1, this.bloodPct) * mul;
+    this.lightI = lerp(0.40, 0.58, this.bloodPct) * mul;
   }
 
   clampToBounds(game) {
@@ -307,12 +312,35 @@ export class Player {
     this.vx *= 0.3; this.vy *= 0.3;
   }
 
-  /* ================= drawing ================= */
+  /* ================= drawing =================
+   *
+   * The character IS the uploaded GLB. valen3d.js hands GLTFLoader the exact
+   * bytes of new_character_glb_box_01_run_walk_c0d0d3.glb — no decoding, no
+   * unpacking, no baked sprite sheet, no mesh rewrite — and Three evaluates the
+   * authored skin and clips (walk / run / box_01) on a transparent WebGL stage.
+   * That single frame is composited here as the upright sprite; Canvas adds
+   * only world anchoring (shadow, halo, VFX), never body geometry.
+   *
+   * The procedural drawBody() below survives solely as the failure path: if
+   * the GLB cannot load (no WebGL, dead asset server, headless harness), the
+   * player is still visible. It is not the character.
+   */
 
   draw(ctx, game) {
     const t = game.time;
     const sp = this.speed;
     const dead = this.state === PSTATE.DEAD;
+
+    // One WebGL evaluation per frame drives the body and every afterimage.
+    const attackDuration = PLAYER.attackWindup + PLAYER.attackActive;
+    const attackProgress = this.attackT > 0 ? clamp(1 - this.attackT / attackDuration, 0, 1) : 0;
+    this._valenFrame = Valen3D.render({
+      state: dead ? PSTATE.IDLE : this.state,
+      angle: this.angle,
+      speed: dead ? 0 : sp,
+      stepPhase: this.stepPhase,
+      attackProgress,
+    });
 
     // shadow
     ctx.save();
@@ -338,31 +366,65 @@ export class Player {
     ctx.beginPath(); ctx.arc(this.x, this.y, 44, 0, TAU); ctx.fill();
     ctx.restore();
 
+    // v1.0 (QA P1-4) — during blackouts a faint ground ring marks the feet,
+    // so the upright sprite never floats without an anchor at 0% light.
+    if (game.blackoutT > 0 && !dead) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      ctx.globalAlpha = 0.3;
+      ctx.strokeStyle = 'rgba(150,172,215,0.55)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.ellipse(this.x, this.y + 9, 26, 10, 0, 0, TAU); ctx.stroke();
+      ctx.restore();
+    }
+
     // dash afterimages
     for (const tr of this.trail) {
       ctx.save();
       ctx.globalAlpha = (tr.t / 0.28) * 0.28;
       ctx.translate(tr.x, tr.y);
-      ctx.rotate(tr.a);
-      ctx.fillStyle = '#3a1f3f';
-      this.drawBody(ctx, game, 0, true);
+      if (this._valenFrame) {
+        this._drawValen(ctx, game, true, tr);
+      } else {
+        ctx.rotate(tr.a);
+        ctx.fillStyle = '#3a1f3f';
+        this.drawBody(ctx, game, 0, true);
+      }
       ctx.restore();
     }
 
-    ctx.save();
-    ctx.translate(this.x, this.y);
-    if (dead) {
-      const k = clamp(this.deathT / 1.1, 0, 1);
-      ctx.rotate(this.angle + Math.PI / 2);
-      ctx.rotate(k * 0.35);
-      ctx.translate(0, k * 8);
-      ctx.globalAlpha = clamp(1 - (this.deathT - 2.6) / 1.6, 0, 1);
+    if (this._valenFrame) {
+      this._drawValen(ctx, game, false, null);
     } else {
-      ctx.rotate(this.angle);
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      if (dead) {
+        const k = clamp(this.deathT / 1.1, 0, 1);
+        ctx.rotate(this.angle + Math.PI / 2);
+        ctx.rotate(k * 0.35);
+        ctx.translate(0, k * 8);
+        ctx.globalAlpha = clamp(1 - (this.deathT - 2.6) / 1.6, 0, 1);
+      } else {
+        ctx.rotate(this.angle);
+      }
+      if (this.iframes > 0 && !dead && Math.floor(t * 24) % 2 === 0) ctx.globalAlpha *= 0.55;
+      this.drawBody(ctx, game, sp, false);
+      // v1.1 — honesty rule: the procedural body is a FAILURE STATE, not the
+      // character (the character is the purchased GLB, imported as-is). While
+      // that asset is missing or loading, say so loudly so nobody mistakes
+      // the placeholder for the real thing.
+      if (!dead && Valen3D.failed || !dead && !Valen3D.ready) {
+        ctx.save();
+        const pulse = 0.65 + Math.sin(t * 5) * 0.3;
+        ctx.globalAlpha = pulse;
+        ctx.font = '700 9px ui-monospace, Consolas, monospace';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#ff5a4a';
+        ctx.fillText(Valen3D.failed ? 'GLB FAILED TO LOAD — PLACEHOLDER' : 'LOADING GLB CHARACTER…', 0, -this.height - 16);
+        ctx.restore();
+      }
+      ctx.restore();
     }
-    if (this.iframes > 0 && !dead && Math.floor(t * 24) % 2 === 0) ctx.globalAlpha *= 0.55;
-    this.drawBody(ctx, game, sp, false);
-    ctx.restore();
 
     // attack arc
     if (this.attackT > 0) {
@@ -397,7 +459,98 @@ export class Player {
     }
   }
 
-  /** The vampire, drawn facing +X in local space. */
+  /**
+   * Composite one authored GLB frame (from Valen3D.render) as the character.
+   * The rig's own clips supply every pose and turn — the sprite is upright and
+   * its yaw was baked in WebGL this frame; Canvas never rotates or shears the
+   * body itself. `ghost` is an optional dash afterimage record.
+   */
+  _drawValen(ctx, game, isGhost, ghost) {
+    const frame = this._valenFrame;
+    if (!frame) return;
+    const dead = this.state === PSTATE.DEAD;
+    const crawling = this.state === PSTATE.CRAWL;
+    const height = 84;   // QA P1-4: +13% — readable at 0.72× camera zoom on phones
+    const footInset = 9;
+    const width = height * (frame.width / frame.height);
+
+    const x = ghost ? ghost.x : this.x;
+    const y = ghost ? ghost.y : this.y;
+
+    ctx.save();
+    ctx.translate(x, y + footInset * 0.2);
+    if (dead && !isGhost) {
+      const k = clamp(this.deathT / 1.1, 0, 1);
+      ctx.translate(0, k * 10);
+      ctx.rotate(k * 0.4);
+      ctx.globalAlpha = clamp(1 - (this.deathT - 2.6) / 1.6, 0, 1);
+    } else if (crawling && !isGhost) {
+      ctx.scale(1, 0.55);
+    } else if (!isGhost) {
+      // restrained condition feedback only: the breathing of a starving predator
+      const panic = this.state === PSTATE.PANIC || (this.lowBlood && game.danger > 0.5);
+      const breathe = 1 + Math.sin(this.breathe * (panic ? 6.2 : 1.8)) * (panic ? 0.014 : 0.006);
+      ctx.scale(1, breathe);
+      if (panic) ctx.translate(Math.sin(this.breathe * 43.7) * 0.5, 0);
+    }
+    if (this.iframes > 0 && !dead && !isGhost && Math.floor(game.time * 24) % 2 === 0) ctx.globalAlpha *= 0.55;
+    // Cosmetic coat tints (Blood Market) are COMPOSITING only — a filter over
+    // the rendered frame. The GLB asset, its textures and its clips stay
+    // byte-identical forever; the model is never re-shaded or re-exported.
+    const coat = game.save && game.save.iap && game.save.iap.owned;
+    const filter = coat && coat.coat_bloodmoon ? 'hue-rotate(-18deg) saturate(1.5) brightness(1.04)'
+      : coat && coat.coat_moonsilver ? 'saturate(0.55) brightness(1.22) hue-rotate(8deg)' : null;
+    if (filter) { ctx.save(); ctx.filter = filter; }
+    Valen3D.draw(ctx, frame, height, { alpha: isGhost ? 0.5 : 1, footInset });
+    if (filter) ctx.restore();
+    
+    // v1.1 debug: small indicator that GLB is active (only in dev/debug builds)
+    if (!isGhost && !dead && typeof window !== 'undefined' && window.__LN_DEBUG) {
+      ctx.save();
+      ctx.font = '8px monospace';
+      ctx.fillStyle = '#0f0';
+      ctx.globalAlpha = 0.6;
+      ctx.fillText('GLB', -width/2 + 2, -height + 10);
+      ctx.restore();
+    }
+
+    // The burning eyes — the design tell from the 2D pass, preserved on top of
+    // the GLB: they are Canvas light, not a repaint of the model. Head bone
+    // projection keeps them welded to the animated skull at any yaw.
+    // (Local space here: the context is already translated to the feet.)
+    if (!isGhost && !dead && !crawling && this.lowBlood) {
+      const head = Valen3D.screenPoint('mixamorig:Head');
+      let hx = 0, hy = -height * 0.74 + footInset;
+      if (head) {
+        hx = (head.x / frame.width - 0.5) * width;
+        hy = -height + footInset + (head.y / frame.height) * height;
+      }
+      const glow = 0.5 + (1 - this.bloodPct) * 0.7;
+      ctx.globalCompositeOperation = 'screen';
+      const g = ctx.createRadialGradient(hx, hy, 0, hx, hy, 16);
+      g.addColorStop(0, `rgba(255,80,64,${(0.34 * glow).toFixed(3)})`);
+      g.addColorStop(1, 'rgba(120,0,0,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(hx, hy, 16, 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    ctx.restore();
+
+    // hurt flash: a screen-blended wash over the body, drawn in world space
+    if (!isGhost && this.hurtT > 0.02) {
+      const hurt = clamp(this.hurtT / 0.42, 0, 1);
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      ctx.globalAlpha = hurt * 0.55;
+      ctx.fillStyle = '#ff3040';
+      ctx.beginPath();
+      ctx.ellipse(x, y - height * 0.38, width * 0.34, height * 0.42, 0, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  /** Fallback body — only reached when the GLB failed to load. */
   drawBody(ctx, game, sp, isGhost) {
     const t = game.time;
     const st = this.state;
@@ -564,6 +717,24 @@ export class Player {
     ctx.restore();
   }
 
+  /**
+   * Second composite pass for the GLB frame, AFTER the world lightmap:
+   * 'screen'-blended moonlight that rides the character itself, so she is
+   * never a hole in the dark even in the worst blackout. This reads the
+   * rendered frame — the model asset remains byte-identical.
+   */
+  drawAfterDark(ctx, game) {
+    const frame = this._valenFrame;
+    if (!frame || this.state === PSTATE.DEAD) return;
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    ctx.translate(this.x, this.y);
+    const need = (this.lowBlood ? 0.26 : 0.17) * (game.blackoutT > 0 ? 0.55 : 1);
+    ctx.globalAlpha = need;
+    Valen3D.draw(ctx, frame, 74, { alpha: 1, footInset: 9 });
+    ctx.restore();
+  }
+
   /** Advance the walk cycle. Called from the game loop with the frame dt. */
   anim(dt) {
     const sp = this.speed;
@@ -579,5 +750,8 @@ export class Player {
     renderer.addLight(this.x, this.y, r, this.lightI ?? 0.4, [190, 205, 235]);
     // faint warm pool right under the vampire (reads as "presence")
     renderer.addLight(this.x, this.y, r * 0.42, 0.22, [255, 170, 140]);
+    // wide soft ring: keeps the room readable at the edge of her world.
+    // Horror lives in the periphery beyond THIS ring, not in total black.
+    renderer.addLight(this.x, this.y, r * 2.1, 0.10, [150, 165, 205]);
   }
 }

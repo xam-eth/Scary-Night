@@ -8,6 +8,7 @@
  * and the clock reads 00:00 -> 05:00. Dawn is at 300.
  */
 
+export const GAME_VERSION = '1.0.0';   // v1.0: expanded mansion, 5 predators, haunts, proper IAP (Midtrans) + rewarded ads
 export const NIGHT_DURATION = 300;      // seconds of a full night
 export const SPAWN_WARMUP = 55;         // "the first hour is quiet"
 export const PANIC_AT = 270;            // 04:30
@@ -127,7 +128,42 @@ export const ENEMY_TYPES = {
     bloodValue: 55, visionRange: 800, loseSight: 4.5, alertRange: 520, steer: 2.6,
     chargeRange: 330, chargeCooldown: 7.5, splinterDamage: 2.2,
     shardChance: 1.0, spawnCost: 5, roarEvery: 14, speak: 'growl', leaveAfter: 78,
+    noWindows: true,
   },
+  /* v1.0 additions — one psychological predator, one door-breaker. */
+  stalker: {
+    key: 'stalker',
+    name: 'STALKER',
+    // Only moves while outside the player's attention. Looking at it freezes
+    // it; so does candlelight at close range. It never damages a door — it
+    // waits for one to open. The horror is the corridor behind you.
+    hp: 60, speed: 60, huntSpeed: 235, radius: 13, contactDamage: 16,
+    attackInterval: 1.9, attackRange: 34, doorDamage: 0, doorAttackInterval: 99,
+    bloodValue: 30, visionRange: 520, loseSight: 5, alertRange: 420, steer: 6.2,
+    shardChance: 0.7, spawnCost: 2.6, speak: 'breath', leaveAfter: 96,
+    noWindows: false, slipsOpenDoors: true, blinkCd: 7,
+  },
+  ghoul: {
+    key: 'ghoul',
+    name: 'GHOUL',
+    // A gaunt, lighter cousin of the werewolf: less health, but it eats
+    // barricades for breakfast and arrives when doors matter most.
+    hp: 150, speed: 84, huntSpeed: 118, chargeSpeed: 0, radius: 18, contactDamage: 18,
+    attackInterval: 1.3, attackRange: 38, doorDamage: 34, doorAttackInterval: 1.15,
+    bloodValue: 38, visionRange: 700, loseSight: 3.6, alertRange: 480, steer: 3.0,
+    splinterDamage: 3.0, shardChance: 0.85, spawnCost: 3.6, roarEvery: 18,
+    speak: 'growl', leaveAfter: 70, noWindows: true,
+    tint: '#2c2434', tintEdge: '#4a3b57',
+  },
+};
+
+/* Difficulty-agnostic night variants — the director rolls these on established
+ * enemies so a long night never repeats a shape. Multipliers stack on top of
+ * the type stats; tint is a draw-time palette hint only (never gameplay). */
+export const VARIANTS = {
+  frenzy:   { speedMul: 1.32, damageMul: 0.8, hpMul: 0.85, tint: '#5a1420', label: 'FRENZIED' },
+  marksman: { keepAdd: 60, boltDamageMul: 1.35, boltCdMul: 1.25, tint: '#3d3a1c', label: 'MARKSMAN' },
+  alpha:    { hpMul: 1.4, damageMul: 1.25, sizeMul: 1.08, tint: '#611b1b', label: 'ALPHA' },
 };
 
 /* ---------------- tension director ----------------
@@ -204,6 +240,8 @@ export const CODEX = [
   { id: 'crawler', name: 'CRAWLER', text: 'Fast. Weak. Never alone.\nIt throws itself at doors until the wood gives.' },
   { id: 'hunter', name: 'HUNTER', text: 'Patient. Keeps its distance.\nCrossbow bolts will find you through a broken door.' },
   { id: 'werewolf', name: 'WEREWOLF', text: 'Slow, and it does not care about your barricade.\nDo not be in the room when it arrives.' },
+  { id: 'ghoul', name: 'GHOUL', text: 'Thinner than the wolf, hungrier for wood.\nA barricade buys you minutes with most things.\nWith this one, it buys you seconds.' },
+  { id: 'stalker', name: 'STALKER', text: 'It moves when your back is turned and freezes in the light.\nIt will never break your door down.\nIt will simply be inside when you open it.\nDo not run. Running is consent.' },
   { id: 'dawn', name: 'DAWN', text: 'The sun does not care who wins.\nIt only arrives. Survive long enough to see it.' },
   { id: 'knock', name: 'THE KNOCK', text: 'Three knocks on the north door.\nThere is nothing outside. There was never anything outside.\n\nProbably.' },
 ];

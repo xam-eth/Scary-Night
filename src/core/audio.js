@@ -307,6 +307,23 @@ S.drip = (t, o) => {
   const v = o.vol ?? 1;
   osc(t, 0.16, { out: o.out, gain: 0.14 * v, type: 'sine', freq: rand(900, 1600), to: rand(200, 400), pan: o.pan, rev: 0.7, attack: 0.001 });
 };
+/* One distant, badly-played piano note: a plucked sine stack with a hammer
+ * click and a long hall tail. Scheduling (which note, when) lives in the
+ * house module — this is just the wood and wire. */
+S.piano = (t, o) => {
+  const v = (o.vol ?? 1) * (o.rate ?? 1);
+  const f = (o.rate ?? 1) * 220;
+  osc(t, 1.8, { out: o.out, gain: 0.08 * (o.vol ?? 1), type: 'triangle', freq: f, to: f * 0.995, pan: o.pan, rev: 1, attack: 0.004, filt: 'lowpass' });
+  osc(t, 1.2, { out: o.out, gain: 0.045 * (o.vol ?? 1), type: 'sine', freq: f * 2, pan: o.pan, rev: 0.9, attack: 0.003 });
+  noise(t, 0.06, { out: o.out, gain: 0.03 * (o.vol ?? 1), type: 'bandpass', freq: f * 3, q: 2, pan: o.pan, rev: 0.6, attack: 0.001 });
+};
+/* A draft testing a door handle: rising air under a soft metallic turn. */
+S.draft = (t, o) => {
+  const v = o.vol ?? 1;
+  const n = noise(t, 1.5, { out: o.out, gain: 0.09 * v, type: 'bandpass', freq: 340, q: 1.4, pan: o.pan, rev: 0.8, attack: 0.5, rate: 1 });
+  if (n && n.f) { n.f.frequency.linearRampToValueAtTime(520, t + 0.8); n.f.frequency.linearRampToValueAtTime(280, t + 1.4); }
+  osc(t, 0.5, { out: o.out, gain: 0.05 * v, type: 'square', freq: rand(70, 110), to: rand(40, 60), pan: o.pan, rev: 0.7, attack: 0.08, filt: 'lowpass' });
+};
 S.whisper = (t, o) => {
   const v = o.vol ?? 1;
   const words = 2 + Math.floor(rand(0, 3));
@@ -475,7 +492,7 @@ export function play(name, { x, y, cam, vol = 1, pan = null, rate = null, bus = 
     else p = 0;
   }
   const dest = bus === 'amb' ? ambBus : bus === 'music' ? musicBus : sfxBus;
-  try { fn(now() + 0.001, { out: dest, pan: p, vol, rev: 1, soft }); }
+  try { fn(now() + 0.001, { out: dest, pan: p, vol, rev: 1, soft, rate, f }); }
   catch (e) { /* the show must go on */ }
 }
 

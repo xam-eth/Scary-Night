@@ -1,5 +1,8 @@
 # LAST NIGHT
 
+*v1.0.0-beta.1 — out of pre-beta: GLB character, night objectives, living
+house, and the Blood Market (IAP skeleton).*
+
 **Survive until dawn.**
 
 A 2D top-down vampire survival horror game about psychological tension, defensive
@@ -52,15 +55,35 @@ interact, repair and barricade buttons, and the layout adapts.
 - **The knock.** Something knocks. [E] opens the door, or you ignore it. The
   answer is never immediate — there might be nothing, a gift, a shadow, or
   something that was waiting for exactly that.
+- **The night has a shape.** Three objectives per night (seeded, fair, always
+  shard-paying) point you at the altar, the glass wing, the stalker. Partial
+  credit pays honestly even when you die at 4:58.
+- **Five predators.** Crawler, Hunter, Werewolf — and the v1.0 pair: the
+  **Stalker** (moves only unseen, never breaks a door, just waits) and the
+  **Ghoul** (a thinner wolf that eats barricades). Late-night variants
+  (FRENZIED, MARKSMAN, ALPHA) stop the last hour from repeating the first.
+- **The night has a shape.** Every run draws three objectives from a seed
+  (feed properly, hold the walls, keep one door forgotten…). They pay out in
+  shards — partial credit even when you die. Purpose on top of survival.
 
 Dawn is at 05:00. Spending the night fighting is a losing strategy; spending it
 surviving is the game.
 
 ## How it is built
 
-Everything is generated at runtime. There are no image files, no audio files and
-no third-party libraries — the art is drawn procedurally on a 2D canvas and the
-sound is synthesised with the Web Audio API.
+Everything except the player is generated at runtime: no image files, no audio
+files and no third-party libraries — the art is drawn procedurally on a 2D
+canvas and the sound is synthesised with the Web Audio API.
+
+**The player is the uploaded GLB, loaded as-is.** `new_character_glb_box_01_run_walk_c0d0d3.glb`
+is fetched byte-for-byte (never decoded, unpacked, baked or re-exported — it is
+SHA-256-checked by `node tools/glbtest.mjs`) and handed to a vendored Three.js
+`GLTFLoader`. Three evaluates the asset's original 65-joint skin and authored
+clips (`walk`, `run`, `box_01` punch; idle = the authored rest pose) on a small
+transparent WebGL canvas, and the 2D renderer composites that live frame as the
+upright character. Root motion from the clips is cancelled in memory only, so
+the GLB file itself stays untouched. The procedural silhouette survives strictly
+as a failure path (no WebGL / headless harness), never as the on-screen character.
 
 ```
 index.html            canvas, veil, fullscreen button
@@ -71,14 +94,34 @@ src/core/config.js    all timings, phases, enemy stats, upgrades, beats
 src/core/audio.js     40+ synthesised sounds, 3 buses, limiter, reverb
 src/core/input.js     keyboard/mouse + virtual stick and buttons
 src/core/render.js    camera, shake, half-res lightmap, particles, decals, post
-src/game/mansion.js   4 rooms, walls, furniture, entrances, collision, nav grid
-src/game/player.js    the vampire: blood economy, states, procedural drawing
-src/game/enemies.js   crawler, hunter, werewolf: perception, pathing, breaches
+src/game/mansion.js   6 rooms + grounds, walls, furniture, entrances, collision, nav grid
+src/game/objectives.js night objectives: seeded picks, partial credit, shard payout
+src/game/house.js     ambient life: flicker, the cat, distant piano, drafts
+src/game/haunts.js    psychology layer: whispers, watchers, fake knocks (never lies about damage)
+src/game/player.js    the vampire: blood economy, states, GLB character composite
+src/game/enemies.js   crawler, hunter, werewolf, stalker, ghoul + variants: perception, pathing, breaches
+src/shop/config.js    store knobs: sandbox | midtrans | bridge; ads off by default
+src/shop/iap.js       catalog + providers (Midtrans Snap, ledger restore)
+src/shop/ads.js       rewarded-only ads: placements, caps, mock provider
+src/game/objectives.js  three seeded goals per night: par checks, rewards, HUD
+src/game/house.js     ambient life: candle flicker, a cat, distant piano, drafts
+src/game/valen3d.js   direct GLTFLoader runtime for the uploaded animated GLB
+src/vendor/three/     vendored Three.js + GLTFLoader (no npm, no CDN)
 src/game/director.js  tension director: budget, moods, knocks, events, countdown
 src/game/hud.js       clock, blood cells, prompts, touch controls
+src/shop/iap.js       the Blood Market: catalog, sandbox/native providers,
+                      entitlements (see the design notes at the top of the file)
 src/ui/screens.js     menu, intro, pause, settings, upgrades, collection, help,
-                      death, victory
+                      shop, death, victory
 ```
+
+### v1.0 — shipping state
+
+Version `1.0.0`. Monetisation plan, price ladder (IDR via Midtrans) and the
+rewarded-ads policy live in **docs/IAP.md**; the client ships with `provider:
+'sandbox'` (no real money, no network) until the four server routes exist.
+Ads are opt-in and invisible until configured. Everything in the store is
+also earnable with shards — and shards are earnable with a good night.
 
 ### A few design decisions worth knowing
 
@@ -117,6 +160,21 @@ node tools/harness.mjs --touch
 node tools/harness.mjs --screens
 ```
 
+`tools/shotbrowser.mjs` runs the game in a REAL headless Chromium with
+software WebGL (`@sparticuz/chromium`, bundled in the npm tarball — no CDN),
+so the GLB character and the store flow are exercised end to end. It writes
+the QA shots to `tools/shots-browser/`:
+
+```bash
+python3 -m http.server 8080 &        # or: node tools/shotbrowser.mjs alone
+node tools/shotbrowser.mjs           # serves + shoots menu, night, shop, mobile
+```
+
+The Blood Market in the web beta runs on a **sandbox provider**: prices are
+shown with a SANDBOX mark, nothing is charged, purchases persist locally, and
+every item is also purchasable with earned shards (no pay-to-win, no ads —
+the full monetization rationale is documented in `src/shop/iap.js`).
+
 `tools/harness.mjs` boots the real game modules against a Node canvas and a
 Web Audio shim, drives a bot that flees swarms, feeds on crawlers, repairs doors
 and answers knocks, and prints a telemetry table every 15 simulated seconds.
@@ -124,6 +182,13 @@ Runs are reproducible per `--seed`.
 
 Note: `@napi-rs/canvas` leaks native memory per render, so the harness renders
 only every 1000th frame (`--rendercheck=N` to change that).
+
+The payment backend has its own zero-dependency test that stubs Midtrans and
+AdMob SSV locally (no network):
+
+```bash
+node server/test.mjs   # order → settlement → replay/refund → SSV: 16/16 PASS
+```
 
 Two small map tools are included for development: `tools/geo.mjs` dumps room
 rects, props and entrance coordinates, and `tools/nav.mjs` prints the

@@ -1,23 +1,27 @@
 /* LAST NIGHT — the mansion
  *
- * One hand-authored gothic mansion: four rooms, three windows, four doors.
+ * One hand-authored gothic mansion: six rooms, five windows, five doors.
  * Everything is built in code: geometry, collision, baked floor rendering,
  * light sources, spawn points and the room graph used by enemy navigation.
  *
  * Floor plan (world pixels):
  *
- *      +----------------+   +-----------------+
- *      |  DINING ROOM   |   |     LIBRARY     |      windows/doors are gaps
- *      |  80,60 780x600 |   | 940,60 780x600  |      in the outer walls
- *      +----==+---------+   +--------+==------+
- *           ||  passage             ||  passage
- *      +----++---------------------++----------+
- *      |              MAIN HALL                 |
- *      |            80,760  1120x740            |
- *      +----------------------+-------==-------+
- *                             |    BASEMENT
- *                             |  1280,820 500x680
- *                             +-----------------+
+ *      +----------------+   +-----------------+   +···············+
+ *      |  DINING ROOM   |   |     LIBRARY     |===|  CONSERVATORY |   glass
+ *      |  80,60 780x600 |   | 940,60 780x600  |   |  moonlit, 2   |   roof
+ *      +----==+---------+   +--------+==------+   +-------==------+   reads
+ *           ||  passage             ||  passage                      as
+ *      +----++---------------------++----------+                      green-
+ *      |              MAIN HALL                 |                     house
+ *      |            80,760  1120x740            |   +---------------+
+ *      +----------------------+-------==-------+   |    CHAPEL     |
+ *                             |    BASEMENT    |===| altar refuge  |
+ *                             | 1280,820 500x680  |  +==== door ====+
+ *                             +-----------------+   +---------------+
+ *
+ * The Conservatory hangs off the library's east wall (shared masonry — the
+ * gothic window looks *into* it now, which is its own small horror). The
+ * Chapel is entered from the basement: worship and hunger one floor apart.
  */
 
 import { clamp, rand, randInt, chance, hash2, hashRange, Rng, TAU } from '../core/util.js';
@@ -29,6 +33,8 @@ export const ROOM = {
   LIBRARY: 'library',
   HALL: 'hall',
   BASEMENT: 'basement',
+  CONSERV: 'conservatory',
+  CHAPEL: 'chapel',
   OUTSIDE: 'outside',
 };
 
@@ -36,7 +42,7 @@ const WALL_T = 26;
 
 export class Mansion {
   constructor() {
-    this.bounds = { x: -340, y: -340, w: 2500, h: 2300 };
+    this.bounds = { x: -340, y: -340, w: 2800, h: 2300 };
     this.solids = [];          // {x,y,w,h,type,solid}
     this.furniture = [];
     this.props = [];
@@ -71,7 +77,11 @@ export class Mansion {
     const LIBRARY = this.rooms.library = { id: ROOM.LIBRARY, name: 'LIBRARY', x: 940, y: 60, w: 780, h: 600, floor: 'wood', dark: 0.78 };
     const HALL = this.rooms.hall = { id: ROOM.HALL, name: 'MAIN HALL', x: 80, y: 760, w: 1120, h: 740, floor: 'marble', dark: 0.62 };
     const BASEMENT = this.rooms.basement = { id: ROOM.BASEMENT, name: 'BASEMENT', x: 1280, y: 820, w: 500, h: 680, floor: 'stone', dark: 1.35 };
-    this.roomList = [DINING, LIBRARY, HALL, BASEMENT];
+    // v1.0 east wing: the Conservatory (glass roof — moonlight you can't govern)
+    // and the Chapel (an altar light the house itself seems to respect).
+    const CONSERV = this.rooms.conserv = { id: ROOM.CONSERV, name: 'CONSERVATORY', x: 1746, y: 60, w: 554, h: 580, floor: 'glass', dark: 0.42 };
+    const CHAPEL = this.rooms.chapel = { id: ROOM.CHAPEL, name: 'CHAPEL', x: 1793, y: 806, w: 507, h: 694, floor: 'tile', dark: 0.68 };
+    this.roomList = [DINING, LIBRARY, HALL, BASEMENT, CONSERV, CHAPEL];
 
     /* ---- outer + inner walls ----
      * gaps = [[start,end,name]] along the wall's axis, turned into entrances below.
@@ -89,7 +99,18 @@ export class Mansion {
     H(914, 1746, 40, []);                                                      // north
     V(14, 666, 914, []);                                                       // west (party wall)
     H(914, 1746, 640, [[1024, 1164, null]]);                                   // south (passage to hall)
-    V(40, 666, 1720, [[262, 424, 'libraryWindow']]);                           // east (window gap)
+    V(40, 666, 1720, [[262, 424, null], [500, 600, null]]);                   // east — the gothic window now opens INSIDE, into the glass house
+
+    // Conservatory shell (v1.0) — glass north + glass east, moonlit and exposed
+    H(1733, 2320, 40, [[1960, 2120, 'glassNorth']]);                          // north (glass roof edge)
+    H(1733, 2320, 640, []);                                                    // south
+    V(14, 666, 2320, [[240, 420, 'glassEast']]);                              // east
+
+    // Chapel shell (v1.0) — reached through the basement; one door to the night.
+    // Its north wall is the basement's north wall, extended; its west wall is
+    // the basement's east wall, with a passage cut into it below.
+    H(1780, 2320, 1500, [[1960, 2086, 'chapelDoor']]);                        // south (new exterior door)
+    V(794, 1526, 2320, [[980, 1140, 'chapelWindow']]);                        // east
 
     // Main hall shell
     V(734, 1526, 54, [[1080, 1186, 'sideDoor']]);                              // west
@@ -97,11 +118,11 @@ export class Mansion {
     H(54, 1246, 1500, [[560, 686, 'frontDoor'], [820, 966, 'hallWindow']]);    // south
     V(734, 1526, 1200, [[1058, 1202, null]]);                                  // east
 
-    // Basement shell
+    // Basement shell (north wall now runs all the way over the chapel too)
     V(794, 1526, 1254, [[1058, 1202, null]]);                                  // west
-    H(1246, 1806, 794, []);                                                    // north
+    H(1246, 2320, 794, []);                                                    // north
     H(1246, 1806, 1500, [[1400, 1516, 'cellarDoor']]);                         // south
-    V(794, 1526, 1780, []);                                                    // east
+    V(794, 1526, 1780, [[1058, 1180, null]]);                                  // east → chapel passage
 
     // passage side walls (make passages read as corridors)
     H(280, 300, 640, []); H(462, 482, 640, []);   // dining passage shoulders
@@ -114,10 +135,10 @@ export class Mansion {
     // invisible threshold: the vampire cannot cross the outer shell, only the
     // interior is walkable. (Lore: you cannot cross the threshold of the house.)
     this.threshold = [
-      { x: 54, y: 30, w: 1692, h: 12, solid: false },
-      { x: 54, y: 1512, w: 1692, h: 12, solid: false },
+      { x: 54, y: 30, w: 2286, h: 12, solid: false },
+      { x: 54, y: 1512, w: 2286, h: 12, solid: false },
       { x: 44, y: 30, w: 12, h: 1494, solid: false },
-      { x: 1744, y: 30, w: 12, h: 1494, solid: false },
+      { x: 2300, y: 30, w: 12, h: 1494, solid: false },
     ];
 
     // ---- entrances (doors & windows) ----
@@ -128,13 +149,22 @@ export class Mansion {
     this.cellarDoor = E(this.makeDoor('cellarDoor', 'CELLAR DOOR', 1400, 1516, 1500, 'h', 'south', ROOM.BASEMENT));
     this.diningWindow = E(this.makeWindow('diningWindow', 'BAY WINDOW', 340, 470, 40, 'h', 'north', ROOM.DINING));
     this.hallWindow = E(this.makeWindow('hallWindow', 'TALL WINDOW', 820, 966, 1500, 'h', 'south', ROOM.HALL));
-    this.libraryWindow = E(this.makeWindow('libraryWindow', 'GOTHIC WINDOW', 262, 424, 1720, 'v', 'east', ROOM.LIBRARY));
+    // v1.0 — the east wing's own openings. Glass is weaker than oak but it
+    // shows you the dark coming, which is worth something at 3 a.m.
+    this.glassNorth = E(this.makeWindow('glassNorth', 'SKYLIGHT ROW', 1960, 2120, 40, 'h', 'north', ROOM.CONSERV));
+    this.glassEast = E(this.makeWindow('glassEast', 'PANE WALL', 240, 420, 2320, 'v', 'east', ROOM.CONSERV));
+    this.chapelDoor = E(this.makeDoor('chapelDoor', 'CHAPEL DOOR', 1960, 2086, 1500, 'h', 'south', ROOM.CHAPEL));
+    this.chapelWindow = E(this.makeWindow('chapelWindow', 'ROSE WINDOW', 980, 1140, 2320, 'v', 'east', ROOM.CHAPEL));
+    // the old gothic window is now an interior arch between library and glass house
+    this.libraryArch = { x: 1720, y: 343, w: WALL_T, h: 162 };
 
     // room graph: which rooms connect through interior passages
     this.passages = [
       { a: ROOM.DINING, b: ROOM.HALL, x: 381, y: 700, r: 62 },
       { a: ROOM.LIBRARY, b: ROOM.HALL, x: 1094, y: 700, r: 62 },
       { a: ROOM.BASEMENT, b: ROOM.HALL, x: 1240, y: 1130, r: 58 },
+      { a: ROOM.LIBRARY, b: ROOM.CONSERV, x: 1733, y: 550, r: 62 },
+      { a: ROOM.BASEMENT, b: ROOM.CHAPEL, x: 1800, y: 1119, r: 62 },
     ];
 
     this.furnish();
@@ -155,7 +185,7 @@ export class Mansion {
     this.navCell = 40;
     this.navX0 = -240;
     this.navY0 = -260;
-    this.navX1 = 2060;
+    this.navX1 = 2460;
     this.navY1 = 1820;
     this.navW = Math.ceil((this.navX1 - this.navX0) / this.navCell);
     this.navH = Math.ceil((this.navY1 - this.navY0) / this.navCell);
@@ -270,7 +300,7 @@ export class Mansion {
 
   /** A walking loop around the outside of the mansion. */
   buildRing() {
-    const x0 = -170, y0 = -190, x1 = 1980, y1 = 1720;
+    const x0 = -170, y0 = -190, x1 = 2420, y1 = 1720;
     const step = 250;
     const pts = [];
     for (let x = x0; x < x1; x += step) pts.push({ x, y: y0 });
@@ -437,6 +467,44 @@ export class Mansion {
     this.addP('cobweb', 1760, 1470, { room: R.basement.id });
     this.addP('bones', 1500, 1000, { room: R.basement.id });
     this.addP('bones', 1620, 1200, { room: R.basement.id });
+
+    /* ---------- CONSERVATORY (v1.0) ----------
+     * Greenhouse off the library. Planters make lanes, the fountain is the
+     * only quiet center, and the glass roof means the moon is a fifth door. */
+    for (let i = 0; i < 4; i++) {
+      this.addF(1790 + i * 118, 120, 72, 72, 'planter', { room: R.conserv.id });
+      this.addF(1790 + i * 118, 500, 72, 72, 'planter', { room: R.conserv.id });
+    }
+    this.addF(1990, 290, 130, 130, 'fountain', { room: R.conserv.id });
+    this.addF(2190, 150, 60, 160, 'pottingBench', { room: R.conserv.id });
+    this.addF(2190, 400, 60, 160, 'pottingBench', { room: R.conserv.id });
+    this.addP('mossPatch', 1820, 300, { room: R.conserv.id });
+    this.addP('mossPatch', 2150, 560, { room: R.conserv.id });
+    this.addP('urn', 1760, 80, { room: R.conserv.id });
+    this.addP('urn', 2280, 80, { room: R.conserv.id });
+    this.addP('candleStand', 1900, 430, { room: R.conserv.id, light: true, dim: true });
+    this.addP('candleStand', 2140, 260, { room: R.conserv.id, light: true, dim: true });
+    this.addP('hangingVine', 1840, 70, { room: R.conserv.id });
+    this.addP('hangingVine', 2060, 70, { room: R.conserv.id });
+    this.addP('hangingVine', 2260, 70, { room: R.conserv.id });
+    this.addP('cobweb', 1750, 636, { room: R.conserv.id });
+
+    /* ---------- CHAPEL (v1.0) ----------
+     * Pews in two banks facing the altar; the altar light is a refuge — not
+     * safety, just fewer seconds between heartbeats (enemies slow inside it). */
+    for (let i = 0; i < 3; i++) {
+      this.addF(1846, 1020 + i * 96, 170, 40, 'pew', { room: R.chapel.id });
+      this.addF(2080, 1020 + i * 96, 170, 40, 'pew', { room: R.chapel.id });
+    }
+    this.addF(1950, 846, 200, 66, 'altar', { room: R.chapel.id });
+    this.addF(2000, 1420, 110, 64, 'font', { room: R.chapel.id, solid: false });
+    this.addP('stainedGlass', 2046, 806, { room: R.chapel.id, w: 210, h: 74 });
+    this.addP('candleStand', 1930, 930, { room: R.chapel.id, light: true });
+    this.addP('candleStand', 2160, 930, { room: R.chapel.id, light: true });
+    this.addP('carpet', 2046, 1220, { w: 170, h: 520, color: 'crimson', seed: 17, room: R.chapel.id });
+    this.addP('urn', 1820, 860, { room: R.chapel.id });
+    this.addP('bones', 2250, 1420, { room: R.chapel.id });
+    this.addP('cobweb', 2290, 830, { room: R.chapel.id });
   }
 
   makeLights() {
@@ -451,6 +519,16 @@ export class Mansion {
     // fireplace
     L({ id: 'fireplace', x: 1120, y: 636, r: 300, i: 0.95, color: [255, 145, 60], flick: 0.5, room: ROOM.LIBRARY, type: 'fire' });
     this.fireplaceLight = this.lights[this.lights.length - 1];
+
+    // v1.0 — the altar: a refuge field. Enemies do not fear God; they simply
+    // move worse inside the light. Players can stand in it to breathe, not to
+    // win. The conservatory gets the moon doubled through its glass roof.
+    L({ id: 'altar', x: 2050, y: 900, r: 300, i: 0.8, color: [238, 214, 160], flick: 0.22, room: ROOM.CHAPEL, type: 'relic' });
+    this.altarLight = this.lights[this.lights.length - 1];
+    this.chapelAltar = { x: 2050, y: 900, r: 175 };
+    L({ x: 2046, y: 850, r: 190, i: 0.5, color: [190, 190, 235], flick: 0.15, room: ROOM.CHAPEL, type: 'moon' });
+    L({ x: 2000, y: 180, r: 260, i: 0.55, color: [150, 190, 245], flick: 0, room: ROOM.CONSERV, type: 'moon' });
+    L({ x: 2160, y: 430, r: 230, i: 0.5, color: [150, 190, 245], flick: 0, room: ROOM.CONSERV, type: 'moon' });
 
     // moonlight through each window (cool, directional)
     for (const e of this.entrances) {
@@ -476,10 +554,13 @@ export class Mansion {
     S(-200, 1130, 'sideDoor'); S(-210, 890, 'sideDoor'); S(-200, 1380, 'sideDoor');
     S(690, -190, 'diningDoor'); S(520, -210, 'diningDoor');
     S(400, -200, 'diningWindow');
-    S(1960, 340, 'libraryWindow'); S(1930, 130, 'libraryWindow'); S(1930, 560, 'libraryWindow');
+    S(2040, -190, 'glassNorth'); S(2210, -210, 'glassNorth');
+    S(2440, 200, 'glassEast'); S(2440, 430, 'glassEast'); S(2420, -60, 'glassEast');
+    S(2023, 1740, 'chapelDoor'); S(2160, 1690, 'chapelDoor');
+    S(2440, 950, 'chapelWindow'); S(2440, 1250, 'chapelWindow');
     S(1460, 1750, 'cellarDoor'); S(1220, 1690, 'cellarDoor'); S(1700, 1700, 'cellarDoor');
     // dark wanderers (behind the house, in the fog)
-    S(-250, 300, null); S(2100, 900, null); S(900, 2050, null); S(300, 2050, null); S(2100, 1500, null);
+    S(-250, 300, null); S(2520, 700, null); S(900, 2050, null); S(300, 2050, null); S(2350, 1900, null);
   }
 
   /* ================= collision grid ================= */
@@ -643,6 +724,7 @@ export class Mansion {
   damageEntrance(e, amount, game, fromX, fromY) {
     if (e.broken) return;
     e.hp -= amount;
+    e.hits = (e.hits || 0) + 1; // objectives: a door nobody ever touched
     e.flash = 1;
     if (e.hp <= 0) {
       e.hp = 0; e.broken = true; e.open = true; e.barricade = 0;
@@ -704,7 +786,7 @@ export class Mansion {
   /* ================= baked floor + walls ================= */
 
   bake() {
-    const W = 2200, H = 2000;
+    const W = 2800, H = 2000;
     const c = document.createElement('canvas');
     c.width = W; c.height = H;
     const g = c.getContext('2d');
@@ -792,7 +874,7 @@ export class Mansion {
         if (((x / 64 | 0) + (y / 64 | 0)) % 2 === 0) { g.fillStyle = '#0c0d12'; g.fillRect(x, y, 64, 64); }
       }
       g.globalAlpha = 1;
-    } else {
+    } else if (r.floor === 'stone') {
       // stone
       g.fillStyle = '#1a1b21'; g.fillRect(r.x, r.y, r.w, r.h);
       const s = 74;
@@ -812,6 +894,43 @@ export class Mansion {
         const rg = g.createRadialGradient(x, y, 0, x, y, rng.float(30, 100));
         rg.addColorStop(0, 'rgba(20,26,30,0.7)'); rg.addColorStop(1, 'rgba(0,0,0,0)');
         g.fillStyle = rg; g.beginPath(); g.arc(x, y, 100, 0, TAU); g.fill();
+      }
+      g.globalAlpha = 1;
+    } else if (r.floor === 'glass') {
+      // v1.0 conservatory: worn flagstone gone mossy in the grout, the glass
+      // roof's light lattice baked in, leaves nobody rakes anymore.
+      g.fillStyle = '#1d2620'; g.fillRect(r.x, r.y, r.w, r.h);
+      {
+        const s = 64;
+        for (let y = r.y; y < r.y + r.h; y += s) for (let x = r.x; x < r.x + r.w; x += s) {
+          const v = hash2(x, y, 71);
+          g.fillStyle = shade('#232c26', 0.85 + v * 0.4);
+          g.fillRect(x + 2, y + 2, s - 4, s - 4);
+          if (v > 0.72) { g.fillStyle = 'rgba(52,84,54,0.35)'; g.fillRect(x + 4, y + s - 12, s - 8, 8); }
+        }
+      }
+      g.strokeStyle = 'rgba(146,178,214,0.10)'; g.lineWidth = 26;
+      for (let k = -2; k < 11; k++) { g.beginPath(); g.moveTo(r.x + k * 90, r.y); g.lineTo(r.x + k * 90 + 180, r.y + r.h); g.stroke(); }
+      for (let i = 0; i < 90; i++) {
+        const x = r.x + rng.float(0, r.w), y = r.y + rng.float(0, r.h);
+        g.fillStyle = rng.chance(0.5) ? 'rgba(74,66,38,0.5)' : 'rgba(58,48,42,0.5)';
+        g.beginPath(); g.ellipse(x, y, rng.float(3, 7), rng.float(2, 4), rng.float(0, TAU), 0, TAU); g.fill();
+      }
+    } else if (r.floor === 'tile') {
+      // v1.0 chapel: bone-and-ink checker gone grey with age, traffic worn down the middle
+      {
+        const s = 56;
+        for (let y = r.y, row = 0; y < r.y + r.h; y += s, row++) for (let x = r.x, col = 0; x < r.x + r.w; x += s, col++) {
+          const light = ((row + col) & 1) === 0;
+          const v = hash2(x, y, 83);
+          g.fillStyle = shade(light ? '#4a4740' : '#17181d', 0.9 + v * 0.24);
+          g.fillRect(x, y, s, s);
+        }
+      }
+      g.globalAlpha = 0.2;
+      for (let i = 0; i < 60; i++) {
+        const x = r.x + rng.float(0, r.w), y = r.y + rng.float(0, r.h);
+        g.fillStyle = '#000'; g.beginPath(); g.ellipse(x, y, rng.float(10, 44), rng.float(6, 20), 0, 0, TAU); g.fill();
       }
       g.globalAlpha = 1;
     }
@@ -1102,7 +1221,70 @@ export class Mansion {
           ctx.restore();
           break;
         }
-        case 'books': {
+        case 'mossPatch': {
+        for (let i = 0; i < 9; i++) {
+          const a = (p.seed + i * 127) % 360 * TAU / 360;
+          const rr = 12 + ((p.seed + i * 31) % 26);
+          ctx.fillStyle = i % 2 ? 'rgba(38,58,40,0.5)' : 'rgba(30,46,34,0.55)';
+          ctx.beginPath(); ctx.ellipse(p.x + Math.cos(a) * rr, p.y + Math.sin(a) * rr * 0.5, 7, 4, a, 0, TAU); ctx.fill();
+        }
+        break;
+      }
+      case 'urn': {
+        ctx.fillStyle = '#000'; ctx.globalAlpha *= 0.3;
+        ctx.beginPath(); ctx.ellipse(p.x, p.y + 12, 11, 4, 0, 0, TAU); ctx.fill();
+        ctx.globalAlpha /= 0.3;
+        ctx.fillStyle = '#494449';
+        ctx.beginPath();
+        ctx.moveTo(p.x - 8, p.y - 6); ctx.quadraticCurveTo(p.x - 12, p.y + 8, p.x - 5, p.y + 11);
+        ctx.lineTo(p.x + 5, p.y + 11); ctx.quadraticCurveTo(p.x + 12, p.y + 8, p.x + 8, p.y - 6);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#5a555a'; ctx.fillRect(p.x - 10, p.y - 9, 20, 4);
+        break;
+      }
+      case 'hangingVine': {
+        ctx.strokeStyle = 'rgba(34,52,34,0.8)'; ctx.lineWidth = 2;
+        const n = 3 + (p.seed % 3);
+        for (let i = 0; i < n; i++) {
+          const vx = p.x + (i - n / 2) * 13;
+          const sw = Math.sin(game.time * 0.7 + i * 2.1 + p.seed) * 3;
+          const len = 26 + ((p.seed + i * 53) % 34);
+          ctx.beginPath(); ctx.moveTo(vx, p.y);
+          ctx.quadraticCurveTo(vx + sw, p.y + len * 0.6, vx + sw * 1.6, p.y + len);
+          ctx.stroke();
+          ctx.fillStyle = 'rgba(40,64,40,0.75)';
+          for (let k = 1; k <= 3; k++) {
+            const ky = p.y + (len / 4) * k;
+            ctx.beginPath(); ctx.ellipse(vx + sw * (k / 3) * 1.4, ky, 4, 2.2, 0.6, 0, TAU); ctx.fill();
+          }
+        }
+        break;
+      }
+      case 'stainedGlass': {
+        // a dead saint in a dead house: colour only at night, only moon
+        const gw = (p.w || 200) / 2, gh = p.h || 70;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.fillStyle = '#141219';
+        ctx.beginPath();
+        ctx.moveTo(-gw, gh / 2); ctx.lineTo(-gw, -gh * 0.1);
+        ctx.quadraticCurveTo(0, -gh * 1.5, gw, -gh * 0.1); ctx.lineTo(gw, gh / 2);
+        ctx.closePath(); ctx.fill();
+        const cols = ['#2c3a63', '#63202c', '#2c5038', '#5d4a22'];
+        for (let i = 0; i < 8; i++) {
+          const a = hash2(i, p.seed, 5);
+          ctx.fillStyle = cols[i % 4];
+          ctx.globalAlpha = 0.28 + a * 0.3;
+          ctx.fillRect(-gw + 8 + (i % 4) * (gw / 2), -gh * 0.1 + Math.floor(i / 4) * gh * 0.3, gw / 2 - 6, gh * 0.26);
+        }
+        ctx.globalAlpha = 0.5 + Math.sin(game.time * 0.4) * 0.08;
+        ctx.globalCompositeOperation = 'screen';
+        ctx.fillStyle = 'rgba(120,150,210,0.2)';
+        ctx.fillRect(-gw + 6, -gh * 0.05, gw * 2 - 12, gh * 0.5);
+        ctx.restore();
+        break;
+      }
+      case 'books': {
           ctx.save(); ctx.translate(p.x, p.y);
           for (let i = 0; i < 4; i++) {
             const a = hash2(i, p.seed, 5) * 1.2 - 0.6;
@@ -1139,6 +1321,20 @@ export class Mansion {
       ctx.save();
       ctx.translate(e.x, e.y);
       if (!horiz) ctx.rotate(Math.PI / 2);
+
+      // v1.0 (QA P1-6) — legibility at range: an entrance with company gets a
+      // cold rim that survives any light grade. Project Zomboid's night mode
+      // teaches the same lesson: at dark, edges are the interface.
+      const urgent = e.attackers > 0 || e.hint > 0 || e.flash > 0 || (e.knock && !e.broken);
+      if (urgent) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+        ctx.globalAlpha = 0.34 + 0.22 * Math.sin(game.time * 5);
+        ctx.strokeStyle = '#8fb0d8';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-w / 2 - 7, -h / 2 - 7, w + 14, h + 14);
+        ctx.restore();
+      }
 
       // frame
       ctx.fillStyle = '#161419';
@@ -1393,6 +1589,84 @@ function shadowBlob(ctx, x, y, w, h, a = 0.45) {
 function drawFurnitureShape(ctx, f, game, t) {
   const x = f.x, y = f.y, w = f.w, h = f.h;
   switch (f.type) {
+    /* ---- v1.0: chapel + conservatory furniture ---- */
+    case 'pew': {
+      shadowBlob(ctx, x + w / 2, y + h + 4, w * 0.52, 7);
+      ctx.fillStyle = '#241a12'; ctx.fillRect(x, y + h * 0.42, w, h * 0.58);   // seat
+      ctx.fillStyle = '#2e2115'; ctx.fillRect(x, y, w, h * 0.3);               // back
+      ctx.fillStyle = '#181009';
+      ctx.fillRect(x + 3, y + h * 0.42 + 3, w - 6, 2);
+      for (const ex of [x + 2, x + w - 8]) ctx.fillRect(ex, y, 6, h);          // ends
+      break;
+    }
+    case 'altar': {
+      shadowBlob(ctx, x + w / 2, y + h + 6, w * 0.55, 9);
+      ctx.fillStyle = '#3a3a42'; ctx.fillRect(x, y + h * 0.3, w, h * 0.7);     // stone block
+      ctx.fillStyle = '#4a4a54'; ctx.fillRect(x - 6, y, w + 12, h * 0.34);     // slab
+      ctx.fillStyle = '#565660'; ctx.fillRect(x - 6, y, w + 12, 4);            // lit edge
+      // cloth with a stitched hem
+      ctx.fillStyle = 'rgba(120,26,38,0.85)';
+      ctx.fillRect(x + 8, y + h * 0.1, w - 16, h * 0.3);
+      ctx.strokeStyle = 'rgba(200,170,90,0.5)'; ctx.lineWidth = 1;
+      ctx.strokeRect(x + 10, y + h * 0.12, w - 20, h * 0.26);
+      break;
+    }
+    case 'font': {
+      shadowBlob(ctx, x + w / 2, y + h * 0.8, w * 0.42, 8);
+      ctx.fillStyle = '#33333c';
+      ctx.beginPath(); ctx.ellipse(x + w / 2, y + h * 0.4, w / 2, h * 0.4, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#0e1622';
+      ctx.beginPath(); ctx.ellipse(x + w / 2, y + h * 0.38, w / 2 - 7, h * 0.28, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = 'rgba(150,180,225,0.16)';
+      ctx.beginPath(); ctx.ellipse(x + w / 2 - 4, y + h * 0.34, w / 5, h * 0.12, 0, 0, TAU); ctx.fill();
+      break;
+    }
+    case 'planter': {
+      shadowBlob(ctx, x + w / 2, y + h + 3, w * 0.5, 7);
+      ctx.fillStyle = '#4a3324';
+      ctx.beginPath();
+      ctx.moveTo(x + 6, y + h * 0.25); ctx.lineTo(x + w - 6, y + h * 0.25);
+      ctx.lineTo(x + w - 13, y + h); ctx.lineTo(x + 13, y + h); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#59402c'; ctx.fillRect(x + 2, y + h * 0.16, w - 4, h * 0.14);   // rim
+      // overgrown green: the plants outlived the gardeners
+      const seed = (f.seed || 0) % 97;
+      for (let i = 0; i < 7; i++) {
+        const a = seed + i * 1.7 + Math.sin(t * 0.6 + i) * 0.05;
+        const rr = w * (0.32 + ((i * 37 + seed) % 13) / 44);
+        const bx = x + w / 2 + Math.cos(a) * rr * 0.5, by = y + h * 0.16 + Math.sin(a) * rr * 0.32 - rr * 0.42;
+        ctx.fillStyle = i % 3 === 0 ? '#243d24' : '#1b301f';
+        ctx.beginPath(); ctx.ellipse(bx, by, rr * 0.34, rr * 0.24, a, 0, TAU); ctx.fill();
+      }
+      break;
+    }
+    case 'fountain': {
+      const cx = x + w / 2, cy = y + h / 2, rr = w / 2;
+      shadowBlob(ctx, cx, cy + h * 0.42, rr * 1.05, rr * 0.42);
+      ctx.fillStyle = '#3b3b45';
+      ctx.beginPath(); ctx.ellipse(cx, cy, rr, rr * 0.66, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#26262e';
+      ctx.beginPath(); ctx.ellipse(cx, cy, rr - 9, (rr - 9) * 0.64, 0, 0, TAU); ctx.fill();
+      // standing water catching the glass roof
+      ctx.fillStyle = 'rgba(60,86,116,0.7)';
+      ctx.beginPath(); ctx.ellipse(cx, cy, rr - 13, (rr - 13) * 0.6, 0, 0, TAU); ctx.fill();
+      ctx.globalAlpha = 0.35;
+      ctx.strokeStyle = 'rgba(170,200,235,0.7)'; ctx.lineWidth = 1;
+      const rip = (t * 0.9) % 1;
+      ctx.beginPath(); ctx.ellipse(cx, cy, (rr - 16) * rip, (rr - 16) * 0.6 * rip, 0, 0, TAU); ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#454550';
+      ctx.beginPath(); ctx.ellipse(cx, cy - 4, 9, 6, 0, 0, TAU); ctx.fill();
+      ctx.fillRect(cx - 3, cy - 26, 6, 24);
+      break;
+    }
+    case 'pottingBench': {
+      shadowBlob(ctx, x + w / 2, y + h + 2, w * 0.4, 6);
+      ctx.fillStyle = '#2e2116'; ctx.fillRect(x, y + h * 0.22, w, h * 0.5);
+      ctx.fillStyle = '#20160e'; ctx.fillRect(x + 3, y + h * 0.72, 5, h * 0.28); ctx.fillRect(x + w - 8, y + h * 0.72, 5, h * 0.28);
+      ctx.fillStyle = '#4a3324';
+      for (let i = 0; i < 3; i++) { const px = x + 8 + i * (w - 20) / 3; ctx.beginPath(); ctx.arc(px + 5, y + h * 0.18, 6, 0, TAU); ctx.fill(); }
+      break;
+    }
     case 'staircase': {
       shadowBlob(ctx, x + w * 0.6, y + h * 0.9, w * 0.7, h * 0.25);
       // landing + two flights going up-left
