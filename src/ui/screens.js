@@ -1409,28 +1409,6 @@ export function drawShop(game, ctx, w, h) {
   const bh = phone ? 42 : (wide ? 42 : 34);
   const r3 = uiButton(game, { x: phone ? 12 : w / 2 - bw - 8, y: h - (phone ? 50 : (wide ? 66 : 52)), w: bw, h: bh, label: restoreLabel, onClick: () => game.restorePurchases(), small: true, accent: '#6a6a80' });
   buttonVisual(ctx, r3.b, { active: r3.hover || r3.selected, label: restoreLabel, small: true, accent: '#6a6a80' });
-  const r4 = uiButton(game, { x: w / 2 + 8, y: h - (wide ? 66 : 52), w: bw, h: bh, label: backLabel, onClick: () => game.setScreen(back, 'shop'), small: true, accent: '#a8833c' });
+  const r4 = uiButton(game, { x: phone ? 20 + bw : w / 2 + 8, y: h - (phone ? 50 : (wide ? 66 : 52)), w: bw, h: bh, label: backLabel, onClick: () => game.setScreen(back, 'shop'), small: true, accent: '#a8833c' });
   buttonVisual(ctx, r4.b, { active: r4.hover || r4.selected, label: backLabel, small: true, accent: '#a8833c' });
 }
-
-, small: true, accent: '#a8833c' });
-}
-
-a8833c' });
-}
-
-4.b, { active: r4.hover || r4.selected, label: backLabel, small: true, accent: '#a8833c' });
-}
-
-, small: true, accent: '#a8833c' });
-}
-
-a8833c' });
-}
-
-' });
-}
-
-a8833c' });
-}
-
