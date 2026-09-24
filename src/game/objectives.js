@@ -125,6 +125,26 @@ export const GOALS = [
     reward: { shards: 22, planks: 1 },
   },
   {
+    id: 'fort', label: 'RAISE THE STAKES', hint: 'three planks, in the gatehouse',
+    event: 'stakesRaised',
+    par: (g, st) => !!st.flags.stakesRaised,
+    progress: (g, st) => (st.flags.stakesRaised ? 1 : 0),
+    reward: { shards: 16, planks: 1 },
+  },
+  {
+    id: 'palisade', label: 'HOLD THE PALISADE', hint: 'the west gate still shut at 2:00',
+    par: (g) => {
+      const door = g.mansion.entranceById('palisade');
+      return g.time >= 120 && door && !door.broken;
+    },
+    progress: (g) => {
+      const door = g.mansion.entranceById('palisade');
+      if (!door) return 0;
+      return clamp((door.broken ? 0 : door.hp / door.hpMax) * clamp(g.time / 120, 0.2, 1), 0, 1);
+    },
+    reward: { shards: 22, planks: 2 },
+  },
+  {
     id: 'ward', label: 'LIGHT THE STUDY', hint: 'the lamp holds them, briefly',
     event: 'wardLit',
     par: (g, st) => !!st.flags.wardLit,
@@ -178,6 +198,7 @@ export class Objectives {
     if (evt === 'drank') this.flags.drank = true;
     if (evt === 'stalkerKilled') this.flags.stalkerKilled = true;
     if (evt === 'wardLit') this.flags.wardLit = true;
+    if (evt === 'stakesRaised') this.flags.stakesRaised = true;
   }
 
   update(dt, game) {

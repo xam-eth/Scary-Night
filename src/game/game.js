@@ -380,6 +380,8 @@ export class Game {
     this.larderUsed = false;
     this._lastRoom = null;
     if (this.mansion.studyWard) { this.mansion.studyWard.until = 0; this.mansion.studyWard.readyAt = 0; }
+    if (this.mansion.lowerStakes) this.mansion.lowerStakes();
+    this._brief = {};
     // ---- night purpose + living house + IAP consumables ----
     this.usedRevive = false;
     this.lastNightGoals = null;
@@ -418,6 +420,9 @@ export class Game {
       { r: ROOM.BASEMENT, planks: 1, blood: 2 },
       { r: ROOM.KITCHEN, planks: 1, blood: 1 },
       { r: ROOM.STUDY, planks: 1, blood: 1 },
+      { r: ROOM.GATEHOUSE, planks: 2, blood: 1 },
+      { r: ROOM.GALLERY, planks: 1, blood: 1 },
+      { r: ROOM.ORATORY, planks: 0, blood: 1 },
     ];
     let totalPlanks = 0, totalBlood = 0;
     for (const spec of rooms) {
@@ -584,6 +589,26 @@ export class Game {
 
   /* ---------------- the night ---------------- */
 
+  nightBrief() {
+    if ((this.save.nightsSurvived || 0) > 0) return;
+    const lines = [
+      [10, 'bar', 'BAR THE SERVANT DOOR, OR OPEN IT AND FEED. PLANKS ARE ON THE FLOOR.'],
+      [32, 'fort', 'WEST OF THE HALL IS THE GATEHOUSE. RAISE THE STAKES. BOARD THE PALISADE.'],
+      [68, 'pack', 'ZOMBIES COME IN PACKS. YOU DO NOT HAVE TO KILL THEM ALL.'],
+      [108, 'rooms', 'THE GALLERY IS NORTH OF THE DINING ROOM. THE ORATORY SITS ABOVE THE GLASS.'],
+      [168, 'choose', 'YOU CANNOT HOLD EVERY DOOR. THE POSTERN IS WEAK ON PURPOSE.'],
+      [236, 'later', 'IF YOU SEE DAWN, THE NEXT NIGHT BRINGS MORE OF THEM.'],
+      [262, 'stay', 'ONE MINUTE. STOP CHASING. STAY BEHIND A DOOR THAT STILL HOLDS.'],
+    ];
+    this._brief = this._brief || {};
+    for (const [at, id, text] of lines) {
+      if (this.time >= at && !this._brief[id]) {
+        this._brief[id] = true;
+        this.showMessage(text, { tone: 'gold', life: 5.4 });
+      }
+    }
+  }
+
   updatePlaying(dt) {
     if (TUNING.godMode && this.player.blood < this.player.bloodMax) this.player.blood = this.player.bloodMax;
     // ---- clock ----
@@ -598,6 +623,7 @@ export class Game {
     this.bloodMoon = this.time >= PANIC_AT ? clamp((this.time - PANIC_AT) / 25, 0, 1) : 0;
     this.blackoutT = Math.max(0, this.blackoutT - dt);
     this.powerOut = this.blackoutT > 0;
+    this.nightBrief();
 
     // ---- world ----
     this.mansion.update(dt, this);
@@ -774,15 +800,25 @@ export class Game {
     } else {
       const larder = this.mansion.props.find((pr) => pr.type === 'larder');
       const ward = this.mansion.props.find((pr) => pr.type === 'ward');
+      const stakes = this.mansion.props.find((pr) => pr.type === 'stakes');
       const larderD = larder ? dist(p.x, p.y, larder.x, larder.y) : 1e9;
       const wardD = ward ? dist(p.x, p.y, ward.x, ward.y) : 1e9;
-      if (larder && larderD < 64 && larderD <= wardD) {
+      const stakesD = stakes ? dist(p.x, p.y, stakes.x, stakes.y) : 1e9;
+      if (larder && larderD < 64 && larderD <= wardD && larderD <= stakesD) {
         this.interactTarget = {
           ent: { x: larder.x, y: larder.y, name: 'LARDER', w: 80, h: 50, facing: 'south', hp: 1, hpMax: 1, barricade: 0 },
           actions: this.larderUsed ? [] : [{ key: 'E', label: 'DRINK — THEY WILL HEAR', act: 'larder' }],
           dist: larderD,
         };
         if (!this.larderUsed && input.interactPressed) this.drinkLarder(larder);
+      } else if (stakes && stakesD < 70 && stakesD <= wardD && stakesD <= larderD) {
+        const up = !!this.mansion.stakesUp;
+        this.interactTarget = {
+          ent: { x: stakes.x, y: stakes.y, name: 'STAKE LINE', w: 90, h: 40, facing: 'south', hp: 1, hpMax: 1, barricade: 0 },
+          actions: up ? [] : [{ key: 'E', label: 'RAISE STAKES — 3 PLANKS', act: 'stakes' }],
+          dist: stakesD,
+        };
+        if (!up && input.interactPressed) this.raiseStakes();
       } else if (ward && wardD < 64) {
         const ready = this.time >= (this.mansion.studyWard.readyAt || 0);
         const lit = this.time < this.mansion.studyWard.until;
@@ -832,6 +868,19 @@ export class Game {
         this.showMessage('THE KITCHEN DOOR. IT SMELLED THE BLOOD.', { tone: 'danger' });
       },
     });
+  }
+
+  raiseStakes() {
+    if (this.mansion.stakesUp) return;
+    if (this.player.planks < 3) {
+      this.showMessage('THE STAKES NEED THREE PLANKS.', { tone: 'cold', life: 2.6 });
+      return;
+    }
+    this.player.planks -= 3;
+    this.mansion.raiseStakes();
+    this.objectives.notify(this, 'stakesRaised');
+    this.audio.play('repair', { vol: 0.7 });
+    this.showMessage('THE STAKES ARE UP. THEY COME THROUGH ONE AT A TIME.', { tone: 'gold', life: 4.2 });
   }
 
   lightWard() {

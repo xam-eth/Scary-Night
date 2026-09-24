@@ -27,6 +27,7 @@
 import { clamp, rand, randInt, chance, hash2, hashRange, Rng, TAU } from '../core/util.js';
 import { PAL } from '../core/render.js';
 import { DOOR } from '../core/config.js';
+import { drawRoomPlates } from './roomplates.js';
 
 export const ROOM = {
   DINING: 'dining',
@@ -37,6 +38,9 @@ export const ROOM = {
   CHAPEL: 'chapel',
   KITCHEN: 'kitchen',
   STUDY: 'study',
+  GALLERY: 'gallery',
+  GATEHOUSE: 'gatehouse',
+  ORATORY: 'oratory',
   OUTSIDE: 'outside',
 };
 
@@ -89,7 +93,11 @@ export class Mansion {
     const KITCHEN = this.rooms.kitchen = { id: ROOM.KITCHEN, name: 'KITCHEN', x: -300, y: 90, w: 354, h: 500, floor: 'stone', dark: 0.7 };
     // North of the library: a lamp that can hold them, and a window that cannot.
     const STUDY = this.rooms.study = { id: ROOM.STUDY, name: 'STUDY', x: 980, y: -280, w: 720, h: 320, floor: 'wood', dark: 0.66 };
-    this.roomList = [DINING, LIBRARY, HALL, BASEMENT, CONSERV, CHAPEL, KITCHEN, STUDY];
+    // Photographed wings. The plates are image assets, not more drawn boxes.
+    const GALLERY = this.rooms.gallery = { id: ROOM.GALLERY, name: 'GALLERY', x: 50, y: -380, w: 660, h: 280, floor: 'wood', dark: 0.68, plate: 'gallery' };
+    const GATE = this.rooms.gatehouse = { id: ROOM.GATEHOUSE, name: 'GATEHOUSE', x: -300, y: 620, w: 354, h: 850, floor: 'stone', dark: 0.7, plate: 'gatehouse' };
+    const ORATORY = this.rooms.oratory = { id: ROOM.ORATORY, name: 'ORATORY', x: 1770, y: -380, w: 480, h: 280, floor: 'tile', dark: 0.6, plate: 'oratory' };
+    this.roomList = [DINING, LIBRARY, HALL, BASEMENT, CONSERV, CHAPEL, KITCHEN, STUDY, GALLERY, GATE, ORATORY];
 
     /* ---- outer + inner walls ----
      * gaps = [[start,end,name]] along the wall's axis, turned into entrances below.
@@ -98,7 +106,7 @@ export class Mansion {
     const V = (y1, y2, x, gaps = []) => this.wallRun('v', y1, y2, x, gaps);
 
     // Dining room shell
-    H(54, 886, 40, [[340, 470, 'diningWindow'], [640, 760, 'diningDoor']]);   // north
+    H(54, 886, 40, [[64, 150, null], [340, 470, 'diningWindow'], [640, 760, 'diningDoor']]);   // north — gap into the gallery
     V(14, 666, 54, [[250, 390, null]]);                                        // west — passage into the kitchen
     H(54, 886, 640, [[300, 462, null]]);                                       // south (passage to hall)
     V(40, 666, 860, []);                                                       // east (party wall)
@@ -110,7 +118,7 @@ export class Mansion {
     V(40, 666, 1720, [[262, 424, null], [500, 600, null]]);                   // east — the gothic window now opens INSIDE, into the glass house
 
     // Conservatory shell (v1.0) — glass north + glass east, moonlit and exposed
-    H(1733, 2320, 40, [[1960, 2120, 'glassNorth']]);                          // north (glass roof edge)
+    H(1733, 2320, 40, [[1800, 1920, null], [1960, 2120, 'glassNorth']]);     // north — passage into the oratory
     H(1733, 2320, 640, []);                                                    // south
     V(14, 666, 2320, [[240, 420, 'glassEast']]);                              // east
 
@@ -121,7 +129,7 @@ export class Mansion {
     V(794, 1526, 2320, [[980, 1140, 'chapelWindow']]);                        // east
 
     // Main hall shell
-    V(734, 1526, 54, [[1080, 1186, 'sideDoor']]);                              // west
+    V(734, 1526, 54, [[1080, 1186, null]]);                                    // courtyard passage                              // west
     H(54, 1246, 734, [[300, 462, null], [1024, 1164, null]]);                  // north
     H(54, 1246, 1500, [[560, 686, 'frontDoor'], [820, 966, 'hallWindow']]);    // south
     V(734, 1526, 1200, [[1058, 1202, null]]);                                  // east
@@ -135,7 +143,24 @@ export class Mansion {
     // Kitchen shell — west of the dining room. The west door is the sacrifice door.
     H(-326, 67, 64, [[-160, -40, 'kitchenWindow']]);
     V(38, 616, -326, [[240, 360, 'kitchenDoor']]);
-    H(-326, 67, 616, []);
+    H(-326, 67, 616, [[-200, -80, null]]);                                    // south — into the gatehouse
+    // Gallery sits north of the dining passage, clear of the servant door's outside.
+    H(40, 720, -400, [[300, 460, 'galleryWindow']]);
+    H(40, 720, -90, [[64, 150, null]]);
+    V(-413, -90, 40, []);
+    V(-413, -90, 720, []);
+    V(-90, 40, 48, []);
+    V(-90, 40, 164, []);
+    // Gatehouse: the west fort. Two gates on the palisade, one passage back to the hall.
+    V(603, 1500, -326, [[860, 980, 'postern'], [1100, 1240, 'palisade']]);
+    H(-339, 50, 1488, []);
+    // Oratory sits north of the conservatory passage, clear of the skylight's outside.
+    H(1760, 2260, -400, [[1960, 2100, 'oratoryWindow']]);
+    H(1760, 2260, -90, [[1800, 1920, null]]);
+    V(-413, -90, 1760, []);
+    V(-413, -90, 2260, []);
+    V(-90, 40, 1788, []);
+    V(-90, 40, 1936, []);
     // Study shell — north of the library. One glass window, no second exit.
     H(954, 1726, -306, [[1240, 1380, 'studyWindow']]);
     V(-332, 66, 954, []);
@@ -161,7 +186,6 @@ export class Mansion {
     // ---- entrances (doors & windows) ----
     const E = (o) => { this.entrances.push(o); return o; };
     this.frontDoor = E(this.makeDoor('frontDoor', 'FRONT DOOR', 560, 686, 1500, 'h', 'south', ROOM.HALL));
-    this.sideDoor = E(this.makeDoor('sideDoor', 'SIDE DOOR', 1080, 1186, 54, 'v', 'west', ROOM.HALL));
     this.diningDoor = E(this.makeDoor('diningDoor', 'SERVANT DOOR', 640, 760, 40, 'h', 'north', ROOM.DINING));
     this.cellarDoor = E(this.makeDoor('cellarDoor', 'CELLAR DOOR', 1400, 1516, 1500, 'h', 'south', ROOM.BASEMENT));
     this.diningWindow = E(this.makeWindow('diningWindow', 'BAY WINDOW', 340, 470, 40, 'h', 'north', ROOM.DINING));
@@ -176,6 +200,12 @@ export class Mansion {
     this.kitchenDoor.hp = this.kitchenDoor.hpMax = this.kitchenDoor.baseHpMax = 78;
     this.kitchenWindow = E(this.makeWindow('kitchenWindow', 'SCULLERY WINDOW', -160, -40, 64, 'h', 'north', ROOM.KITCHEN));
     this.studyWindow = E(this.makeWindow('studyWindow', 'STUDY WINDOW', 1240, 1380, -306, 'h', 'north', ROOM.STUDY));
+    this.galleryWindow = E(this.makeWindow('galleryWindow', 'GALLERY WINDOW', 300, 460, -400, 'h', 'north', ROOM.GALLERY));
+    this.oratoryWindow = E(this.makeWindow('oratoryWindow', 'ORATORY WINDOW', 1960, 2100, -400, 'h', 'north', ROOM.ORATORY));
+    this.palisade = E(this.makeDoor('palisade', 'PALISADE GATE', 1100, 1240, -326, 'v', 'west', ROOM.GATEHOUSE));
+    this.palisade.hp = this.palisade.hpMax = this.palisade.baseHpMax = 210;
+    this.postern = E(this.makeDoor('postern', 'POSTERN', 860, 980, -326, 'v', 'west', ROOM.GATEHOUSE));
+    this.postern.hp = this.postern.hpMax = this.postern.baseHpMax = 72;
     // the old gothic window is now an interior arch between library and glass house
     this.libraryArch = { x: 1720, y: 343, w: WALL_T, h: 162 };
 
@@ -188,6 +218,10 @@ export class Mansion {
       { a: ROOM.BASEMENT, b: ROOM.CHAPEL, x: 1800, y: 1119, r: 62 },
       { a: ROOM.KITCHEN, b: ROOM.DINING, x: 54, y: 320, r: 58 },
       { a: ROOM.STUDY, b: ROOM.LIBRARY, x: 1580, y: 40, r: 58 },
+      { a: ROOM.GALLERY, b: ROOM.DINING, x: 210, y: 40, r: 52 },
+      { a: ROOM.GATEHOUSE, b: ROOM.KITCHEN, x: -140, y: 616, r: 52 },
+      { a: ROOM.GATEHOUSE, b: ROOM.HALL, x: 54, y: 1133, r: 58 },
+      { a: ROOM.ORATORY, b: ROOM.CONSERV, x: 1860, y: 40, r: 52 },
     ];
 
     this.furnish();
@@ -269,7 +303,7 @@ export class Mansion {
 
   /**
    * Breadth-first route between two world points. Returns waypoints (world
-   * space) or null when there is genuinely no way through.
+   * space) or null when there is genuinelyly no way through.
    */
   navPath(fromX, fromY, toX, toY) {
     if (!this.nav) return null;
@@ -557,6 +591,29 @@ export class Mansion {
     this.addP('books', 1080, -190, { room: R.study.id });
     this.addP('portrait', 1400, -292, { room: R.study.id });
     this.studyWard = { x: 1320, y: -120, r: 150, until: 0, readyAt: 0 };
+
+    /* ---------- GALLERY — photographed floor, a runner, no second exit ---------- */
+    this.addF(140, -250, 140, 32, 'pew', { room: R.gallery.id });
+    this.addF(480, -250, 140, 32, 'pew', { room: R.gallery.id });
+    this.addF(360, -180, 64, 40, 'sideTable', { room: R.gallery.id });
+    this.addP('portrait', 160, -370, { room: R.gallery.id });
+    this.addP('portrait', 600, -370, { room: R.gallery.id, big: true });
+    this.addP('candleStand', 300, -160, { room: R.gallery.id, light: true });
+    this.addP('candleStand', 560, -160, { room: R.gallery.id, light: true, dim: true });
+
+    /* ---------- GATEHOUSE — the fort. Stakes are raised with planks. ---------- */
+    this.addF(-250, 700, 70, 70, 'crates', { room: R.gatehouse.id });
+    this.addF(-90, 760, 70, 50, 'barrel', { room: R.gatehouse.id });
+    this.addF(-240, 1360, 90, 50, 'crates', { room: R.gatehouse.id });
+    this.addP('stakes', -150, 980, { room: R.gatehouse.id });
+    this.addP('candleStand', -220, 860, { room: R.gatehouse.id, light: true });
+    this.addP('candleStand', -70, 1320, { room: R.gatehouse.id, light: true, dim: true });
+
+    /* ---------- ORATORY ---------- */
+    this.addF(1960, -300, 110, 40, 'altar', { room: R.oratory.id });
+    this.addP('candleStand', 1840, -200, { room: R.oratory.id, light: true, dim: true });
+    this.addP('candleStand', 2140, -200, { room: R.oratory.id, light: true, dim: true });
+    this.addP('urn', 1820, -280, { room: R.oratory.id });
   }
 
   makeLights() {
@@ -598,6 +655,9 @@ export class Mansion {
     L({ x: 1500, y: 1160, r: 210, i: 0.3, color: [255, 160, 90], flick: 0.6, room: ROOM.BASEMENT, type: 'lamp' });
     L({ x: -150, y: 320, r: 220, i: 0.45, color: [255, 170, 110], flick: 0.2, room: ROOM.KITCHEN, type: 'lamp' });
     L({ x: 1320, y: -120, r: 200, i: 0.4, color: [210, 190, 150], flick: 0.08, room: ROOM.STUDY, type: 'lamp' });
+    L({ x: 400, y: -220, r: 220, i: 0.48, color: [255, 176, 110], flick: 0.18, room: ROOM.GALLERY, type: 'candle' });
+    L({ x: -160, y: 1000, r: 220, i: 0.5, color: [255, 150, 80], flick: 0.28, room: ROOM.GATEHOUSE, type: 'fire' });
+    L({ x: 2000, y: -240, r: 230, i: 0.46, color: [170, 190, 230], flick: 0.05, room: ROOM.ORATORY, type: 'moon' });
   }
 
   makeSpawns() {
@@ -605,7 +665,10 @@ export class Mansion {
     // outside positions clustered near each entrance + a few wanderers
     S(620, 1760, 'frontDoor'); S(430, 1690, 'frontDoor'); S(860, 1700, 'frontDoor');
     S(890, 1760, 'hallWindow');
-    S(-200, 1130, 'sideDoor'); S(-210, 890, 'sideDoor'); S(-200, 1380, 'sideDoor');
+    S(-430, 1170, 'palisade'); S(-450, 1080, 'palisade'); S(-440, 1280, 'palisade');
+    S(-450, 920, 'postern'); S(-460, 800, 'postern');
+    S(470, -360, 'galleryWindow'); S(360, -370, 'galleryWindow');
+    S(2050, -360, 'oratoryWindow'); S(1900, -350, 'oratoryWindow');
     S(690, -190, 'diningDoor'); S(520, -210, 'diningDoor');
     S(400, -200, 'diningWindow');
     S(2040, -190, 'glassNorth'); S(2210, -210, 'glassNorth');
@@ -673,16 +736,14 @@ export class Mansion {
         hit = true;
       }
     }
-    if (isPlayer) {
-      for (const s of this.barriers()) {
-        const nx = clamp(x, s.x, s.x + s.w);
-        const ny = clamp(y, s.y, s.y + s.h);
-        const dx = x - nx, dy = y - ny, d = Math.hypot(dx, dy);
-        if (d < r) {
-          if (d < 0.0001) { y = s.y - r; }
-          else { const push = (r - d) / d; x += dx * push * 1.2; y += dy * push * 1.2; }
-          hit = true;
-        }
+    for (const s of this.barriers()) {
+      const nx = clamp(x, s.x, s.x + s.w);
+      const ny = clamp(y, s.y, s.y + s.h);
+      const dx = x - nx, dy = y - ny, d = Math.hypot(dx, dy);
+      if (d < r) {
+        if (d < 0.0001) { y = s.y - r; }
+        else { const push = (r - d) / d; x += dx * push * 1.2; y += dy * push * 1.2; }
+        hit = true;
       }
     }
     return { x, y, hit };
@@ -1071,6 +1132,50 @@ export class Mansion {
 
   drawFloor(ctx) {
     ctx.drawImage(this.floorCanvas, this.bakeOx, this.bakeOy);
+    drawRoomPlates(ctx, this);
+    if (!this.stakesUp) return;
+    ctx.save();
+    ctx.fillStyle = '#24160c';
+    ctx.strokeStyle = '#8a6840';
+    ctx.lineWidth = 2;
+    for (const s of this.solids) {
+      if (s.type !== 'fort') continue;
+      ctx.fillRect(s.x, s.y, s.w, s.h);
+      ctx.strokeRect(s.x + 1, s.y + 1, s.w - 2, s.h - 2);
+    }
+    ctx.restore();
+  }
+
+  /** Three planks turn the courtyard into a one-at-a-time lane. */
+  raiseStakes() {
+    if (this.stakesUp) return;
+    this.stakesUp = true;
+    const posts = [
+      { x: -248, y: 624, w: 28, h: 236 },
+      { x: -248, y: 950, w: 28, h: 520 },
+    ];
+    for (const s of posts) this._indexSolid({ ...s, type: 'fort', solid: true });
+  }
+
+  lowerStakes() {
+    if (!this.stakesUp && !this.solids.some((s) => s.type === 'fort')) return;
+    this.stakesUp = false;
+    this.solids = this.solids.filter((s) => s.type !== 'fort');
+    this.buildGrid();
+    this.buildNav();
+  }
+
+  _indexSolid(s) {
+    this.solids.push(s);
+    const c = this.cell;
+    const x0 = Math.floor(s.x / c), x1 = Math.floor((s.x + s.w) / c);
+    const y0 = Math.floor(s.y / c), y1 = Math.floor((s.y + s.h) / c);
+    for (let gx = x0; gx <= x1; gx++) for (let gy = y0; gy <= y1; gy++) {
+      const k = gx + ',' + gy;
+      let arr = this.grid.get(k);
+      if (!arr) this.grid.set(k, (arr = []));
+      arr.push(s);
+    }
   }
 
   drawProps(ctx, game) {
@@ -1078,6 +1183,24 @@ export class Mansion {
     for (const p of this.props) {
       if (!game.renderer.isVisible(p.x, p.y, 320)) continue;
       switch (p.type) {
+        case 'stakes': {
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          const up = !!game.mansion.stakesUp;
+          ctx.fillStyle = up ? '#3a2614' : '#24180e';
+          for (let i = -3; i <= 3; i++) {
+            ctx.save();
+            ctx.translate(i * 16, 0);
+            ctx.rotate(-0.15);
+            ctx.fillRect(-3, -18, 6, 36);
+            ctx.beginPath(); ctx.moveTo(-5, -18); ctx.lineTo(0, -30); ctx.lineTo(5, -18); ctx.fill();
+            ctx.restore();
+          }
+          ctx.fillStyle = 'rgba(90,60,30,0.85)';
+          ctx.fillRect(-52, 8, 104, 6);
+          ctx.restore();
+          break;
+        }
         case 'carpet': {
           const w = p.w, h = p.h;
           ctx.save();

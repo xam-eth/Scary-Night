@@ -15,10 +15,10 @@ import {
   clamp, lerp, damp, rand, randInt, chance, pick, shuffle, dist, fmtClock,
 } from '../core/util.js';
 import {
-  PHASES, phaseAt, nextPhase, BEATS, DIRECTOR, KNOCKS, NIGHT_DURATION,
+  PHASES, phaseAt, nextPhase, BEATS, DIRECTOR, KNOCKS, NIGHT_DURATION, nightHeat,
   SPAWN_WARMUP, PANIC_AT, SILENCE_AT, COUNTDOWN_AT, ENEMY_TYPES, TUNING,
 } from '../core/config.js';
-import { Crawler, Hunter, Werewolf, Stalker, Ghoul, applyVariant } from './enemies.js';
+import { Crawler, Hunter, Werewolf, Stalker, Ghoul, Zombie, applyVariant } from './enemies.js';
 import { ROOM } from './mansion.js';
 
 export const MOOD = {
@@ -170,11 +170,12 @@ export class Director {
     const t = game.time;
     if (t < SPAWN_WARMUP) { this.budget = Math.min(this.budget, 0.6); return; }
     const d = game.difficulty;
-    const regen = lerp(DIRECTOR.budgetRegen[0], DIRECTOR.budgetRegen[1], game.danger) * this.waveRegen * d.spawn;
-    this.budget = Math.min(DIRECTOR.budgetMax, this.budget + regen * dt);
+    const heat = nightHeat(game.save && game.save.nightsSurvived);
+    const regen = lerp(DIRECTOR.budgetRegen[0], DIRECTOR.budgetRegen[1], game.danger) * this.waveRegen * d.spawn * heat;
+    this.budget = Math.min(DIRECTOR.budgetMax * Math.min(heat, 2.2), this.budget + regen * dt);
 
     const alive = game.enemies.filter((e) => !e.dead).length;
-    const maxAlive = Math.round(lerp(DIRECTOR.maxAlive[0], DIRECTOR.maxAlive[1], game.danger) * Math.max(0.8, d.spawn));
+    const maxAlive = Math.min(14, Math.round(lerp(DIRECTOR.maxAlive[0], DIRECTOR.maxAlive[1], game.danger) * Math.max(0.8, d.spawn) * heat));
     // BREATHING. The curve needs contrast: without quiet stretches, pressure
     // stops reading as pressure at all. Whenever the house is empty, buy the
     // player a genuine lull — shorter as the night gets late.
@@ -196,7 +197,7 @@ export class Director {
       this.spawnWave(game, ['stalker'], { entranceId: sEnt ? sEnt.id : undefined });
       game.showMessage('THE QUIET GREW A SECOND SET OF FOOTSTEPS.', { tone: 'cold', whisper: true, life: 4.5 });
     }
-    const tooSoon = t - this.lastWaveT < lerp(DIRECTOR.waveGap[1], DIRECTOR.waveGap[0], game.danger);
+    const tooSoon = t - this.lastWaveT < lerp(DIRECTOR.waveGap[1], DIRECTOR.waveGap[0], game.danger) / Math.min(heat, 1.8);
     const wavesReady = !quiet && (!tooSoon || game.danger > 0.75);
     if (TUNING.noSpawns) return;
     if (wavesReady && alive < maxAlive && this.budget > 1.0) {
@@ -214,12 +215,13 @@ export class Director {
       let budgetLeft = this.budget;
       // the type mix opens up as the night goes on
       const pool = [];
-      pool.push({ k: 'crawler', w: 5 });
+      pool.push({ k: 'crawler', w: 4 });
+      pool.push({ k: 'zombie', w: 5.5 });
       if (game.time > 110) pool.push({ k: 'hunter', w: 2.4 });
       if (game.time > 170) pool.push({ k: 'werewolf', w: 0.55 + d * 0.8 });
       // v1.0: the ghoul comes when the doors matter; the pack answers the panic
       if (game.time > 150) pool.push({ k: 'ghoul', w: 0.45 + d * 0.7 });
-      if (phase.id === 'panic') pool.push({ k: 'crawler', w: 4 }, { k: 'werewolf', w: 1.0 }, { k: 'hunter', w: 1.4 }, { k: 'ghoul', w: 0.8 });
+      if (phase.id === 'panic') pool.push({ k: 'crawler', w: 3 }, { k: 'zombie', w: 5 }, { k: 'werewolf', w: 1.0 }, { k: 'hunter', w: 1.4 }, { k: 'ghoul', w: 0.8 });
       const totalW = pool.reduce((a, b) => a + b.w, 0);
       let guard = 0;
       while (budgetLeft > 1.0 && guard++ < 12) {
@@ -231,8 +233,10 @@ export class Director {
         picks.push(chosen.k);
         budgetLeft -= cost;
         // a group of crawlers is scarier than one of anything else
-        if (chosen.k === 'crawler' && chance(0.45) && budgetLeft > 1.1) picks.push('crawler');
+        if ((chosen.k === 'crawler' || chosen.k === 'zombie') && chance(0.55) && budgetLeft > 0.7) picks.push('zombie');
       }
+      const remembered = Math.min(4, (game.save && game.save.nightsSurvived) || 0);
+      for (let i = 0; i < remembered && picks.length < 8; i++) picks.push('zombie');
     }
     if (!picks.length) return;
     this.budget = Math.max(0, this.budget - picks.reduce((a, k) => a + ENEMY_TYPES[k].spawnCost, 0) * 0.85);
@@ -256,7 +260,7 @@ export class Director {
       const cands = game.mansion.entrances.filter((e) => {
         const cd = this.spawnEntranceCd.get(e.id) || 0;
         if (e.id === this.lastSpawnEntrance && game.time - cd < DIRECTOR.spawnPointCooldown * 2) return false;
-        if (e.kind === 'window' && (picks.includes('werewolf') || picks.includes('ghoul'))) return false;
+        if (e.kind === 'window' && picks.some((k) => ENEMY_TYPES[k] && ENEMY_TYPES[k].noWindows)) return false;
         return true;
       });
       const pool = cands.length ? cands : game.mansion.entrances;
@@ -295,6 +299,7 @@ export class Director {
       };
       let e;
       if (key === 'crawler') e = new Crawler(pos.x, pos.y, o);
+      else if (key === 'zombie') e = new Zombie(pos.x, pos.y, o);
       else if (key === 'hunter') e = new Hunter(pos.x, pos.y, o);
       else if (key === 'stalker') e = new Stalker(pos.x, pos.y, o);
       else if (key === 'ghoul') e = new Ghoul(pos.x, pos.y, o);
@@ -739,10 +744,14 @@ export class Director {
       }
       case 'spawnWave': {
         const picks = [];
-        const count = args.count || 1;
+        const survived = (game.save && game.save.nightsSurvived) || 0;
+        const count = (args.count || 1) + (args.type === 'werewolf' ? 0 : Math.min(4, survived));
         for (let i = 0; i < count; i++) {
-          if (args.type === 'mixed') picks.push(pick(['crawler', 'crawler', 'hunter', 'werewolf']));
+          if (args.type === 'mixed') picks.push(pick(['zombie', 'crawler', 'zombie', 'hunter', 'ghoul']));
           else picks.push(args.type);
+        }
+        if (args.type === 'crawler' || args.type === 'mixed') {
+          for (let i = 0; i < 1 + Math.min(3, survived); i++) picks.push('zombie');
         }
         const spawned = this.spawnWave(game, picks, args);
         break;

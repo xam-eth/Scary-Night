@@ -370,6 +370,7 @@ export function drawMenu(game, ctx, w, h) {
   const marketOpen = (B.nightsAttempted || 0) > 0;
   const defs = [
     { label: 'PLAY', sub: 'ONE NIGHT. FIVE MINUTES. THREE GOALS.', onClick: () => game.beginNight() },
+    { label: 'HOW TO SURVIVE', sub: 'THE NIGHT, HOUR BY HOUR.', onClick: () => game.setScreen('help') },
     { label: 'UPGRADES', sub: canUpgrade ? `${B.shards} BLOOD SHARDS` : 'EARNED BY SURVIVING', onClick: () => game.setScreen('upgrades') },
     ...(marketOpen ? [{ label: 'BLOOD MARKET', sub: 'OPTIONAL. THE NIGHT DOES NOT ASK.', onClick: () => game.setScreen('shop') }] : []),
     { label: 'COLLECTION', sub: `${Object.keys(B.seen || {}).length}/${CODEX.length} RECORDED`, onClick: () => game.setScreen('collection') },
@@ -549,6 +550,9 @@ export function drawIntro(game, ctx, w, h) {
   const body = [
     ...wrap('You woke hungry. The servant door is already shaking.', bodyFont),
     ...wrap('Bar it, or open it and feed. You cannot do both.', bodyFont),
+    ...wrap((game.save.nightsSurvived || 0) > 0
+      ? `Night ${(game.save.nightsSurvived || 0) + 1}. The house kept every dawn. More of them are coming.`
+      : 'The gatehouse is west of the hall. Raise the stakes. Dawn is at 05:00.', bodyFont),
   ];
   const draw = (text, { f, style, ls, y, c }) => {
     ctx.font = `400 ${f}px ${style}`;
@@ -970,12 +974,13 @@ export function drawHelp(game, ctx, w, h) {
   ctx.fillText('HOW TO SURVIVE', w / 2, phone ? 26 : h * 0.12);
 
   const lines = [
-    ['WHICH WAY.', 'Drag the left stick — she walks the way you push. The floor mark shows where the claw will go. WASD still works.'],
-    ['YOU ARE NOT A SOLDIER.', 'You are a wounded predator in a locked house. You do not have to kill anything.'],
-    ['DOORS ARE YOUR LIFE.', 'You cannot hold every door. The kitchen door is weak on purpose. FIX repairs. BOARD spends planks.'],
-    ['BLOOD IS EVERYTHING.', 'It drains with time. The larder feeds you and calls the kitchen door. The study lamp and the altar only slow them.'],
-    ['LISTEN.', 'A knock you cannot see leaves a chevron on the screen edge. It points at the door. It does not say what is there.'],
-    ['DAWN IS AT 05:00.', 'Five minutes. Do not spend them fighting. Spend them surviving.'],
+    ['00:00 — SERVANT DOOR.', 'It is already shaking. BOARD it, or open it and feed. You cannot do both. Drag the left stick to walk.'],
+    ['THE FORT.', 'Gatehouse is west of the hall. USE the stakes — three planks — so they come one at a time. BOARD the palisade. The postern is thin on purpose.'],
+    ['THE PACK.', 'Zombies are slow and never alone. You do not have to kill them. Blood drains. The larder feeds you and calls the kitchen.'],
+    ['THE NEW WINGS.', 'Gallery is north of the dining room. Oratory is above the glass. The lamp and the altar only slow them.'],
+    ['A KNOCK.', 'A chevron points at the door. It does not say what is there. You cannot hold every door. Abandon one.'],
+    ['04:30 — PANIC.', 'They come from every entrance. Stop chasing. Stand behind a door that still holds. Dawn is 05:00.'],
+    ['THE NEXT NIGHT.', 'Every dawn you live, the next night brings a larger pack. The house remembers.'],
   ];
   let y = h * 0.2;
   ctx.textAlign = 'left';

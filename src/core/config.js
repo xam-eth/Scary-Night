@@ -50,6 +50,12 @@ export function nextPhase(t) {
   return null;
 }
 
+/** Each dawn the house remembers. Night 1 is 1. Later nights pack the doors. */
+export function nightHeat(nightsSurvived) {
+  const n = Math.max(0, nightsSurvived | 0);
+  return 1 + Math.min(n, 12) * 0.2;
+}
+
 /* ---------------- player ---------------- */
 export const PLAYER = {
   radius: 13,
@@ -145,6 +151,16 @@ export const ENEMY_TYPES = {
     shardChance: 0.7, spawnCost: 2.6, speak: 'breath', leaveAfter: 96,
     noWindows: false, slipsOpenDoors: true, blinkCd: 7,
   },
+  zombie: {
+    key: 'zombie',
+    name: 'ZOMBIE',
+    // The dead do not hurry. They arrive in a pack and they keep arriving.
+    hp: 68, speed: 54, huntSpeed: 72, radius: 14, contactDamage: 11, attackInterval: 1.45,
+    attackRange: 30, doorDamage: 9, doorAttackInterval: 1.25, bloodValue: 16,
+    visionRange: 460, loseSight: 3.4, alertRange: 240, steer: 3.1,
+    shardChance: 0.22, spawnCost: 0.65, speak: 'crawlerChatter', leaveAfter: 80,
+    noWindows: true,
+  },
   ghoul: {
     key: 'ghoul',
     name: 'GHOUL',
@@ -191,6 +207,7 @@ export const BEATS = [
   { t: 26, id: 'creak', text: null, fn: 'creakNear' },
   { t: 44, id: 'firstKnock', text: null, fn: 'knock' },
   { t: 70, id: 'firstCrawler', text: 'SOMETHING IS TRYING THE FRONT DOOR.', fn: 'spawnWave', args: { type: 'crawler', count: 1, door: true } },
+  { t: 82, id: 'firstDead', text: 'THE DEAD ARE AT THE PALISADE.', fn: 'spawnWave', args: { type: 'zombie', count: 3, door: true } },
   { t: 96, id: 'window', text: null, fn: 'windowBreak' },
   { t: 118, id: 'secondWave', text: 'THEY HAVE SURROUNDED THE HOUSE.', fn: 'spawnWave', args: { type: 'crawler', count: 2, door: true } },
   { t: 140, id: 'firstHunter', text: 'A CROSSBOW BOLT CLATTERS AGAINST THE GLASS.', fn: 'spawnWave', args: { type: 'hunter', count: 1, snipe: true } },
@@ -198,6 +215,7 @@ export const BEATS = [
   { t: 168, id: 'behindYou', text: 'SOMETHING MOVED BEHIND YOU.', fn: 'behindYou' },
   { t: 186, id: 'blackout', text: 'THE LIGHTS GO OUT.', fn: 'blackout' },
   { t: 198, id: 'werewolf', text: null, fn: 'spawnWave', args: { type: 'werewolf', count: 1, door: true, reveal: true } },
+  { t: 210, id: 'deadAgain', text: 'THEY BROUGHT MORE OF THE DEAD.', fn: 'spawnWave', args: { type: 'zombie', count: 4, door: true, entranceId: 'postern' } },
   { t: 224, id: 'knock3', text: null, fn: 'knockHard' },
   { t: 236, id: 'behindYou2', text: 'SOMETHING MOVED BEHIND YOU.', fn: 'behindYou' },
   { t: 246, id: 'dawnSoon', text: 'DAWN IN 60 SECONDS.', fn: 'flourish' },
@@ -240,6 +258,7 @@ export function upgradeMul(save, id, per) {
 /* ---------------- collection (codex of what the player has faced) ---------------- */
 export const CODEX = [
   { id: 'crawler', name: 'CRAWLER', text: 'Fast. Weak. Never alone.\nIt throws itself at doors until the wood gives.' },
+  { id: 'zombie', name: 'ZOMBIE', text: 'Slow, and never the only one.\nA pack at a door is the night learning your habits.\nEvery dawn you live, the next pack is larger.' },
   { id: 'hunter', name: 'HUNTER', text: 'Patient. Keeps its distance.\nCrossbow bolts will find you through a broken door.' },
   { id: 'werewolf', name: 'WEREWOLF', text: 'Slow, and it does not care about your barricade.\nDo not be in the room when it arrives.' },
   { id: 'ghoul', name: 'GHOUL', text: 'Thinner than the wolf, hungrier for wood.\nA barricade buys you minutes with most things.\nWith this one, it buys you seconds.' },

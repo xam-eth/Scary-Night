@@ -295,6 +295,20 @@ export class Enemy {
     this.speak(dt, game, sees);
     this.behave(dt, game, sees);
     this.postUpdate(dt, game);
+    // A closed inner gate is a wall. If they are grinding on it, they have to break it.
+    if (!this.dead && this.stuckT > 0.5 && this.state !== ESTATE.BREACH && this.state !== ESTATE.CLIMB && this.state !== ESTATE.LEAVE) {
+      let near = null, best = 96;
+      for (const door of game.mansion.entrances) {
+        if (door.broken || (door.kind === 'door' && door.open)) continue;
+        const d = dist(this.x, this.y, door.x, door.y);
+        if (d < best) { best = d; near = door; }
+      }
+      if (near && this.T.doorDamage > 0) {
+        this.entranceId = near.id;
+        this.state = ESTATE.BREACH;
+        this.stuckT = 0;
+      }
+    }
   }
 
   /** Walk back out of the house and disappear into the dark. */
@@ -701,6 +715,47 @@ export class Crawler extends Enemy {
       ctx.beginPath(); ctx.ellipse(this.x, this.y + 5, 18 + this.deathT * 8, 10 + this.deathT * 4, 0, 0, TAU); ctx.fill();
       ctx.restore();
     }
+  }
+}
+
+/* The dead. Same hunger as a crawler, none of its speed. They come as a crowd. */
+export class Zombie extends Crawler {
+  constructor(x, y, opts) {
+    super(x, y, opts);
+    const T = ENEMY_TYPES.zombie;
+    this.type = T;
+    this.key = 'zombie';
+    this.hp = this.hpMax = T.hp;
+    this.radius = T.radius;
+  }
+
+  draw(ctx, game) {
+    const t = game.time;
+    const dying = this.dead;
+    const k = dying ? clamp(this.deathT / 0.9, 0, 1) : 0;
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.globalAlpha = this.alpha;
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.beginPath(); ctx.ellipse(0, 8, 12, 5, 0, 0, TAU); ctx.fill();
+    ctx.rotate(visualAngle(this.angle, game.renderer.tilt));
+    if (dying) { ctx.rotate(k * 0.8); ctx.scale(1, 1 - k * 0.4); }
+    const step = Math.sin(t * 3.2 + this.id) * 3;
+    ctx.strokeStyle = '#1a1c16';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-3, 2); ctx.lineTo(-6, 10 + step); ctx.moveTo(3, 2); ctx.lineTo(6, 10 - step);
+    ctx.moveTo(-4, -2); ctx.lineTo(-11, 1); ctx.moveTo(4, -2); ctx.lineTo(12, 0);
+    ctx.stroke();
+    ctx.fillStyle = this.hurtFlash > 0.01 ? '#6a3030' : '#2a3128';
+    ctx.beginPath(); ctx.ellipse(0, -1, 7, 9, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#141814';
+    ctx.beginPath(); ctx.arc(0, -8, 5.5, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#c45a4a';
+    ctx.fillRect(-2, -9, 1.4, 1.4);
+    ctx.fillRect(1.2, -9, 1.4, 1.4);
+    ctx.restore();
   }
 }
 
