@@ -370,7 +370,6 @@ export function drawMenu(game, ctx, w, h) {
   const marketOpen = (B.nightsAttempted || 0) > 0;
   const defs = [
     { label: 'PLAY', sub: 'ONE NIGHT. FIVE MINUTES. THREE GOALS.', onClick: () => game.beginNight() },
-    { label: 'HOW TO SURVIVE', sub: 'THE NIGHT, HOUR BY HOUR.', onClick: () => game.setScreen('help') },
     { label: 'UPGRADES', sub: canUpgrade ? `${B.shards} BLOOD SHARDS` : 'EARNED BY SURVIVING', onClick: () => game.setScreen('upgrades') },
     ...(marketOpen ? [{ label: 'BLOOD MARKET', sub: 'OPTIONAL. THE NIGHT DOES NOT ASK.', onClick: () => game.setScreen('shop') }] : []),
     { label: 'COLLECTION', sub: `${Object.keys(B.seen || {}).length}/${CODEX.length} RECORDED`, onClick: () => game.setScreen('collection') },
@@ -1234,40 +1233,8 @@ export function drawVictory(game, ctx, w, h) {
 
 /* ================= in-run tutorial hints ================= */
 
-export function drawTutorial(game, ctx, w, h) {
-  if (game.save.tutorialSeen && !game.showTutorialHints) return;
-  const t = game.time;
-  const touch = game.input && (game.input.touchSeen || w < 900);
-  const hints = [
-    { at: 14, life: 6, text: touch ? 'CLAW FEEDS YOU. DASH COSTS BLOOD.' : 'F CLAWS. SHIFT DASHES. BOTH COST BLOOD.' },
-    { at: 24, life: 6, text: 'YOU CANNOT HOLD EVERY DOOR. PICK ONE TO ABANDON.' },
-  ];
-  ctx.save();
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  for (const hnt of hints) {
-    const dt = t - hnt.at;
-    if (dt < 0 || dt > hnt.life) continue;
-    const a = clamp(dt / 0.6, 0, 1) * clamp((hnt.life - dt) / 1.2, 0, 1);
-    ctx.globalAlpha = a * 0.85;
-    ctx.font = `500 12px ${SANS}`;
-    if ('letterSpacing' in ctx) ctx.letterSpacing = '1px';
-    ctx.fillStyle = '#cfc4a8';
-    ctx.shadowColor = 'rgba(0,0,0,0.9)'; ctx.shadowBlur = 8;
-    const maxW = w * 0.86;
-    const words = hnt.text.split(' ');
-    const lines = [];
-    let cur = '';
-    for (const word of words) {
-      const next = cur ? cur + ' ' + word : word;
-      if (ctx.measureText(next).width > maxW && cur) { lines.push(cur); cur = word; }
-      else cur = next;
-    }
-    if (cur) lines.push(cur);
-    const y0 = h < 500 ? h * 0.38 : h * 0.22;
-    lines.forEach((ln, i) => ctx.fillText(ln, w / 2, y0 + i * 16));
-  }
-  ctx.restore();
+export function drawTutorial() {
+  // The first night is taught by the pointing hand in coach.js, not by a page.
 }
 
 /* ================= the Blood Market (IAP) — src/shop/iap.js =================

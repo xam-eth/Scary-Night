@@ -9,6 +9,7 @@ import * as Audio from './core/audio.js';
 import { Game } from './game/game.js';
 import { phaseAt } from './core/config.js';
 import { drawTouchControls } from './game/hud.js';
+import { drawCoach } from './game/coach.js';
 import { Valen3D } from './game/valen3d.js';
 import { Ads } from './shop/ads.js';
 import { IAP } from './shop/iap.js';
@@ -111,6 +112,7 @@ function frame(now) {
   // is how "the direction feels wrong" starts.
   game.renderer.resetForUI();
   drawTouchControls(game, game.renderer.ctx, game.renderer.w, game.renderer.h);
+  drawCoach(game, game.renderer.ctx, game.renderer.w, game.renderer.h);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

@@ -30,6 +30,7 @@ import { Ads } from '../shop/ads.js';
 import { Valen3D } from './valen3d.js';
 import { IAP } from '../shop/iap.js';
 import { drawHUD, drawWorldPrompts } from './hud.js';
+import { updateCoach, drawCoachWorld } from './coach.js';
 import * as UI from '../ui/screens.js';
 
 /* ================= pickups ================= */
@@ -382,6 +383,7 @@ export class Game {
     if (this.mansion.studyWard) { this.mansion.studyWard.until = 0; this.mansion.studyWard.readyAt = 0; }
     if (this.mansion.lowerStakes) this.mansion.lowerStakes();
     this._brief = {};
+    this.coach = null;
     // ---- night purpose + living house + IAP consumables ----
     this.usedRevive = false;
     this.lastNightGoals = null;
@@ -591,9 +593,8 @@ export class Game {
 
   nightBrief() {
     if ((this.save.nightsSurvived || 0) > 0) return;
+    if (this.coach && this.coach.step !== 'done') return;
     const lines = [
-      [10, 'bar', 'BAR THE SERVANT DOOR, OR OPEN IT AND FEED. PLANKS ARE ON THE FLOOR.'],
-      [32, 'fort', 'WEST OF THE HALL IS THE GATEHOUSE. RAISE THE STAKES. BOARD THE PALISADE.'],
       [68, 'pack', 'ZOMBIES COME IN PACKS. YOU DO NOT HAVE TO KILL THEM ALL.'],
       [108, 'rooms', 'THE GALLERY IS NORTH OF THE DINING ROOM. THE ORATORY SITS ABOVE THE GLASS.'],
       [168, 'choose', 'YOU CANNOT HOLD EVERY DOOR. THE POSTERN IS WEAK ON PURPOSE.'],
@@ -632,6 +633,7 @@ export class Game {
 
     this.player.update(dt, this);
     this.player.anim(dt);
+    updateCoach(this);
 
     // ---- enemies ----
     for (let i = this.enemies.length - 1; i >= 0; i--) {
@@ -1588,6 +1590,7 @@ export class Game {
 
     // ---------- baked architecture ----------
     m.drawFloor(ctx);
+    drawCoachWorld(this, ctx);
     // ---------- decals ----------
     this.decals.draw(ctx);
     // ---------- props under entities ----------
