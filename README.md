@@ -28,6 +28,12 @@ Any static file server works (`npx serve`, `php -S`, nginx, GitHub Pages). It mu
 be served over HTTP rather than opened as `file://`, because the game is split
 across ES modules.
 
+The static preview cannot take payment. `/api/iap` is the Node server in
+`server/`, and the Midtrans server key stays in `server/.env` (gitignored).
+A Google Play build must bill digital goods through Google Play Billing, not
+Midtrans. The in-app privacy notice, `privacy.html`, and `delete.html` are
+the store-facing copies. See `docs/PLAY-STORE.md`.
+
 Opening it on a phone works too: there is a virtual stick plus sprint, attack,
 interact, repair and barricade buttons, and the layout adapts.
 

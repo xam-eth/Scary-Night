@@ -43,7 +43,7 @@
 import { defaultSave } from '../core/util.js';
 import { SHOP_CONFIG, IDR } from './config.js';
 
-export const IAP_ENABLED = true;          // beta: on, sandboxed on web
+export const IAP_ENABLED = true;          // web: Midtrans. Play: LNBridge wins in init()
 export const SANDBOX_LATENCY_MS = 900;
 
 /* ---------------- catalog ---------------- */
@@ -159,8 +159,9 @@ class MidtransProvider {
   constructor(cfg) {
     this.cfg = cfg;
     this.snapPromise = null;
-    this.playerId = this._playerId();
+    this._id = null;   // created on the first payment, never at boot
   }
+  get playerId() { return this._id || (this._id = this._playerId()); }
   get available() { return !!(this.cfg.enabled && this.cfg.clientKey); }
   _playerId() {
     try {
@@ -324,6 +325,7 @@ export const IAP = {
 
   priceLabel(sku) {
     if (this.mode === 'midtrans') return IDR(sku.priceIdr || Math.round(sku.priceUsd * 16000));
+    if (this.mode === 'native') return 'GOOGLE PLAY';
     if (this.mode === 'sandbox') return '$' + sku.priceUsd.toFixed(2) + ' · SANDBOX';
     return '$' + sku.priceUsd.toFixed(2);
   },

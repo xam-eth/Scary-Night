@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Privacy Policy — LAST NIGHT</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; background: #07080d; color: #e6dcc4; font: 16px/1.55 Georgia, "Times New Roman", serif; }
+  main { max-width: 42rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+  h1 { font-weight: 400; letter-spacing: .12em; font-size: 1.6rem; }
+  h2 { font-weight: 400; letter-spacing: .08em; font-size: 1.05rem; margin-top: 2rem; color: #c8a04a; }
+  a { color: #e0c070; }
+  p, li { color: #cfc6b0; }
+  .en { color: #a8a090; font-size: .95rem; }
+  code { font-family: ui-monospace, Consolas, monospace; font-size: .9em; }
+</style>
+</head>
+<body>
+<main>
+  <h1>PRIVACY POLICY</h1>
+  <p>LAST NIGHT · kebijakan privasi · berlaku untuk build web dan build Google Play.</p>
+  <p class="en">This page is the privacy policy for the game LAST NIGHT. It is also linked inside the game (menu and Settings) and is the URL to paste into Play Console.</p>
+
+  <h2>SIAPA YANG MENANGANI DATA</h2>
+  <p>Pengembang game LAST NIGHT. Pertanyaan privasi: buka isu di <a href="https://github.com/xam-eth/Scary-Night/issues">repositori publik game</a>, atau email dukungan yang tercantum di listing Play Console. Jangan kirim Server Key, bukti pembayaran lengkap, atau sandi.</p>
+  <p class="en">Privacy contact: the Play Console support email, or a public issue on the game repository. Do not send payment secrets.</p>
+
+  <h2>APA YANG TIDAK KAMI AMBIL</h2>
+  <ul>
+    <li>Tidak ada akun. Tidak ada email, nama, nomor telepon, atau kata sandi.</li>
+    <li>Tidak ada lokasi, kontak, foto, mikrofon, atau daftar aplikasi.</li>
+    <li>Tidak ada iklan, dan tidak ada ID iklan (GAID) yang dibaca game ini.</li>
+    <li>Tidak ada analitik pihak ketiga.</li>
+  </ul>
+  <p class="en">No account, no ads, no location, no contacts, no advertising ID, no third-party analytics.</p>
+
+  <h2>APA YANG TERSIMPAN DI PERANGKAT</h2>
+  <p>Progres (malam yang selamat, pecahan darah, pengaturan, item yang sudah dibeli) disimpan di perangkat ini, di <code>localStorage</code>, kunci <code>lastnight.save.v1</code>. Data itu tidak dikirim ke server kami kecuali kamu sendiri membayar lewat web.</p>
+  <p class="en">Progress stays on the device. It is not uploaded unless you start a web payment.</p>
+
+  <h2>PEMBAYARAN</h2>
+  <p><strong>Google Play.</strong> Barang digital (pecahan, nyawa kedua, kosmetik) di aplikasi yang diunduh dari Play wajib dibayar lewat Google Play Billing. Itu syarat <a href="https://support.google.com/googleplay/android-developer/answer/10281818">Kebijakan Pembayaran Google Play</a>. Midtrans tidak dipakai untuk barang digital di build Play. Google memproses pembayaran itu menurut kebijakan Google.</p>
+  <p><strong>Web.</strong> Di browser, pembayaran memakai Midtrans Snap (QRIS, GoPay, transfer bank). Merchant ID <code>M769336744</code>. Saat kamu menekan bayar, game membuat id acak di perangkat (<code>lastnight.playerId</code>) dan mengirim id itu plus kode barang ke server kami, yang membuat transaksi di Midtrans. Server key tidak pernah ada di aplikasi. Hibah item hanya setelah server mengonfirmasi settlement.</p>
+  <p class="en">Play builds bill digital goods only through Google Play Billing. The browser build uses Midtrans. The server key never ships in the app. A random on-device id is sent only when you pay on the web.</p>
+
+  <h2>BERBAGI DENGAN PIHAK LAIN</h2>
+  <ul>
+    <li>Midtrans, hanya untuk pembayaran web yang kamu mulai.</li>
+    <li>Google Play, hanya untuk pembelian di build Play.</li>
+    <li>Tidak dijual. Tidak dipakai untuk iklan.</li>
+  </ul>
+
+  <h2>ANAK-ANAK</h2>
+  <p>LAST NIGHT adalah horror untuk 18 tahun ke atas. Bukan untuk anak. Tidak ikut Google Play Families. Jangan mainkan jika kamu di bawah 18.</p>
+  <p class="en">18+ horror. Not directed at children. Not in the Families program.</p>
+
+  <h2>KEAMANAN DAN RETENSI</h2>
+  <p>Lalu lintas pembayaran memakai HTTPS. Data di perangkat tetap ada sampai kamu menghapusnya. Catatan pembayaran web di server dihapus saat kamu meminta penghapusan. Kami tidak membekukan data sebagai pengganti penghapusan. Jika hukum mewajibkan menyimpan bukti transaksi, yang disimpan hanya catatan akuntansi minimum, dan hanya selama wajib, lalu dihapus.</p>
+
+  <h2>HAPUS DATA</h2>
+  <p>Di dalam game: Settings atau layar Privacy → DELETE MY DATA. Itu menghapus simpanan di perangkat dan meminta server menghapus catatan pembayaran untuk id perangkat itu.</p>
+  <p>Tanpa membuka game: <a href="./delete.html">halaman hapus data</a>. Karena tidak ada akun, kamu memasukkan id perangkat yang terlihat di layar Privacy. Mengosongkan data aplikasi di Android juga menghapus salinan lokal.</p>
+  <p class="en">In-app: Privacy → Delete my data. On the web, without reinstalling: the deletion page. Clearing app storage on Android deletes the local copy.</p>
+
+  <h2>DATA SAFETY (PLAY CONSOLE)</h2>
+  <p>Jawaban yang sesuai dengan build ini ada di <code>docs/PLAY-STORE.md</code>. Jika suatu hari iklan dinyalakan, kebijakan ini dan formulir Data safety harus diubah dulu. Sekarang: Contains ads = No.</p>
+
+  <p><a href="./index.html">Kembali ke game</a> · <a href="./delete.html">Hapus data</a></p>
+</main>
+</body>
+</html>

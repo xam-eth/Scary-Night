@@ -123,7 +123,8 @@ export function createIapServer(config = {}) {
     const snap = {
       transaction_details: { order_id: orderId, gross_amount: item.priceIdr },
       item_details: [{ id: sku, price: item.priceIdr, quantity: 1, name: item.label }],
-      enabled_payments: ['bca_va', 'permata_va', 'echelon', 'other_va', 'qris', 'gopay'],
+      enabled_payments: ['qris', 'gopay', 'shopeepay', 'bca_va', 'bni_va', 'bri_va', 'permata_va', 'echannel'],
+      custom_field1: process.env.MIDTRANS_MERCHANT_ID || '',
       metadata: { order_id: orderId },
     };
     try {
@@ -178,7 +179,9 @@ export function createIapServer(config = {}) {
     const orderId = body.order_id || body.transaction_id;
     const statusCode = String(body.status_code ?? '');
     const gross = String(body.gross_amount ?? '');
-    const signature = req.headers['x-signature'] || body.signature || '';
+    // Midtrans sends signature_key in the JSON body. The older header form is
+    // still accepted so the local test stub keeps working.
+    const signature = body.signature_key || req.headers['x-signature'] || body.signature || '';
     if (!orderId || !sigEqual(midtransSign(orderId, statusCode, gross), signature)) {
       return send(res, 401, 'NOT OK');   // never grant on a forged callback
     }
@@ -210,6 +213,19 @@ export function createIapServer(config = {}) {
     }
     ledger.sort((a, b) => a.at - b.at);
     return send(res, 200, { ledger });
+  }
+
+  /* On-device id is the deletion token. No account exists to freeze. */
+  async function handleDelete(req, res) {
+    if (!allowed(req.socket.remoteAddress || 'local')) return send(res, 429, { error: 'slow-down' });
+    const { playerId } = await parseBody(req);
+    if (!playerId || typeof playerId !== 'string' || playerId.length > 64) return send(res, 400, { error: 'bad-player' });
+    let n = 0;
+    for (const [id, t] of Object.entries(store.transactions)) {
+      if (t.playerId === playerId) { delete store.transactions[id]; n++; }
+    }
+    if (n) saveStore();
+    return send(res, 200, { deleted: n });
   }
 
   /* ---- AdMob rewarded-ad SSV (server-side verification) ----
@@ -256,6 +272,7 @@ export function createIapServer(config = {}) {
     'POST /api/iap/verify': handleVerify,
     'POST /api/iap/callback': handleCallback,
     'POST /api/iap/ledger': handleLedger,
+    'POST /api/privacy/delete': handleDelete,
     'POST /api/ads/verify': handleAdsVerify,
     'GET /healthz': (req, res) => send(res, 200, { ok: true, transactions: Object.keys(store.transactions).length }),
   };
@@ -270,8 +287,19 @@ export function createIapServer(config = {}) {
   return { httpServer, cfg, store, _test: { midtransSign } };
 }
 
+function loadDotEnv() {
+  try {
+    const raw = fs.readFileSync(path.join(HERE, '.env'), 'utf8');
+    for (const line of raw.split(/\n/)) {
+      const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
+      if (m && process.env[m[1]] == null) process.env[m[1]] = m[2].trim();
+    }
+  } catch (e) { /* optional */ }
+}
+
 /* ---------------- CLI ---------------- */
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+  loadDotEnv();
   const app = createIapServer();
   const port = +process.env.PORT || 8787;
   app.httpServer.listen(port, '0.0.0.0', () => {

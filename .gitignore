@@ -7,3 +7,5 @@ shots-browser/
 tools/.cache/
 server/data.json
 server/data.test.json
+.env
+server/.env

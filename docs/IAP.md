@@ -69,8 +69,10 @@ Server obligations (out of repo by design — any stack that answers 4 routes):
 
 1. `POST /order` → idempotent: same playerId+sku+unpaid → same transaction.
 2. `POST /verify` → `{ status in ('settlement','capture') → { settled: true, receipt } }`.
-3. `POST /callback` → verify `x-signature` with SERVER key; store ledger row; **this
-   is what grants**; duplicate-safe on transaction_id.
+3. `POST /callback` → verify `signature_key` (SHA512 of order_id + status_code +
+   gross_amount + server key) with the SERVER key; store ledger row; **this
+   is what grants**; duplicate-safe on transaction_id. The older `x-signature`
+   header is still accepted.
 4. `POST /ledger` → list of settled transactions for restore.
 5. Refunds: Midtrans dashboard → callback `status: settle→refund/void` → revoke
    unconsumed entitlements only (spent revives are honoured — retro-punishing a
@@ -87,8 +89,10 @@ empty — `provider:'sandbox'` keeps zero network calls until you flip it.
 | `revive` | death screen, none held | SECOND BLOOD grant | 1 / night |
 | `crate` | shop | +2 planks next night | 1 / day |
 
-Rules: never mid-night, never interstitial, never on victory screen, and the
-buttons are **invisible** unless a provider is configured (`'none'` default).
+This build ships `provider: 'none'`. The Play listing must say **Contains ads: No**
+until that changes. Rules if it is ever turned on: never mid-night, never
+interstitial, never on the victory screen, and the buttons stay **invisible**
+unless a provider is configured.
 `'mock'` exists so QA can exercise the full loop (2.6 s simulated watch).
 Before production keys: enable AdMob **server-side verification** and reward
 on SSV callback, not on the client `onUserEarnedReward` alone.
@@ -115,8 +119,9 @@ on SSV callback, not on the client `onUserEarnedReward` alone.
 - [ ] Midtrans sandbox keys → live test matrix: success / pending / fail /
       duplicate callback / refund-revoke — set `IAP.debug.failMode` for the
       client failure states
-- [ ] flip `src/shop/config.js` → `provider: 'midtrans'`; client key via
-      server-injected `window.LN_STORE` (never baked into the bundle);
-      keep `server/catalog.json` and `CATALOG` in sync at price-change time
+- [x] web provider is `midtrans`; the public client key is in `src/shop/config.js`
+      (a client key is meant to be public). The server key is not in the bundle.
+      Play digital goods stay on `LNBridge` / Play Billing.
+- [ ] keep `server/catalog.json` and `CATALOG` in sync at price-change time
 - [ ] receipt ledger export + a manual "grant fix" runbook for support
 - [ ] store-page price sync pass at launch (docs/LAUNCH.md when it exists)

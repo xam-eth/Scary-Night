@@ -49,7 +49,7 @@ export class Renderer {
     // around their foot anchor by renderer.upright(), which turns flat
     // top-down staging into a Diablo-style angled read without touching
     // gameplay math (aim, movement and collision stay pure top-down).
-    this.tilt = 0.58;  // v1.1: more dramatic 3/4 view (was 0.66, user said 'masih top down')
+    this.tilt = 0.42;  // lower = more oblique. 0.66 read as top-down; 0.58 still too steep.
     this.cam = { x: 0, y: 0, tx: 0, ty: 0, zoom: 1, viewW: 1280, viewH: 720, shake: 0, sx: 0, sy: 0, rot: 0 };
     this.grain = this._makeGrain();
     this.flash = 0;

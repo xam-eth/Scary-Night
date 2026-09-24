@@ -122,6 +122,18 @@ const refund = await post('/api/iap/callback',
 const l3 = await post('/api/iap/ledger', { playerId: 'LN-TESTER' });
 ok('refund revokes the grant (ledger drops it, replay-safe)', refund.code === 200 && l3.json.ledger.length === 0);
 
+const oDel = await post('/api/iap/order', { sku: 'pouch', playerId: 'LN-DELETE' });
+const delId = oDel.json.transactionId;
+const sigKey = crypto.createHash('sha512').update(`${delId}20019000${SERVER_KEY}`).digest('hex');
+const bodySigned = await post('/api/iap/callback', {
+  order_id: delId, status_code: '200', gross_amount: '19000', transaction_status: 'settlement', signature_key: sigKey,
+});
+const lDel = await post('/api/iap/ledger', { playerId: 'LN-DELETE' });
+ok('signature_key in the body settles, without x-signature', bodySigned.code === 200 && lDel.json.ledger.length === 1);
+const wiped = await post('/api/privacy/delete', { playerId: 'LN-DELETE' });
+const lGone = await post('/api/iap/ledger', { playerId: 'LN-DELETE' });
+ok('delete drops that device id and leaves other players', wiped.code === 200 && wiped.json.deleted === 1 && lGone.json.ledger.length === 0);
+
 console.log('\n=== ADMOB SSV ===');
 const ssvPayload = {
   custom_data: 'player:LN-TESTER;placement:revive',

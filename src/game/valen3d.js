@@ -24,7 +24,7 @@ export function valenClipForState(state) {
   return VALEN_CLIPS.idle;
 }
 
-const PITCH_DY = 1.73;   // tan(33°) * PITCH_DZ — oblique-camera match for the world tilt
+const PITCH_DY = 1.18;   // tan(24°) * PITCH_DZ — matches the lower floor tilt
 const PITCH_DZ = 2.65;
 
 const wrap01 = (value) => ((value % 1) + 1) % 1;

@@ -13,7 +13,7 @@ import { Input } from '../core/input.js';
 import { Renderer, Particles, Decals, PAL } from '../core/render.js';
 import {
   clamp, lerp, damp, rand, randInt, chance, pick, dist, TAU, fmtClock,
-  loadSave, writeSave, Rng,
+  loadSave, writeSave, defaultSave, Rng,
 } from '../core/util.js';
 import {
   NIGHT_DURATION, DAWN_AT, COUNTDOWN_AT, SILENCE_AT, PANIC_AT, PLAYER, DOOR, RES,
@@ -205,8 +205,39 @@ export class Game {
    * Thin wrappers: IAP owns the rules, these own the feedback (audio,
    * messages, save writes). The store never touches gameplay numbers.
    */
+  acceptPrivacy() {
+    this.save.privacyAck = true;
+    writeSave(this.save);
+    this.setScreen('menu');
+  }
+  async wipeLocalData() {
+    let id = null;
+    try { id = localStorage.getItem('lastnight.playerId'); } catch (e) { /* private mode */ }
+    if (id) {
+      try {
+        await fetch('/api/privacy/delete', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ playerId: id }),
+        });
+      } catch (e) { /* local wipe still proceeds; the web page can retry */ }
+    }
+    try {
+      localStorage.removeItem('lastnight.save.v1');
+      localStorage.removeItem('lastnight.playerId');
+      localStorage.removeItem('lastnight.iap.sandbox.v1');
+    } catch (e) { /* private mode */ }
+    this.save = defaultSave();
+    this.privacyDeleteArmed = false;
+    this.setScreen('menu');
+  }
   purchaseSku(id) {
     if (IAP.busy) return;
+    if (!this.save.privacyAck) {
+      this.setScreen('privacy');
+      this.showMessage('READ THE NOTICE BEFORE THE MARKET TAKES ANYTHING.', { tone: 'cold', life: 4 });
+      return;
+    }
     this.audio.play('uiClick', { vol: 0.5 });
     IAP.buy(this.save, id, () => { writeSave(this.save); this.player && this.player.applyUpgrades(this.save); })
       .then((r) => {
@@ -262,7 +293,7 @@ export class Game {
     this.uiIndex = 0;
     this.ui = [];
     if (s !== 'playing') this.audio.play('uiClick', { vol: 0.5 });
-    if (s === 'settings' || s === 'upgrades' || s === 'collection' || s === 'help' || s === 'shop') {
+    if (s === 'settings' || s === 'upgrades' || s === 'collection' || s === 'help' || s === 'shop' || s === 'privacy') {
       this.settingsReturn = from || (prev === 'paused' ? 'paused' : prev === 'death' ? 'death' : prev === 'victory' ? 'victory' : 'menu');
     }
   }
@@ -456,7 +487,7 @@ export class Game {
 
     switch (this.screen) {
       case 'menu': this.updateMenu(dt); break;
-      case 'settings': case 'upgrades': case 'collection': case 'help': case 'shop': break;
+      case 'settings': case 'upgrades': case 'collection': case 'help': case 'shop': case 'privacy': break;
       case 'intro': this.updateIntro(dt); break;
       case 'playing': this.updatePlaying(this.dt); break;
       case 'paused': break;
@@ -1406,7 +1437,7 @@ export class Game {
     }
 
     // ---- the world is drawn for every in-run screen (so pause/death keep it) ----
-    const gameVisible = ['playing', 'paused', 'intro', 'dying', 'dawn', 'settings', 'upgrades', 'collection', 'help', 'shop'].includes(this.screen);
+    const gameVisible = ['playing', 'paused', 'intro', 'dying', 'dawn', 'settings', 'upgrades', 'collection', 'help', 'shop', 'privacy'].includes(this.screen);
     if (gameVisible) {
       // v1.1 — if the purchased GLB never loaded, the player sees this once
       // and the placeholder announces itself every frame after that.
@@ -1434,6 +1465,7 @@ export class Game {
       case 'collection': UI.drawCollection(this, ctx, w, h); break;
       case 'help': UI.drawHelp(this, ctx, w, h); break;
       case 'shop': UI.drawShop(this, ctx, w, h); break;
+      case 'privacy': UI.drawPrivacy(this, ctx, w, h); break;
       case 'death': UI.drawDeath(this, ctx, w, h); break;
       case 'victory': UI.drawVictory(this, ctx, w, h); break;
     }

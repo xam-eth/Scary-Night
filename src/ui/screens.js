@@ -19,6 +19,20 @@ const SERIF = 'Georgia, "Palatino Linotype", "Times New Roman", serif';
 const SANS = '"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 const MONO = 'Consolas, "SF Mono", Menlo, monospace';
 
+function wrapLines(ctx, text, maxW) {
+  const words = String(text).split(' ');
+  const out = [];
+  let cur = '';
+  for (const word of words) {
+    const next = cur ? cur + ' ' + word : word;
+    if (cur && ctx.measureText(next).width > maxW) { out.push(cur); cur = word; }
+    else cur = next;
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+
+
 /* ================= UI primitives ================= */
 
 function uiButton(game, { x, y, w, h, label, sub, onClick, disabled, small, align = 'center', accent = '#a8833c' }) {
@@ -324,8 +338,13 @@ export function drawMenu(game, ctx, w, h) {
   ctx.font = `400 10px ${MONO}`;
   if ('letterSpacing' in ctx) ctx.letterSpacing = '1px';
   ctx.fillStyle = 'rgba(140,134,124,0.4)';
-  ctx.fillText('v' + GAME_VERSION, 12, 16);   // v1.0: the BETA flag retires with the version bump
+  ctx.fillText('v' + GAME_VERSION + '  ·  18+', 12, 16);
   ctx.restore();
+
+  if (!game.save.privacyAck) {
+    drawConsent(game, ctx, w, h);
+    return;
+  }
 
   // Short landscape phones used to push MAIN-equivalent rows off the bottom.
   // Fit the stack between the title and the footer instead of hoping h*0.41 works.
@@ -347,7 +366,7 @@ export function drawMenu(game, ctx, w, h) {
   const defs = [
     { label: 'PLAY', sub: 'ONE NIGHT. FIVE MINUTES. THREE GOALS.', onClick: () => game.beginNight() },
     { label: 'UPGRADES', sub: canUpgrade ? `${B.shards} BLOOD SHARDS` : 'NO SHARDS YET', onClick: () => game.setScreen('upgrades') },
-    { label: 'BLOOD MARKET', sub: IAP.mode === 'disabled' ? 'STORE OFFLINE' : IAP.mode === 'sandbox' ? 'SANDBOX STORE' : 'STORE READY', onClick: () => game.setScreen('shop') },
+    { label: 'BLOOD MARKET', sub: IAP.mode === 'native' ? 'GOOGLE PLAY BILLING' : IAP.mode === 'midtrans' ? 'WEB · MIDTRANS' : IAP.mode === 'sandbox' ? 'SANDBOX STORE' : 'STORE OFFLINE', onClick: () => game.setScreen('shop') },
     { label: 'COLLECTION', sub: `${Object.keys(B.seen || {}).length}/${CODEX.length} RECORDED`, onClick: () => game.setScreen('collection') },
     { label: 'SETTINGS', sub: DIFFICULTY[B.settings.difficulty]?.label || 'STANDARD', onClick: () => game.setScreen('settings') },
   ];
@@ -374,6 +393,106 @@ export function drawMenu(game, ctx, w, h) {
     : 'DRAG LEFT TO MOVE  ·  RIGHT BUTTONS ACT  ·  WASD STILL WORKS  ·  F CLAW  ·  E USE  ·  ESC PAUSE';
   ctx.fillText(hint, w / 2, h - 16);
   ctx.restore();
+
+  const pr = uiButton(game, {
+    x: w - 112, y: h - 38, w: 96, h: 26, label: 'PRIVACY', small: true,
+    onClick: () => game.setScreen('privacy'),
+  });
+  buttonVisual(ctx, pr.b, { active: pr.hover, label: 'PRIVACY', small: true, accent: '#6a6a80' });
+}
+
+function drawConsent(game, ctx, w, h) {
+  const cardW = Math.min(540, w - 28);
+  const cardH = Math.min(360, h - 96);
+  const x = (w - cardW) / 2;
+  const y = Math.max(64, (h - cardH) / 2);
+  ctx.save();
+  ctx.fillStyle = 'rgba(4,5,9,0.94)';
+  ctx.fillRect(x, y, cardW, cardH);
+  ctx.strokeStyle = 'rgba(168,131,60,0.45)';
+  ctx.strokeRect(x + 0.5, y + 0.5, cardW - 1, cardH - 1);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#e8e0cc';
+  ctx.font = `400 ${cardW < 420 ? 16 : 20}px ${SERIF}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
+  ctx.fillText('BEFORE THE NIGHT', w / 2, y + 32);
+  ctx.font = `400 ${h < 420 ? 11 : 12}px ${SANS}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '0.4px';
+  ctx.fillStyle = 'rgba(205,196,180,0.82)';
+  const lines = [
+    '18+ horror. No account. No ads. No location.',
+    'Progress stays on this device until you delete it.',
+    'On Google Play, digital goods bill through Google Play Billing.',
+    'In the browser, payment uses Midtrans. A random device id is created only when you pay, and sent to finish that payment.',
+    'You can wipe the save from Privacy, in the game or on the web.',
+  ].flatMap((t) => wrapLines(ctx, t, cardW - 36));
+  const gap = Math.max(13, Math.min(20, (cardH - 108) / Math.max(1, lines.length)));
+  lines.forEach((line, i) => ctx.fillText(line, w / 2, y + 54 + i * gap));
+  ctx.restore();
+  const bw = Math.min(200, (cardW - 36) / 2);
+  const by = y + cardH - 58;
+  const ok = uiButton(game, {
+    x: w / 2 - bw - 8, y: by, w: bw, h: 40, label: 'I UNDERSTAND', small: true,
+    onClick: () => game.acceptPrivacy(),
+  });
+  buttonVisual(ctx, ok.b, { active: ok.hover, label: 'I UNDERSTAND', small: true, accent: '#a8833c' });
+  const pol = uiButton(game, {
+    x: w / 2 + 8, y: by, w: bw, h: 40, label: 'PRIVACY', small: true,
+    onClick: () => game.setScreen('privacy'),
+  });
+  buttonVisual(ctx, pol.b, { active: pol.hover, label: 'PRIVACY', small: true, accent: '#6a6a80' });
+}
+
+export function drawPrivacy(game, ctx, w, h) {
+  const back = game.settingsReturn || 'menu';
+  ctx.save();
+  ctx.fillStyle = 'rgba(4,5,9,0.94)';
+  ctx.fillRect(0, 0, w, h);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#e8e0cc';
+  ctx.font = `400 26px ${SERIF}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '6px';
+  ctx.fillText('PRIVACY', w / 2, 46);
+  ctx.font = `400 ${w < 720 ? 12 : 13}px ${SANS}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '0.3px';
+  ctx.fillStyle = 'rgba(205,196,180,0.84)';
+  let pid = 'not created — nothing has been sent';
+  try { pid = localStorage.getItem('lastnight.playerId') || pid; } catch (e) { /* private mode */ }
+  const lines = [
+    '18+. This build does not show ads and does not read location, contacts, or photos.',
+    'There is no account. The save lives on this device (lastnight.save.v1).',
+    'Google Play digital goods are billed by Google Play Billing, not Midtrans.',
+    'Browser payments use Midtrans, merchant M769336744. The server key is not in the app.',
+    'Device id: ' + pid,
+    'Delete removes the save, that id, and asks the payment server to drop the ledger.',
+    'The same page is at privacy.html. Deletion without the game is at delete.html.',
+  ].flatMap((t) => wrapLines(ctx, t, w - 48));
+  const top = 72;
+  const gap = Math.max(14, Math.min(22, (h - 140) / Math.max(1, lines.length)));
+  lines.forEach((line, i) => ctx.fillText(line, w / 2, top + i * gap));
+  ctx.restore();
+
+  const bw = Math.min(200, (w - 48) / 3);
+  const by = Math.min(h - 56, Math.max(top + lines.length * gap + 8, h - 72));
+  const page = uiButton(game, {
+    x: w / 2 - bw * 1.5 - 12, y: by, w: bw, h: 40, label: 'FULL POLICY', small: true,
+    onClick: () => { try { window.open('./privacy.html', '_blank', 'noopener'); } catch (e) { /* blocked */ } },
+  });
+  buttonVisual(ctx, page.b, { active: page.hover, label: 'FULL POLICY', small: true, accent: '#6a6a80' });
+  const delLabel = game.privacyDeleteArmed ? 'CONFIRM DELETE' : 'DELETE DATA';
+  const del = uiButton(game, {
+    x: w / 2 - bw / 2, y: by, w: bw, h: 40, label: delLabel, small: true,
+    onClick: () => {
+      if (!game.privacyDeleteArmed) { game.privacyDeleteArmed = true; return; }
+      game.wipeLocalData();
+    },
+  });
+  buttonVisual(ctx, del.b, { active: del.hover, label: delLabel, small: true, accent: '#8a3030' });
+  const bk = uiButton(game, {
+    x: w / 2 + bw / 2 + 12, y: by, w: bw, h: 40, label: 'BACK', small: true,
+    onClick: () => { game.privacyDeleteArmed = false; game.setScreen(back); },
+  });
+  buttonVisual(ctx, bk.b, { active: bk.hover, label: 'BACK', small: true, accent: '#a8833c' });
 }
 
 /* ================= intro card ================= */
@@ -583,6 +702,15 @@ export function drawSettings(game, ctx, w, h) {
   });
   buttonVisual(ctx, r.b, { active: r.hover, label: DIFFICULTY[s.difficulty].label, small: true, accent: '#6a6a80' });
   y += rowH + 10;
+
+  // Short phones already overflow. The menu footer and the HTML link cover them.
+  if (h >= 700 && y < h - 150) {
+    const pr = uiButton(game, {
+      x: cx - 110, y: y - 16, w: 220, h: 36, label: 'PRIVACY & DELETE', small: true,
+      onClick: () => game.setScreen('privacy', back),
+    });
+    buttonVisual(ctx, pr.b, { active: pr.hover, label: 'PRIVACY & DELETE', small: true, accent: '#6a6a80' });
+  }
 
   const backBtn = uiButton(game, { x: cx - 110, y: h - 90, w: 220, h: 46, label: 'BACK', small: true, accent: '#6a6a80', onClick: () => game.setScreen(back) });
   buttonVisual(ctx, backBtn.b, { active: backBtn.hover, label: 'BACK', small: true, accent: '#6a6a80' });
@@ -1176,10 +1304,10 @@ export function drawShop(game, ctx, w, h) {
       const busy = IAP.busy === sku.id;
       const r1 = uiButton(game, {
         x: cx + cardW - bw2 * 2 - 22, y: cy + cardH / 2 - bh2 / 2, w: bw2, h: bh2,
-        label: busy ? '…' : 'STORE', small: true, disabled: busy || IAP.mode === 'disabled',
+        label: busy ? '…' : (IAP.mode === 'native' ? 'PLAY' : IAP.mode === 'midtrans' ? 'PAY' : 'STORE'), small: true, disabled: busy || IAP.mode === 'disabled',
         onClick: () => game.purchaseSku(sku.id),
       });
-      buttonVisual(ctx, r1.b, { active: r1.hover || r1.selected, label: busy ? '…' : 'STORE', small: true, accent: '#a8833c' });
+      buttonVisual(ctx, r1.b, { active: r1.hover || r1.selected, label: busy ? '…' : (IAP.mode === 'native' ? 'PLAY' : IAP.mode === 'midtrans' ? 'PAY' : 'STORE'), small: true, accent: '#a8833c' });
       const canShard = sku.shardPrice && B.shards >= sku.shardPrice;
       const r2 = uiButton(game, {
         x: cx + cardW - bw2 - 12, y: cy + cardH / 2 - bh2 / 2, w: bw2, h: bh2,
@@ -1200,11 +1328,12 @@ export function drawShop(game, ctx, w, h) {
   ctx.font = `400 10px ${SANS}`;
   if ('letterSpacing' in ctx) ctx.letterSpacing = '1.4px';
   ctx.fillStyle = 'rgba(140,134,124,0.55)';
-  const policy = ['EVERYTHING HERE IS EARNABLE BY PLAYING · NO PAY-TO-WIN · REWARDED ADS ARE OPT-IN AND HARD-CAPPED · COSMETICS NEVER ALTER THE MODEL FILES',
-    IAP.mode === 'sandbox' ? 'SANDBOX STORE — ⌁ NO REAL MONEY MOVES · V1.0'
-      : IAP.mode === 'midtrans' ? 'MIDTRANS SNAP — IDR PRICES · SETTLEMENT CONFIRMED BY THE SERVER'
-      : 'STORE CONNECTED TO THE PLATFORM BILLING BRIDGE'];
-  const pLines = wide ? policy : [policy[0].split(' · ').slice(0, 3).join(' · ') + ' · ' + (IAP.mode === 'sandbox' ? '⌁ NO REAL MONEY MOVES' : 'BRIDGE CONNECTED')];
+  const policy = ['EVERYTHING HERE IS EARNABLE BY PLAYING · NO PAY-TO-WIN · NO ADS IN THIS BUILD · COSMETICS NEVER ALTER THE MODEL FILES',
+    IAP.mode === 'sandbox' ? 'SANDBOX STORE — NO REAL MONEY MOVES'
+      : IAP.mode === 'midtrans' ? 'WEB ONLY · MIDTRANS · SETTLEMENT CONFIRMED BY THE SERVER, NOT THE BROWSER'
+      : IAP.mode === 'native' ? 'GOOGLE PLAY BILLING · DIGITAL GOODS ARE NOT SOLD THROUGH MIDTRANS'
+      : 'STORE OFFLINE'];
+  const pLines = wide ? policy : [policy[0].split(' · ').slice(0, 3).join(' · '), policy[1]];
   pLines.forEach((line, i) => ctx.fillText(line, w / 2, policyY + i * 16));
   ctx.restore();
 

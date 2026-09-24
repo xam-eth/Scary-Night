@@ -130,6 +130,7 @@ export const defaultSave = () => ({
     invertPanic: 0,
   },
   tutorialSeen: false,
+  privacyAck: false,        // first-run notice; not an account
 });
 
 function deepMerge(base, over) {

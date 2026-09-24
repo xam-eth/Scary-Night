@@ -8,8 +8,8 @@ hosting + a reverse proxy needs no client changes).
 ## Run
 
 ```bash
-MIDTRANS_SERVER_KEY=SB-Mid-server-xxxxxx PORT=8787 node server/server.mjs
-# production later: MIDTRANS_IS_PRODUCTION=true with the live server key
+cp server/.env.example server/.env   # then put the server key in server/.env
+node server/server.mjs               # loads server/.env if present; never commit that file
 ```
 
 The **client key** is a different key — it goes to the game (via
@@ -22,9 +22,10 @@ key never leaves this process.
 |---|---|---|---|
 | `POST /api/iap/order` | `{sku, playerId}` | `{transactionId, token}` | idempotent per (player, sku) for 30 min of pending; catalog truth in `catalog.json`; 503 without a server key |
 | `POST /api/iap/verify` | `{transactionId}` | `{settled, status, receipt?}` | UX fast-path; polls Midtrans only while unsettled |
-| `POST /api/iap/callback` | Midtrans async body | `OK` | **the source of truth**; x-signature = SHA512(order_id+status_code+gross_amount+server key), timing-safe; replay-safe |
+| `POST /api/iap/callback` | Midtrans async body | `OK` | **the source of truth**; `signature_key` (or the older `x-signature`) = SHA512(order_id+status_code+gross_amount+server key), timing-safe; replay-safe |
 | `POST /api/iap/ledger` | `{playerId}` | `{ledger:[{transactionId, sku, at}]}` | settled-only → `IAP.restore()` re-derives entitlements |
 | `POST /api/ads/verify` | AdMob SSV params | `{ok, verified, replay}` | RSA-SHA1 over the 5-field SSV string; key URL restricted to `ADS_KEY_ALLOWLIST` (default `developers.google.com`); replayed transactions flagged, not re-granted |
+| `POST /api/privacy/delete` | `{playerId}` | `{deleted}` | drops that device id's ledger rows. Not an account freeze. |
 | `GET /healthz` | — | `{ok, transactions}` | for uptime probes |
 
 Data lands in `server/data.json` (atomic write, gitignored). To scale,

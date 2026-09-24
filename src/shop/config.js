@@ -1,8 +1,8 @@
 /* LAST NIGHT — store configuration (v1.0)
  *
  * Everything about HOW money and ads connect lives in this single file so the
- * launch checklist is one edit, not a hunt. Defaults are safe: sandbox money,
- * no ads, no network calls.
+ * launch checklist is one edit, not a hunt. Ads stay off. Web money is
+ * Midtrans; Play money is Google Play Billing. See docs/PLAY-STORE.md.
  *
  * ⚠ SECURITY RULE — the Midtrans SERVER key never ships in a web bundle.
  * The client only ever holds a *client/key* (Snap) token; order creation and
@@ -13,28 +13,29 @@
  *   game → snap.pay(token)                 (Midtrans hosts the payment sheet)
  *   game → POST {serverBase}/verify  { transactionId }
  *        ← { status: 'settlement' | 'capture', ... }
- *   Midtrans → POST {serverBase}/callback  (async notification, x-signature
+ *   Midtrans → POST {serverBase}/callback  (async notification, signature_key
  *              verified with the SERVER key — the source of truth for grants)
  *
- * Fill `midtrans.clientKey` from YOUR server at boot if you want it dynamic
- * (`window.LN_STORE = { midtrans: { clientKey, serverBase, sandbox } }`), or
- * bake it here for a demo build. The public "SBPT…" client key below is
- * Midtrans' own documentation sample for sandbox mode; it can only move fake
- * money inside a sandbox account you have not connected.
+ * The client key in this file is public (it rides in the Snap.js URL) and it
+ * is a live key, not Midtrans' sandbox sample. The server key is not here.
  */
 
 export const SHOP_CONFIG = {
-  // 'sandbox' = simulated purchases, no network. 'midtrans' = Snap web flow.
-  // 'native' = platform bridge (window.LNBridge), see iap.js.
-  provider: 'sandbox',
-  currency: 'USD',            // midtrans mode renders priceIdr
+  // Web checkout is Midtrans Snap. A Play Store wrapper that sets window.LNBridge
+  // is forced onto Google Play Billing in iap.js — digital goods on Play cannot
+  // be sold through Midtrans. See docs/PLAY-STORE.md.
+  provider: 'midtrans',
+  currency: 'IDR',
 
   midtrans: {
-    // Flip on when you have a Snap client key + the two server endpoints.
-    enabled: false,
-    clientKey: '',            // 'SBPT-CLIENT-KEY-...' (sandbox) / 'VT-CLIENT-...' (prod)
-    serverBase: '/api/iap',   // your backend: POST /order, POST /verify, POST /callback
-    snapScript: 'https://app.sandbox.midtrans.com/snap/snap.js',
+    enabled: true,
+    // Client key is public by design (it is in the Snap.js URL). The server key
+    // is not in this file and must never be added here.
+    clientKey: 'Mid-client-SZuukvoxN7N2-cZo',
+    merchantId: 'M769336744',
+    serverBase: '/api/iap',
+    snapScript: 'https://app.midtrans.com/snap/snap.js',
+    production: true,
   },
 
   ads: {
