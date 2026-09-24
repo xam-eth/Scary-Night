@@ -179,28 +179,35 @@ function drawBlood(game, ctx, w, h, pulse) {
   // above the stick well so the hunger readout is never under the finger.
   const stick = game.input && game.input.stick;
   const stickTop = stick ? (stick.homeY || h - 120) - (stick.r || 52) : h - 80;
-  const x = 22;
-  const y = game.input && game.input.gameplay ? Math.min(h - 48, stickTop - 36) : h - 52;
+  const phone = w < 840 || h < 500;
+  const x = 14;
+  const barW = phone ? Math.min(w - 36, 280) : Math.min(168, Math.max(120, w * 0.28));
+  const barH = phone ? 16 : 12;
+  const plateH = phone ? 52 : 34;
+  const y = game.input && game.input.gameplay
+    ? Math.max(8, Math.min(h - plateH - 8, stickTop - plateH - 10))
+    : h - plateH - 16;
   const pct = p.bloodPct;
   const low = p.lowBlood;
   const critical = pct < 0.14;
-  // One readable vial, not ten 11px cells. Darkwood's health bar is the
-  // reference: you must know if you can take a hit without squinting.
-  const barW = Math.min(168, Math.max(120, w * 0.28));
-  const barH = 12;
 
   ctx.save();
+  ctx.fillStyle = 'rgba(8,6,8,0.78)';
+  ctx.fillRect(x - 8, y - 22, barW + 16, plateH);
+  ctx.strokeStyle = low ? 'rgba(180,40,48,0.7)' : 'rgba(140,110,70,0.35)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x - 7.5, y - 21.5, barW + 15, plateH - 1);
   ctx.textBaseline = 'middle';
-  ctx.font = `500 11px ${SANS}`;
-  setLetter(ctx, 3);
+  ctx.font = `500 ${phone ? 13 : 11}px ${SANS}`;
+  setLetter(ctx, 1);
   ctx.fillStyle = low ? `rgba(220,${120 - 60 * Math.sin(game.time * 5)},110,0.95)` : 'rgba(190,180,165,0.8)';
   ctx.textAlign = 'left';
-  ctx.fillText('BLOOD', x, y - 16);
+  ctx.fillText('BLOOD', x, y - 10);
 
-  ctx.font = `400 11px ${MONO}`;
-  ctx.fillStyle = 'rgba(190,180,165,0.7)';
+  ctx.font = `400 ${phone ? 13 : 11}px ${MONO}`;
+  ctx.fillStyle = 'rgba(200,160,74,0.9)';
   ctx.textAlign = 'right';
-  ctx.fillText(Math.round(pct * 100) + '%', x + barW, y - 16);
+  ctx.fillText(Math.round(pct * 100) + '%', x + barW, y - 10);
 
   const scale = 1 + pulse * 0.06 * (low ? 1.8 : 0.4);
   ctx.translate(x, y);

@@ -19,6 +19,26 @@ const SERIF = 'Georgia, "Palatino Linotype", "Times New Roman", serif';
 const SANS = '"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 const MONO = 'Consolas, "SF Mono", Menlo, monospace';
 
+/** Phone first: portrait, and the short landscape most people actually hold. */
+function isPhone(w, h) { return w < 840 || h < 500; }
+
+function fitType(ctx, text, maxW, size, family, weight = 500) {
+  let px = size;
+  let track = px >= 18 ? 2 : 0.6;
+  const apply = () => {
+    ctx.font = `${weight} ${px}px ${family}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = track + 'px';
+  };
+  apply();
+  while (text && ctx.measureText(text).width > maxW && px > 11) {
+    px -= 1;
+    track = 0;
+    apply();
+  }
+  return px;
+}
+
+
 function wrapLines(ctx, text, maxW) {
   const words = String(text).split(' ');
   const out = [];
@@ -69,8 +89,7 @@ function buttonVisual(ctx, { x, y, w, h }, { active, disabled, label, sub, small
   // text
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.font = `${small ? 500 : 500} ${small ? 15 : 19}px ${SERIF}`;
-  if ('letterSpacing' in ctx) ctx.letterSpacing = small ? '2px' : '4px';
+  fitType(ctx, label, Math.max(40, w - 18), small ? 15 : 18, SERIF);
   ctx.fillStyle = disabled ? 'rgba(140,138,132,0.5)' : active ? '#f2ead6' : 'rgba(214,206,190,' + a + ')';
   if (active) {
     ctx.shadowColor = 'rgba(255,200,120,0.35)';
@@ -79,8 +98,7 @@ function buttonVisual(ctx, { x, y, w, h }, { active, disabled, label, sub, small
   ctx.fillText(label, x + w / 2, y + h / 2 + (sub ? -5 : 0));
   ctx.shadowBlur = 0;
   if (sub) {
-    ctx.font = `400 11px ${SANS}`;
-    if ('letterSpacing' in ctx) ctx.letterSpacing = '1px';
+    fitType(ctx, sub, Math.max(40, w - 16), 11, SANS, 400);
     ctx.fillStyle = 'rgba(190,182,168,0.6)';
     ctx.fillText(sub, x + w / 2, y + h / 2 + 14);
   }
@@ -296,33 +314,31 @@ export function drawMenuScene(game, ctx, w, h, t) {
 }
 
 export function drawTitle(game, ctx, w, h, t) {
+  const phone = isPhone(w, h);
   const cx = w / 2;
-  const ty = h * 0.2;
+  const ty = phone ? Math.min(h * 0.13, 72) : h * 0.2;
   ctx.save();
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  // title
-  ctx.font = `400 ${clamp(w * 0.075, 42, 96)}px ${SERIF}`;
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '14px';
-  const g = ctx.createLinearGradient(cx, ty - 50, cx, ty + 50);
+  const titleSize = phone ? clamp(w * 0.085, 28, 46) : clamp(w * 0.075, 42, 96);
+  fitType(ctx, 'LAST NIGHT', w - 36, titleSize, SERIF, 400);
+  const g = ctx.createLinearGradient(cx, ty - 40, cx, ty + 40);
   g.addColorStop(0, '#f4ecd8');
   g.addColorStop(0.5, '#cfc4a8');
   g.addColorStop(1, '#8d7f5f');
   ctx.fillStyle = g;
-  ctx.shadowColor = 'rgba(0,0,0,0.9)'; ctx.shadowBlur = 22;
+  ctx.shadowColor = 'rgba(0,0,0,0.9)'; ctx.shadowBlur = phone ? 12 : 22;
   ctx.fillText('LAST NIGHT', cx, ty);
   ctx.shadowBlur = 0;
-  // blood underline
+  const rule = Math.min(150, w * 0.28);
   ctx.strokeStyle = 'rgba(140,26,36,0.75)';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(cx - 150, ty + 52); ctx.lineTo(cx + 150, ty + 52);
+  ctx.moveTo(cx - rule, ty + (phone ? 28 : 52)); ctx.lineTo(cx + rule, ty + (phone ? 28 : 52));
   ctx.stroke();
-  // subtitle
-  ctx.font = `400 ${clamp(w * 0.014, 13, 18)}px ${SANS}`;
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '8px';
+  fitType(ctx, 'SURVIVE UNTIL DAWN.', w - 36, phone ? 12 : clamp(w * 0.014, 13, 18), SANS, 400);
   ctx.fillStyle = 'rgba(200,190,172,0.75)';
-  ctx.fillText('SURVIVE UNTIL DAWN.', cx, ty + 86);
+  ctx.fillText('SURVIVE UNTIL DAWN.', cx, ty + (phone ? 46 : 86));
   ctx.restore();
 }
 
@@ -360,14 +376,15 @@ export function drawMenu(game, ctx, w, h) {
     { label: 'SETTINGS', sub: DIFFICULTY[B.settings.difficulty]?.label || 'STANDARD', onClick: () => game.setScreen('settings') },
   ];
   const nButtons = defs.length;
-  const footerH = 78;
-  const titleBottom = h * 0.18 + 72;
-  const startY = Math.max(titleBottom, h < 520 ? h * 0.28 : h * 0.36);
-  const avail = Math.max(120, h - footerH - startY);
-  const gap = avail < nButtons * 40 ? 4 : 8;
-  const bh = clamp((avail - gap * (nButtons - 1)) / nButtons, 28, 48);
-  const bw = clamp(w * 0.22, 188, 300);
-  const bx = w / 2 - bw / 2;
+  const phone = isPhone(w, h);
+  const footerH = phone ? 64 : 78;
+  const titleBottom = phone ? Math.min(h * 0.13, 72) + 58 : h * 0.18 + 72;
+  const startY = phone ? titleBottom : Math.max(titleBottom, h < 520 ? h * 0.28 : h * 0.36);
+  const avail = Math.max(96, h - footerH - startY);
+  const gap = phone ? 6 : (avail < nButtons * 40 ? 4 : 8);
+  const bh = clamp((avail - gap * (nButtons - 1)) / nButtons, phone ? 42 : 28, phone ? 56 : 48);
+  const bw = phone ? Math.min(w - 32, 480) : clamp(w * 0.22, 188, 300);
+  const bx = phone ? (w - bw) / 2 : w / 2 - bw / 2;
   let by = startY;
   game.uiIndex = clamp(game.uiIndex, 0, defs.length - 1);
   defs.forEach((d, i) => {
@@ -379,22 +396,27 @@ export function drawMenu(game, ctx, w, h) {
   // stats footer
   ctx.save();
   ctx.textAlign = 'center';
-  ctx.font = `400 12px ${SANS}`;
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
+  ctx.font = `400 ${phone ? 11 : 12}px ${SANS}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '0.4px';
   ctx.fillStyle = 'rgba(180,172,158,0.6)';
   const best = B.bestTime > 0 ? fmtClock(B.bestTime) : '--:--';
-  ctx.fillText(`NIGHTS SURVIVED ${B.nightsSurvived}     BEST ${best}     SHARDS ${B.shards}`, w / 2, h - 34);
-  ctx.fillText(goalLine, w / 2, h - 48);
-  ctx.font = `400 10px ${SANS}`;
-  ctx.fillStyle = 'rgba(140,134,124,0.45)';
-  const hint = w < 720
-    ? 'DRAG LEFT TO MOVE  ·  BUTTONS ON THE RIGHT  ·  ESC PAUSE'
-    : 'DRAG LEFT TO MOVE  ·  RIGHT BUTTONS ACT  ·  WASD STILL WORKS  ·  F CLAW  ·  E USE  ·  ESC PAUSE';
-  ctx.fillText(hint, w / 2, h - 16);
+  const stat = phone
+    ? `NIGHTS ${B.nightsSurvived}   ·   BEST ${best}   ·   ◆ ${B.shards}`
+    : `NIGHTS SURVIVED ${B.nightsSurvived}     BEST ${best}     SHARDS ${B.shards}`;
+  ctx.fillText(stat, w / 2, h - (phone ? 22 : 34));
+  if (!phone) ctx.fillText(goalLine, w / 2, h - 48);
+  if (!phone) {
+    ctx.font = `400 10px ${SANS}`;
+    ctx.fillStyle = 'rgba(140,134,124,0.45)';
+    const hint = w < 720
+      ? 'DRAG LEFT TO MOVE  ·  BUTTONS ON THE RIGHT  ·  ESC PAUSE'
+      : 'DRAG LEFT TO MOVE  ·  RIGHT BUTTONS ACT  ·  WASD STILL WORKS  ·  F CLAW  ·  E USE  ·  ESC PAUSE';
+    ctx.fillText(hint, w / 2, h - 16);
+  }
   ctx.restore();
 
   const pr = uiButton(game, {
-    x: w - 112, y: h - 38, w: 96, h: 26, label: 'PRIVACY', small: true,
+    x: phone ? w - 100 : w - 112, y: h - (phone ? 46 : 38), w: phone ? 88 : 96, h: phone ? 34 : 26, label: 'PRIVACY', small: true,
     onClick: () => game.setScreen('privacy'),
   });
   buttonVisual(ctx, pr.b, { active: pr.hover, label: 'PRIVACY', small: true, accent: '#6a6a80' });
@@ -466,8 +488,8 @@ export function drawPrivacy(game, ctx, w, h) {
     'Delete removes the save, that id, and asks the payment server to drop the ledger.',
     'The same page is at privacy.html. Deletion without the game is at delete.html.',
   ].flatMap((t) => wrapLines(ctx, t, w - 48));
-  const top = 72;
-  const gap = Math.max(14, Math.min(22, (h - 140) / Math.max(1, lines.length)));
+  const top = isPhone(w, h) ? 48 : 72;
+  const gap = Math.max(13, Math.min(22, (h - (isPhone(w, h) ? 168 : 140)) / Math.max(1, lines.length)));
   lines.forEach((line, i) => ctx.fillText(line, w / 2, top + i * gap));
   ctx.restore();
 
@@ -480,7 +502,7 @@ export function drawPrivacy(game, ctx, w, h) {
   buttonVisual(ctx, page.b, { active: page.hover, label: 'FULL POLICY', small: true, accent: '#6a6a80' });
   const delLabel = game.privacyDeleteArmed ? 'CONFIRM DELETE' : 'DELETE DATA';
   const del = uiButton(game, {
-    x: w / 2 - bw / 2, y: by, w: bw, h: 40, label: delLabel, small: true,
+    x: phone ? 12 : w / 2 - bw / 2, y: phone ? by0 + bh + 6 : by0, w: bw, h: bh, label: delLabel, small: true,
     onClick: () => {
       if (!game.privacyDeleteArmed) { game.privacyDeleteArmed = true; return; }
       game.wipeLocalData();
@@ -488,7 +510,7 @@ export function drawPrivacy(game, ctx, w, h) {
   });
   buttonVisual(ctx, del.b, { active: del.hover, label: delLabel, small: true, accent: '#8a3030' });
   const bk = uiButton(game, {
-    x: w / 2 + bw / 2 + 12, y: by, w: bw, h: 40, label: 'BACK', small: true,
+    x: phone ? 12 : w / 2 + bw / 2 + 12, y: phone ? by0 + (bh + 6) * 2 : by0, w: bw, h: bh, label: 'BACK', small: true,
     onClick: () => { game.privacyDeleteArmed = false; game.setScreen(back); },
   });
   buttonVisual(ctx, bk.b, { active: bk.hover, label: 'BACK', small: true, accent: '#a8833c' });
@@ -557,14 +579,14 @@ export function drawPause(game, ctx, w, h) {
   ctx.fillRect(0, 0, w, h);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.font = `400 34px ${SERIF}`;
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '10px';
+  const phone = isPhone(w, h);
+  fitType(ctx, 'PAUSED', w - 32, phone ? 26 : 34, SERIF, 400);
   ctx.fillStyle = '#e8e0cc';
-  const titleY = h * 0.2;
+  const titleY = phone ? Math.min(h * 0.16, 48) : h * 0.2;
   ctx.fillText('PAUSED', w / 2, titleY);
   ctx.restore();
 
-  const bw = Math.min(240, w * 0.7);
+  const bw = phone ? Math.min(w - 28, 420) : Math.min(240, w * 0.7);
   const items = [
     { label: 'RESUME', onClick: () => game.togglePause(false) },
     { label: 'RESTART NIGHT', onClick: () => game.beginNight() },
@@ -594,34 +616,38 @@ export function drawSettings(game, ctx, w, h) {
   ctx.fillRect(0, 0, w, h);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.font = `400 30px ${SERIF}`;
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '8px';
+  fitType(ctx, 'SETTINGS', w - 32, isPhone(w, h) ? 22 : 30, SERIF, 400);
   ctx.fillStyle = '#e8e0cc';
-  ctx.fillText('SETTINGS', w / 2, h * 0.14);
+  ctx.fillText('SETTINGS', w / 2, isPhone(w, h) ? 26 : h * 0.14);
   ctx.restore();
 
-  const rowH = 46;
-  let y = h * 0.24;
-  const labelW = 200;
+  const phone = isPhone(w, h);
+  const nRows = 8;
+  const header = phone ? 42 : h * 0.18;
+  const footer = phone ? 56 : 96;
+  const rowH = phone ? clamp((h - header - footer) / nRows, 34, 46) : 46;
+  let y = phone ? header + rowH * 0.45 : h * 0.24;
   const cx = w / 2;
 
   const slider = (label, key, min, max, fmt) => {
     // v1.0 (QA P0-3): a fixed label column and a track that starts after it.
     // Labels are right-aligned to `x - 26` so the longest ("SOUND EFFECTS")
     // keeps 26px of air before the bar, on every screen width this layout ships.
-    const wdt = Math.min(300, Math.max(160, w * 0.3));
-    const x = cx - wdt / 2 + 92;
+    const short = { 'MASTER VOLUME': 'VOLUME', 'SOUND EFFECTS': 'SFX', 'CAMERA SHAKE': 'SHAKE', 'FLASH EFFECTS': 'FLASH' };
+    const shown = phone ? (short[label] || label) : label;
+    const wdt = phone ? Math.max(80, w - 176) : Math.min(300, Math.max(160, w * 0.3));
+    const x = phone ? 96 : cx - wdt / 2 + 92;
     const val = s[key];
     ctx.save();
-    ctx.textAlign = 'right';
-    ctx.font = `500 13px ${SANS}`;
-    if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+    ctx.textAlign = phone ? 'left' : 'right';
+    ctx.font = `500 ${phone ? 12 : 13}px ${SANS}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = phone ? '0.4px' : '2px';
     ctx.fillStyle = 'rgba(205,196,180,0.85)';
-    ctx.fillText(label, x - 26, y);
-    ctx.textAlign = 'left';
-    ctx.font = `400 13px ${MONO}`;
+    ctx.fillText(shown, phone ? 14 : x - 26, y);
+    ctx.textAlign = phone ? 'right' : 'left';
+    ctx.font = `400 ${phone ? 12 : 13}px ${MONO}`;
     ctx.fillStyle = 'rgba(205,196,180,0.7)';
-    ctx.fillText(fmt ? fmt(val) : Math.round(val * 100) + '%', x + wdt + 16, y);
+    ctx.fillText(fmt ? fmt(val) : Math.round(val * 100) + '%', phone ? w - 14 : x + wdt + 16, y);
     // track
     const tx = x, tw = wdt, th = 6;
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
@@ -662,18 +688,19 @@ export function drawSettings(game, ctx, w, h) {
   // toggles
   const toggle = (label, key, fmt) => {
     const on = !!s[key];
-    const bw = 130, bh = 34;
-    const bx = cx + 90;
+    const bw = phone ? 96 : 130, bh = Math.min(34, rowH - 8);
+    const bx = phone ? w - 16 - bw : cx + 90;
     const r = uiButton(game, {
       x: bx, y: y - bh / 2, w: bw, h: bh, label: on ? (fmt ? fmt(true) : 'ON') : (fmt ? fmt(false) : 'OFF'),
       small: true, onClick: () => { s[key] = on ? 0 : 1; game.applySettings(); },
     });
     ctx.save();
-    ctx.textAlign = 'right';
-    ctx.font = `500 13px ${SANS}`;
-    if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+    ctx.textAlign = phone ? 'left' : 'right';
+    ctx.font = `500 ${phone ? 12 : 13}px ${SANS}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = phone ? '0.4px' : '2px';
     ctx.fillStyle = 'rgba(205,196,180,0.85)';
-    ctx.fillText(label, bx - 20, y);
+    const tShown = phone ? (label === 'INVERT PANIC FLASH' ? 'PANIC FLASH' : label === 'SCREEN CAPTIONS' ? 'CAPTIONS' : label) : label;
+    ctx.fillText(tShown, phone ? 14 : bx - 20, y);
     ctx.restore();
     buttonVisual(ctx, r.b, { active: r.hover, label: on ? (fmt ? fmt(true) : 'ON') : (fmt ? fmt(false) : 'OFF'), small: true, accent: '#6a6a80' });
     y += rowH;
@@ -683,14 +710,14 @@ export function drawSettings(game, ctx, w, h) {
 
   // difficulty
   ctx.save();
-  ctx.textAlign = 'right';
-  ctx.font = `500 13px ${SANS}`;
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+  ctx.textAlign = phone ? 'left' : 'right';
+  ctx.font = `500 ${phone ? 12 : 13}px ${SANS}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = phone ? '0.4px' : '2px';
   ctx.fillStyle = 'rgba(205,196,180,0.85)';
-  ctx.fillText('DIFFICULTY', cx + 90 - 20, y);
+  ctx.fillText('DIFFICULTY', phone ? 14 : cx + 90 - 20, y);
   ctx.restore();
   const diffKeys = Object.keys(DIFFICULTY);
-  const bw2 = 130, bh2 = 34, bx2 = cx + 90;
+  const bw2 = phone ? 120 : 130, bh2 = Math.min(34, rowH - 8), bx2 = phone ? w - 16 - bw2 : cx + 90;
   const r = uiButton(game, {
     x: bx2, y: y - bh2 / 2, w: bw2, h: bh2, label: DIFFICULTY[s.difficulty].label, small: true,
     onClick: () => {
@@ -724,19 +751,24 @@ export function drawUpgrades(game, ctx, w, h) {
   ctx.fillRect(0, 0, w, h);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.font = `400 30px ${SERIF}`;
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '8px';
+  const phoneTitle = isPhone(w, h);
+  fitType(ctx, 'BLOOD SHARDS', w - 32, phoneTitle ? 22 : 30, SERIF, 400);
   ctx.fillStyle = '#e8e0cc';
-  ctx.fillText('BLOOD SHARDS', w / 2, h * 0.12);
+  ctx.fillText('BLOOD SHARDS', w / 2, phoneTitle ? 28 : h * 0.12);
   ctx.font = `400 14px ${SANS}`;
   if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
   ctx.fillStyle = 'rgba(200,160,74,0.9)';
   ctx.fillText(`◆ ${B.shards} AVAILABLE`, w / 2, h * 0.175);
   ctx.restore();
 
-  const rowH = 64;
-  let y = h * 0.24;
-  const bx = w / 2 - 280;
+  const phone = isPhone(w, h);
+  const pad = phone ? 12 : Math.max(24, (w - 640) / 2);
+  const rowW = w - pad * 2;
+  const top = phone ? 64 : h * 0.24;
+  const bottom = h - (phone ? 58 : 108);
+  const rowH = clamp((bottom - top) / UPGRADES.length, phone ? 54 : 64, 76);
+  let y = top;
+  const bx = pad;
   UPGRADES.forEach((u, i) => {
     const lvl = upgradeLevel(B, u.id);
     const maxed = lvl >= u.max;
@@ -745,10 +777,10 @@ export function drawUpgrades(game, ctx, w, h) {
     ctx.save();
     // row backing
     ctx.fillStyle = 'rgba(12,12,18,0.7)';
-    ctx.fillRect(bx, y, 560, rowH - 10);
+    ctx.fillRect(bx, y, rowW, rowH - 8);
     ctx.strokeStyle = 'rgba(140,120,70,0.28)';
     ctx.lineWidth = 1;
-    ctx.strokeRect(bx + 0.5, y + 0.5, 559, rowH - 11);
+    ctx.strokeRect(bx + 0.5, y + 0.5, rowW - 1, rowH - 9);
     // icon
     ctx.translate(bx + 40, y + (rowH - 10) / 2);
     drawUpgradeIcon(ctx, u.icon, lvl);
@@ -761,7 +793,11 @@ export function drawUpgrades(game, ctx, w, h) {
     ctx.font = `400 12px ${SANS}`;
     if ('letterSpacing' in ctx) ctx.letterSpacing = '1px';
     ctx.fillStyle = 'rgba(180,172,158,0.7)';
-    ctx.fillText(u.desc, bx + 78, y + 40);
+    const descMax = rowW - 78 - (phone ? 100 : 150);
+    let desc = u.desc;
+    while (ctx.measureText(desc).width > descMax && desc.length > 8) desc = desc.slice(0, -2);
+    if (desc !== u.desc) desc = desc.replace(/[,.;]$/, '') + '…';
+    if (rowH >= 62) ctx.fillText(desc, bx + 78, y + 40);
     // pips
     for (let k = 0; k < u.max; k++) {
       const px = bx + 78 + k * 20;
@@ -776,9 +812,9 @@ export function drawUpgrades(game, ctx, w, h) {
     }
     ctx.restore();
     // buy button
-    const bw = 130, bh = 36;
+    const bw = phone ? 88 : 130, bh = Math.min(36, rowH - 16);
     const r = uiButton(game, {
-      x: bx + 560 - bw - 14, y: y + (rowH - 10) / 2 - bh / 2, w: bw, h: bh,
+      x: bx + rowW - bw - 10, y: y + (rowH - 8) / 2 - bh / 2, w: bw, h: bh,
       label: maxed ? 'MASTERED' : `◆ ${cost}`, small: true,
       disabled: maxed || !afford,
       accent: '#a8833c',
@@ -793,7 +829,7 @@ export function drawUpgrades(game, ctx, w, h) {
   ctx.font = `400 12px ${SANS}`;
   if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
   ctx.fillStyle = 'rgba(170,162,150,0.6)';
-  ctx.fillText('BLOOD SHARDS ARE EARNED BY SURVIVING. THE LONGER YOU LAST, THE MORE YOU KEEP.', w / 2, h - 128);
+  if (!phone) ctx.fillText('BLOOD SHARDS ARE EARNED BY SURVIVING. THE LONGER YOU LAST, THE MORE YOU KEEP.', w / 2, h - 128);
   ctx.restore();
 
   const backBtn = uiButton(game, { x: w / 2 - 110, y: h - 88, w: 220, h: 44, label: 'BACK', small: true, accent: '#6a6a80', onClick: () => game.setScreen(game.settingsReturn || 'menu') });
@@ -851,21 +887,25 @@ export function drawCollection(game, ctx, w, h) {
   ctx.fillRect(0, 0, w, h);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.font = `400 30px ${SERIF}`;
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '8px';
+  const phone = isPhone(w, h);
+  fitType(ctx, 'COLLECTION', w - 32, phone ? 22 : 30, SERIF, 400);
   ctx.fillStyle = '#e8e0cc';
-  ctx.fillText('COLLECTION', w / 2, h * 0.13);
+  ctx.fillText('COLLECTION', w / 2, phone ? 26 : h * 0.13);
   ctx.restore();
 
-  const cols = Math.min(3, Math.max(1, Math.floor(w / 380)));
-  const cw = Math.min(340, (w - 120) / cols - 20);
-  const ch = 170;
-  const x0 = w / 2 - (cols * (cw + 20) - 20) / 2;
-  let y = h * 0.24;
+  const cols = phone ? 1 : Math.min(3, Math.max(1, Math.floor(w / 380)));
+  const gap = phone ? 8 : 16;
+  const cw = phone ? w - 24 : Math.min(340, (w - 80) / cols - gap);
+  const rows = Math.ceil(CODEX.length / cols);
+  const top = phone ? 44 : h * 0.22;
+  const bottom = h - (phone ? 56 : 84);
+  const ch = clamp((bottom - top) / rows - gap, phone ? 40 : 120, phone ? 108 : 170);
+  const x0 = phone ? 12 : w / 2 - (cols * (cw + gap) - gap) / 2;
+  let y = top;
   CODEX.forEach((c, i) => {
     const col = i % cols, row = Math.floor(i / cols);
-    const x = x0 + col * (cw + 20);
-    const yy = y + row * (ch + 16);
+    const x = x0 + col * (cw + gap);
+    const yy = y + row * (ch + gap);
     const known = !!B.seen[c.id];
     ctx.save();
     ctx.fillStyle = known ? 'rgba(14,14,20,0.75)' : 'rgba(8,8,12,0.6)';
@@ -876,8 +916,8 @@ export function drawCollection(game, ctx, w, h) {
     ctx.font = `500 16px ${SERIF}`;
     if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
     ctx.fillStyle = known ? '#ded4bc' : 'rgba(120,116,110,0.6)';
-    ctx.fillText(known ? c.name : '??? ' + c.name.slice(0, 2) + '· · ·', x + 18, yy + 30);
-    if (!known) {
+    ctx.fillText(known ? c.name : '??? ' + c.name.slice(0, 2) + '· · ·', x + 18, ch < 64 ? yy + ch / 2 : yy + 30);
+    if (!known && ch >= 80) {
       // blind-box teaser: the initials, a silhouette, and nothing else
       ctx.save();
       ctx.globalAlpha = 0.16;
@@ -892,11 +932,11 @@ export function drawCollection(game, ctx, w, h) {
     const txt = known ? c.text
       : 'A shape the house has not handed over yet. ' +
         'Every night keeps its names in a different room.';
-    wrapText(ctx, txt, x + 18, yy + 56, cw - 36, 17);
+    if (ch >= 70) wrapText(ctx, txt, x + 18, yy + 56, cw - 36, 17);
     ctx.restore();
   });
 
-  const backBtn = uiButton(game, { x: w / 2 - 110, y: h - 84, w: 220, h: 44, label: 'BACK', small: true, accent: '#6a6a80', onClick: () => game.setScreen(game.settingsReturn || 'menu') });
+  const backBtn = uiButton(game, { x: phone ? 12 : w / 2 - 110, y: h - (phone ? 48 : 84), w: phone ? w - 24 : 220, h: phone ? 40 : 44, label: 'BACK', small: true, accent: '#6a6a80', onClick: () => game.setScreen(game.settingsReturn || 'menu') });
   buttonVisual(ctx, backBtn.b, { active: backBtn.hover, label: 'BACK', small: true, accent: '#6a6a80' });
 }
 
@@ -924,10 +964,10 @@ export function drawHelp(game, ctx, w, h) {
   ctx.fillRect(0, 0, w, h);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.font = `400 28px ${SERIF}`;
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '7px';
+  const phone = isPhone(w, h);
+  fitType(ctx, 'HOW TO SURVIVE', w - 28, phone ? 20 : 28, SERIF, 400);
   ctx.fillStyle = '#e8e0cc';
-  ctx.fillText('HOW TO SURVIVE', w / 2, h * 0.12);
+  ctx.fillText('HOW TO SURVIVE', w / 2, phone ? 26 : h * 0.12);
 
   const lines = [
     ['WHICH WAY.', 'Drag the left stick — she walks the way you push. The floor mark shows where the claw will go. WASD still works.'],
@@ -955,7 +995,7 @@ export function drawHelp(game, ctx, w, h) {
   }
   ctx.restore();
 
-  const backBtn = uiButton(game, { x: w / 2 - 110, y: h - 80, w: 220, h: 44, label: 'BACK', small: true, accent: '#6a6a80', onClick: () => game.setScreen(game.settingsReturn || 'menu') });
+  const backBtn = uiButton(game, { x: phone ? 12 : w / 2 - 110, y: h - (phone ? 48 : 80), w: phone ? w - 24 : 220, h: phone ? 40 : 44, label: 'BACK', small: true, accent: '#6a6a80', onClick: () => game.setScreen(game.settingsReturn || 'menu') });
   buttonVisual(ctx, backBtn.b, { active: backBtn.hover, label: 'BACK', small: true, accent: '#6a6a80' });
 }
 
@@ -983,11 +1023,10 @@ export function drawDeath(game, ctx, w, h) {
   ctx.globalAlpha = fade;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.font = `400 ${clamp(w * 0.035, 26, 44)}px ${SERIF}`;
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '10px';
+  fitType(ctx, 'THE NIGHT CLAIMED YOU', w - 28, isPhone(w, h) ? 22 : clamp(w * 0.035, 26, 44), SERIF, 400);
   ctx.fillStyle = '#8e1622';
   ctx.shadowColor = 'rgba(180,20,30,0.4)'; ctx.shadowBlur = 24;
-  ctx.fillText('THE NIGHT CLAIMED YOU', w / 2, h * 0.3);
+  ctx.fillText('THE NIGHT CLAIMED YOU', w / 2, isPhone(w, h) ? Math.min(h * 0.22, 72) : h * 0.3);
   ctx.shadowBlur = 0;
   // v1.0 (QA P2-9): the death screen teaches. What actually got you.
   if (game.deathReason) {
@@ -1032,7 +1071,7 @@ export function drawDeath(game, ctx, w, h) {
   ctx.restore();
 
   if (fade > 0.9) {
-    const bw = 220, bh = 48;
+    const bw = isPhone(w, h) ? Math.min(w - 28, 420) : 220, bh = h < 520 ? 42 : 48;
     const items = [
       { label: 'TRY AGAIN', onClick: () => game.beginNight(), accent: '#a8833c' },
     ];
@@ -1091,15 +1130,14 @@ export function drawVictory(game, ctx, w, h) {
   ctx.globalAlpha = fade;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.font = `400 ${clamp(w * 0.026, 20, 34)}px ${SERIF}`;
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '12px';
+  const phone = isPhone(w, h);
+  fitType(ctx, 'LAST NIGHT', w - 28, phone ? 16 : clamp(w * 0.026, 20, 34), SERIF, 400);
   ctx.fillStyle = 'rgba(226,218,200,0.85)';
-  ctx.fillText('LAST NIGHT', w / 2, h * 0.14);
-  ctx.font = `400 ${clamp(w * 0.05, 36, 64)}px ${SERIF}`;
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '14px';
+  ctx.fillText('LAST NIGHT', w / 2, phone ? 28 : h * 0.14);
+  fitType(ctx, 'SURVIVED', w - 28, phone ? 32 : clamp(w * 0.05, 36, 64), SERIF, 400);
   ctx.fillStyle = '#f0e6c8';
   ctx.shadowColor = 'rgba(255,200,120,0.45)'; ctx.shadowBlur = 30;
-  ctx.fillText('SURVIVED', w / 2, h * 0.23);
+  ctx.fillText('SURVIVED', w / 2, phone ? 64 : h * 0.23);
   ctx.shadowBlur = 0;
   if (IAP.owns(game.save, 'title_dawnbreaker')) {
     ctx.font = `400 14px ${SERIF}`;
@@ -1174,7 +1212,7 @@ export function drawVictory(game, ctx, w, h) {
   ctx.restore();
 
   if (fade > 0.9) {
-    const bw = Math.min(220, w * 0.72);
+    const bw = isPhone(w, h) ? Math.min(w - 28, 420) : Math.min(220, w * 0.72);
     const items = [
       { label: 'UPGRADES', onClick: () => game.setScreen('upgrades', 'victory'), accent: '#a8833c' },
       { label: 'ANOTHER NIGHT', onClick: () => game.beginNight(), accent: '#a8833c' },
@@ -1241,14 +1279,16 @@ export function drawShop(game, ctx, w, h) {
   ctx.fillRect(0, 0, w, h);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.font = `400 ${clamp(w * 0.03, 22, 32)}px ${SERIF}`;
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '8px';
+  const phone = isPhone(w, h);
+  fitType(ctx, 'BLOOD MARKET', w - 32, phone ? 22 : clamp(w * 0.03, 22, 32), SERIF, 400);
   ctx.fillStyle = '#e8e0cc';
-  ctx.fillText('BLOOD MARKET', w / 2, h * 0.075);
-  ctx.font = `400 13px ${MONO}`;
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+  ctx.fillText('BLOOD MARKET', w / 2, phone ? 28 : h * 0.075);
+  fitType(ctx, `◆ ${B.shards}`, w - 32, phone ? 12 : 13, MONO, 400);
   ctx.fillStyle = 'rgba(200,160,74,0.95)';
-  ctx.fillText(`◆ ${B.shards} EARNED   ·   MERCY HELD ${(B.iap && B.iap.revives) | 0}   ·   NOTHING HERE CHANGES THE CLAW`, w / 2, h * 0.125);
+  const purse = phone
+    ? `◆ ${B.shards} EARNED   ·   MERCY ${(B.iap && B.iap.revives) | 0}`
+    : `◆ ${B.shards} EARNED   ·   MERCY HELD ${(B.iap && B.iap.revives) | 0}   ·   NOTHING HERE CHANGES THE CLAW`;
+  ctx.fillText(purse, w / 2, phone ? 48 : h * 0.125);
   // v1.0 — the daily rewarded crate (opt-in, capped, invisible when no ad
   // network is configured). AdMob SSV is required before real keys: docs/IAP.md.
   if (Ads.isAvailable('crate')) {
@@ -1258,15 +1298,15 @@ export function drawShop(game, ctx, w, h) {
   }
   ctx.restore();
 
-  const wide = w > 860;
+  const wide = !phone && w >= 980 && h >= 640;
   const cols = wide ? 2 : 1;
-  const gap = 12;
-  const padX = wide ? 60 : 16;
+  const gap = phone ? 8 : 12;
+  const padX = phone ? 12 : (wide ? 60 : 24);
   const cardW = (w - padX * 2 - gap * (cols - 1)) / cols;
   const rows = Math.ceil(CATALOG.length / cols);
-  const gridTop = h * 0.175;
-  const footY = h - (wide ? 66 : 52) - 10;               // reserve for buttons
-  const cardH = clamp((footY - gridTop - 46 - gap * (rows - 1)) / rows, 52, 92);
+  const gridTop = phone ? 62 : h * 0.175;
+  const footY = h - (phone ? 58 : (wide ? 76 : 62));
+  const cardH = clamp((footY - gridTop - gap * (rows - 1)) / rows, phone ? 64 : 72, phone ? 128 : 108);
   let cy = gridTop;
   let cx = padX;
   const iapBag = (B.iap && B.iap.owned) || {};
@@ -1289,47 +1329,55 @@ export function drawShop(game, ctx, w, h) {
     ctx.font = `500 15px ${SERIF}`;
     if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
     ctx.fillStyle = '#e6dcc4';
-    ctx.fillText(sku.name, cx + 14, cy + 24);
+    const tight = cardH < 84;
+    ctx.fillText(sku.name, cx + 14, cy + (tight ? 20 : 24));
     ctx.font = `400 11px ${SANS}`;
     if ('letterSpacing' in ctx) ctx.letterSpacing = '0.4px';
     ctx.fillStyle = 'rgba(178,172,160,0.75)';
     const showBuy = open && !(isOwned && sku.play !== 'consumable');
-    const blurbMax = cardW - (showBuy ? (clamp(cardW * 0.3, 86, 120) * 2 + 34) : 120) - 28;
+    const stackBtns = cardH >= 96;
+    const blurbMax = stackBtns ? cardW - 28 : cardW - 168;
     let blurb = open ? sku.blurb : sku.locked;
     while (ctx.measureText(blurb).width > blurbMax && blurb.length > 8) blurb = blurb.slice(0, -2);
     if (blurb !== sku.blurb) blurb = blurb.replace(/[,.;]$/, '') + '…';
-    ctx.fillText(blurb, cx + 14, cy + 44);
+    if (!tight) ctx.fillText(blurb, cx + 14, cy + 44);
     ctx.font = `400 11px ${MONO}`;
     ctx.fillStyle = 'rgba(150,146,136,0.6)';
     const foot = !open ? 'NOT YET — PLAY THE NIGHT'
       : isOwned && sku.kind === 'title' ? 'THE HOUSE ALREADY KNOWS THE NAME'
       : isOwned ? (wearing ? 'WORN' : 'YOURS — NOT WORN')
       : `${IAP.priceLabel(sku)}   or   ◆${sku.shardPrice}`;
-    ctx.fillText(foot, cx + 14, cy + cardH - 14);
+    if (!tight) ctx.fillText(foot, cx + 14, cy + 62);
     ctx.restore();
     // actions
     if (showBuy) {
-      const bw2 = clamp(cardW * 0.3, 86, 120), bh2 = 30;
+      const bh2 = tight ? 28 : 36;
+      const bw2 = stackBtns ? (cardW - 28) / 2 : Math.min(108, (cardW - 36) / 2);
+      const by2 = cy + cardH - bh2 - (tight ? 4 : 8);
+      const x1 = stackBtns ? cx + 10 : cx + cardW - bw2 * 2 - 16;
+      const x2 = stackBtns ? cx + 14 + bw2 : cx + cardW - bw2 - 8;
       const busy = IAP.busy === sku.id;
       const pay = IAP.mode === 'native' ? 'PLAY' : IAP.mode === 'midtrans' ? 'PAY' : 'STORE';
       const r1 = uiButton(game, {
-        x: cx + cardW - bw2 * 2 - 22, y: cy + cardH / 2 - bh2 / 2, w: bw2, h: bh2,
+        x: x1, y: by2, w: bw2, h: bh2,
         label: busy ? '…' : pay, small: true, disabled: busy || IAP.mode === 'disabled',
         onClick: () => game.purchaseSku(sku.id),
       });
       buttonVisual(ctx, r1.b, { active: r1.hover || r1.selected, label: busy ? '…' : pay, small: true, accent: '#6a6a80' });
       const canShard = sku.shardPrice && B.shards >= sku.shardPrice;
       const r2 = uiButton(game, {
-        x: cx + cardW - bw2 - 12, y: cy + cardH / 2 - bh2 / 2, w: bw2, h: bh2,
+        x: x2, y: by2, w: bw2, h: bh2,
         label: '◆ SHARDS', small: true, disabled: !canShard,
         onClick: () => game.buySkuWithShards(sku.id),
       });
       buttonVisual(ctx, r2.b, { active: r2.hover || r2.selected, label: '◆ SHARDS', small: true, accent: '#6a6a80', disabled: !canShard });
     } else if (open && sku.kind === 'cosmetic' && isOwned) {
-      const bw2 = 108, bh2 = 30;
+      const bw2 = cardW - 20, bh2 = tight ? 28 : 36;
       const label = wearing ? 'TAKE OFF' : 'WEAR';
       const r = uiButton(game, {
-        x: cx + cardW - bw2 - 12, y: cy + cardH / 2 - bh2 / 2, w: bw2, h: bh2,
+        x: cx + 10,
+        y: cy + cardH - bh2 - (tight ? 4 : 8),
+        w: bw2, h: bh2,
         label, small: true, onClick: () => game.wearCoat(sku.id),
       });
       buttonVisual(ctx, r.b, { active: r.hover, label, small: true, accent: wearing ? '#6a6a80' : '#a8833c' });
@@ -1357,10 +1405,26 @@ export function drawShop(game, ctx, w, h) {
 
   const restoreLabel = wide ? 'RESTORE PURCHASES' : 'RESTORE';
   const backLabel = wide ? 'BACK TO THE HOUSE' : 'BACK';
-  const bw = wide ? 224 : Math.min(160, w * 0.4), bh = wide ? 42 : 34;
-  const r3 = uiButton(game, { x: w / 2 - bw - 8, y: h - (wide ? 66 : 52), w: bw, h: bh, label: restoreLabel, onClick: () => game.restorePurchases(), small: true, accent: '#6a6a80' });
+  const bw = phone ? (w - 36) / 2 : (wide ? 224 : Math.min(160, w * 0.4));
+  const bh = phone ? 42 : (wide ? 42 : 34);
+  const r3 = uiButton(game, { x: phone ? 12 : w / 2 - bw - 8, y: h - (phone ? 50 : (wide ? 66 : 52)), w: bw, h: bh, label: restoreLabel, onClick: () => game.restorePurchases(), small: true, accent: '#6a6a80' });
   buttonVisual(ctx, r3.b, { active: r3.hover || r3.selected, label: restoreLabel, small: true, accent: '#6a6a80' });
   const r4 = uiButton(game, { x: w / 2 + 8, y: h - (wide ? 66 : 52), w: bw, h: bh, label: backLabel, onClick: () => game.setScreen(back, 'shop'), small: true, accent: '#a8833c' });
   buttonVisual(ctx, r4.b, { active: r4.hover || r4.selected, label: backLabel, small: true, accent: '#a8833c' });
+}
+
+, small: true, accent: '#a8833c' });
+}
+
+a8833c' });
+}
+
+4.b, { active: r4.hover || r4.selected, label: backLabel, small: true, accent: '#a8833c' });
+}
+
+, small: true, accent: '#a8833c' });
+}
+
+a8833c' });
 }
 
