@@ -245,18 +245,64 @@ export class Input {
   }
 
   layout(w, h) {
-    const pad = Math.max(14, Math.min(26, Math.round(Math.min(w, h) * 0.03)));
-    const s = clamp(Math.min(w, h) / 780, 0.78, 1.08);
+    const phone = w < 840 || h < 500;
     const b = this.buttons;
-    const right = w - pad;
-    const bottom = h - pad;
-    b.attack.x = right - 36 * s; b.attack.y = bottom - 44 * s; b.attack.r = 32 * s;
-    b.dash.x = right - 108 * s; b.dash.y = bottom - 26 * s; b.dash.r = 26 * s;
-    b.interact.x = right - 68 * s; b.interact.y = bottom - 118 * s; b.interact.r = 25 * s;
-    b.repair.x = right - 156 * s; b.repair.y = bottom - 108 * s; b.repair.r = 22 * s;
-    b.barricade.x = right - 156 * s; b.barricade.y = bottom - 48 * s; b.barricade.r = 22 * s;
-    this.stick.r = 52 * s;
-    this.stick.homeX = pad + 72 * s;
-    this.stick.homeY = bottom - 64 * s;
+    if (phone) {
+      // Thumb zone, two columns. CLAW stays in the corner the thumb already rests on.
+      // BOARD steps left only when it will not land on the stick.
+      const short = h < 500;
+      const pad = 12;
+      const gap = 8;
+      const ar = short ? 26 : 30;
+      const sr = 22;
+      const right = w - pad;
+      const bottom = h - pad;
+      b.attack.r = ar;
+      b.attack.x = right - ar;
+      b.attack.y = bottom - ar;
+      b.dash.r = sr;
+      b.dash.x = b.attack.x - ar - sr - gap;
+      b.dash.y = bottom - sr;
+      b.interact.r = sr;
+      b.interact.x = b.attack.x;
+      b.interact.y = b.attack.y - ar - sr - gap;
+      b.repair.r = sr;
+      b.repair.x = b.dash.x;
+      b.repair.y = b.interact.y;
+      b.barricade.r = sr;
+      const boardX = b.dash.x - sr - sr - gap;
+      const stickR = short ? 42 : 54;
+      const stickRight = pad + stickR * 2 + 16;
+      if (boardX - sr > stickRight) {
+        b.barricade.x = boardX;
+        b.barricade.y = bottom - sr;
+      } else {
+        b.barricade.x = b.dash.x;
+        b.barricade.y = b.repair.y - sr - sr - gap;
+      }
+      this.stick.r = stickR;
+      this.stick.homeX = pad + stickR + 6;
+      this.stick.homeY = bottom - stickR;
+    } else {
+      const pad = Math.max(14, Math.min(26, Math.round(Math.min(w, h) * 0.03)));
+      const s = clamp(Math.min(w, h) / 780, 0.78, 1.08);
+      const right = w - pad;
+      const bottom = h - pad;
+      b.attack.x = right - 36 * s; b.attack.y = bottom - 44 * s; b.attack.r = 32 * s;
+      b.dash.x = right - 108 * s; b.dash.y = bottom - 26 * s; b.dash.r = 26 * s;
+      b.interact.x = right - 68 * s; b.interact.y = bottom - 118 * s; b.interact.r = 25 * s;
+      b.repair.x = right - 156 * s; b.repair.y = bottom - 108 * s; b.repair.r = 22 * s;
+      b.barricade.x = right - 156 * s; b.barricade.y = bottom - 48 * s; b.barricade.r = 22 * s;
+      this.stick.r = 52 * s;
+      this.stick.homeX = pad + 72 * s;
+      this.stick.homeY = bottom - 64 * s;
+    }
+    this.clusterLeft = Math.min(
+      b.attack.x - b.attack.r,
+      b.dash.x - b.dash.r,
+      b.interact.x - b.interact.r,
+      b.repair.x - b.repair.r,
+      b.barricade.x - b.barricade.r,
+    ) - 8;
   }
 }

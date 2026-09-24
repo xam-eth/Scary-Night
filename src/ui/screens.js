@@ -354,7 +354,7 @@ export function drawMenu(game, ctx, w, h) {
   ctx.font = `400 10px ${MONO}`;
   if ('letterSpacing' in ctx) ctx.letterSpacing = '1px';
   ctx.fillStyle = 'rgba(140,134,124,0.4)';
-  ctx.fillText('v' + GAME_VERSION + '  ·  18+' + (IAP.owns(game.save, 'title_dawnbreaker') ? '  ·  DAWNBREAKER' : ''), 12, 16);
+  ctx.fillText('v' + GAME_VERSION + '  ·  18+' + (IAP.owns(game.save, 'title_dawnbreaker') ? '  ·  DAWNBREAKER' : ''), isPhone(w, h) ? 78 : 92, 18);
   ctx.restore();
 
   if (!game.save.privacyAck) {
@@ -1259,7 +1259,7 @@ export function drawTutorial(game, ctx, w, h) {
       else cur = next;
     }
     if (cur) lines.push(cur);
-    const y0 = h * 0.22;
+    const y0 = h < 500 ? h * 0.38 : h * 0.22;
     lines.forEach((ln, i) => ctx.fillText(ln, w / 2, y0 + i * 16));
   }
   ctx.restore();
@@ -1423,6 +1423,12 @@ a8833c' });
 }
 
 , small: true, accent: '#a8833c' });
+}
+
+a8833c' });
+}
+
+' });
 }
 
 a8833c' });

@@ -33,9 +33,57 @@ export function drawHUD(game, ctx, w, h) {
 
 /* ---------------- top left: tonight's goals (the night's purpose) ---------------- */
 
+function phoneHud(w, h) {
+  return { phone: w < 840 || h < 500, short: h < 500 };
+}
+
 function drawGoals(game, ctx, w, h) {
   const st = game.objectives && game.objectives.hudState();
   if (!st) return;
+  const { phone, short } = phoneHud(w, h);
+  if (phone) {
+    // One chip. The night is the picture; a goal spreadsheet is not.
+    const x = 14;
+    const y = short ? 58 : 86;
+    ctx.save();
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.font = `500 12px ${SANS}`;
+    setLetter(ctx, 0.6);
+    ctx.fillStyle = 'rgba(200,160,74,0.9)';
+    ctx.fillText(`GOALS ${st.done}/${st.total}`, x, y);
+    if (!short && st.open[0]) {
+      ctx.font = `400 11px ${SANS}`;
+      setLetter(ctx, 0.3);
+      ctx.fillStyle = 'rgba(178,172,160,0.75)';
+      let label = st.open[0].label;
+      const maxW = Math.min(168, (game.input && game.input.clusterLeft ? game.input.clusterLeft - 20 : w * 0.42));
+      while (ctx.measureText(label).width > maxW && label.length > 6) label = label.slice(0, -2);
+      ctx.fillText(label, x, y + 16);
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.fillRect(x, y + 26, maxW, 3);
+      ctx.fillStyle = 'rgba(200,160,74,0.7)';
+      ctx.fillRect(x, y + 26, maxW * st.open[0].progress, 3);
+    }
+    ctx.restore();
+    const b = game.objectives.banner;
+    if (b) {
+      const a = b.t < 0.4 ? b.t / 0.4 : clamp(1 - (b.t - 3.2) / 0.8, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.textAlign = 'center';
+      ctx.font = `500 ${short ? 12 : 14}px ${SERIF}`;
+      setLetter(ctx, 1);
+      ctx.fillStyle = '#c8a04a';
+      ctx.shadowColor = 'rgba(0,0,0,0.9)';
+      ctx.shadowBlur = 8;
+      let text = '✓ ' + b.text;
+      while (ctx.measureText(text).width > w - 28 && text.length > 8) text = text.slice(0, -2);
+      ctx.fillText(text, w / 2, short ? h * 0.42 : h * 0.16);
+      ctx.restore();
+    }
+    return;
+  }
   const narrow = w < 620;
   // The clock plate owns the top centre. If the goal panel would crawl into
   // it (phones, short landscape), drop the list under the rail instead.
@@ -95,8 +143,9 @@ function drawGoals(game, ctx, w, h) {
 /* ---------------- top centre: the night clock ---------------- */
 
 function drawClock(game, ctx, w, h, pulse) {
+  const { phone, short } = phoneHud(w, h);
   const cx = w / 2;
-  const y = h * 0.055;
+  const y = short ? 28 : phone ? 40 : h * 0.055;
   const t = game.time;
   const phase = game.phase;
 
@@ -112,24 +161,25 @@ function drawClock(game, ctx, w, h, pulse) {
   plate.addColorStop(1, 'rgba(2,3,7,0)');
   ctx.save();
   ctx.translate(cx, y - 4);
-  ctx.scale(1.5, 0.62);
+  ctx.scale(phone ? 1.15 : 1.5, phone ? 0.7 : 0.62);
   ctx.translate(-cx, -(y - 4));
   ctx.fillStyle = plate;
   ctx.beginPath(); ctx.arc(cx, y - 4, 150, 0, TAU); ctx.fill();
   ctx.restore();
 
   // label
-  ctx.font = `500 13px ${SANS}`;
-  setLetter(ctx, 5);
+  ctx.font = `500 ${phone ? 11 : 13}px ${SANS}`;
+  setLetter(ctx, phone ? 1 : 5);
   const labelA = 0.5 + 0.25 * Math.sin(t * 1.4) * (game.danger > 0.5 ? 1 : 0.4);
   ctx.fillStyle = `rgba(190,180,160,${labelA})`;
-  ctx.fillText(phase.id === 'panic' || phase.id === 'silence' ? 'PANIC' : 'DAWN IN', cx, y - 26);
+  ctx.fillText(phase.id === 'panic' || phase.id === 'silence' ? 'PANIC' : 'DAWN IN', cx, y - (short ? 14 : 22));
 
   // clock
   const timeLeft = clamp(game.timeLeft, 0, 999);
   const clockStr = fmtClock(timeLeft);
   const critical = timeLeft < 61;
-  ctx.font = `400 ${critical ? 46 : 40}px ${MONO}`;
+  const digit = short ? 24 : phone ? 30 : (critical ? 46 : 40);
+  ctx.font = `400 ${digit}px ${MONO}`;
   setLetter(ctx, 1);
   const glow = 0.35 + game.danger * 0.4 + pulse * 0.25;
   if (critical) {
@@ -147,8 +197,8 @@ function drawClock(game, ctx, w, h, pulse) {
   ctx.shadowBlur = 0;
 
   // tick marks — a very thin progress rail so the player can feel time moving
-  const railW = 190;
-  const railY = y + 36;
+  const railW = phone ? Math.min(140, w * 0.38) : 190;
+  const railY = y + (short ? 16 : phone ? 26 : 36);
   ctx.globalAlpha = 0.5;
   ctx.fillStyle = 'rgba(0,0,0,0.5)';
   ctx.fillRect(cx - railW / 2 - 1, railY - 1, railW + 2, 4);
@@ -181,7 +231,9 @@ function drawBlood(game, ctx, w, h, pulse) {
   const stickTop = stick ? (stick.homeY || h - 120) - (stick.r || 52) : h - 80;
   const phone = w < 840 || h < 500;
   const x = 14;
-  const barW = phone ? Math.min(w - 36, 280) : Math.min(168, Math.max(120, w * 0.28));
+  const cluster = game.input && game.input.clusterLeft;
+  const room = cluster ? cluster - x - 18 : w - 36;
+  const barW = phone ? Math.min(Math.max(108, room), 200) : Math.min(168, Math.max(120, w * 0.28));
   const barH = phone ? 16 : 12;
   const plateH = phone ? 52 : 34;
   const y = game.input && game.input.gameplay
@@ -287,7 +339,43 @@ function drawDoorStatus(game, ctx, w, h) {
   if (!shown.length) return;
   const rank = (d) => (d.attackers > 0 ? 4 : 0) + (d.broken ? 2 : 0) + (1 - d.hp / Math.max(1, d.hpMax));
   shown.sort((a, b) => rank(b) - rank(a));
-  const list = shown.slice(0, 4);
+  const { phone, short } = phoneHud(w, h);
+  const list = shown.slice(0, phone ? (short ? 2 : 3) : 4);
+  if (phone) {
+    const x = 14;
+    let y = short ? 76 : 132;
+    const floor = (game.input && game.input.stick)
+      ? (game.input.stick.homeY - game.input.stick.r - 64)
+      : h - 160;
+    const maxW = Math.min(156, (game.input && game.input.clusterLeft ? game.input.clusterLeft - 24 : w * 0.4));
+    ctx.save();
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.font = `500 11px ${SANS}`;
+    setLetter(ctx, 0.4);
+    for (const d of list) {
+      if (y > floor) break;
+      const pct = clamp(d.hp / d.hpMax, 0, 1);
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(x, y - 3, maxW, 5);
+      ctx.fillStyle = d.broken ? '#2a2a30' : pct > 0.6 ? '#6a6a52' : pct > 0.3 ? '#8a6a2a' : '#9c1a26';
+      ctx.fillRect(x, y - 3, maxW * pct, 5);
+      const bear = bearing(game, d.x, d.y);
+      let name = d.broken ? 'BROKEN' : d.name;
+      while (ctx.measureText(name + ' ' + bear.card).width > maxW - 16 && name.length > 3) name = name.slice(0, -1);
+      ctx.fillStyle = d.broken ? 'rgba(200,80,80,0.9)' : 'rgba(190,180,165,0.8)';
+      ctx.fillText(`${name} ${bear.card}`, x, y + 10);
+      ctx.save();
+      ctx.translate(x + maxW - 6, y + 10);
+      ctx.rotate(bear.screen);
+      ctx.fillStyle = d.attackers > 0 ? 'rgba(220,70,60,0.95)' : 'rgba(210,200,180,0.8)';
+      ctx.beginPath(); ctx.moveTo(5, 0); ctx.lineTo(-4, -3); ctx.lineTo(-4, 3); ctx.closePath(); ctx.fill();
+      ctx.restore();
+      y += 28;
+    }
+    ctx.restore();
+    return;
+  }
   const x = w - 18;
   let y = Math.max(88, h * 0.14);
   ctx.save();
@@ -595,7 +683,7 @@ export function drawTouchControls(game, ctx, w, h) {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(label, 0, hint && w > 720 ? -2 : 0);
-    if (hint && w > 720) {
+    if (hint && w > 720 && h > 500) {
       ctx.font = `400 8px ${MONO}`;
       if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
       ctx.fillStyle = 'rgba(190,182,168,0.55)';

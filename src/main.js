@@ -105,6 +105,7 @@ function frame(now) {
     acc -= STEP;
   }
   if (guard === 0) game.update(0);
+  if (document.body.dataset.screen !== game.screen) document.body.dataset.screen = game.screen;
   game.render();
   // Controls are part of the night HUD on every device — an invisible stick
   // is how "the direction feels wrong" starts.

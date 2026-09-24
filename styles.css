@@ -56,27 +56,30 @@ canvas#game {
 
 #privacy-link {
   position: fixed;
-  left: max(10px, env(safe-area-inset-left));
-  bottom: max(8px, env(safe-area-inset-bottom));
+  left: max(8px, env(safe-area-inset-left));
+  top: max(8px, env(safe-area-inset-top));
   z-index: 20;
+  min-height: 44px;
+  display: grid;
+  place-items: center;
   font: 11px/1 "Segoe UI", Roboto, sans-serif;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   text-decoration: none;
   color: rgba(200, 190, 172, 0.72);
   background: rgba(8, 9, 14, 0.62);
   border: 1px solid rgba(168, 131, 60, 0.28);
-  padding: 7px 9px;
+  padding: 0 12px;
   touch-action: manipulation;
 }
 #privacy-link:hover { color: rgba(240, 232, 214, 0.95); border-color: rgba(168, 131, 60, 0.7); }
 
 #fullscreen {
   position: fixed;
-  right: max(10px, env(safe-area-inset-right));
-  top: max(10px, env(safe-area-inset-top));
-  width: 34px;
-  height: 34px;
+  right: max(8px, env(safe-area-inset-right));
+  top: max(8px, env(safe-area-inset-top));
+  width: 44px;
+  height: 44px;
   display: grid;
   place-items: center;
   color: rgba(200, 190, 172, 0.45);
@@ -146,6 +149,20 @@ canvas#game {
   100% { transform: translateX(320%); }
 }
 
-@media (max-width: 640px) {
-  #fullscreen { display: none; }
+@media (max-width: 520px) {
+  .veil-title { letter-spacing: 0.1em; font-size: clamp(26px, 9vw, 40px); }
+  .veil-sub { letter-spacing: 0.16em; }
+}
+
+/* The night owns the corners. The policy link stays on every menu. */
+body[data-screen="playing"] #privacy-link,
+body[data-screen="playing"] #fullscreen,
+body[data-screen="dying"] #privacy-link,
+body[data-screen="dying"] #fullscreen,
+body[data-screen="intro"] #privacy-link,
+body[data-screen="intro"] #fullscreen,
+body[data-screen="dawn"] #privacy-link,
+body[data-screen="dawn"] #fullscreen {
+  visibility: hidden;
+  pointer-events: none;
 }
