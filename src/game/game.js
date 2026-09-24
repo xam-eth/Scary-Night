@@ -1590,7 +1590,6 @@ export class Game {
 
     // ---------- baked architecture ----------
     m.drawFloor(ctx);
-    drawCoachWorld(this, ctx);
     // ---------- decals ----------
     this.decals.draw(ctx);
     // ---------- props under entities ----------
@@ -1687,6 +1686,9 @@ export class Game {
     // muzzle flashes / impacts
     for (const b of this.bolts) r.addLight(b.x, b.y, 70, 0.3, [255, 220, 170]);
     r.lightEnd();
+    // The guide arrow is a pointer, not a floor stain. Draw it after the
+    // multiply so the night cannot swallow it.
+    drawCoachWorld(this, ctx);
 
     // ---------- character self-light (moonlight on the GLB frame) ----------
     this.player.drawAfterDark(ctx, this);
