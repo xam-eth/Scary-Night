@@ -131,6 +131,7 @@ export const defaultSave = () => ({
   },
   tutorialSeen: false,
   privacyAck: false,        // first-run notice; not an account
+  deeds: {},                // what the player has actually done; the shop waits on these
 });
 
 function deepMerge(base, over) {

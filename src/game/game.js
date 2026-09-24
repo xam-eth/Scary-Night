@@ -205,6 +205,18 @@ export class Game {
    * Thin wrappers: IAP owns the rules, these own the feedback (audio,
    * messages, save writes). The store never touches gameplay numbers.
    */
+  noteDeed(id) {
+    if (!this.save.deeds) this.save.deeds = {};
+    if (this.save.deeds[id]) return false;
+    this.save.deeds[id] = true;
+    writeSave(this.save);
+    return true;
+  }
+  wearCoat(id) {
+    const worn = IAP.wear(this.save, id);
+    writeSave(this.save);
+    this.showMessage(worn ? 'YOU PUT IT ON. THE NIGHT DOES NOT GET EASIER.' : 'YOU TAKE IT OFF.', { tone: 'cold', life: 2.8 });
+  }
   acceptPrivacy() {
     this.save.privacyAck = true;
     writeSave(this.save);
@@ -259,7 +271,8 @@ export class Game {
       this.showMessage('PAID IN SHARDS. NO DEBT OUTSIDE.', { tone: 'gold', life: 3.4 });
     } else {
       this.audio.play('uiBack', { vol: 0.5 });
-      this.showMessage((r.error || 'NOT POSSIBLE').replace(/-/g, ' ').toUpperCase(), { tone: 'cold', life: 3 });
+      const err = r.error === 'not-yet' ? 'THE HOUSE HAS NOT SEEN THAT YET.' : (r.error || 'NOT POSSIBLE').replace(/-/g, ' ').toUpperCase();
+      this.showMessage(err, { tone: 'cold', life: 3 });
     }
   }
   restorePurchases() {
@@ -873,7 +886,9 @@ export class Game {
     if (!this.save.seen.knock) { this.save.seen.knock = true; writeSave(this.save); }
     this.audio.play('creak', { x: e.x, y: e.y, cam: this.renderer.cam, vol: 0.75 });
     this.makeNoise(e.x, e.y, 260);
-    if (k.opened) {
+    if (this.noteDeed('answered') && k.opened) {
+      this.showMessage('YOU ANSWERED. WHATEVER WAS THERE KNOWS YOUR HAND.', { tone: 'cold', life: 3.4 });
+    } else if (k.opened) {
       this.showMessage('THE DARK BEYOND THE DOOR IS PATIENT.', { tone: 'cold', life: 3.2 });
       this.particles.burst('mist', e.outside.x, e.outside.y, 10, {
         color: 'rgba(110,120,150,0.16)', sizeMin: 12, sizeMax: 26, speedMin: 6, speedMax: 26, lifeMin: 0.5, lifeMax: 1.2,
@@ -924,6 +939,7 @@ export class Game {
     this.audio.play('build', { x: e.x, y: e.y, cam: this.renderer.cam, vol: 0.8 });
     this.audio.play('woodPickup', { x: e.x, y: e.y, cam: this.renderer.cam, vol: 0.5 });
     this.showCombatText('BARRICADED', e.x, e.y - 30, '#c8a05a');
+    if (this.noteDeed('barred')) this.showMessage('THE WOOD HOLDS BECAUSE YOUR HANDS PUT IT THERE.', { tone: 'gold', life: 3.6 });
     this.makeNoise(e.x, e.y, 300);
     this.particles.burst('splinter', e.x, e.y, 10, {
       color: 'rgba(110,80,45,0.8)', sizeMin: 2, sizeMax: 4, speedMin: 20, speedMax: 80, lifeMin: 0.3, lifeMax: 0.7, grav: 120, spin: 5,
@@ -1001,6 +1017,12 @@ export class Game {
     this.decals.splat(p.x, p.y + 4, 12, 'rgba(96,12,20,0.42)', 4);
     this.hbPulse = 1;
     this.showCombatText(`-${Math.round(dmg)}`, p.x + rand(-8, 8), p.y - 22, '#ff6a6a');
+    if (dmg > 0 && this.noteDeed('bled')) {
+      this.showMessage('IT DREW BLOOD. THE HOUSE KEEPS THE STAIN.', { tone: 'danger', life: 3.4 });
+    } else if (dmg > 0 && IAP.equippedCoat(this.save) === 'coat_bloodmoon' && !this._coatStain) {
+      this._coatStain = true;
+      this.showMessage('THE COAT TAKES THE STAIN. THE CLAW DOES NOT GROW.', { tone: 'cold', life: 2.8 });
+    }
     this.audio.duck(0.55, 0.7);
   }
 
@@ -1058,6 +1080,9 @@ export class Game {
     });
     this.particles.burst('mist', enemy.x, enemy.y, 6, { color: 'rgba(80,10,20,0.25)', sizeMin: 8, sizeMax: 22, lifeMin: 0.4, lifeMax: 1.0, speedMin: 5, speedMax: 30 });
     this.decals.splat(enemy.x, enemy.y + 4, 16, 'rgba(88,10,18,0.5)', 6);
+    if (this.stats.kills === 1 && this.noteDeed('fed')) {
+      this.showMessage('YOU FED. THE NIGHT NOTICED THE CHOICE.', { tone: 'cold', life: 3.4 });
+    }
     if (!this.save.seen[enemy.key]) { this.save.seen[enemy.key] = true; writeSave(this.save); }
     if (enemy.key === 'werewolf') {
       this.renderer.shake(0.5);
@@ -1250,18 +1275,21 @@ export class Game {
     // ---- SECOND BLOOD ---- (IAP entitlement or shard-bought; once per night)
     // It does not make you stronger: it hands back one dawn and drops you in
     // the same dark, mid-swing, at 45% blood. Cap is enforced by the ledger.
-    if (!this.usedRevive && IAP.takeRevive(this.save)) {
-      this.usedRevive = true;
-      this.reviveIntoNight();
-      writeSave(this.save);
-      return;
-    }
+    this.noteDeed('died');
     this.player.die(this);
     this.deathReason = reason;
   }
 
+  spendSecondBlood() {
+    if (this.usedRevive || this.screen !== 'death') return;
+    if (!IAP.takeRevive(this.save)) return;
+    this.usedRevive = true;
+    writeSave(this.save);
+    this.reviveIntoNight();
+  }
+
   /** Hand back one dawn. Same dark, same danger, 45% blood — the cap is the
-   *  whole design: this is mercy, not power. Used by IAP and rewarded ads. */
+   *  whole design: this is mercy, not power. The player has to choose it. */
   reviveIntoNight() {
     const p = this.player;
     if (p.state !== PSTATE.DEAD) { /* mid-death-screen revive */ }
@@ -1387,7 +1415,16 @@ export class Game {
       this.particles.burst('glow', e.x, e.y, 16, { color: 'rgba(220,190,150,0.7)', sizeMin: 4, sizeMax: 14, lifeMin: 0.5, lifeMax: 1.6, speedMin: 10, speedMax: 50 });
       this.particles.burst('dust', e.x, e.y, 20, { color: 'rgba(120,110,100,0.5)', sizeMin: 4, sizeMax: 12, lifeMin: 0.6, lifeMax: 1.8, speedMin: 20, speedMax: 60 });
     }
-    this.showMessage('THE SUN IS COMING UP.', { tone: 'warm' });
+    const firstDawn = this.noteDeed('dawned');
+    const named = IAP.owns(this.save, 'title_dawnbreaker');
+    const silver = IAP.equippedCoat(this.save) === 'coat_moonsilver';
+    this.showMessage(
+      named ? 'DAWNBREAKER. THE HOUSE SAYS YOUR NAME.'
+        : silver ? 'THE WOOL GOES PALE WITH THE WINDOWS.'
+        : firstDawn ? 'YOU STAYED. THAT IS THE WHOLE STORY.'
+        : 'THE SUN IS COMING UP.',
+      { tone: 'warm', life: 5 },
+    );
     // results
     this.finalizeShards(NIGHT_DURATION);
     this.settleNight(NIGHT_DURATION);

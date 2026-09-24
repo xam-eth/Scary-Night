@@ -14,6 +14,7 @@ import { clamp, lerp, damp, dist, TAU, rand, randInt, angDiff, approachAngle, ch
 import { PLAYER, TUNING } from '../core/config.js';
 import { PAL } from '../core/render.js';
 import { Valen3D } from './valen3d.js';
+import { IAP } from '../shop/iap.js';
 
 export const PSTATE = {
   IDLE: 'idle', WALK: 'walk', RUN: 'run', ATTACK: 'attack', HURT: 'hurt',
@@ -515,12 +516,32 @@ export class Player {
     // Cosmetic coat tints (Blood Market) are COMPOSITING only — a filter over
     // the rendered frame. The GLB asset, its textures and its clips stay
     // byte-identical forever; the model is never re-shaded or re-exported.
-    const coat = game.save && game.save.iap && game.save.iap.owned;
-    const filter = coat && coat.coat_bloodmoon ? 'hue-rotate(-18deg) saturate(1.5) brightness(1.04)'
-      : coat && coat.coat_moonsilver ? 'saturate(0.55) brightness(1.22) hue-rotate(8deg)' : null;
+    const coatId = IAP.equippedCoat(game.save);
+    const filter = coatId === 'coat_bloodmoon' ? 'hue-rotate(-22deg) saturate(1.7) brightness(0.96)'
+      : coatId === 'coat_moonsilver' ? 'saturate(0.35) brightness(1.28) hue-rotate(18deg)' : null;
     if (filter) { ctx.save(); ctx.filter = filter; }
     Valen3D.draw(ctx, frame, height, { alpha: isGhost ? 0.5 : 1, footInset });
     if (filter) ctx.restore();
+    if (coatId && !isGhost) {
+      const blood = coatId === 'coat_bloodmoon';
+      ctx.save();
+      ctx.globalAlpha = dead ? 0.45 : 0.9;
+      ctx.fillStyle = blood ? 'rgba(122, 12, 22, 0.82)' : 'rgba(214, 224, 236, 0.78)';
+      ctx.beginPath();
+      ctx.moveTo(-18, -6);
+      ctx.lineTo(18, -6);
+      ctx.lineTo(26, 8);
+      ctx.lineTo(-26, 8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = blood ? 'rgba(255, 64, 48, 0.85)' : 'rgba(255, 255, 255, 0.8)';
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+      ctx.globalAlpha = 0.55;
+      ctx.fillStyle = blood ? 'rgba(160, 20, 28, 0.7)' : 'rgba(230, 236, 246, 0.7)';
+      ctx.fillRect(-12, -height * 0.58, 24, 7);
+      ctx.restore();
+    }
     
     // v1.1 debug: small indicator that GLB is active (only in dev/debug builds)
     if (!isGhost && !dead && typeof window !== 'undefined' && window.__LN_DEBUG) {

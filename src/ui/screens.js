@@ -338,7 +338,7 @@ export function drawMenu(game, ctx, w, h) {
   ctx.font = `400 10px ${MONO}`;
   if ('letterSpacing' in ctx) ctx.letterSpacing = '1px';
   ctx.fillStyle = 'rgba(140,134,124,0.4)';
-  ctx.fillText('v' + GAME_VERSION + '  ·  18+', 12, 16);
+  ctx.fillText('v' + GAME_VERSION + '  ·  18+' + (IAP.owns(game.save, 'title_dawnbreaker') ? '  ·  DAWNBREAKER' : ''), 12, 16);
   ctx.restore();
 
   if (!game.save.privacyAck) {
@@ -348,7 +348,18 @@ export function drawMenu(game, ctx, w, h) {
 
   // Short landscape phones used to push MAIN-equivalent rows off the bottom.
   // Fit the stack between the title and the footer instead of hoping h*0.41 works.
-  const nButtons = 5;
+  const B = game.save;
+  const canUpgrade = (B.shards || 0) > 0;
+  const goalLine = B.goals && B.goals.done ? `${B.goals.done} GOALS MET ACROSS ${B.goals.nights} NIGHTS` : 'THE NIGHT HAS GOALS NOW';
+  const marketOpen = (B.nightsAttempted || 0) > 0;
+  const defs = [
+    { label: 'PLAY', sub: 'ONE NIGHT. FIVE MINUTES. THREE GOALS.', onClick: () => game.beginNight() },
+    { label: 'UPGRADES', sub: canUpgrade ? `${B.shards} BLOOD SHARDS` : 'EARNED BY SURVIVING', onClick: () => game.setScreen('upgrades') },
+    ...(marketOpen ? [{ label: 'BLOOD MARKET', sub: 'OPTIONAL. THE NIGHT DOES NOT ASK.', onClick: () => game.setScreen('shop') }] : []),
+    { label: 'COLLECTION', sub: `${Object.keys(B.seen || {}).length}/${CODEX.length} RECORDED`, onClick: () => game.setScreen('collection') },
+    { label: 'SETTINGS', sub: DIFFICULTY[B.settings.difficulty]?.label || 'STANDARD', onClick: () => game.setScreen('settings') },
+  ];
+  const nButtons = defs.length;
   const footerH = 78;
   const titleBottom = h * 0.18 + 72;
   const startY = Math.max(titleBottom, h < 520 ? h * 0.28 : h * 0.36);
@@ -358,18 +369,6 @@ export function drawMenu(game, ctx, w, h) {
   const bw = clamp(w * 0.22, 188, 300);
   const bx = w / 2 - bw / 2;
   let by = startY;
-
-  const B = game.save;
-  const canUpgrade = (B.shards || 0) > 0;
-
-  const goalLine = B.goals && B.goals.done ? `${B.goals.done} GOALS MET ACROSS ${B.goals.nights} NIGHTS` : 'THE NIGHT HAS GOALS NOW';
-  const defs = [
-    { label: 'PLAY', sub: 'ONE NIGHT. FIVE MINUTES. THREE GOALS.', onClick: () => game.beginNight() },
-    { label: 'UPGRADES', sub: canUpgrade ? `${B.shards} BLOOD SHARDS` : 'NO SHARDS YET', onClick: () => game.setScreen('upgrades') },
-    { label: 'BLOOD MARKET', sub: IAP.mode === 'native' ? 'GOOGLE PLAY BILLING' : IAP.mode === 'midtrans' ? 'WEB · MIDTRANS' : IAP.mode === 'sandbox' ? 'SANDBOX STORE' : 'STORE OFFLINE', onClick: () => game.setScreen('shop') },
-    { label: 'COLLECTION', sub: `${Object.keys(B.seen || {}).length}/${CODEX.length} RECORDED`, onClick: () => game.setScreen('collection') },
-    { label: 'SETTINGS', sub: DIFFICULTY[B.settings.difficulty]?.label || 'STANDARD', onClick: () => game.setScreen('settings') },
-  ];
   game.uiIndex = clamp(game.uiIndex, 0, defs.length - 1);
   defs.forEach((d, i) => {
     const r = uiButton(game, { x: bx, y: by, w: bw, h: bh, label: d.label, sub: d.sub, onClick: d.onClick });
@@ -1036,9 +1035,14 @@ export function drawDeath(game, ctx, w, h) {
     const bw = 220, bh = 48;
     const items = [
       { label: 'TRY AGAIN', onClick: () => game.beginNight(), accent: '#a8833c' },
+    ];
+    if (!game.usedRevive && game.save.iap && game.save.iap.revives > 0) {
+      items.push({ label: 'USE SECOND BLOOD', onClick: () => game.spendSecondBlood(), accent: '#6a6a80' });
+    }
+    items.push(
       { label: 'UPGRADES', onClick: () => game.setScreen('upgrades', 'death'), accent: '#6a6a80' },
       { label: 'MAIN MENU', onClick: () => game.toMenu(), accent: '#6a6a80' },
-    ];
+    );
     // v1.0 — rewarded revive offer, opt-in, once per night (src/shop/ads.js).
     if (!game.usedRevive && Ads.isAvailable('revive')) {
       items.unshift({ label: Ads.label('revive'), onClick: () => game.requestAdRevive(), accent: '#6a2230' });
@@ -1097,6 +1101,12 @@ export function drawVictory(game, ctx, w, h) {
   ctx.shadowColor = 'rgba(255,200,120,0.45)'; ctx.shadowBlur = 30;
   ctx.fillText('SURVIVED', w / 2, h * 0.23);
   ctx.shadowBlur = 0;
+  if (IAP.owns(game.save, 'title_dawnbreaker')) {
+    ctx.font = `400 14px ${SERIF}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '4px';
+    ctx.fillStyle = 'rgba(224, 180, 92, 0.9)';
+    ctx.fillText('THE HOUSE CALLS YOU DAWNBREAKER', w / 2, h * 0.29);
+  }
   ctx.restore();
 
   if (game.newRecord && fade > 0.6) {
@@ -1238,7 +1248,7 @@ export function drawShop(game, ctx, w, h) {
   ctx.font = `400 13px ${MONO}`;
   if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
   ctx.fillStyle = 'rgba(200,160,74,0.95)';
-  ctx.fillText(`◆ ${B.shards} SHARDS   ·   SECOND BLOOD: ${(B.iap && B.iap.revives) | 0}/NIGHT   ·   POUCHES: ${(B.iap && B.iap.pouches) | 0}`, w / 2, h * 0.125);
+  ctx.fillText(`◆ ${B.shards} EARNED   ·   MERCY HELD ${(B.iap && B.iap.revives) | 0}   ·   NOTHING HERE CHANGES THE CLAW`, w / 2, h * 0.125);
   // v1.0 — the daily rewarded crate (opt-in, capped, invisible when no ad
   // network is configured). AdMob SSV is required before real keys: docs/IAP.md.
   if (Ads.isAvailable('crate')) {
@@ -1263,14 +1273,15 @@ export function drawShop(game, ctx, w, h) {
 
   CATALOG.forEach((sku) => {
     if (wide && cx > padX) { /* keep */ }
-    const owned = sku.kind === 'cosmetic' && iapBag[sku.gives.owned] === true;
-    const bundleOwned = sku.kind === 'bundle' && sku.gives.owned.every((o) => iapBag[o]);
-    const isOwned = owned || bundleOwned;
+    const ownId = Array.isArray(sku.gives.owned) ? sku.gives.owned[0] : sku.gives.owned;
+    const isOwned = !!(ownId && iapBag[ownId]);
+    const open = IAP.offered(B, sku);
+    const wearing = IAP.equippedCoat(B) === sku.id;
     // card body
     ctx.save();
     ctx.fillStyle = isOwned ? 'rgba(20,22,30,0.5)' : 'rgba(14,14,20,0.72)';
     ctx.fillRect(cx, cy, cardW, cardH);
-    ctx.strokeStyle = sku.tag ? 'rgba(200,160,74,0.6)' : 'rgba(90,88,110,0.35)';
+    ctx.strokeStyle = wearing ? 'rgba(200,160,74,0.7)' : 'rgba(90,88,110,0.35)';
     ctx.lineWidth = 1;
     ctx.strokeRect(cx + 0.5, cy + 0.5, cardW - 1, cardH - 1);
     ctx.textAlign = 'left';
@@ -1279,35 +1290,34 @@ export function drawShop(game, ctx, w, h) {
     if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
     ctx.fillStyle = '#e6dcc4';
     ctx.fillText(sku.name, cx + 14, cy + 24);
-    if (sku.tag) {
-      const nameW = ctx.measureText(sku.name).width;
-      ctx.font = `500 9px ${SANS}`;
-      ctx.fillStyle = 'rgba(200,160,74,0.95)';
-      ctx.fillText(sku.tag, cx + 14 + nameW + 10, cy + 23);
-    }
     ctx.font = `400 11px ${SANS}`;
     if ('letterSpacing' in ctx) ctx.letterSpacing = '0.4px';
     ctx.fillStyle = 'rgba(178,172,160,0.75)';
-    // the button column owns the right side of the card: clip the blurb
-    const blurbMax = cardW - (isOwned ? 30 : (clamp(cardW * 0.3, 86, 120) * 2 + 34)) - 28;
-    let blurb = sku.blurb;
+    const showBuy = open && !(isOwned && sku.play !== 'consumable');
+    const blurbMax = cardW - (showBuy ? (clamp(cardW * 0.3, 86, 120) * 2 + 34) : 120) - 28;
+    let blurb = open ? sku.blurb : sku.locked;
     while (ctx.measureText(blurb).width > blurbMax && blurb.length > 8) blurb = blurb.slice(0, -2);
     if (blurb !== sku.blurb) blurb = blurb.replace(/[,.;]$/, '') + '…';
     ctx.fillText(blurb, cx + 14, cy + 44);
     ctx.font = `400 11px ${MONO}`;
     ctx.fillStyle = 'rgba(150,146,136,0.6)';
-    ctx.fillText(isOwned ? 'ALREADY YOURS' : `${IAP.priceLabel(sku)}   or   ${sku.shardPrice ? '◆' + sku.shardPrice : 'shard lane n/a'}`, cx + 14, cy + cardH - 14);
+    const foot = !open ? 'NOT YET — PLAY THE NIGHT'
+      : isOwned && sku.kind === 'title' ? 'THE HOUSE ALREADY KNOWS THE NAME'
+      : isOwned ? (wearing ? 'WORN' : 'YOURS — NOT WORN')
+      : `${IAP.priceLabel(sku)}   or   ◆${sku.shardPrice}`;
+    ctx.fillText(foot, cx + 14, cy + cardH - 14);
     ctx.restore();
     // actions
-    if (!isOwned) {
+    if (showBuy) {
       const bw2 = clamp(cardW * 0.3, 86, 120), bh2 = 30;
       const busy = IAP.busy === sku.id;
+      const pay = IAP.mode === 'native' ? 'PLAY' : IAP.mode === 'midtrans' ? 'PAY' : 'STORE';
       const r1 = uiButton(game, {
         x: cx + cardW - bw2 * 2 - 22, y: cy + cardH / 2 - bh2 / 2, w: bw2, h: bh2,
-        label: busy ? '…' : (IAP.mode === 'native' ? 'PLAY' : IAP.mode === 'midtrans' ? 'PAY' : 'STORE'), small: true, disabled: busy || IAP.mode === 'disabled',
+        label: busy ? '…' : pay, small: true, disabled: busy || IAP.mode === 'disabled',
         onClick: () => game.purchaseSku(sku.id),
       });
-      buttonVisual(ctx, r1.b, { active: r1.hover || r1.selected, label: busy ? '…' : (IAP.mode === 'native' ? 'PLAY' : IAP.mode === 'midtrans' ? 'PAY' : 'STORE'), small: true, accent: '#a8833c' });
+      buttonVisual(ctx, r1.b, { active: r1.hover || r1.selected, label: busy ? '…' : pay, small: true, accent: '#6a6a80' });
       const canShard = sku.shardPrice && B.shards >= sku.shardPrice;
       const r2 = uiButton(game, {
         x: cx + cardW - bw2 - 12, y: cy + cardH / 2 - bh2 / 2, w: bw2, h: bh2,
@@ -1315,6 +1325,14 @@ export function drawShop(game, ctx, w, h) {
         onClick: () => game.buySkuWithShards(sku.id),
       });
       buttonVisual(ctx, r2.b, { active: r2.hover || r2.selected, label: '◆ SHARDS', small: true, accent: '#6a6a80', disabled: !canShard });
+    } else if (open && sku.kind === 'cosmetic' && isOwned) {
+      const bw2 = 108, bh2 = 30;
+      const label = wearing ? 'TAKE OFF' : 'WEAR';
+      const r = uiButton(game, {
+        x: cx + cardW - bw2 - 12, y: cy + cardH / 2 - bh2 / 2, w: bw2, h: bh2,
+        label, small: true, onClick: () => game.wearCoat(sku.id),
+      });
+      buttonVisual(ctx, r.b, { active: r.hover, label, small: true, accent: wearing ? '#6a6a80' : '#a8833c' });
     }
     cx += cardW + gap;
     if (cx + cardW > w - padX / 2) { cx = padX; cy += cardH + gap; }
@@ -1328,10 +1346,10 @@ export function drawShop(game, ctx, w, h) {
   ctx.font = `400 10px ${SANS}`;
   if ('letterSpacing' in ctx) ctx.letterSpacing = '1.4px';
   ctx.fillStyle = 'rgba(140,134,124,0.55)';
-  const policy = ['EVERYTHING HERE IS EARNABLE BY PLAYING · NO PAY-TO-WIN · NO ADS IN THIS BUILD · COSMETICS NEVER ALTER THE MODEL FILES',
-    IAP.mode === 'sandbox' ? 'SANDBOX STORE — NO REAL MONEY MOVES'
-      : IAP.mode === 'midtrans' ? 'WEB ONLY · MIDTRANS · SETTLEMENT CONFIRMED BY THE SERVER, NOT THE BROWSER'
-      : IAP.mode === 'native' ? 'GOOGLE PLAY BILLING · DIGITAL GOODS ARE NOT SOLD THROUGH MIDTRANS'
+  const policy = ['SHARDS ARE EARNED BY THE NIGHT · MONEY IS OPTIONAL · NO STATS SOLD · NO ADS',
+    IAP.mode === 'native' ? 'GOOGLE PLAY BILLING · THE GAME GRANTS ONLY AFTER CONSUME OR ACKNOWLEDGE'
+      : IAP.mode === 'midtrans' ? 'WEB RAIL · THE SAME FOUR GOODS · THE SERVER CONFIRMS SETTLEMENT'
+      : IAP.mode === 'sandbox' ? 'SANDBOX — NO REAL MONEY MOVES'
       : 'STORE OFFLINE'];
   const pLines = wide ? policy : [policy[0].split(' · ').slice(0, 3).join(' · '), policy[1]];
   pLines.forEach((line, i) => ctx.fillText(line, w / 2, policyY + i * 16));
@@ -1345,3 +1363,4 @@ export function drawShop(game, ctx, w, h) {
   const r4 = uiButton(game, { x: w / 2 + 8, y: h - (wide ? 66 : 52), w: bw, h: bh, label: backLabel, onClick: () => game.setScreen(back, 'shop'), small: true, accent: '#a8833c' });
   buttonVisual(ctx, r4.b, { active: r4.hover || r4.selected, label: backLabel, small: true, accent: '#a8833c' });
 }
+

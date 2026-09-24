@@ -122,7 +122,7 @@ const refund = await post('/api/iap/callback',
 const l3 = await post('/api/iap/ledger', { playerId: 'LN-TESTER' });
 ok('refund revokes the grant (ledger drops it, replay-safe)', refund.code === 200 && l3.json.ledger.length === 0);
 
-const oDel = await post('/api/iap/order', { sku: 'pouch', playerId: 'LN-DELETE' });
+const oDel = await post('/api/iap/order', { sku: 'revive1', playerId: 'LN-DELETE' });
 const delId = oDel.json.transactionId;
 const sigKey = crypto.createHash('sha512').update(`${delId}20019000${SERVER_KEY}`).digest('hex');
 const bodySigned = await post('/api/iap/callback', {

@@ -12,17 +12,27 @@ Official rules used here:
 
 ## What this build may and may not do
 
-| Surface | Digital goods (shards, revive, coats) | Midtrans |
+| Surface | Digital goods (one mercy, two coats, a name) | Midtrans |
 |---|---|---|
 | Browser | Midtrans Snap, IDR | Yes. Client key is public. Server key is only in `server/.env`. |
 | Google Play app | Google Play Billing, via `window.LNBridge` | No. Indonesia is not an alternative-billing region. Selling these SKUs through Midtrans on Play violates the Payments policy. |
 
 `IAP.init()` already prefers `LNBridge` over Midtrans. The Play wrapper must
 set `window.LNBridge.postMessage` and complete purchases with
-`window.__LN_IAP_result`. Product ids are the catalog ids: `shards_s`,
-`shards_m`, `shards_l`, `revive1`, `revive5`, `pouch`, `coat_bloodmoon`,
-`coat_moonsilver`, `dawnbreaker`. Create those as Play products. Do not put
-the Midtrans server key in the APK.
+`window.__LN_IAP_result`. Create these Play products, and no others:
+
+| Product id | Play type | After the sheet |
+|---|---|---|
+| `revive1` | consumable | `consumeAsync`, then `{ ok:true, consumed:true, purchaseToken }` |
+| `coat_bloodmoon` | non-consumable | `acknowledgePurchase`, then `{ ok:true, acknowledged:true, purchaseToken }` |
+| `coat_moonsilver` | non-consumable | same acknowledge |
+| `dawnbreaker` | non-consumable | same acknowledge |
+
+The game does not grant on `{ ok:true }` alone. Google refunds an
+unacknowledged purchase after three days, and an unconsumed consumable
+cannot be bought again. Restore returns non-consumables still owned, not
+consumed tokens. Do not put the Midtrans server key in the APK. Shard
+packs, plank pouches, and revive bundles are not products.
 
 Physical goods are not sold. Do not add them to Play Billing.
 

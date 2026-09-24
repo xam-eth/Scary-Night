@@ -6,41 +6,40 @@ Code: `src/shop/iap.js` (catalog, providers), `src/shop/config.js`
 
 ---
 
-## 1. Economy model
+## 1. The strategy that fits this game
 
-Two currencies, deliberately:
+LAST NIGHT is a five-minute single-player horror night. The player is not a
+soldier. The value is the knock, the choice to bar or feed, and whether dawn
+comes. A shop that sells power, planks, or a pile of shards makes those
+choices into a receipt. That is the wrong strategy, even if it converts.
 
-| | Shards ◆ | Money |
-|---|---|---|
-| earned by | playing (nights, objectives, kills) | IAP only |
-| buys | the whole upgrade tree, every consumable, coats | everything, faster |
+What is sold, after the player has already done the thing:
 
-Every SKU has a shard price (the F2P lane) and no SKU gates core survival.
-IAP **accelerates the meta, never the night** — stat upgrades stay shard-only
-inside `UPGRADES`, and `SECOND BLOOD` (the only power-adjacent item) is capped
-at one per night whether bought or earned.
-
-Balance intent (v1.0 targets, seed-verified by the harness):
-
-* a focused F2P player earns one consumable (~150 ◆) in 4–6 good nights;
-* `PUDDLE` ≈ what a strong single night pays, `TIDE` ≈ a patient week;
-* Dawnbreaker Edition = supporter tier: value is generosity, not advantage.
-
-## 2. Price ladder (Midtrans, IDR)
-
-| SKU | USD | IDR | note |
+| SKU | Play type | Appears after | What it actually does |
 |---|---|---|---|
-| SECOND BLOOD | 1.99 | Rp19.000 | consumable, cap 1/night |
-| CARPENTER'S POUCH | 1.99 | Rp19.000 | +3 planks/night, stackable 3 |
-| COAT (cosmetic) | 1.99 | Rp29.000 | tint over GLB; the .glb file never changes |
-| PUDDLE · 200◆ | 2.99 | Rp49.000 | entry |
-| POOL · 605◆ | 6.99 | Rp99.000 | BEST VALUE (+10%) |
-| TIDE · 1500◆ | 13.99 | Rp199.000 | +18% |
-| FIVE SECOND BLOODS | 7.99 | Rp69.000 | bundle discount |
-| DAWNBREAKER EDITION | 9.99 | Rp149.000 | both coats + 800◆ + title |
+| `revive1` | consumable | a death | One mercy, spent by the player on the death screen. Same night, 45% blood, once. Not automatic. |
+| `coat_bloodmoon` | non-consumable | a wound | A red hem and a colder filter on the body. Wear or take off. No stats. |
+| `coat_moonsilver` | non-consumable | a dawn | A pale hem. At dawn the wool is named. No stats. |
+| `dawnbreaker` | non-consumable | a dawn | The house says the name on the menu and at dawn. No shards attached. |
 
-Indonesian price points sit on the familiar Rp-x9.000 ladder; web channels
-(VA/QRIS) dominate, so QRIS is always enabled server-side.
+Each also has a shard price, so money is never required. Shards are only
+earned. The market button is hidden until a night has ended. There is no
+buy button on the death screen, no "best value" tag, no timer, no loot box.
+
+Not sold: shard packs, plank pouches, revive bundles, stat upgrades.
+
+## 2. Price ladder (same four goods on Play and on the web)
+
+| SKU | USD | IDR | shard price |
+|---|---|---|---|
+| SECOND BLOOD | 1.99 | Rp19.000 | 150 |
+| BLOODMOON COAT | 1.99 | Rp29.000 | 180 |
+| MOONSILVER COAT | 1.99 | Rp29.000 | 180 |
+| DAWNBREAKER | 4.99 | Rp79.000 | 400 |
+
+Play prices are whatever Play Console sets. The game shows "GOOGLE PLAY"
+on that rail and does not invent a local price. A Play grant happens only
+after `consumed` or `acknowledged` comes back from `LNBridge`.
 
 ## 3. Midtrans integration (web)
 

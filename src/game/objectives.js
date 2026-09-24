@@ -6,7 +6,7 @@
  * already uses. Three goals per night are drawn from the pool with the run
  * seed, so every night has a different shape but a fair shape — and every
  * goal is completable by a player who is playing well, not a player who is
- * paying. (Paying speeds the meta, never the night — see src/shop/iap.js.)
+ * paying. Money buys a memory of a night already lived, never the night.
  *
  * Goals are checked by polling cheap game state each tick plus a handful of
  * explicit notify() events, so no gameplay system had to be rewired.
