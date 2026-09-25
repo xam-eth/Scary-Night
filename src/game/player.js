@@ -362,6 +362,8 @@ export class Player {
       speed: dead || showSlash ? 0 : sp,
       stepPhase: this.stepPhase,
       attackProgress,
+      // Top-down world: head and a little body, not a full figure lying on the floor.
+      view: 'overhead',
     });
 
     // shadow
@@ -513,15 +515,20 @@ export class Player {
     if (!frame) return;
     const dead = this.state === PSTATE.DEAD;
     const crawling = this.state === PSTATE.CRAWL;
-    const height = 84;   // QA P1-4: +13% — readable at 0.72× camera zoom on phones
+    // The frame is a top-down head, not a full body. Keep her short so the
+    // skull sits on the world point instead of a figure stretched up the map.
+    const height = 58;
     const footInset = 9;
+    const drop = 0;
+    const headPt = Valen3D.screenPoint('mixamorig:Head');
     const width = height * (frame.width / frame.height);
+    this._valenPlace = { height, footInset, drop, head: headPt, anchor: headPt ? 'head' : 'feet' };
 
     const x = ghost ? ghost.x : this.x;
     const y = ghost ? ghost.y : this.y;
 
     ctx.save();
-    ctx.translate(x, y + footInset * 0.2);
+    ctx.translate(x, y);
     if (dead && !isGhost) {
       const k = clamp(this.deathT / 1.1, 0, 1);
       ctx.translate(0, k * 10);
@@ -544,18 +551,29 @@ export class Player {
     const filter = coatId === 'coat_bloodmoon' ? 'hue-rotate(-22deg) saturate(1.7) brightness(0.96)'
       : coatId === 'coat_moonsilver' ? 'saturate(0.35) brightness(1.28) hue-rotate(18deg)' : null;
     if (filter) { ctx.save(); ctx.filter = filter; }
-    Valen3D.draw(ctx, frame, height, { alpha: isGhost ? 0.5 : 1, footInset });
+    // The visible head is painted after the night multiply (drawAfterDark).
+    // Drawing it here as well left a darkened rectangle under the skull.
+    if (isGhost) {
+      Valen3D.draw(ctx, frame, height, {
+        alpha: 0.5,
+        footInset,
+        anchor: place.anchor,
+        head: place.head,
+        drop,
+      });
+    }
     if (filter) ctx.restore();
     if (coatId && !isGhost) {
       const blood = coatId === 'coat_bloodmoon';
       ctx.save();
       ctx.globalAlpha = dead ? 0.45 : 0.9;
       ctx.fillStyle = blood ? 'rgba(122, 12, 22, 0.82)' : 'rgba(214, 224, 236, 0.78)';
+      ctx.translate(0, drop + 8);
       ctx.beginPath();
-      ctx.moveTo(-18, -6);
-      ctx.lineTo(18, -6);
-      ctx.lineTo(26, 8);
-      ctx.lineTo(-26, 8);
+      ctx.moveTo(-12, -3);
+      ctx.lineTo(12, -3);
+      ctx.lineTo(16, 6);
+      ctx.lineTo(-16, 6);
       ctx.closePath();
       ctx.fill();
       ctx.strokeStyle = blood ? 'rgba(255, 64, 48, 0.85)' : 'rgba(255, 255, 255, 0.8)';
@@ -563,7 +581,7 @@ export class Player {
       ctx.stroke();
       ctx.globalAlpha = 0.55;
       ctx.fillStyle = blood ? 'rgba(160, 20, 28, 0.7)' : 'rgba(230, 236, 246, 0.7)';
-      ctx.fillRect(-12, -height * 0.58, 24, 7);
+      ctx.fillRect(-8, -2, 16, 4);
       ctx.restore();
     }
     
@@ -583,10 +601,10 @@ export class Player {
     // (Local space here: the context is already translated to the feet.)
     if (!isGhost && !dead && !crawling && this.lowBlood) {
       const head = Valen3D.screenPoint('mixamorig:Head');
-      let hx = 0, hy = -height * 0.74 + footInset;
+      let hx = 0, hy = drop;
       if (head) {
-        hx = (head.x / frame.width - 0.5) * width;
-        hy = -height + footInset + (head.y / frame.height) * height;
+        hx = 0;
+        hy = drop;
       }
       const glow = 0.5 + (1 - this.bloodPct) * 0.7;
       ctx.globalCompositeOperation = 'screen';
@@ -607,7 +625,7 @@ export class Player {
       ctx.globalAlpha = hurt * 0.55;
       ctx.fillStyle = '#ff3040';
       ctx.beginPath();
-      ctx.ellipse(x, y - height * 0.38, width * 0.34, height * 0.42, 0, 0, TAU);
+      ctx.ellipse(x, y + drop, 16, 11, 0, 0, TAU);
       ctx.fill();
       ctx.restore();
     }
@@ -796,7 +814,7 @@ export class Player {
     ctx.globalAlpha = 0.2;
     ctx.fillStyle = 'rgba(176, 194, 224, 0.95)';
     ctx.beginPath();
-    ctx.ellipse(this.x, this.y + 4, 42, 18, 0, 0, TAU);
+    ctx.ellipse(this.x, this.y + 6, 20, 8, 0, 0, TAU);
     ctx.fill();
     ctx.restore();
     ctx.save();
@@ -805,10 +823,23 @@ export class Player {
     // paints a squashed smear at her feet.
     if (game.renderer.upright) game.renderer.upright(ctx, this.x, this.y);
     ctx.translate(this.x, this.y);
-    ctx.globalCompositeOperation = 'screen';
-    const need = (this.lowBlood ? 0.46 : 0.32) * (game.blackoutT > 0 ? 0.72 : 1);
-    ctx.globalAlpha = need;
-    Valen3D.draw(ctx, frame, 84, { alpha: 1, footInset: 9 });
+    // The night multiply turns a dark coat into a hole. Paint the head again,
+    // on top, so the skull stays where she stands.
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = game.blackoutT > 0 ? 0.72 : 0.94;
+    const coatId = IAP.equippedCoat(game.save);
+    const filter = coatId === 'coat_bloodmoon' ? 'hue-rotate(-22deg) saturate(1.7) brightness(0.96)'
+      : coatId === 'coat_moonsilver' ? 'saturate(0.35) brightness(1.28) hue-rotate(18deg)' : null;
+    if (filter) ctx.filter = filter;
+    const place = this._valenPlace || { height: 58, footInset: 9, drop: 0, head: null, anchor: 'feet' };
+    Valen3D.draw(ctx, frame, place.height, {
+      alpha: 1,
+      footInset: place.footInset,
+      anchor: place.anchor,
+      head: place.head,
+      drop: place.drop,
+    });
+    if (filter) ctx.filter = 'none';
     ctx.globalAlpha = 0.55;
     ctx.fillStyle = 'rgba(186, 206, 235, 0.9)';
     ctx.beginPath();

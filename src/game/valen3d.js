@@ -188,18 +188,7 @@ class ValenRuntime {
 
     // Keep the original model scale and textures. Only the orthographic camera
     // is fitted around it, preserving the authored geometry and material data.
-    const verticalSpan = Math.max(1.12, size.y * 1.14);
-    const halfHeight = verticalSpan / 2;
-    const halfWidth = halfHeight * (this.canvas.width / this.canvas.height);
-    this.camera.left = -halfWidth;
-    this.camera.right = halfWidth;
-    this.camera.top = halfHeight;
-    this.camera.bottom = -halfHeight;
-    this.camera.near = 0.1;
-    this.camera.far = 10;
-    this.camera.position.set(center.x, center.y + PITCH_DY, PITCH_DZ);
-    this.camera.lookAt(center.x, center.y, 0);
-    this.camera.updateProjectionMatrix();
+    this._applyCamera('portrait');
 
     this.mixer = new THREE.AnimationMixer(this.model);
     for (const clip of gltf.animations) this.clips[clip.name] = clip;
@@ -230,12 +219,68 @@ class ValenRuntime {
   }
 
   /**
+   * Portrait is the menu hero: a 3/4 full body. Overhead is the play camera.
+   * The world is top-down, so the token is the head and a little of the body —
+   * a full standing portrait on that floor reads as someone lying asleep.
+   */
+  _applyCamera(view) {
+    const b = this.bounds;
+    if (!b || !this.camera) return;
+    const aspect = this.canvas.width / this.canvas.height;
+    if (view === 'overhead') {
+      this._frameHead();
+    } else {
+      const verticalSpan = Math.max(1.12, b.size.y * 1.14);
+      const halfHeight = verticalSpan / 2;
+      const halfWidth = halfHeight * aspect;
+      this.camera.left = -halfWidth;
+      this.camera.right = halfWidth;
+      this.camera.top = halfHeight;
+      this.camera.bottom = -halfHeight;
+      this.camera.position.set(b.center.x, b.center.y + PITCH_DY, PITCH_DZ);
+      this.camera.lookAt(b.center.x, b.center.y, 0);
+    }
+    this.camera.near = 0.05;
+    this.camera.far = 12;
+    this.camera.updateProjectionMatrix();
+  }
+
+  /** Top-down token: crown, face, and the shoulders. Not the coat, not the boots. */
+  _frameHead() {
+    const head = this._rigObject('mixamorig:Head');
+    const neck = this._rigObject('mixamorig:Neck');
+    const top = this._rigObject('mixamorig:HeadTop_End');
+    if (!head || !this.bounds) return;
+    const hp = this._hp || (this._hp = new THREE.Vector3());
+    const np = this._np || (this._np = new THREE.Vector3());
+    const tp = this._tp || (this._tp = new THREE.Vector3());
+    head.getWorldPosition(hp);
+    if (neck) neck.getWorldPosition(np); else np.copy(hp);
+    if (top) top.getWorldPosition(tp); else tp.copy(hp).setY(hp.y + 0.11);
+    const span = Math.max(0.1, tp.distanceTo(np));
+    const look = hp.clone().lerp(np, 0.28);
+    const aspect = this.canvas.width / this.canvas.height;
+    const halfH = span * 0.72;
+    const halfW = Math.max(halfH * aspect, span * 0.95);
+    this.camera.top = halfH;
+    this.camera.bottom = -halfH;
+    this.camera.left = -halfW;
+    this.camera.right = halfW;
+    this.camera.position.set(look.x, look.y + span * 5.2, look.z + span * 0.42);
+    this.camera.lookAt(look);
+    this.camera.near = 0.02;
+    this.camera.far = 12;
+    this.camera.updateProjectionMatrix();
+  }
+
+  /**
    * Evaluate the authored clips at gameplay-controlled times and render one
    * transparent frame. Walk/run use collision-resolved stride phase, while the
    * attack clip is compressed to the gameplay attack window.
    */
-  render({ state = 'idle', angle = Math.PI / 2, speed = 0, stepPhase = 0, attackProgress = 0 } = {}) {
+  render({ state = 'idle', angle = Math.PI / 2, speed = 0, stepPhase = 0, attackProgress = 0, view = 'portrait' } = {}) {
     if (!this.ready || !this.renderer || !this.model || !this.mixer) return null;
+    this._applyCamera(view);
 
     const attacking = state === 'attack';
     const locomotion = attacking ? 0 : smoothstep(4, 24, speed);
@@ -271,10 +316,13 @@ class ValenRuntime {
 
     // Natural front in this asset is shown at yaw 0 when moving south. This
     // formula maps the continuous Canvas heading to a continuous 3D turn.
+    this.model.rotation.order = 'YXZ';
     this.model.rotation.y = yaw;
     this.model.position.x = -rootX;
     this.model.position.z = -rootZ;
     this.model.updateMatrixWorld(true);
+    if (view === 'overhead') this._frameHead();
+    this.renderer.toneMappingExposure = view === 'overhead' ? 1.65 : 1.18;
     this.renderer.clear();
     this.renderer.render(this.scene, this.camera);
     return this.canvas;
@@ -306,12 +354,30 @@ class ValenRuntime {
     };
   }
 
-  draw(ctx, canvas, height, { alpha = 1, footInset = 7 } = {}) {
+  draw(ctx, canvas, height, { alpha = 1, footInset = 7, anchor = 'feet', head = null, drop = 0 } = {}) {
     if (!canvas) return false;
     const width = height * (canvas.width / canvas.height);
+    let x = -width / 2;
+    let y = -height + footInset;
+    if (anchor === 'head' && head) {
+      // Only the skull and the shoulders. A full coat on this floor reads as
+      // a body lying down.
+      const cropW = canvas.width * 0.58;
+      const cropH = canvas.height * 0.48;
+      const sx = Math.max(0, Math.min(canvas.width - cropW, head.x - cropW * 0.5));
+      const sy = Math.max(0, Math.min(canvas.height - cropH, head.y - cropH * 0.62));
+      const dw = height * (cropW / cropH);
+      const hx = ((head.x - sx) / cropW) * dw;
+      const hy = ((head.y - sy) / cropH) * height;
+      ctx.save();
+      ctx.globalAlpha *= alpha;
+      ctx.drawImage(canvas, sx, sy, cropW, cropH, -hx, drop - hy, dw, height);
+      ctx.restore();
+      return true;
+    }
     ctx.save();
     ctx.globalAlpha *= alpha;
-    ctx.drawImage(canvas, -width / 2, -height + footInset, width, height);
+    ctx.drawImage(canvas, x, y, width, height);
     ctx.restore();
     return true;
   }
