@@ -257,16 +257,18 @@ class ValenRuntime {
     head.getWorldPosition(hp);
     if (neck) neck.getWorldPosition(np); else np.copy(hp);
     if (top) top.getWorldPosition(tp); else tp.copy(hp).setY(hp.y + 0.11);
-    const span = Math.max(0.1, tp.distanceTo(np));
-    const look = hp.clone().lerp(np, 0.28);
+    const span = Math.max(0.12, tp.distanceTo(np));
+    const look = hp.clone().lerp(np, 0.32);
     const aspect = this.canvas.width / this.canvas.height;
-    const halfH = span * 0.72;
-    const halfW = Math.max(halfH * aspect, span * 0.95);
+    // Wide enough that the skull and collar sit inside the frame. A tight
+    // ortho clips the coat into a hard rectangle on the map.
+    const halfH = span * 1.7;
+    const halfW = Math.max(halfH * aspect, span * 2.2);
     this.camera.top = halfH;
     this.camera.bottom = -halfH;
     this.camera.left = -halfW;
     this.camera.right = halfW;
-    this.camera.position.set(look.x, look.y + span * 5.2, look.z + span * 0.42);
+    this.camera.position.set(look.x, look.y + span * 6.2, look.z + span * 0.26);
     this.camera.lookAt(look);
     this.camera.near = 0.02;
     this.camera.far = 12;
@@ -316,13 +318,23 @@ class ValenRuntime {
 
     // Natural front in this asset is shown at yaw 0 when moving south. This
     // formula maps the continuous Canvas heading to a continuous 3D turn.
-    this.model.rotation.order = 'YXZ';
-    this.model.rotation.y = yaw;
+    // X first, then yaw, so standing her up does not flip when she turns.
+    // The rest pose bows at the floor; overhead then reads as someone asleep.
+    // -1.0 rad is the view correction that shows the skull and the collar.
+    if (view === 'overhead') {
+      this.model.rotation.order = 'XYZ';
+      this.model.rotation.x = -1.0;
+      this.model.rotation.y = yaw;
+    } else {
+      this.model.rotation.order = 'YXZ';
+      this.model.rotation.x = 0;
+      this.model.rotation.y = yaw;
+    }
     this.model.position.x = -rootX;
     this.model.position.z = -rootZ;
     this.model.updateMatrixWorld(true);
     if (view === 'overhead') this._frameHead();
-    this.renderer.toneMappingExposure = view === 'overhead' ? 1.65 : 1.18;
+    this.renderer.toneMappingExposure = view === 'overhead' ? 1.9 : 1.18;
     this.renderer.clear();
     this.renderer.render(this.scene, this.camera);
     return this.canvas;
@@ -354,24 +366,99 @@ class ValenRuntime {
     };
   }
 
+  /**
+   * Opaque pixels around the skull. The search window is inset from the
+   * canvas edge so a clipped coat cannot become the token's border.
+   */
+  _headBox(canvas, head) {
+    const w = canvas.width;
+    const h = canvas.height;
+    const winW = Math.round(w * 0.62);
+    const winH = Math.round(h * 0.5);
+    const x0 = Math.max(0, Math.min(w - winW, Math.round(head.x - winW * 0.5)));
+    const y0 = Math.max(0, Math.min(h - winH, Math.round(head.y - winH * 0.62)));
+    if (!this._scan || this._scan.width !== w || this._scan.height !== h) {
+      this._scan = document.createElement('canvas');
+      this._scan.width = w;
+      this._scan.height = h;
+      this._scanCtx = this._scan.getContext('2d', { willReadFrequently: true });
+    }
+    this._scanCtx.clearRect(0, 0, w, h);
+    this._scanCtx.drawImage(canvas, 0, 0);
+    const data = this._scanCtx.getImageData(x0, y0, winW, winH).data;
+    let minX = winW, minY = winH, maxX = 0, maxY = 0, hit = false;
+    for (let y = 0; y < winH; y += 2) {
+      for (let x = 0; x < winW; x += 2) {
+        if (data[(y * winW + x) * 4 + 3] > 16) {
+          hit = true;
+          if (x < minX) minX = x;
+          if (y < minY) minY = y;
+          if (x > maxX) maxX = x;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+    if (!hit) return { x: x0, y: y0, w: winW, h: winH };
+    const pad = 2;
+    return {
+      x: x0 + Math.max(0, minX - pad),
+      y: y0 + Math.max(0, minY - pad),
+      w: Math.min(winW - Math.max(0, minX - pad), maxX - minX + pad * 2 + 2),
+      h: Math.min(winH - Math.max(0, minY - pad), maxY - minY + pad * 2 + 2),
+    };
+  }
+
+  /**
+   * The coat is wider than the skull, so a crop cuts it on a straight line.
+   * Fade that cut. The hair keeps its own outline.
+   */
+  _softToken(canvas, box, dw, height) {
+    const tw = Math.max(2, Math.ceil(dw));
+    const th = Math.max(2, Math.ceil(height));
+    if (!this._token || this._token.width !== tw || this._token.height !== th) {
+      this._token = document.createElement('canvas');
+      this._token.width = tw;
+      this._token.height = th;
+    }
+    const t = this._token.getContext('2d');
+    t.setTransform(1, 0, 0, 1, 0, 0);
+    t.globalCompositeOperation = 'source-over';
+    t.clearRect(0, 0, tw, th);
+    t.drawImage(canvas, box.x, box.y, box.w, box.h, 0, 0, tw, th);
+    t.globalCompositeOperation = 'destination-in';
+    const down = t.createLinearGradient(0, th * 0.38, 0, th);
+    down.addColorStop(0, 'rgba(0,0,0,1)');
+    down.addColorStop(0.46, 'rgba(0,0,0,1)');
+    down.addColorStop(1, 'rgba(0,0,0,0)');
+    t.fillStyle = down;
+    t.fillRect(0, 0, tw, th);
+    const side = t.createLinearGradient(0, 0, tw, 0);
+    side.addColorStop(0, 'rgba(0,0,0,0)');
+    side.addColorStop(0.1, 'rgba(0,0,0,1)');
+    side.addColorStop(0.9, 'rgba(0,0,0,1)');
+    side.addColorStop(1, 'rgba(0,0,0,0)');
+    t.fillStyle = side;
+    t.fillRect(0, 0, tw, th);
+    t.globalCompositeOperation = 'source-over';
+    return this._token;
+  }
+
   draw(ctx, canvas, height, { alpha = 1, footInset = 7, anchor = 'feet', head = null, drop = 0 } = {}) {
     if (!canvas) return false;
     const width = height * (canvas.width / canvas.height);
     let x = -width / 2;
     let y = -height + footInset;
     if (anchor === 'head' && head) {
-      // Only the skull and the shoulders. A full coat on this floor reads as
-      // a body lying down.
-      const cropW = canvas.width * 0.58;
-      const cropH = canvas.height * 0.48;
-      const sx = Math.max(0, Math.min(canvas.width - cropW, head.x - cropW * 0.5));
-      const sy = Math.max(0, Math.min(canvas.height - cropH, head.y - cropH * 0.62));
-      const dw = height * (cropW / cropH);
-      const hx = ((head.x - sx) / cropW) * dw;
-      const hy = ((head.y - sy) / cropH) * height;
+      // Draw the skull's own silhouette, not a rectangle of the render.
+      // A fixed crop cuts the coat on a straight edge and looks pasted on.
+      const box = this._headBox(canvas, head);
+      const dw = height * (box.w / box.h);
+      const hx = ((head.x - box.x) / box.w) * dw;
+      const hy = ((head.y - box.y) / box.h) * height;
+      const token = this._softToken(canvas, box, dw, height);
       ctx.save();
       ctx.globalAlpha *= alpha;
-      ctx.drawImage(canvas, sx, sy, cropW, cropH, -hx, drop - hy, dw, height);
+      ctx.drawImage(token, -hx, drop - hy);
       ctx.restore();
       return true;
     }

@@ -517,7 +517,7 @@ export class Player {
     const crawling = this.state === PSTATE.CRAWL;
     // The frame is a top-down head, not a full body. Keep her short so the
     // skull sits on the world point instead of a figure stretched up the map.
-    const height = 58;
+    const height = 64;
     const footInset = 9;
     const drop = 0;
     const headPt = Valen3D.screenPoint('mixamorig:Head');
@@ -557,8 +557,8 @@ export class Player {
       Valen3D.draw(ctx, frame, height, {
         alpha: 0.5,
         footInset,
-        anchor: place.anchor,
-        head: place.head,
+        anchor: headPt ? 'head' : 'feet',
+        head: headPt,
         drop,
       });
     }
