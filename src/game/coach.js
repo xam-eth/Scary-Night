@@ -131,20 +131,59 @@ function worldMark(game) {
   return null;
 }
 
+function promptPoint(ent) {
+  if (!ent) return null;
+  const d = 54;
+  if (ent.facing === 'south') return { x: ent.x, y: ent.y + d };
+  if (ent.facing === 'east') return { x: ent.x + d, y: ent.y };
+  if (ent.facing === 'west') return { x: ent.x - d, y: ent.y };
+  return { x: ent.x, y: ent.y - d };
+}
+
+/** Screen box of the interact label, so the floor arrow can stay off the words. */
+function promptBox(game) {
+  const t = game.interactTarget;
+  const r = game.renderer;
+  if (!t || !t.ent || !r.worldToScreen) return null;
+  const p = r.worldToScreen(promptPoint(t.ent).x, promptPoint(t.ent).y);
+  const zoom = r.cam.zoom || 1;
+  return { x: p.x, top: p.y - 16 * zoom - 14, bot: p.y + 14, half: 132 };
+}
+
+function markerClearance(game, mark) {
+  const box = promptBox(game);
+  const r = game.renderer;
+  const zoom = (r.cam && r.cam.zoom) || 1;
+  if (!box || !r.worldToScreen) return { lift: 56, ring: true };
+  const mp = r.worldToScreen(mark.x, mark.y);
+  const nearX = Math.abs(mp.x - box.x) < box.half + 18;
+  const ring = !(nearX && mp.y > box.top - 10 && mp.y < box.bot + 10);
+  let lift = 56;
+  const tipY = () => mp.y - (lift - 18) * zoom;
+  const topY = () => mp.y - (lift + 8) * zoom;
+  if (nearX && tipY() > box.top - 6 && topY() < box.bot + 6) {
+    lift = Math.max(56, Math.min(200, (mp.y - (box.top - 12)) / zoom + 18));
+  }
+  return { lift, ring };
+}
+
 export function drawCoachWorld(game, ctx) {
   const mark = worldMark(game);
   if (!mark) return;
+  const clear = markerClearance(game, mark);
   const bob = Math.sin(game.time * 5) * 8;
-  ctx.save();
-  ctx.strokeStyle = 'rgba(240, 208, 120, 0.95)';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.ellipse(mark.x, mark.y, 28, 12, 0, 0, TAU);
-  ctx.stroke();
-  ctx.restore();
+  if (clear.ring) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(240, 208, 120, 0.95)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.ellipse(mark.x, mark.y, 28, 12, 0, 0, TAU);
+    ctx.stroke();
+    ctx.restore();
+  }
   ctx.save();
   if (game.renderer.upright) game.renderer.upright(ctx, mark.x, mark.y);
-  ctx.translate(mark.x, mark.y - 56 + bob);
+  ctx.translate(mark.x, mark.y - clear.lift + bob);
   ctx.fillStyle = '#f0d078';
   ctx.strokeStyle = '#1a140c';
   ctx.lineWidth = 3;
@@ -229,17 +268,8 @@ function drawWorldCue(game, ctx, w, h, cue) {
     edgeArrow(ctx, view, sp, label, game.time);
     return;
   }
-  const bob = Math.sin(game.time * 5) * 7;
-  ctx.save();
-  ctx.translate(sp.x, sp.y - 36 + bob);
-  ctx.fillStyle = '#f0d078';
-  ctx.beginPath();
-  ctx.moveTo(0, 12);
-  ctx.lineTo(-8, -4);
-  ctx.lineTo(8, -4);
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
+  // On screen, the floor arrow is the pointer. A second chevron here was
+  // drawn over "RAISE STAKES" and the door name.
   chip(ctx, w, h, label, sub);
 }
 

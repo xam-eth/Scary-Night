@@ -1692,9 +1692,10 @@ export class Game {
     // muzzle flashes / impacts
     for (const b of this.bolts) r.addLight(b.x, b.y, 70, 0.3, [255, 220, 170]);
     r.lightEnd();
-    // The guide arrow is a pointer, not a floor stain. Draw it after the
-    // multiply so the night cannot swallow it.
+    // The guide arrow and the claw are pointers, not floor stains. Drawn
+    // after the multiply so the night cannot swallow them.
     drawCoachWorld(this, ctx);
+    p.drawSwing(ctx, this);
 
     // ---------- character self-light (moonlight on the GLB frame) ----------
     this.player.drawAfterDark(ctx, this);
@@ -1776,7 +1777,6 @@ export class Game {
       ctx.fill();
       ctx.restore();
     }
-    p.drawSwing(ctx);
     ctx.save(); this.renderer.upright(ctx, p.x, p.y);
     p.draw(ctx, this);
     ctx.restore();

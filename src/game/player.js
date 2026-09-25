@@ -223,6 +223,7 @@ export class Player {
       }
       if (this.attackT <= 0) this.state = PSTATE.IDLE;
     }
+    if (this.slashAge != null && this.slashAge < 1) this.slashAge += dt;
     if (this.attackCd <= 0) this.attackCd = 0;
 
     // ---------- drink ----------
@@ -269,6 +270,9 @@ export class Player {
     this.attackCd = PLAYER.attackCooldown;
     this.attackHit = false;
     this.swingAngle = this.angle;
+    // Visual only. The hit window stays attackWindup + attackActive; the claw
+    // mark lingers so a 0.2s swing is something you can actually see.
+    this.slashAge = 0;
     // Aim assist. The vampire always claws at what is in front of her; without
     // this, keyboard and touch players swing wherever they last walked, which
     // reads as the attack simply not working. Only bends toward a target that is
@@ -344,13 +348,18 @@ export class Player {
 
     // One WebGL evaluation per frame drives the body and every afterimage.
     const attackDuration = PLAYER.attackWindup + PLAYER.attackActive;
-    const attackProgress = this.attackT > 0 ? clamp(1 - this.attackT / attackDuration, 0, 1) : 0;
+    // The hit is 0.21s. The clip plays a little longer so the arm doesn't
+    // vanish in the same frame the claw connects.
+    const showSlash = !dead && this.slashAge != null && this.slashAge < 0.36;
+    const attackProgress = showSlash
+      ? clamp(this.slashAge / 0.32, 0, 1)
+      : (this.attackT > 0 ? clamp(1 - this.attackT / attackDuration, 0, 1) : 0);
     this._valenFrame = Valen3D.render({
-      state: dead ? PSTATE.IDLE : this.state,
+      state: dead ? PSTATE.IDLE : (showSlash ? PSTATE.ATTACK : this.state),
       // Billboards are counter-scaled upright, so feed the projected heading
       // or she looks 15° off every diagonal she walks.
       angle: visualAngle(this.angle, game.renderer.tilt || 1),
-      speed: dead ? 0 : sp,
+      speed: dead || showSlash ? 0 : sp,
       stepPhase: this.stepPhase,
       attackProgress,
     });
@@ -442,37 +451,52 @@ export class Player {
   }
 
   /**
-   * Claw arc on the FLOOR, in world space (call before upright()).
-   * Drawn in the same projection as movement and hit tests, so the red
-   * sweep covers exactly the cone that connects — not a screen-space circle
-   * that misses the thing she is facing.
+   * Claw mark. Call AFTER the night multiply — a swing drawn under it is
+   * swallowed, which is why the attack read as nothing. The floor arcs use
+   * the hit cone; the upright streaks are what the eye follows.
    */
-  drawSwing(ctx) {
-    if (this.attackT <= 0) return;
-    const total = PLAYER.attackWindup + PLAYER.attackActive;
-    const p = 1 - this.attackT / total;
-    const a = this.swingAngle;
+  drawSwing(ctx, game) {
+    const age = this.slashAge;
+    if (age == null || age > 0.5 || this.state === PSTATE.DEAD) return;
+    const sweep = clamp(age / 0.16, 0, 1);
+    const fade = sweep * (age < 0.2 ? 1 : clamp(1 - (age - 0.2) / 0.3, 0, 1));
+    if (fade < 0.04) return;
+    const a = this.swingAngle ?? this.angle;
+    const arc = PLAYER.attackArc;
+    const start = a - arc / 2 + (1 - sweep) * arc * 0.35;
+    const end = a - arc / 2 + sweep * arc;
+
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.globalCompositeOperation = 'screen';
-    const arcA = PLAYER.attackArc;
-    const sweep = lerp(-arcA / 2, arcA / 2, p);
-    const alpha = Math.sin(p * Math.PI) * 0.75;
-    const g = ctx.createRadialGradient(0, 0, 18, 0, 0, PLAYER.attackRange);
-    g.addColorStop(0, `rgba(255,60,80,${0.0 * alpha})`);
-    g.addColorStop(0.55, `rgba(190,30,50,${0.30 * alpha})`);
-    g.addColorStop(1, `rgba(255,120,140,${0.55 * alpha})`);
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.arc(0, 0, PLAYER.attackRange, a + sweep - 0.35, a + sweep + 0.35);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = `rgba(255,200,210,${0.5 * alpha})`;
-    ctx.lineWidth = 2;
-    for (let i = -1; i <= 1; i++) {
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 3; i++) {
+      const rad = PLAYER.attackRange * (0.52 + i * 0.18);
+      ctx.strokeStyle = i === 1
+        ? `rgba(255, 232, 224, ${(0.9 * fade).toFixed(3)})`
+        : `rgba(255, 58, 66, ${(0.72 * fade).toFixed(3)})`;
+      ctx.lineWidth = i === 1 ? 3.6 : 2.4;
       ctx.beginPath();
-      ctx.arc(0, 0, PLAYER.attackRange * (0.7 + i * 0.14), a + sweep - 0.3, a + sweep + 0.3);
+      ctx.arc(0, 0, rad, start, end);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    if (!game || !game.renderer || !game.renderer.upright) return;
+    ctx.save();
+    game.renderer.upright(ctx, this.x, this.y);
+    ctx.translate(this.x, this.y);
+    ctx.rotate(visualAngle(a, game.renderer.tilt || 1));
+    ctx.globalCompositeOperation = 'screen';
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 3; i++) {
+      const t0 = -0.85 + sweep * 1.45 + (i - 1) * 0.18;
+      ctx.strokeStyle = i === 1
+        ? `rgba(255, 240, 232, ${(0.95 * fade).toFixed(3)})`
+        : `rgba(255, 42, 52, ${(0.82 * fade).toFixed(3)})`;
+      ctx.lineWidth = i === 1 ? 3.2 : 2.1;
+      ctx.beginPath();
+      ctx.arc(8, -24, 42 + i * 7, t0, t0 + 0.7);
       ctx.stroke();
     }
     ctx.restore();
