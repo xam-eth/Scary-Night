@@ -57,7 +57,7 @@ function drawGoals(game, ctx, w, h) {
       setLetter(ctx, 0.3);
       ctx.fillStyle = 'rgba(178,172,160,0.75)';
       let label = st.open[0].label;
-      const maxW = Math.min(168, (game.input && game.input.clusterLeft ? game.input.clusterLeft - 20 : w * 0.42));
+      const maxW = Math.min(132, (game.input && game.input.clusterLeft ? game.input.clusterLeft - 28 : w * 0.34));
       while (ctx.measureText(label).width > maxW && label.length > 6) label = label.slice(0, -2);
       ctx.fillText(label, x, y + 16);
       ctx.fillStyle = 'rgba(0,0,0,0.45)';
@@ -342,37 +342,33 @@ function drawDoorStatus(game, ctx, w, h) {
   const { phone, short } = phoneHud(w, h);
   const list = shown.slice(0, phone ? (short ? 2 : 3) : 4);
   if (phone) {
-    const x = 14;
-    let y = short ? 76 : 132;
-    const floor = (game.input && game.input.stick)
-      ? (game.input.stick.homeY - game.input.stick.r - 64)
-      : h - 160;
-    const maxW = Math.min(156, (game.input && game.input.clusterLeft ? game.input.clusterLeft - 24 : w * 0.4));
+    // One door, in the top-right margin. A stack of three names was sitting
+    // on the room photo and reading as broken UI.
+    const d = list[0];
+    const bear = bearing(game, d.x, d.y);
+    const y = short ? 64 : 96;
+    const maxW = Math.min(132, w * 0.34);
     ctx.save();
-    ctx.textAlign = 'left';
+    ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
     ctx.font = `500 11px ${SANS}`;
-    setLetter(ctx, 0.4);
-    for (const d of list) {
-      if (y > floor) break;
-      const pct = clamp(d.hp / d.hpMax, 0, 1);
-      ctx.fillStyle = 'rgba(0,0,0,0.5)';
-      ctx.fillRect(x, y - 3, maxW, 5);
-      ctx.fillStyle = d.broken ? '#2a2a30' : pct > 0.6 ? '#6a6a52' : pct > 0.3 ? '#8a6a2a' : '#9c1a26';
-      ctx.fillRect(x, y - 3, maxW * pct, 5);
-      const bear = bearing(game, d.x, d.y);
-      let name = d.broken ? 'BROKEN' : d.name;
-      while (ctx.measureText(name + ' ' + bear.card).width > maxW - 16 && name.length > 3) name = name.slice(0, -1);
-      ctx.fillStyle = d.broken ? 'rgba(200,80,80,0.9)' : 'rgba(190,180,165,0.8)';
-      ctx.fillText(`${name} ${bear.card}`, x, y + 10);
-      ctx.save();
-      ctx.translate(x + maxW - 6, y + 10);
-      ctx.rotate(bear.screen);
-      ctx.fillStyle = d.attackers > 0 ? 'rgba(220,70,60,0.95)' : 'rgba(210,200,180,0.8)';
-      ctx.beginPath(); ctx.moveTo(5, 0); ctx.lineTo(-4, -3); ctx.lineTo(-4, 3); ctx.closePath(); ctx.fill();
-      ctx.restore();
-      y += 28;
-    }
+    setLetter(ctx, 0.3);
+    let name = d.broken ? 'BROKEN' : d.name;
+    while (ctx.measureText(name + ' ' + bear.card).width > maxW - 16 && name.length > 3) name = name.slice(0, -1);
+    const label = `${name} ${bear.card}`;
+    const tw = ctx.measureText(label).width;
+    const x = w - 12;
+    ctx.fillStyle = 'rgba(6,7,10,0.82)';
+    ctx.fillRect(x - tw - 22, y - 12, tw + 28, 24);
+    const pct = clamp(d.hp / d.hpMax, 0, 1);
+    ctx.fillStyle = d.broken ? '#9c1a26' : pct > 0.6 ? '#6a6a52' : pct > 0.3 ? '#8a6a2a' : '#9c1a26';
+    ctx.fillRect(x - tw - 22, y + 8, (tw + 28) * pct, 2);
+    ctx.fillStyle = d.broken || d.attackers > 0 ? 'rgba(230,120,110,0.95)' : 'rgba(210,200,180,0.9)';
+    ctx.fillText(label, x - 14, y);
+    ctx.translate(x - 6, y);
+    ctx.rotate(bear.screen);
+    ctx.fillStyle = d.attackers > 0 ? 'rgba(230,80,70,0.95)' : 'rgba(210,200,180,0.85)';
+    ctx.beginPath(); ctx.moveTo(5, 0); ctx.lineTo(-4, -3); ctx.lineTo(-4, 3); ctx.closePath(); ctx.fill();
     ctx.restore();
     return;
   }
@@ -404,7 +400,12 @@ function drawDoorStatus(game, ctx, w, h) {
     let name = d.broken ? `${d.name} BROKEN` : d.name;
     const maxName = Math.max(72, bw - 36);
     while (ctx.measureText(name + '  ' + bear.card).width > maxName && name.length > 4) name = name.slice(0, -1);
-    ctx.fillText(name + `  ${bear.card}`, bw - 22, y + 2);
+    const label = name + `  ${bear.card}`;
+    const tw = ctx.measureText(label).width;
+    ctx.fillStyle = 'rgba(6,7,10,0.78)';
+    ctx.fillRect(bw - 30 - tw, y - 10, tw + 16, 20);
+    ctx.fillStyle = d.broken ? 'rgba(230,120,110,0.95)' : 'rgba(220,210,190,0.92)';
+    ctx.fillText(label, bw - 22, y + 2);
     // wedge points the way to run — letters alone are a translation step
     ctx.save();
     ctx.translate(bw - 12, y + 2);
@@ -570,11 +571,14 @@ function drawBearings(game, ctx, w, h) {
     const e = game.mansion.entranceById(k.entranceId);
     if (!e) continue;
     const sp = game.renderer.worldToScreen(e.x, e.y);
-    if (sp.x > margin && sp.x < w - margin && sp.y > 64 && sp.y < h - margin) continue;
-    const cx = w / 2, cy = h / 2;
+    const view = game.renderer.view || { left: 0, top: 0, w, h };
+    const onPlay = sp.x > view.left + margin && sp.x < view.left + view.w - margin
+      && sp.y > view.top + 16 && sp.y < view.top + view.h - 16;
+    if (onPlay) continue;
+    const cx = view.left + view.w / 2, cy = view.top + view.h / 2;
     const ang = Math.atan2(sp.y - cy, sp.x - cx);
     const dx = Math.cos(ang), dy = Math.sin(ang);
-    const hx = w / 2 - 46, hy = h / 2 - 52;
+    const hx = view.w / 2 - 28, hy = view.h / 2 - 22;
     const tx = Math.abs(dx) > 0.001 ? hx / Math.abs(dx) : 1e9;
     const ty = Math.abs(dy) > 0.001 ? hy / Math.abs(dy) : 1e9;
     const t = Math.min(tx, ty);

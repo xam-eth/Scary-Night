@@ -49,7 +49,9 @@ export class Renderer {
     // around their foot anchor by renderer.upright(), which turns flat
     // top-down staging into a Diablo-style angled read without touching
     // gameplay math (aim, movement and collision stay pure top-down).
-    this.tilt = 0.42;  // lower = more oblique. 0.66 read as top-down; 0.58 still too steep.
+    this.baseTilt = 0.42;  // lower = more oblique. 0.66 read as top-down; 0.58 still too steep.
+    this.tilt = this.baseTilt;
+    this.view = { left: 0, top: 0, w: 1280, h: 720, cx: 640, cy: 360 };
     this.cam = { x: 0, y: 0, tx: 0, ty: 0, zoom: 1, viewW: 1280, viewH: 720, shake: 0, sx: 0, sy: 0, rot: 0 };
     this.grain = this._makeGrain();
     this.flash = 0;
@@ -87,9 +89,20 @@ export class Renderer {
     this.canvas.style.height = this.h + 'px';
     this.light.width = Math.max(2, Math.floor(this.w * this.lightScale));
     this.light.height = Math.max(2, Math.floor(this.h * this.lightScale));
-    this.cam.zoom = clamp(this.w / 1010, 0.72, 1.9);
-    this.cam.viewW = this.w / this.cam.zoom;
-    this.cam.viewH = this.h / (this.cam.zoom * this.tilt);
+    // A tall phone was a map: four rooms stacked, the vampire a speck under
+    // the clock. Letterbox the world between the clock and the thumbs so the
+    // frame is the room she is standing in. Wide screens keep the tuned 3/4.
+    const tall = this.h > this.w * 1.2 && this.h >= 620;
+    this.tilt = tall ? 0.56 : this.baseTilt;
+    const top = tall ? 118 : 0;
+    // Room ends above the blood plate, leaving one strip for the caption.
+    const bottom = tall ? Math.max(236, Math.round(this.h * 0.3)) : 0;
+    const vh = Math.max(220, this.h - top - bottom);
+    this.view = { left: 0, top, w: this.w, h: vh, cx: this.w / 2, cy: top + vh / 2 };
+    const basis = tall ? 460 : 1010;
+    this.cam.zoom = clamp(this.view.w / basis, tall ? 0.9 : 0.72, 1.9);
+    this.cam.viewW = this.view.w / this.cam.zoom;
+    this.cam.viewH = this.view.h / (this.cam.zoom * this.tilt);
   }
 
   /* ---------------- camera ---------------- */
@@ -136,27 +149,37 @@ export class Renderer {
 
   screenToWorld(sx, sy) {
     const c = this.cam;
+    const v = this.view;
     return {
-      x: c.x + (sx - this.w / 2) / c.zoom,
-      y: c.y + (sy - this.h / 2) / (c.zoom * this.tilt),
+      x: c.x + (sx - v.cx) / c.zoom,
+      y: c.y + (sy - v.cy) / (c.zoom * this.tilt),
     };
   }
 
   /** Inverse of the world camera (shake ignored — HUD cues must not jitter). */
   worldToScreen(x, y) {
     const c = this.cam;
+    const v = this.view;
     return {
-      x: this.w / 2 + (x - c.x) * c.zoom,
-      y: this.h / 2 + (y - c.y) * c.zoom * this.tilt,
+      x: v.cx + (x - c.x) * c.zoom,
+      y: v.cy + (y - c.y) * c.zoom * this.tilt,
     };
   }
 
   /* ---------------- world drawing ---------------- */
   beginWorld() {
     const ctx = this.ctx, c = this.cam;
+    const v = this.view;
+    ctx.save();
+    this._worldState = true;
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    if (v.top > 0 || v.h < this.h - 1) {
+      ctx.beginPath();
+      ctx.rect(v.left, v.top, v.w, v.h);
+      ctx.clip();
+    }
     const sh = this._shake === false ? 0 : 1;
-    ctx.translate(this.w / 2 + c.sx * sh, this.h / 2 + c.sy * sh);
+    ctx.translate(v.cx + c.sx * sh, v.cy + c.sy * sh);
     ctx.scale(c.zoom, c.zoom * this.tilt);
     ctx.translate(-c.x, -c.y);
   }
@@ -189,9 +212,10 @@ export class Renderer {
     lc.fillStyle = `rgb(${a[0]},${a[1]},${a[2]})`;
     lc.fillRect(0, 0, this.light.width, this.light.height);
     const c = this.cam;
+    const v = this.view;
     const s = this.lightScale * c.zoom;
     lc.globalCompositeOperation = 'lighter';
-    lc.setTransform(s, 0, 0, s * this.tilt, this.light.width / 2 - c.x * s, this.light.height / 2 - c.y * s * this.tilt);
+    lc.setTransform(s, 0, 0, s * this.tilt, v.cx * this.lightScale - c.x * s, v.cy * this.lightScale - c.y * s * this.tilt);
   }
 
   /** Radial light. color/intensity are multiplied into the lightmap. */
@@ -372,8 +396,34 @@ export class Renderer {
     ctx.fillRect(0, 0, this.w, this.h);
   }
 
+  /** Soften the letterbox so the room does not look sliced off. */
+  drawFrameFade() {
+    const v = this.view;
+    if (!v || v.top < 4) return;
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    const ink = '#04050a';
+    const top = ctx.createLinearGradient(0, v.top - 6, 0, v.top + 28);
+    top.addColorStop(0, ink);
+    top.addColorStop(1, 'rgba(4,5,10,0)');
+    ctx.fillStyle = top;
+    ctx.fillRect(0, v.top - 6, this.w, 34);
+    const bottomY = v.top + v.h;
+    const bot = ctx.createLinearGradient(0, bottomY - 26, 0, bottomY + 8);
+    bot.addColorStop(0, 'rgba(4,5,10,0)');
+    bot.addColorStop(1, ink);
+    ctx.fillStyle = bot;
+    ctx.fillRect(0, bottomY - 26, this.w, 34);
+    ctx.restore();
+  }
+
   resetForUI() {
     const ctx = this.ctx;
+    if (this._worldState) {
+      ctx.restore();
+      this._worldState = false;
+    }
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = 1;

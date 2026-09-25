@@ -1289,7 +1289,8 @@ export class Game {
       }
     }
     this.messages.push({ text, tone, whisper, t: 0, life, key });
-    if (this.messages.length > 3) this.messages.shift();
+    // One caption. A stack of three bars was covering the vampire and the door.
+    if (this.messages.length > 1) this.messages.splice(0, this.messages.length - 1);
   }
 
   showBanner(text, life = 3) {
@@ -1537,6 +1538,7 @@ export class Game {
     }
     if (gameVisible) this.renderWorld(dtSafe(this));
     r.resetForUI();
+    if (gameVisible) r.drawFrameFade();
 
     // ---- HUD ----
     if (this.screen === 'playing' || this.screen === 'dying') {
@@ -1800,57 +1802,59 @@ export class Game {
   }
 
   drawMessages(ctx, w, h) {
-    const msgs = this.messages;
+    const captionsOn = !this.save.settings || this.save.settings.captions !== 0;
+    const msgs = captionsOn ? this.messages : [];
     ctx.save();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    const touch = this.input && this.input.touchSeen;
-    // phones keep the thumb zone and the blood bar clear of text
-    let y = h * (touch ? 0.32 : 0.72);
-    for (let i = 0; i < msgs.length; i++) {
-      const m = msgs[i];
-      const inA = clamp(m.t / 0.5, 0, 1);
-      const outA = clamp((m.life - m.t) / 0.8, 0, 1);
+    const m = msgs[msgs.length - 1];
+    if (m) {
+      const inA = clamp(m.t / 0.35, 0, 1);
+      const outA = clamp((m.life - m.t) / 0.6, 0, 1);
       const a = inA * outA;
       const tone = m.tone === 'danger' ? '#e2685c' : m.tone === 'gold' ? '#e0c070' : m.tone === 'warm' ? '#e0c48a' : m.tone === 'calm' ? '#a8b0c0' : '#cfc6b0';
-      // wrap to the viewport — a 390px phone must read every whisper too
-      const baseLines = String(m.text).split('\n');
-      const fontLine = `500 ${m.whisper ? 15 : 14}px ${m.whisper ? 'Georgia, serif' : '"Segoe UI", Roboto, sans-serif'}`;
-      ctx.font = fontLine;
-      if ('letterSpacing' in ctx) ctx.letterSpacing = '4px';
-      const maxW = w * 0.9;
+      const view = this.renderer.view || { top: 0, h, left: 0, w, cy: h / 2 };
+      const framed = view.top > 8 || view.h < h - 8;
+      const phone = w < 840 || h < 500;
+      const stick = this.input && this.input.stick;
+      const stickTop = stick ? (stick.homeY - stick.r) : h - 80;
+      // One chip, under the vampire and above the blood plate. Never a stack
+      // across the middle of the room.
+      const y = framed
+        ? view.top + view.h + 16
+        : (phone ? stickTop - 28 : h * 0.7);
+      const maxW = Math.min(framed ? view.w - 28 : w * 0.72, phone ? 280 : 560);
+      const fontPx = phone ? 12 : 14;
+      ctx.font = `500 ${fontPx}px "Segoe UI", Roboto, sans-serif`;
+      if ('letterSpacing' in ctx) ctx.letterSpacing = '0.4px';
       const lines = [];
-      for (const base of baseLines) {
+      for (const base of String(m.text).split('\n')) {
         let cur = '';
         for (const word of base.split(' ')) {
           const next = cur ? cur + ' ' + word : word;
           if (ctx.measureText(next).width > maxW && cur) { lines.push(cur); cur = word; }
           else cur = next;
         }
-        lines.push(cur);
+        if (cur) lines.push(cur);
       }
-      // v1.0 (QA P1-5) — a soft scrim so captions never fight the rug: the
-      // text keeps its glow, the floor keeps its darkness, both are readable.
+      const shown = lines.slice(0, 2);
       let maxLw = 0;
-      for (const ln of lines) maxLw = Math.max(maxLw, ctx.measureText(ln).width);
-      ctx.save();
-      ctx.shadowBlur = 0;
-      ctx.globalAlpha = a * 0.42;
-      ctx.fillStyle = 'rgba(2,3,6,1)';
-      const scrW = Math.min(w * 0.94, maxLw + 58);
-      const scrH = lines.length * 20 + 13;
+      for (const ln of shown) maxLw = Math.max(maxLw, ctx.measureText(ln).width);
+      const scrW = Math.min(maxW + 22, maxLw + 22);
+      const scrH = shown.length * (fontPx + 6) + 10;
+      ctx.globalAlpha = a * 0.88;
+      ctx.fillStyle = 'rgba(6,7,10,0.88)';
       ctx.fillRect(w / 2 - scrW / 2, y - scrH / 2, scrW, scrH);
-      ctx.restore();
-      ctx.globalAlpha = a * (m.whisper ? 0.75 : 0.95);
-      ctx.font = `${m.whisper ? 'italic ' : ''}500 ${m.whisper ? 15 : 14}px ${m.whisper ? 'Georgia, serif' : '"Segoe UI", Roboto, sans-serif'}`;
-      if ('letterSpacing' in ctx) ctx.letterSpacing = '4px';
+      ctx.strokeStyle = tone;
+      ctx.globalAlpha = a * 0.45;
+      ctx.strokeRect(w / 2 - scrW / 2 + 0.5, y - scrH / 2 + 0.5, scrW - 1, scrH - 1);
+      ctx.globalAlpha = a;
       ctx.fillStyle = tone;
-      ctx.shadowColor = 'rgba(0,0,0,0.95)';
-      ctx.shadowBlur = 10;
-      for (let l = 0; l < lines.length; l++) {
-        ctx.fillText(lines[l], w / 2, y + l * 20 - (lines.length - 1) * 10);
+      ctx.shadowColor = 'rgba(0,0,0,0.9)';
+      ctx.shadowBlur = 6;
+      for (let l = 0; l < shown.length; l++) {
+        ctx.fillText(shown[l], w / 2, y + l * (fontPx + 6) - (shown.length - 1) * (fontPx + 6) / 2);
       }
-      y += lines.length * 20 + 12;
     }
     ctx.restore();
 
@@ -1870,14 +1874,16 @@ export class Game {
         ctx.fillStyle = b.text === 'PANIC' ? '#c8202e' : '#e6dcc4';
         ctx.shadowColor = b.text === 'PANIC' ? 'rgba(180,20,30,0.6)' : 'rgba(0,0,0,0.9)';
         ctx.shadowBlur = 22;
-        ctx.fillText(b.text, w / 2, h * 0.3);
+        const view = this.renderer.view;
+        const by = view && view.top > 8 ? view.top + 28 : h * 0.2;
+        ctx.fillText(b.text, w / 2, by);
         ctx.shadowBlur = 0;
         ctx.strokeStyle = 'rgba(180,150,80,0.5)';
         ctx.lineWidth = 1;
         const tw = ctx.measureText(b.text).width;
         ctx.beginPath();
-        ctx.moveTo(w / 2 - tw / 2 - 20, h * 0.3 + 26);
-        ctx.lineTo(w / 2 + tw / 2 + 20, h * 0.3 + 26);
+        ctx.moveTo(w / 2 - tw / 2 - 20, by + 26);
+        ctx.lineTo(w / 2 + tw / 2 + 20, by + 26);
         ctx.stroke();
         ctx.restore();
       }

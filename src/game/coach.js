@@ -223,9 +223,10 @@ function drawWorldCue(game, ctx, w, h, cue) {
   const label = (cue && cue.label) || 'GO';
   const sub = (cue && cue.sub) || 'FOLLOW THE ARROW';
   const sp = game.renderer.worldToScreen(mark.x, mark.y);
-  const on = sp.x > 56 && sp.x < w - 56 && sp.y > 72 && sp.y < h - 88;
+  const view = game.renderer.view || { left: 0, top: 0, w, h };
+  const on = sp.x > view.left + 36 && sp.x < view.left + view.w - 36 && sp.y > view.top + 24 && sp.y < view.top + view.h - 28;
   if (!on) {
-    edgeArrow(ctx, w, h, sp, label, game.time);
+    edgeArrow(ctx, view, sp, label, game.time);
     return;
   }
   const bob = Math.sin(game.time * 5) * 7;
@@ -365,8 +366,16 @@ function chip(ctx, w, h, title, sub) {
   const tw = Math.max(ctx.measureText(title).width, ctx.measureText(sub).width);
   const bw = tw + 22;
   const bh = 36;
-  const left = Math.max(8, Math.min(w / 2 - bw / 2, w - bw - 8));
-  const top = h < 500 ? 46 : 70;
+  const phone = w < 840 || h < 500;
+  const short = h < 500;
+  const clockY = short ? 28 : phone ? 40 : h * 0.055;
+  const digit = short ? 24 : phone ? 30 : 40;
+  const digitBottom = clockY + 8 + digit / 2;
+  const railBottom = clockY + (short ? 20 : phone ? 32 : 42);
+  let top = Math.ceil(Math.max(digitBottom, railBottom) + (short ? 18 : 8));
+  let left = Math.max(8, Math.min(w / 2 - bw / 2, w - bw - 8));
+  // Goals own the top-left. A centered chip must not cover "THE FIRST MINUTE".
+  if (phone && left < 158) left = Math.min(158, w - bw - 8);
   ctx.fillStyle = 'rgba(8,7,6,0.9)';
   ctx.strokeStyle = 'rgba(240, 208, 120, 0.9)';
   ctx.lineWidth = 1.5;
@@ -382,11 +391,11 @@ function chip(ctx, w, h, title, sub) {
   ctx.restore();
 }
 
-function edgeArrow(ctx, w, h, sp, label, time) {
-  const cx = w / 2, cy = h / 2;
+function edgeArrow(ctx, view, sp, label, time) {
+  const cx = view.left + view.w / 2, cy = view.top + view.h / 2;
   const ang = Math.atan2(sp.y - cy, sp.x - cx);
   const dx = Math.cos(ang), dy = Math.sin(ang);
-  const hx = w / 2 - 58, hy = h / 2 - 70;
+  const hx = view.w / 2 - 36, hy = view.h / 2 - 28;
   const tx = Math.abs(dx) > 0.001 ? hx / Math.abs(dx) : 1e9;
   const ty = Math.abs(dy) > 0.001 ? hy / Math.abs(dy) : 1e9;
   const t = Math.min(tx, ty);

@@ -766,11 +766,20 @@ export class Player {
     const frame = this._valenFrame;
     if (!frame || this.state === PSTATE.DEAD) return;
     ctx.save();
-    ctx.globalCompositeOperation = 'screen';
+    // The body was drawn upright, then the night multiply darkened it. This
+    // pass has to use the same counter-scale or the moonlight misses her and
+    // paints a squashed smear at her feet.
+    if (game.renderer.upright) game.renderer.upright(ctx, this.x, this.y);
     ctx.translate(this.x, this.y);
-    const need = (this.lowBlood ? 0.26 : 0.17) * (game.blackoutT > 0 ? 0.55 : 1);
+    ctx.globalCompositeOperation = 'screen';
+    const need = (this.lowBlood ? 0.46 : 0.32) * (game.blackoutT > 0 ? 0.72 : 1);
     ctx.globalAlpha = need;
-    Valen3D.draw(ctx, frame, 74, { alpha: 1, footInset: 9 });
+    Valen3D.draw(ctx, frame, 84, { alpha: 1, footInset: 9 });
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = 'rgba(186, 206, 235, 0.9)';
+    ctx.beginPath();
+    ctx.ellipse(0, 2, 11, 4.5, 0, 0, TAU);
+    ctx.fill();
     ctx.restore();
   }
 
