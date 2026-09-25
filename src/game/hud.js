@@ -346,7 +346,9 @@ function drawDoorStatus(game, ctx, w, h) {
     // on the room photo and reading as broken UI.
     const d = list[0];
     const bear = bearing(game, d.x, d.y);
-    const y = short ? 64 : 96;
+    // Tall phones: the coach chip owns the row under the clock. Drop the door
+    // mark below that row so "WALK ONTO THEM" cannot eat the door name.
+    const y = short ? 64 : 156;
     const maxW = Math.min(132, w * 0.34);
     ctx.save();
     ctx.textAlign = 'right';

@@ -290,7 +290,7 @@ export class Renderer {
     const lift = this.fadeLift ?? 1;
     if (lift > 0.02) {
       ctx.globalCompositeOperation = 'screen';
-      ctx.globalAlpha = 0.26 * lift;
+      ctx.globalAlpha = 0.34 * lift;
       ctx.fillStyle = this.fadeColor || '#8490a4';
       ctx.fillRect(0, 0, this.w, this.h);
       ctx.globalAlpha = 1;

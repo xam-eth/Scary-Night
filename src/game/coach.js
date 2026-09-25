@@ -368,14 +368,27 @@ function chip(ctx, w, h, title, sub) {
   const bh = 36;
   const phone = w < 840 || h < 500;
   const short = h < 500;
-  const clockY = short ? 28 : phone ? 40 : h * 0.055;
-  const digit = short ? 24 : phone ? 30 : 40;
-  const digitBottom = clockY + 8 + digit / 2;
-  const railBottom = clockY + (short ? 20 : phone ? 32 : 42);
-  let top = Math.ceil(Math.max(digitBottom, railBottom) + (short ? 18 : 8));
-  let left = Math.max(8, Math.min(w / 2 - bw / 2, w - bw - 8));
-  // Goals own the top-left. A centered chip must not cover "THE FIRST MINUTE".
-  if (phone && left < 158) left = Math.min(158, w - bw - 8);
+  const tall = h > w * 1.2 && h >= 620;
+  let top;
+  let left;
+  if (short) {
+    // A centered chip on a short phone lands on the dining table. Park it
+    // under the goals, on the wall, where the thumb is not.
+    top = 76;
+    left = 12;
+  } else if (tall) {
+    const clockY = 40;
+    const digitBottom = clockY + 8 + 15;
+    const railBottom = clockY + 32;
+    top = Math.ceil(Math.max(digitBottom, railBottom) + 8);
+    left = Math.max(148, Math.min(w / 2 - bw / 2, w - bw - 8));
+  } else {
+    const clockY = h * 0.055;
+    const digitBottom = clockY + 8 + 20;
+    const railBottom = clockY + 42;
+    top = Math.ceil(Math.max(digitBottom, railBottom) + 8);
+    left = Math.max(8, Math.min(w / 2 - bw / 2, w - bw - 8));
+  }
   ctx.fillStyle = 'rgba(8,7,6,0.9)';
   ctx.strokeStyle = 'rgba(240, 208, 120, 0.9)';
   ctx.lineWidth = 1.5;

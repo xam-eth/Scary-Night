@@ -685,7 +685,7 @@ export class Game {
     // first-use legend for the door list (QA P1-7): teach it while it matters
     if (!this.compassLegendShown && this.mansion.doors.some((d) => d.attackers > 0)) {
       this.compassLegendShown = true;
-      this.showMessage('THE TOP-RIGHT LIST POINTS AT THE DOOR IT IS TOUCHING.', { tone: 'calm', life: 5 });
+      this.showMessage('THE CORNER MARK POINTS AT THE DOOR THEY ARE TOUCHING.', { tone: 'calm', life: 4.2 });
     }
     // keep the HUD knock markers in sync
     this.knocks = this.director.knock ? [this.director.knock] : [];
@@ -697,8 +697,12 @@ export class Game {
     const p = this.player;
     const lookX = clamp(p.vx * 0.22, -70, 70);
     const lookY = clamp(p.vy * 0.22, -70, 70);
+    // On a tall phone the player was centered on a blank wall. Sit her a little
+    // lower so the table and the door ahead stay in the frame.
+    const tall = this.renderer.h > this.renderer.w * 1.2;
+    const biasY = tall ? -110 : 0;
     this.noteRoom(p);
-    this.renderer.followCamera(p.x, p.y, dt, lookX, lookY, this.mansion.camBounds);
+    this.renderer.followCamera(p.x, p.y, dt, lookX, lookY + biasY, this.mansion.camBounds);
 
     // ---- stats / codex ----
     this.stats.bloodMin = Math.min(this.stats.bloodMin, p.bloodPct * 100);

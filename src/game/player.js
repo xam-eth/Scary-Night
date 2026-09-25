@@ -765,6 +765,16 @@ export class Player {
   drawAfterDark(ctx, game) {
     const frame = this._valenFrame;
     if (!frame || this.state === PSTATE.DEAD) return;
+    // Multiply cannot brighten a near-black floor. A small pool on the ground
+    // keeps the first minute readable before the lamps are doing the work.
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    ctx.globalAlpha = 0.2;
+    ctx.fillStyle = 'rgba(176, 194, 224, 0.95)';
+    ctx.beginPath();
+    ctx.ellipse(this.x, this.y + 4, 42, 18, 0, 0, TAU);
+    ctx.fill();
+    ctx.restore();
     ctx.save();
     // The body was drawn upright, then the night multiply darkened it. This
     // pass has to use the same counter-scale or the moonlight misses her and
@@ -809,11 +819,11 @@ export class Player {
   submitLight(renderer, game) {
     const r = this.lightR ?? 150;
     // cold inner light so the player is never lost in the dark
-    renderer.addLight(this.x, this.y, r, this.lightI ?? 0.4, [190, 205, 235]);
+    renderer.addLight(this.x, this.y, r, this.lightI ?? 0.55, [190, 205, 235]);
     // faint warm pool right under the vampire (reads as "presence")
-    renderer.addLight(this.x, this.y, r * 0.42, 0.22, [255, 170, 140]);
+    renderer.addLight(this.x, this.y, r * 0.42, 0.28, [255, 170, 140]);
     // wide soft ring: keeps the room readable at the edge of her world.
     // Horror lives in the periphery beyond THIS ring, not in total black.
-    renderer.addLight(this.x, this.y, r * 2.1, 0.10, [150, 165, 205]);
+    renderer.addLight(this.x, this.y, r * 2.1, 0.16, [150, 165, 205]);
   }
 }
