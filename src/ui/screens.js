@@ -74,8 +74,8 @@ function buttonVisual(ctx, { x, y, w, h }, { active, disabled, label, sub, small
   const a = active ? 1 : 0.72;
   // backing
   const g = ctx.createLinearGradient(x, y, x + w, y);
-  g.addColorStop(0, active ? 'rgba(60,42,20,0.55)' : 'rgba(16,16,22,0.55)');
-  g.addColorStop(1, active ? 'rgba(30,20,10,0.35)' : 'rgba(10,10,14,0.45)');
+  g.addColorStop(0, active ? 'rgba(42,28,16,0.94)' : 'rgba(8,9,14,0.88)');
+  g.addColorStop(1, active ? 'rgba(22,14,10,0.9)' : 'rgba(8,9,14,0.82)');
   ctx.fillStyle = g;
   ctx.fillRect(x, y, w, h);
   // frame
@@ -112,14 +112,23 @@ function buttonVisual(ctx, { x, y, w, h }, { active, disabled, label, sub, small
 }
 
 
-const BRAND_PLATE = './assets/loading-last-night.jpg';
+const BRAND_PLATE = './assets/brand/menu-9x16.jpg';
+const BRAND_MARK = './assets/brand/mark.svg';
+let brandMark = null;
 let brandPlate = null;
 
 function ensureBrandPlate() {
-  if (brandPlate || typeof Image === 'undefined') return;
-  brandPlate = new Image();
-  brandPlate.decoding = 'async';
-  brandPlate.src = BRAND_PLATE;
+  if (typeof Image === 'undefined') return;
+  if (!brandPlate) {
+    brandPlate = new Image();
+    brandPlate.decoding = 'async';
+    brandPlate.src = BRAND_PLATE;
+  }
+  if (!brandMark) {
+    brandMark = new Image();
+    brandMark.decoding = 'async';
+    brandMark.src = BRAND_MARK;
+  }
 }
 
 /** The mansion plate already in the repo. One house, not a new generated set. */
@@ -145,14 +154,27 @@ function drawBrandPlate(ctx, w, h, { focus = 0.18, dim = 0.55 } = {}) {
 /* ================= menu scene ================= */
 
 export function drawMenuScene(game, ctx, w, h, t) {
-  // Same plate as the loading screen. The procedural hall was a second, weaker house.
-  drawBrandPlate(ctx, w, h, { focus: 0.16, dim: 0.5 });
+  // Vertical hall plate. A light wash only — the architecture is the identity.
+  drawBrandPlate(ctx, w, h, { focus: 0.5, dim: 0.08 });
+  const topWash = ctx.createLinearGradient(0, 0, 0, h * 0.28);
+  topWash.addColorStop(0, 'rgba(5,6,11,0.72)');
+  topWash.addColorStop(1, 'rgba(5,6,11,0)');
+  ctx.fillStyle = topWash;
+  ctx.fillRect(0, 0, w, h * 0.28);
+  const botWash = ctx.createLinearGradient(0, h * 0.48, 0, h);
+  botWash.addColorStop(0, 'rgba(5,6,11,0)');
+  botWash.addColorStop(1, 'rgba(5,6,11,0.55)');
+  ctx.fillStyle = botWash;
+  ctx.fillRect(0, h * 0.48, w, h * 0.52);
+  ctx.strokeStyle = 'rgba(168,131,60,0.55)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(10.5, 10.5, w - 21, h - 21);
 
-  // ---- the character, in the foreground, three-quarter to camera ----
+  // ---- the character, in the hall, under the window ----
   // Industry rule for a hero screen: the menu shows WHAT YOU PLAY, so the
   // loaded GLB itself stands in the hall (its rest pose, evaluated once).
   // The procedural figure survives only while the GLB is unavailable.
-  const px = w * 0.16, py = h * 0.86;
+  const px = w * 0.5, py = h * 0.5;
   const br = Math.sin(t * 1.1) * 2.6;
   const vframe = Valen3D.renderMenu();
   ctx.save();
@@ -170,7 +192,7 @@ export function drawMenuScene(game, ctx, w, h, t) {
   ctx.closePath(); ctx.fill();
   ctx.restore();
   if (vframe) {
-    Valen3D.draw(ctx, vframe, h * 0.46 / scale, { footInset: 8 });
+    Valen3D.draw(ctx, vframe, h * 0.28 / scale, { footInset: 8 });
   } else {
     // coat
     const coatG = ctx.createLinearGradient(0, -180, 0, 10);
@@ -221,20 +243,25 @@ export function drawMenuScene(game, ctx, w, h, t) {
   ctx.save();
   const vg = ctx.createRadialGradient(w / 2, h / 2, h * 0.2, w / 2, h / 2, h * 0.95);
   vg.addColorStop(0, 'rgba(0,0,0,0)');
-  vg.addColorStop(1, 'rgba(0,0,0,0.9)');
+  vg.addColorStop(1, 'rgba(0,0,0,0.45)');
   ctx.fillStyle = vg;
   ctx.fillRect(0, 0, w, h);
   ctx.restore();
 }
 
 export function drawTitle(game, ctx, w, h, t) {
-  const phone = isPhone(w, h);
+  const phone = h > w;
   const cx = w / 2;
-  const ty = phone ? Math.min(h * 0.13, 72) : h * 0.2;
+  const ty = phone ? h * 0.16 : h * 0.2;
   ctx.save();
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  const titleSize = phone ? clamp(w * 0.085, 28, 46) : clamp(w * 0.075, 42, 96);
+  ensureBrandPlate();
+  if (brandMark && brandMark.complete && brandMark.naturalWidth) {
+    const ms = phone ? 52 : 64;
+    ctx.drawImage(brandMark, cx - ms / 2, ty - (phone ? 78 : 96), ms, ms);
+  }
+  const titleSize = phone ? clamp(w * 0.09, 28, 44) : clamp(w * 0.075, 42, 72);
   fitType(ctx, 'LAST NIGHT', w - 36, titleSize, SERIF, 400);
   const g = ctx.createLinearGradient(cx, ty - 40, cx, ty + 40);
   g.addColorStop(0, '#f4ecd8');
@@ -291,14 +318,14 @@ export function drawMenu(game, ctx, w, h) {
   ];
   const nButtons = defs.length;
   const phone = isPhone(w, h);
-  const footerH = phone ? 64 : 78;
-  const titleBottom = phone ? Math.min(h * 0.13, 72) + 58 : h * 0.18 + 72;
-  const startY = phone ? titleBottom : Math.max(titleBottom, h < 520 ? h * 0.28 : h * 0.36);
+  const footerH = 72;
+  const titleBottom = phone ? h * 0.22 : h * 0.28;
+  const startY = Math.max(titleBottom + 8, h * 0.5);
   const avail = Math.max(96, h - footerH - startY);
-  const gap = phone ? 6 : (avail < nButtons * 40 ? 4 : 8);
-  const bh = clamp((avail - gap * (nButtons - 1)) / nButtons, phone ? 42 : 28, phone ? 56 : 48);
-  const bw = phone ? Math.min(w - 32, 480) : clamp(w * 0.22, 188, 300);
-  const bx = phone ? (w - bw) / 2 : w / 2 - bw / 2;
+  const gap = 8;
+  const bh = clamp((avail - gap * (nButtons - 1)) / nButtons, 42, 54);
+  const bw = Math.min(w - 36, 420);
+  const bx = (w - bw) / 2;
   let by = startY;
   game.uiIndex = clamp(game.uiIndex, 0, defs.length - 1);
   defs.forEach((d, i) => {

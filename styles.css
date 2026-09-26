@@ -24,18 +24,17 @@ html, body {
   touch-action: none;
 }
 
+/* One vertical 9:16 frame. Wide screens letterbox. The plate is never stretched. */
 #stage {
   position: fixed;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding:
-    env(safe-area-inset-top, 0px)
-    env(safe-area-inset-right, 0px)
-    env(safe-area-inset-bottom, 0px)
-    env(safe-area-inset-left, 0px);
-  background:
-    radial-gradient(120% 90% at 50% 0%, #0b0e16 0%, #04050a 55%, #000 100%);
+  left: 50%;
+  top: 50%;
+  width: min(100vw, calc(100vh * 9 / 16));
+  height: min(100vh, calc(100vw * 16 / 9));
+  width: min(100vw, calc((100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) * 9 / 16));
+  height: min(calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)), calc(100vw * 16 / 9));
+  transform: translate(-50%, -50%);
+  background: #04050a;
 }
 
 canvas#game {
@@ -104,28 +103,62 @@ canvas#game {
   z-index: 30;
   display: grid;
   place-items: center;
-  background:
-    linear-gradient(180deg, rgba(4,5,10,0.72) 0%, rgba(4,5,10,0.38) 34%, rgba(4,5,10,0.62) 68%, rgba(4,5,10,0.9) 100%),
-    url('./assets/loading-last-night.jpg') center 22%/cover no-repeat,
-    #04050a;
+  background: #04050a;
   transition: opacity .8s ease;
 }
 #veil.gone { opacity: 0; pointer-events: none; }
 
-.veil-inner { text-align: center; transform: translateY(-6vh); }
-.veil-mark { width: 72px; height: 72px; display: block; margin: 0 auto 10px; }
+.veil-frame {
+  position: relative;
+  width: min(100vw, calc(100vh * 9 / 16));
+  height: min(100vh, calc(100vw * 16 / 9));
+  width: min(100vw, calc((100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) * 9 / 16));
+  height: min(calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)), calc(100vw * 16 / 9));
+  overflow: hidden;
+  background: #05060b;
+}
+.veil-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  /* The file is already 9:16. Do not blur, filter, or rescale it off that frame. */
+  image-rendering: auto;
+}
+.veil-frame::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 34%;
+  background: linear-gradient(180deg, rgba(5,6,11,0) 0%, rgba(5,6,11,0.78) 70%, rgba(5,6,11,0.92) 100%);
+  pointer-events: none;
+}
+.veil-inner {
+  position: absolute;
+  left: 0; right: 0; bottom: 6.5%;
+  z-index: 1;
+  text-align: center;
+}
+.veil-mark { width: 64px; height: 64px; display: block; margin: 0 auto 8px; }
 .veil-title {
-  font-size: clamp(28px, 7vw, 62px);
-  letter-spacing: .28em;
+  font-size: clamp(28px, 8.4vw, 52px);
+  letter-spacing: .18em;
   color: #e8e0cc;
-  text-shadow: 0 0 30px rgba(125, 18, 32, .55);
-  animation: veilPulse 3.4s ease-in-out infinite;
+  text-shadow: 0 2px 0 rgba(0,0,0,0.65);
+}
+.veil-rule {
+  width: 36%;
+  height: 1px;
+  margin: 12px auto 10px;
+  background: #a8833c;
 }
 .veil-sub {
-  margin-top: .9em;
-  font-size: clamp(11px, 2.4vw, 14px);
-  letter-spacing: .42em;
-  color: rgba(200, 190, 172, .5);
+  margin-top: 0;
+  font-size: clamp(10px, 2.6vw, 13px);
+  letter-spacing: .32em;
+  color: #a8833c;
   text-transform: uppercase;
   font-family: "Segoe UI", Roboto, sans-serif;
 }
@@ -153,9 +186,10 @@ canvas#game {
   100% { transform: translateX(320%); }
 }
 
-@media (max-width: 520px) {
-  .veil-title { letter-spacing: 0.1em; font-size: clamp(26px, 9vw, 40px); }
+@media (max-width: 380px) {
+  .veil-title { letter-spacing: 0.1em; font-size: 26px; }
   .veil-sub { letter-spacing: 0.16em; }
+  .veil-mark { width: 52px; height: 52px; }
 }
 
 /* The night owns the corners. The policy link stays on every menu. */

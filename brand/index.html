@@ -6,75 +6,39 @@
 <title>LAST NIGHT — brand kit</title>
 <style>
   :root {
-    --ink: #05060b;
-    --void: #04050a;
-    --ash: #cfc6b0;
-    --bone: #e6e1d2;
-    --blood: #7d1220;
-    --gold: #a8833c;
-    --candle: #ffb257;
-    --moon: #8fb6e8;
+    --ink: #05060b; --bone: #e6e1d2; --ash: #cfc6b0;
+    --blood: #7d1220; --gold: #a8833c; --candle: #ffb257; --moon: #8fb6e8;
   }
   * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    background: var(--ink);
-    color: var(--ash);
-    font-family: Georgia, "Palatino Linotype", "Times New Roman", serif;
-  }
-  header, section { padding: 48px 8vw; }
-  header {
-    min-height: 70vh;
-    display: grid;
-    align-content: end;
-    background:
-      linear-gradient(180deg, rgba(5,6,11,0.2), rgba(5,6,11,0.82)),
-      url('../assets/loading-last-night.jpg') center 22% / cover no-repeat;
-  }
-  img.mark { width: 84px; height: 84px; display: block; }
-  h1 {
-    margin: 16px 0 0;
-    font-weight: 400;
-    letter-spacing: 0.22em;
-    font-size: clamp(40px, 7vw, 84px);
-    color: var(--bone);
-  }
-  .rule { width: 160px; height: 1px; background: var(--gold); margin: 16px 0; }
-  .tag {
-    letter-spacing: 0.38em;
-    font-size: 12px;
-    color: var(--gold);
-    font-family: "Segoe UI", Roboto, sans-serif;
-  }
-  h2 {
-    font-weight: 400;
-    letter-spacing: 0.18em;
-    font-size: 14px;
-    color: var(--gold);
-  }
+  body { margin: 0; background: var(--ink); color: var(--ash); font-family: Georgia, "Palatino Linotype", serif; }
+  header, section { padding: 36px 6vw; }
+  h1 { font-weight: 400; letter-spacing: 0.18em; font-size: clamp(32px, 6vw, 64px); color: var(--bone); margin: 12px 0 0; }
+  h2 { font-weight: 400; letter-spacing: 0.16em; font-size: 13px; color: var(--gold); }
   p { max-width: 62ch; line-height: 1.55; }
-  .row { display: flex; flex-wrap: wrap; gap: 18px; }
-  .swatch {
-    width: 140px;
-    background: #0c0e14;
-    border: 1px solid rgba(168,131,60,0.35);
+  .mark { width: 72px; height: 72px; }
+  .rule { width: 140px; height: 1px; background: var(--gold); margin: 14px 0; }
+  .tag { letter-spacing: 0.32em; font: 11px/1 "Segoe UI", Roboto, sans-serif; color: var(--gold); }
+  .phones { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; }
+  .phone {
+    width: min(280px, 70vw);
+    aspect-ratio: 9 / 16;
+    background: #000 center/cover no-repeat;
+    border: 1px solid rgba(168,131,60,0.45);
+    position: relative;
+    overflow: hidden;
   }
-  .swatch i { display: block; height: 72px; }
-  .swatch b, .swatch span {
-    display: block;
-    padding: 8px 10px 0;
-    font-family: "Segoe UI", Roboto, sans-serif;
-    font-size: 12px;
-    letter-spacing: 0.04em;
+  .phone img.plate { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .phone figcaption {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 28px 12px 16px;
+    background: linear-gradient(transparent, rgba(5,6,11,0.88));
+    text-align: center; color: var(--bone); letter-spacing: 0.14em; font-size: 13px;
   }
+  .swatches { display: flex; flex-wrap: wrap; gap: 12px; }
+  .swatch { width: 120px; background: #0c0e14; border: 1px solid rgba(168,131,60,0.35); }
+  .swatch i { display: block; height: 56px; }
+  .swatch b, .swatch span { display: block; padding: 8px 10px 0; font: 12px/1.3 "Segoe UI", Roboto, sans-serif; }
   .swatch span { padding-bottom: 10px; color: rgba(207,198,176,0.7); }
-  .uses { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
-  .uses article {
-    border: 1px solid rgba(168,131,60,0.28);
-    padding: 16px;
-    background: #0a0c12;
-  }
-  code { color: var(--bone); }
 </style>
 </head>
 <body>
@@ -83,11 +47,24 @@
     <h1>LAST NIGHT</h1>
     <div class="rule"></div>
     <div class="tag">SURVIVE UNTIL DAWN</div>
+    <p>Mobile first. Every screen is a vertical 9:16 frame. Type is vector. The photographs are the plates below, shown at their own aspect so they are not stretched.</p>
   </header>
   <section>
-    <h2>ONE HOUSE</h2>
-    <p>The mark is the servant door: one warm window, the moon, a drop of blood. The plate behind it is the mansion already in the game, <code>assets/loading-last-night.jpg</code>. Do not generate a second house, a second wordmark, or a second crest.</p>
-    <div class="row">
+    <h2>PLATES · 768 × 1365</h2>
+    <div class="phones">
+      <figure class="phone">
+        <img class="plate" src="../assets/brand/loading-9x16.jpg" alt="Loading plate" />
+        <figcaption>LOADING</figcaption>
+      </figure>
+      <figure class="phone">
+        <img class="plate" src="../assets/brand/menu-9x16.jpg" alt="Menu plate" />
+        <figcaption>MENU</figcaption>
+      </figure>
+    </div>
+  </section>
+  <section>
+    <h2>COLOUR</h2>
+    <div class="swatches">
       <div class="swatch"><i style="background:#05060b"></i><b>Ink</b><span>#05060b</span></div>
       <div class="swatch"><i style="background:#e6e1d2"></i><b>Bone</b><span>#e6e1d2</span></div>
       <div class="swatch"><i style="background:#cfc6b0"></i><b>Ash</b><span>#cfc6b0</span></div>
@@ -95,14 +72,6 @@
       <div class="swatch"><i style="background:#a8833c"></i><b>Gold</b><span>#a8833c</span></div>
       <div class="swatch"><i style="background:#ffb257"></i><b>Candle</b><span>#ffb257</span></div>
       <div class="swatch"><i style="background:#8fb6e8"></i><b>Moon</b><span>#8fb6e8</span></div>
-    </div>
-  </section>
-  <section>
-    <h2>WHERE IT SITS</h2>
-    <div class="uses">
-      <article><h2>LOADING</h2><p>The existing mansion plate, the door mark, and the wordmark. The title is type, not another picture of letters.</p></article>
-      <article><h2>MENU</h2><p>The same plate, darkened so the buttons stay readable. The character stays the live portrait, not a new face.</p></article>
-      <article><h2>TYPE</h2><p>Georgia for LAST NIGHT. A plain sans for SURVIVE UNTIL DAWN, tracked wide, in gold.</p></article>
     </div>
   </section>
 </body>
