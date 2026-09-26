@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LAST NIGHT — brand kit</title>
+<style>
+  :root {
+    --ink: #05060b;
+    --void: #04050a;
+    --ash: #cfc6b0;
+    --bone: #e6e1d2;
+    --blood: #7d1220;
+    --gold: #a8833c;
+    --candle: #ffb257;
+    --moon: #8fb6e8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--ash);
+    font-family: Georgia, "Palatino Linotype", "Times New Roman", serif;
+  }
+  header, section { padding: 48px 8vw; }
+  header {
+    min-height: 70vh;
+    display: grid;
+    align-content: end;
+    background:
+      linear-gradient(180deg, rgba(5,6,11,0.2), rgba(5,6,11,0.82)),
+      url('../assets/loading-last-night.jpg') center 22% / cover no-repeat;
+  }
+  img.mark { width: 84px; height: 84px; display: block; }
+  h1 {
+    margin: 16px 0 0;
+    font-weight: 400;
+    letter-spacing: 0.22em;
+    font-size: clamp(40px, 7vw, 84px);
+    color: var(--bone);
+  }
+  .rule { width: 160px; height: 1px; background: var(--gold); margin: 16px 0; }
+  .tag {
+    letter-spacing: 0.38em;
+    font-size: 12px;
+    color: var(--gold);
+    font-family: "Segoe UI", Roboto, sans-serif;
+  }
+  h2 {
+    font-weight: 400;
+    letter-spacing: 0.18em;
+    font-size: 14px;
+    color: var(--gold);
+  }
+  p { max-width: 62ch; line-height: 1.55; }
+  .row { display: flex; flex-wrap: wrap; gap: 18px; }
+  .swatch {
+    width: 140px;
+    background: #0c0e14;
+    border: 1px solid rgba(168,131,60,0.35);
+  }
+  .swatch i { display: block; height: 72px; }
+  .swatch b, .swatch span {
+    display: block;
+    padding: 8px 10px 0;
+    font-family: "Segoe UI", Roboto, sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+  }
+  .swatch span { padding-bottom: 10px; color: rgba(207,198,176,0.7); }
+  .uses { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+  .uses article {
+    border: 1px solid rgba(168,131,60,0.28);
+    padding: 16px;
+    background: #0a0c12;
+  }
+  code { color: var(--bone); }
+</style>
+</head>
+<body>
+  <header>
+    <img class="mark" src="../assets/brand/mark.svg" alt="" />
+    <h1>LAST NIGHT</h1>
+    <div class="rule"></div>
+    <div class="tag">SURVIVE UNTIL DAWN</div>
+  </header>
+  <section>
+    <h2>ONE HOUSE</h2>
+    <p>The mark is the servant door: one warm window, the moon, a drop of blood. The plate behind it is the mansion already in the game, <code>assets/loading-last-night.jpg</code>. Do not generate a second house, a second wordmark, or a second crest.</p>
+    <div class="row">
+      <div class="swatch"><i style="background:#05060b"></i><b>Ink</b><span>#05060b</span></div>
+      <div class="swatch"><i style="background:#e6e1d2"></i><b>Bone</b><span>#e6e1d2</span></div>
+      <div class="swatch"><i style="background:#cfc6b0"></i><b>Ash</b><span>#cfc6b0</span></div>
+      <div class="swatch"><i style="background:#7d1220"></i><b>Blood</b><span>#7d1220</span></div>
+      <div class="swatch"><i style="background:#a8833c"></i><b>Gold</b><span>#a8833c</span></div>
+      <div class="swatch"><i style="background:#ffb257"></i><b>Candle</b><span>#ffb257</span></div>
+      <div class="swatch"><i style="background:#8fb6e8"></i><b>Moon</b><span>#8fb6e8</span></div>
+    </div>
+  </section>
+  <section>
+    <h2>WHERE IT SITS</h2>
+    <div class="uses">
+      <article><h2>LOADING</h2><p>The existing mansion plate, the door mark, and the wordmark. The title is type, not another picture of letters.</p></article>
+      <article><h2>MENU</h2><p>The same plate, darkened so the buttons stay readable. The character stays the live portrait, not a new face.</p></article>
+      <article><h2>TYPE</h2><p>Georgia for LAST NIGHT. A plain sans for SURVIVE UNTIL DAWN, tracked wide, in gold.</p></article>
+    </div>
+  </section>
+</body>
+</html>

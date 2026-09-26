@@ -111,128 +111,42 @@ function buttonVisual(ctx, { x, y, w, h }, { active, disabled, label, sub, small
   ctx.restore();
 }
 
+
+const BRAND_PLATE = './assets/loading-last-night.jpg';
+let brandPlate = null;
+
+function ensureBrandPlate() {
+  if (brandPlate || typeof Image === 'undefined') return;
+  brandPlate = new Image();
+  brandPlate.decoding = 'async';
+  brandPlate.src = BRAND_PLATE;
+}
+
+/** The mansion plate already in the repo. One house, not a new generated set. */
+function drawBrandPlate(ctx, w, h, { focus = 0.18, dim = 0.55 } = {}) {
+  ensureBrandPlate();
+  const img = brandPlate;
+  if (!img || !img.complete || !img.naturalWidth) {
+    ctx.fillStyle = '#05060b';
+    ctx.fillRect(0, 0, w, h);
+    return false;
+  }
+  const iw = img.naturalWidth;
+  const ih = img.naturalHeight;
+  const scale = Math.max(w / iw, h / ih);
+  const dw = iw * scale;
+  const dh = ih * scale;
+  ctx.drawImage(img, (w - dw) / 2, (h - dh) * focus, dw, dh);
+  ctx.fillStyle = `rgba(5,6,11,${dim})`;
+  ctx.fillRect(0, 0, w, h);
+  return true;
+}
+
 /* ================= menu scene ================= */
 
 export function drawMenuScene(game, ctx, w, h, t) {
-  // ---- the hall, seen from the floor ----
-  // back wall
-  const wallG = ctx.createLinearGradient(0, 0, 0, h * 0.72);
-  wallG.addColorStop(0, '#0a0c14'); wallG.addColorStop(0.5, '#12131c'); wallG.addColorStop(1, '#080910');
-  ctx.fillStyle = wallG;
-  ctx.fillRect(0, 0, w, h * 0.72);
-  // floor
-  const floorG = ctx.createLinearGradient(0, h * 0.7, 0, h);
-  floorG.addColorStop(0, '#161219'); floorG.addColorStop(1, '#08070a');
-  ctx.fillStyle = floorG;
-  ctx.fillRect(0, h * 0.7, w, h * 0.3);
-
-  // ---- tall gothic window with moonlight ----
-  const wx = w * 0.66, wy = h * 0.1, ww = w * 0.2, wh = h * 0.5;
-  ctx.save();
-  ctx.fillStyle = '#070a12';
-  ctx.fillRect(wx - 10, wy - 10, ww + 20, wh + 20);
-  const glass = ctx.createLinearGradient(wx, wy, wx, wy + wh);
-  glass.addColorStop(0, '#1d2a44'); glass.addColorStop(0.55, '#2a3b5c'); glass.addColorStop(1, '#16203a');
-  ctx.fillStyle = glass;
-  ctx.fillRect(wx, wy, ww, wh);
-  // arched top
-  ctx.beginPath();
-  ctx.moveTo(wx - 10, wy);
-  ctx.quadraticCurveTo(wx + ww / 2, wy - wh * 0.22, wx + ww + 10, wy);
-  ctx.lineTo(wx + ww + 10, wy - 20); ctx.lineTo(wx - 10, wy - 20);
-  ctx.closePath();
-  ctx.fillStyle = '#0a0c14';
-  ctx.fill();
-  // mullions
-  ctx.strokeStyle = '#0b0b10'; ctx.lineWidth = 7;
-  ctx.beginPath();
-  ctx.moveTo(wx + ww / 2, wy); ctx.lineTo(wx + ww / 2, wy + wh);
-  ctx.moveTo(wx, wy + wh * 0.34); ctx.lineTo(wx + ww, wy + wh * 0.34);
-  ctx.moveTo(wx, wy + wh * 0.67); ctx.lineTo(wx + ww, wy + wh * 0.67);
-  ctx.stroke();
-  // the moon
-  ctx.globalAlpha = 0.8;
-  const mg = ctx.createRadialGradient(wx + ww * 0.62, wy + wh * 0.22, 0, wx + ww * 0.62, wy + wh * 0.22, 66);
-  mg.addColorStop(0, 'rgba(226,238,255,0.95)');
-  mg.addColorStop(0.22, 'rgba(180,205,240,0.45)');
-  mg.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = mg;
-  ctx.beginPath(); ctx.arc(wx + ww * 0.62, wy + wh * 0.22, 66, 0, TAU); ctx.fill();
-  ctx.globalAlpha = 1;
-  // light shaft onto the floor
-  ctx.globalCompositeOperation = 'screen';
-  const shaft = ctx.createLinearGradient(wx, wy + wh, wx + ww * 0.2, h);
-  shaft.addColorStop(0, 'rgba(140,175,235,0.16)');
-  shaft.addColorStop(0.6, 'rgba(110,145,205,0.07)');
-  shaft.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = shaft;
-  ctx.beginPath();
-  ctx.moveTo(wx, wy + wh);
-  ctx.lineTo(wx + ww, wy + wh);
-  ctx.lineTo(wx + ww * 1.9, h);
-  ctx.lineTo(wx - ww * 0.9, h);
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
-
-  // ---- dust motes in the shaft ----
-  ctx.save();
-  ctx.globalCompositeOperation = 'screen';
-  for (let i = 0; i < 40; i++) {
-    const s = hash2(i, 7, 3);
-    const px = wx + (hash2(i, 3, 9) - 0.2) * ww * 2 + Math.sin(t * 0.3 + i) * 14;
-    const py = wy + hash2(i, 11, 5) * wh * 1.6 + ((t * 6 * (0.3 + s) + i * 30) % (h - wy));
-    const a = 0.10 + 0.16 * Math.sin(t * 2 + i);
-    ctx.fillStyle = `rgba(200,220,255,${clamp(a, 0, 0.3)})`;
-    ctx.beginPath(); ctx.arc(px, py % h, 1.4 + s * 1.6, 0, TAU); ctx.fill();
-  }
-  ctx.restore();
-
-  // ---- chandelier ----
-  const chx = w * 0.3, chy = h * 0.2;
-  ctx.save();
-  ctx.strokeStyle = '#101018'; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(chx, 0); ctx.lineTo(chx, chy); ctx.stroke();
-  const flick = 0.75 + 0.25 * Math.sin(t * 5.2) + 0.08 * Math.sin(t * 17);
-  ctx.globalCompositeOperation = 'screen';
-  const cg = ctx.createRadialGradient(chx, chy, 0, chx, chy, 260 * flick);
-  cg.addColorStop(0, 'rgba(255,208,150,0.5)');
-  cg.addColorStop(0.4, 'rgba(255,150,60,0.16)');
-  cg.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = cg;
-  ctx.beginPath(); ctx.arc(chx, chy, 260 * flick, 0, TAU); ctx.fill();
-  ctx.globalCompositeOperation = 'source-over';
-  for (let i = 0; i < 6; i++) {
-    const a = (i / 6) * TAU;
-    const px = chx + Math.cos(a) * 54, py = chy + Math.sin(a) * 16;
-    ctx.fillStyle = '#d8cfb8';
-    ctx.fillRect(px - 1.5, py - 12, 3, 12);
-    ctx.globalCompositeOperation = 'screen';
-    const fg = ctx.createRadialGradient(px, py - 14, 0, px, py - 14, 16);
-    fg.addColorStop(0, `rgba(255,225,170,${0.8 * flick})`);
-    fg.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = fg;
-    ctx.beginPath(); ctx.arc(px, py - 14, 16, 0, TAU); ctx.fill();
-    ctx.globalCompositeOperation = 'source-over';
-  }
-  ctx.fillStyle = '#191922';
-  ctx.beginPath(); ctx.ellipse(chx, chy, 62, 16, 0, 0, TAU); ctx.fill();
-  ctx.restore();
-
-  // ---- fog bank ----
-  ctx.save();
-  ctx.globalCompositeOperation = 'screen';
-  for (let i = 0; i < 7; i++) {
-    const fx = ((t * (12 + i * 5) + i * 400) % (w + 700)) - 350;
-    const fy = h * (0.6 + hash2(i, 2, 4) * 0.34);
-    const fr = 240 + hash2(i, 5, 6) * 260;
-    const fg = ctx.createRadialGradient(fx, fy, 0, fx, fy, fr);
-    fg.addColorStop(0, 'rgba(70,84,116,0.075)');
-    fg.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = fg;
-    ctx.beginPath(); ctx.arc(fx, fy, fr, 0, TAU); ctx.fill();
-  }
-  ctx.restore();
+  // Same plate as the loading screen. The procedural hall was a second, weaker house.
+  drawBrandPlate(ctx, w, h, { focus: 0.16, dim: 0.5 });
 
   // ---- the character, in the foreground, three-quarter to camera ----
   // Industry rule for a hero screen: the menu shows WHAT YOU PLAY, so the
@@ -467,8 +381,7 @@ function drawConsent(game, ctx, w, h) {
 export function drawPrivacy(game, ctx, w, h) {
   const back = game.settingsReturn || 'menu';
   ctx.save();
-  ctx.fillStyle = 'rgba(4,5,9,0.94)';
-  ctx.fillRect(0, 0, w, h);
+  drawBrandPlate(ctx, w, h, { dim: 0.86 });
   ctx.textAlign = 'center';
   ctx.fillStyle = '#e8e0cc';
   ctx.font = `400 26px ${SERIF}`;
@@ -615,8 +528,7 @@ export function drawSettings(game, ctx, w, h) {
   const back = game.settingsReturn || 'menu';
   const s = game.save.settings;
   ctx.save();
-  ctx.fillStyle = 'rgba(4,5,9,0.9)';
-  ctx.fillRect(0, 0, w, h);
+  drawBrandPlate(ctx, w, h, { dim: 0.84 });
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   fitType(ctx, 'SETTINGS', w - 32, isPhone(w, h) ? 22 : 30, SERIF, 400);
@@ -750,8 +662,7 @@ export function drawSettings(game, ctx, w, h) {
 export function drawUpgrades(game, ctx, w, h) {
   const B = game.save;
   ctx.save();
-  ctx.fillStyle = 'rgba(4,5,9,0.92)';
-  ctx.fillRect(0, 0, w, h);
+  drawBrandPlate(ctx, w, h, { dim: 0.84 });
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   const phoneTitle = isPhone(w, h);
@@ -886,8 +797,7 @@ function drawUpgradeIcon(ctx, kind, lvl) {
 export function drawCollection(game, ctx, w, h) {
   const B = game.save;
   ctx.save();
-  ctx.fillStyle = 'rgba(4,5,9,0.93)';
-  ctx.fillRect(0, 0, w, h);
+  drawBrandPlate(ctx, w, h, { dim: 0.84 });
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   const phone = isPhone(w, h);
@@ -963,8 +873,7 @@ function wrapText(ctx, text, x, y, maxW, lh) {
 
 export function drawHelp(game, ctx, w, h) {
   ctx.save();
-  ctx.fillStyle = 'rgba(4,5,9,0.93)';
-  ctx.fillRect(0, 0, w, h);
+  drawBrandPlate(ctx, w, h, { dim: 0.84 });
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   const phone = isPhone(w, h);
@@ -1247,8 +1156,7 @@ export function drawShop(game, ctx, w, h) {
   const back = game.settingsReturn || 'menu';
   const B = game.save;
   ctx.save();
-  ctx.fillStyle = 'rgba(4,5,9,0.94)';
-  ctx.fillRect(0, 0, w, h);
+  drawBrandPlate(ctx, w, h, { dim: 0.84 });
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   const phone = isPhone(w, h);
