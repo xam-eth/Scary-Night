@@ -428,16 +428,26 @@ export function drawPrivacy(game, ctx, w, h) {
   lines.forEach((line, i) => ctx.fillText(line, w / 2, top + i * gap));
   ctx.restore();
 
-  const bw = Math.min(200, (w - 48) / 3);
-  const by = Math.min(h - 56, Math.max(top + lines.length * gap + 8, h - 72));
+  // v1.0 FIX: this block referenced `phone`, `by0` and `bh` without ever
+  // declaring them — a ReferenceError on every render of this screen, which
+  // killed the rAF loop stone dead (main.js never reaches its next
+  // requestAnimationFrame once render() throws). Reachable from the very
+  // first consent dialog's PRIVACY button, so this froze the game before a
+  // player even started a night.
+  const phone = isPhone(w, h);
+  const bh = 40;
+  const btnGap = 8;
+  const bw = phone ? Math.min(w - 24, 420) : Math.min(200, (w - 48) / 3);
+  const stackH = phone ? bh * 3 + btnGap * 2 : bh;
+  const by0 = Math.min(h - stackH - 16, Math.max(top + lines.length * gap + 8, h - stackH - 40));
   const page = uiButton(game, {
-    x: w / 2 - bw * 1.5 - 12, y: by, w: bw, h: 40, label: 'FULL POLICY', small: true,
+    x: phone ? (w - bw) / 2 : w / 2 - bw * 1.5 - 12, y: by0, w: bw, h: bh, label: 'FULL POLICY', small: true,
     onClick: () => { try { window.open('./privacy.html', '_blank', 'noopener'); } catch (e) { /* blocked */ } },
   });
   buttonVisual(ctx, page.b, { active: page.hover, label: 'FULL POLICY', small: true, accent: '#6a6a80' });
   const delLabel = game.privacyDeleteArmed ? 'CONFIRM DELETE' : 'DELETE DATA';
   const del = uiButton(game, {
-    x: phone ? 12 : w / 2 - bw / 2, y: phone ? by0 + bh + 6 : by0, w: bw, h: bh, label: delLabel, small: true,
+    x: phone ? (w - bw) / 2 : w / 2 - bw / 2, y: phone ? by0 + bh + btnGap : by0, w: bw, h: bh, label: delLabel, small: true,
     onClick: () => {
       if (!game.privacyDeleteArmed) { game.privacyDeleteArmed = true; return; }
       game.wipeLocalData();
@@ -445,7 +455,7 @@ export function drawPrivacy(game, ctx, w, h) {
   });
   buttonVisual(ctx, del.b, { active: del.hover, label: delLabel, small: true, accent: '#8a3030' });
   const bk = uiButton(game, {
-    x: phone ? 12 : w / 2 + bw / 2 + 12, y: phone ? by0 + (bh + 6) * 2 : by0, w: bw, h: bh, label: 'BACK', small: true,
+    x: phone ? (w - bw) / 2 : w / 2 + bw / 2 + 12, y: phone ? by0 + (bh + btnGap) * 2 : by0, w: bw, h: bh, label: 'BACK', small: true,
     onClick: () => { game.privacyDeleteArmed = false; game.setScreen(back); },
   });
   buttonVisual(ctx, bk.b, { active: bk.hover, label: 'BACK', small: true, accent: '#a8833c' });

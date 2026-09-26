@@ -112,6 +112,21 @@ const clickOk = async (label, want) => {
   return { pass, why: `screen=${got}` };
 };
 
+console.log('\n=== CONSENT GATE ===');
+// v1.0 added a privacy consent card in front of the menu (game.save.privacyAck).
+// On a clean profile every menu button is behind "I UNDERSTAND" — without
+// dismissing it first, every check below fails not because a button is
+// broken but because it is still covered by the consent card.
+{
+  const r = await clickOk('I UNDERSTAND', 'menu');
+  ok('consent "I UNDERSTAND" reaches the menu', r.pass, r.why);
+}
+// BLOOD MARKET only appears on the menu once a night has been attempted —
+// force that here so the menu button tour below can reach it, same as any
+// returning player would see.
+await page.evaluate(() => { window.__LN.save.nightsAttempted = 1; });
+await pump(2);
+
 console.log('\n=== LOOP ===');
 const t0 = await page.evaluate(() => window.__LN.now);
 await pump(10);
@@ -119,7 +134,7 @@ const t1 = await page.evaluate(() => window.__LN.now);
 ok('update+render pump works (state advances)', t1 > t0, `Δ=${(t1 - t0).toFixed(3)}s`);
 
 console.log('\n=== MENU BUTTONS (real clicks) ===');
-for (const [label, expect] of [['UPGRADES', 'upgrades'], ['BLOOD MARKET', 'shop'], ['COLLECTION', 'collection'], ['SETTINGS', 'settings']]) {
+for (const [label, expect] of [['UPGRADES', 'upgrades'], ['BLOOD MARKET', 'shop'], ['COLLECTION', 'collection'], ['SETTINGS', 'settings'], ['PRIVACY', 'privacy']]) {
   const r = await clickOk(label, expect);
   ok(`click ${label} → ${expect}`, r.pass, r.why);
   if ((await screen()) !== 'menu') { await clickLabel('BACK'); await pump(2); }
