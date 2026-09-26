@@ -155,17 +155,12 @@ function drawBrandPlate(ctx, w, h, { focus = 0.18, dim = 0.55 } = {}) {
 
 export function drawMenuScene(game, ctx, w, h, t) {
   // Vertical hall plate. A light wash only — the architecture is the identity.
-  drawBrandPlate(ctx, w, h, { focus: 0.5, dim: 0.08 });
-  const topWash = ctx.createLinearGradient(0, 0, 0, h * 0.28);
-  topWash.addColorStop(0, 'rgba(5,6,11,0.72)');
-  topWash.addColorStop(1, 'rgba(5,6,11,0)');
-  ctx.fillStyle = topWash;
-  ctx.fillRect(0, 0, w, h * 0.28);
-  const botWash = ctx.createLinearGradient(0, h * 0.48, 0, h);
+  drawBrandPlate(ctx, w, h, { focus: 0.5, dim: 0 });
+  const botWash = ctx.createLinearGradient(0, h * 0.52, 0, h);
   botWash.addColorStop(0, 'rgba(5,6,11,0)');
-  botWash.addColorStop(1, 'rgba(5,6,11,0.55)');
+  botWash.addColorStop(1, 'rgba(5,6,11,0.42)');
   ctx.fillStyle = botWash;
-  ctx.fillRect(0, h * 0.48, w, h * 0.52);
+  ctx.fillRect(0, h * 0.52, w, h * 0.48);
   ctx.strokeStyle = 'rgba(168,131,60,0.55)';
   ctx.lineWidth = 1;
   ctx.strokeRect(10.5, 10.5, w - 21, h - 21);
@@ -174,7 +169,7 @@ export function drawMenuScene(game, ctx, w, h, t) {
   // Industry rule for a hero screen: the menu shows WHAT YOU PLAY, so the
   // loaded GLB itself stands in the hall (its rest pose, evaluated once).
   // The procedural figure survives only while the GLB is unavailable.
-  const px = w * 0.5, py = h * 0.5;
+  const px = w * 0.5, py = h * 0.46;
   const br = Math.sin(t * 1.1) * 2.6;
   const vframe = Valen3D.renderMenu();
   ctx.save();
@@ -192,7 +187,7 @@ export function drawMenuScene(game, ctx, w, h, t) {
   ctx.closePath(); ctx.fill();
   ctx.restore();
   if (vframe) {
-    Valen3D.draw(ctx, vframe, h * 0.28 / scale, { footInset: 8 });
+    Valen3D.draw(ctx, vframe, h * 0.2 / scale, { footInset: 8 });
   } else {
     // coat
     const coatG = ctx.createLinearGradient(0, -180, 0, 10);
@@ -243,7 +238,7 @@ export function drawMenuScene(game, ctx, w, h, t) {
   ctx.save();
   const vg = ctx.createRadialGradient(w / 2, h / 2, h * 0.2, w / 2, h / 2, h * 0.95);
   vg.addColorStop(0, 'rgba(0,0,0,0)');
-  vg.addColorStop(1, 'rgba(0,0,0,0.45)');
+  vg.addColorStop(1, 'rgba(0,0,0,0.22)');
   ctx.fillStyle = vg;
   ctx.fillRect(0, 0, w, h);
   ctx.restore();
@@ -288,14 +283,14 @@ export function drawTitle(game, ctx, w, h, t) {
 export function drawMenu(game, ctx, w, h) {
   const t = game.time;
   drawMenuScene(game, ctx, w, h, t);
-  drawTitle(game, ctx, w, h, t);
+  // The plate already carries the crest and the wordmark. Do not paint a second title over it.
   // build stamp — small, honest, visible: v1.0.0-beta line
   ctx.save();
   ctx.textAlign = 'left';
   ctx.font = `400 10px ${MONO}`;
   if ('letterSpacing' in ctx) ctx.letterSpacing = '1px';
-  ctx.fillStyle = 'rgba(140,134,124,0.4)';
-  ctx.fillText('v' + GAME_VERSION + '  ·  18+' + (IAP.owns(game.save, 'title_dawnbreaker') ? '  ·  DAWNBREAKER' : ''), isPhone(w, h) ? 78 : 92, 18);
+  ctx.fillStyle = 'rgba(180,172,158,0.55)';
+  ctx.fillText('v' + GAME_VERSION + '  ·  18+' + (IAP.owns(game.save, 'title_dawnbreaker') ? '  ·  DAWNBREAKER' : ''), 16, h - 16);
   ctx.restore();
 
   if (!game.save.privacyAck) {

@@ -124,49 +124,18 @@ canvas#game {
   height: 100%;
   object-fit: cover;
   object-position: center center;
-  /* The file is already 9:16. Do not blur, filter, or rescale it off that frame. */
   image-rendering: auto;
 }
-.veil-frame::after {
-  content: "";
-  position: absolute;
-  left: 0; right: 0; bottom: 0;
-  height: 34%;
-  background: linear-gradient(180deg, rgba(5,6,11,0) 0%, rgba(5,6,11,0.78) 70%, rgba(5,6,11,0.92) 100%);
-  pointer-events: none;
-}
-.veil-inner {
-  position: absolute;
-  left: 0; right: 0; bottom: 6.5%;
-  z-index: 1;
-  text-align: center;
-}
-.veil-mark { width: 64px; height: 64px; display: block; margin: 0 auto 8px; }
-.veil-title {
-  font-size: clamp(28px, 8.4vw, 52px);
-  letter-spacing: .18em;
-  color: #e8e0cc;
-  text-shadow: 0 2px 0 rgba(0,0,0,0.65);
-}
-.veil-rule {
-  width: 36%;
-  height: 1px;
-  margin: 12px auto 10px;
-  background: #a8833c;
-}
-.veil-sub {
-  margin-top: 0;
-  font-size: clamp(10px, 2.6vw, 13px);
-  letter-spacing: .32em;
-  color: #a8833c;
-  text-transform: uppercase;
-  font-family: "Segoe UI", Roboto, sans-serif;
-}
 .veil-bar {
-  margin: 2.2em auto 0;
-  width: min(240px, 60vw);
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 1;
+  margin: 0;
+  width: min(180px, 46%);
   height: 2px;
-  background: rgba(200, 190, 172, .12);
+  background: rgba(200, 190, 172, .22);
   overflow: hidden;
 }
 .veil-bar span {
@@ -186,11 +155,7 @@ canvas#game {
   100% { transform: translateX(320%); }
 }
 
-@media (max-width: 380px) {
-  .veil-title { letter-spacing: 0.1em; font-size: 26px; }
-  .veil-sub { letter-spacing: 0.16em; }
-  .veil-mark { width: 52px; height: 52px; }
-}
+
 
 /* The night owns the corners. The policy link stays on every menu. */
 body[data-screen="playing"] #privacy-link,
