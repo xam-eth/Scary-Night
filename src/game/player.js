@@ -281,11 +281,15 @@ export class Player {
     for (const e of game.enemies) {
       if (e.dead) continue;
       const d = dist(this.x, this.y, e.x, e.y);
-      if (d > PLAYER.attackRange * 1.2) continue;
+      const reach = PLAYER.attackRange + (e.radius || 0);
+      if (d > reach) continue;
       const a = Math.atan2(e.y - this.y, e.x - this.x);
       const off = Math.abs(angDiff(a, this.angle));
-      if (off > PLAYER.attackArc * 0.8) continue;
-      const score = (1 - off / (PLAYER.attackArc * 0.8)) + (1 - d / PLAYER.attackRange) * 0.7;
+      // Touch controls face the way you walk, so a thing on your hip is not
+      // "in the cone" and the claw used to miss the fight you were in.
+      const touching = d < this.radius + (e.radius || 12) + 14;
+      if (!touching && off > 1.35) continue;
+      const score = (touching ? 3 : 0) + (1 - Math.min(off, 2.4) / 2.4) + (1 - d / reach);
       if (score > bestScore) { bestScore = score; bestA = a; }
     }
     if (bestA !== null) { this.swingAngle = bestA; this.angle = bestA; }

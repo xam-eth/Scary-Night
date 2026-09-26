@@ -357,11 +357,14 @@ export class Game {
     this.timeouts.length = 0;
     this.knocks.length = 0;
     // ---- player ----
-    // Wake at the dining table, facing the servant door. The hall can wait.
-    this.player = new Player(400, 520);
+    // Wake in the servant-door opening, south of the slab. Dragging up on the
+    // stick walks into that door. The long table used to sit in the way.
+    this.player = new Player(720, 200);
     this.player.applyUpgrades(this.save);
     this.player.blood = this.player.bloodMax * 0.48;
-    this.player.planks = 2;
+    // Night one can bar the shaking door without a scavenger hunt. Later
+    // nights start leaner; the fort still costs three planks.
+    this.player.planks = (this.save.nightsSurvived || 0) > 0 ? 2 : 3;
     this.player.angle = -Math.PI / 2;
     // ---- director ----
     this.director = new Director();
@@ -449,7 +452,7 @@ export class Game {
       for (const e of this.mansion.entrances) if (dist(x, y, e.x, e.y) < 70) ok = false;
       for (const p of this.pickups) if (dist(x, y, p.x, p.y) < 60) ok = false;
       // not right under the player's nose at the start
-      if (dist(x, y, 400, 520) < 120 && room.id === ROOM.DINING) ok = false;
+      if (dist(x, y, 720, 200) < 120 && room.id === ROOM.DINING) ok = false;
       if (ok) return { x, y };
     }
     return null;
@@ -1104,7 +1107,8 @@ export class Game {
       if (d > PLAYER.attackRange + e.radius) continue;
       const a = Math.atan2(e.y - player.y, e.x - player.x);
       let diff = Math.abs(((a - player.swingAngle + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
-      if (diff > arc / 2) continue;
+      const touching = d < player.radius + (e.radius || 12) + 14;
+      if (!touching && diff > arc / 2) continue;
       const dmg = PLAYER.attackDamage * player.damageMul;
       e.hurt(dmg, this, player.x, player.y);
       hits++;

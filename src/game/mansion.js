@@ -485,7 +485,9 @@ export class Mansion {
       const idx = i % 4;
       this.addF(210 + idx * 140, left ? 190 : 410, 54, 54, 'chair', { room: R.dining.id, rot: left ? 0 : Math.PI });
     }
-    this.addF(640, 60 + 40, 150, 60, 'cabinet', { room: R.dining.id });
+    // Keep the servant-door apron clear. A cabinet on the gap made the first
+    // knock a door you could hear and not stand in front of.
+    this.addF(300, 110, 150, 60, 'cabinet', { room: R.dining.id });
     this.addF(100, 90, 120, 54, 'cabinet', { room: R.dining.id });
     this.addF(700, 480, 120, 120, 'sideTable', { room: R.dining.id });
     this.addP('carpet', 460, 330, { w: 620, h: 420, color: 'purple', seed: 12, room: R.dining.id });

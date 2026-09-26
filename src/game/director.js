@@ -460,6 +460,19 @@ export class Director {
       k.nextKnockAt = rand(3.2, 6.5) * (1 + k.knockCount * 0.18);
       e.hint = 1;
     }
+    // The opening knock is the first choice: bar the servant door, or open
+    // it and feed. A new player is still learning the stick. Hold the breach
+    // until they can reach the door, then give them a beat to choose.
+    if (k.mustEnter) {
+      if (d < 100 && !k.playerArrived) {
+        k.playerArrived = true;
+        k.deadline = Math.max(k.deadline, game.time + 8);
+      }
+      const holdUntil = (game.save && game.save.coachDone) ? k.t + 22 : 50;
+      if (!k.playerArrived && game.time < holdUntil && k.deadline < holdUntil && game.time > k.deadline - 1.4) {
+        k.deadline = Math.min(holdUntil, game.time + 2.2);
+      }
+    }
     if (game.time > k.deadline) {
       // ignored for too long: usually safe, sometimes very much not
       k.resolved = true;
@@ -477,7 +490,9 @@ export class Director {
             spawned[0].state = 'approach';
             spawned[0].seenPlayer = spawned[0].type.loseSight;
             spawned[0].lastKnown = { x: p.x, y: p.y };
-            e.hp = Math.min(e.hp, e.hpMax * 0.42);
+            // Boards the player already paid for have to be chewed. An
+            // ignored door still fails in their face.
+            if (!(e.barricade > 0)) e.hp = Math.min(e.hp, e.hpMax * 0.42);
             e.attackers = Math.max(e.attackers || 0, 1);
           }
           game.showMessage(k.mustEnter ? 'IT IS COMING THROUGH THE SERVANT DOOR.' : 'WHATEVER IT WAS, IT STOPPED WAITING.', { tone: 'danger' });

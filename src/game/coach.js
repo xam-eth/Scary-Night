@@ -5,9 +5,12 @@
  */
 
 import { TAU, writeSave } from '../core/util.js';
+import { PLAYER } from '../core/config.js';
 
-const ORDER = ['walk', 'planks', 'door', 'board', 'planks2', 'stakes', 'raise'];
-const DOOR_RANGE = 90;
+// The servant door is already knocking. Learn the stick, then go to it.
+// Planks for the fort come after that choice, not before the door falls.
+const ORDER = ['walk', 'door', 'board', 'planks', 'planks2', 'stakes', 'raise'];
+const DOOR_RANGE = 96;
 const STAKE_RANGE = 64;
 
 export function updateCoach(game) {
@@ -31,21 +34,27 @@ export function updateCoach(game) {
   const door = servantDoor(game);
   const stakes = stakeProp(game);
 
-  if (!c.clawed && c.step !== 'claw' && enemyClose(game)) {
+  // Only interrupt when a swing can connect. A crawler on the other side of
+  // a boarded door used to demand a claw that could not reach it.
+  if (!c.clawed && c.step !== 'claw' && enemyInReach(game)) {
     c.hold = c.step;
+    c.hitsAt = game.stats.clawHits || 0;
     c.step = 'claw';
   }
 
   if (c.step === 'walk') {
-    if (Math.hypot(p.x - c.originX, p.y - c.originY) > 70) advance(c);
+    if (Math.hypot(p.x - c.originX, p.y - c.originY) > 70 || c.t > 4) advance(c);
   } else if (c.step === 'planks' || c.step === 'planks2') {
     if (p.planks >= 3 || !nearestPlank(game)) advance(c);
   } else if (c.step === 'door') {
-    if (door && distTo(p, door) < DOOR_RANGE) advance(c);
+    if (door && nearDoor(p, door) < DOOR_RANGE) advance(c);
   } else if (c.step === 'board') {
     if (door && (door.barricade > 0 || door.open)) advance(c);
   } else if (c.step === 'claw') {
-    if (game.input.attackPressed) {
+    // A held claw has no second edge. Count the hold, or a hit, or the tap.
+    const swung = game.input.attackPressed || game.input.keys.attack
+      || (game.stats.clawHits || 0) > (c.hitsAt || 0);
+    if (swung) {
       c.clawed = true;
       c.step = c.hold && c.hold !== 'claw' ? c.hold : 'walk';
       c.hold = null;
@@ -92,13 +101,23 @@ function nearestPlank(game) {
   return best;
 }
 
-function enemyClose(game) {
+function enemyInReach(game) {
   const p = game.player;
-  return game.enemies.some((e) => !e.dead && Math.hypot(e.x - p.x, e.y - p.y) < 280);
+  return game.enemies.some((e) => {
+    if (e.dead) return false;
+    return Math.hypot(e.x - p.x, e.y - p.y) <= PLAYER.attackRange + (e.radius || 12) - 2;
+  });
 }
 
 function distTo(p, o) {
   return Math.hypot(p.x - o.x, p.y - o.y);
+}
+
+/** Same reach the interact prompt uses: the door, or the floor in front of it. */
+function nearDoor(p, e) {
+  let d = distTo(p, e);
+  if (e.inside) d = Math.min(d, Math.hypot(p.x - e.inside.x, p.y - e.inside.y));
+  return d;
 }
 
 function worldMark(game) {
@@ -111,11 +130,12 @@ function worldMark(game) {
   if (step === 'door' || step === 'board') {
     const e = servantDoor(game);
     if (!e) return null;
-    const boardReady = step === 'board' && distTo(p, e) < DOOR_RANGE
+    const boardReady = step === 'board' && nearDoor(p, e) < DOOR_RANGE
       && game.input.buttons.barricade && !game.input.buttons.barricade.hidden;
     if (boardReady) return null;
-    if (step === 'board' && distTo(p, e) < DOOR_RANGE && p.planks < 3) return null;
-    return { x: e.x, y: e.y };
+    if (step === 'board' && nearDoor(p, e) < DOOR_RANGE && p.planks < 3) return null;
+    const mark = e.inside || e;
+    return { x: mark.x, y: mark.y };
   }
   if (step === 'stakes' || step === 'raise') {
     const s = stakeProp(game);
@@ -235,11 +255,11 @@ function cueFor(game) {
   const stakes = stakeProp(game);
   const boardBtn = game.input.buttons.barricade;
   if (step === 'walk') return { kind: 'drag' };
-  if (step === 'claw') return { kind: 'button', id: 'attack', title: 'TAP CLAW', sub: 'HIT THEM' };
+  if (step === 'claw') return { kind: 'button', id: 'attack', title: 'TAP CLAW', sub: 'A KILL FEEDS YOU' };
   if (step === 'board') {
-    const near = door && distTo(p, door) < DOOR_RANGE;
+    const near = door && nearDoor(p, door) < DOOR_RANGE;
     if (near && boardBtn && !boardBtn.hidden && p.planks >= 3) {
-      return { kind: 'button', id: 'barricade', title: 'TAP BOARD', sub: 'THREE PLANKS' };
+      return { kind: 'button', id: 'barricade', title: 'TAP BOARD', sub: 'OR OPEN AND FEED' };
     }
     if (near && p.planks < 3) return { kind: 'button', id: 'interact', title: 'TAP USE', sub: 'OPEN AND FEED' };
     return { kind: 'world', label: 'DOOR', sub: 'SERVANT DOOR' };
