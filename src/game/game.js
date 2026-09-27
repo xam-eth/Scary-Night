@@ -33,7 +33,8 @@ import { Haunts } from './haunts.js';
 import { Ads } from '../shop/ads.js';
 import { Valen3D } from './valen3d.js';
 import { IAP } from '../shop/iap.js';
-import { drawHUD, drawWorldPrompts } from './hud.js';
+import { drawHUD, drawWorldPrompts, urgentGuidance } from './hud.js';
+import { nextBeat, ackBeat, beatById } from './narrative.js';
 import { updateCoach, drawCoachWorld } from './coach.js';
 import * as UI from '../ui/screens.js';
 
@@ -153,6 +154,11 @@ export class Game {
     this.particles = new Particles(760);
     this.decals = new Decals();
     this.messages = [];
+    this.storyQueue = [];
+    this.storyLine = null;
+    this.storyBeatId = null;
+    this.storyShown = 0;
+    this.dawnCard = null;
     this.combatTexts = [];
     this.knocks = [];
     this.timeouts = [];
@@ -527,6 +533,7 @@ export class Game {
       this.fadeFromBlack = 1;
     }
     this.renderer.snapCamera(this.player.x, this.player.y);
+    this.offerNarrative({ surface: 'strip', event: 'night', night: (this.save.nightsSurvived || 0) + 1 });
     const reveal = revealForNight(this.save.nightsSurvived);
     if (reveal) this.showMessage(reveal.text, { tone: 'cold', life: 4.2 });
     if (this.save.iap && this.save.iap.owned && this.save.iap.owned.remove_ads) Ads.suppressed = true;
@@ -791,6 +798,8 @@ export class Game {
     const tall = this.renderer.h > this.renderer.w * 1.2;
     const biasY = tall ? -110 : 0;
     this.noteRoom(p);
+    if (p.lowBlood) this.offerNarrative({ surface: 'strip', event: 'state', state: 'lowBlood', night: (this.save.nightsSurvived || 0) + 1 });
+    this.tickStory(dt);
     this.renderer.followCamera(p.x, p.y, dt, lookX, lookY + biasY, this.mansion.camBounds);
 
     // ---- stats / codex ----
@@ -950,6 +959,57 @@ export class Game {
     const roomLine = lines[id] || (named && named.name) || id;
     this._roomLine = roomLine;
     this._roomLineAt = this.time;
+    this.offerNarrative({ surface: 'room', event: 'room', room: id, night: (this.save.nightsSurvived || 0) + 1 });
+  }
+
+  /**
+   * Ask the director for the beat due at this hook. Strip and room lines
+   * queue for the guidance slot. Dawn-cards wait on save for the interstitial.
+   */
+  offerNarrative(query) {
+    const beat = nextBeat(this.save, query);
+    if (!beat) return null;
+    const queued = (this.storyQueue || []).some((b) => b.id === beat.id) || this.storyBeatId === beat.id;
+    if (queued) return beat;
+    if (beat.surface === 'dawnCard') {
+      ackBeat(this.save, beat.id);
+      this.save.pendingDawn = this.save.pendingDawn || [];
+      if (!this.save.pendingDawn.includes(beat.id)) this.save.pendingDawn.push(beat.id);
+      this.dawnCard = beatById(beat.id);
+      writeSave(this.save);
+      return beat;
+    }
+    this.storyQueue = this.storyQueue || [];
+    this.storyQueue.push(beat);
+    return beat;
+  }
+
+  /** Advance the murmur only while the strip is actually showing it. */
+  tickStory(dt) {
+    if (!this.storyLine && this.storyQueue && this.storyQueue.length) {
+      const beat = this.storyQueue.shift();
+      this.storyLine = beat.text;
+      this.storyBeatId = beat.id;
+      this.narrativeLine = beat.text;
+      this.storyShown = 0;
+      this._storyAcked = false;
+    }
+    if (!this.storyLine || this.screen !== 'playing') return;
+    const covered = (this.messages || []).some((m) => m.life - m.t > 0.05);
+    if (urgentGuidance(this) || covered) return;
+    this.storyShown += dt;
+    if (!this._storyAcked && this.storyShown >= 0.45 && this.storyBeatId) {
+      ackBeat(this.save, this.storyBeatId);
+      this._storyAcked = true;
+      writeSave(this.save);
+    }
+    if (this.storyShown >= 6.8) {
+      if (this.narrativeLine === this.storyLine) this.narrativeLine = null;
+      this.storyLine = null;
+      this.storyBeatId = null;
+      this.storyShown = 0;
+      this._storyAcked = false;
+    }
   }
 
   drinkLarder(larder) {
@@ -1299,6 +1359,7 @@ export class Game {
     this.particles.burst('dust', e.x, e.y, 18, { color: 'rgba(140,130,115,0.4)', sizeMin: 5, sizeMax: 16, speedMin: 20, speedMax: 70, lifeMin: 0.6, lifeMax: 1.6 });
     this.decals.splat(e.x, e.y, 20, 'rgba(40,30,20,0.35)', 6);
     this.showMessage(`${e.name} GIVES WAY.`, { tone: 'danger' });
+    if (e.kind === 'door') this.offerNarrative({ surface: 'strip', event: 'state', state: 'doorLost', night: (this.save.nightsSurvived || 0) + 1 });
     this.makeNoise(e.x, e.y, 900);
     this.hbPulse = 1;
   }
@@ -1652,6 +1713,7 @@ export class Game {
     this.finalizeShards(NIGHT_DURATION);
     this.settleNight(NIGHT_DURATION);
     this.save.nightsSurvived++;
+    this.offerNarrative({ surface: 'dawnCard', event: 'dawn', dawn: this.save.nightsSurvived });
     this.newRecord = NIGHT_DURATION > this.save.bestTime;
     this.save.bestTime = Math.max(this.save.bestTime, NIGHT_DURATION);
     this.save.seen.dawn = true;

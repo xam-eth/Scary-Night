@@ -187,6 +187,9 @@ final decision, so it feels earned, not menu-picked.
 ## 12. Implementation seams → Epic (Narrative & Cinematics)
 - A **narrative director** (data-driven beats → the bottom strip #31 slot,
   dawn-cards, room fragments; hung on `REVEALS`/#15 and room-enter).
+  Landed in `src/game/narrative.js`. Once-only beats persist on `save.beats`.
+  Dawn-cards wait in `save.pendingDawn`. Urgent guidance pre-empts a murmur;
+  the murmur resumes. Adding a line is a table row, not new control flow.
 - **Dawn-card interstitials** after each survived dawn.
 - **Environmental room fragments** (one discoverable detail per named room).
 - **The arc content + the knock's fragment thread** (the authored beats here).

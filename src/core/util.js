@@ -140,6 +140,8 @@ export const defaultSave = () => ({
   milestones: {},
   privacyAck: false,        // first-run notice; not an account
   deeds: {},                // what the player has actually done; the shop waits on these
+  beats: {},                // once-only narrative beats the director has delivered
+  pendingDawn: [],          // dawn-card ids waiting for the interstitial
 });
 
 function deepMerge(base, over) {

@@ -230,6 +230,8 @@ export function migrateSave(save) {
   save.builds = save.builds || {};
   save.revealed = save.revealed || {};
   save.milestones = save.milestones || {};
+  save.beats = save.beats || {};
+  save.pendingDawn = save.pendingDawn || [];
   save.coachFed = !!save.coachFed;
   save.coachKnock = !!save.coachKnock;
   if (!save._migratedLanes && save.upgrades) {

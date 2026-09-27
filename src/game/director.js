@@ -447,6 +447,9 @@ export class Director {
         break;
       }
     }
+    if (k.outcome === 'gift' && game.offerNarrative) {
+      game.offerNarrative({ surface: 'strip', event: 'knock', knock: 'gift', night: (game.save.nightsSurvived || 0) + 1 });
+    }
     return k;
   }
 

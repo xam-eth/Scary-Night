@@ -275,14 +275,9 @@ function drawClock(game, ctx, w, h, pulse, em = 1) {
   ctx.restore();
 }
 
-/**
- * One line for the bottom strip.
- * Narrative seam: set `game.narrativeLine` and it wins. A later story epic
- * feeds this same slot; do not add a second caption channel.
- */
-export function guidanceLine(game) {
+/** Teaching, a live door, hunger, or a knock. Story waits, then resumes. */
+export function urgentGuidance(game) {
   if (!game || !game.player) return null;
-  if (typeof game.narrativeLine === 'string' && game.narrativeLine) return game.narrativeLine;
   const step = game.coach && game.coach.step;
   if (step && step !== 'done') {
     if (step === 'walk') return 'DRAG TO WALK. BLOOD IS ALREADY DRAINING.';
@@ -292,17 +287,33 @@ export function guidanceLine(game) {
     if (step === 'board' || step === 'door') return 'BAR THE SERVANT DOOR, OR OPEN AND FEED.';
     if (step === 'raise') return 'RAISE THE STAKES.';
     if (step === 'planks' || step === 'planks2') return 'WALK ONTO THE PLANKS.';
+    if (step === 'stakes') return 'WALK TO THE STAKES.';
   }
   const door = game.mansion && game.mansion.entrances && game.mansion.entrances.find((e) => e.attackers > 0);
   if (door) return `BAR THE ${door.name || 'DOOR'}.`;
-  const hungry = game.player.lowBlood || game.hungerFailing;
-  if (hungry) return (game.timeLeft || 0) > 80 ? 'FEED — DAWN IS FAR.' : 'FEED, OR THE DAWN IS LOST.';
+  if (game.player.lowBlood || game.hungerFailing) {
+    return (game.timeLeft || 0) > 80 ? 'FEED — DAWN IS FAR.' : 'FEED, OR THE DAWN IS LOST.';
+  }
   const knock = game.director && game.director.knock;
   if (knock && knock.tell) {
     if (knock.tell.class === 'gift') return 'THE KNOCK IS OFFERING SOMETHING.';
     if (knock.tell.class === 'empty') return 'THE DOOR IS ONLY WOOD.';
     return 'THE WOOD WARNS YOU.';
   }
+  return null;
+}
+
+/**
+ * One line for the bottom strip.
+ * Urgent guidance pre-empts a story murmur. When the night quiets, the murmur
+ * resumes. `narrativeLine` is that murmur — do not add a second caption channel.
+ */
+export function guidanceLine(game) {
+  if (!game || !game.player) return null;
+  const urgent = urgentGuidance(game);
+  if (urgent) return urgent;
+  const story = game.storyLine || (typeof game.narrativeLine === 'string' ? game.narrativeLine : '');
+  if (story) return story;
   const open = game.objectives && game.objectives.hudState && game.objectives.hudState();
   if (open && open.open && open.open[0]) return open.open[0].label;
   if (game._roomLine && game.time - (game._roomLineAt || 0) < 4.2) return game._roomLine;
