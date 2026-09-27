@@ -154,6 +154,103 @@ function drawBrandPlate(ctx, w, h, { focus = 0.18, dim = 0.55 } = {}) {
 
 /* ================= menu scene ================= */
 
+/** Silent attract loop. A real slice of the house: clock, a door, a drink. */
+function drawAttract(game, ctx, w, h, idle) {
+  const door = game.mansion && (game.mansion.diningDoor || (game.mansion.doors && game.mansion.doors[0]));
+  if (!door || !door.inside) return;
+  const LOOP = 6.6;
+  const u = ((idle - 2.4) % LOOP + LOOP) % LOOP;
+  const bx = w * 0.12;
+  const by = h * 0.18;
+  const bw = w * 0.76;
+  const bh = Math.min(h * 0.28, h * 0.47 - by);
+  const zoom = Math.min(bw / 640, bh / 340);
+  const drain = u < 1.8 ? 1 : u < 3.6 ? 1 - (u - 1.8) / 1.8 : 0.1;
+  const walk = u < 1.8 ? u / 1.8 : 1;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(bx, by, bw, bh);
+  ctx.clip();
+  ctx.fillStyle = '#101218';
+  ctx.fillRect(bx, by, bw, bh);
+  ctx.translate(bx + bw * 0.38, by + bh * 0.62);
+  ctx.scale(zoom, zoom);
+  ctx.translate(-door.inside.x, -door.inside.y);
+  game.mansion.drawFloor(ctx);
+  if (game.mansion.drawProps) game.mansion.drawProps(ctx, game);
+  ctx.fillStyle = drain > 0.45 ? '#6d8a48' : '#9a2424';
+  ctx.fillRect(door.x - 22, door.y - 4, 44 * drain, 7);
+  if (u > 1.5 && u < 5.2 && door.outside) {
+    ctx.fillStyle = '#0c0d12';
+    ctx.beginPath();
+    ctx.ellipse(door.outside.x, door.outside.y, 14, 8, 0, 0, TAU);
+    ctx.fill();
+  }
+  ctx.restore();
+  const vx = bx + 48 + walk * (bw * 0.42);
+  const vy = by + bh * 0.78;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(bx, by, bw, bh);
+  ctx.clip();
+  ctx.translate(vx, vy);
+  if (u > 5.1) ctx.filter = 'saturate(1.35) sepia(0.3)';
+  const frame = Valen3D.renderMenu();
+  const drew = frame && Valen3D.draw(ctx, frame, Math.min(78, bh * 0.62), { footInset: 8 });
+  if (!drew) {
+    ctx.fillStyle = '#14151c';
+    ctx.beginPath();
+    ctx.moveTo(-16, 4);
+    ctx.quadraticCurveTo(-22, -28, -12, -48);
+    ctx.quadraticCurveTo(0, -58, 12, -48);
+    ctx.quadraticCurveTo(22, -28, 16, 4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#c8b8a4';
+    ctx.beginPath();
+    ctx.arc(0, -52, 7, 0, TAU);
+    ctx.fill();
+  }
+  ctx.restore();
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(bx, by, bw, bh);
+  ctx.clip();
+  ctx.fillStyle = '#0c0d12';
+  ctx.beginPath();
+  ctx.ellipse(bx + bw - 42, by + bh * 0.58, 11, 6, 0, 0, TAU);
+  ctx.fill();
+  ctx.fillStyle = drain > 0.45 ? '#6d8a48' : '#9a2424';
+  ctx.fillRect(bx + bw - 58, by + bh * 0.66, 34 * drain, 5);
+  if (u > 3.5 && u < 5.4) {
+    const k = (u - 3.5) / 1.6;
+    for (let i = 0; i < 7; i++) {
+      const t = clamp(k * 1.15 - i * 0.08, 0, 1);
+      const x = (bx + bw - 42) + (vx - (bx + bw - 42)) * t;
+      const y = (by + bh * 0.58) + (vy - 24 - by - bh * 0.58) * t - Math.sin(t * Math.PI) * 16;
+      ctx.globalAlpha = 0.9 * (1 - k * 0.25);
+      ctx.fillStyle = '#c01828';
+      ctx.beginPath();
+      ctx.arc(x, y, 2.6, 0, TAU);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+  ctx.save();
+  ctx.strokeStyle = 'rgba(168,131,60,0.45)';
+  ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
+  ctx.font = `500 12px ${MONO}`;
+  ctx.fillStyle = 'rgba(232,220,200,0.92)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const secs = Math.max(18, 248 - u * 6);
+  const mm = String((secs / 60) | 0).padStart(2, '0');
+  const ss = String((secs % 60) | 0).padStart(2, '0');
+  ctx.fillText(`DAWN IN  ${mm}:${ss}`, bx + bw / 2, by + 16);
+  ctx.restore();
+}
+
 export function drawMenuScene(game, ctx, w, h, t) {
   // Vertical hall plate. A light wash only — the architecture is the identity.
   drawBrandPlate(ctx, w, h, { focus: 0.5, dim: 0 });
@@ -166,6 +263,9 @@ export function drawMenuScene(game, ctx, w, h, t) {
   ctx.lineWidth = 1;
   ctx.strokeRect(10.5, 10.5, w - 21, h - 21);
 
+  if (game.save && game.save.privacyAck && (game.menuIdle || 0) > 2.4) {
+    drawAttract(game, ctx, w, h, game.menuIdle);
+  } else {
   // ---- the character, in the hall, under the window ----
   // Industry rule for a hero screen: the menu shows WHAT YOU PLAY, so the
   // loaded GLB itself stands in the hall (its rest pose, evaluated once).
@@ -225,6 +325,7 @@ export function drawMenuScene(game, ctx, w, h, t) {
     ctx.stroke();
   }
   ctx.restore();
+  }
 
   // ---- lightning flash ----
   if (game.menuLightning > 0) {
@@ -986,6 +1087,16 @@ export function drawDeath(game, ctx, w, h) {
     ctx.fillStyle = 'rgba(178,120,110,0.85)';
     ctx.fillText(String(game.deathReason).toUpperCase(), w / 2, h * 0.365);
   }
+  const worn = IAP.equippedCoat(game.save);
+  const coatDeath = worn === 'coat_glutton' ? 'SHE DIED STILL HUNGRY.'
+    : worn === 'coat_warden' ? 'THE WOOD OUTLASTED HER.'
+    : worn === 'coat_shade' ? 'THE QUIET CLOSED OVER HER.'
+    : null;
+  if (coatDeath) {
+    ctx.font = `italic 400 13px ${SERIF}`;
+    ctx.fillStyle = 'rgba(196,176,140,0.75)';
+    ctx.fillText(coatDeath, w / 2, h * 0.4);
+  }
 
   const stats = game.stats;
   const rows = [
@@ -1011,6 +1122,9 @@ export function drawDeath(game, ctx, w, h) {
     ctx.fillStyle = 'rgba(200,160,74,0.9)';
     const floor = game.purseSettled ? game.bankedNow : Math.max(1, Math.round((game.shardsEarned || 0) * 0.2));
     ctx.fillText(game.purseSettled ? `◆ ${game.bankedNow} KEPT` : `◆ ${game.shardsEarned} AT RISK · KEEP ${floor}`, w / 2, y + 6);
+    ctx.font = `400 11px ${SANS}`;
+    ctx.fillStyle = 'rgba(176,166,150,0.7)';
+    ctx.fillText('KEEPS THE PURSE. NOT THE CLAW.', w / 2, y + 24);
   }
   // tonight's goals board — partial credit, shown honestly
   if (game.lastNightGoals && game.lastNightGoals.length) {
@@ -1033,6 +1147,8 @@ export function drawDeath(game, ctx, w, h) {
       items.push({ label: `KEEP ◆ ${atRisk}`, onClick: () => game.spendSecondBlood(), accent: '#a8833c' });
     } else if (!game.usedRevive && game.save.iap && game.save.iap.revives > 0) {
       items.push({ label: 'USE SECOND BLOOD', onClick: () => game.spendSecondBlood(), accent: '#6a6a80' });
+    } else if (relief && IAP.mode !== 'disabled' && IAP.offered(game.save, 'revive1')) {
+      items.push({ label: 'SECOND BLOOD', onClick: () => game.purchaseSku('revive1'), accent: '#a8833c' });
     }
     items.push(
       { label: 'UPGRADES', onClick: () => game.setScreen('upgrades', 'death'), accent: '#6a6a80' },
@@ -1321,7 +1437,11 @@ export function drawShop(game, ctx, w, h) {
   ctx.font = `400 10px ${SANS}`;
   if ('letterSpacing' in ctx) ctx.letterSpacing = '1.4px';
   ctx.fillStyle = 'rgba(140,134,124,0.55)';
+  const adsLine = Ads.provider() === 'none'
+    ? 'ADS ARE OFF HERE · IF THEY RETURN THEY ARE OPT-IN, NEVER FORCED'
+    : 'REWARDED ADS ARE OPT-IN AND HARD-CAPPED · NEVER FORCED';
   const policy = ['SHARDS ARE EARNED BY THE NIGHT · MONEY BUYS RELIEF AND IDENTITY · NEVER POWER',
+    adsLine,
     IAP.mode === 'native' ? 'GOOGLE PLAY BILLING · THE GAME GRANTS ONLY AFTER CONSUME OR ACKNOWLEDGE'
       : IAP.mode === 'midtrans' ? 'WEB RAIL · RELIEF AND IDENTITY ONLY · THE SERVER CONFIRMS SETTLEMENT'
       : IAP.mode === 'sandbox' ? 'SANDBOX — NO REAL MONEY MOVES'

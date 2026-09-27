@@ -559,14 +559,17 @@ if (args.systems) {
   }
   else line(false, 'no basin in the mansion');
 
-  const { hideDeathSecond, unlocked, rankCount, tellFor, purseFloor, drainPerSecond } = await import('../src/game/economy.js');
+  const { hideDeathSecond, unlocked, rankCount, tellFor, purseFloor, drainPerSecond, projectDawn } = await import('../src/game/economy.js');
   const { dealNightGoals, forbiddenPair, CORE_GOALS } = await import('../src/game/objectives.js');
-  const { TUNING } = await import('../src/core/config.js');
+  const { TUNING, nightHeat, threatMix } = await import('../src/core/config.js');
   const hideAt = hideDeathSecond({ nightsSurvived: 1 });
   line(hideAt > 180 && hideAt < 210, `hoard-and-hide dies at ${hideAt.toFixed(0)}s (want 03:00–03:30)`);
   const n1 = drainPerSecond({ nightsSurvived: 0 });
   line((48 + 20) / n1 > 300 && 48 / n1 < 300, `night 1 is a taught feed (${(48 / n1).toFixed(0)}s hidden, ${((48 + 20) / n1).toFixed(0)}s with one kill)`);
   line((77.6 + 60) / 0.42 > 300, 'three feeds carry a later night to dawn');
+  line(projectDawn(48, 300, { nightsSurvived: 1 }).failing, 'a hider is already losing at dusk, with the whole night left to feed');
+  line(nightHeat(4) > 1.2 && nightHeat(4) < 1.35, `four dawns of heat (${nightHeat(4).toFixed(2)}) fits a maxed lane`);
+  line(nightHeat(12) <= nightHeat(8) + 0.001 && threatMix(8).stalker && !threatMix(3).stalker, 'count flattens; kind keeps rising');
   let badGoals = 0;
   for (let s = 1; s <= 200; s++) {
     const ids = dealNightGoals(s).map((g) => g.id);
@@ -631,6 +634,9 @@ const shot = (name, warm = 60) => {
 if (args.screens) {
   console.log('writing screenshots:');
   game.screen = 'menu'; shot('menu', 90);
+  game.save.privacyAck = true;
+  game.menuIdle = 6.8;
+  shot('menu-attract', 8);
   game.screen = 'intro'; game.introT = 1.6; shot('intro', 30);
   game.screen = 'settings'; shot('settings', 20);
   game.screen = 'upgrades'; shot('upgrades', 20);

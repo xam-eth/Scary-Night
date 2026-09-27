@@ -15,7 +15,7 @@ import {
   clamp, lerp, damp, rand, randInt, chance, pick, shuffle, dist, fmtClock,
 } from '../core/util.js';
 import {
-  PHASES, phaseAt, nextPhase, BEATS, DIRECTOR, KNOCKS, NIGHT_DURATION, nightHeat,
+  PHASES, phaseAt, nextPhase, BEATS, DIRECTOR, KNOCKS, NIGHT_DURATION, nightHeat, threatMix,
   SPAWN_WARMUP, PANIC_AT, SILENCE_AT, COUNTDOWN_AT, ENEMY_TYPES, TUNING,
 } from '../core/config.js';
 import { tellFor, revealForNight } from './economy.js';
@@ -193,6 +193,7 @@ export class Director {
     // unbothered is what it hunts. One per long while, on its own schedule.
     this.stalkerCd = (this.stalkerCd ?? 40) - dt;
     if (quiet && !TUNING.noSpawns && this.stalkerCd <= 0 && t > 95 && game.danger > 0.12 && game.danger < 0.72
+        && threatMix(game.save && game.save.nightsSurvived).stalker
         && !game.enemies.some((x) => x.key === 'stalker' && !x.dead)) {
       this.stalkerCd = rand(55, 95);
       const sEnt = game.mansion.entrances[(rand(0, game.mansion.entrances.length)) | 0];
@@ -222,12 +223,12 @@ export class Director {
       let budgetLeft = this.budget;
       // the type mix opens up as the night goes on
       const pool = [];
+      const mix = threatMix(game.save && game.save.nightsSurvived);
       pool.push({ k: 'crawler', w: 4 });
       pool.push({ k: 'zombie', w: 5.5 });
-      if (game.time > 110) pool.push({ k: 'hunter', w: 2.4 });
-      if (game.time > 170) pool.push({ k: 'werewolf', w: 0.55 + d * 0.8 });
-      // v1.0: the ghoul comes when the doors matter; the pack answers the panic
-      if (game.time > 150) pool.push({ k: 'ghoul', w: 0.45 + d * 0.7 });
+      if (game.time > mix.hunterAt) pool.push({ k: 'hunter', w: 2.4 });
+      if (game.time > mix.wolfAt) pool.push({ k: 'werewolf', w: 0.55 + d * 0.8 });
+      if (game.time > mix.ghoulAt) pool.push({ k: 'ghoul', w: 0.45 + d * 0.7 });
       if (phase.id === 'panic') pool.push({ k: 'crawler', w: 3 }, { k: 'zombie', w: 5 }, { k: 'werewolf', w: 1.0 }, { k: 'hunter', w: 1.4 }, { k: 'ghoul', w: 0.8 });
       const totalW = pool.reduce((a, b) => a + b.w, 0);
       let guard = 0;

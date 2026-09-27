@@ -39,7 +39,7 @@ export function updateCoach(game) {
 
   // One lesson at a time, and only when the tap can succeed.
   const lesson = c.step === 'walk' ? null : pendingLesson(game);
-  if (lesson && c.step !== lesson && c.step !== 'feed' && c.step !== 'knock') {
+  if (lesson && c.step !== lesson && c.step !== 'feed' && c.step !== 'knock' && c.step !== 'hunt') {
     c.hold = c.step;
     c.killsAt = game.stats.kills || 0;
     c.step = lesson;
@@ -54,6 +54,14 @@ export function updateCoach(game) {
     if (door && nearDoor(p, door) < DOOR_RANGE) advance(c);
   } else if (c.step === 'board') {
     if (door && (door.barricade > 0 || door.open)) advance(c);
+  } else if (c.step === 'hunt') {
+    if (enemyInReach(game)) {
+      c.killsAt = game.stats.kills || 0;
+      c.step = 'feed';
+    } else if (!nearestPrey(game)) {
+      c.step = c.hold && c.hold !== 'hunt' ? c.hold : 'planks';
+      c.hold = null;
+    }
   } else if (c.step === 'feed') {
     if ((game.stats.kills || 0) > (c.killsAt || 0)) {
       game.save.coachFed = true;
@@ -119,12 +127,26 @@ function nearestPlank(game) {
   return best;
 }
 
+function nearestPrey(game) {
+  let best = null;
+  let bd = 1e9;
+  for (const e of game.enemies || []) {
+    if (!e || e.dead) continue;
+    const d = Math.hypot(e.x - game.player.x, e.y - game.player.y);
+    if (d < bd) { bd = d; best = e; }
+  }
+  return best;
+}
+
 function pendingLesson(game) {
   const save = game.save || {};
   const door = servantDoor(game);
   const chose = door && (door.open || door.barricade > 0 || door.broken);
   const hungry = !!(game.hungerWarned || (game.player && game.player.lowBlood));
-  if (!save.coachFed && enemyInReach(game) && (chose || hungry)) return 'feed';
+  if (!save.coachFed && (chose || hungry)) {
+    if (enemyInReach(game)) return 'feed';
+    if (nearestPrey(game)) return 'hunt';
+  }
   if (!save.coachKnock && chose && game.director && game.director.knock) return 'knock';
   return null;
 }
@@ -154,6 +176,10 @@ function worldMark(game) {
   if (step === 'planks' || step === 'planks2' || (step === 'raise' && p.planks < 3)) {
     const pk = nearestPlank(game);
     return pk ? { x: pk.x, y: pk.y } : null;
+  }
+  if (step === 'hunt' && nearestPrey(game)) {
+    const e = nearestPrey(game);
+    return { x: e.x, y: e.y };
   }
   if (step === 'knock' && game.director && game.director.knock) {
     const e = game.mansion.entranceById(game.director.knock.entranceId);
@@ -289,8 +315,12 @@ function cueFor(game) {
   const stakes = stakeProp(game);
   const boardBtn = game.input.buttons.barricade;
   if (step === 'walk') return { kind: 'drag' };
-  if (step === 'feed' || step === 'claw') return { kind: 'button', id: 'attack', title: 'TAP CLAW', sub: 'KILL TO DRINK' };
-  if (step === 'knock') return { kind: 'world', label: 'A KNOCK', sub: 'ANSWER IT, OR LEAVE IT' };
+  if (step === 'hunt') return { kind: 'world', label: 'BLOOD IS DRAINING', sub: 'WALK TO THE MEAL' };
+  if (step === 'feed' || step === 'claw') return { kind: 'button', id: 'attack', title: 'BLOOD IS DRAINING', sub: 'KILL TO DRINK' };
+  if (step === 'knock') {
+    const tell = game.director && game.director.knock && game.director.knock.tell;
+    return { kind: 'world', label: 'A KNOCK', sub: tell && tell.class === 'menacing' ? 'THE WOOD WARNS YOU' : 'ANSWER OR LEAVE IT' };
+  }
   if (step === 'board') {
     const near = door && nearDoor(p, door) < DOOR_RANGE;
     if (near && boardBtn && !boardBtn.hidden && p.planks >= 3) {

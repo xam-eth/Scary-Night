@@ -25,6 +25,15 @@ function coatFilter(id) {
   return null;
 }
 
+/** Composite over the GLB. Hunger greys her. A feed puts the colour back. */
+function bodyGrade(id, hunger, sated) {
+  const coat = coatFilter(id);
+  const sat = Math.max(0.12, 1 - hunger * 0.88 + (sated || 0) * 0.6);
+  const bri = 0.76 + (1 - hunger) * 0.24 + (sated || 0) * 0.14;
+  const warm = sated > 0.04 ? `sepia(${(sated * 0.4).toFixed(2)})` : '';
+  return [coat, `saturate(${sat.toFixed(2)}) brightness(${bri.toFixed(2)})`, warm].filter(Boolean).join(' ');
+}
+
 export const PSTATE = {
   IDLE: 'idle', WALK: 'walk', RUN: 'run', ATTACK: 'attack', HURT: 'hurt',
   DEAD: 'death', DRINK: 'drink', PANIC: 'panic', CRAWL: 'crawl',
@@ -37,6 +46,7 @@ export class Player {
     this.angle = -Math.PI / 2;
     this.radius = PLAYER.radius;
     this.blood = PLAYER.bloodMax;
+    this.sated = 0;
     this.bloodMax = PLAYER.bloodMax;
     this.planks = 2;
     this.state = PSTATE.IDLE;
@@ -72,6 +82,7 @@ export class Player {
   get alive() { return this.state !== PSTATE.DEAD; }
   get bloodPct() { return clamp(this.blood / this.bloodMax, 0, 1); }
   get lowBlood() { return this.blood < PLAYER.lowBlood; }
+  get hungerVis() { return clamp(1 - this.bloodPct, 0, 1); }
   get critBlood() { return this.blood < PLAYER.critBlood; }
   get moving() { return Math.hypot(this.vx, this.vy) > 12; }
   get speed() { return Math.hypot(this.vx, this.vy); }
@@ -121,6 +132,7 @@ export class Player {
       const before = this.blood;
       this.blood = Math.max(0, this.blood - drain * dt);
       if (running && before - this.blood > 0.01) game.bloodTick = Math.max(game.bloodTick || 0, 0.28);
+      this.sated = Math.max(0, (this.sated || 0) - dt * 0.85);
     } else this.blood = this.bloodMax;
 
     if (this.blood <= 0) {
@@ -405,13 +417,19 @@ export class Player {
     ctx.globalCompositeOperation = 'screen';
     // the weaker the vampire, the harder the rim works: panic makes the world
     // darker, but losing sight of yourself is never the intended feeling
-    const need = this.lowBlood ? 1 + (1 - this.bloodPct) * 1.5 : 1;
-    const halo = ctx.createRadialGradient(this.x, this.y, 2, this.x, this.y, 44);
-    halo.addColorStop(0, dead ? 'rgba(70,80,105,0.10)' : `rgba(150,172,215,${(0.24 * need).toFixed(3)})`);
-    halo.addColorStop(0.5, `rgba(110,132,180,${(0.13 * need).toFixed(3)})`);
+    const hunger = this.hungerVis;
+    const sated = this.sated || 0;
+    const need = 1 + hunger * 2.6;
+    const rad = 36 + hunger * 26;
+    const halo = ctx.createRadialGradient(this.x, this.y, 2, this.x, this.y, rad);
+    const core = sated > 0.08
+      ? `rgba(255,168,132,${(0.2 + sated * 0.4).toFixed(3)})`
+      : `rgba(176,198,235,${(0.14 + hunger * 0.42).toFixed(3)})`;
+    halo.addColorStop(0, dead ? 'rgba(70,80,105,0.10)' : core);
+    halo.addColorStop(0.55, `rgba(120,146,190,${(0.08 * need).toFixed(3)})`);
     halo.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = halo;
-    ctx.beginPath(); ctx.arc(this.x, this.y, 44, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(this.x, this.y, rad, 0, TAU); ctx.fill();
     ctx.restore();
 
     // v1.0 (QA P1-4) — during blackouts a faint ground ring marks the feet,
@@ -851,7 +869,7 @@ export class Player {
     ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = game.blackoutT > 0 ? 0.72 : 0.94;
     const coatId = IAP.equippedCoat(game.save);
-    const filter = coatFilter(coatId);
+    const filter = bodyGrade(coatId, this.hungerVis, this.sated || 0);
     if (filter) ctx.filter = filter;
     const place = this._valenPlace || { height: 58, footInset: 9, drop: 0, head: null, anchor: 'feet' };
     Valen3D.draw(ctx, frame, place.height, {
@@ -862,11 +880,26 @@ export class Player {
       drop: place.drop,
     });
     if (filter) ctx.filter = 'none';
-    ctx.globalAlpha = 0.55;
-    ctx.fillStyle = 'rgba(186, 206, 235, 0.9)';
+    const hv = this.hungerVis;
+    ctx.globalCompositeOperation = 'screen';
+    ctx.globalAlpha = 0.22 + hv * 0.72;
+    ctx.fillStyle = hv > 0.72 ? 'rgba(214,226,255,0.95)' : 'rgba(176,198,232,0.9)';
     ctx.beginPath();
-    ctx.ellipse(0, 2, 11, 4.5, 0, 0, TAU);
+    ctx.ellipse(0, 3, 12 + hv * 22, 5 + hv * 8, 0, 0, TAU);
     ctx.fill();
+    ctx.globalAlpha = 0.35 + hv * 0.6;
+    ctx.strokeStyle = hv > 0.72 ? 'rgba(236,242,255,0.95)' : 'rgba(186,206,235,0.75)';
+    ctx.lineWidth = 1.2 + hv * 2.4;
+    ctx.beginPath();
+    ctx.ellipse(0, 3, 16 + hv * 20, 6.5 + hv * 7, 0, 0, TAU);
+    ctx.stroke();
+    if ((this.sated || 0) > 0.05) {
+      ctx.globalAlpha = this.sated * 0.65;
+      ctx.fillStyle = 'rgba(255,118,86,0.85)';
+      ctx.beginPath();
+      ctx.ellipse(0, 2, 18, 8, 0, 0, TAU);
+      ctx.fill();
+    }
     ctx.restore();
   }
 

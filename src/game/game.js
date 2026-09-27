@@ -17,7 +17,7 @@ import {
 } from '../core/util.js';
 import {
   NIGHT_DURATION, DAWN_AT, COUNTDOWN_AT, SILENCE_AT, PANIC_AT, PLAYER, DOOR, RES,
-  phaseAt, DIFFICULTY, TUNING, UPGRADES, upgradeLevel, SHARDS, CODEX, nightHeat,
+  phaseAt, DIFFICULTY, TUNING, UPGRADES, upgradeLevel, SHARDS, CODEX, nightHeat, threatMix,
 } from '../core/config.js';
 import { Mansion, ROOM } from './mansion.js';
 import { Player, PSTATE } from './player.js';
@@ -443,6 +443,9 @@ export class Game {
     this.forfeited = 0;
     this.hungerWarned = false;
     this.bloodTick = 0;
+    this.drinks = [];
+    this.bloodShown = null;
+    this.bloodGulp = 0;
     this.newRecord = false;
     this.dyingT = 0;
     this.dawnT = 0;
@@ -604,6 +607,10 @@ export class Game {
   }
 
   updateMenu(dt) {
+    const keys = this.input && this.input.keys;
+    const busy = !!(this.input && ((this.input.mouse && this.input.mouse.down) || (keys && (keys.interact || keys.attack || keys.up || keys.down))));
+    if (!this.save.privacyAck || busy) this.menuIdle = 0;
+    else this.menuIdle = (this.menuIdle || 0) + dt;
     this.menuLightningAt -= dt;
     if (this.menuLightningAt <= 0) {
       this.menuLightningAt = rand(9, 26);
@@ -681,6 +688,16 @@ export class Game {
     this.powerOut = this.blackoutT > 0;
     this.nightBrief();
     this.bloodTick = Math.max(0, (this.bloodTick || 0) - dt);
+    this.bloodGulp = Math.max(0, (this.bloodGulp || 0) - dt);
+    const shown = this.player.bloodPct;
+    if (this.bloodShown == null) this.bloodShown = shown;
+    this.bloodShown = damp(this.bloodShown, shown, this.bloodGulp > 0 ? 2.4 : 9, dt);
+    if (this.drinks) {
+      for (let i = this.drinks.length - 1; i >= 0; i--) {
+        this.drinks[i].t += dt;
+        if (this.drinks[i].t > this.drinks[i].life) this.drinks.splice(i, 1);
+      }
+    }
     const proj = projectDawn(this.player.blood, this.timeLeft, this.save, this.player.state === 'run');
     this.hungerFailing = proj.failing;
     if (proj.failing && !this.hungerWarned && this.player.alive) {
@@ -1199,6 +1216,15 @@ export class Game {
     this.stats.kills++;
     const gain = enemy.type.bloodValue * p.recoveryMul;
     p.heal(gain, this);
+    p.sated = Math.min(1.25, 0.7 + gain / 48);
+    this.bloodGulp = 0.7 + Math.min(0.4, gain / 80);
+    this.drinks = this.drinks || [];
+    this.drinks.push({
+      ox: enemy.x, oy: enemy.y, t: 0,
+      life: 0.42 + Math.min(0.28, gain / 90),
+      amount: gain,
+      color: gain > 24 ? '#c42838' : '#8a1424',
+    });
     this.stats.feedShards = (this.stats.feedShards || 0) + killShards(enemy);
     if (!this.save.coachFed) this.save.coachFed = true;
     this.showCombatText(`+${Math.round(gain)} BLOOD`, enemy.x, enemy.y - 20, '#e06070');
@@ -1231,7 +1257,8 @@ export class Game {
   damageEntrance(e, amount, source) {
     if (e.broken) return;
     const before = e.hp;
-    this.mansion.damageEntrance(e, amount, this, source ? source.x : undefined, source ? source.y : undefined);
+    const press = threatMix(this.save && this.save.nightsSurvived).doorMul;
+    this.mansion.damageEntrance(e, amount * press, this, source ? source.x : undefined, source ? source.y : undefined);
     e.lastTouched = this.time;
     if (e.attackers <= 0 || before > 0) { /* keep */ }
   }
@@ -1411,6 +1438,8 @@ export class Game {
     const p = this.player;
     const gain = diminish ? packGain(p.blood, p.bloodMax, amount) : amount;
     p.heal(gain, this);
+    p.sated = Math.min(1.1, (p.sated || 0) + 0.4);
+    this.bloodGulp = 0.55;
     return gain;
   }
 
@@ -1595,12 +1624,15 @@ export class Game {
     }
     const firstDawn = this.noteDeed('dawned');
     const named = IAP.owns(this.save, 'title_dawnbreaker');
-    const silver = IAP.equippedCoat(this.save) === 'coat_moonsilver';
+    const coat = IAP.equippedCoat(this.save);
+    const coatDawn = coat === 'coat_glutton' ? 'THE GLUTTON DRINKS THE MORNING.'
+      : coat === 'coat_warden' ? 'THE WARDEN KEPT THE WOOD.'
+      : coat === 'coat_shade' ? 'THE SHADE WALKS OUT UNSEEN.'
+      : coat === 'coat_moonsilver' ? 'THE WOOL GOES PALE WITH THE WINDOWS.'
+      : null;
     this.showMessage(
       named ? 'DAWNBREAKER. THE HOUSE SAYS YOUR NAME.'
-        : silver ? 'THE WOOL GOES PALE WITH THE WINDOWS.'
-        : firstDawn ? 'YOU STAYED. THAT IS THE WHOLE STORY.'
-        : 'THE SUN IS COMING UP.',
+        : coatDawn || (firstDawn ? 'YOU STAYED. THAT IS THE WHOLE STORY.' : 'THE SUN IS COMING UP.'),
       { tone: 'warm', life: 5 },
     );
     // results
@@ -1664,6 +1696,21 @@ export class Game {
     if (gameVisible) this.renderWorld(dtSafe(this));
     r.resetForUI();
     if (gameVisible) r.drawFrameFade();
+    if (gameVisible && this.player && this.player.alive && r.worldToScreen) {
+      const s = r.worldToScreen(this.player.x, this.player.y);
+      const hv = this.player.hungerVis || 0;
+      const sated = this.player.sated || 0;
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      ctx.strokeStyle = sated > 0.08
+        ? `rgba(255,150,110,${0.35 + sated * 0.5})`
+        : `rgba(206,220,255,${0.18 + hv * 0.72})`;
+      ctx.lineWidth = 1.2 + hv * 2.8;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, 16 + hv * 18, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
 
     // ---- HUD ----
     if (this.screen === 'playing' || this.screen === 'dying') {
@@ -1703,6 +1750,40 @@ export class Game {
         g.addColorStop(1, `rgba(110,0,10,${0.22 * lb})`);
         ctx.fillStyle = g;
         ctx.fillRect(0, 0, w, h);
+        ctx.restore();
+      }
+    }
+  }
+
+  drawFoodCues(ctx) {
+    for (const e of this.enemies) {
+      if (e.dead || !e.hpMax || e.hp / e.hpMax > 0.45) continue;
+      const big = (e.type && e.type.bloodValue > 24) ? 1.5 : 1;
+      ctx.save();
+      ctx.globalAlpha = 0.45 + 0.3 * Math.abs(Math.sin(this.time * 4 + e.x * 0.01));
+      ctx.fillStyle = '#9a1828';
+      ctx.beginPath();
+      ctx.arc(e.x, e.y - 16, 2.2 * big, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  drawDrinks(ctx) {
+    const p = this.player;
+    if (!p || !this.drinks) return;
+    for (const d of this.drinks) {
+      const k = clamp(d.t / d.life, 0, 1);
+      for (let i = 0; i < 8; i++) {
+        const u = clamp(k * 1.2 - i * 0.07, 0, 1);
+        const x = d.ox + (p.x - d.ox) * u;
+        const y = d.oy + (p.y - d.oy) * u - Math.sin(u * Math.PI) * (18 + d.amount * 0.15);
+        ctx.save();
+        ctx.globalAlpha = (1 - k) * (0.35 + (1 - i / 8) * 0.55);
+        ctx.fillStyle = d.color;
+        ctx.beginPath();
+        ctx.arc(x, y, 1.6 + (d.amount > 24 ? 1.4 : 0.4) + (1 - i / 8), 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
       }
     }
@@ -1757,6 +1838,8 @@ export class Game {
       }
     }
     if (!playerDrawn) this.drawPlayerLayer(ctx);
+    this.drawFoodCues(ctx);
+    this.drawDrinks(ctx);
 
     // ---------- bolts ----------
     for (const b of this.bolts) if (r.isVisible(b.x, b.y, 60)) {

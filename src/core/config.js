@@ -50,10 +50,29 @@ export function nextPhase(t) {
   return null;
 }
 
-/** Each dawn the house remembers. Night 1 is 1. Later nights pack the doors. */
+/**
+ * Count pressure, shared by the purse and the pack size.
+ * A maxed lane is four ranks: about +10% damage, +14% recovery, +8% speed,
+ * +5% blood — a ~1.3× answer. Heat is 1.28 on the night after four dawns
+ * (nightsSurvived 4). After that the count curve flattens at 1.56 and
+ * threatMix changes what comes, so the top of the game is mastery.
+ * Night 1 still multiplies the director budget by 0.45 and skips the spine.
+ */
 export function nightHeat(nightsSurvived) {
   const n = Math.max(0, nightsSurvived | 0);
-  return 1 + Math.min(n, 12) * 0.2;
+  return 1 + Math.min(n, 8) * 0.07;
+}
+
+/** Kind pressure. The count curve flattens; the house does not. */
+export function threatMix(nightsSurvived) {
+  const n = Math.max(0, nightsSurvived | 0);
+  return {
+    hunterAt: n >= 3 ? 70 : 110,
+    ghoulAt: n >= 5 ? 110 : 150,
+    wolfAt: n >= 6 ? 130 : 170,
+    doorMul: 1 + Math.min(n, 8) * 0.045,
+    stalker: n >= 8,
+  };
 }
 
 /* ---------------- player ---------------- */

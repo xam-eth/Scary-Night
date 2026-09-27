@@ -10,7 +10,7 @@
 import { clamp, lerp, damp, fmtClock, TAU } from '../core/util.js';
 import { PAL } from '../core/render.js';
 import { PLAYER, UPGRADES, SHARDS } from '../core/config.js';
-import { unlocked } from './economy.js';
+import { unlocked, projectDawn, LANES } from './economy.js';
 
 const SERIF = 'Georgia, "Palatino Linotype", "Times New Roman", serif';
 const SANS = '"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
@@ -20,25 +20,64 @@ function setLetter(ctx, px) {
   if ('letterSpacing' in ctx) ctx.letterSpacing = px + 'px';
 }
 
-export function drawHUD(game, ctx, w, h) {
+export function hudEmphasis(game) {
   const p = game.player;
+  const doors = game.mansion && game.mansion.entrances.some((e) => e.attackers > 0);
+  const knock = !!(game.director && game.director.knock);
+  const panic = game.phase && (game.phase.id === 'panic' || game.phase.id === 'silence');
+  const hungry = !!(p && (p.lowBlood || game.hungerFailing));
+  const floor = 0.42;
+  let clock = 0.78, blood = 0.58, door = 0.48, goals = 0.72, actions = 0.8, badge = 0.46;
+  if (!hungry && !doors && !panic) { clock = 1; goals = 0.92; blood = 0.52; }
+  if (doors) { door = 1; blood = 0.88; goals = 0.44; clock = 0.7; }
+  if (knock) { door = Math.max(door, 0.86); clock = Math.max(clock, 0.9); }
+  if (hungry) { blood = 1; clock = 0.9; goals = 0.4; badge = 0.36; }
+  if (panic) { clock = 1; blood = 1; goals = 0.4; actions = 1; door = doors ? 1 : 0.46; badge = 0.34; }
+  const a = (v) => Math.max(floor, v);
+  return { clock: a(clock), blood: a(blood), door: a(door), goals: a(goals), actions: a(actions), badge: a(badge) };
+}
+
+export function drawHUD(game, ctx, w, h) {
   const pulse = game.hbPulse;
-  drawClock(game, ctx, w, h, pulse);
-  drawBlood(game, ctx, w, h, pulse);
-  drawActions(game, ctx, w, h);
-  drawDoorStatus(game, ctx, w, h);
+  const em = hudEmphasis(game);
+  drawClock(game, ctx, w, h, pulse, em.clock);
+  drawBlood(game, ctx, w, h, pulse, em.blood);
+  drawActions(game, ctx, w, h, em.actions);
+  drawDoorStatus(game, ctx, w, h, em.door);
   drawBearings(game, ctx, w, h);
   drawThreat(game, ctx, w, h);
-  drawGoals(game, ctx, w, h);
+  drawGoals(game, ctx, w, h, em.goals);
+  drawBuildBadge(game, ctx, w, h, em.badge);
 }
 
 /* ---------------- top left: tonight's goals (the night's purpose) ---------------- */
+
+function drawBuildBadge(game, ctx, w, h, em) {
+  if (!unlocked(game.save, 'builds')) return;
+  const builds = (game.save && game.save.builds) || {};
+  let best = null;
+  let n = 0;
+  for (const lane of LANES) {
+    const owned = lane.ranks.filter((r) => builds[r.id]).length;
+    if (owned > n) { n = owned; best = lane; }
+  }
+  if (!best) return;
+  ctx.save();
+  ctx.globalAlpha = em;
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  ctx.font = `500 10px ${SANS}`;
+  setLetter(ctx, 1.2);
+  ctx.fillStyle = 'rgba(206,186,140,0.8)';
+  ctx.fillText(best.name.replace('THE ', ''), w - 14, 18);
+  ctx.restore();
+}
 
 function phoneHud(w, h) {
   return { phone: w < 840 || h < 500, short: h < 500 };
 }
 
-function drawGoals(game, ctx, w, h) {
+function drawGoals(game, ctx, w, h, em = 1) {
   const st = game.objectives && game.objectives.hudState();
   if (!st) return;
   const { phone, short } = phoneHud(w, h);
@@ -47,6 +86,7 @@ function drawGoals(game, ctx, w, h) {
     const x = 14;
     const y = short ? 58 : 86;
     ctx.save();
+    ctx.globalAlpha = em;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     ctx.font = `500 12px ${SANS}`;
@@ -93,6 +133,7 @@ function drawGoals(game, ctx, w, h) {
   const collide = x + 190 > w / 2 - 120;
   const y = (narrow || collide) ? Math.max(clockClear, 78) : 16;
   ctx.save();
+  ctx.globalAlpha = em;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   ctx.font = `500 10px ${SANS}`;
@@ -143,7 +184,7 @@ function drawGoals(game, ctx, w, h) {
 
 /* ---------------- top centre: the night clock ---------------- */
 
-function drawClock(game, ctx, w, h, pulse) {
+function drawClock(game, ctx, w, h, pulse, em = 1) {
   const { phone, short } = phoneHud(w, h);
   const cx = w / 2;
   const y = short ? 28 : phone ? 40 : h * 0.055;
@@ -151,6 +192,7 @@ function drawClock(game, ctx, w, h, pulse) {
   const phase = game.phase;
 
   ctx.save();
+  ctx.globalAlpha = em;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
@@ -200,7 +242,7 @@ function drawClock(game, ctx, w, h, pulse) {
   // tick marks — a very thin progress rail so the player can feel time moving
   const railW = phone ? Math.min(140, w * 0.38) : 190;
   const railY = y + (short ? 16 : phone ? 26 : 36);
-  ctx.globalAlpha = 0.5;
+  ctx.globalAlpha = 0.5 * em;
   ctx.fillStyle = 'rgba(0,0,0,0.5)';
   ctx.fillRect(cx - railW / 2 - 1, railY - 1, railW + 2, 4);
   ctx.fillStyle = 'rgba(150,160,190,0.28)';
@@ -209,22 +251,22 @@ function drawClock(game, ctx, w, h, pulse) {
   const g = ctx.createLinearGradient(cx - railW / 2, 0, cx + railW / 2, 0);
   g.addColorStop(0, '#3a4a72'); g.addColorStop(0.6, '#7d1220'); g.addColorStop(1, '#b8202e');
   ctx.fillStyle = g;
-  ctx.globalAlpha = 0.85;
+  ctx.globalAlpha = 0.85 * em;
   ctx.fillRect(cx - railW / 2, railY, railW * pr, 2);
   // phase pips
-  ctx.globalAlpha = 0.6;
+  ctx.globalAlpha = 0.6 * em;
   for (const ph of [60, 120, 180, 240, 270, 290]) {
     const x = cx - railW / 2 + (ph / 300) * railW;
     ctx.fillStyle = ph === 290 ? 'rgba(210,60,60,0.9)' : 'rgba(200,195,180,0.45)';
     ctx.fillRect(x, railY - 3, 1.5, 8);
   }
-  ctx.globalAlpha = 1;
+  ctx.globalAlpha = em;
   ctx.restore();
 }
 
 /* ---------------- bottom left: blood ---------------- */
 
-function drawBlood(game, ctx, w, h, pulse) {
+function drawBlood(game, ctx, w, h, pulse, em = 1) {
   const p = game.player;
   // Thumbs own the bottom (Vampire Survivors / Hades mobile). Blood sits just
   // above the stick well so the hunger readout is never under the finger.
@@ -235,8 +277,8 @@ function drawBlood(game, ctx, w, h, pulse) {
   const cluster = game.input && game.input.clusterLeft;
   const room = cluster ? cluster - x - 18 : w - 36;
   const barW = phone ? Math.min(Math.max(108, room), 200) : Math.min(168, Math.max(120, w * 0.28));
-  const barH = phone ? 16 : 12;
-  const plateH = phone ? 52 : 34;
+  const barH = phone ? 10 : 8;
+  const plateH = phone ? 44 : 30;
   const y = game.input && game.input.gameplay
     ? Math.max(8, Math.min(h - plateH - 8, stickTop - plateH - 10))
     : h - plateH - 16;
@@ -245,7 +287,8 @@ function drawBlood(game, ctx, w, h, pulse) {
   const critical = pct < 0.14 || (game.hungerFailing && pct < 0.3);
 
   ctx.save();
-  ctx.fillStyle = 'rgba(8,6,8,0.78)';
+  ctx.globalAlpha = em;
+  ctx.fillStyle = 'rgba(8,6,8,0.55)';
   ctx.fillRect(x - 8, y - 22, barW + 16, plateH);
   ctx.strokeStyle = low ? 'rgba(180,40,48,0.7)' : 'rgba(140,110,70,0.35)';
   ctx.lineWidth = 1;
@@ -255,12 +298,12 @@ function drawBlood(game, ctx, w, h, pulse) {
   setLetter(ctx, 1);
   ctx.fillStyle = low ? `rgba(220,${120 - 60 * Math.sin(game.time * 5)},110,0.95)` : 'rgba(190,180,165,0.8)';
   ctx.textAlign = 'left';
-  ctx.fillText('BLOOD', x, y - 10);
+  ctx.fillText('BLOOD', x, y - 8);
 
   ctx.font = `400 ${phone ? 13 : 11}px ${MONO}`;
   ctx.fillStyle = 'rgba(200,160,74,0.9)';
   ctx.textAlign = 'right';
-  ctx.fillText(Math.round(pct * 100) + '%', x + barW, y - 10);
+  ctx.fillText(Math.round(pct * 100) + '%', x + barW, y - 8);
 
   const scale = 1 + pulse * 0.06 * (low ? 1.8 : 0.4);
   ctx.translate(x, y);
@@ -275,7 +318,12 @@ function drawBlood(game, ctx, w, h, pulse) {
     else if (low) { gg.addColorStop(0, '#d03842'); gg.addColorStop(1, '#5a0c14'); }
     else { gg.addColorStop(0, '#a81e2c'); gg.addColorStop(1, '#4a0a12'); }
     ctx.fillStyle = gg;
-    ctx.fillRect(0, 0, barW * pct, barH);
+    const shown = game.bloodShown == null ? pct : game.bloodShown;
+    ctx.fillRect(0, 0, barW * shown, barH);
+    if (game.bloodGulp > 0) {
+      ctx.fillStyle = `rgba(255,150,140,${game.bloodGulp})`;
+      ctx.fillRect(0, 0, barW * shown, barH);
+    }
     ctx.fillStyle = 'rgba(255,190,190,0.22)';
     ctx.fillRect(0, 0, barW * pct, 2);
     if (game.bloodTick > 0) {
@@ -289,6 +337,12 @@ function drawBlood(game, ctx, w, h, pulse) {
       ctx.strokeRect(-1, -1, barW + 2, barH + 2);
     }
   }
+  const proj = projectDawn(p.blood, game.timeLeft || 0, game.save, p.state === 'run');
+  const mark = clamp(proj.atDawn <= 0 ? 0 : proj.atDawn / Math.max(1, p.bloodMax), 0, 1);
+  ctx.fillStyle = proj.failing
+    ? `rgba(255,214,150,${0.5 + 0.45 * Math.abs(Math.sin(game.time * 5))})`
+    : 'rgba(214,204,180,0.75)';
+  ctx.fillRect(barW * mark - 1, -4, 2, barH + 8);
   ctx.strokeStyle = 'rgba(200,170,140,0.28)';
   ctx.lineWidth = 1;
   ctx.strokeRect(0.5, 0.5, barW - 1, barH - 1);
@@ -319,7 +373,7 @@ function drawBlood(game, ctx, w, h, pulse) {
 
 /* ---------------- bottom right: actions ---------------- */
 
-function drawActions(game, ctx, w, h) {
+function drawActions(game, ctx, w, h, em = 1) {
   const p = game.player;
   const input = game.input;
   const live = !!(input && input.gameplay);
@@ -332,6 +386,7 @@ function drawActions(game, ctx, w, h) {
   const px = w - 18;
   const py = live ? clusterTop : h - 36;
   ctx.save();
+  ctx.globalAlpha = em;
   ctx.textAlign = 'right';
   ctx.textBaseline = 'middle';
   ctx.font = `500 11px ${SANS}`;
@@ -349,7 +404,7 @@ function drawActions(game, ctx, w, h) {
 
 /* ---------------- door status readout (world) ---------------- */
 
-function drawDoorStatus(game, ctx, w, h) {
+function drawDoorStatus(game, ctx, w, h, em = 1) {
   // A small compass-like list of the four doors: only appears when a door is
   // damaged or being attacked. This is the "which entrance should I protect?"
   // decision surface, kept as far from the centre of the screen as possible.
@@ -370,6 +425,7 @@ function drawDoorStatus(game, ctx, w, h) {
     const y = short ? 64 : 156;
     const maxW = Math.min(132, w * 0.34);
     ctx.save();
+    ctx.globalAlpha = em;
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
     ctx.font = `500 11px ${SANS}`;
@@ -396,6 +452,7 @@ function drawDoorStatus(game, ctx, w, h) {
   const x = w - 18;
   let y = Math.max(88, h * 0.14);
   ctx.save();
+  ctx.globalAlpha = em;
   ctx.textAlign = 'right';
   ctx.textBaseline = 'middle';
   ctx.font = `500 11px ${SANS}`;

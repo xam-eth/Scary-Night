@@ -325,6 +325,10 @@ gulp, a momentary satiation, and enemies that read as food.
 - Locked tune: death floor 20% (min 1), dawn banks 100%, lane cap 6, cadence
   nights 1–6 as in `src/game/economy.js`, night-2 rest drain 0.42, night-1
   drain ×0.48. The rewarded crate mints 1 Relic, never planks or shards.
+- Difficulty↔power: `nightHeat` is `1 + min(n, 8) × 0.07` (1.28 after four
+  dawns, flat at 1.56). A maxed lane is about 1.3×. Past that, `threatMix`
+  changes hunters, ghouls, wolves, door pressure, and stalkers — mastery, not
+  more stats.
 - Mid-night bank point (§6) — in or out.
 - Visual `[tune]`: desaturation curve for hunger, vignette length, HUD emphasis
   weights.
