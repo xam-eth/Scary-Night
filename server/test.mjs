@@ -175,5 +175,18 @@ for (const sku of CATALOG) {
   ok(`${sku.id} money grant cannot mint shards`, save.shards === before);
 }
 ok('catalog has no relic pack', !CATALOG.some((s) => /pack/i.test(s.id) && s.kind !== 'cosmetic'));
+
+// #18 — rewarded ads: every placement may only hand back relief (a revive)
+// or a single Relic, never shards or build power, and each is hard-capped.
+const { AdPlacements } = await import('../src/shop/ads.js');
+const RELIEF_OR_RELIC = new Set(['grantRevive', 'relic1']);
+for (const [id, cfg] of Object.entries(AdPlacements)) {
+  ok(`ad '${id}' reward is relief or a relic, never power`, RELIEF_OR_RELIC.has(cfg.reward), cfg.reward);
+  ok(`ad '${id}' reward never mints shards`, !/shard/i.test(cfg.reward || ''));
+  ok(`ad '${id}' is hard-capped`, (cfg.perNight > 0) || (cfg.perDay > 0));
+}
+ok('the crate hands one relic, not shards or a claw', AdPlacements.crate.reward === 'relic1' && AdPlacements.crate.perDay === 1);
+ok('the revive ad is relief, capped once per night', AdPlacements.revive.reward === 'grantRevive' && AdPlacements.revive.perNight === 1);
+
 console.log(fails === 0 ? '\nIAP server: all PASS' : `\nIAP server: ${fails} FAILURE(S)`);
 process.exit(fails === 0 ? 0 : 1);

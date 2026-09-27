@@ -1248,10 +1248,7 @@ export class Game {
   }
 
   playerAttackHit(player) {
-    const look = IAP.coatLook(IAP.equippedCoat(this.save));
-    if (look && look.fx === 'glut') this.particles.burst('blood', player.x, player.y, 6, { color: '#8a1020', speedMin: 40, speedMax: 90, lifeMin: 0.2, lifeMax: 0.35 });
-    if (look && look.fx === 'ward') this.particles.burst('dust', player.x, player.y, 4, { color: '#c4a46a', speedMin: 16, speedMax: 40, lifeMin: 0.2, lifeMax: 0.3 });
-    if (look && look.fx === 'shade') this.particles.burst('mote', player.x, player.y, 5, { color: '#6a6a90', speedMin: 10, speedMax: 28, lifeMin: 0.25, lifeMax: 0.45 });
+    this.spawnCoatClaw(player, IAP.fxLook(this.save));
     const arc = PLAYER.attackArc;
     let hits = 0;
     let heft = 16;
@@ -1282,6 +1279,52 @@ export class Game {
     this.makeNoise(player.x, player.y, 360);
   }
 
+  /** The equipped coat's claw signature — visual only, no stat rides the
+   *  swing (#19; the integrity wall in iap.js keeps cosmetics powerless).
+   *  Glutton sprays red, Warden strikes blunt and sure, Shade slashes pale. */
+  spawnCoatClaw(player, look) {
+    const fx = look && look.fx;
+    const cc = look && look.claw;
+    if (!fx && !cc) return;
+    const col = cc ? `rgb(${cc[0] | 0},${cc[1] | 0},${cc[2] | 0})` : 'rgb(200,40,48)';
+    const ang = player.swingAngle || 0;
+    const ox = player.x + Math.cos(ang) * 20, oy = player.y + Math.sin(ang) * 20;
+    if (fx === 'glut') {
+      this.particles.burst('blood', ox, oy, 12, { color: col, angle: ang, spread: 0.7, speedMin: 70, speedMax: 170, lifeMin: 0.22, lifeMax: 0.5, sizeMin: 2, sizeMax: 5.5, grav: 90 });
+    } else if (fx === 'ward') {
+      this.particles.burst('dust', ox, oy, 8, { color: col, angle: ang, spread: 0.5, speedMin: 14, speedMax: 46, lifeMin: 0.26, lifeMax: 0.5, sizeMin: 3, sizeMax: 7 });
+      this.particles.burst('spark', ox, oy, 3, { color: col, angle: ang, spread: 0.4, speedMin: 30, speedMax: 70, lifeMin: 0.1, lifeMax: 0.22, glow: true });
+    } else if (fx === 'shade') {
+      for (let i = 0; i < 7; i++) {
+        const r = 6 + i * 5;
+        this.particles.burst('mote', player.x + Math.cos(ang) * r, player.y + Math.sin(ang) * r, 1, { color: col, speedMin: 4, speedMax: 14, lifeMin: 0.12, lifeMax: 0.3, sizeMin: 1, sizeMax: 2.6, glow: true });
+      }
+    } else {
+      this.particles.burst('blood', ox, oy, 5, { color: col, angle: ang, spread: 0.6, speedMin: 44, speedMax: 96, lifeMin: 0.2, lifeMax: 0.4 });
+    }
+  }
+
+  /** The coat's feed signature on a kill — the drink reads as the build.
+   *  Glutton gorges, Warden feeds only when forced, Shade slips the kill. */
+  spawnCoatFeed(x, y, look) {
+    const fx = look && look.fx;
+    const cc = look && look.claw;
+    const col = cc ? `rgb(${cc[0] | 0},${cc[1] | 0},${cc[2] | 0})` : '#8a1020';
+    if (fx === 'glut') {
+      this.particles.burst('blood', x, y, 14, { color: col, speedMin: 50, speedMax: 240, lifeMin: 0.3, lifeMax: 1.25, sizeMin: 2.5, sizeMax: 6.5, grav: 110 });
+      this.particles.burst('mist', x, y, 8, { color: 'rgba(120,10,20,0.3)', sizeMin: 10, sizeMax: 26, lifeMin: 0.4, lifeMax: 1.1, speedMin: 6, speedMax: 34 });
+    } else if (fx === 'ward') {
+      this.particles.burst('blood', x, y, 5, { color: col, speedMin: 30, speedMax: 120, lifeMin: 0.25, lifeMax: 0.8, sizeMin: 2, sizeMax: 4.5, grav: 90 });
+      this.particles.burst('dust', x, y, 7, { color: 'rgba(150,120,70,0.4)', sizeMin: 4, sizeMax: 11, speedMin: 16, speedMax: 60, lifeMin: 0.3, lifeMax: 0.7 });
+    } else if (fx === 'shade') {
+      this.particles.burst('mote', x, y, 8, { color: col, speedMin: 10, speedMax: 70, lifeMin: 0.2, lifeMax: 0.6, sizeMin: 1.5, sizeMax: 3.5, glow: true });
+      this.particles.burst('mist', x, y, 6, { color: 'rgba(80,90,150,0.22)', sizeMin: 8, sizeMax: 20, lifeMin: 0.35, lifeMax: 0.9, speedMin: 6, speedMax: 30 });
+    } else {
+      this.particles.burst('blood', x, y, 8, { color: col, speedMin: 40, speedMax: 190, lifeMin: 0.3, lifeMax: 1.1, sizeMin: 2, sizeMax: 5.5, grav: 100 });
+      this.particles.burst('mist', x, y, 6, { color: 'rgba(80,10,20,0.25)', sizeMin: 8, sizeMax: 22, lifeMin: 0.4, lifeMax: 1.0, speedMin: 5, speedMax: 30 });
+    }
+  }
+
   onEnemyKilled(enemy) {
     const p = this.player;
     this.stats.kills++;
@@ -1300,10 +1343,7 @@ export class Game {
     this.stats.feedShards = (this.stats.feedShards || 0) + killShards(enemy);
     if (!this.save.coachFed) this.save.coachFed = true;
     this.audio.play('drink', { vol: 0.62 + Math.min(0.4, gain / 48), weight: Math.min(1.7, gain / 18) });
-    this.particles.burst('blood', enemy.x, enemy.y, 8, {
-      color: '#8a1020', speedMin: 40, speedMax: 190, lifeMin: 0.3, lifeMax: 1.1, sizeMin: 2, sizeMax: 5.5, grav: 100,
-    });
-    this.particles.burst('mist', enemy.x, enemy.y, 6, { color: 'rgba(80,10,20,0.25)', sizeMin: 8, sizeMax: 22, lifeMin: 0.4, lifeMax: 1.0, speedMin: 5, speedMax: 30 });
+    this.spawnCoatFeed(enemy.x, enemy.y, look);
     this.decals.splat(enemy.x, enemy.y + 4, 16, 'rgba(88,10,18,0.5)', 6);
     if (this.stats.kills === 1 && this.noteDeed('fed')) {
       this.showMessage('YOU FED. THE NIGHT NOTICED THE CHOICE.', { tone: 'cold', life: 3.4 });

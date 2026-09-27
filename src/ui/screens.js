@@ -1164,19 +1164,33 @@ export function drawDeath(game, ctx, w, h) {
     ];
     const atRisk = game.shardsEarned || 0;
     const relief = unlocked(game.save, 'risk') && atRisk > 0 && !game.usedRevive;
-    if (relief && game.save.iap && game.save.iap.revives > 0) {
-      items.push({ label: `KEEP ◆ ${atRisk}`, onClick: () => game.spendSecondBlood(), accent: '#a8833c' });
-    } else if (!game.usedRevive && game.save.iap && game.save.iap.revives > 0) {
-      items.push({ label: 'USE SECOND BLOOD', onClick: () => game.spendSecondBlood(), accent: '#6a6a80' });
-    } else if (relief && IAP.mode !== 'disabled' && IAP.offered(game.save, 'revive1')) {
-      items.push({ label: `KEEP ◆ ${atRisk}`, onClick: () => game.purchaseSku('revive1'), accent: '#a8833c' });
-    }
-    if (!game.usedRevive && Ads.isAvailable('revive')) {
-      items.push({
-        label: relief ? `WATCH · KEEP ◆ ${atRisk}` : Ads.label('revive'),
-        onClick: () => game.requestAdRevive(),
-        accent: '#6a2230',
-      });
+    // Archero-style relief (docs/DESIGN.md §7 · D9): the revive is *tempting
+    // but never forcing*. The offer is a snap decision on a short, visible
+    // countdown that opens when the buttons fade in and closes after
+    // REVIVE_WINDOW seconds. Letting it lapse forfeits nothing but the offer
+    // itself — the purse still keeps its floor on TRY AGAIN / MAIN MENU.
+    const REVIVE_OFFER_AT = 2.5, REVIVE_WINDOW = 6;
+    const reviveLeft = clamp(REVIVE_WINDOW - (t - REVIVE_OFFER_AT), 0, REVIVE_WINDOW);
+    const reviveOpen = reviveLeft > 0;
+    const ownsRevive = !game.usedRevive && game.save.iap && game.save.iap.revives > 0;
+    const canBuyRevive = relief && IAP.mode !== 'disabled' && IAP.offered(game.save, 'revive1');
+    const canAdRevive = !game.usedRevive && Ads.isAvailable('revive');
+    const hasReviveOffer = !game.usedRevive && (ownsRevive || canBuyRevive || canAdRevive);
+    if (reviveOpen) {
+      if (relief && ownsRevive) {
+        items.push({ label: `KEEP ◆ ${atRisk}`, onClick: () => game.spendSecondBlood(), accent: '#a8833c' });
+      } else if (ownsRevive) {
+        items.push({ label: 'USE SECOND BLOOD', onClick: () => game.spendSecondBlood(), accent: '#6a6a80' });
+      } else if (canBuyRevive) {
+        items.push({ label: `KEEP ◆ ${atRisk}`, onClick: () => game.purchaseSku('revive1'), accent: '#a8833c' });
+      }
+      if (canAdRevive) {
+        items.push({
+          label: relief ? `WATCH · KEEP ◆ ${atRisk}` : Ads.label('revive'),
+          onClick: () => game.requestAdRevive(),
+          accent: '#6a2230',
+        });
+      }
     }
     items.push(
       { label: 'UPGRADES', onClick: () => game.setScreen('upgrades', 'death'), accent: '#6a6a80' },
@@ -1186,6 +1200,31 @@ export function drawDeath(game, ctx, w, h) {
     // never clip the last button, whatever the row count.
     const gap = h < 640 ? 6 : 8;
     let by = Math.min(h * 0.76, h - (items.length * (bh + gap)) - 14);
+
+    // The countdown sits just above the button stack while an offer is live;
+    // once it lapses, one quiet line tells the player the moment is gone.
+    if (hasReviveOffer) {
+      ctx.save();
+      ctx.textAlign = 'center';
+      const barW = bw, bx = w / 2 - barW / 2, cy = by - 22;
+      if (reviveOpen) {
+        ctx.font = `600 11px ${SANS}`;
+        if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+        ctx.fillStyle = 'rgba(200,160,74,0.95)';
+        ctx.fillText(`DECIDE · ${Math.ceil(reviveLeft)}`, w / 2, cy - 4);
+        if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+        ctx.fillStyle = 'rgba(120,90,40,0.3)';
+        ctx.fillRect(bx, cy + 6, barW, 3);
+        ctx.fillStyle = 'rgba(200,160,74,0.92)';
+        ctx.fillRect(bx, cy + 6, barW * (reviveLeft / REVIVE_WINDOW), 3);
+      } else {
+        ctx.font = `italic 400 12px ${SERIF}`;
+        ctx.fillStyle = 'rgba(150,120,110,0.7)';
+        ctx.fillText('THE MOMENT PASSED. THE PURSE KEEPS ONLY ITS FLOOR.', w / 2, cy);
+      }
+      ctx.restore();
+    }
+
     items.forEach((it, i) => {
       const r = uiButton(game, { x: w / 2 - bw / 2, y: by, w: bw, h: bh, label: it.label, onClick: it.onClick, accent: it.accent, small: true });
       buttonVisual(ctx, r.b, { active: r.hover || (game.usingKeyboard && game.uiIndex === i), label: it.label, small: true, accent: it.accent });
