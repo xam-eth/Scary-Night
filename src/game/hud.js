@@ -51,14 +51,14 @@ export function drawHUD(game, ctx, w, h) {
   const pulse = game.hbPulse;
   const em = hudEmphasis(game);
   const phone = w < 840 || h < 500;
-  withPriority(ctx, em.clock, w / 2, phone ? 40 : h * 0.055, () => drawClock(game, ctx, w, h, pulse, em.clock));
-  withPriority(ctx, em.blood, 90, h - 72, () => drawBlood(game, ctx, w, h, pulse, em.blood));
-  drawActions(game, ctx, w, h, em.actions);
-  withPriority(ctx, em.door, w - 48, 88, () => drawDoorStatus(game, ctx, w, h, em.door));
+  drawTopBar(game, ctx, w, h, em, pulse);
+  drawBuildBadge(game, ctx, w, h, em.badge);
+  withPriority(ctx, em.clock, w / 2, phone ? 58 : h * 0.07, () => drawClock(game, ctx, w, h, pulse, em.clock));
+  withPriority(ctx, em.door, w - 48, phone ? 108 : 96, () => drawDoorStatus(game, ctx, w, h, em.door));
   drawBearings(game, ctx, w, h);
   drawThreat(game, ctx, w, h);
-  withPriority(ctx, em.goals, 48, phone ? 78 : 96, () => drawGoals(game, ctx, w, h, em.goals));
-  withPriority(ctx, em.badge, w - 36, 36, () => drawBuildBadge(game, ctx, w, h, em.badge));
+  withPriority(ctx, em.goals, 48, phone ? 108 : 108, () => drawGoals(game, ctx, w, h, em.goals));
+  drawGuidanceStrip(game, ctx, w, h);
 }
 
 /* ---------------- top left: tonight's goals (the night's purpose) ---------------- */
@@ -80,7 +80,7 @@ function drawBuildBadge(game, ctx, w, h, em) {
   ctx.font = `500 10px ${SANS}`;
   setLetter(ctx, 1.2);
   ctx.fillStyle = 'rgba(206,186,140,0.8)';
-  ctx.fillText(best.name.replace('THE ', ''), w - 14, 18);
+  ctx.fillText(best.name.replace('THE ', ''), w - 14, phoneHud(w, h).short ? 28 : 34);
   ctx.restore();
 }
 
@@ -95,7 +95,7 @@ function drawGoals(game, ctx, w, h, em = 1) {
   if (phone) {
     // One chip. The night is the picture; a goal spreadsheet is not.
     const x = 14;
-    const y = short ? 58 : 86;
+    const y = short ? 64 : 100;
     ctx.save();
     ctx.globalAlpha = em;
     ctx.textAlign = 'left';
@@ -198,7 +198,7 @@ function drawGoals(game, ctx, w, h, em = 1) {
 function drawClock(game, ctx, w, h, pulse, em = 1) {
   const { phone, short } = phoneHud(w, h);
   const cx = w / 2;
-  const y = short ? 28 : phone ? 40 : h * 0.055;
+  const y = short ? 36 : phone ? 58 : h * 0.07;
   const t = game.time;
   const phase = game.phase;
 
@@ -275,7 +275,126 @@ function drawClock(game, ctx, w, h, pulse, em = 1) {
   ctx.restore();
 }
 
-/* ---------------- bottom left: blood ---------------- */
+/**
+ * One line for the bottom strip.
+ * Narrative seam: set `game.narrativeLine` and it wins. A later story epic
+ * feeds this same slot; do not add a second caption channel.
+ */
+export function guidanceLine(game) {
+  if (!game || !game.player) return null;
+  if (typeof game.narrativeLine === 'string' && game.narrativeLine) return game.narrativeLine;
+  const step = game.coach && game.coach.step;
+  if (step && step !== 'done') {
+    if (step === 'walk') return 'DRAG TO WALK. BLOOD IS ALREADY DRAINING.';
+    if (step === 'hunt') return 'WALK TO THE MEAL.';
+    if (step === 'feed' || step === 'claw') return 'KILL TO DRINK.';
+    if (step === 'knock') return 'A KNOCK. ANSWER, OR LEAVE IT.';
+    if (step === 'board' || step === 'door') return 'BAR THE SERVANT DOOR, OR OPEN AND FEED.';
+    if (step === 'raise') return 'RAISE THE STAKES.';
+    if (step === 'planks' || step === 'planks2') return 'WALK ONTO THE PLANKS.';
+  }
+  const door = game.mansion && game.mansion.entrances && game.mansion.entrances.find((e) => e.attackers > 0);
+  if (door) return `BAR THE ${door.name || 'DOOR'}.`;
+  const hungry = game.player.lowBlood || game.hungerFailing;
+  if (hungry) return (game.timeLeft || 0) > 80 ? 'FEED — DAWN IS FAR.' : 'FEED, OR THE DAWN IS LOST.';
+  const knock = game.director && game.director.knock;
+  if (knock && knock.tell) {
+    if (knock.tell.class === 'gift') return 'THE KNOCK IS OFFERING SOMETHING.';
+    if (knock.tell.class === 'empty') return 'THE DOOR IS ONLY WOOD.';
+    return 'THE WOOD WARNS YOU.';
+  }
+  const open = game.objectives && game.objectives.hudState && game.objectives.hudState();
+  if (open && open.open && open.open[0]) return open.open[0].label;
+  if (game._roomLine && game.time - (game._roomLineAt || 0) < 4.2) return game._roomLine;
+  return null;
+}
+
+function drawTopBar(game, ctx, w, h, em, pulse) {
+  const p = game.player;
+  if (!p) return;
+  const { phone, short } = phoneHud(w, h);
+  const y = short ? 14 : phone ? 16 : 20;
+  const pct = Math.round((p.bloodPct || 0) * 100);
+  const low = p.lowBlood || game.hungerFailing;
+  const purse = unlocked(game.save, 'risk') && game.livePurse ? game.livePurse() : ((game.save && game.save.shards) || 0);
+  if (game._purseSeen != null && purse !== game._purseSeen) game._purseFlashAt = game.time;
+  game._purseSeen = purse;
+  const flash = game._purseFlashAt != null && game.time - game._purseFlashAt < 0.7;
+  ctx.save();
+  ctx.textBaseline = 'middle';
+  ctx.font = `500 ${short ? 11 : 13}px ${SANS}`;
+  setLetter(ctx, 0.6);
+  ctx.globalAlpha = em.blood;
+  ctx.textAlign = 'left';
+  ctx.fillStyle = low
+    ? `rgba(230,${80 + 40 * Math.abs(Math.sin(game.time * 5))},70,0.96)`
+    : 'rgba(232,220,206,0.92)';
+  if (low) ctx.shadowColor = 'rgba(160,20,30,0.8)', ctx.shadowBlur = 8;
+  ctx.fillText(`BLOOD  ${pct}%`, 12, y);
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = flash ? 1 : em.badge;
+  ctx.textAlign = 'right';
+  ctx.fillStyle = flash ? '#f0d48a' : 'rgba(214,186,120,0.92)';
+  const right = `◆ ${purse}    PLANKS  ${p.planks | 0}`;
+  ctx.fillText(right, w - 12, y);
+  if (pulse && low) {
+    ctx.globalAlpha = 0.35;
+    ctx.fillRect(10, y + 8, 72, 2);
+  }
+  ctx.restore();
+}
+
+function drawGuidanceStrip(game, ctx, w, h) {
+  const line = guidanceLine(game);
+  if (line !== game._guideShown) {
+    game._guidePrev = game._guideShown;
+    game._guideShown = line;
+    game._guideAt = game.time;
+  }
+  const shown = line || game._guidePrev;
+  if (!shown) return;
+  const age = game.time - (game._guideAt || 0);
+  const fade = line ? Math.min(1, age / 0.22) : Math.max(0, 1 - age / 0.35);
+  if (fade <= 0.02) return;
+  const live = (game.messages || []).some((m) => m.life - m.t > 0.05);
+  if (live) return;
+  const input = game.input;
+  const stick = input && input.stick;
+  const view = game.renderer && game.renderer.view;
+  const framed = view && (view.top > 8 || view.h < h - 8);
+  const stickTop = stick && input.gameplay
+    ? (stick.homeY || h - 120) - (stick.r || 52)
+    : h - 86;
+  const y = framed ? view.top + view.h + 18 : Math.max(h * 0.58, stickTop - 22);
+  ctx.save();
+  ctx.globalAlpha = fade;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `500 ${h < 520 ? 12 : 13}px ${SANS}`;
+  setLetter(ctx, 0.8);
+  const maxW = Math.min((view ? view.w : w) - 36, 420);
+  const words = String(shown).split(' ');
+  const lines = [];
+  let cur = '';
+  for (const word of words) {
+    const next = cur ? cur + ' ' + word : word;
+    if (cur && ctx.measureText(next).width > maxW) { lines.push(cur); cur = word; }
+    else cur = next;
+  }
+  if (cur) lines.push(cur);
+  const shownLines = lines.slice(0, 2);
+  if (lines.length > 2) shownLines[1] = shownLines[1].replace(/[,.]?$/, '') + '…';
+  let tw = 0;
+  for (const ln of shownLines) tw = Math.max(tw, ctx.measureText(ln).width);
+  const boxH = shownLines.length * 16 + 10;
+  ctx.fillStyle = 'rgba(6,7,12,0.72)';
+  ctx.fillRect(w / 2 - tw / 2 - 12, y - boxH / 2, tw + 24, boxH);
+  ctx.fillStyle = 'rgba(232,220,200,0.94)';
+  shownLines.forEach((ln, i) => ctx.fillText(ln, w / 2, y - (shownLines.length - 1) * 8 + i * 16));
+  ctx.restore();
+}
+
+/* ---------------- bottom left: blood (folded into the top bar) ---------------- */
 
 function drawBlood(game, ctx, w, h, pulse, em = 1) {
   const p = game.player;

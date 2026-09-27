@@ -134,7 +134,7 @@ export function tellFor(outcome) {
     return { class: 'menacing', sound: 'tellBreath', weight: 0.55 };
   }
   if (outcome === 'gift') return { class: 'gift', sound: 'tellGift', weight: 0.5 };
-  return { class: 'empty', sound: null, weight: 0 };
+  return { class: 'empty', sound: 'tellEmpty', weight: 0.5 };
 }
 
 export function revealForNight(nightsSurvived) {

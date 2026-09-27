@@ -170,6 +170,7 @@ S.tellBreath = (t, o) => {
   const v = o.vol ?? 1;
   noise(t, 0.45, { out: o.out, gain: 0.16 * v, type: 'lowpass', freq: 420, q: 0.7, pan: o.pan, rev: 0.7, attack: 0.08 });
   osc(t + 0.05, 0.35, { out: o.out, gain: 0.08 * v, type: 'sine', freq: 78, to: 54, pan: o.pan, rev: 0.55, attack: 0.04 });
+  noise(t + 0.22, 0.4, { out: o.out, gain: 0.1 * v, type: 'bandpass', freq: 260, q: 0.8, pan: o.pan, rev: 0.6, attack: 0.12 });
 };
 S.tellWolf = (t, o) => {
   const v = o.vol ?? 1;
@@ -180,6 +181,12 @@ S.tellGift = (t, o) => {
   const v = o.vol ?? 1;
   osc(t, 0.28, { out: o.out, gain: 0.1 * v, type: 'sine', freq: 520, to: 640, pan: o.pan, rev: 0.45, attack: 0.02 });
   osc(t + 0.12, 0.22, { out: o.out, gain: 0.06 * v, type: 'triangle', freq: 780, to: 700, pan: o.pan, rev: 0.35, attack: 0.02 });
+  osc(t + 0.04, 0.4, { out: o.out, gain: 0.05 * v, type: 'sine', freq: 260, to: 300, pan: o.pan, rev: 0.4, attack: 0.03 });
+};
+S.tellEmpty = (t, o) => {
+  const v = o.vol ?? 1;
+  noise(t, 0.06, { out: o.out, gain: 0.16 * v, type: 'bandpass', freq: 1900, q: 1.2, pan: o.pan, rev: 0.12, attack: 0.001 });
+  osc(t, 0.1, { out: o.out, gain: 0.07 * v, type: 'triangle', freq: 240, to: 150, pan: o.pan, rev: 0.1, attack: 0.001 });
 };
 S.knockHard = (t, o) => {
   const v = o.vol ?? 1;
@@ -197,10 +204,12 @@ S.doorHit = (t, o) => {
 };
 S.doorBreak = (t, o) => {
   const v = o.vol ?? 1;
-  noise(t, 0.5, { out: o.out, gain: 0.5 * v, type: 'lowpass', freq: 2600, q: 0.8, pan: o.pan, rev: 0.55, attack: 0.001, sweep: 0.2 });
-  osc(t, 0.4, { out: o.out, gain: 0.35 * v, type: 'sawtooth', freq: 150, to: 40, pan: o.pan, rev: 0.4, attack: 0.001, filt: 'lowpass', filtQ: 4 });
-  for (let i = 0; i < 6; i++) {
-    noise(t + 0.02 + rand(0, 0.38), 0.05 + rand(0, 0.05), { out: o.out, gain: 0.14 * v, type: 'bandpass', freq: rand(1400, 4200), q: 4, pan: o.pan + rand(-0.2, 0.2), rev: 0.25, attack: 0.001 });
+  noise(t, 0.12, { out: o.out, gain: 0.42 * v, type: 'bandpass', freq: 1800, q: 1.6, pan: o.pan, rev: 0.3, attack: 0.001 });
+  noise(t, 0.55, { out: o.out, gain: 0.4 * v, type: 'lowpass', freq: 2200, q: 0.8, pan: o.pan, rev: 0.55, attack: 0.001, sweep: 0.2 });
+  osc(t, 0.5, { out: o.out, gain: 0.4 * v, type: 'sine', freq: 46, to: 22, pan: o.pan, rev: 0.5, attack: 0.002 });
+  osc(t, 0.4, { out: o.out, gain: 0.28 * v, type: 'sawtooth', freq: 150, to: 40, pan: o.pan, rev: 0.4, attack: 0.001, filt: 'lowpass', filtQ: 4 });
+  for (let i = 0; i < 8; i++) {
+    noise(t + 0.04 + rand(0, 0.55), 0.05 + rand(0, 0.08), { out: o.out, gain: 0.12 * v, type: 'bandpass', freq: rand(900, 4200), q: 4, pan: o.pan + rand(-0.3, 0.3), rev: 0.3, attack: 0.001 });
   }
 };
 S.glassBreak = (t, o) => {
@@ -249,9 +258,11 @@ S.slash = (t, o) => {
   osc(t, 0.16, { out: o.out, gain: 0.14 * v, type: 'sawtooth', freq: 620, to: 120, pan: o.pan, rev: 0.2, attack: 0.002, filt: 'bandpass', filtQ: 3 });
 };
 S.hitFlesh = (t, o) => {
-  const v = o.vol ?? 1;
-  noise(t, 0.14, { out: o.out, gain: 0.3 * v, type: 'lowpass', freq: 900, q: 1.5, pan: o.pan, rev: 0.3, attack: 0.001 });
-  osc(t, 0.18, { out: o.out, gain: 0.2 * v, type: 'sine', freq: 180, to: 60, pan: o.pan, rev: 0.25, attack: 0.001 });
+  const heft = Math.min(1.8, o.weight || 1);
+  const v = (o.vol ?? 1) * (0.85 + heft * 0.25);
+  noise(t, 0.06, { out: o.out, gain: 0.26 * v, type: 'highpass', freq: 1600, q: 0.7, pan: o.pan, rev: 0.12, attack: 0.001 });
+  noise(t, 0.16, { out: o.out, gain: 0.28 * v, type: 'lowpass', freq: 720, q: 1.4, pan: o.pan, rev: 0.28, attack: 0.001 });
+  osc(t, 0.22, { out: o.out, gain: 0.32 * v * heft, type: 'sine', freq: 54, to: 26, pan: o.pan, rev: 0.35, attack: 0.001 });
 };
 S.playerHurt = (t, o) => {
   const v = o.vol ?? 1;
@@ -380,11 +391,14 @@ S.bloodPickup = (t, o) => {
 };
 S.drink = (t, o) => {
   const v = o.vol ?? 1;
+  const heft = Math.min(1.8, o.weight || 1);
   for (let i = 0; i < 4; i++) {
-    const dt = i * 0.19;
-    noise(t + dt, 0.16, { out: o.out, gain: 0.14 * v, type: 'lowpass', freq: rand(500, 900), q: 2, pan: 0, rev: 0.25, attack: 0.02, rate: rand(0.4, 0.7) });
+    const dt = i * 0.16;
+    noise(t + dt, 0.16, { out: o.out, gain: 0.16 * v, type: 'lowpass', freq: rand(480, 860), q: 2, pan: 0, rev: 0.25, attack: 0.02, rate: rand(0.4, 0.7) });
     osc(t + dt, 0.14, { out: o.out, gain: 0.1 * v, type: 'sine', freq: rand(110, 170), to: 70, pan: 0, rev: 0.2, attack: 0.01 });
   }
+  osc(t + 0.08, 0.7, { out: o.out, gain: 0.16 * v * heft, type: 'sine', freq: 96, to: 62, pan: 0, rev: 0.45, attack: 0.08 });
+  osc(t + 0.14, 0.5, { out: o.out, gain: 0.07 * v, type: 'triangle', freq: 190, to: 120, pan: 0, rev: 0.3, attack: 0.06 });
 };
 S.thunder = (t, o) => {
   const v = o.vol ?? 1;
@@ -497,7 +511,7 @@ function distCurve(amount) {
 }
 
 /** Play a sound by name. */
-export function play(name, { x, y, cam, vol = 1, pan = null, rate = null, bus = 'sfx', f = null, base = null, det = null, soft = false } = {}) {
+export function play(name, { x, y, cam, vol = 1, pan = null, rate = null, bus = 'sfx', f = null, base = null, det = null, soft = false, weight = 1 } = {}) {
   if (!ready || !ctx) return;
   const fn = S[name];
   if (!fn) return;
@@ -508,7 +522,7 @@ export function play(name, { x, y, cam, vol = 1, pan = null, rate = null, bus = 
     else p = 0;
   }
   const dest = bus === 'amb' ? ambBus : bus === 'music' ? musicBus : sfxBus;
-  try { fn(now() + 0.001, { out: dest, pan: p, vol, rev: 1, soft, rate, f }); }
+  try { fn(now() + 0.001, { out: dest, pan: p, vol, rev: 1, soft, rate, f, weight }); }
   catch (e) { /* the show must go on */ }
 }
 

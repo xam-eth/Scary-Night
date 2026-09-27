@@ -24,8 +24,10 @@ export function valenClipForState(state) {
   return VALEN_CLIPS.idle;
 }
 
-const PITCH_DY = 1.18;   // tan(24°) * PITCH_DZ — matches the lower floor tilt
+const PITCH_DY = 1.18;   // tan(24°) * PITCH_DZ — menu hero, a little more headroom
 const PITCH_DZ = 2.65;
+const PLAY_DZ = 2.35;
+const PLAY_DY = Math.tan(38 * Math.PI / 180) * PLAY_DZ; // ~38° — coat and skull, not a map token
 
 const wrap01 = (value) => ((value % 1) + 1) % 1;
 const clamp01 = (value) => Math.max(0, Math.min(1, value));
@@ -219,9 +221,9 @@ class ValenRuntime {
   }
 
   /**
-   * Portrait is the menu hero: a 3/4 full body. Overhead is the play camera.
-   * The world is top-down, so the token is the head and a little of the body —
-   * a full standing portrait on that floor reads as someone lying asleep.
+   * Portrait is the menu hero. Play is the same standing 3/4, pitched nearer
+   * 38° so the coat reads in a night. Overhead remains only as the old token
+   * path. The world plane is oblique; the sprite is stood up by upright().
    */
   _applyCamera(view) {
     const b = this.bounds;
@@ -229,6 +231,17 @@ class ValenRuntime {
     const aspect = this.canvas.width / this.canvas.height;
     if (view === 'overhead') {
       this._frameHead();
+    } else if (view === 'play') {
+      const verticalSpan = Math.max(1.05, b.size.y * 1.2);
+      const halfHeight = verticalSpan / 2;
+      const halfWidth = halfHeight * aspect;
+      this.camera.left = -halfWidth;
+      this.camera.right = halfWidth;
+      this.camera.top = halfHeight;
+      this.camera.bottom = -halfHeight;
+      const lookY = b.min.y + b.size.y * 0.46;
+      this.camera.position.set(b.center.x, lookY + PLAY_DY, PLAY_DZ);
+      this.camera.lookAt(b.center.x, lookY, 0);
     } else {
       const verticalSpan = Math.max(1.12, b.size.y * 1.14);
       const halfHeight = verticalSpan / 2;
@@ -319,8 +332,8 @@ class ValenRuntime {
     // Natural front in this asset is shown at yaw 0 when moving south. This
     // formula maps the continuous Canvas heading to a continuous 3D turn.
     // X first, then yaw, so standing her up does not flip when she turns.
-    // The rest pose bows at the floor; overhead then reads as someone asleep.
-    // -1.0 rad is the view correction that shows the skull and the collar.
+    // Overhead tips the rig so only the skull shows. Play and the menu stay
+    // standing — yaw only — or a 3/4 body lies down on the floor plane.
     if (view === 'overhead') {
       this.model.rotation.order = 'XYZ';
       this.model.rotation.x = -1.0;
@@ -334,7 +347,7 @@ class ValenRuntime {
     this.model.position.z = -rootZ;
     this.model.updateMatrixWorld(true);
     if (view === 'overhead') this._frameHead();
-    this.renderer.toneMappingExposure = view === 'overhead' ? 1.9 : 1.18;
+    this.renderer.toneMappingExposure = view === 'overhead' ? 1.9 : view === 'play' ? 1.55 : 1.18;
     this.renderer.clear();
     this.renderer.render(this.scene, this.camera);
     return this.canvas;

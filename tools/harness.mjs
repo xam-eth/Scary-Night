@@ -585,6 +585,14 @@ if (args.systems) {
   for (const [outcome, cls] of [['crawler', 'menacing'], ['gift', 'gift'], ['nothing', 'empty'], ['werewolf', 'menacing']]) {
     line(tellFor(outcome).class === cls, `${outcome} tell is ${cls}`);
   }
+  line(tellFor('nothing').sound === 'tellEmpty', 'an empty door still has a knock tell');
+  const { guidanceLine } = await import('../src/game/hud.js');
+  game.narrativeLine = 'THE HOUSE REMEMBERS.';
+  line(guidanceLine(game) === 'THE HOUSE REMEMBERS.', 'narrativeLine wins the guidance slot');
+  game.render();
+  game.narrativeLine = null;
+  const { SFX } = await import('../src/core/audio.js');
+  line(typeof SFX.tellEmpty === 'function' && typeof SFX.hitFlesh === 'function' && typeof SFX.drink === 'function' && typeof SFX.doorBreak === 'function', 'feed, claw, door, and knock tells are synth layers');
   game.director.knock = null;
   game.director.lastKnock = -999;
   const told = game.director.scheduleKnock(game, { force: true, outcome: 'gift', entranceId: 'diningDoor' });

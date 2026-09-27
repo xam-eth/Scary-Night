@@ -317,6 +317,16 @@ attention follow the moment.
 the juiciest, most legible beat — a visible drink/absorb, the blood filling with a
 gulp, a momentary satiation, and enemies that read as food.
 
+**Presentation seam** (#29–#32). Portrait 9:16 stays. The night camera is a
+standing three-quarter, feet on the tile, not the menu's head crop. The flat HUD
+is a slim top bar (blood percent, ◆, planks) plus the clock; the old blood plate
+and plank chips are gone. One fading line sits above the thumb zone. That line is
+the narrative seam: `game.narrativeLine` wins when a later story epic sets it;
+until then the coach, the threatened door, hunger, the knock class, and the open
+objective feed the same slot. Feed, claw, door-break, and knock tells are layered
+synth on the existing buses — low-end body under the wet layer, claw weight from
+prey size, a door break that ducks the music. No new control lives in the thumb zone.
+
 ---
 
 ## 16. Still open (not final)

@@ -947,7 +947,9 @@ export class Game {
       dining: 'DINING ROOM. THE SERVANT DOOR IS NORTH.',
     };
     const named = this.mansion.room(id);
-    this.showMessage(lines[id] || (named && named.name) || id, { tone: 'calm', life: 3.2, key: 'room:' + id });
+    const roomLine = lines[id] || (named && named.name) || id;
+    this._roomLine = roomLine;
+    this._roomLineAt = this.time;
   }
 
   drinkLarder(larder) {
@@ -1192,6 +1194,7 @@ export class Game {
     if (look && look.fx === 'shade') this.particles.burst('mote', player.x, player.y, 5, { color: '#6a6a90', speedMin: 10, speedMax: 28, lifeMin: 0.25, lifeMax: 0.45 });
     const arc = PLAYER.attackArc;
     let hits = 0;
+    let heft = 16;
     for (const e of this.enemies) {
       if (e.dead) continue;
       const d = dist(e.x, e.y, player.x, player.y);
@@ -1203,6 +1206,7 @@ export class Game {
       const dmg = PLAYER.attackDamage * player.damageMul;
       e.hurt(dmg, this, player.x, player.y);
       hits++;
+      heft = Math.max(heft, (e.type && e.type.bloodValue) || 16);
       // knockback
       const kb = e.key === 'werewolf' ? 30 : e.key === 'ghoul' ? 48 : e.key === 'stalker' ? 60 : 110;
       e.vx += Math.cos(a) * kb; e.vy += Math.sin(a) * kb;
@@ -1211,7 +1215,7 @@ export class Game {
     this.stats.clawHits = (this.stats.clawHits || 0) + hits;
     if (hits) {
       this.renderer.shake(0.16 + hits * 0.04);
-      this.audio.play('hitFlesh', { vol: 0.5 });
+      this.audio.play('hitFlesh', { vol: 0.48, weight: 0.7 + heft / 28 });
       this.renderer.addFlash(0.04, '#ffffff');
     }
     // clawing is loud
@@ -1235,7 +1239,7 @@ export class Game {
     });
     this.stats.feedShards = (this.stats.feedShards || 0) + killShards(enemy);
     if (!this.save.coachFed) this.save.coachFed = true;
-    this.audio.play('growl', { x: enemy.x, y: enemy.y, cam: this.renderer.cam, vol: 0.35 });
+    this.audio.play('drink', { vol: 0.62 + Math.min(0.4, gain / 48), weight: Math.min(1.7, gain / 18) });
     this.particles.burst('blood', enemy.x, enemy.y, 8, {
       color: '#8a1020', speedMin: 40, speedMax: 190, lifeMin: 0.3, lifeMax: 1.1, sizeMin: 2, sizeMax: 5.5, grav: 100,
     });
@@ -1288,7 +1292,7 @@ export class Game {
     this.audio.play('doorBreak', { x: e.x, y: e.y, cam: this.renderer.cam, vol: 1.05 });
     this.audio.play('impact', { x: e.x, y: e.y, cam: this.renderer.cam, vol: 0.8 });
     this.renderer.shake(DOOR.breakShake);
-    this.audio.duck(0.35, 1.6);
+    this.audio.duck(0.28, 2.1);
     this.particles.burst('splinter', e.x, e.y, 26, {
       color: 'rgba(120,88,50,0.9)', sizeMin: 2, sizeMax: 5, speedMin: 40, speedMax: 200, lifeMin: 0.4, lifeMax: 1.2, grav: 190, spin: 8,
     });
@@ -1717,7 +1721,7 @@ export class Game {
           : `rgba(220,230,255,${0.22 + (hv - 0.32) * 1.05})`;
         ctx.lineWidth = hv > 0.75 ? 3.4 + hv * 2 : 1.4 + hv * 2.2;
         ctx.beginPath();
-        ctx.arc(s.x, s.y, 14 + hv * 20, 0, Math.PI * 2);
+        ctx.arc(s.x, s.y - 52, 22 + hv * 14, 0, Math.PI * 2);
         ctx.stroke();
         ctx.restore();
       }

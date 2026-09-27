@@ -406,8 +406,8 @@ export class Player {
       speed: dead || showSlash ? 0 : sp,
       stepPhase: this.stepPhase,
       attackProgress,
-      // Top-down world: head and a little body, not a full figure lying on the floor.
-      view: 'overhead',
+      // Standing 3/4. upright() keeps her on her feet; overhead was only a head.
+      view: 'play',
     });
 
     // shadow
@@ -459,46 +459,15 @@ export class Player {
       ctx.translate(tr.x, tr.y);
       if (this._valenFrame) {
         this._drawValen(ctx, game, true, tr);
-      } else {
-        ctx.rotate(tr.a);
-        ctx.fillStyle = '#3a1f3f';
-        this.drawBody(ctx, game, 0, true);
       }
       ctx.restore();
     }
 
     if (this._valenFrame) {
       this._drawValen(ctx, game, false, null);
-    } else {
-      ctx.save();
-      ctx.translate(this.x, this.y);
-      if (dead) {
-        const k = clamp(this.deathT / 1.1, 0, 1);
-        ctx.rotate(visualAngle(this.angle, game.renderer.tilt || 1) + Math.PI / 2);
-        ctx.rotate(k * 0.35);
-        ctx.translate(0, k * 8);
-        ctx.globalAlpha = clamp(1 - (this.deathT - 2.6) / 1.6, 0, 1);
-      } else {
-        ctx.rotate(this.angle);
-      }
-      if (this.iframes > 0 && !dead && Math.floor(t * 24) % 2 === 0) ctx.globalAlpha *= 0.55;
-      this.drawBody(ctx, game, sp, false);
-      // v1.1 — honesty rule: the procedural body is a FAILURE STATE, not the
-      // character (the character is the purchased GLB, imported as-is). While
-      // that asset is missing or loading, say so loudly so nobody mistakes
-      // the placeholder for the real thing.
-      if (!dead && Valen3D.failed || !dead && !Valen3D.ready) {
-        ctx.save();
-        const pulse = 0.65 + Math.sin(t * 5) * 0.3;
-        ctx.globalAlpha = pulse;
-        ctx.font = '700 9px ui-monospace, Consolas, monospace';
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#ff5a4a';
-        ctx.fillText(Valen3D.failed ? 'GLB FAILED TO LOAD — PLACEHOLDER' : 'LOADING GLB CHARACTER…', 0, -this.height - 16);
-        ctx.restore();
-      }
-      ctx.restore();
     }
+    // No GLB frame: the standing silhouette is painted after the night
+    // multiply (drawAfterDark). A floor-rotated token here read as a body lying down.
 
   }
 
@@ -564,14 +533,13 @@ export class Player {
     if (!frame) return;
     const dead = this.state === PSTATE.DEAD;
     const crawling = this.state === PSTATE.CRAWL;
-    // The frame is a top-down head, not a full body. Keep her short so the
-    // skull sits on the world point instead of a figure stretched up the map.
-    const height = 64;
-    const footInset = 9;
+    // Full coat, feet on the tile. Tall enough to read, short enough that a
+    // door behind her is still a door.
+    const height = 104;
+    const footInset = 10;
     const drop = 0;
-    const headPt = Valen3D.screenPoint('mixamorig:Head');
     const width = height * (frame.width / frame.height);
-    this._valenPlace = { height, footInset, drop, head: headPt, anchor: headPt ? 'head' : 'feet' };
+    this._valenPlace = { height, footInset, drop, head: null, anchor: 'feet' };
 
     const x = ghost ? ghost.x : this.x;
     const y = ghost ? ghost.y : this.y;
@@ -602,37 +570,9 @@ export class Player {
     // The visible head is painted after the night multiply (drawAfterDark).
     // Drawing it here as well left a darkened rectangle under the skull.
     if (isGhost) {
-      Valen3D.draw(ctx, frame, height, {
-        alpha: 0.5,
-        footInset,
-        anchor: headPt ? 'head' : 'feet',
-        head: headPt,
-        drop,
-      });
+      Valen3D.draw(ctx, frame, height, { alpha: 0.5, footInset, anchor: 'feet', drop });
     }
     if (filter) ctx.restore();
-    if (coatId && !isGhost) {
-      const blood = coatId === 'coat_bloodmoon' || coatId === 'coat_glutton';
-      ctx.save();
-      ctx.globalAlpha = dead ? 0.45 : 0.9;
-      ctx.fillStyle = blood ? 'rgba(122, 12, 22, 0.82)' : 'rgba(214, 224, 236, 0.78)';
-      ctx.translate(0, drop + 8);
-      ctx.beginPath();
-      ctx.moveTo(-12, -3);
-      ctx.lineTo(12, -3);
-      ctx.lineTo(16, 6);
-      ctx.lineTo(-16, 6);
-      ctx.closePath();
-      ctx.fill();
-      ctx.strokeStyle = blood ? 'rgba(255, 64, 48, 0.85)' : 'rgba(255, 255, 255, 0.8)';
-      ctx.lineWidth = 1.6;
-      ctx.stroke();
-      ctx.globalAlpha = 0.55;
-      ctx.fillStyle = blood ? 'rgba(160, 20, 28, 0.7)' : 'rgba(230, 236, 246, 0.7)';
-      ctx.fillRect(-8, -2, 16, 4);
-      ctx.restore();
-    }
-    
     // v1.1 debug: small indicator that GLB is active (only in dev/debug builds)
     if (!isGhost && !dead && typeof window !== 'undefined' && window.__LN_DEBUG) {
       ctx.save();
@@ -649,10 +589,10 @@ export class Player {
     // (Local space here: the context is already translated to the feet.)
     if (!isGhost && !dead && !crawling && this.lowBlood) {
       const head = Valen3D.screenPoint('mixamorig:Head');
-      let hx = 0, hy = drop;
-      if (head) {
-        hx = 0;
-        hy = drop;
+      let hx = 0, hy = -height * 0.72;
+      if (head && frame.width) {
+        hx = (head.x / frame.width) * width - width / 2;
+        hy = (head.y / frame.height) * height - height + footInset;
       }
       const glow = 0.5 + (1 - this.bloodPct) * 0.7;
       ctx.globalCompositeOperation = 'screen';
@@ -854,7 +794,11 @@ export class Player {
    */
   drawAfterDark(ctx, game) {
     const frame = this._valenFrame;
-    if (!frame || this.state === PSTATE.DEAD) return;
+    if (this.state === PSTATE.DEAD) return;
+    if (!frame) {
+      this._drawStandingFallback(ctx, game);
+      return;
+    }
     // Multiply cannot brighten a near-black floor. A small pool on the ground
     // keeps the first minute readable before the lamps are doing the work.
     ctx.save();
@@ -888,24 +832,89 @@ export class Player {
     });
     if (filter) ctx.filter = 'none';
     const hv = this.hungerVis;
+    const torso = -(place.height || 104) * 0.42;
     ctx.globalCompositeOperation = 'screen';
-    ctx.globalAlpha = 0.22 + hv * 0.72;
-    ctx.fillStyle = hv > 0.72 ? 'rgba(214,226,255,0.95)' : 'rgba(176,198,232,0.9)';
+    ctx.globalAlpha = 0.16 + hv * 0.55;
+    ctx.strokeStyle = hv > 0.72 ? 'rgba(236,242,255,0.95)' : 'rgba(186,206,235,0.7)';
+    ctx.lineWidth = 1.4 + hv * 2.2;
     ctx.beginPath();
-    ctx.ellipse(0, 3, 12 + hv * 22, 5 + hv * 8, 0, 0, TAU);
-    ctx.fill();
-    ctx.globalAlpha = 0.35 + hv * 0.6;
-    ctx.strokeStyle = hv > 0.72 ? 'rgba(236,242,255,0.95)' : 'rgba(186,206,235,0.75)';
-    ctx.lineWidth = 1.2 + hv * 2.4;
-    ctx.beginPath();
-    ctx.ellipse(0, 3, 16 + hv * 20, 6.5 + hv * 7, 0, 0, TAU);
+    ctx.ellipse(0, torso, 16 + hv * 8, 26 + hv * 10, 0, 0, TAU);
     ctx.stroke();
     if ((this.sated || 0) > 0.05) {
-      ctx.globalAlpha = this.sated * 0.65;
-      ctx.fillStyle = 'rgba(255,118,86,0.85)';
+      ctx.globalAlpha = this.sated * 0.55;
+      ctx.fillStyle = 'rgba(255,118,86,0.8)';
       ctx.beginPath();
-      ctx.ellipse(0, 2, 18, 8, 0, 0, TAU);
+      ctx.ellipse(0, torso, 18, 22, 0, 0, TAU);
       ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Standing coat when the GLB frame is missing. Same feet anchor and height
+   * as the play camera composite — never the old floor token spun onto its side.
+   */
+  _drawStandingFallback(ctx, game) {
+    const h = 104;
+    const yaw = Math.sin(visualAngle(this.angle, game.renderer.tilt || 1));
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    ctx.globalAlpha = 0.2;
+    ctx.fillStyle = 'rgba(176, 194, 224, 0.95)';
+    ctx.beginPath();
+    ctx.ellipse(this.x, this.y + 6, 20, 8, 0, 0, TAU);
+    ctx.fill();
+    ctx.restore();
+    ctx.save();
+    if (game.renderer.upright) game.renderer.upright(ctx, this.x, this.y);
+    ctx.translate(this.x, this.y);
+    ctx.globalAlpha = game.blackoutT > 0 ? 0.72 : 0.94;
+    const filter = bodyGrade(IAP.equippedCoat(game.save), this.hungerVis, this.sated || 0);
+    if (filter) ctx.filter = filter;
+    ctx.fillStyle = '#101218';
+    ctx.beginPath();
+    ctx.moveTo(-12 + yaw * 8, -h * 0.78);
+    ctx.lineTo(14 + yaw * 5, -h * 0.7);
+    ctx.lineTo(20 + yaw * 10, -h * 0.16);
+    ctx.lineTo(-18 + yaw * 4, -h * 0.13);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#7a1a28';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.strokeStyle = '#0a0b10';
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-6 + yaw * 2, -h * 0.16);
+    ctx.lineTo(-8, -3);
+    ctx.moveTo(7 + yaw * 4, -h * 0.15);
+    ctx.lineTo(9, -2);
+    ctx.stroke();
+    ctx.fillStyle = '#d7cfc2';
+    ctx.beginPath();
+    ctx.ellipse(yaw * 7, -h * 0.86, 9, 11, yaw * 0.2, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = '#090a10';
+    ctx.beginPath();
+    ctx.ellipse(yaw * 5, -h * 0.92, 11, 7, 0, Math.PI, TAU);
+    ctx.fill();
+    if (filter) ctx.filter = 'none';
+    const hv = this.hungerVis;
+    ctx.globalCompositeOperation = 'screen';
+    ctx.globalAlpha = 0.16 + hv * 0.55;
+    ctx.strokeStyle = hv > 0.72 ? 'rgba(236,242,255,0.95)' : 'rgba(186,206,235,0.7)';
+    ctx.lineWidth = 1.4 + hv * 2.2;
+    ctx.beginPath();
+    ctx.ellipse(yaw * 3, -h * 0.42, 16 + hv * 8, 26 + hv * 10, 0, 0, TAU);
+    ctx.stroke();
+    if (Valen3D.failed) {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 0.85;
+      ctx.font = '700 9px ui-monospace, Consolas, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ff5a4a';
+      ctx.fillText('CHARACTER ASSET FAILED', 0, -h - 14);
     }
     ctx.restore();
   }
