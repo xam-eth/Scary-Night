@@ -95,7 +95,7 @@ from build power.
 - **Rule:** never purchasable with money. Never minted by an ad. Earned only by
   playing. This is the guarantee behind D6.
 
-### 4.2 Premium currency (name TBD — themeable, e.g. "Moonstone" / "Relic") — HARD
+### 4.2 Relics ✦ — HARD (locked name)
 - **Faucets:** slow drip from tasks / milestones / achievements, **or** bought with
   money.
 - **Sinks:** cosmetics (§7 identity), relief (revive/keep-purse), remove-ads,
@@ -321,11 +321,10 @@ gulp, a momentary satiation, and enemies that read as food.
 
 ## 16. Still open (not final)
 
-- Premium currency name/theme.
-- Exact `[tune]` values: purse formula, permanent-floor %, lane commitment
-  mechanism, cadence night numbers, difficulty depth `N`.
-- Whether the rewarded-ad crate mints premium currency or only cosmetics/relief
-  (classify in #20).
+- Premium currency name is locked: **Relics ✦**.
+- Locked tune: death floor 20% (min 1), dawn banks 100%, lane cap 6, cadence
+  nights 1–6 as in `src/game/economy.js`, night-2 rest drain 0.42, night-1
+  drain ×0.48. The rewarded crate mints 1 Relic, never planks or shards.
 - Mid-night bank point (§6) — in or out.
 - Visual `[tune]`: desaturation curve for hunger, vignette length, HUD emphasis
   weights.

@@ -74,8 +74,8 @@ export const PLAYER = {
   attackWindup: 0.09,
   attackActive: 0.12,
   bloodMax: 100,
-  bloodDrain: 0.34,        // per second at rest-ish
-  bloodDrainRun: 0.22,     // extra while running
+  bloodDrain: 0.42,        // per second at rest. Night 1 multiplies by NIGHT1_DRAIN.
+  bloodDrainRun: 0.22,     // extra while running — a visible tick, not the meal
   bloodRegenRate: 0,       // none: blood only comes from blood
   lowBlood: 30,
   critBlood: 12,
@@ -101,9 +101,9 @@ export const DOOR = {
 export const RES = {
   plankPickup: 2,
   plankCount: 7,           // total planks in the world (each gives 2)
-  bloodPackValue: 20,
-  bloodPackCount: 8,
-  bloodWellValue: 34,      // basement basin, high risk
+  bloodPackValue: 4,       // a mouthful. Six of them do not make a night.
+  bloodPackCount: 6,
+  bloodWellValue: 8,       // basement basin, high risk, still not a meal
   bonfireHeal: 12,
 };
 
@@ -113,7 +113,7 @@ export const ENEMY_TYPES = {
     key: 'crawler',
     name: 'CRAWLER',
     hp: 42, speed: 92, huntSpeed: 141, radius: 12, contactDamage: 8, attackInterval: 1.1,
-    attackRange: 26, doorDamage: 6.5, doorAttackInterval: 1.15, bloodValue: 22,
+    attackRange: 26, doorDamage: 6.5, doorAttackInterval: 1.15, bloodValue: 20,
     visionRange: 620, loseSight: 2.4, alertRange: 300, steer: 5.2,
     silhouettes: 'lean', shardChance: 0.35, leaveAfter: 42,
     spawnCost: 1, canClimb: false, speak: 'crawlerChatter',
@@ -269,9 +269,10 @@ export const CODEX = [
 
 /* ---------------- blood shard economy ---------------- */
 export const SHARDS = {
-  perMinute: 1.1,
-  surviveBonus: 4,
-  defeatBonusPer10: 0.35,
+  perMinute: 0.4,          // idle time is a trickle, not the purse
+  surviveBonus: 6,
+  knockSurvived: 3,
+  defeatBonusPer10: 0,     // kills pay through killShards, not this floor-to-zero bonus
 };
 
 export const TUNING = {

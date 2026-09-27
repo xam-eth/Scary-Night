@@ -17,13 +17,17 @@ import {
 } from '../core/util.js';
 import {
   NIGHT_DURATION, DAWN_AT, COUNTDOWN_AT, SILENCE_AT, PANIC_AT, PLAYER, DOOR, RES,
-  phaseAt, DIFFICULTY, TUNING, UPGRADES, upgradeLevel, SHARDS, CODEX,
+  phaseAt, DIFFICULTY, TUNING, UPGRADES, upgradeLevel, SHARDS, CODEX, nightHeat,
 } from '../core/config.js';
 import { Mansion, ROOM } from './mansion.js';
 import { Player, PSTATE } from './player.js';
 import { Enemy, Crawler, Hunter, Werewolf, Bolt } from './enemies.js';
 import { Director, MOOD } from './director.js';
 import { Objectives } from './objectives.js';
+import {
+  packGain, killShards, purseFloor, projectDawn, hungerMul, revealForNight,
+  nextRank, rankCost, rankCount, LANE_CAP, LARDER_BLOOD, unlocked, markUnlocks,
+} from './economy.js';
 import { House } from './house.js';
 import { Haunts } from './haunts.js';
 import { Ads } from '../shop/ads.js';
@@ -59,7 +63,7 @@ class Pickup {
         game.audio.play('woodPickup', { x: this.x, y: this.y, cam: game.renderer.cam, vol: 0.7 });
         game.showCombatText(`+${this.amount} PLANKS`, this.x, this.y - 14, '#c8a05a');
       } else if (this.kind === 'blood') {
-        game.player.heal(this.amount, game);
+        game.grantBlood(this.amount, true);
         game.audio.play('bloodPickup', { x: this.x, y: this.y, cam: game.renderer.cam, vol: 0.8 });
         game.showCombatText(`+${Math.round(this.amount)} BLOOD`, this.x, this.y - 14, '#e06070');
         game.particles.burst('blood', this.x, this.y, 10, { color: '#b8202e', speedMin: 10, speedMax: 60, lifeMin: 0.3, lifeMax: 0.8, sizeMin: 2, sizeMax: 4 });
@@ -121,6 +125,7 @@ export class Game {
     this.input = canvas.__input || (canvas.__input = new Input(canvas));
     this.audio = Audio;
     this.save = loadSave();
+    Ads.suppressed = !!(this.save.iap && this.save.iap.owned && this.save.iap.owned.remove_ads);
     this.screen = 'menu';
     this.settingsReturn = 'menu';
     this.time = 0;
@@ -160,6 +165,7 @@ export class Game {
     this.newRecord = false;
     this.introT = 0;
     this.introLen = 3.2;
+    this.seenIntroThisSession = false;
     this.deathScreenT = 0;
     this.victoryScreenT = 0;
     this.dawnT = 0;
@@ -276,6 +282,17 @@ export class Game {
       this.showMessage(err, { tone: 'cold', life: 3 });
     }
   }
+  buySkuWithRelics(id) {
+    const r = IAP.buyWithRelics(this.save, id);
+    if (r.ok) {
+      writeSave(this.save);
+      this.audio.play('uiConfirm', { vol: 0.7 });
+      this.showMessage('PAID IN RELICS. THE CLAW IS UNCHANGED.', { tone: 'gold', life: 3.4 });
+    } else {
+      this.audio.play('uiBack', { vol: 0.5 });
+      this.showMessage('NOT ENOUGH RELICS.', { tone: 'cold', life: 2.6 });
+    }
+  }
   restorePurchases() {
     this.audio.play('uiClick', { vol: 0.4 });
     IAP.restore(this.save, () => writeSave(this.save)).then((r) => {
@@ -284,14 +301,21 @@ export class Game {
   }
 
   buyUpgrade(id) {
-    const u = UPGRADES.find((x) => x.id === id);
-    if (!u) return;
-    const lvl = upgradeLevel(this.save, id);
-    if (lvl >= u.max) return;
-    const cost = u.costs[lvl];
+    if (!unlocked(this.save, 'builds') && !(this.save.nightsSurvived > 0 && this.save.revealed && this.save.revealed.builds)) {
+      this.showMessage('THE HOUSE HAS NOT OFFERED YOU A LANE YET.', { tone: 'cold', life: 2.6 });
+      return;
+    }
+    const rank = nextRank(this.save, id);
+    if (!rank) { this.audio.play('uiBack', { vol: 0.5 }); return; }
+    if (rankCount(this.save) >= LANE_CAP) {
+      this.showMessage('SIX RANKS. THE REST OF YOU STAYS UNBOUGHT.', { tone: 'cold', life: 3.2 });
+      this.audio.play('uiBack', { vol: 0.5 });
+      return;
+    }
+    const cost = rankCost(this.save, rank);
     if (this.save.shards < cost) { this.audio.play('uiBack', { vol: 0.5 }); return; }
     this.save.shards -= cost;
-    this.save.upgrades[id] = lvl + 1;
+    this.save.builds[rank.id] = 1;
     writeSave(this.save);
     this.audio.play('shard', { vol: 0.8 });
     this.audio.play('uiConfirm', { vol: 0.6 });
@@ -321,6 +345,7 @@ export class Game {
   }
 
   toMenu() {
+    this.settlePurse('leave');
     this.paused = false;
     this.screen = 'menu';
     this.ui = []; this.uiIndex = 0;
@@ -365,7 +390,15 @@ export class Game {
     // Night one can bar the shaking door without a scavenger hunt. Later
     // nights start leaner; the fort still costs three planks.
     this.player.planks = (this.save.nightsSurvived || 0) > 0 ? 2 : 3;
+    this.player.planks += this.player.bonusPlanks || 0;
     this.player.angle = -Math.PI / 2;
+    const doorMul = this.player.doorMul || 1;
+    if (doorMul !== 1) {
+      for (const e of this.mansion.entrances) {
+        e.hpMax = e.baseHpMax * doorMul;
+        e.hp = e.hpMax;
+      }
+    }
     // ---- director ----
     this.director = new Director();
     // ---- clocks ----
@@ -404,6 +437,12 @@ export class Game {
     Ads.beginNight(this.night || 1);
     this.objectives.beginNight(this);
     this.shardsEarned = 0;
+    this.purseReady = false;
+    this.purseSettled = false;
+    this.bankedNow = 0;
+    this.forfeited = 0;
+    this.hungerWarned = false;
+    this.bloodTick = 0;
     this.newRecord = false;
     this.dyingT = 0;
     this.dawnT = 0;
@@ -436,7 +475,7 @@ export class Game {
         const p = this.pickSpotInRoom(room);
         if (p) { this.pickups.push(new Pickup(p.x, p.y, 'planks', RES.plankPickup)); totalPlanks++; }
       }
-      for (let i = 0; i < spec.blood; i++) {
+      for (let i = 0; i < spec.blood && totalBlood < RES.bloodPackCount; i++) {
         const p = this.pickSpotInRoom(room);
         if (p) { this.pickups.push(new Pickup(p.x, p.y, 'blood', RES.bloodPackValue)); totalBlood++; }
       }
@@ -464,11 +503,24 @@ export class Game {
     // browsers, some WebViews, autoplay quirks) then silently swallowed the
     // transition and TRY AGAIN/PLAY/RESTART were dead buttons. The game state
     // machine must never wait on audio — unlock is fire-and-forget polish.
+    this.settlePurse('leave');
     this.freshRun();
-    this.screen = 'intro';
-    this.introT = 0;
-    this.fadeFromBlack = 1;
+    const repeat = this.seenIntroThisSession;
+    this.seenIntroThisSession = true;
+    if (repeat) {
+      this.screen = 'playing';
+      this.fadeFromBlack = 0.45;
+      this.finishIntro();
+    } else {
+      this.screen = 'intro';
+      this.introT = 0;
+      this.fadeFromBlack = 1;
+    }
     this.renderer.snapCamera(this.player.x, this.player.y);
+    const reveal = revealForNight(this.save.nightsSurvived);
+    if (reveal) this.showMessage(reveal.text, { tone: 'cold', life: 4.2 });
+    if (this.save.iap && this.save.iap.owned && this.save.iap.owned.remove_ads) Ads.suppressed = true;
+    else Ads.suppressed = false;
     Audio.unlock().then(() => { this.applySettings(); Audio.setAmbienceVolume(1); }).catch(() => { });
   }
 
@@ -628,6 +680,16 @@ export class Game {
     this.blackoutT = Math.max(0, this.blackoutT - dt);
     this.powerOut = this.blackoutT > 0;
     this.nightBrief();
+    this.bloodTick = Math.max(0, (this.bloodTick || 0) - dt);
+    const proj = projectDawn(this.player.blood, this.timeLeft, this.save, this.player.state === 'run');
+    this.hungerFailing = proj.failing;
+    if (proj.failing && !this.hungerWarned && this.player.alive) {
+      this.hungerWarned = true;
+      this.showMessage('THE HUNGER IS WINNING. YOU NEED TO FEED.', { tone: 'danger', life: 4.4 });
+      this.audio.setHeartbeat(1.15, 0.55);
+    } else if (!proj.failing && this.hungerWarned) {
+      this.hungerWarned = false;
+    }
 
     // ---- world ----
     this.mansion.update(dt, this);
@@ -866,7 +928,7 @@ export class Game {
 
   drinkLarder(larder) {
     this.larderUsed = true;
-    this.player.heal(20, this);
+    this.grantBlood(LARDER_BLOOD, true);
     this.audio.play('drink', { vol: 0.55 });
     this.showMessage('THE LARDER IS COLD. SOMETHING HEARD THE LATCH.', { tone: 'cold', life: 3.6 });
     this.makeNoise(larder.x, larder.y, 280);
@@ -1013,7 +1075,7 @@ export class Game {
   finishDrink(basin) {
     const p = this.player;
     this.basinUsed = true;
-    p.heal(RES.bloodWellValue, this);
+    this.grantBlood(RES.bloodWellValue, true);
     this.audio.play('bloodPickup', { vol: 0.9 });
     this.showMessage('THE BLOOD IS OLD. IT TASTES LIKE THE HOUSE.', { tone: 'cold' });
     this.particles.burst('blood', basin.x, basin.y, 20, { color: '#a01020', speedMin: 20, speedMax: 90, lifeMin: 0.4, lifeMax: 1.1, sizeMin: 2, sizeMax: 5 });
@@ -1052,10 +1114,11 @@ export class Game {
     // footprints
     if (chance(0.6)) this.decals.print(p.x - Math.cos(p.angle) * 6, p.y - Math.sin(p.angle) * 6, p.angle, 'rgba(70,8,14,0.20)', 5);
     // running is loud
+    const quiet = p.quietMul || 1;
     if (running) {
-      this.makeNoise(p.x, p.y, 380);
+      this.makeNoise(p.x, p.y, 380 * quiet);
       if (chance(0.25)) this.audio.play('stepCreak', { x: p.x, y: p.y, cam: this.renderer.cam, vol: 0.5 });
-    } else this.makeNoise(p.x, p.y, 130);
+    } else this.makeNoise(p.x, p.y, 130 * quiet);
   }
 
   onPlayerHurt(dmg, fromX, fromY, kind) {
@@ -1099,6 +1162,10 @@ export class Game {
   }
 
   playerAttackHit(player) {
+    const look = IAP.coatLook(IAP.equippedCoat(this.save));
+    if (look && look.fx === 'glut') this.particles.burst('blood', player.x, player.y, 6, { color: '#8a1020', speedMin: 40, speedMax: 90, lifeMin: 0.2, lifeMax: 0.35 });
+    if (look && look.fx === 'ward') this.particles.burst('dust', player.x, player.y, 4, { color: '#c4a46a', speedMin: 16, speedMax: 40, lifeMin: 0.2, lifeMax: 0.3 });
+    if (look && look.fx === 'shade') this.particles.burst('mote', player.x, player.y, 5, { color: '#6a6a90', speedMin: 10, speedMax: 28, lifeMin: 0.25, lifeMax: 0.45 });
     const arc = PLAYER.attackArc;
     let hits = 0;
     for (const e of this.enemies) {
@@ -1132,6 +1199,8 @@ export class Game {
     this.stats.kills++;
     const gain = enemy.type.bloodValue * p.recoveryMul;
     p.heal(gain, this);
+    this.stats.feedShards = (this.stats.feedShards || 0) + killShards(enemy);
+    if (!this.save.coachFed) this.save.coachFed = true;
     this.showCombatText(`+${Math.round(gain)} BLOOD`, enemy.x, enemy.y - 20, '#e06070');
     this.audio.play('growl', { x: enemy.x, y: enemy.y, cam: this.renderer.cam, vol: 0.35 });
     this.particles.burst('blood', enemy.x, enemy.y, 22, {
@@ -1326,7 +1395,42 @@ export class Game {
     this.pickups.push(new Pickup(x, y, kind, amount));
   }
 
-  addBloodShards(n) { this.save.shards += n; this.save.totalShards = (this.save.totalShards || 0) + n; }
+  addBloodShards(n) {
+    if (!n) return;
+    this.save.shards += n;
+    this.save.totalShards = (this.save.totalShards || 0) + n;
+  }
+
+  addRelics(n) {
+    if (!n) return;
+    this.save.relics = (this.save.relics || 0) + n;
+  }
+
+  /** Vials, the basin, the larder. Kills do not use this — feeding stays the meal. */
+  grantBlood(amount, diminish = false) {
+    const p = this.player;
+    const gain = diminish ? packGain(p.blood, p.bloodMax, amount) : amount;
+    p.heal(gain, this);
+    return gain;
+  }
+
+  /**
+   * Dawn banks the whole purse. Leaving a death banks the floor only.
+   * A revive does not call this — the purse stays at risk in the same night.
+   */
+  settlePurse(why) {
+    if (!this.purseReady || this.purseSettled) return;
+    this.purseSettled = true;
+    const full = Math.max(0, this.shardsEarned || 0);
+    const bank = why === 'dawn' ? full : purseFloor(full);
+    this.bankedNow = bank;
+    this.forfeited = Math.max(0, full - bank);
+    this.addBloodShards(bank);
+    if (why === 'dawn' && unlocked(this.save, 'relics')) this.addRelics(1);
+    markUnlocks(this.save);
+    this.save.nightsAttempted = (this.save.nightsAttempted || 0) + 1;
+    writeSave(this.save);
+  }
 
   /* ---------------- death ---------------- */
 
@@ -1351,6 +1455,12 @@ export class Game {
   /** Hand back one dawn. Same dark, same danger, 45% blood — the cap is the
    *  whole design: this is mercy, not power. The player has to choose it. */
   reviveIntoNight() {
+    if (this._objectivePaid) {
+      this.shardsEarned = Math.max(0, (this.shardsEarned || 0) - this._objectivePaid);
+      this._objectivePaid = 0;
+      if (this.objectives) this.objectives._settled = false;
+    }
+    this.purseSettled = false;
     const p = this.player;
     if (p.state !== PSTATE.DEAD) { /* mid-death-screen revive */ }
     p.state = PSTATE.IDLE;
@@ -1386,8 +1496,8 @@ export class Game {
   async requestAdCrate() {
     const res = await Ads.watch('crate');
     if (!res.ok) { this.showMessage(res.error === 'user-cancelled' ? 'NOT TODAY.' : 'NO CRATE TONIGHT.', { tone: 'cold', life: 2.6 }); return res; }
-    this.player.planks += 2;
-    this.showMessage('A CRATE, OUTSIDE THE DOOR. WOOD SMELLS LIKE TIME.', { tone: 'gold', life: 4 });
+    this.addRelics(1);
+    this.showMessage('A RELIC IN THE CRATE. NOT BLOOD. NOT A CLAW.', { tone: 'gold', life: 4 });
     writeSave(this.save);
     return res;
   }
@@ -1405,11 +1515,9 @@ export class Game {
     // the night keeps its stats (objectives pay out with it, partial credit)
     this.finalizeShards(this.time);
     this.settleNight(this.time);
-    this.save.nightsAttempted = (this.save.nightsAttempted || 0) + 1;
     this.save.bestTime = Math.max(this.save.bestTime, this.time);
     const kills = this.stats.kills;
     if (this.save.bestDefeated === undefined || kills > this.save.bestDefeated) this.save.bestDefeated = kills;
-    this.addBloodShards(this.shardsEarned);
     writeSave(this.save);
   }
 
@@ -1444,15 +1552,25 @@ export class Game {
     this.save.goals.done += night.done;
     this.save.goals.nights += 1;
     this.shardsEarned = Math.max(0, this.shardsEarned + night.shards);
+    this._objectivePaid = night.shards;
     if (night.done) this.showMessage(night.done + ' OF ' + night.list.length + ' GOALS MET', { tone: 'gold', life: 4.2 });
+  }
+
+  livePurse() {
+    const mins = (this.time || 0) / 60;
+    let s = Math.floor(mins * SHARDS.perMinute) + ((this.stats && this.stats.feedShards) || 0);
+    return Math.max(0, Math.round(s * nightHeat(this.save && this.save.nightsSurvived)));
   }
 
   finalizeShards(survived) {
     const mins = survived / 60;
     let s = Math.floor(mins * SHARDS.perMinute);
+    s += this.stats.feedShards || 0;
+    if (this.objectives && this.objectives.flags && this.objectives.flags.knockSurvived) s += SHARDS.knockSurvived || 0;
     if (survived >= NIGHT_DURATION) s += SHARDS.surviveBonus;
-    s += Math.floor((this.stats.kills / 10) * SHARDS.defeatBonusPer10);
-    this.shardsEarned = Math.max(0, s);
+    const heat = nightHeat(this.save && this.save.nightsSurvived);
+    this.shardsEarned = Math.max(0, Math.round(s * heat));
+    this.purseReady = true;
     return this.shardsEarned;
   }
 
@@ -1489,11 +1607,10 @@ export class Game {
     this.finalizeShards(NIGHT_DURATION);
     this.settleNight(NIGHT_DURATION);
     this.save.nightsSurvived++;
-    this.save.nightsAttempted = (this.save.nightsAttempted || 0) + 1;
     this.newRecord = NIGHT_DURATION > this.save.bestTime;
     this.save.bestTime = Math.max(this.save.bestTime, NIGHT_DURATION);
     this.save.seen.dawn = true;
-    this.addBloodShards(this.shardsEarned);
+    this.settlePurse('dawn');
     this.stats.doorsSurviving = this.mansion.doors.filter((d) => !d.broken).length;
     this.stats.doorsTotal = this.mansion.doors.length;
     writeSave(this.save);

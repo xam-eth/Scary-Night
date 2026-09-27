@@ -124,7 +124,7 @@ console.log('\n=== CONSENT GATE ===');
 // BLOOD MARKET only appears on the menu once a night has been attempted —
 // force that here so the menu button tour below can reach it, same as any
 // returning player would see.
-await page.evaluate(() => { window.__LN.save.nightsAttempted = 1; });
+await page.evaluate(() => { window.__LN.save.nightsAttempted = 4; window.__LN.save.nightsSurvived = 4; });
 await pump(2);
 
 console.log('\n=== LOOP ===');

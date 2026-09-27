@@ -111,11 +111,14 @@ export function fmtBar(pct, cells = 10) {
 }
 
 /* ---------------- save storage ---------------- */
+import { migrateSave } from '../game/economy.js';
+
 const SAVE_KEY = 'lastnight.save.v1';
 
 export const defaultSave = () => ({
   shards: 0,
   totalShards: 0,
+  relics: 0,                // hard currency. Play drip or money-bought goods. Never power.
   nightsSurvived: 0,
   nightsAttempted: 0,
   bestTime: 0,
@@ -130,6 +133,11 @@ export const defaultSave = () => ({
     invertPanic: 0,
   },
   tutorialSeen: false,
+  coachFed: false,
+  coachKnock: false,
+  builds: {},               // lane rank id -> 1. Commitment cap lives in economy.js.
+  revealed: {},
+  milestones: {},
   privacyAck: false,        // first-run notice; not an account
   deeds: {},                // what the player has actually done; the shop waits on these
 });
@@ -148,8 +156,8 @@ export function loadSave() {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return base;
-    return deepMerge(base, JSON.parse(raw));
-  } catch (e) { return base; }
+    return migrateSave(deepMerge(base, JSON.parse(raw)));
+  } catch (e) { return migrateSave(base); }
 }
 export function writeSave(save) {
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* private mode */ }

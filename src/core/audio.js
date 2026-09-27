@@ -165,6 +165,22 @@ S.knock = (t, o) => {
     osc(t + dt, 0.16, { out: o.out, gain: 0.22 * v, type: 'triangle', freq: 132 + rand(-14, 14), to: 62, pan: o.pan, rev: 0.4, attack: 0.001 });
   }
 };
+/* Knock tells. Partial on purpose: the director only plays them some of the time. */
+S.tellBreath = (t, o) => {
+  const v = o.vol ?? 1;
+  noise(t, 0.45, { out: o.out, gain: 0.16 * v, type: 'lowpass', freq: 420, q: 0.7, pan: o.pan, rev: 0.7, attack: 0.08 });
+  osc(t + 0.05, 0.35, { out: o.out, gain: 0.08 * v, type: 'sine', freq: 78, to: 54, pan: o.pan, rev: 0.55, attack: 0.04 });
+};
+S.tellWolf = (t, o) => {
+  const v = o.vol ?? 1;
+  noise(t, 0.22, { out: o.out, gain: 0.28 * v, type: 'bandpass', freq: 900, q: 2.4, pan: o.pan, rev: 0.4, attack: 0.002 });
+  osc(t + 0.04, 0.5, { out: o.out, gain: 0.2 * v, type: 'sawtooth', freq: 62, to: 38, pan: o.pan, rev: 0.6, attack: 0.01, filt: 'lowpass', filtQ: 3 });
+};
+S.tellGift = (t, o) => {
+  const v = o.vol ?? 1;
+  osc(t, 0.28, { out: o.out, gain: 0.1 * v, type: 'sine', freq: 520, to: 640, pan: o.pan, rev: 0.45, attack: 0.02 });
+  osc(t + 0.12, 0.22, { out: o.out, gain: 0.06 * v, type: 'triangle', freq: 780, to: 700, pan: o.pan, rev: 0.35, attack: 0.02 });
+};
 S.knockHard = (t, o) => {
   const v = o.vol ?? 1;
   for (let i = 0; i < 3; i++) {

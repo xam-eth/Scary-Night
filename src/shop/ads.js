@@ -26,7 +26,7 @@ import { SHOP_CONFIG } from './config.js';
 
 export const AdPlacements = Object.freeze({
   revive: { name: 'SECOND BLOOD (watch)', perNight: 1, reward: 'grantRevive' },
-  crate: { name: "CARPENTER'S CRATE (watch)", perDay: 1, reward: 'planks2' },
+  crate: { name: "A RELIC (watch)", perDay: 1, reward: 'relic1' },
 });
 
 class AdBridge {
@@ -67,7 +67,9 @@ export const Ads = {
     return p;
   },
 
+  suppressed: false,
   isAvailable(placement) {
+    if (this.suppressed) return false;
     const cfg = AdPlacements[placement];
     if (!cfg || this.provider() === 'none') return false;
     const use = this.counts[placement] || { night: 0, day: 0 };

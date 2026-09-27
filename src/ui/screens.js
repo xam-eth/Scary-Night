@@ -11,6 +11,7 @@
 import { clamp, lerp, damp, TAU, rand, chance, fmtClock, hash2, fmtBar } from '../core/util.js';
 import { PAL } from '../core/render.js';
 import { UPGRADES, upgradeLevel, DIFFICULTY, CODEX, NIGHT_DURATION, GAME_VERSION } from '../core/config.js';
+import { unlocked, nextRevealLine, LANES, nextRank, rankCost, rankCount, LANE_CAP } from '../game/economy.js';
 import { Valen3D } from '../game/valen3d.js';
 import { IAP, CATALOG } from '../shop/iap.js';
 import { Ads } from '../shop/ads.js';
@@ -303,9 +304,9 @@ export function drawMenu(game, ctx, w, h) {
   const B = game.save;
   const canUpgrade = (B.shards || 0) > 0;
   const goalLine = B.goals && B.goals.done ? `${B.goals.done} GOALS MET ACROSS ${B.goals.nights} NIGHTS` : 'THE NIGHT HAS GOALS NOW';
-  const marketOpen = (B.nightsAttempted || 0) > 0;
+  const marketOpen = unlocked(B, 'market');
   const defs = [
-    { label: 'PLAY', sub: 'ONE NIGHT. FIVE MINUTES. THREE GOALS.', onClick: () => game.beginNight() },
+    { label: 'PLAY', sub: nextRevealLine(B), onClick: () => game.beginNight() },
     { label: 'UPGRADES', sub: canUpgrade ? `${B.shards} BLOOD SHARDS` : 'EARNED BY SURVIVING', onClick: () => game.setScreen('upgrades') },
     ...(marketOpen ? [{ label: 'BLOOD MARKET', sub: 'OPTIONAL. THE NIGHT DOES NOT ASK.', onClick: () => game.setScreen('shop') }] : []),
     { label: 'COLLECTION', sub: `${Object.keys(B.seen || {}).length}/${CODEX.length} RECORDED`, onClick: () => game.setScreen('collection') },
@@ -377,7 +378,7 @@ function drawConsent(game, ctx, w, h) {
   if ('letterSpacing' in ctx) ctx.letterSpacing = '0.4px';
   ctx.fillStyle = 'rgba(205,196,180,0.82)';
   const lines = [
-    '18+ horror. No account. No ads. No location.',
+    '18+ horror. No account. No location.',
     'Progress stays on this device until you delete it.',
     'On Google Play, digital goods bill through Google Play Billing.',
     'In the browser, payment uses Midtrans. A random device id is created only when you pay, and sent to finish that payment.',
@@ -712,14 +713,19 @@ export function drawUpgrades(game, ctx, w, h) {
   const rowW = w - pad * 2;
   const top = phone ? 64 : h * 0.24;
   const bottom = h - (phone ? 58 : 108);
-  const rowH = clamp((bottom - top) / UPGRADES.length, phone ? 54 : 64, 76);
+  const rowH = clamp((bottom - top) / LANES.length, phone ? 78 : 92, 120);
   let y = top;
   const bx = pad;
-  UPGRADES.forEach((u, i) => {
-    const lvl = upgradeLevel(B, u.id);
-    const maxed = lvl >= u.max;
-    const cost = maxed ? 0 : u.costs[lvl];
-    const afford = !maxed && B.shards >= cost;
+  const openLanes = unlocked(B, 'builds');
+  LANES.forEach((lane) => {
+    const nxt = nextRank(B, lane.id);
+    const owned = lane.ranks.filter((r) => B.builds && B.builds[r.id]).length;
+    const maxed = !nxt;
+    const capped = rankCount(B) >= LANE_CAP && !maxed;
+    const cost = nxt ? rankCost(B, nxt) : 0;
+    const afford = openLanes && !maxed && !capped && B.shards >= cost;
+    const u = { id: lane.id, name: lane.name, desc: openLanes ? (nxt ? nxt.name + ' — ' + lane.blurb : lane.blurb) : 'THE LANES OPEN AFTER TWO DAWNS.', max: lane.ranks.length, icon: lane.id === 'glutton' ? 'claw' : lane.id === 'warden' ? 'plank' : 'boot' };
+    const lvl = owned;
     ctx.save();
     // row backing
     ctx.fillStyle = 'rgba(12,12,18,0.7)';
@@ -761,12 +767,12 @@ export function drawUpgrades(game, ctx, w, h) {
     const bw = phone ? 88 : 130, bh = Math.min(36, rowH - 16);
     const r = uiButton(game, {
       x: bx + rowW - bw - 10, y: y + (rowH - 8) / 2 - bh / 2, w: bw, h: bh,
-      label: maxed ? 'MASTERED' : `◆ ${cost}`, small: true,
-      disabled: maxed || !afford,
+      label: !openLanes ? 'LATER' : maxed ? 'MASTERED' : capped ? 'CAPPED' : `◆ ${cost}`, small: true,
+      disabled: !afford,
       accent: '#a8833c',
-      onClick: () => game.buyUpgrade(u.id),
+      onClick: () => game.buyUpgrade(lane.id),
     });
-    buttonVisual(ctx, r.b, { active: r.hover, label: maxed ? 'MASTERED' : `◆ ${cost}`, small: true, disabled: maxed || !afford, accent: '#a8833c' });
+    buttonVisual(ctx, r.b, { active: r.hover, label: !openLanes ? 'LATER' : maxed ? 'MASTERED' : capped ? 'CAPPED' : `◆ ${cost}`, small: true, disabled: !afford, accent: '#a8833c' });
     y += rowH;
   });
 
@@ -775,7 +781,7 @@ export function drawUpgrades(game, ctx, w, h) {
   ctx.font = `400 12px ${SANS}`;
   if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
   ctx.fillStyle = 'rgba(170,162,150,0.6)';
-  if (!phone) ctx.fillText('BLOOD SHARDS ARE EARNED BY SURVIVING. THE LONGER YOU LAST, THE MORE YOU KEEP.', w / 2, h - 128);
+  if (!phone) ctx.fillText('SIX RANKS. ONE LANE DEEP, OR TWO LANES SHALLOW. YOU CANNOT OWN THE HOUSE.', w / 2, h - 128);
   ctx.restore();
 
   const backBtn = uiButton(game, { x: w / 2 - 110, y: h - 88, w: 220, h: 44, label: 'BACK', small: true, accent: '#6a6a80', onClick: () => game.setScreen(game.settingsReturn || 'menu') });
@@ -1003,7 +1009,8 @@ export function drawDeath(game, ctx, w, h) {
     ctx.font = `500 13px ${SANS}`;
     if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
     ctx.fillStyle = 'rgba(200,160,74,0.9)';
-    ctx.fillText(`◆ +${game.shardsEarned} BLOOD SHARDS`, w / 2, y + 6);
+    const floor = game.purseSettled ? game.bankedNow : Math.max(1, Math.round((game.shardsEarned || 0) * 0.2));
+    ctx.fillText(game.purseSettled ? `◆ ${game.bankedNow} KEPT` : `◆ ${game.shardsEarned} AT RISK · KEEP ${floor}`, w / 2, y + 6);
   }
   // tonight's goals board — partial credit, shown honestly
   if (game.lastNightGoals && game.lastNightGoals.length) {
@@ -1020,7 +1027,11 @@ export function drawDeath(game, ctx, w, h) {
     const items = [
       { label: 'TRY AGAIN', onClick: () => game.beginNight(), accent: '#a8833c' },
     ];
-    if (!game.usedRevive && game.save.iap && game.save.iap.revives > 0) {
+    const atRisk = game.livePurse ? game.livePurse() : (game.shardsEarned || 0);
+    const relief = unlocked(game.save, 'risk') && atRisk > 0 && !game.usedRevive;
+    if (relief && game.save.iap && game.save.iap.revives > 0) {
+      items.push({ label: `KEEP ◆ ${atRisk}`, onClick: () => game.spendSecondBlood(), accent: '#a8833c' });
+    } else if (!game.usedRevive && game.save.iap && game.save.iap.revives > 0) {
       items.push({ label: 'USE SECOND BLOOD', onClick: () => game.spendSecondBlood(), accent: '#6a6a80' });
     }
     items.push(
@@ -1143,7 +1154,7 @@ export function drawVictory(game, ctx, w, h) {
   if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
   ctx.textAlign = 'center';
   ctx.fillStyle = 'rgba(200,160,74,0.95)';
-  ctx.fillText(`◆ +${game.shardsEarned} BLOOD SHARDS`, cx, y + 12);
+  ctx.fillText(`◆ ${game.bankedNow || game.shardsEarned} BANKED`, cx, y + 12);
   if (game.lastNightGoals && game.lastNightGoals.length) {
     const done = game.lastNightGoals.filter((g) => g.state === 'done');
     ctx.font = `400 11px ${SANS}`;
@@ -1181,8 +1192,8 @@ export function drawTutorial() {
 /* ================= the Blood Market (IAP) — src/shop/iap.js =================
  * Catalog policy lives in iap.js; this screen is only its face. Every card
  * states plainly what it is, every item is also shard-buyable, the sandbox
- * mark (⌁) tells beta testers no real money moves. No ads anywhere in the
- * game — that is a feature, and it is written on the wall.
+ * mark (⌁) tells beta testers no real money moves. Ads are off until a
+ * provider is configured; money never buys a claw.
  */
 export function drawShop(game, ctx, w, h) {
   const back = game.settingsReturn || 'menu';
@@ -1197,9 +1208,10 @@ export function drawShop(game, ctx, w, h) {
   ctx.fillText('BLOOD MARKET', w / 2, phone ? 28 : h * 0.075);
   fitType(ctx, `◆ ${B.shards}`, w - 32, phone ? 12 : 13, MONO, 400);
   ctx.fillStyle = 'rgba(200,160,74,0.95)';
+  const relicBit = unlocked(B, 'relics') ? `   ·   ✦ ${B.relics || 0}` : '';
   const purse = phone
-    ? `◆ ${B.shards} EARNED   ·   MERCY ${(B.iap && B.iap.revives) | 0}`
-    : `◆ ${B.shards} EARNED   ·   MERCY HELD ${(B.iap && B.iap.revives) | 0}   ·   NOTHING HERE CHANGES THE CLAW`;
+    ? `◆ ${B.shards}${relicBit}`
+    : `◆ ${B.shards} EARNED${relicBit}   ·   MERCY ${(B.iap && B.iap.revives) | 0}   ·   NOTHING HERE CHANGES THE CLAW`;
   ctx.fillText(purse, w / 2, phone ? 48 : h * 0.125);
   // v1.0 — the daily rewarded crate (opt-in, capped, invisible when no ad
   // network is configured). AdMob SSV is required before real keys: docs/IAP.md.
@@ -1215,7 +1227,8 @@ export function drawShop(game, ctx, w, h) {
   const gap = phone ? 8 : 12;
   const padX = phone ? 12 : (wide ? 60 : 24);
   const cardW = (w - padX * 2 - gap * (cols - 1)) / cols;
-  const rows = Math.ceil(CATALOG.length / cols);
+  const shown = CATALOG.filter((sku) => sku.kind !== 'remove_ads' || unlocked(B, 'ads'));
+  const rows = Math.ceil(shown.length / cols);
   const gridTop = phone ? 62 : h * 0.175;
   const footY = h - (phone ? 58 : (wide ? 76 : 62));
   const cardH = clamp((footY - gridTop - gap * (rows - 1)) / rows, phone ? 64 : 72, phone ? 128 : 108);
@@ -1223,7 +1236,7 @@ export function drawShop(game, ctx, w, h) {
   let cx = padX;
   const iapBag = (B.iap && B.iap.owned) || {};
 
-  CATALOG.forEach((sku) => {
+  shown.forEach((sku) => {
     if (wide && cx > padX) { /* keep */ }
     const ownId = Array.isArray(sku.gives.owned) ? sku.gives.owned[0] : sku.gives.owned;
     const isOwned = !!(ownId && iapBag[ownId]);
@@ -1276,13 +1289,15 @@ export function drawShop(game, ctx, w, h) {
         onClick: () => game.purchaseSku(sku.id),
       });
       buttonVisual(ctx, r1.b, { active: r1.hover || r1.selected, label: busy ? '…' : pay, small: true, accent: '#6a6a80' });
+      const useRelic = !sku.shardPrice && sku.relicPrice;
       const canShard = sku.shardPrice && B.shards >= sku.shardPrice;
+      const canRelic = sku.relicPrice && (B.relics || 0) >= sku.relicPrice;
       const r2 = uiButton(game, {
         x: x2, y: by2, w: bw2, h: bh2,
-        label: '◆ SHARDS', small: true, disabled: !canShard,
-        onClick: () => game.buySkuWithShards(sku.id),
+        label: useRelic ? '✦ RELIC' : '◆ SHARDS', small: true, disabled: useRelic ? !canRelic : !canShard,
+        onClick: () => (useRelic ? game.buySkuWithRelics(sku.id) : game.buySkuWithShards(sku.id)),
       });
-      buttonVisual(ctx, r2.b, { active: r2.hover || r2.selected, label: '◆ SHARDS', small: true, accent: '#6a6a80', disabled: !canShard });
+      buttonVisual(ctx, r2.b, { active: r2.hover || r2.selected, label: useRelic ? '✦ RELIC' : '◆ SHARDS', small: true, accent: '#6a6a80', disabled: useRelic ? !canRelic : !canShard });
     } else if (open && sku.kind === 'cosmetic' && isOwned) {
       const bw2 = cardW - 20, bh2 = tight ? 28 : 36;
       const label = wearing ? 'TAKE OFF' : 'WEAR';
@@ -1306,9 +1321,9 @@ export function drawShop(game, ctx, w, h) {
   ctx.font = `400 10px ${SANS}`;
   if ('letterSpacing' in ctx) ctx.letterSpacing = '1.4px';
   ctx.fillStyle = 'rgba(140,134,124,0.55)';
-  const policy = ['SHARDS ARE EARNED BY THE NIGHT · MONEY IS OPTIONAL · NO STATS SOLD · NO ADS',
+  const policy = ['SHARDS ARE EARNED BY THE NIGHT · MONEY BUYS RELIEF AND IDENTITY · NEVER POWER',
     IAP.mode === 'native' ? 'GOOGLE PLAY BILLING · THE GAME GRANTS ONLY AFTER CONSUME OR ACKNOWLEDGE'
-      : IAP.mode === 'midtrans' ? 'WEB RAIL · THE SAME FOUR GOODS · THE SERVER CONFIRMS SETTLEMENT'
+      : IAP.mode === 'midtrans' ? 'WEB RAIL · RELIEF AND IDENTITY ONLY · THE SERVER CONFIRMS SETTLEMENT'
       : IAP.mode === 'sandbox' ? 'SANDBOX — NO REAL MONEY MOVES'
       : 'STORE OFFLINE'];
   const pLines = wide ? policy : [policy[0].split(' · ').slice(0, 3).join(' · '), policy[1]];

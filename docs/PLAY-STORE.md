@@ -65,7 +65,7 @@ Physical goods are not sold. Do not add them to Play Billing.
 - First launch replaces the menu buttons with the privacy notice until `save.privacyAck`.
 - Menu footer has Privacy. Tall settings screens also have Privacy & delete. Short screens do not grow a new settings row, because that screen already overflows.
 - `index.html` has a fixed Privacy link so a reviewer can open the policy even if the canvas fails.
-- Shop copy says there are no ads in this build, and that Play billing and Midtrans are different rails.
+- Shop copy says money buys relief and identity, never power. Ads render nothing while `provider` is `none`. Play billing and Midtrans stay different rails.
 - Purchases are refused until the notice is accepted.
 - `lastnight.playerId` is not created at boot. It is created on the first web payment.
 

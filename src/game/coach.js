@@ -14,13 +14,9 @@ const DOOR_RANGE = 96;
 const STAKE_RANGE = 64;
 
 export function updateCoach(game) {
-  if (game.save.coachDone) {
-    game.coach = { step: 'done' };
-    return;
-  }
   if (!game.coach) {
     game.coach = {
-      step: 'walk',
+      step: game.save.coachDone ? 'done' : 'walk',
       t: 0,
       originX: game.player.x,
       originY: game.player.y,
@@ -28,18 +24,26 @@ export function updateCoach(game) {
     };
   }
   const c = game.coach;
-  if (c.step === 'done') return;
+  if (c.step === 'done') {
+    const again = pendingLesson(game);
+    if (!again) return;
+    c.hold = 'done';
+    c.killsAt = game.stats.kills || 0;
+    c.step = again;
+    c.t = 0;
+  }
   c.t += 1 / 60;
   const p = game.player;
   const door = servantDoor(game);
   const stakes = stakeProp(game);
 
-  // Only interrupt when a swing can connect. A crawler on the other side of
-  // a boarded door used to demand a claw that could not reach it.
-  if (!c.clawed && c.step !== 'claw' && enemyInReach(game)) {
+  // One lesson at a time, and only when the tap can succeed.
+  const lesson = c.step === 'walk' ? null : pendingLesson(game);
+  if (lesson && c.step !== lesson && c.step !== 'feed' && c.step !== 'knock') {
     c.hold = c.step;
-    c.hitsAt = game.stats.clawHits || 0;
-    c.step = 'claw';
+    c.killsAt = game.stats.kills || 0;
+    c.step = lesson;
+    c.t = 0;
   }
 
   if (c.step === 'walk') {
@@ -50,6 +54,20 @@ export function updateCoach(game) {
     if (door && nearDoor(p, door) < DOOR_RANGE) advance(c);
   } else if (c.step === 'board') {
     if (door && (door.barricade > 0 || door.open)) advance(c);
+  } else if (c.step === 'feed') {
+    if ((game.stats.kills || 0) > (c.killsAt || 0)) {
+      game.save.coachFed = true;
+      writeSave(game.save);
+      c.step = c.hold && c.hold !== 'feed' ? c.hold : 'planks';
+      c.hold = null;
+    }
+  } else if (c.step === 'knock') {
+    if (!game.director.knock) {
+      game.save.coachKnock = true;
+      writeSave(game.save);
+      c.step = c.hold && c.hold !== 'knock' ? c.hold : 'planks';
+      c.hold = null;
+    }
   } else if (c.step === 'claw') {
     // A held claw has no second edge. Count the hold, or a hit, or the tap.
     const swung = game.input.attackPressed || game.input.keys.attack
@@ -101,6 +119,16 @@ function nearestPlank(game) {
   return best;
 }
 
+function pendingLesson(game) {
+  const save = game.save || {};
+  const door = servantDoor(game);
+  const chose = door && (door.open || door.barricade > 0 || door.broken);
+  const hungry = !!(game.hungerWarned || (game.player && game.player.lowBlood));
+  if (!save.coachFed && enemyInReach(game) && (chose || hungry)) return 'feed';
+  if (!save.coachKnock && chose && game.director && game.director.knock) return 'knock';
+  return null;
+}
+
 function enemyInReach(game) {
   const p = game.player;
   return game.enemies.some((e) => {
@@ -126,6 +154,12 @@ function worldMark(game) {
   if (step === 'planks' || step === 'planks2' || (step === 'raise' && p.planks < 3)) {
     const pk = nearestPlank(game);
     return pk ? { x: pk.x, y: pk.y } : null;
+  }
+  if (step === 'knock' && game.director && game.director.knock) {
+    const e = game.mansion.entranceById(game.director.knock.entranceId);
+    if (!e) return null;
+    const mark = e.inside || e;
+    return { x: mark.x, y: mark.y };
   }
   if (step === 'door' || step === 'board') {
     const e = servantDoor(game);
@@ -255,7 +289,8 @@ function cueFor(game) {
   const stakes = stakeProp(game);
   const boardBtn = game.input.buttons.barricade;
   if (step === 'walk') return { kind: 'drag' };
-  if (step === 'claw') return { kind: 'button', id: 'attack', title: 'TAP CLAW', sub: 'A KILL FEEDS YOU' };
+  if (step === 'feed' || step === 'claw') return { kind: 'button', id: 'attack', title: 'TAP CLAW', sub: 'KILL TO DRINK' };
+  if (step === 'knock') return { kind: 'world', label: 'A KNOCK', sub: 'ANSWER IT, OR LEAVE IT' };
   if (step === 'board') {
     const near = door && nearDoor(p, door) < DOOR_RANGE;
     if (near && boardBtn && !boardBtn.hidden && p.planks >= 3) {

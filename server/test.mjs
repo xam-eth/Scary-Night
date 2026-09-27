@@ -164,5 +164,16 @@ app.httpServer.close();
 stub.close();
 try { fs.unlinkSync(DATA); fs.unlinkSync(DATA + '.bare'); } catch (e) { /* ok */ }
 
+const { IAP, CATALOG, MONEY_KINDS } = await import('../src/shop/iap.js');
+const save = { shards: 0, relics: 0, deeds: {}, builds: {}, nightsSurvived: 9, iap: { owned: {}, revives: 0 } };
+for (const sku of CATALOG) {
+  if (sku.gives && sku.gives.shards) ok('no sku mints shards', false, sku.id);
+  const kind = IAP.moneyKind(sku);
+  ok(`${sku.id} is a money-legal kind`, MONEY_KINDS.has(kind), kind || 'none');
+  const before = save.shards;
+  IAP.grant(save, { ...sku, gives: { ...(sku.gives || {}), shards: 50 } }, { money: true });
+  ok(`${sku.id} money grant cannot mint shards`, save.shards === before);
+}
+ok('catalog has no relic pack', !CATALOG.some((s) => /pack/i.test(s.id) && s.kind !== 'cosmetic'));
 console.log(fails === 0 ? '\nIAP server: all PASS' : `\nIAP server: ${fails} FAILURE(S)`);
 process.exit(fails === 0 ? 0 : 1);

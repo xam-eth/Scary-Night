@@ -886,8 +886,9 @@ export class Mansion {
   }
 
   barricadeEntrance(e, game) {
+    const mul = (game && game.player && game.player.barricadeMul) || 1;
     if (e.kind === 'door') {
-      e.hpMax = e.baseHpMax + DOOR.barricadeHp;
+      e.hpMax = e.baseHpMax + DOOR.barricadeHp * mul;
       e.hp = e.hpMax;
       e.barricade++;
       e.open = false;

@@ -15,6 +15,15 @@ import { PLAYER, TUNING } from '../core/config.js';
 import { PAL } from '../core/render.js';
 import { Valen3D } from './valen3d.js';
 import { IAP } from '../shop/iap.js';
+import { drainPerSecond, laneStats } from './economy.js';
+
+function coatFilter(id) {
+  if (id === 'coat_bloodmoon' || id === 'coat_glutton') return 'hue-rotate(-22deg) saturate(1.7) brightness(0.96)';
+  if (id === 'coat_moonsilver') return 'saturate(0.35) brightness(1.28) hue-rotate(18deg)';
+  if (id === 'coat_warden') return 'sepia(0.55) saturate(0.65) brightness(0.92)';
+  if (id === 'coat_shade') return 'saturate(0.15) brightness(0.7) hue-rotate(200deg)';
+  return null;
+}
 
 export const PSTATE = {
   IDLE: 'idle', WALK: 'walk', RUN: 'run', ATTACK: 'attack', HURT: 'hurt',
@@ -68,13 +77,20 @@ export class Player {
   get speed() { return Math.hypot(this.vx, this.vy); }
 
   applyUpgrades(save) {
-    const u = save.upgrades || {};
-    this.bloodMax = PLAYER.bloodMax * (1 + (u.blood || 0) * 0.06);
+    const s = laneStats(save);
+    this.bloodMax = PLAYER.bloodMax * (1 + (s.blood || 0));
     this.blood = Math.min(this.blood, this.bloodMax);
-    this.speedMul = 1 + (u.speed || 0) * 0.05;
-    this.repairMul = 1 + (u.repair || 0) * 0.15;
-    this.damageMul = 1 + (u.damage || 0) * 0.08;
-    this.recoveryMul = 1 + (u.recovery || 0) * 0.12;
+    this.speedMul = 1 + (s.speed || 0);
+    this.repairMul = 1 + (s.repair || 0);
+    this.damageMul = 1 + (s.damage || 0);
+    this.recoveryMul = 1 + (s.recovery || 0);
+    this.attackSpeedMul = 1 + (s.attackSpeed || 0);
+    this.doorMul = 1 + (s.doorHp || 0);
+    this.barricadeMul = 1 + (s.barricade || 0);
+    this.dashMul = 1 + (s.dash || 0);
+    this.quietMul = Math.max(0.35, 1 - (s.quiet || 0));
+    this.sightMul = 1 + (s.sight || 0);
+    this.bonusPlanks = s.planks || 0;
   }
 
   /* ================= update ================= */
@@ -100,9 +116,11 @@ export class Player {
 
     // ---------- hunger ----------
     if (!TUNING.infiniteBlood) {
-      const runExtra = this.state === PSTATE.RUN ? PLAYER.bloodDrainRun : 0;
-      const drain = (PLAYER.bloodDrain + runExtra) * game.difficulty.bloodDrain * (starving ? 0 : 1);
+      const running = this.state === PSTATE.RUN;
+      const drain = drainPerSecond(game.save, running) * game.difficulty.bloodDrain * (starving ? 0 : 1);
+      const before = this.blood;
       this.blood = Math.max(0, this.blood - drain * dt);
+      if (running && before - this.blood > 0.01) game.bloodTick = Math.max(game.bloodTick || 0, 0.28);
     } else this.blood = this.bloodMax;
 
     if (this.blood <= 0) {
@@ -145,7 +163,7 @@ export class Player {
     // ---------- dash ----------
     if (input.dashPressed && this.dashCd <= 0 && mag > 0.2 && !starving && this.blood > PLAYER.dashBlood) {
       this.dashT = PLAYER.dashTime;
-      this.dashCd = PLAYER.dashCooldown;
+      this.dashCd = PLAYER.dashCooldown / (this.dashMul || 1);
       this.blood -= PLAYER.dashBlood;
       game.audio.play('whoosh', { vol: 0.5 });
       game.particles.burst('mist', this.x, this.y, 8, { color: 'rgba(120,90,150,0.16)', sizeMin: 8, sizeMax: 18, speedMin: 10, speedMax: 60, lifeMin: 0.3, lifeMax: 0.7 });
@@ -255,7 +273,7 @@ export class Player {
     // atmosphere is allowed, disorientation is not). Blackout still wins, but
     // less brutally than before.
     const mul = (game.blackoutT > 0 ? 0.85 : 1) * (game.lightMul ?? 1);
-    this.lightR = 172 * lerp(0.62, 1, this.bloodPct) * mul;
+    this.lightR = 172 * lerp(0.62, 1, this.bloodPct) * mul * (this.sightMul || 1);
     this.lightI = lerp(0.40, 0.58, this.bloodPct) * mul;
   }
 
@@ -267,7 +285,7 @@ export class Player {
 
   startAttack(game) {
     this.attackT = PLAYER.attackWindup + PLAYER.attackActive;
-    this.attackCd = PLAYER.attackCooldown;
+    this.attackCd = PLAYER.attackCooldown / (this.attackSpeedMul || 1);
     this.attackHit = false;
     this.swingAngle = this.angle;
     // Visual only. The hit window stays attackWindup + attackActive; the claw
@@ -294,7 +312,9 @@ export class Player {
     }
     if (bestA !== null) { this.swingAngle = bestA; this.angle = bestA; }
     this.state = PSTATE.ATTACK;
-    this.blood = Math.max(0, this.blood - PLAYER.attackCost * (this.bloodPct < 0.15 ? 0 : 1));
+    const clawCost = PLAYER.attackCost * (this.bloodPct < 0.15 ? 0 : 1) / (this.attackSpeedMul || 1);
+    this.blood = Math.max(0, this.blood - clawCost);
+    if (clawCost > 0) game.bloodTick = Math.max(game.bloodTick || 0, 0.45);
     this.bloodSpent += PLAYER.attackCost;
     game.audio.play('slash', { pan: 0, vol: 0.55 });
   }
@@ -552,8 +572,7 @@ export class Player {
     // the rendered frame. The GLB asset, its textures and its clips stay
     // byte-identical forever; the model is never re-shaded or re-exported.
     const coatId = IAP.equippedCoat(game.save);
-    const filter = coatId === 'coat_bloodmoon' ? 'hue-rotate(-22deg) saturate(1.7) brightness(0.96)'
-      : coatId === 'coat_moonsilver' ? 'saturate(0.35) brightness(1.28) hue-rotate(18deg)' : null;
+    const filter = coatFilter(coatId);
     if (filter) { ctx.save(); ctx.filter = filter; }
     // The visible head is painted after the night multiply (drawAfterDark).
     // Drawing it here as well left a darkened rectangle under the skull.
@@ -568,7 +587,7 @@ export class Player {
     }
     if (filter) ctx.restore();
     if (coatId && !isGhost) {
-      const blood = coatId === 'coat_bloodmoon';
+      const blood = coatId === 'coat_bloodmoon' || coatId === 'coat_glutton';
       ctx.save();
       ctx.globalAlpha = dead ? 0.45 : 0.9;
       ctx.fillStyle = blood ? 'rgba(122, 12, 22, 0.82)' : 'rgba(214, 224, 236, 0.78)';
@@ -832,8 +851,7 @@ export class Player {
     ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = game.blackoutT > 0 ? 0.72 : 0.94;
     const coatId = IAP.equippedCoat(game.save);
-    const filter = coatId === 'coat_bloodmoon' ? 'hue-rotate(-22deg) saturate(1.7) brightness(0.96)'
-      : coatId === 'coat_moonsilver' ? 'saturate(0.35) brightness(1.28) hue-rotate(18deg)' : null;
+    const filter = coatFilter(coatId);
     if (filter) ctx.filter = filter;
     const place = this._valenPlace || { height: 58, footInset: 9, drop: 0, head: null, anchor: 'feet' };
     Valen3D.draw(ctx, frame, place.height, {

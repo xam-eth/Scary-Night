@@ -18,6 +18,7 @@ import {
   PHASES, phaseAt, nextPhase, BEATS, DIRECTOR, KNOCKS, NIGHT_DURATION, nightHeat,
   SPAWN_WARMUP, PANIC_AT, SILENCE_AT, COUNTDOWN_AT, ENEMY_TYPES, TUNING,
 } from '../core/config.js';
+import { tellFor, revealForNight } from './economy.js';
 import { Crawler, Hunter, Werewolf, Stalker, Ghoul, Zombie, applyVariant } from './enemies.js';
 import { ROOM } from './mansion.js';
 
@@ -170,7 +171,8 @@ export class Director {
     const t = game.time;
     if (t < SPAWN_WARMUP) { this.budget = Math.min(this.budget, 0.6); return; }
     const d = game.difficulty;
-    const heat = nightHeat(game.save && game.save.nightsSurvived);
+    const first = !game.save || !(game.save.nightsSurvived > 0);
+    const heat = nightHeat(game.save && game.save.nightsSurvived) * (first ? 0.45 : 1);
     const regen = lerp(DIRECTOR.budgetRegen[0], DIRECTOR.budgetRegen[1], game.danger) * this.waveRegen * d.spawn * heat;
     this.budget = Math.min(DIRECTOR.budgetMax * Math.min(heat, 2.2), this.budget + regen * dt);
 
@@ -212,6 +214,11 @@ export class Director {
     const picks = [];
     if (forced) picks.push(...forced);
     else {
+      const reveal = revealForNight(game.save && game.save.nightsSurvived);
+      if (reveal && reveal.kind === 'enemy' && !this._revealed) {
+        picks.push(reveal.key);
+        this._revealed = true;
+      }
       let budgetLeft = this.budget;
       // the type mix opens up as the night goes on
       const pool = [];
@@ -305,11 +312,17 @@ export class Director {
       else if (key === 'ghoul') e = new Ghoul(pos.x, pos.y, o);
       else e = new Werewolf(pos.x, pos.y, o);
       // v1.0 variant rolls — the late night does not repeat the early one
-      if (key !== 'stalker' && game.time > 165) {
+      const reveal = revealForNight(game.save && game.save.nightsSurvived);
+      const nights = (game.save && game.save.nightsSurvived) || 0;
+      const variantChance = Math.min(0.55, 0.08 + nights * 0.04);
+      if (reveal && reveal.kind === 'variant' && !this._variantShown) {
+        applyVariant(e, reveal.variant);
+        this._variantShown = true;
+      } else if (key !== 'stalker' && (game.time > 165 || nights >= 4) && Math.random() < variantChance) {
         const vr = Math.random();
-        if (key === 'crawler' && game.phase.id === 'panic' && vr < 0.34) applyVariant(e, 'frenzy');
-        else if (key === 'hunter' && vr < 0.18) applyVariant(e, 'marksman');
-        else if ((key === 'werewolf' || key === 'ghoul') && vr < 0.16) applyVariant(e, 'alpha');
+        if (key === 'crawler' && vr < 0.4) applyVariant(e, 'frenzy');
+        else if (key === 'hunter' && vr < 0.28) applyVariant(e, 'marksman');
+        else if ((key === 'werewolf' || key === 'ghoul') && vr < 0.22) applyVariant(e, 'alpha');
       }
       e.waveId = this.waveCount;
       game.enemies.push(e);
@@ -366,6 +379,7 @@ export class Director {
       entranceId: ent.id,
       outcome: outcome.id,
       label: outcome.label,
+      tell: tellFor(outcome.id),
       t: game.time,
       deadline: game.time + wait,
       opened: false,
@@ -456,6 +470,11 @@ export class Director {
       k.knockCount++;
       const hard = k.knockCount >= 3;
       game.audio.playAt(hard ? 'knockHard' : 'knock', e.x, e.y, game.renderer.cam, { vol: hard ? 1.05 : 0.85 });
+      // A tell is a read, not a label. Some knocks carry only the wood.
+      if (k.tell && k.tell.sound && Math.random() < k.tell.weight) {
+        game.audio.playAt(k.tell.sound, e.x, e.y, game.renderer.cam, { vol: 0.7 });
+        k.tellHeard = (k.tellHeard || 0) + 1;
+      }
       game.onKnockSound(e, k);
       k.nextKnockAt = rand(3.2, 6.5) * (1 + k.knockCount * 0.18);
       e.hint = 1;
@@ -710,6 +729,10 @@ export class Director {
 
   fireBeat(beat, game) {
     this.beatsFired[beat.id] = game.time;
+    // Night 1 is a guided win. The opening knock is the lesson. The spine of
+    // later nights stays in the book until they have seen dawn once.
+    const first = !game.save || !(game.save.nightsSurvived > 0);
+    if (first && (beat.fn === 'spawnWave' || beat.fn === 'windowBreak' || beat.fn === 'behindYou' || beat.fn === 'blackout')) return;
     const args = beat.args || {};
     switch (beat.fn) {
       case 'creakNear': {

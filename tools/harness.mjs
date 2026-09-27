@@ -508,7 +508,7 @@ if (args.systems) {
   game.toggleDoor(door);   // this answers the knock
   line(game.director.knock === null, 'opening the door resolves the knock');
   line(game.enemies.length > 0, `answering spawned the waiting enemy (${game.enemies.length})`);
-  line(game.messages.some((m) => /WAITING|NOT WAIT|INVITATION/i.test(m.text)), 'the answer is narrated, not yet revealed');
+  line(game.messages.some((m) => /WAITING|NOT WAIT|INVITATION|ANSWERED|PATIENT/i.test(m.text)), 'the answer is narrated, not yet revealed');
 
   // ---- knocking: the player ignores it until the deadline ----
   game.freshRun(); game.screen = 'playing'; game.time = 100;
@@ -558,6 +558,64 @@ if (args.systems) {
     line(game.player.blood > 20, `the basin restores blood (${game.player.blood.toFixed(0)})`);
   }
   else line(false, 'no basin in the mansion');
+
+  const { hideDeathSecond, unlocked, rankCount, tellFor, purseFloor, drainPerSecond } = await import('../src/game/economy.js');
+  const { dealNightGoals, forbiddenPair, CORE_GOALS } = await import('../src/game/objectives.js');
+  const { TUNING } = await import('../src/core/config.js');
+  const hideAt = hideDeathSecond({ nightsSurvived: 1 });
+  line(hideAt > 180 && hideAt < 210, `hoard-and-hide dies at ${hideAt.toFixed(0)}s (want 03:00–03:30)`);
+  const n1 = drainPerSecond({ nightsSurvived: 0 });
+  line((48 + 20) / n1 > 300 && 48 / n1 < 300, `night 1 is a taught feed (${(48 / n1).toFixed(0)}s hidden, ${((48 + 20) / n1).toFixed(0)}s with one kill)`);
+  line((77.6 + 60) / 0.42 > 300, 'three feeds carry a later night to dawn');
+  let badGoals = 0;
+  for (let s = 1; s <= 200; s++) {
+    const ids = dealNightGoals(s).map((g) => g.id);
+    if (ids.length !== 3 || forbiddenPair(ids) || !ids.some((id) => CORE_GOALS.has(id))) badGoals++;
+  }
+  line(badGoals === 0, '200 seeds deal 3 goals, no contradiction, always a core');
+  line(!unlocked({ nightsSurvived: 0, revealed: {} }, 'market'), 'night 1 hides the market');
+  line(unlocked({ nightsSurvived: 3, revealed: {} }, 'market'), 'the market opens after three dawns');
+  for (const [outcome, cls] of [['crawler', 'menacing'], ['gift', 'gift'], ['nothing', 'empty'], ['werewolf', 'menacing']]) {
+    line(tellFor(outcome).class === cls, `${outcome} tell is ${cls}`);
+  }
+  game.director.knock = null;
+  game.director.lastKnock = -999;
+  const told = game.director.scheduleKnock(game, { force: true, outcome: 'gift', entranceId: 'diningDoor' });
+  line(told && told.tell && told.tell.class === 'gift', 'a scheduled knock carries its tell');
+  game.director.knock = null;
+  game.save.shards = 0;
+  game.shardsEarned = 10;
+  game.purseReady = true;
+  game.purseSettled = false;
+  game.settlePurse('leave');
+  line(game.bankedNow === purseFloor(10), `leaving a death keeps the floor (${game.bankedNow})`);
+  game.purseSettled = false;
+  game.purseReady = true;
+  game.shardsEarned = 10;
+  game.settlePurse('dawn');
+  line(game.bankedNow === 10, 'dawn banks the whole purse');
+  game.save.shards = 400;
+  game.save.nightsSurvived = 4;
+  game.save.builds = {};
+  game.save.revealed = { builds: true };
+  for (const lane of ['glutton', 'glutton', 'glutton', 'glutton', 'warden', 'warden', 'shade']) game.buyUpgrade(lane);
+  line(rankCount(game.save) === 6, `commitment cap holds at ${rankCount(game.save)}`);
+  TUNING.noSpawns = true;
+  game.save.nightsSurvived = 1;
+  game.save.builds = {};
+  game.freshRun();
+  game.screen = 'playing';
+  const vials = game.pickups.filter((p) => p.kind === 'blood');
+  line(vials.length === 6, `six vials in the house, not a pantry (${vials.length})`);
+  for (const p of vials) game.grantBlood(p.amount, true);
+  game.grantBlood(8, true);
+  game.grantBlood(6, true);
+  line(game.player.blood < 90, `a full scavenge is not a meal (${game.player.blood.toFixed(1)} blood)`);
+  game.seenIntroThisSession = false;
+  game.beginNight();
+  line(game.screen === 'intro', 'the first attempt still opens on the intro');
+  game.beginNight();
+  line(game.screen === 'playing', 'a retry fades in and skips the intro');
   process.exit(0);
 }
 
@@ -576,6 +634,7 @@ if (args.screens) {
   game.screen = 'intro'; game.introT = 1.6; shot('intro', 30);
   game.screen = 'settings'; shot('settings', 20);
   game.screen = 'upgrades'; shot('upgrades', 20);
+  game.screen = 'shop'; shot('shop', 20);
   game.screen = 'collection'; shot('collection', 20);
   game.screen = 'help'; shot('help', 20);
   // playing: calm, mid-night and final minute

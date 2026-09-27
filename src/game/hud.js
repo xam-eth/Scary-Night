@@ -10,6 +10,7 @@
 import { clamp, lerp, damp, fmtClock, TAU } from '../core/util.js';
 import { PAL } from '../core/render.js';
 import { PLAYER, UPGRADES, SHARDS } from '../core/config.js';
+import { unlocked } from './economy.js';
 
 const SERIF = 'Georgia, "Palatino Linotype", "Times New Roman", serif';
 const SANS = '"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
@@ -240,8 +241,8 @@ function drawBlood(game, ctx, w, h, pulse) {
     ? Math.max(8, Math.min(h - plateH - 8, stickTop - plateH - 10))
     : h - plateH - 16;
   const pct = p.bloodPct;
-  const low = p.lowBlood;
-  const critical = pct < 0.14;
+  const low = p.lowBlood || game.hungerFailing;
+  const critical = pct < 0.14 || (game.hungerFailing && pct < 0.3);
 
   ctx.save();
   ctx.fillStyle = 'rgba(8,6,8,0.78)';
@@ -277,6 +278,16 @@ function drawBlood(game, ctx, w, h, pulse) {
     ctx.fillRect(0, 0, barW * pct, barH);
     ctx.fillStyle = 'rgba(255,190,190,0.22)';
     ctx.fillRect(0, 0, barW * pct, 2);
+    if (game.bloodTick > 0) {
+      ctx.fillStyle = `rgba(255,70,70,${game.bloodTick})`;
+      ctx.fillRect(0, 0, barW * pct, barH);
+    }
+    if (game.hungerFailing) {
+      const k = 0.35 + 0.35 * Math.abs(Math.sin(game.time * 5));
+      ctx.strokeStyle = `rgba(220,40,40,${k})`;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-1, -1, barW + 2, barH + 2);
+    }
   }
   ctx.strokeStyle = 'rgba(200,170,140,0.28)';
   ctx.lineWidth = 1;
@@ -293,7 +304,15 @@ function drawBlood(game, ctx, w, h, pulse) {
     setLetter(ctx, 2);
     ctx.textAlign = 'left';
     ctx.fillStyle = `rgba(230,60,60,${a})`;
-    ctx.fillText(critical ? 'THE HUNGER IS TAKING YOU' : 'YOU NEED BLOOD', x, y + 26);
+    ctx.fillText(critical ? 'THE HUNGER IS TAKING YOU' : (game.hungerFailing ? 'FEED, OR THE DAWN IS LOST' : 'YOU NEED BLOOD'), x, y + 26);
+  }
+  if (game.screen === 'playing' && unlocked(game.save, 'risk')) {
+    const atRisk = game.livePurse ? game.livePurse() : 0;
+    ctx.font = `500 10px ${SANS}`;
+    setLetter(ctx, 1);
+    ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(200,160,74,0.85)';
+    ctx.fillText(`◆ ${atRisk} AT RISK`, x, y - 28);
   }
   ctx.restore();
 }

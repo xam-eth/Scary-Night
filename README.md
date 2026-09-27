@@ -180,8 +180,9 @@ node tools/shotbrowser.mjs           # serves + shoots menu, night, shop, mobile
 
 The Blood Market in the web beta runs on a **sandbox provider**: prices are
 shown with a SANDBOX mark, nothing is charged, purchases persist locally, and
-every item is also purchasable with earned shards (no pay-to-win, no ads —
-the full monetization rationale is documented in `src/shop/iap.js`).
+every item is also purchasable with earned shards (no pay-to-win — money
+buys relief and identity, never a claw. Ads stay off until a provider is
+configured. The rationale is in `src/shop/iap.js` and `docs/DESIGN.md`).
 
 `tools/harness.mjs` boots the real game modules against a Node canvas and a
 Web Audio shim, drives a bot that flees swarms, feeds on crawlers, repairs doors

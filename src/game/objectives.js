@@ -157,6 +157,43 @@ const eastGlass = (game) => game.mansion.entrances.filter((e) => e.id === 'glass
 
 const GOALS_PER_NIGHT = 3;
 
+/* Hard contradictions. Tension pairs are allowed; impossible triples are not. */
+export const GOAL_EXCLUDE = [
+  ['walls', 'quiet'],
+  ['feed', 'untouched'],
+];
+
+export const CORE_GOALS = new Set(['feed', 'firstMinute', 'wings', 'fort', 'knocks', 'chapel', 'scullery']);
+
+export function forbiddenPair(ids) {
+  return GOAL_EXCLUDE.some((pair) => pair.every((id) => ids.includes(id)));
+}
+
+export function dealNightGoals(seed) {
+  const pick = [];
+  const pool = GOALS.filter((g) => !g.pinned);
+  const pinned = GOALS.find((g) => g.pinned);
+  if (pinned) pick.push(pinned);
+  let r = (Math.abs(seed || 1) * 2654435761) % 4294967296;
+  const rnd = () => ((r = (r * 1664525 + 1013904223) >>> 0) / 4294967296);
+  const ids = () => pick.map((g) => g.id);
+  let guard = 0;
+  while (pick.length < GOALS_PER_NIGHT && pool.length && guard++ < 40) {
+    const i = (rnd() * pool.length) | 0;
+    const g = pool[i];
+    if (forbiddenPair(ids().concat(g.id))) { pool.splice(i, 1); continue; }
+    const needCore = !ids().some((id) => CORE_GOALS.has(id));
+    const lastSlot = pick.length === GOALS_PER_NIGHT - 1;
+    if (lastSlot && needCore && !CORE_GOALS.has(g.id) && pool.some((x) => CORE_GOALS.has(x.id))) {
+      pool.splice(i, 1);
+      pool.push(g);
+      continue;
+    }
+    pick.push(pool.splice(i, 1)[0]);
+  }
+  return pick;
+}
+
 export class Objectives {
   constructor() {
     this.list = [];
@@ -177,15 +214,7 @@ export class Objectives {
     this.lastKills = 0;
     this.completed = new Set();
     const seed = game.runSeed ?? game.time ?? 1;
-    const pick = [];
-    const pool = GOALS.filter((g) => !g.pinned);
-    const pinned = GOALS.find((g) => g.pinned);
-    if (pinned) pick.push(pinned);
-    let r = (seed * 2654435761) % 4294967296;
-    const rnd = () => ((r = (r * 1664525 + 1013904223) >>> 0) / 4294967296);
-    while (pick.length < GOALS_PER_NIGHT && pool.length) {
-      pick.push(pool.splice((rnd() * pool.length) | 0, 1)[0]);
-    }
+    const pick = dealNightGoals(seed);
     this.list = pick.map((g) => ({
       goal: g, state: g.par(game, this) ? 'done' : 'open', t: 0,
     }));
@@ -234,6 +263,10 @@ export class Objectives {
 
   /** End of night: partial credit so a hard loss still advances the meta. */
   settle(game, won) {
+    if (this._settled) {
+      return { done: this.doneCount, shards: 0, list: this.list.map((s) => ({ id: s.goal.id, label: s.goal.label, hint: s.goal.hint, state: s.state })) };
+    }
+    this._settled = true;
     // last-second par checks that only make sense at dawn
     for (const slot of this.list) {
       if (slot.goal.endOfNight && slot.state === 'open' && slot.goal.par(game, this)) {

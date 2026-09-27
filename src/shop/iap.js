@@ -36,6 +36,8 @@
  */
 
 import { SHOP_CONFIG, IDR } from './config.js';
+import { LANES, ownsRank, unlocked } from '../game/economy.js';
+import { Ads } from './ads.js';
 
 export const IAP_ENABLED = true;          // web: Midtrans. Play: LNBridge wins in init()
 export const SANDBOX_LATENCY_MS = 900;
@@ -70,7 +72,44 @@ export const CATALOG = [
     blurb: 'The house says your name at dawn. Nothing else.',
     locked: 'Stay until morning. A name you have not earned is only a label.',
   },
+  {
+    id: 'coat_glutton', name: 'THE GLUTTON\'S COAT', kind: 'cosmetic', play: 'nonconsumable',
+    priceUsd: 1.99, priceIdr: 29000, shardPrice: 220, relicPrice: 3,
+    gives: { owned: 'coat_glutton' }, needs: 'lane:glutton',
+    blurb: 'Redder claws. The lane, worn. No stronger bite.',
+    locked: 'Buy a rank of the Glutton. Then the coat is a memory of the meal.',
+  },
+  {
+    id: 'coat_warden', name: 'THE WARDEN\'S COAT', kind: 'cosmetic', play: 'nonconsumable',
+    priceUsd: 1.99, priceIdr: 29000, shardPrice: 220, relicPrice: 3,
+    gives: { owned: 'coat_warden' }, needs: 'lane:warden',
+    blurb: 'Oak dust on the shoulders. The door does not care.',
+    locked: 'Buy a rank of the Warden. Then the wool remembers the wood.',
+  },
+  {
+    id: 'coat_shade', name: 'THE SHADE\'S COAT', kind: 'cosmetic', play: 'nonconsumable',
+    priceUsd: 1.99, priceIdr: 29000, shardPrice: 220, relicPrice: 3,
+    gives: { owned: 'coat_shade' }, needs: 'lane:shade',
+    blurb: 'A quieter silhouette. The night still hears you.',
+    locked: 'Buy a rank of the Shade. Then the dark has a cut.',
+  },
+  {
+    id: 'remove_ads', name: 'REMOVE ADS', kind: 'remove_ads', play: 'nonconsumable',
+    priceUsd: 2.99, priceIdr: 45000, shardPrice: 0, relicPrice: 5,
+    gives: { owned: 'remove_ads' }, needs: 'ads',
+    blurb: 'The night stays quiet. Forever. No power in the silence.',
+    locked: 'Ads are not here yet. When they are, this ends them.',
+  },
 ];
+
+export const MONEY_KINDS = new Set(['relief', 'cosmetic', 'title', 'remove_ads']);
+export const COAT_LOOK = {
+  coat_bloodmoon: { tint: [1.15, 0.72, 0.72] },
+  coat_moonsilver: { tint: [0.78, 0.86, 1.12] },
+  coat_glutton: { tint: [1.22, 0.55, 0.55], fx: 'glut' },
+  coat_warden: { tint: [0.85, 0.72, 0.5], fx: 'ward' },
+  coat_shade: { tint: [0.55, 0.55, 0.7], fx: 'shade' },
+};
 
 const findSku = (id) => CATALOG.find((c) => c.id === id) || null;
 
@@ -246,20 +285,39 @@ export const IAP = {
 
   offered(save, id) {
     const sku = typeof id === 'string' ? findSku(id) : id;
-    if (!sku || !sku.needs) return !!sku;
+    if (!sku) return false;
+    if (sku.needs && sku.needs.startsWith('lane:')) {
+      const lane = LANES.find((l) => l.id === sku.needs.slice(5));
+      return !!(lane && lane.ranks.some((r) => ownsRank(save, r.id)));
+    }
+    if (sku.needs === 'ads') return unlocked(save, 'ads');
+    if (!sku.needs) return true;
     return !!(save && save.deeds && save.deeds[sku.needs]);
   },
 
-  grant(save, sku) {
+  moneyKind(sku) {
+    if (!sku) return null;
+    if (sku.kind === 'consumable') return 'relief';
+    if (sku.kind === 'cosmetic') return 'cosmetic';
+    if (sku.kind === 'title') return 'title';
+    if (sku.kind === 'remove_ads') return 'remove_ads';
+    return null;
+  },
+
+  grant(save, sku, opts = {}) {
+    if (opts.money && !MONEY_KINDS.has(this.moneyKind(sku))) return false;
     const bag = this._bag(save);
     const g = sku.gives || {};
-    if (g.shards) { save.shards += g.shards; save.totalShards = (save.totalShards || 0) + g.shards; }
+    // Shards are earned by the night. No SKU, paid or free, mints them.
+    if (g.shards) return false;
     if (g.revives) bag.revives = Math.min(2, bag.revives + g.revives);
     if (g.pouches) bag.pouches = Math.min(9, bag.pouches + g.pouches);
     const owns = Array.isArray(g.owned) ? g.owned : [g.owned].filter(Boolean);
     for (const o of owns) bag.owned[o] = true;
-    const coat = owns.find((o) => o === 'coat_bloodmoon' || o === 'coat_moonsilver');
+    const coat = owns.find((o) => COAT_LOOK[o]);
     if (coat && !bag.equipped) bag.equipped = coat;
+    if (bag.owned.remove_ads) Ads.suppressed = true;
+    return true;
   },
 
   rememberReceipt(save, receipt) {
@@ -307,7 +365,7 @@ export const IAP = {
       const finished = sku.play === 'consumable' ? res.consumed : res.acknowledged;
       if (!finished) { this.lastError = 'play-not-finished'; return { ok: false, error: 'play-not-finished' }; }
     }
-    this.grant(save, sku);
+    if (this.grant(save, sku, { money: true }) === false) return { ok: false, error: 'money-cannot-buy-this' };
     this.rememberReceipt(save, res.receipt || res.purchaseToken || null);
     if (onSaved) onSaved();
     return { ok: true, lane: 'store', receipt: res.receipt || null };
@@ -347,11 +405,25 @@ export const IAP = {
   },
 
   wear(save, id) {
-    if (id !== 'coat_bloodmoon' && id !== 'coat_moonsilver') return null;
+    if (!COAT_LOOK[id]) return null;
     if (!this.owns(save, id)) return null;
     const bag = this._bag(save);
     bag.equipped = bag.equipped === id ? null : id;
     return bag.equipped;
+  },
+
+  coatLook(id) { return COAT_LOOK[id] || null; },
+
+  buyWithRelics(save, id) {
+    const sku = findSku(id);
+    if (!sku || !sku.relicPrice) return { ok: false, error: 'no-relic-price' };
+    if (!this.offered(save, sku)) return { ok: false, error: 'not-yet' };
+    const ownId = Array.isArray(sku.gives.owned) ? sku.gives.owned[0] : sku.gives.owned;
+    if (sku.play !== 'consumable' && ownId && this.owns(save, ownId)) return { ok: false, error: 'already-yours' };
+    if ((save.relics || 0) < sku.relicPrice) return { ok: false, error: 'need-relics' };
+    save.relics -= sku.relicPrice;
+    this.grant(save, sku);
+    return { ok: true, lane: 'relics' };
   },
 
   /* ---- gameplay consumption (kept here so rules live in one place) ---- */
