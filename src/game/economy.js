@@ -16,7 +16,7 @@
  * the guided win. The floor is not an easy mode.
  */
 
-import { PLAYER, RES, nightHeat } from '../core/config.js';
+import { PLAYER, RES, nightHeat, threatMix } from '../core/config.js';
 
 export const LARDER_BLOOD = 6;
 export const NIGHT1_DRAIN = 0.48;
@@ -156,6 +156,40 @@ export function nextRevealLine(save) {
 export function rankCount(save) {
   const b = (save && save.builds) || {};
   return Object.values(b).reduce((a, n) => a + (n ? 1 : 0), 0);
+}
+
+/** A finished lane is a name, not a stat. Money never buys the name by itself. */
+export function grantLaneTitle(save, laneId) {
+  const lane = LANES.find((l) => l.id === laneId);
+  if (!lane || !lane.ranks.every((r) => ownsRank(save, r.id))) return null;
+  save.titles = save.titles || {};
+  save.titles[lane.id] = lane.name;
+  return lane.name;
+}
+
+export function houseTitle(save) {
+  const t = (save && save.titles) || {};
+  return t.glutton || t.warden || t.shade || null;
+}
+
+/**
+ * One maxed lane is about 1.3×. Count heat matches that through four dawns,
+ * then flattens. Kind (door pressure, stalkers) keeps rising — mastery.
+ */
+export function curveSweep() {
+  const lane = 1.3;
+  const marks = [0, 4, 8, 12];
+  const rows = marks.map((n) => {
+    const mix = threatMix(n);
+    return { n, heat: nightHeat(n), door: mix.doorMul, stalker: !!mix.stalker };
+  });
+  const ok = rows.every((r) => r.heat <= 1.56 + 1e-9)
+    && rows[1].heat <= lane + 0.02
+    && rows[1].heat > 1.2
+    && rows[2].stalker
+    && rows[2].door > lane
+    && rows[3].heat === rows[2].heat;
+  return { ok, lane, rows };
 }
 
 export function ownsRank(save, id) {

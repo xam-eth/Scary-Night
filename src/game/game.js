@@ -26,7 +26,7 @@ import { Director, MOOD } from './director.js';
 import { Objectives } from './objectives.js';
 import {
   packGain, killShards, purseFloor, projectDawn, hungerMul, revealForNight,
-  nextRank, rankCost, rankCount, LANE_CAP, LARDER_BLOOD, unlocked, markUnlocks,
+  nextRank, rankCost, rankCount, LANE_CAP, LARDER_BLOOD, unlocked, markUnlocks, grantLaneTitle, houseTitle,
 } from './economy.js';
 import { House } from './house.js';
 import { Haunts } from './haunts.js';
@@ -260,6 +260,11 @@ export class Game {
     this.audio.play('uiClick', { vol: 0.5 });
     IAP.buy(this.save, id, () => { writeSave(this.save); this.player && this.player.applyUpgrades(this.save); })
       .then((r) => {
+        if (r.ok && id === 'revive1' && this.screen === 'death' && !this.usedRevive) {
+          this.spendSecondBlood();
+          this.showMessage('THE PURSE STAYS. THE CLAW DOES NOT.', { tone: 'gold', life: 4 });
+          return;
+        }
         if (r.ok) {
           this.audio.play('chandelier', { vol: 0.7 });
           this.showMessage('THE MARKET REMEMBERS. IT IS GRATEFUL.', { tone: 'gold', life: 4 });
@@ -316,9 +321,11 @@ export class Game {
     if (this.save.shards < cost) { this.audio.play('uiBack', { vol: 0.5 }); return; }
     this.save.shards -= cost;
     this.save.builds[rank.id] = 1;
+    const named = grantLaneTitle(this.save, id);
     writeSave(this.save);
     this.audio.play('shard', { vol: 0.8 });
     this.audio.play('uiConfirm', { vol: 0.6 });
+    if (named) this.showMessage(named + '. THE HOUSE HAS A NAME FOR YOU.', { tone: 'gold', life: 3.6 });
     if (this.player) this.player.applyUpgrades(this.save);
   }
 
@@ -1219,17 +1226,17 @@ export class Game {
     p.sated = Math.min(1.25, 0.7 + gain / 48);
     this.bloodGulp = 0.7 + Math.min(0.4, gain / 80);
     this.drinks = this.drinks || [];
+    const look = IAP.fxLook(this.save);
     this.drinks.push({
       ox: enemy.x, oy: enemy.y, t: 0,
-      life: 0.42 + Math.min(0.28, gain / 90),
+      life: 0.55 + Math.min(0.35, gain / 80),
       amount: gain,
-      color: gain > 24 ? '#c42838' : '#8a1424',
+      color: (look && look.drink) || (gain > 24 ? '#e02030' : '#a01828'),
     });
     this.stats.feedShards = (this.stats.feedShards || 0) + killShards(enemy);
     if (!this.save.coachFed) this.save.coachFed = true;
-    this.showCombatText(`+${Math.round(gain)} BLOOD`, enemy.x, enemy.y - 20, '#e06070');
     this.audio.play('growl', { x: enemy.x, y: enemy.y, cam: this.renderer.cam, vol: 0.35 });
-    this.particles.burst('blood', enemy.x, enemy.y, 22, {
+    this.particles.burst('blood', enemy.x, enemy.y, 8, {
       color: '#8a1020', speedMin: 40, speedMax: 190, lifeMin: 0.3, lifeMax: 1.1, sizeMin: 2, sizeMax: 5.5, grav: 100,
     });
     this.particles.burst('mist', enemy.x, enemy.y, 6, { color: 'rgba(80,10,20,0.25)', sizeMin: 8, sizeMax: 22, lifeMin: 0.4, lifeMax: 1.0, speedMin: 5, speedMax: 30 });
@@ -1521,7 +1528,7 @@ export class Game {
     if (res.mock) this.showMessage('(simulated grant)', { tone: 'cold', life: 2.2 });
   }
 
-  /** Rewarded crate: +2 planks, once per day, from the shop. */
+  /** Rewarded crate: one Relic, once per day, from the shop. Never shards. */
   async requestAdCrate() {
     const res = await Ads.watch('crate');
     if (!res.ok) { this.showMessage(res.error === 'user-cancelled' ? 'NOT TODAY.' : 'NO CRATE TONIGHT.', { tone: 'cold', life: 2.6 }); return res; }
@@ -1624,6 +1631,7 @@ export class Game {
     }
     const firstDawn = this.noteDeed('dawned');
     const named = IAP.owns(this.save, 'title_dawnbreaker');
+    const laneName = houseTitle(this.save);
     const coat = IAP.equippedCoat(this.save);
     const coatDawn = coat === 'coat_glutton' ? 'THE GLUTTON DRINKS THE MORNING.'
       : coat === 'coat_warden' ? 'THE WARDEN KEPT THE WOOD.'
@@ -1632,6 +1640,7 @@ export class Game {
       : null;
     this.showMessage(
       named ? 'DAWNBREAKER. THE HOUSE SAYS YOUR NAME.'
+        : laneName ? laneName + '. THE MORNING KNOWS THE LANE.'
         : coatDawn || (firstDawn ? 'YOU STAYED. THAT IS THE WHOLE STORY.' : 'THE SUN IS COMING UP.'),
       { tone: 'warm', life: 5 },
     );
@@ -1700,16 +1709,18 @@ export class Game {
       const s = r.worldToScreen(this.player.x, this.player.y);
       const hv = this.player.hungerVis || 0;
       const sated = this.player.sated || 0;
-      ctx.save();
-      ctx.globalCompositeOperation = 'screen';
-      ctx.strokeStyle = sated > 0.08
-        ? `rgba(255,150,110,${0.35 + sated * 0.5})`
-        : `rgba(206,220,255,${0.18 + hv * 0.72})`;
-      ctx.lineWidth = 1.2 + hv * 2.8;
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, 16 + hv * 18, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
+      if (hv > 0.32 || sated > 0.08) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+        ctx.strokeStyle = sated > 0.08
+          ? `rgba(255,150,110,${0.4 + sated * 0.5})`
+          : `rgba(220,230,255,${0.22 + (hv - 0.32) * 1.05})`;
+        ctx.lineWidth = hv > 0.75 ? 3.4 + hv * 2 : 1.4 + hv * 2.2;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, 14 + hv * 20, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
     }
 
     // ---- HUD ----
@@ -1756,14 +1767,21 @@ export class Game {
   }
 
   drawFoodCues(ctx) {
+    const p = this.player;
     for (const e of this.enemies) {
-      if (e.dead || !e.hpMax || e.hp / e.hpMax > 0.45) continue;
-      const big = (e.type && e.type.bloodValue > 24) ? 1.5 : 1;
+      if (e.dead) continue;
+      const near = p && dist(e.x, e.y, p.x, p.y) < PLAYER.attackRange + (e.radius || 12) + 24;
+      const hurt = e.hpMax && e.hp / e.hpMax < 0.72;
+      if (!near && !hurt) continue;
+      const big = (e.type && e.type.bloodValue > 24) ? 1.7 : 1;
+      const y = e.y - (e.radius || 12) - 10;
       ctx.save();
-      ctx.globalAlpha = 0.45 + 0.3 * Math.abs(Math.sin(this.time * 4 + e.x * 0.01));
-      ctx.fillStyle = '#9a1828';
+      ctx.globalAlpha = 0.55 + 0.35 * Math.abs(Math.sin(this.time * 4 + e.x * 0.01));
+      ctx.fillStyle = '#c01828';
       ctx.beginPath();
-      ctx.arc(e.x, e.y - 16, 2.2 * big, 0, Math.PI * 2);
+      ctx.moveTo(e.x, y + 7 * big);
+      ctx.bezierCurveTo(e.x - 5 * big, y, e.x - 4 * big, y - 6 * big, e.x, y - 2 * big);
+      ctx.bezierCurveTo(e.x + 4 * big, y - 6 * big, e.x + 5 * big, y, e.x, y + 7 * big);
       ctx.fill();
       ctx.restore();
     }
@@ -1779,10 +1797,10 @@ export class Game {
         const x = d.ox + (p.x - d.ox) * u;
         const y = d.oy + (p.y - d.oy) * u - Math.sin(u * Math.PI) * (18 + d.amount * 0.15);
         ctx.save();
-        ctx.globalAlpha = (1 - k) * (0.35 + (1 - i / 8) * 0.55);
+        ctx.globalAlpha = (1 - k) * (0.45 + (1 - i / 8) * 0.55);
         ctx.fillStyle = d.color;
         ctx.beginPath();
-        ctx.arc(x, y, 1.6 + (d.amount > 24 ? 1.4 : 0.4) + (1 - i / 8), 0, Math.PI * 2);
+        ctx.arc(x, y, 2.4 + (d.amount > 24 ? 2.2 : 0.8) + (1 - i / 8) * 1.4, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
       }

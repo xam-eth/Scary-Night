@@ -95,7 +95,7 @@ export const CATALOG = [
   },
   {
     id: 'remove_ads', name: 'REMOVE ADS', kind: 'remove_ads', play: 'nonconsumable',
-    priceUsd: 2.99, priceIdr: 45000, shardPrice: 0, relicPrice: 5,
+    priceUsd: 2.99, priceIdr: 45000, shardPrice: 280, relicPrice: 5,
     gives: { owned: 'remove_ads' }, needs: 'ads',
     blurb: 'The night stays quiet. Forever. No power in the silence.',
     locked: 'Ads are not here yet. When they are, this ends them.',
@@ -104,11 +104,11 @@ export const CATALOG = [
 
 export const MONEY_KINDS = new Set(['relief', 'cosmetic', 'title', 'remove_ads']);
 export const COAT_LOOK = {
-  coat_bloodmoon: { tint: [1.15, 0.72, 0.72] },
-  coat_moonsilver: { tint: [0.78, 0.86, 1.12] },
-  coat_glutton: { tint: [1.22, 0.55, 0.55], fx: 'glut' },
-  coat_warden: { tint: [0.85, 0.72, 0.5], fx: 'ward' },
-  coat_shade: { tint: [0.55, 0.55, 0.7], fx: 'shade' },
+  coat_bloodmoon: { tint: [1.15, 0.72, 0.72], drink: '#c01828', claw: [220, 40, 48], hot: [255, 210, 200] },
+  coat_moonsilver: { tint: [0.78, 0.86, 1.12], drink: '#c8d0e8', claw: [180, 196, 230], hot: [240, 244, 255] },
+  coat_glutton: { tint: [1.22, 0.55, 0.55], fx: 'glut', drink: '#e01828', claw: [255, 36, 48], hot: [255, 180, 160] },
+  coat_warden: { tint: [0.85, 0.72, 0.5], fx: 'ward', drink: '#c4883a', claw: [196, 132, 58], hot: [255, 220, 170] },
+  coat_shade: { tint: [0.55, 0.55, 0.7], fx: 'shade', drink: '#6a78c8', claw: [110, 130, 210], hot: [210, 220, 255] },
 };
 
 const findSku = (id) => CATALOG.find((c) => c.id === id) || null;
@@ -397,6 +397,11 @@ export const IAP = {
     if (onSaved) onSaved();
     this.lastError = null;
     return { ok: true, restored };
+  },
+
+  fxLook(save) {
+    const id = this.equippedCoat(save);
+    return (id && COAT_LOOK[id]) || null;
   },
 
   equippedCoat(save) {

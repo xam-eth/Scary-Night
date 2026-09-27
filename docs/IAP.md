@@ -21,10 +21,14 @@ What is sold, after the player has already done the thing:
 | `coat_bloodmoon` | non-consumable | a wound | A red hem and a colder filter on the body. Wear or take off. No stats. |
 | `coat_moonsilver` | non-consumable | a dawn | A pale hem. At dawn the wool is named. No stats. |
 | `dawnbreaker` | non-consumable | a dawn | The house says the name on the menu and at dawn. No shards attached. |
+| `coat_glutton` / `coat_warden` / `coat_shade` | non-consumable | a lane rank | Coat tint plus claw and drink colour. No stats. |
+| `remove_ads` | non-consumable | ads are in the build | Hides the opt-in ad buttons. Shard price 280, or 5 Relics. No power. |
 
 Each also has a shard price, so money is never required. Shards are only
 earned. The market button is hidden until a night has ended. There is no
-buy button on the death screen, no "best value" tag, no timer, no loot box.
+"best value" tag, no timer, no loot box. The death screen may offer
+KEEP ◆N — revive-and-keep-purse, once, opt-in. That saves the purse. It
+does not buy a claw.
 
 Not sold: shard packs, plank pouches, revive bundles, stat upgrades.
 
@@ -85,13 +89,17 @@ empty — `provider:'sandbox'` keeps zero network calls until you flip it.
 
 | placement | when | reward | cap |
 |---|---|---|---|
-| `revive` | death screen, none held | SECOND BLOOD grant | 1 / night |
-| `crate` | shop | +2 planks next night | 1 / day |
+| `revive` | death screen, none held | SECOND BLOOD grant — keeps the at-risk purse | 1 / night |
+| `crate` | shop | 1 Relic. Never planks, never shards | 1 / day |
 
-This build ships `provider: 'none'`. The Play listing must say **Contains ads: No**
-until that changes. Rules if it is ever turned on: never mid-night, never
-interstitial, never on the victory screen, and the buttons stay **invisible**
-unless a provider is configured.
+This build ships `provider: 'none'`. With that provider, **zero** ad buttons
+render. The store copy does not say "NO ADS"; it says ads are off here, and
+if they return they are opt-in and never forced. The Play listing must say
+**Contains ads: No** until a provider is configured. Rules if it is ever
+turned on: never mid-night, never interstitial, never on the victory screen,
+and the buttons stay **invisible** unless a provider is configured.
+`remove_ads` suppresses those buttons after purchase. It is also
+shard-earnable.
 `'mock'` exists so QA can exercise the full loop (2.6 s simulated watch).
 Before production keys: enable AdMob **server-side verification** and reward
 on SSV callback, not on the client `onUserEarnedReward` alone.

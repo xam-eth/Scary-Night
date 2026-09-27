@@ -559,7 +559,7 @@ if (args.systems) {
   }
   else line(false, 'no basin in the mansion');
 
-  const { hideDeathSecond, unlocked, rankCount, tellFor, purseFloor, drainPerSecond, projectDawn } = await import('../src/game/economy.js');
+  const { hideDeathSecond, unlocked, rankCount, tellFor, purseFloor, drainPerSecond, projectDawn, curveSweep, grantLaneTitle, houseTitle } = await import('../src/game/economy.js');
   const { dealNightGoals, forbiddenPair, CORE_GOALS } = await import('../src/game/objectives.js');
   const { TUNING, nightHeat, threatMix } = await import('../src/core/config.js');
   const hideAt = hideDeathSecond({ nightsSurvived: 1 });
@@ -570,6 +570,10 @@ if (args.systems) {
   line(projectDawn(48, 300, { nightsSurvived: 1 }).failing, 'a hider is already losing at dusk, with the whole night left to feed');
   line(nightHeat(4) > 1.2 && nightHeat(4) < 1.35, `four dawns of heat (${nightHeat(4).toFixed(2)}) fits a maxed lane`);
   line(nightHeat(12) <= nightHeat(8) + 0.001 && threatMix(8).stalker && !threatMix(3).stalker, 'count flattens; kind keeps rising');
+  const sweep = curveSweep();
+  line(sweep.ok, 'curve sweep ' + sweep.rows.map((r) => `n${r.n} heat ${r.heat.toFixed(2)} door ${r.door.toFixed(2)}${r.stalker ? ' stalker' : ''}`).join(' | '));
+  const titled = { builds: { g_dmg: 1, g_rec: 1, g_aspd: 1, g_blood: 1 } };
+  line(grantLaneTitle(titled, 'glutton') === 'THE GLUTTON' && houseTitle(titled) === 'THE GLUTTON', 'a finished lane is a name, not a stat');
   let badGoals = 0;
   for (let s = 1; s <= 200; s++) {
     const ids = dealNightGoals(s).map((g) => g.id);
@@ -614,6 +618,27 @@ if (args.systems) {
   game.grantBlood(8, true);
   game.grantBlood(6, true);
   line(game.player.blood < 90, `a full scavenge is not a meal (${game.player.blood.toFixed(1)} blood)`);
+  game.save.nightsSurvived = 2;
+  game.freshRun();
+  game.screen = 'playing';
+  game.time = 120;
+  game.stats.feedShards = 6;
+  game.finalizeShards(120);
+  game.killPlayer('the hunger took you');
+  game.beginDying();
+  const atRisk = game.shardsEarned;
+  line(atRisk > 0 && !game.purseSettled, `death leaves ◆${atRisk} at risk`);
+  game.screen = 'death';
+  game.usedRevive = false;
+  game.save.iap = game.save.iap || { owned: {}, revives: 0 };
+  game.save.iap.revives = 1;
+  const held = game.shardsEarned;
+  game.spendSecondBlood();
+  line(game.screen === 'playing' && !game.purseSettled && game.shardsEarned === held, 'revive keeps the purse and does not bank it');
+  const { IAP } = await import('../src/shop/iap.js');
+  const adSave = { shards: 300, relics: 0, nightsSurvived: 6, revealed: { ads: true }, deeds: {}, builds: {}, iap: { owned: {}, revives: 0 } };
+  const bought = IAP.buyWithShards(adSave, 'remove_ads');
+  line(bought.ok && adSave.iap.owned.remove_ads && adSave.shards === 20 && !adSave.iap.owned.shards, 'remove-ads is shard-earnable and grants no power');
   game.seenIntroThisSession = false;
   game.beginNight();
   line(game.screen === 'intro', 'the first attempt still opens on the intro');

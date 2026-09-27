@@ -330,6 +330,8 @@ gulp, a momentary satiation, and enemies that read as food.
   changes hunters, ghouls, wolves, door pressure, and stalkers — mastery, not
   more stats.
 - Mid-night bank point (§6) — in or out.
-- Visual `[tune]`: desaturation curve for hunger, vignette length, HUD emphasis
-  weights.
+- Visual layer is in: hunger greys the body and rings her below ~68% blood;
+  a feed is a stream, not a `+N BLOOD` score; the menu loops clock / door /
+  walk / drink after 2.4s idle; HUD emphasis floor is 0.28 and scales the
+  urgent plate. A finished lane is a name (`save.titles`), not a shop card.
 - Balance of the 5 predators against the three new builds (future pass).

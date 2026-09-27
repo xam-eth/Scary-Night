@@ -28,10 +28,18 @@ function coatFilter(id) {
 /** Composite over the GLB. Hunger greys her. A feed puts the colour back. */
 function bodyGrade(id, hunger, sated) {
   const coat = coatFilter(id);
-  const sat = Math.max(0.12, 1 - hunger * 0.88 + (sated || 0) * 0.6);
-  const bri = 0.76 + (1 - hunger) * 0.24 + (sated || 0) * 0.14;
-  const warm = sated > 0.04 ? `sepia(${(sated * 0.4).toFixed(2)})` : '';
+  const sat = Math.max(0.06, 1 - hunger * 1.05 + (sated || 0) * 0.7);
+  const bri = 0.7 + (1 - hunger) * 0.3 + (sated || 0) * 0.16;
+  const warm = sated > 0.04 ? `sepia(${(sated * 0.45).toFixed(2)})` : '';
   return [coat, `saturate(${sat.toFixed(2)}) brightness(${bri.toFixed(2)})`, warm].filter(Boolean).join(' ');
+}
+
+function clawInk(game) {
+  const look = game && game.save ? IAP.fxLook(game.save) : null;
+  return {
+    edge: (look && look.claw) || [255, 58, 66],
+    hot: (look && look.hot) || [255, 232, 224],
+  };
 }
 
 export const PSTATE = {
@@ -510,15 +518,15 @@ export class Player {
     const start = a - arc / 2 + (1 - sweep) * arc * 0.35;
     const end = a - arc / 2 + sweep * arc;
 
+    const ink = clawInk(game);
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.globalCompositeOperation = 'screen';
     ctx.lineCap = 'round';
     for (let i = 0; i < 3; i++) {
       const rad = PLAYER.attackRange * (0.52 + i * 0.18);
-      ctx.strokeStyle = i === 1
-        ? `rgba(255, 232, 224, ${(0.9 * fade).toFixed(3)})`
-        : `rgba(255, 58, 66, ${(0.72 * fade).toFixed(3)})`;
+      const rgb = i === 1 ? ink.hot : ink.edge;
+      ctx.strokeStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${((i === 1 ? 0.9 : 0.72) * fade).toFixed(3)})`;
       ctx.lineWidth = i === 1 ? 3.6 : 2.4;
       ctx.beginPath();
       ctx.arc(0, 0, rad, start, end);
@@ -535,9 +543,8 @@ export class Player {
     ctx.lineCap = 'round';
     for (let i = 0; i < 3; i++) {
       const t0 = -0.85 + sweep * 1.45 + (i - 1) * 0.18;
-      ctx.strokeStyle = i === 1
-        ? `rgba(255, 240, 232, ${(0.95 * fade).toFixed(3)})`
-        : `rgba(255, 42, 52, ${(0.82 * fade).toFixed(3)})`;
+      const rgb = i === 1 ? ink.hot : ink.edge;
+      ctx.strokeStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${((i === 1 ? 0.95 : 0.82) * fade).toFixed(3)})`;
       ctx.lineWidth = i === 1 ? 3.2 : 2.1;
       ctx.beginPath();
       ctx.arc(8, -24, 42 + i * 7, t0, t0 + 0.7);

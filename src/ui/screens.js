@@ -11,7 +11,7 @@
 import { clamp, lerp, damp, TAU, rand, chance, fmtClock, hash2, fmtBar } from '../core/util.js';
 import { PAL } from '../core/render.js';
 import { UPGRADES, upgradeLevel, DIFFICULTY, CODEX, NIGHT_DURATION, GAME_VERSION } from '../core/config.js';
-import { unlocked, nextRevealLine, LANES, nextRank, rankCost, rankCount, LANE_CAP } from '../game/economy.js';
+import { unlocked, nextRevealLine, LANES, nextRank, rankCost, rankCount, LANE_CAP, houseTitle } from '../game/economy.js';
 import { Valen3D } from '../game/valen3d.js';
 import { IAP, CATALOG } from '../shop/iap.js';
 import { Ads } from '../shop/ads.js';
@@ -154,101 +154,117 @@ function drawBrandPlate(ctx, w, h, { focus = 0.18, dim = 0.55 } = {}) {
 
 /* ================= menu scene ================= */
 
-/** Silent attract loop. A real slice of the house: clock, a door, a drink. */
+/** Silent attract loop. Clock, a door failing, a walk, a drink. No captions. */
 function drawAttract(game, ctx, w, h, idle) {
-  const door = game.mansion && (game.mansion.diningDoor || (game.mansion.doors && game.mansion.doors[0]));
-  if (!door || !door.inside) return;
   const LOOP = 6.6;
   const u = ((idle - 2.4) % LOOP + LOOP) % LOOP;
-  const bx = w * 0.12;
-  const by = h * 0.18;
-  const bw = w * 0.76;
-  const bh = Math.min(h * 0.28, h * 0.47 - by);
-  const zoom = Math.min(bw / 640, bh / 340);
-  const drain = u < 1.8 ? 1 : u < 3.6 ? 1 - (u - 1.8) / 1.8 : 0.1;
-  const walk = u < 1.8 ? u / 1.8 : 1;
+  const bx = w * 0.1;
+  const by = h * 0.155;
+  const bw = w * 0.8;
+  const bh = Math.min(h * 0.3, h * 0.47 - by);
+  if (bh < 72) return;
+  const drain = u < 1.6 ? 1 : u < 3.5 ? 1 - (u - 1.6) / 1.9 : 0.08;
+  const walk = u < 2.2 ? u / 2.2 : 1;
+  const feeding = u > 3.35 && u < 5.35;
+  const feedK = feeding ? (u - 3.35) / 1.7 : (u >= 5.35 ? 1 : 0);
+
   ctx.save();
   ctx.beginPath();
   ctx.rect(bx, by, bw, bh);
   ctx.clip();
-  ctx.fillStyle = '#101218';
+  const door = game.mansion && (game.mansion.diningDoor || (game.mansion.doors && game.mansion.doors[0]));
+  if (door && door.inside) {
+    const zoom = Math.min(bw / 520, bh / 280);
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    ctx.translate(bx + bw * 0.42, by + bh * 0.58);
+    ctx.scale(zoom, zoom);
+    ctx.translate(-door.inside.x, -door.inside.y);
+    game.mansion.drawFloor(ctx);
+    if (game.mansion.drawProps) game.mansion.drawProps(ctx, game);
+    ctx.restore();
+  } else {
+    ctx.fillStyle = '#12141c';
+    ctx.fillRect(bx, by, bw, bh);
+  }
+  ctx.fillStyle = 'rgba(6,7,12,0.38)';
   ctx.fillRect(bx, by, bw, bh);
-  ctx.translate(bx + bw * 0.38, by + bh * 0.62);
-  ctx.scale(zoom, zoom);
-  ctx.translate(-door.inside.x, -door.inside.y);
-  game.mansion.drawFloor(ctx);
-  if (game.mansion.drawProps) game.mansion.drawProps(ctx, game);
-  ctx.fillStyle = drain > 0.45 ? '#6d8a48' : '#9a2424';
-  ctx.fillRect(door.x - 22, door.y - 4, 44 * drain, 7);
-  if (u > 1.5 && u < 5.2 && door.outside) {
-    ctx.fillStyle = '#0c0d12';
+
+  ctx.font = `500 13px ${MONO}`;
+  ctx.fillStyle = 'rgba(232,220,200,0.96)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const secs = Math.max(16, 250 - u * 8);
+  const mm = String((secs / 60) | 0).padStart(2, '0');
+  const ss = String((secs % 60) | 0).padStart(2, '0');
+  ctx.fillText(`DAWN IN  ${mm}:${ss}`, bx + bw / 2, by + 18);
+
+  const doorX = bx + bw * 0.78;
+  const doorY = by + bh * 0.46;
+  ctx.fillStyle = '#2a1c12';
+  ctx.fillRect(doorX - 18, doorY - 36, 36, 70);
+  ctx.strokeStyle = drain > 0.4 ? 'rgba(170,190,110,0.95)' : 'rgba(220,48,48,0.95)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(doorX - 18, doorY - 36, 36, 70);
+  const barW = 84;
+  const barY = doorY + 42;
+  ctx.fillStyle = 'rgba(232,220,200,0.35)';
+  ctx.fillRect(doorX - barW / 2, barY, barW, 12);
+  ctx.fillStyle = drain > 0.45 ? '#9ec46a' : '#ff3a3a';
+  ctx.fillRect(doorX - barW / 2, barY, barW * Math.max(0.08, drain), 12);
+  if (u > 1.15 && u < 5.4) {
+    ctx.fillStyle = '#07080c';
     ctx.beginPath();
-    ctx.ellipse(door.outside.x, door.outside.y, 14, 8, 0, 0, TAU);
+    ctx.ellipse(doorX - 46, doorY + 16, 22, 12, 0, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = '#e01828';
+    ctx.beginPath();
+    ctx.arc(doorX - 56, doorY + 12, 3, 0, TAU);
     ctx.fill();
   }
-  ctx.restore();
-  const vx = bx + 48 + walk * (bw * 0.42);
-  const vy = by + bh * 0.78;
+
+  const vx = bx + 56 + walk * (bw * 0.38);
+  const vy = by + bh * 0.72;
   ctx.save();
-  ctx.beginPath();
-  ctx.rect(bx, by, bw, bh);
-  ctx.clip();
   ctx.translate(vx, vy);
-  if (u > 5.1) ctx.filter = 'saturate(1.35) sepia(0.3)';
-  const frame = Valen3D.renderMenu();
-  const drew = frame && Valen3D.draw(ctx, frame, Math.min(78, bh * 0.62), { footInset: 8 });
-  if (!drew) {
-    ctx.fillStyle = '#14151c';
-    ctx.beginPath();
-    ctx.moveTo(-16, 4);
-    ctx.quadraticCurveTo(-22, -28, -12, -48);
-    ctx.quadraticCurveTo(0, -58, 12, -48);
-    ctx.quadraticCurveTo(22, -28, 16, 4);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = '#c8b8a4';
-    ctx.beginPath();
-    ctx.arc(0, -52, 7, 0, TAU);
-    ctx.fill();
-  }
-  ctx.restore();
-  ctx.save();
+  ctx.fillStyle = '#101118';
   ctx.beginPath();
-  ctx.rect(bx, by, bw, bh);
-  ctx.clip();
-  ctx.fillStyle = '#0c0d12';
-  ctx.beginPath();
-  ctx.ellipse(bx + bw - 42, by + bh * 0.58, 11, 6, 0, 0, TAU);
+  ctx.ellipse(0, 8, 26, 34, 0, 0, TAU);
   ctx.fill();
-  ctx.fillStyle = drain > 0.45 ? '#6d8a48' : '#9a2424';
-  ctx.fillRect(bx + bw - 58, by + bh * 0.66, 34 * drain, 5);
-  if (u > 3.5 && u < 5.4) {
-    const k = (u - 3.5) / 1.6;
-    for (let i = 0; i < 7; i++) {
-      const t = clamp(k * 1.15 - i * 0.08, 0, 1);
-      const x = (bx + bw - 42) + (vx - (bx + bw - 42)) * t;
-      const y = (by + bh * 0.58) + (vy - 24 - by - bh * 0.58) * t - Math.sin(t * Math.PI) * 16;
-      ctx.globalAlpha = 0.9 * (1 - k * 0.25);
-      ctx.fillStyle = '#c01828';
+  ctx.fillStyle = feedK > 0.4 ? '#f2c4ae' : (u < 1.1 ? '#9a9084' : '#e4d4c4');
+  ctx.beginPath();
+  ctx.arc(0, -30, 15, 0, TAU);
+  ctx.fill();
+  ctx.strokeStyle = feedK > 0.4 ? 'rgba(255,150,110,0.85)' : 'rgba(206,220,255,0.7)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(0, -8, 40, 0, TAU);
+  ctx.stroke();
+  ctx.restore();
+
+  if (feeding) {
+    const sx = doorX - 46;
+    const sy = doorY + 12;
+    for (let i = 0; i < 9; i++) {
+      const t = clamp(feedK * 1.25 - i * 0.07, 0, 1);
+      const x = sx + (vx - sx) * t;
+      const y = sy + (vy - 30 - sy) * t - Math.sin(t * Math.PI) * 22;
+      ctx.globalAlpha = 0.95;
+      ctx.fillStyle = '#e01828';
       ctx.beginPath();
-      ctx.arc(x, y, 2.6, 0, TAU);
+      ctx.arc(x, y, 3.6, 0, TAU);
       ctx.fill();
     }
     ctx.globalAlpha = 1;
+    const pipW = Math.min(78, bw * 0.3);
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(bx + bw / 2 - pipW / 2, by + 32, pipW, 5);
+    ctx.fillStyle = '#e01828';
+    ctx.fillRect(bx + bw / 2 - pipW / 2, by + 32, pipW * clamp(feedK, 0, 1), 5);
   }
   ctx.restore();
-  ctx.save();
-  ctx.strokeStyle = 'rgba(168,131,60,0.45)';
+  ctx.strokeStyle = 'rgba(168,131,60,0.5)';
   ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
-  ctx.font = `500 12px ${MONO}`;
-  ctx.fillStyle = 'rgba(232,220,200,0.92)';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  const secs = Math.max(18, 248 - u * 6);
-  const mm = String((secs / 60) | 0).padStart(2, '0');
-  const ss = String((secs % 60) | 0).padStart(2, '0');
-  ctx.fillText(`DAWN IN  ${mm}:${ss}`, bx + bw / 2, by + 16);
-  ctx.restore();
 }
 
 export function drawMenuScene(game, ctx, w, h, t) {
@@ -392,7 +408,8 @@ export function drawMenu(game, ctx, w, h) {
   ctx.font = `400 10px ${MONO}`;
   if ('letterSpacing' in ctx) ctx.letterSpacing = '1px';
   ctx.fillStyle = 'rgba(180,172,158,0.55)';
-  ctx.fillText('v' + GAME_VERSION + '  ·  18+' + (IAP.owns(game.save, 'title_dawnbreaker') ? '  ·  DAWNBREAKER' : ''), 16, h - 16);
+  const stamp = IAP.owns(game.save, 'title_dawnbreaker') ? 'DAWNBREAKER' : houseTitle(game.save);
+  ctx.fillText('v' + GAME_VERSION + '  ·  18+' + (stamp ? '  ·  ' + stamp : ''), 16, h - 16);
   ctx.restore();
 
   if (!game.save.privacyAck) {
@@ -1088,9 +1105,11 @@ export function drawDeath(game, ctx, w, h) {
     ctx.fillText(String(game.deathReason).toUpperCase(), w / 2, h * 0.365);
   }
   const worn = IAP.equippedCoat(game.save);
+  const laneDeath = houseTitle(game.save);
   const coatDeath = worn === 'coat_glutton' ? 'SHE DIED STILL HUNGRY.'
     : worn === 'coat_warden' ? 'THE WOOD OUTLASTED HER.'
     : worn === 'coat_shade' ? 'THE QUIET CLOSED OVER HER.'
+    : laneDeath ? laneDeath + ' ENDS HERE. THE NAME DOES NOT.'
     : null;
   if (coatDeath) {
     ctx.font = `italic 400 13px ${SERIF}`;
@@ -1104,35 +1123,37 @@ export function drawDeath(game, ctx, w, h) {
     ['BEST', game.save.bestTime > 0 ? fmtClock(game.save.bestTime) : '--:--'],
     ['NIGHTS SURVIVED', String(game.save.nightsSurvived)],
   ];
-  let y = h * 0.43;
+  const phoneDeath = isPhone(w, h);
+  const step = phoneDeath || h < 700 ? 40 : 52;
+  let y = phoneDeath ? h * 0.34 : h * 0.4;
   for (const [k, v] of rows) {
-    ctx.font = `500 12px ${SANS}`;
-    if ('letterSpacing' in ctx) ctx.letterSpacing = '4px';
+    ctx.font = `500 11px ${SANS}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
     ctx.fillStyle = 'rgba(170,162,150,0.7)';
     ctx.fillText(k, w / 2, y);
-    ctx.font = `400 22px ${MONO}`;
+    ctx.font = `400 ${phoneDeath ? 18 : 20}px ${MONO}`;
     ctx.fillStyle = '#e2dac6';
-    ctx.fillText(v, w / 2, y + 26);
-    y += 62;
+    ctx.fillText(v, w / 2, y + 18);
+    y += step;
   }
-  // shards earned
-  if (game.shardsEarned > 0) {
+  const riskOpen = unlocked(game.save, 'risk') && (game.shardsEarned || 0) > 0;
+  if (riskOpen) {
     ctx.font = `500 13px ${SANS}`;
-    if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
-    ctx.fillStyle = 'rgba(200,160,74,0.9)';
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+    ctx.fillStyle = 'rgba(200,160,74,0.95)';
     const floor = game.purseSettled ? game.bankedNow : Math.max(1, Math.round((game.shardsEarned || 0) * 0.2));
-    ctx.fillText(game.purseSettled ? `◆ ${game.bankedNow} KEPT` : `◆ ${game.shardsEarned} AT RISK · KEEP ${floor}`, w / 2, y + 6);
+    ctx.fillText(game.purseSettled ? `◆ ${game.bankedNow} KEPT` : `◆ ${game.shardsEarned} AT RISK · KEEP ${floor}`, w / 2, y + 4);
     ctx.font = `400 11px ${SANS}`;
-    ctx.fillStyle = 'rgba(176,166,150,0.7)';
-    ctx.fillText('KEEPS THE PURSE. NOT THE CLAW.', w / 2, y + 24);
+    ctx.fillStyle = 'rgba(176,166,150,0.75)';
+    ctx.fillText('KEEPS THE PURSE. NOT THE CLAW.', w / 2, y + 20);
+    y += 36;
   }
-  // tonight's goals board — partial credit, shown honestly
   if (game.lastNightGoals && game.lastNightGoals.length) {
     ctx.font = `400 11px ${SANS}`;
-    if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '1px';
     const done = game.lastNightGoals.filter((g) => g.state === 'done');
-    ctx.fillStyle = 'rgba(160,154,142,0.75)';
-    ctx.fillText(`GOALS ${done.length}/${game.lastNightGoals.length} — ` + game.lastNightGoals.map((g) => (g.state === 'done' ? '✓' : '·') + ' ' + g.label).join('   '), w / 2, y + 30);
+    ctx.fillStyle = 'rgba(160,154,142,0.8)';
+    ctx.fillText(`GOALS ${done.length}/${game.lastNightGoals.length}`, w / 2, y + 8);
   }
   ctx.restore();
 
@@ -1141,23 +1162,26 @@ export function drawDeath(game, ctx, w, h) {
     const items = [
       { label: 'TRY AGAIN', onClick: () => game.beginNight(), accent: '#a8833c' },
     ];
-    const atRisk = game.livePurse ? game.livePurse() : (game.shardsEarned || 0);
+    const atRisk = game.shardsEarned || 0;
     const relief = unlocked(game.save, 'risk') && atRisk > 0 && !game.usedRevive;
     if (relief && game.save.iap && game.save.iap.revives > 0) {
       items.push({ label: `KEEP ◆ ${atRisk}`, onClick: () => game.spendSecondBlood(), accent: '#a8833c' });
     } else if (!game.usedRevive && game.save.iap && game.save.iap.revives > 0) {
       items.push({ label: 'USE SECOND BLOOD', onClick: () => game.spendSecondBlood(), accent: '#6a6a80' });
     } else if (relief && IAP.mode !== 'disabled' && IAP.offered(game.save, 'revive1')) {
-      items.push({ label: 'SECOND BLOOD', onClick: () => game.purchaseSku('revive1'), accent: '#a8833c' });
+      items.push({ label: `KEEP ◆ ${atRisk}`, onClick: () => game.purchaseSku('revive1'), accent: '#a8833c' });
+    }
+    if (!game.usedRevive && Ads.isAvailable('revive')) {
+      items.push({
+        label: relief ? `WATCH · KEEP ◆ ${atRisk}` : Ads.label('revive'),
+        onClick: () => game.requestAdRevive(),
+        accent: '#6a2230',
+      });
     }
     items.push(
       { label: 'UPGRADES', onClick: () => game.setScreen('upgrades', 'death'), accent: '#6a6a80' },
       { label: 'MAIN MENU', onClick: () => game.toMenu(), accent: '#6a6a80' },
     );
-    // v1.0 — rewarded revive offer, opt-in, once per night (src/shop/ads.js).
-    if (!game.usedRevive && Ads.isAvailable('revive')) {
-      items.unshift({ label: Ads.label('revive'), onClick: () => game.requestAdRevive(), accent: '#6a2230' });
-    }
     // v1.0 (QA P0-2): stack from the bottom edge upward — landscape phones
     // never clip the last button, whatever the row count.
     const gap = h < 640 ? 6 : 8;
@@ -1211,11 +1235,13 @@ export function drawVictory(game, ctx, w, h) {
   ctx.shadowColor = 'rgba(255,200,120,0.45)'; ctx.shadowBlur = 30;
   ctx.fillText('SURVIVED', w / 2, phone ? 64 : h * 0.23);
   ctx.shadowBlur = 0;
-  if (IAP.owns(game.save, 'title_dawnbreaker')) {
+  const dawnName = IAP.owns(game.save, 'title_dawnbreaker') ? 'DAWNBREAKER' : houseTitle(game.save);
+  if (dawnName) {
     ctx.font = `400 14px ${SERIF}`;
     if ('letterSpacing' in ctx) ctx.letterSpacing = '4px';
     ctx.fillStyle = 'rgba(224, 180, 92, 0.9)';
-    ctx.fillText('THE HOUSE CALLS YOU DAWNBREAKER', w / 2, h * 0.29);
+    const call = dawnName.length > 16 ? dawnName : 'THE HOUSE CALLS YOU ' + dawnName;
+    ctx.fillText(call, w / 2, h * 0.29);
   }
   ctx.restore();
 

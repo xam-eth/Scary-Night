@@ -26,8 +26,8 @@ export function hudEmphasis(game) {
   const knock = !!(game.director && game.director.knock);
   const panic = game.phase && (game.phase.id === 'panic' || game.phase.id === 'silence');
   const hungry = !!(p && (p.lowBlood || game.hungerFailing));
-  const floor = 0.42;
-  let clock = 0.78, blood = 0.58, door = 0.48, goals = 0.72, actions = 0.8, badge = 0.46;
+  const floor = 0.28;
+  let clock = 0.72, blood = 0.5, door = 0.4, goals = 0.66, actions = 0.8, badge = 0.4;
   if (!hungry && !doors && !panic) { clock = 1; goals = 0.92; blood = 0.52; }
   if (doors) { door = 1; blood = 0.88; goals = 0.44; clock = 0.7; }
   if (knock) { door = Math.max(door, 0.86); clock = Math.max(clock, 0.9); }
@@ -37,17 +37,28 @@ export function hudEmphasis(game) {
   return { clock: a(clock), blood: a(blood), door: a(door), goals: a(goals), actions: a(actions), badge: a(badge) };
 }
 
+function withPriority(ctx, em, ax, ay, draw) {
+  ctx.save();
+  const s = 0.9 + em * 0.12;
+  ctx.translate(ax, ay);
+  ctx.scale(s, s);
+  ctx.translate(-ax, -ay);
+  draw();
+  ctx.restore();
+}
+
 export function drawHUD(game, ctx, w, h) {
   const pulse = game.hbPulse;
   const em = hudEmphasis(game);
-  drawClock(game, ctx, w, h, pulse, em.clock);
-  drawBlood(game, ctx, w, h, pulse, em.blood);
+  const phone = w < 840 || h < 500;
+  withPriority(ctx, em.clock, w / 2, phone ? 40 : h * 0.055, () => drawClock(game, ctx, w, h, pulse, em.clock));
+  withPriority(ctx, em.blood, 90, h - 72, () => drawBlood(game, ctx, w, h, pulse, em.blood));
   drawActions(game, ctx, w, h, em.actions);
-  drawDoorStatus(game, ctx, w, h, em.door);
+  withPriority(ctx, em.door, w - 48, 88, () => drawDoorStatus(game, ctx, w, h, em.door));
   drawBearings(game, ctx, w, h);
   drawThreat(game, ctx, w, h);
-  drawGoals(game, ctx, w, h, em.goals);
-  drawBuildBadge(game, ctx, w, h, em.badge);
+  withPriority(ctx, em.goals, 48, phone ? 78 : 96, () => drawGoals(game, ctx, w, h, em.goals));
+  withPriority(ctx, em.badge, w - 36, 36, () => drawBuildBadge(game, ctx, w, h, em.badge));
 }
 
 /* ---------------- top left: tonight's goals (the night's purpose) ---------------- */
@@ -365,7 +376,8 @@ function drawBlood(game, ctx, w, h, pulse, em = 1) {
     ctx.font = `500 10px ${SANS}`;
     setLetter(ctx, 1);
     ctx.textAlign = 'left';
-    ctx.fillStyle = 'rgba(200,160,74,0.85)';
+    const failing = game.hungerFailing || p.lowBlood;
+    ctx.fillStyle = failing ? `rgba(255,196,90,${0.75 + 0.25 * Math.abs(Math.sin(game.time * 5))})` : 'rgba(200,160,74,0.7)';
     ctx.fillText(`◆ ${atRisk} AT RISK`, x, y - 28);
   }
   ctx.restore();
