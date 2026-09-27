@@ -250,16 +250,19 @@ pay-to-win), Deconstructor of Fun (Archero; Fortnite), Mobile Free To Play
   #7 FTUE · #8 goal-draw anti-conflict · #9 instant retry
 
 **Epic #10 — Compulsion economy**
-- #11 night purse + bank-vs-risk (+ **permanent floor**, §6) · #12 build
+- #21 dual-currency model (§4) — **foundational, precedes #11/#12** ·
+  #11 night purse + bank-vs-risk (+ **permanent floor**, §6) · #12 build
   specialization · #13 difficulty↔power curve · #14 Guided-Win Night 1 ·
-  #15 curiosity cadence
-- *(new, foundational)* dual-currency model (§4) — precedes #11/#12
-- *(new)* progressive disclosure cadence (§8)
+  #22 progressive disclosure cadence (§8) · #15 curiosity cadence
 
 **Epic #16 — Monetization (Ethical F2P)**
 - #17 relief at bank-vs-risk (+ Archero refinements, §7·D9) · #18 rewarded ads +
   remove-ads · #19 cosmetic identity · #20 integrity invariant · *(phase 2)*
   season pass
+
+**Epic #23 — Visual communication** (presentation layer; see §15)
+- #24 diegetic blood (body = clock) · #25 the feed verb · #26 attract-mode loop
+  vignette · #27 adaptive HUD priority
 
 ---
 
@@ -277,7 +280,46 @@ pay-to-win), Deconstructor of Fun (Archero; Fortnite), Mobile Free To Play
 
 ---
 
-## 14. Still open (not final)
+## 15. Visual communication — the game reads itself (Epic #23)
+
+Solid backend logic is wasted if the player can't *see* and *understand* it. The
+game already communicates **mood** at an AAA level; this layer adds the **loop**.
+
+Three channels a game communicates through, and where we stand:
+
+1. **Pre-play identity (5-second read).** Weakest today — the menu sells
+   atmosphere, not the verbs (defend, feed, race the clock).
+2. **Moment readability.** Strong bones (clock rail, door bearings, hunger
+   language) but two core gaps: **blood reads as "health," not a clock**, and
+   **feeding reads as score numbers, not the refill verb**.
+3. **Systemic legibility.** The new economy (purse, builds) needs deliberate viz,
+   and the flat HUD needs an attention layer to make room.
+
+**Principle:** keep the AAA mood, add the loop. Show the systems diegetically (on
+the body, in the world); reserve the flat HUD for what can't be shown; let
+attention follow the moment.
+
+**Locked visual decisions:**
+
+- **D-V1 — Blood is diegetic, on the body** (#24). The primary "how close to
+  death" read moves onto the vampire: the moonlight rim intensifies and the body
+  desaturates as hunger grows; feeding briefly sates her. The HUD bar is demoted
+  to a secondary readout. This is what makes "blood is a clock" read as a clock —
+  the single biggest visual lever.
+- **D-V2 — Show the loop before play** (#26). The menu plays a short silent
+  gameplay vignette (chased by the clock, a door draining, a feed) so a new
+  player learns the verbs in ~5 seconds — taught through the eyes, not text.
+- **D-V3 — Adaptive HUD priority** (#27). The HUD spotlights what's urgent now and
+  dims the rest (calm → clock; door attack → that door + blood; panic →
+  survival), which also seats the incoming purse (#17) and build badge (#19).
+
+**The feed verb** (#25): feeding is the core verb of a feed-economy, so it must be
+the juiciest, most legible beat — a visible drink/absorb, the blood filling with a
+gulp, a momentary satiation, and enemies that read as food.
+
+---
+
+## 16. Still open (not final)
 
 - Premium currency name/theme.
 - Exact `[tune]` values: purse formula, permanent-floor %, lane commitment
@@ -285,4 +327,6 @@ pay-to-win), Deconstructor of Fun (Archero; Fortnite), Mobile Free To Play
 - Whether the rewarded-ad crate mints premium currency or only cosmetics/relief
   (classify in #20).
 - Mid-night bank point (§6) — in or out.
+- Visual `[tune]`: desaturation curve for hunger, vignette length, HUD emphasis
+  weights.
 - Balance of the 5 predators against the three new builds (future pass).
