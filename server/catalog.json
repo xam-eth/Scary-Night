@@ -1,0 +1,6 @@
+{
+  "revive1":         { "priceIdr": 19000, "label": "SECOND BLOOD — one chosen mercy" },
+  "coat_bloodmoon":  { "priceIdr": 29000, "label": "BLOODMOON COAT" },
+  "coat_moonsilver": { "priceIdr": 29000, "label": "MOONSILVER COAT" },
+  "dawnbreaker":     { "priceIdr": 79000, "label": "DAWNBREAKER — the house says your name" }
+}
