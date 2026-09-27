@@ -11,6 +11,7 @@ import { clamp, lerp, damp, fmtClock, TAU } from '../core/util.js';
 import { PAL } from '../core/render.js';
 import { PLAYER, UPGRADES, SHARDS } from '../core/config.js';
 import { unlocked, projectDawn, LANES } from './economy.js';
+import { drawGuideArrow } from './coach.js';
 
 const SERIF = 'Georgia, "Palatino Linotype", "Times New Roman", serif';
 const SANS = '"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
@@ -816,14 +817,19 @@ function drawBearings(game, ctx, w, h) {
     const x = cx + dx * t, y = cy + dy * t;
     const pulse = 0.55 + 0.45 * Math.abs(Math.sin(game.time * 4));
     ctx.save();
-    ctx.translate(x, y);
     ctx.globalAlpha = pulse;
-    ctx.rotate(ang);
-    ctx.fillStyle = '#e6dcc4';
-    ctx.beginPath(); ctx.moveTo(11, 0); ctx.lineTo(-7, -6); ctx.lineTo(-7, 6); ctx.closePath(); ctx.fill();
-    ctx.rotate(-ang);
-    ctx.fillStyle = 'rgba(230,220,196,0.9)';
-    ctx.fillText('KNOCK', 0, 16);
+    if (!drawGuideArrow(ctx, x, y, ang, 72)) {
+      ctx.translate(x, y);
+      ctx.rotate(ang);
+      ctx.fillStyle = '#e6dcc4';
+      ctx.beginPath(); ctx.moveTo(11, 0); ctx.lineTo(-7, -6); ctx.lineTo(-7, 6); ctx.closePath(); ctx.fill();
+      ctx.rotate(-ang);
+      ctx.fillStyle = 'rgba(230,220,196,0.9)';
+      ctx.fillText('KNOCK', 0, 16);
+    } else {
+      ctx.fillStyle = 'rgba(240,208,120,0.95)';
+      ctx.fillText('KNOCK', x - dx * 18, y - dy * 18);
+    }
     ctx.restore();
   }
   ctx.restore();

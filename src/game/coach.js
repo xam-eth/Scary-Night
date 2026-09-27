@@ -13,6 +13,45 @@ const ORDER = ['walk', 'door', 'board', 'planks', 'planks2', 'stakes', 'raise'];
 const DOOR_RANGE = 96;
 const STAKE_RANGE = 64;
 
+// Cropped guide art. Fractions are the pointing tip inside the PNG.
+const HAND_TIP = { x: 0.290, y: 0.008 };
+const ARROW_TIP = { x: 0.478, y: 0.993 };
+const guideArt = { hand: null, arrow: null };
+
+function bootGuideArt() {
+  if (typeof Image === 'undefined') return;
+  guideArt.hand = new Image();
+  guideArt.hand.src = './assets/ui/guide-hand.png';
+  guideArt.arrow = new Image();
+  guideArt.arrow.src = './assets/ui/guide-arrow.png';
+}
+bootGuideArt();
+
+function artReady(img) {
+  return !!(img && img.complete && img.naturalWidth > 0);
+}
+
+/** Screen-space waymark. ang 0 points right. Falls back if the asset is not in yet. */
+export function drawGuideArrow(ctx, x, y, ang, height = 78) {
+  if (!artReady(guideArt.arrow)) return false;
+  drawGuideIcon(ctx, guideArt.arrow, ARROW_TIP, x, y, ang - Math.PI / 2, height);
+  return true;
+}
+
+/** Draw a guide PNG so its tip sits on (x, y). rot 0 keeps the asset's own point. */
+function drawGuideIcon(ctx, img, tip, x, y, rot, height) {
+  const h = height;
+  const w = img.naturalWidth * (h / img.naturalHeight);
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rot);
+  ctx.shadowColor = 'rgba(0,0,0,0.7)';
+  ctx.shadowBlur = 12;
+  ctx.shadowOffsetY = 2;
+  ctx.drawImage(img, -tip.x * w, -tip.y * h, w, h);
+  ctx.restore();
+}
+
 export function updateCoach(game) {
   if (!game.coach) {
     game.coach = {
@@ -261,19 +300,28 @@ export function drawCoachWorld(game, ctx) {
     ctx.stroke();
     ctx.restore();
   }
+  const sp = game.renderer.worldToScreen
+    ? game.renderer.worldToScreen(mark.x, mark.y - clear.lift)
+    : null;
   ctx.save();
-  if (game.renderer.upright) game.renderer.upright(ctx, mark.x, mark.y);
-  ctx.translate(mark.x, mark.y - clear.lift + bob);
-  ctx.fillStyle = '#f0d078';
-  ctx.strokeStyle = '#1a140c';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(0, 18);
-  ctx.lineTo(-11, -6);
-  ctx.lineTo(11, -6);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
+  if (sp && artReady(guideArt.arrow)) {
+    const dpr = game.renderer.dpr || 1;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawGuideIcon(ctx, guideArt.arrow, ARROW_TIP, sp.x, sp.y + bob, 0, 132);
+  } else {
+    if (game.renderer.upright) game.renderer.upright(ctx, mark.x, mark.y);
+    ctx.translate(mark.x, mark.y - clear.lift + bob);
+    ctx.fillStyle = '#f0d078';
+    ctx.strokeStyle = '#1a140c';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(0, 18);
+    ctx.lineTo(-11, -6);
+    ctx.lineTo(11, -6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
   ctx.restore();
 }
 
@@ -379,7 +427,7 @@ function aimHand(b, w, h, input) {
   const candidates = [];
   for (let i = 0; i < 16; i++) {
     const outward = -Math.PI + (i / 16) * TAU;
-    for (const back of [28, 42, 58]) {
+    for (const back of [72, 92, 112]) {
       const tipX = b.x + Math.cos(outward) * (b.r + 8);
       const tipY = b.y + Math.sin(outward) * (b.r + 8);
       const angle = outward + Math.PI;
@@ -387,8 +435,8 @@ function aimHand(b, w, h, input) {
       const palmY = tipY - Math.sin(angle) * back;
       const onScreen = palmX > 16 && palmY > 64 && palmX < w - 16 && palmY < h - 16;
       let clear = onScreen ? 80 : -200;
-      for (const o of buttons) clear = Math.min(clear, Math.hypot(palmX - o.x, palmY - o.y) - o.r - 16);
-      if (stick) clear = Math.min(clear, Math.hypot(palmX - (stick.homeX || 0), palmY - (stick.homeY || h)) - (stick.r || 52) - 16);
+      for (const o of buttons) clear = Math.min(clear, Math.hypot(palmX - o.x, palmY - o.y) - o.r - 28);
+      if (stick) clear = Math.min(clear, Math.hypot(palmX - (stick.homeX || 0), palmY - (stick.homeY || h)) - (stick.r || 52) - 22);
       candidates.push({ tipX, tipY, angle, clear });
     }
   }
@@ -428,6 +476,14 @@ function drawTapHand(ctx, tipX, tipY, angle, time) {
   const cycle = ((time % 1.1) + 1.1) % 1.1;
   const press = cycle < 0.22 ? Math.sin((cycle / 0.22) * Math.PI) : 0;
   const bob = Math.sin(time * 6.5) * 3.5 * (1 - press);
+  if (artReady(guideArt.hand)) {
+    const inset = 2 + bob * 0.35 - press * 12;
+    const x = tipX - Math.cos(angle) * inset;
+    const y = tipY - Math.sin(angle) * inset;
+    drawGuideIcon(ctx, guideArt.hand, HAND_TIP, x, y, angle + Math.PI / 2, 128);
+    if (press > 0.15) ripple(ctx, tipX, tipY, cycle);
+    return;
+  }
   const back = 26 + bob - press * 9;
   const x = tipX - Math.cos(angle) * back;
   const y = tipY - Math.sin(angle) * back;
@@ -529,23 +585,27 @@ function edgeArrow(ctx, view, sp, label, time) {
   const t = Math.min(tx, ty);
   const x = cx + dx * t;
   const y = cy + dy * t;
-  const pulse = 0.7 + 0.3 * Math.abs(Math.sin(time * 5));
+  const pulse = 0.75 + 0.25 * Math.abs(Math.sin(time * 5));
   ctx.save();
-  ctx.translate(x, y);
   ctx.globalAlpha = pulse;
-  ctx.rotate(ang);
-  ctx.fillStyle = '#f0d078';
-  ctx.beginPath();
-  ctx.moveTo(16, 0);
-  ctx.lineTo(-9, -8);
-  ctx.lineTo(-9, 8);
-  ctx.closePath();
-  ctx.fill();
-  ctx.rotate(-ang);
+  if (artReady(guideArt.arrow)) {
+    drawGuideIcon(ctx, guideArt.arrow, ARROW_TIP, x, y, ang - Math.PI / 2, 96);
+  } else {
+    ctx.translate(x, y);
+    ctx.rotate(ang);
+    ctx.fillStyle = '#f0d078';
+    ctx.beginPath();
+    ctx.moveTo(16, 0);
+    ctx.lineTo(-9, -8);
+    ctx.lineTo(-9, 8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.rotate(-ang);
+  }
   ctx.font = '500 11px "Segoe UI", Roboto, sans-serif';
   ctx.fillStyle = '#f0d078';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(label, 0, 18);
+  ctx.fillText(label, artReady(guideArt.arrow) ? x - dx * 20 : 0, artReady(guideArt.arrow) ? y - dy * 20 : 18);
   ctx.restore();
 }
