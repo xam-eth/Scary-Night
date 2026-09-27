@@ -671,7 +671,7 @@ if (args.systems) {
   game.beginNight();
   line(game.screen === 'playing', 'a retry fades in and skips the intro');
 
-  const { BEATS, nextBeat, ackBeat } = await import('../src/game/narrative.js');
+  const { BEATS, nextBeat, ackBeat, endingFrame, fragmentsKnown } = await import('../src/game/narrative.js');
   line(BEATS.length > 0 && BEATS.every((b) => b.id && b.trigger && b.surface && b.text && !/placeholder|\[draft\]/i.test(b.text)), 'beats are data, not placeholders');
   line(BEATS.every((b) => b.surface === 'strip' || b.surface === 'dawnCard' || b.surface === 'room'), 'every beat names strip, dawn-card, or room');
   const storySave = { beats: {}, pendingDawn: [] };
@@ -717,6 +717,46 @@ if (args.systems) {
   const dawnHeld = game.save.pendingDawn.length;
   game.beginDawn();
   line(game.save.pendingDawn.length === dawnHeld, 'the dawn card does not double-fire');
+  line(game.screen === 'dawnCard' && game.dawnCard && game.dawnCard.text, 'the waking card plays before the results');
+  game.finishDawnCard();
+  line(game.screen === 'dawn' && !(game.save.pendingDawn || []).includes('dawn-waking'), 'dismissing the card clears it');
+  line(fragmentsKnown(game.save).some((f) => f.id === 'dawn-waking'), 'a shown dawn line is remembered');
+  game.screen = 'playing';
+  game.save.beats['knock-true-dawn'] = 1;
+  game.save.nightsSurvived = 7;
+  game.save.ending = null;
+  game.save.feeds = 1;
+  game.save.pendingDawn = [];
+  const hid = endingFrame({ feeds: 1, nightsSurvived: 8 });
+  const daring = endingFrame({ feeds: 12, nightsSurvived: 8 });
+  line(hid !== daring, 'the lean frames the choice and does not pick it');
+  game.beginDawn();
+  line(game.screen === 'ending', 'act III offers the choice instead of auto-resolving');
+  game.chooseEnding('monster');
+  line(game.save.ending === 'monster' && !(game.save.iap.owned && game.save.iap.owned.title_dawnbreaker), 'turning back keeps the siege and withholds the title');
+  game.save.ending = null;
+  game.chooseEnding('dawnbreaker');
+  line(game.save.ending === 'dawnbreaker' && game.save.iap.owned.title_dawnbreaker === true, 'walking into the dawn grants DAWNBREAKER');
+  const arcSave = { beats: {}, nightsSurvived: 0, pendingDawn: [], seen: {} };
+  const arc = [];
+  const take = (beat) => { if (!beat) return; arc.push(beat.id); ackBeat(arcSave, beat.id); };
+  for (let n = 1; n <= 10; n++) {
+    take(nextBeat(arcSave, { surface: 'strip', event: 'night', night: n }));
+    take(nextBeat(arcSave, { surface: 'dawnCard', event: 'dawn', dawn: n }));
+    for (const room of ['dining', 'hall', 'chapel', 'conservatory', 'study', 'basement', 'kitchen', 'gatehouse']) {
+      take(nextBeat(arcSave, { surface: 'room', event: 'room', room, night: n }));
+    }
+    take(nextBeat(arcSave, { surface: 'strip', event: 'knock', knock: 'gift', night: n }));
+  }
+  line(arc.includes('dawn-waking') && arc.includes('night-faces') && arc.includes('night-stakes') && arc.includes('dawn-kept') && arc.includes('knock-true-dawn') && arc.includes('room-chapel'), 'nights 1 through 10 keep the bible order');
+  line(arc.indexOf('dawn-waking') < arc.indexOf('dawn-past') && arc.indexOf('night-faces') < arc.indexOf('night-leave'), 'earlier nights speak before the late ones');
+  line(arc.length === new Set(arc).size, 'no beat repeats across the arc');
+  line(BEATS.every((b) => b.text && b.text.length <= 120 && !/TODO|lorem|placeholder/i.test(b.text)), 'every line is final and short enough for the strip');
+  game.screen = 'ending';
+  game.endingT = 1;
+  game.render();
+  const endingBtns = game.ui.filter((b) => b.label === 'WALK INTO THE DAWN' || b.label === 'TURN BACK');
+  line(endingBtns.length === 2 && endingBtns.every((b) => b.h >= 44), 'both endings sit on the thumb, 44px or taller');
   const wide = { w: game.renderer.w, h: game.renderer.h, zoom: game.renderer.cam.zoom };
   game.renderer.resize(390, 844, 1);
   const pv = game.renderer.view;

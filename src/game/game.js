@@ -34,7 +34,7 @@ import { Ads } from '../shop/ads.js';
 import { Valen3D } from './valen3d.js';
 import { IAP } from '../shop/iap.js';
 import { drawHUD, drawWorldPrompts, urgentGuidance } from './hud.js';
-import { nextBeat, ackBeat, beatById } from './narrative.js';
+import { nextBeat, ackBeat, beatById, drawRoomMarks, endingReady } from './narrative.js';
 import { updateCoach, drawCoachWorld } from './coach.js';
 import * as UI from '../ui/screens.js';
 
@@ -586,6 +586,8 @@ export class Game {
       case 'dying': this.updateDying(dt); break;
       case 'death': this.deathScreenT += dt; break;
       case 'dawn': this.updateDawn(dt); break;
+      case 'dawnCard': this.updateDawnCard(dt); break;
+      case 'ending': this.endingT = (this.endingT || 0) + dt; break;
       case 'victory': this.victoryScreenT += dt; break;
     }
 
@@ -1341,6 +1343,7 @@ export class Game {
       color: (look && look.drink) || (gain > 24 ? '#e02030' : '#a01828'),
     });
     this.stats.feedShards = (this.stats.feedShards || 0) + killShards(enemy);
+    this.save.feeds = (this.save.feeds || 0) + 1;
     if (!this.save.coachFed) this.save.coachFed = true;
     this.audio.play('drink', { vol: 0.62 + Math.min(0.4, gain / 48), weight: Math.min(1.7, gain / 18) });
     this.spawnCoatFeed(enemy.x, enemy.y, look);
@@ -1718,7 +1721,7 @@ export class Game {
   /* ---------------- dawn ---------------- */
 
   beginDawn() {
-    if (this.screen === 'dawn') return;
+    if (this.screen === 'dawn' || this.screen === 'dawnCard' || this.screen === 'ending') return;
     this.screen = 'dawn';
     this.dawnT = 0;
     this.audio.setHeartbeat(0, 0);
@@ -1761,6 +1764,62 @@ export class Game {
     this.stats.doorsSurviving = this.mansion.doors.filter((d) => !d.broken).length;
     this.stats.doorsTotal = this.mansion.doors.length;
     writeSave(this.save);
+    this.presentDawnSurface();
+  }
+
+  /** Card, or the Act III choice, before the results. No card means the old dawn. */
+  presentDawnSurface() {
+    if (endingReady(this.save)) {
+      this.screen = 'ending';
+      this.endingT = 0;
+      this.audio.play('dawnSwell', { vol: 0.75, bus: 'music' });
+      return;
+    }
+    const id = (this.save.pendingDawn || [])[0];
+    const card = id && beatById(id);
+    if (card) {
+      this.dawnCard = card;
+      this.dawnCardT = 0;
+      this.screen = 'dawnCard';
+      this.audio.play('dawnSwell', { vol: 0.7, bus: 'music' });
+      return;
+    }
+    this.screen = 'dawn';
+  }
+
+  finishDawnCard() {
+    const id = this.dawnCard && this.dawnCard.id;
+    if (id) this.save.pendingDawn = (this.save.pendingDawn || []).filter((x) => x !== id);
+    this.dawnCard = null;
+    this.dawnCardT = 0;
+    writeSave(this.save);
+    this.screen = 'dawn';
+    this.dawnT = 5.0;
+  }
+
+  chooseEnding(which) {
+    if (this.save.ending) return;
+    const stay = which === 'monster';
+    this.save.ending = stay ? 'monster' : 'dawnbreaker';
+    this.save.iap = this.save.iap || { owned: {}, revives: 0 };
+    this.save.iap.owned = this.save.iap.owned || {};
+    this.save.seen = this.save.seen || {};
+    if (!stay) {
+      this.save.iap.owned.title_dawnbreaker = true;
+      this.save.seen['frag:ending-dawnbreaker'] = true;
+    } else {
+      this.save.seen['frag:ending-monster'] = true;
+    }
+    writeSave(this.save);
+    this.endingJustChosen = this.save.ending;
+    this.screen = 'dawn';
+    this.dawnT = 4.4;
+  }
+
+  updateDawnCard(dt) {
+    this.dawnCardT = (this.dawnCardT || 0) + dt;
+    if (this.player) this.player.anim(dt);
+    if (this.dawnCardT > 4.6) this.finishDawnCard();
   }
 
   updateDawn(dt) {
@@ -1798,7 +1857,7 @@ export class Game {
     }
 
     // ---- the world is drawn for every in-run screen (so pause/death keep it) ----
-    const gameVisible = ['playing', 'paused', 'intro', 'dying', 'dawn', 'settings', 'upgrades', 'collection', 'help', 'shop', 'privacy'].includes(this.screen);
+    const gameVisible = ['playing', 'paused', 'intro', 'dying', 'dawn', 'dawnCard', 'ending', 'settings', 'upgrades', 'collection', 'help', 'shop', 'privacy'].includes(this.screen);
     if (gameVisible) {
       // v1.1 — if the purchased GLB never loaded, the player sees this once
       // and the placeholder announces itself every frame after that.
@@ -1846,6 +1905,8 @@ export class Game {
       case 'shop': UI.drawShop(this, ctx, w, h); break;
       case 'privacy': UI.drawPrivacy(this, ctx, w, h); break;
       case 'death': UI.drawDeath(this, ctx, w, h); break;
+      case 'dawnCard': UI.drawDawnCard(this, ctx, w, h); break;
+      case 'ending': UI.drawEnding(this, ctx, w, h); break;
       case 'victory': UI.drawVictory(this, ctx, w, h); break;
     }
     if (this.screen === 'playing') UI.drawTutorial(this, ctx, w, h);
@@ -1926,6 +1987,7 @@ export class Game {
     this.decals.draw(ctx);
     // ---------- props under entities ----------
     m.drawProps(ctx, this);
+    drawRoomMarks(ctx, m);
     this.house.draw(ctx, this);   // the cat, the drafts — before the actors
     this.haunts.drawWatchers(ctx, this);   // the things at the edge of the light
     // ---------- dust motes (air, not floor — billboard around the view) ----------

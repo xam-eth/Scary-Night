@@ -12,6 +12,7 @@ import { clamp, lerp, damp, TAU, rand, chance, fmtClock, hash2, fmtBar } from '.
 import { PAL } from '../core/render.js';
 import { UPGRADES, upgradeLevel, DIFFICULTY, CODEX, NIGHT_DURATION, GAME_VERSION } from '../core/config.js';
 import { unlocked, nextRevealLine, LANES, nextRank, rankCost, rankCount, LANE_CAP, houseTitle } from '../game/economy.js';
+import { fragmentsKnown, endingFrame } from '../game/narrative.js';
 import { Valen3D } from '../game/valen3d.js';
 import { IAP, CATALOG } from '../shop/iap.js';
 import { Ads } from '../shop/ads.js';
@@ -962,12 +963,14 @@ export function drawCollection(game, ctx, w, h) {
   ctx.fillText('COLLECTION', w / 2, phone ? 26 : h * 0.13);
   ctx.restore();
 
+  const remembered = fragmentsKnown(B);
+  const fragReserve = remembered.length ? (phone ? 88 : 104) : 0;
   const cols = phone ? 1 : Math.min(3, Math.max(1, Math.floor(w / 380)));
   const gap = phone ? 8 : 16;
   const cw = phone ? w - 24 : Math.min(340, (w - 80) / cols - gap);
   const rows = Math.ceil(CODEX.length / cols);
   const top = phone ? 44 : h * 0.22;
-  const bottom = h - (phone ? 56 : 84);
+  const bottom = h - (phone ? 56 : 84) - fragReserve;
   const ch = clamp((bottom - top) / rows - gap, phone ? 40 : 120, phone ? 108 : 170);
   const x0 = phone ? 12 : w / 2 - (cols * (cw + gap) - gap) / 2;
   let y = top;
@@ -1001,12 +1004,205 @@ export function drawCollection(game, ctx, w, h) {
     const txt = known ? c.text
       : 'A shape the house has not handed over yet. ' +
         'Every night keeps its names in a different room.';
-    if (ch >= 70) wrapText(ctx, txt, x + 18, yy + 56, cw - 36, 17);
+    if (ch >= 70 && ch < 88) wrapText(ctx, txt.split('\n')[0], x + 18, yy + 50, cw - 36, 15);
+    else if (ch >= 88) wrapText(ctx, txt, x + 18, yy + 56, cw - 36, 17);
     ctx.restore();
   });
 
+  if (remembered.length) {
+    const last = remembered[remembered.length - 1];
+    const fy = h - (phone ? 118 : 168);
+    const fh = phone ? 64 : 76;
+    const fx = phone ? 12 : w / 2 - 220;
+    const fw = phone ? w - 24 : 440;
+    ctx.save();
+    ctx.fillStyle = 'rgba(14,12,16,0.82)';
+    ctx.fillRect(fx, fy, fw, fh);
+    ctx.strokeStyle = 'rgba(180,140,70,0.4)';
+    ctx.strokeRect(fx + 0.5, fy + 0.5, fw - 1, fh - 1);
+    ctx.textAlign = 'left';
+    ctx.font = `500 ${phone ? 11 : 12}px ${SERIF}`;
+    ctx.fillStyle = '#e0c48a';
+    const more = remembered.length > 1 ? ` · ${remembered.length} REMEMBERED` : '';
+    ctx.fillText(last.name + more, fx + 12, fy + 16);
+    ctx.font = `400 ${phone ? 11 : 12}px ${SANS}`;
+    ctx.fillStyle = 'rgba(226,216,198,0.88)';
+    wrapText(ctx, last.text, fx + 12, fy + 32, fw - 24, phone ? 13 : 15);
+    ctx.restore();
+  }
+
   const backBtn = uiButton(game, { x: phone ? 12 : w / 2 - 110, y: h - (phone ? 48 : 84), w: phone ? w - 24 : 220, h: phone ? 40 : 44, label: 'BACK', small: true, accent: '#6a6a80', onClick: () => game.setScreen(game.settingsReturn || 'menu') });
   buttonVisual(ctx, backBtn.b, { active: backBtn.hover, label: 'BACK', small: true, accent: '#6a6a80' });
+}
+
+function drawValenShade(ctx, x, y, s) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(s, s);
+  ctx.fillStyle = 'rgba(10,7,12,0.88)';
+  ctx.beginPath();
+  ctx.ellipse(0, -52, 7, 8, 0, 0, TAU);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(-8, -42);
+  ctx.quadraticCurveTo(-16, -8, -14, 28);
+  ctx.lineTo(14, 28);
+  ctx.quadraticCurveTo(16, -8, 8, -42);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawGlassPanes(ctx, x, y, w, h) {
+  ctx.save();
+  ctx.strokeStyle = 'rgba(236,214,170,0.55)';
+  ctx.fillStyle = 'rgba(255,214,160,0.08)';
+  ctx.lineWidth = 1.5;
+  const panes = 3;
+  const gap = 8;
+  const pw = (w - gap * (panes - 1)) / panes;
+  for (let i = 0; i < panes; i++) {
+    const px = x + i * (pw + gap);
+    ctx.fillRect(px, y, pw, h);
+    ctx.strokeRect(px, y, pw, h);
+    ctx.beginPath();
+    ctx.moveTo(px, y + h * 0.42); ctx.lineTo(px + pw, y + h * 0.42);
+    ctx.moveTo(px + pw * 0.5, y); ctx.lineTo(px + pw * 0.5, y + h);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+export function drawDawnCard(game, ctx, w, h) {
+  const card = game.dawnCard;
+  const t = game.dawnCardT || 0;
+  const short = h < 520;
+  ctx.save();
+  ctx.fillStyle = 'rgba(8,6,10,0.34)';
+  ctx.fillRect(0, 0, w, h);
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, 'rgba(232,168,96,0.42)');
+  g.addColorStop(0.4, 'rgba(120,64,48,0.18)');
+  g.addColorStop(1, 'rgba(6,5,10,0.62)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+  const winX = short ? 28 : w * 0.28;
+  const winY = short ? 16 : 64;
+  const winW = short ? Math.min(160, w * 0.34) : Math.min(220, w * 0.5);
+  const winH = short ? 92 : Math.min(210, h * 0.28);
+  drawGlassPanes(ctx, winX, winY, winW, winH);
+  ctx.globalCompositeOperation = 'screen';
+  const shaft = ctx.createLinearGradient(winX, winY, winX + 40, winY + winH + 80);
+  shaft.addColorStop(0, 'rgba(255,214,160,0.28)');
+  shaft.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = shaft;
+  ctx.beginPath();
+  ctx.moveTo(winX + 12, winY + winH);
+  ctx.lineTo(winX + winW * 0.45, winY + winH);
+  ctx.lineTo(winX + winW * 0.2, h);
+  ctx.lineTo(winX - 20, h);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+  const shadeScale = short ? 0.4 : 0.85;
+  const shadeY = short ? winY + winH + 6 + 52 * shadeScale : winY + winH + 36;
+  drawValenShade(ctx, short ? winX + winW * 0.5 : winX + winW * 0.55, shadeY, shadeScale);
+  ctx.save();
+  ctx.textAlign = short ? 'left' : 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(232,214,190,0.78)';
+  ctx.font = `400 ${short ? 11 : 12}px ${SANS}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
+  const labelX = short ? winX + winW + 16 : w / 2;
+  ctx.fillText('DAWN', labelX, short ? 28 : Math.max(28, winY - 22));
+  const text = (card && card.text) || 'The house raises a morning. It is not the true one.';
+  ctx.fillStyle = '#f0e6d4';
+  ctx.font = `400 ${short ? 14 : 17}px ${SERIF}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '0.3px';
+  const maxW = short ? Math.max(120, w - (winX + winW + 28)) : Math.min(w - 48, 420);
+  const lineX = short ? labelX : w / 2;
+  const y0 = short ? 52 : Math.min(h * 0.5, h - 150);
+  wrapText(ctx, text, lineX, y0, maxW, short ? 18 : 24);
+  ctx.restore();
+  if (t > 0.35) {
+    const bw = Math.min(w - 36, short ? 200 : 280);
+    const bh = 46;
+    const btn = uiButton(game, {
+      x: short ? w - bw - 16 : (w - bw) / 2,
+      y: h - (short ? 58 : 78),
+      w: bw, h: bh,
+      label: 'CONTINUE', small: true, accent: '#a8833c',
+      onClick: () => game.finishDawnCard(),
+    });
+    buttonVisual(ctx, btn.b, { active: btn.hover, label: 'CONTINUE', small: true, accent: '#a8833c' });
+  }
+}
+
+export function drawEnding(game, ctx, w, h) {
+  const short = h < 520;
+  const t = game.endingT || 0;
+  ctx.save();
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, 'rgba(255,206,140,0.5)');
+  g.addColorStop(0.4, 'rgba(90,40,36,0.18)');
+  g.addColorStop(1, 'rgba(4,4,8,0.74)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+  ctx.restore();
+  const paneW = short ? Math.min(180, w * 0.32) : Math.min(240, w * 0.62);
+  const paneH = short ? 110 : Math.min(240, h * 0.3);
+  const paneX = short ? 24 : (w - paneW) / 2;
+  const paneY = short ? 18 : 56;
+  drawGlassPanes(ctx, paneX, paneY, paneW, paneH);
+  const endScale = short ? 0.38 : 0.8;
+  const endY = short ? paneY + paneH + 6 + 52 * endScale : paneY + paneH + 28;
+  drawValenShade(ctx, paneX + paneW * 0.5, endY, endScale);
+  ctx.save();
+  ctx.textAlign = short ? 'left' : 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#f3e7d4';
+  ctx.font = `400 ${short ? 14 : 16}px ${SERIF}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '0.2px';
+  const frame = endingFrame(game.save);
+  const textX = short ? paneX + paneW + 16 : w / 2;
+  const maxW = short ? Math.max(140, w - textX - 16) : Math.min(w - 40, 420);
+  let y = short ? 28 : paneY + paneH + 78;
+  y = wrapText(ctx, 'The true dawn is in the glass. The house cannot raise this one.', textX, y, maxW, short ? 18 : 22);
+  ctx.fillStyle = 'rgba(214,186,120,0.92)';
+  ctx.font = `400 ${short ? 12 : 14}px ${SANS}`;
+  wrapText(ctx, frame, textX, y + 6, maxW, 16);
+  ctx.restore();
+  if (t > 0.4) {
+    const bh = 46;
+    if (short) {
+      const bw = Math.min(210, (w - 36) / 2);
+      const y1 = h - 58;
+      const walk = uiButton(game, {
+        x: 12, y: y1, w: bw, h: bh, label: 'WALK INTO THE DAWN', small: true, accent: '#c4a060',
+        onClick: () => game.chooseEnding('dawnbreaker'),
+      });
+      buttonVisual(ctx, walk.b, { active: walk.hover, label: 'WALK INTO THE DAWN', small: true, accent: '#c4a060' });
+      const stay = uiButton(game, {
+        x: w - bw - 12, y: y1, w: bw, h: bh, label: 'TURN BACK', small: true, accent: '#6a2230',
+        onClick: () => game.chooseEnding('monster'),
+      });
+      buttonVisual(ctx, stay.b, { active: stay.hover, label: 'TURN BACK', small: true, accent: '#6a2230' });
+    } else {
+      const bw = Math.min(w - 36, 320);
+      const x = (w - bw) / 2;
+      const y1 = h - 168;
+      const walk = uiButton(game, {
+        x, y: y1, w: bw, h: bh, label: 'WALK INTO THE DAWN', small: true, accent: '#c4a060',
+        onClick: () => game.chooseEnding('dawnbreaker'),
+      });
+      buttonVisual(ctx, walk.b, { active: walk.hover, label: 'WALK INTO THE DAWN', small: true, accent: '#c4a060' });
+      const stay = uiButton(game, {
+        x, y: y1 + bh + 10, w: bw, h: bh, label: 'TURN BACK', small: true, accent: '#6a2230',
+        onClick: () => game.chooseEnding('monster'),
+      });
+      buttonVisual(ctx, stay.b, { active: stay.hover, label: 'TURN BACK', small: true, accent: '#6a2230' });
+    }
+  }
 }
 
 function wrapText(ctx, text, x, y, maxW, lh) {
@@ -1281,6 +1477,12 @@ export function drawVictory(game, ctx, w, h) {
     ctx.fillStyle = 'rgba(224, 180, 92, 0.9)';
     const call = dawnName.length > 16 ? dawnName : 'THE HOUSE CALLS YOU ' + dawnName;
     ctx.fillText(call, w / 2, h * 0.29);
+  }
+  if (game.endingJustChosen) {
+    ctx.font = `400 ${phone ? 13 : 15}px ${SERIF}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '0.4px';
+    ctx.fillStyle = '#f0e6d4';
+    ctx.fillText(game.endingJustChosen === 'monster' ? 'She stayed. The siege is hers now.' : 'It burned. She was free.', w / 2, phone ? 108 : h * 0.345);
   }
   ctx.restore();
 

@@ -425,6 +425,12 @@ S.bell = (t, o) => {
   });
   noise(t, 0.25, { out: o.out, gain: 0.1 * v, type: 'bandpass', freq: base * 6, q: 3, pan: o.pan, rev: 0.9, attack: 0.002 });
 };
+S.dawnSwell = (t, o) => {
+  const v = o.vol ?? 1;
+  osc(t, 3.4, { out: o.out, gain: 0.11 * v, type: 'sine', freq: 196, to: 294, pan: 0, rev: 0.85, attack: 0.35 });
+  osc(t + 0.18, 2.8, { out: o.out, gain: 0.05 * v, type: 'triangle', freq: 392, to: 330, pan: 0.15, rev: 0.6, attack: 0.28 });
+  noise(t, 2.4, { out: o.out, gain: 0.035 * v, type: 'lowpass', freq: 720, q: 0.6, pan: 0, rev: 0.45, attack: 0.4 });
+};
 S.dawnChime = (t, o) => {
   const v = o.vol ?? 1;
   const notes = [392, 523.25, 659.25, 784];

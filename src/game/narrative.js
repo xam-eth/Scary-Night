@@ -1,9 +1,8 @@
 /* LAST NIGHT — narrative director.
  *
- * docs/STORY.md wins on story. This module holds structure, not new control
- * flow: a beat is a row. #37 polishes copy; #35 draws dawn-cards; #36 draws
- * the room object. The strip already exists (#31) and speaks strip lines and
- * room murmurs. Urgent guidance pre-empts a murmur, then the murmur resumes.
+ * docs/STORY.md wins on story. A beat is a row. The strip speaks strip lines
+ * and room murmurs. Dawn-cards and the Act III choice consume what this table
+ * queues. Urgent guidance pre-empts a murmur, then the murmur resumes.
  *
  * Once-only beats persist on save.beats. Dawn-cards wait in save.pendingDawn
  * until the interstitial consumes them.
@@ -145,6 +144,22 @@ export const BEATS = [
   },
 ];
 
+const FRAG_NAMES = {
+  'dawn-waking': 'WAKING',
+  'dawn-past': 'HER PAST',
+  'dawn-kept': 'KEPT',
+  'room-dining': 'THE SERVANT DOOR',
+  'room-hall': 'THE FLOOR',
+  'room-chapel': 'THE ALTAR',
+  'room-glass': 'THE GLASS',
+  'room-study': 'THE WARD',
+  'room-basin': 'THE BASIN',
+  'room-larder': 'THE LARDER',
+  'room-gate': 'THE STAKES',
+  'knock-kept': 'KEPT SAFE',
+  'knock-true-dawn': 'THE TRUE DAWN',
+};
+
 const BY_ID = Object.fromEntries(BEATS.map((b) => [b.id, b]));
 
 export function beatById(id) {
@@ -159,6 +174,92 @@ export function ackBeat(save, id) {
   if (!save || !id) return;
   save.beats = save.beats || {};
   save.beats[id] = 1;
+  const beat = BY_ID[id];
+  if (!beat) return;
+  const keep = beat.surface === 'room' || beat.surface === 'dawnCard' || (beat.trigger && beat.trigger.event === 'knock');
+  if (!keep) return;
+  save.seen = save.seen || {};
+  save.seen['frag:' + id] = true;
+}
+
+/** Codex rows for lines the house has already handed over. Canon CODEX stays untouched. */
+export function fragmentsKnown(save) {
+  const seen = (save && save.seen) || {};
+  const rows = BEATS.filter((b) => seen['frag:' + b.id]).map((b) => ({
+    id: b.id,
+    name: b.name || FRAG_NAMES[b.id] || b.id.replace(/-/g, ' ').toUpperCase(),
+    text: b.text,
+  }));
+  if (save && save.ending === 'dawnbreaker') {
+    rows.push({ id: 'ending-dawnbreaker', name: 'DAWNBREAKER', text: 'She walked into the dawn the house could not raise. It burned. She was free.' });
+  }
+  if (save && save.ending === 'monster') {
+    rows.push({ id: 'ending-monster', name: "THE HOUSE'S MONSTER", text: 'She turned back. The hunger won. The siege answers to her now.' });
+  }
+  return rows;
+}
+
+/** Fed-and-daring versus hoarded-and-hid. Frames the choice. Never picks it. */
+export function endingFrame(save) {
+  const feeds = (save && save.feeds) || 0;
+  const dawns = (save && save.nightsSurvived) || 0;
+  const daring = feeds >= Math.max(3, Math.ceil(dawns * 0.6));
+  return daring
+    ? 'You fed in the open. The house knows your mouth.'
+    : 'You hid, and the walls kept you. They are used to that.';
+}
+
+export function endingReady(save) {
+  return !!(save && !save.ending && beatSeen(save, 'knock-true-dawn') && (save.nightsSurvived || 0) >= 8);
+}
+
+/** Small floor objects. Interior of the room, never on a door. */
+export const ROOM_MARKS = [
+  { room: 'dining', ox: 0.58, oy: 0.68, kind: 'latch' },
+  { room: 'hall', ox: 0.38, oy: 0.42, kind: 'threshold' },
+  { room: 'chapel', ox: 0.55, oy: 0.32, kind: 'cloth' },
+  { room: 'conservatory', ox: 0.46, oy: 0.48, kind: 'glass' },
+  { room: 'oratory', ox: 0.5, oy: 0.55, kind: 'glass' },
+  { room: 'study', ox: 0.36, oy: 0.62, kind: 'ward' },
+  { room: 'basement', ox: 0.52, oy: 0.46, kind: 'basin' },
+  { room: 'kitchen', ox: 0.42, oy: 0.58, kind: 'dish' },
+  { room: 'gatehouse', ox: 0.48, oy: 0.36, kind: 'stake' },
+];
+
+export function drawRoomMarks(ctx, mansion) {
+  if (!ctx || !mansion || !mansion.room) return;
+  for (const mark of ROOM_MARKS) {
+    const room = mansion.room(mark.room);
+    if (!room) continue;
+    const x = room.x + room.w * mark.ox;
+    const y = room.y + room.h * mark.oy;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.fillStyle = mark.kind === 'glass' ? 'rgba(210,220,235,0.55)' : 'rgba(28,22,18,0.9)';
+    ctx.strokeStyle = mark.kind === 'stake' ? 'rgba(90,70,40,0.9)' : 'rgba(160,130,80,0.55)';
+    ctx.lineWidth = 1.4;
+    if (mark.kind === 'stake') {
+      ctx.beginPath();
+      ctx.moveTo(0, -10); ctx.lineTo(0, 8); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-4, -6); ctx.lineTo(4, -6); ctx.stroke();
+    } else if (mark.kind === 'glass') {
+      ctx.beginPath();
+      ctx.moveTo(0, -8); ctx.lineTo(7, 2); ctx.lineTo(-1, 8); ctx.lineTo(-7, 0); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+    } else if (mark.kind === 'ward') {
+      ctx.strokeRect(-7, -7, 14, 14);
+      ctx.beginPath(); ctx.moveTo(-7, -7); ctx.lineTo(7, 7); ctx.moveTo(7, -7); ctx.lineTo(-7, 7); ctx.stroke();
+    } else if (mark.kind === 'basin' || mark.kind === 'dish') {
+      ctx.beginPath(); ctx.ellipse(0, 0, 8, 4, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = 'rgba(80,16,22,0.45)';
+      ctx.fill();
+    } else {
+      ctx.fillRect(-8, -3, 16, 6);
+      ctx.strokeRect(-8, -3, 16, 6);
+    }
+    ctx.restore();
+  }
 }
 
 function roomsOf(trigger) {
