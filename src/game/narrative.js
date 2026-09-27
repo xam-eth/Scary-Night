@@ -40,7 +40,7 @@ export const BEATS = [
   },
   {
     id: 'night-stakes',
-    trigger: { night: 3 },
+    trigger: { event: 'night', night: 3 },
     surface: 'strip',
     once: true,
     text: 'They came with stakes. The house kept the stakes. It kept them, too.',

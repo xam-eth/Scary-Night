@@ -681,6 +681,9 @@ if (args.systems) {
   line(!nextBeat(storySave, { surface: 'dawnCard', event: 'dawn', dawn: 1 }), 'a once-only dawn card does not double-fire');
   const faces = nextBeat(storySave, { surface: 'strip', event: 'night', night: 2 });
   line(faces && faces.id === 'night-faces', 'night 2 strip is the dead she made');
+  ackBeat(storySave, faces && faces.id);
+  const stakes = nextBeat(storySave, { surface: 'strip', event: 'night', night: 3 });
+  line(stakes && stakes.id === 'night-stakes' && /stakes/.test(stakes.text), 'night 3 strip is the hunters’ stakes');
   line(!nextBeat(storySave, { surface: 'room', event: 'room', room: 'chapel', night: 2 }), 'night 2 does not steal the chapel fragment');
   line(!nextBeat(storySave, { surface: 'room', event: 'room', room: 'chapel', night: 1 }), 'the chapel waits until the house remembers');
   const chapel = nextBeat(storySave, { surface: 'room', event: 'room', room: 'chapel', night: 4 });
