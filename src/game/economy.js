@@ -173,6 +173,18 @@ export function houseTitle(save) {
 }
 
 /**
+ * Fed-and-daring versus hoarded-and-hid.
+ * Frames the Act III choice. Never selects it.
+ */
+export function playLean(save) {
+  const feeds = (save && save.feeds) || 0;
+  const dawns = Math.max(1, (save && save.nightsSurvived) || 0);
+  const banked = (save && save.shards) || 0;
+  const hoard = banked > 80 && feeds < 4;
+  return feeds / dawns >= 0.5 && !hoard ? 'daring' : 'hid';
+}
+
+/**
  * One maxed lane is about 1.3×. Count heat matches that through four dawns,
  * then flattens. Kind (door pressure, stalkers) keeps rising — mastery.
  */

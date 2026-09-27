@@ -34,7 +34,7 @@ import { Ads } from '../shop/ads.js';
 import { Valen3D } from './valen3d.js';
 import { IAP } from '../shop/iap.js';
 import { drawHUD, drawWorldPrompts, urgentGuidance } from './hud.js';
-import { nextBeat, ackBeat, beatById, drawRoomMarks, endingReady } from './narrative.js';
+import { nextBeat, ackBeat, beatById, endingReady } from './narrative.js';
 import { updateCoach, drawCoachWorld } from './coach.js';
 import * as UI from '../ui/screens.js';
 
@@ -534,6 +534,12 @@ export class Game {
     }
     this.renderer.snapCamera(this.player.x, this.player.y);
     this.offerNarrative({ surface: 'strip', event: 'night', night: (this.save.nightsSurvived || 0) + 1 });
+    if (this.save.ending === 'monster' && this.save.seen && !this.save.seen.houseHeartTold) {
+      this.save.seen.houseHeartTold = true;
+      this.save.houseHeart = true;
+      writeSave(this.save);
+      this.showMessage('THE SIEGE ANSWERS. YOU ARE ITS HEART.', { tone: 'cold', life: 4.4 });
+    }
     const reveal = revealForNight(this.save.nightsSurvived);
     if (reveal) this.showMessage(reveal.text, { tone: 'cold', life: 4.2 });
     if (this.save.iap && this.save.iap.owned && this.save.iap.owned.remove_ads) Ads.suppressed = true;
@@ -1807,8 +1813,10 @@ export class Game {
     if (!stay) {
       this.save.iap.owned.title_dawnbreaker = true;
       this.save.seen['frag:ending-dawnbreaker'] = true;
+      this.save.freed = true;
     } else {
       this.save.seen['frag:ending-monster'] = true;
+      this.save.houseHeart = true;
     }
     writeSave(this.save);
     this.endingJustChosen = this.save.ending;
@@ -1987,7 +1995,6 @@ export class Game {
     this.decals.draw(ctx);
     // ---------- props under entities ----------
     m.drawProps(ctx, this);
-    drawRoomMarks(ctx, m);
     this.house.draw(ctx, this);   // the cat, the drafts — before the actors
     this.haunts.drawWatchers(ctx, this);   // the things at the edge of the light
     // ---------- dust motes (air, not floor — billboard around the view) ----------

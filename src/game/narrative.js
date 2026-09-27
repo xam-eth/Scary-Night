@@ -8,6 +8,8 @@
  * until the interstitial consumes them.
  */
 
+import { playLean } from './economy.js';
+
 export const BEATS = [
   {
     id: 'dawn-waking',
@@ -201,10 +203,7 @@ export function fragmentsKnown(save) {
 
 /** Fed-and-daring versus hoarded-and-hid. Frames the choice. Never picks it. */
 export function endingFrame(save) {
-  const feeds = (save && save.feeds) || 0;
-  const dawns = (save && save.nightsSurvived) || 0;
-  const daring = feeds >= Math.max(3, Math.ceil(dawns * 0.6));
-  return daring
+  return playLean(save) === 'daring'
     ? 'You fed in the open. The house knows your mouth.'
     : 'You hid, and the walls kept you. They are used to that.';
 }
@@ -226,6 +225,70 @@ export const ROOM_MARKS = [
   { room: 'gatehouse', ox: 0.48, oy: 0.36, kind: 'stake' },
 ];
 
+function paintFragment(ctx, kind) {
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  if (kind === 'stake') {
+    ctx.strokeStyle = '#6b4b28';
+    ctx.lineWidth = 3.2;
+    ctx.beginPath(); ctx.moveTo(0, -26); ctx.lineTo(0, 14); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-9, -16); ctx.lineTo(9, -16); ctx.stroke();
+    ctx.fillStyle = '#8a1820';
+    ctx.beginPath(); ctx.arc(0, 14, 3.2, 0, Math.PI * 2); ctx.fill();
+  } else if (kind === 'cloth') {
+    ctx.fillStyle = 'rgba(110, 22, 32, 0.9)';
+    ctx.strokeStyle = 'rgba(212, 176, 96, 0.75)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(-18, -6); ctx.quadraticCurveTo(0, 10, 18, -4);
+    ctx.lineTo(15, 10); ctx.quadraticCurveTo(0, 2, -16, 10);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+  } else if (kind === 'glass') {
+    ctx.fillStyle = 'rgba(226, 236, 248, 0.78)';
+    ctx.strokeStyle = 'rgba(255, 246, 220, 0.95)';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(0, -18); ctx.lineTo(13, 2); ctx.lineTo(2, 16); ctx.lineTo(-11, 3);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+    ctx.beginPath(); ctx.moveTo(-2, -10); ctx.lineTo(5, -2); ctx.stroke();
+  } else if (kind === 'ward') {
+    ctx.strokeStyle = 'rgba(206, 168, 92, 0.92)';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(0, 0, 16, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-9, -9); ctx.lineTo(9, 9);
+    ctx.moveTo(9, -9); ctx.lineTo(-9, 9);
+    ctx.stroke();
+  } else if (kind === 'basin') {
+    ctx.fillStyle = 'rgba(36, 8, 14, 0.82)';
+    ctx.strokeStyle = 'rgba(86, 92, 102, 0.95)';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(0, 0, 18, 9, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  } else if (kind === 'dish') {
+    ctx.fillStyle = 'rgba(18, 14, 12, 0.88)';
+    ctx.strokeStyle = 'rgba(186, 174, 150, 0.85)';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.arc(0, 0, 11, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.stroke();
+  } else if (kind === 'latch') {
+    ctx.fillStyle = '#241c14';
+    ctx.strokeStyle = '#b08a48';
+    ctx.lineWidth = 1.5;
+    ctx.fillRect(-16, -4, 32, 8);
+    ctx.strokeRect(-16, -4, 32, 8);
+    ctx.beginPath(); ctx.arc(11, 0, 3.5, 0, Math.PI * 2); ctx.stroke();
+  } else {
+    ctx.fillStyle = 'rgba(92, 70, 46, 0.62)';
+    ctx.strokeStyle = 'rgba(168, 136, 84, 0.45)';
+    ctx.lineWidth = 1.2;
+    ctx.fillRect(-24, -5, 48, 10);
+    ctx.strokeRect(-24, -5, 48, 10);
+  }
+}
+
 export function drawRoomMarks(ctx, mansion) {
   if (!ctx || !mansion || !mansion.room) return;
   for (const mark of ROOM_MARKS) {
@@ -235,29 +298,7 @@ export function drawRoomMarks(ctx, mansion) {
     const y = room.y + room.h * mark.oy;
     ctx.save();
     ctx.translate(x, y);
-    ctx.fillStyle = mark.kind === 'glass' ? 'rgba(210,220,235,0.55)' : 'rgba(28,22,18,0.9)';
-    ctx.strokeStyle = mark.kind === 'stake' ? 'rgba(90,70,40,0.9)' : 'rgba(160,130,80,0.55)';
-    ctx.lineWidth = 1.4;
-    if (mark.kind === 'stake') {
-      ctx.beginPath();
-      ctx.moveTo(0, -10); ctx.lineTo(0, 8); ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(-4, -6); ctx.lineTo(4, -6); ctx.stroke();
-    } else if (mark.kind === 'glass') {
-      ctx.beginPath();
-      ctx.moveTo(0, -8); ctx.lineTo(7, 2); ctx.lineTo(-1, 8); ctx.lineTo(-7, 0); ctx.closePath();
-      ctx.fill(); ctx.stroke();
-    } else if (mark.kind === 'ward') {
-      ctx.strokeRect(-7, -7, 14, 14);
-      ctx.beginPath(); ctx.moveTo(-7, -7); ctx.lineTo(7, 7); ctx.moveTo(7, -7); ctx.lineTo(-7, 7); ctx.stroke();
-    } else if (mark.kind === 'basin' || mark.kind === 'dish') {
-      ctx.beginPath(); ctx.ellipse(0, 0, 8, 4, 0, 0, Math.PI * 2); ctx.stroke();
-      ctx.fillStyle = 'rgba(80,16,22,0.45)';
-      ctx.fill();
-    } else {
-      ctx.fillRect(-8, -3, 16, 6);
-      ctx.strokeRect(-8, -3, 16, 6);
-    }
+    paintFragment(ctx, mark.kind);
     ctx.restore();
   }
 }

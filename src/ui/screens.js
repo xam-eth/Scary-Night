@@ -13,6 +13,7 @@ import { PAL } from '../core/render.js';
 import { UPGRADES, upgradeLevel, DIFFICULTY, CODEX, NIGHT_DURATION, GAME_VERSION } from '../core/config.js';
 import { unlocked, nextRevealLine, LANES, nextRank, rankCost, rankCount, LANE_CAP, houseTitle } from '../game/economy.js';
 import { fragmentsKnown, endingFrame } from '../game/narrative.js';
+import { drawPlateCover } from '../game/roomplates.js';
 import { Valen3D } from '../game/valen3d.js';
 import { IAP, CATALOG } from '../shop/iap.js';
 import { Ads } from '../shop/ads.js';
@@ -963,8 +964,8 @@ export function drawCollection(game, ctx, w, h) {
   ctx.fillText('COLLECTION', w / 2, phone ? 26 : h * 0.13);
   ctx.restore();
 
-  const remembered = fragmentsKnown(B);
-  const fragReserve = remembered.length ? (phone ? 88 : 104) : 0;
+  const remembered = fragmentsKnown(B).slice(-3);
+  const fragReserve = remembered.length ? (phone ? 6 + remembered.length * 32 : 10 + remembered.length * 36) : 0;
   const cols = phone ? 1 : Math.min(3, Math.max(1, Math.floor(w / 380)));
   const gap = phone ? 8 : 16;
   const cw = phone ? w - 24 : Math.min(340, (w - 80) / cols - gap);
@@ -1010,24 +1011,33 @@ export function drawCollection(game, ctx, w, h) {
   });
 
   if (remembered.length) {
-    const last = remembered[remembered.length - 1];
-    const fy = h - (phone ? 118 : 168);
-    const fh = phone ? 64 : 76;
     const fx = phone ? 12 : w / 2 - 220;
     const fw = phone ? w - 24 : 440;
+    const rowH = phone ? 30 : 34;
+    let fy = h - (phone ? 48 : 84) - fragReserve + 4;
     ctx.save();
-    ctx.fillStyle = 'rgba(14,12,16,0.82)';
-    ctx.fillRect(fx, fy, fw, fh);
-    ctx.strokeStyle = 'rgba(180,140,70,0.4)';
-    ctx.strokeRect(fx + 0.5, fy + 0.5, fw - 1, fh - 1);
     ctx.textAlign = 'left';
-    ctx.font = `500 ${phone ? 11 : 12}px ${SERIF}`;
-    ctx.fillStyle = '#e0c48a';
-    const more = remembered.length > 1 ? ` · ${remembered.length} REMEMBERED` : '';
-    ctx.fillText(last.name + more, fx + 12, fy + 16);
-    ctx.font = `400 ${phone ? 11 : 12}px ${SANS}`;
-    ctx.fillStyle = 'rgba(226,216,198,0.88)';
-    wrapText(ctx, last.text, fx + 12, fy + 32, fw - 24, phone ? 13 : 15);
+    ctx.textBaseline = 'middle';
+    remembered.forEach((row) => {
+      ctx.fillStyle = 'rgba(14,12,16,0.82)';
+      ctx.fillRect(fx, fy, fw, rowH - 4);
+      ctx.strokeStyle = 'rgba(180,140,70,0.4)';
+      ctx.strokeRect(fx + 0.5, fy + 0.5, fw - 1, rowH - 5);
+      ctx.font = `500 ${phone ? 11 : 12}px ${SERIF}`;
+      ctx.fillStyle = '#e0c48a';
+      let name = row.name;
+      while (ctx.measureText(name).width > 118 && name.length > 6) name = name.slice(0, -2);
+      if (name !== row.name) name = name.replace(/\s$/, '') + '…';
+      ctx.fillText(name, fx + 10, fy + (rowH - 4) / 2);
+      const nameW = Math.min(126, ctx.measureText(name).width + 18);
+      ctx.font = `400 ${phone ? 11 : 12}px ${SANS}`;
+      ctx.fillStyle = 'rgba(226,216,198,0.88)';
+      let line = row.text;
+      while (ctx.measureText(line).width > fw - nameW - 20 && line.length > 8) line = line.slice(0, -2);
+      if (line !== row.text) line = line.replace(/[,.;]$/, '') + '…';
+      ctx.fillText(line, fx + 10 + nameW, fy + (rowH - 4) / 2);
+      fy += rowH;
+    });
     ctx.restore();
   }
 
@@ -1053,76 +1063,50 @@ function drawValenShade(ctx, x, y, s) {
   ctx.restore();
 }
 
-function drawGlassPanes(ctx, x, y, w, h) {
-  ctx.save();
-  ctx.strokeStyle = 'rgba(236,214,170,0.55)';
-  ctx.fillStyle = 'rgba(255,214,160,0.08)';
-  ctx.lineWidth = 1.5;
-  const panes = 3;
-  const gap = 8;
-  const pw = (w - gap * (panes - 1)) / panes;
-  for (let i = 0; i < panes; i++) {
-    const px = x + i * (pw + gap);
-    ctx.fillRect(px, y, pw, h);
-    ctx.strokeRect(px, y, pw, h);
-    ctx.beginPath();
-    ctx.moveTo(px, y + h * 0.42); ctx.lineTo(px + pw, y + h * 0.42);
-    ctx.moveTo(px + pw * 0.5, y); ctx.lineTo(px + pw * 0.5, y + h);
-    ctx.stroke();
+function drawPlateGrade(ctx, w, h, key, warm) {
+  ctx.fillStyle = '#100c0a';
+  ctx.fillRect(0, 0, w, h);
+  drawPlateCover(ctx, key, 0, 0, w, h);
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  if (warm) {
+    g.addColorStop(0, 'rgba(255,186,96,0.38)');
+    g.addColorStop(0.45, 'rgba(90,36,28,0.12)');
+    g.addColorStop(1, 'rgba(6,4,8,0.72)');
+  } else {
+    g.addColorStop(0, 'rgba(232,168,96,0.28)');
+    g.addColorStop(0.5, 'rgba(40,24,20,0.18)');
+    g.addColorStop(1, 'rgba(6,4,8,0.78)');
   }
-  ctx.restore();
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
 }
 
 export function drawDawnCard(game, ctx, w, h) {
   const card = game.dawnCard;
   const t = game.dawnCardT || 0;
   const short = h < 520;
-  ctx.save();
-  ctx.fillStyle = 'rgba(8,6,10,0.34)';
-  ctx.fillRect(0, 0, w, h);
-  const g = ctx.createLinearGradient(0, 0, 0, h);
-  g.addColorStop(0, 'rgba(232,168,96,0.42)');
-  g.addColorStop(0.4, 'rgba(120,64,48,0.18)');
-  g.addColorStop(1, 'rgba(6,5,10,0.62)');
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, w, h);
-  const winX = short ? 28 : w * 0.28;
-  const winY = short ? 16 : 64;
-  const winW = short ? Math.min(160, w * 0.34) : Math.min(220, w * 0.5);
-  const winH = short ? 92 : Math.min(210, h * 0.28);
-  drawGlassPanes(ctx, winX, winY, winW, winH);
-  ctx.globalCompositeOperation = 'screen';
-  const shaft = ctx.createLinearGradient(winX, winY, winX + 40, winY + winH + 80);
-  shaft.addColorStop(0, 'rgba(255,214,160,0.28)');
-  shaft.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = shaft;
-  ctx.beginPath();
-  ctx.moveTo(winX + 12, winY + winH);
-  ctx.lineTo(winX + winW * 0.45, winY + winH);
-  ctx.lineTo(winX + winW * 0.2, h);
-  ctx.lineTo(winX - 20, h);
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
-  const shadeScale = short ? 0.4 : 0.85;
-  const shadeY = short ? winY + winH + 6 + 52 * shadeScale : winY + winH + 36;
-  drawValenShade(ctx, short ? winX + winW * 0.5 : winX + winW * 0.55, shadeY, shadeScale);
+  drawPlateGrade(ctx, w, h, 'gallery', false);
+  const scrim = ctx.createLinearGradient(0, short ? 0 : h * 0.42, 0, h);
+  scrim.addColorStop(0, 'rgba(6,4,8,0)');
+  scrim.addColorStop(short ? 0.2 : 0.35, 'rgba(6,4,8,0.72)');
+  scrim.addColorStop(1, 'rgba(6,4,8,0.88)');
+  ctx.fillStyle = scrim;
+  ctx.fillRect(0, short ? 0 : h * 0.38, w, h);
+  drawValenShade(ctx, short ? w * 0.22 : w * 0.5, short ? h * 0.55 : h * 0.34, short ? 0.42 : 0.62);
   ctx.save();
   ctx.textAlign = short ? 'left' : 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = 'rgba(232,214,190,0.78)';
+  ctx.fillStyle = 'rgba(232,214,190,0.8)';
   ctx.font = `400 ${short ? 11 : 12}px ${SANS}`;
   if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
-  const labelX = short ? winX + winW + 16 : w / 2;
-  ctx.fillText('DAWN', labelX, short ? 28 : Math.max(28, winY - 22));
+  const labelX = short ? w * 0.42 : w / 2;
+  ctx.fillText('DAWN', labelX, short ? 22 : h * 0.46);
   const text = (card && card.text) || 'The house raises a morning. It is not the true one.';
-  ctx.fillStyle = '#f0e6d4';
+  ctx.fillStyle = '#f4eadc';
   ctx.font = `400 ${short ? 14 : 17}px ${SERIF}`;
   if ('letterSpacing' in ctx) ctx.letterSpacing = '0.3px';
-  const maxW = short ? Math.max(120, w - (winX + winW + 28)) : Math.min(w - 48, 420);
-  const lineX = short ? labelX : w / 2;
-  const y0 = short ? 52 : Math.min(h * 0.5, h - 150);
-  wrapText(ctx, text, lineX, y0, maxW, short ? 18 : 24);
+  const maxW = short ? w * 0.52 : Math.min(w - 48, 420);
+  wrapText(ctx, text, labelX, short ? 42 : h * 0.52, maxW, short ? 18 : 24);
   ctx.restore();
   if (t > 0.35) {
     const bw = Math.min(w - 36, short ? 200 : 280);
@@ -1141,22 +1125,14 @@ export function drawDawnCard(game, ctx, w, h) {
 export function drawEnding(game, ctx, w, h) {
   const short = h < 520;
   const t = game.endingT || 0;
-  ctx.save();
-  const g = ctx.createLinearGradient(0, 0, 0, h);
-  g.addColorStop(0, 'rgba(255,206,140,0.5)');
-  g.addColorStop(0.4, 'rgba(90,40,36,0.18)');
-  g.addColorStop(1, 'rgba(4,4,8,0.74)');
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, w, h);
-  ctx.restore();
-  const paneW = short ? Math.min(180, w * 0.32) : Math.min(240, w * 0.62);
-  const paneH = short ? 110 : Math.min(240, h * 0.3);
-  const paneX = short ? 24 : (w - paneW) / 2;
-  const paneY = short ? 18 : 56;
-  drawGlassPanes(ctx, paneX, paneY, paneW, paneH);
-  const endScale = short ? 0.38 : 0.8;
-  const endY = short ? paneY + paneH + 6 + 52 * endScale : paneY + paneH + 28;
-  drawValenShade(ctx, paneX + paneW * 0.5, endY, endScale);
+  drawPlateGrade(ctx, w, h, 'oratory', true);
+  const scrim = ctx.createLinearGradient(0, short ? 0 : h * 0.34, 0, h);
+  scrim.addColorStop(0, 'rgba(6,4,8,0)');
+  scrim.addColorStop(0.4, 'rgba(6,4,8,0.7)');
+  scrim.addColorStop(1, 'rgba(6,4,8,0.9)');
+  ctx.fillStyle = scrim;
+  ctx.fillRect(0, short ? 0 : h * 0.3, w, h);
+  drawValenShade(ctx, short ? w * 0.2 : w * 0.5, short ? h * 0.5 : h * 0.32, short ? 0.36 : 0.58);
   ctx.save();
   ctx.textAlign = short ? 'left' : 'center';
   ctx.textBaseline = 'middle';
@@ -1164,9 +1140,9 @@ export function drawEnding(game, ctx, w, h) {
   ctx.font = `400 ${short ? 14 : 16}px ${SERIF}`;
   if ('letterSpacing' in ctx) ctx.letterSpacing = '0.2px';
   const frame = endingFrame(game.save);
-  const textX = short ? paneX + paneW + 16 : w / 2;
-  const maxW = short ? Math.max(140, w - textX - 16) : Math.min(w - 40, 420);
-  let y = short ? 28 : paneY + paneH + 78;
+  const textX = short ? w * 0.4 : w / 2;
+  const maxW = short ? w * 0.56 : Math.min(w - 40, 420);
+  let y = short ? 18 : h * 0.46;
   y = wrapText(ctx, 'The true dawn is in the glass. The house cannot raise this one.', textX, y, maxW, short ? 18 : 22);
   ctx.fillStyle = 'rgba(214,186,120,0.92)';
   ctx.font = `400 ${short ? 12 : 14}px ${SANS}`;

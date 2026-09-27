@@ -28,6 +28,7 @@ import { clamp, rand, randInt, chance, hash2, hashRange, Rng, TAU } from '../cor
 import { PAL } from '../core/render.js';
 import { DOOR } from '../core/config.js';
 import { drawRoomPlates } from './roomplates.js';
+import { drawRoomMarks } from './narrative.js';
 
 export const ROOM = {
   DINING: 'dining',
@@ -1136,6 +1137,7 @@ export class Mansion {
   drawFloor(ctx) {
     ctx.drawImage(this.floorCanvas, this.bakeOx, this.bakeOy);
     drawRoomPlates(ctx, this);
+    drawRoomMarks(ctx, this);
     if (!this.stakesUp) return;
     ctx.save();
     ctx.fillStyle = '#24160c';

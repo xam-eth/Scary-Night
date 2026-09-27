@@ -59,4 +59,22 @@ export function drawRoomPlates(ctx, mansion) {
   }
 }
 
+/** Cover-crop a photographed room into a screen rect. False if it has not loaded. */
+export function drawPlateCover(ctx, key, x, y, w, h) {
+  const img = imgs[key];
+  if (!ctx || !img || !img.complete || !img.naturalWidth || w < 2 || h < 2) return false;
+  const iw = img.naturalWidth;
+  const ih = img.naturalHeight;
+  const scale = Math.max(w / iw, h / ih);
+  const dw = iw * scale;
+  const dh = ih * scale;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+  ctx.clip();
+  ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+  ctx.restore();
+  return true;
+}
+
 loadRoomPlates();
