@@ -47,10 +47,22 @@ function withPriority(ctx, em, ax, ay, draw) {
   ctx.restore();
 }
 
+function drawTopScrim(ctx, w, h) {
+  const scrimH = Math.min(132, h * 0.18);
+  const g = ctx.createLinearGradient(0, 0, 0, scrimH);
+  g.addColorStop(0, 'rgba(4,5,10,0.78)');
+  g.addColorStop(1, 'rgba(4,5,10,0)');
+  ctx.save();
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, scrimH);
+  ctx.restore();
+}
+
 export function drawHUD(game, ctx, w, h) {
   const pulse = game.hbPulse;
   const em = hudEmphasis(game);
   const phone = w < 840 || h < 500;
+  drawTopScrim(ctx, w, h);
   drawTopBar(game, ctx, w, h, em, pulse);
   drawBuildBadge(game, ctx, w, h, em.badge);
   withPriority(ctx, em.clock, w / 2, phone ? 58 : h * 0.07, () => drawClock(game, ctx, w, h, pulse, em.clock));
@@ -371,12 +383,11 @@ function drawGuidanceStrip(game, ctx, w, h) {
   if (live) return;
   const input = game.input;
   const stick = input && input.stick;
-  const view = game.renderer && game.renderer.view;
-  const framed = view && (view.top > 8 || view.h < h - 8);
   const stickTop = stick && input.gameplay
     ? (stick.homeY || h - 120) - (stick.r || 52)
     : h - 86;
-  const y = framed ? view.top + view.h + 18 : Math.max(h * 0.58, stickTop - 22);
+  // Above the thumb cluster, over the world — never in a reserved black band.
+  const y = Math.min(stickTop - 28, h - 168);
   ctx.save();
   ctx.globalAlpha = fade;
   ctx.textAlign = 'center';
@@ -830,6 +841,13 @@ export function drawTouchControls(game, ctx, w, h) {
   const alive = game.screen === 'playing' || game.screen === 'dying';
   const p = game.player;
   ctx.save();
+  ctx.globalAlpha = alive ? 1 : 0.28;
+  const shade = ctx.createLinearGradient(0, h * 0.58, 0, h);
+  shade.addColorStop(0, 'rgba(4,5,10,0)');
+  shade.addColorStop(0.42, 'rgba(4,5,10,0.22)');
+  shade.addColorStop(1, 'rgba(4,5,10,0.58)');
+  ctx.fillStyle = shade;
+  ctx.fillRect(0, h * 0.58, w, h * 0.42);
   ctx.globalAlpha = alive ? 1 : 0.28;
 
   const s = input.stick;

@@ -89,18 +89,20 @@ export class Renderer {
     this.canvas.style.height = this.h + 'px';
     this.light.width = Math.max(2, Math.floor(this.w * this.lightScale));
     this.light.height = Math.max(2, Math.floor(this.h * this.lightScale));
-    // A tall phone was a map: four rooms stacked, the vampire a speck under
-    // the clock. Letterbox the world between the clock and the thumbs so the
-    // frame is the room she is standing in. Wide screens keep the tuned 3/4.
+    // Portrait fills the canvas. The clock and the thumbs float over the
+    // world — a reserved band read as a broken frame. Wide screens keep the
+    // tuned 3/4. Cover, don't zoom out: she stays near her old size, and the
+    // extra height is house, not void.
     const tall = this.h > this.w * 1.2 && this.h >= 620;
     this.tilt = tall ? 0.56 : this.baseTilt;
-    const top = tall ? 118 : 0;
-    // Room ends above the blood plate, leaving one strip for the caption.
-    const bottom = tall ? Math.max(236, Math.round(this.h * 0.3)) : 0;
-    const vh = Math.max(220, this.h - top - bottom);
-    this.view = { left: 0, top, w: this.w, h: vh, cx: this.w / 2, cy: top + vh / 2 };
-    const basis = tall ? 460 : 1010;
-    this.cam.zoom = clamp(this.view.w / basis, tall ? 0.9 : 0.72, 1.9);
+    this.view = { left: 0, top: 0, w: this.w, h: this.h, cx: this.w / 2, cy: this.h / 2 };
+    if (tall) {
+      const wide = this.view.w / 460;
+      const cover = this.h / (1120 * this.tilt);
+      this.cam.zoom = clamp(Math.max(wide, cover), 0.9, 1.18);
+    } else {
+      this.cam.zoom = clamp(this.view.w / 1010, 0.72, 1.9);
+    }
     this.cam.viewW = this.view.w / this.cam.zoom;
     this.cam.viewH = this.view.h / (this.cam.zoom * this.tilt);
   }

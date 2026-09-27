@@ -717,6 +717,13 @@ if (args.systems) {
   const dawnHeld = game.save.pendingDawn.length;
   game.beginDawn();
   line(game.save.pendingDawn.length === dawnHeld, 'the dawn card does not double-fire');
+  const wide = { w: game.renderer.w, h: game.renderer.h, zoom: game.renderer.cam.zoom };
+  game.renderer.resize(390, 844, 1);
+  const pv = game.renderer.view;
+  line(pv.top === 0 && pv.h === 844 && pv.w === 390, 'a phone canvas is full-bleed, not a middle band');
+  line(game.renderer.cam.zoom >= 0.9 && game.renderer.cam.zoom <= 1.2, `phone cover zoom stays readable (${game.renderer.cam.zoom.toFixed(2)})`);
+  game.renderer.resize(wide.w, wide.h, 1);
+  line(game.renderer.view.top === 0 && game.renderer.view.h === wide.h, 'a wide canvas still fills its frame');
   process.exit(0);
 }
 

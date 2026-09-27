@@ -793,10 +793,10 @@ export class Game {
     const p = this.player;
     const lookX = clamp(p.vx * 0.22, -70, 70);
     const lookY = clamp(p.vy * 0.22, -70, 70);
-    // On a tall phone the player was centered on a blank wall. Sit her a little
-    // lower so the table and the door ahead stay in the frame.
+    // Full-bleed portrait. A small look-ahead keeps the door in frame; the
+    // old -110 was compensating for a letterboxed band.
     const tall = this.renderer.h > this.renderer.w * 1.2;
-    const biasY = tall ? -110 : 0;
+    const biasY = tall ? -48 : 0;
     this.noteRoom(p);
     if (p.lowBlood) this.offerNarrative({ surface: 'strip', event: 'state', state: 'lowBlood', night: (this.save.nightsSurvived || 0) + 1 });
     this.tickStory(dt);
@@ -2149,12 +2149,9 @@ export class Game {
       const framed = view.top > 8 || view.h < h - 8;
       const phone = w < 840 || h < 500;
       const stick = this.input && this.input.stick;
-      const stickTop = stick ? (stick.homeY - stick.r) : h - 80;
-      // One chip, under the vampire and above the blood plate. Never a stack
-      // across the middle of the room.
-      const y = framed
-        ? view.top + view.h + 16
-        : (phone ? stickTop - 28 : h * 0.7);
+      const stickTop = stick ? ((stick.homeY || h - 120) - stick.r) : h - 80;
+      // One chip, above the thumbs. Never a stack across the middle of the room.
+      const y = phone ? Math.min(stickTop - 36, h - 176) : h * 0.72;
       const maxW = Math.min(framed ? view.w - 28 : w * 0.72, phone ? 280 : 560);
       const fontPx = phone ? 12 : 14;
       ctx.font = `500 ${fontPx}px "Segoe UI", Roboto, sans-serif`;
