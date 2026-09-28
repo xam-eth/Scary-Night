@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LAST NIGHT — brand kit</title>
+<style>
+  :root {
+    --ink: #05060b; --bone: #e6e1d2; --ash: #cfc6b0;
+    --blood: #7d1220; --gold: #a8833c; --candle: #ffb257; --moon: #8fb6e8;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ink); color: var(--ash); font-family: Georgia, "Palatino Linotype", serif; }
+  header, section { padding: 40px 6vw; border-top: 1px solid rgba(168,131,60,0.18); }
+  header { border-top: 0; }
+  h1 { font-weight: 400; letter-spacing: 0.18em; font-size: clamp(32px, 6vw, 64px); color: var(--bone); margin: 12px 0 0; }
+  h2 { font-weight: 400; letter-spacing: 0.22em; font-size: 13px; color: var(--gold); }
+  h3 { font-weight: 400; letter-spacing: 0.08em; font-size: 15px; color: var(--bone); margin: 26px 0 8px; }
+  p, li { max-width: 68ch; line-height: 1.6; }
+  .mark { width: 72px; height: 72px; }
+  .rule { width: 140px; height: 1px; background: var(--gold); margin: 14px 0; }
+  .tag { letter-spacing: 0.32em; font: 11px/1 "Segoe UI", Roboto, sans-serif; color: var(--gold); }
+  .muted { color: rgba(207,198,176,0.65); }
+  .row { display: flex; flex-wrap: wrap; gap: 20px; align-items: stretch; }
+  .tile { border: 1px solid rgba(168,131,60,0.35); padding: 22px; display: flex; align-items: center; justify-content: center; }
+  .tile.dark { background: #07080d; }
+  .tile.light { background: #e9e4d6; }
+  .tile img { display: block; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 12px; }
+  .swatch { width: 128px; background: #0c0e14; border: 1px solid rgba(168,131,60,0.35); }
+  .swatch i { display: block; height: 56px; }
+  .swatch b, .swatch span { display: block; padding: 8px 10px 0; font: 12px/1.3 "Segoe UI", Roboto, sans-serif; }
+  .swatch span { padding-bottom: 10px; color: rgba(207,198,176,0.7); }
+  .assets { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
+  .asset { border: 1px solid rgba(168,131,60,0.35); background: #0a0c12; }
+  .asset .frame { background: #07080d center/contain no-repeat; padding: 10px; display:flex; align-items:center; justify-content:center; min-height: 120px; }
+  .asset .frame img { max-width: 100%; max-height: 260px; display: block; }
+  .asset .frame.fill img { width: 100%; height: 190px; object-fit: cover; }
+  .asset figcaption { padding: 10px 12px 12px; font: 12px/1.5 "Segoe UI", Roboto, sans-serif; color: rgba(207,198,176,0.85); border-top: 1px solid rgba(168,131,60,0.25); }
+  .asset b { color: var(--bone); font-weight: 600; }
+  .asset a { color: var(--gold); text-decoration: none; }
+  .asset a:hover { text-decoration: underline; }
+  .phones { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; }
+  .phone { width: min(240px, 70vw); border: 1px solid rgba(168,131,60,0.45); }
+  .phone img { width: 100%; display: block; }
+  .phone figcaption { padding: 8px 10px; font: 11px/1.4 "Segoe UI", Roboto, sans-serif; color: rgba(207,198,176,0.8); }
+  table { border-collapse: collapse; font: 12px/1.6 "Segoe UI", Roboto, sans-serif; }
+  td, th { border: 1px solid rgba(168,131,60,0.3); padding: 6px 10px; text-align: left; color: var(--ash); }
+  th { color: var(--gold); font-weight: 600; letter-spacing: 0.08em; }
+  code { font: 12px Consolas, Menlo, monospace; color: var(--candle); }
+  ul.donts li::marker { color: var(--blood); }
+  ul.dos li::marker { color: var(--gold); }
+</style>
+</head>
+<body>
+  <header>
+    <img class="mark" src="../assets/brand/mark.svg" alt="" />
+    <h1>LAST NIGHT</h1>
+    <div class="rule"></div>
+    <div class="tag">BRAND KIT · SURVIVE UNTIL DAWN</div>
+    <p>The identity of a quiet horror: candlelight against ink, gold against bone.
+    Everything here is generated from <code>tools/brandkit.mjs</code> — edit that file, re-run it,
+    and every asset below is rebuilt. The plates and the mark are the source of truth;
+    this page is the rulebook.</p>
+  </header>
+
+  <section>
+    <h2>01 · THE MARK</h2>
+    <p>The mark is a door in a ring of night: the crescent moon (the night that owns her),
+    the arched servant door (the choice — bar it or open it), the candle window (hunger,
+    light, life), and one drop of blood below the threshold. It reads at 32&nbsp;px and it
+    reads on a billboard; never redraw it, never recolor it.</p>
+    <div class="row">
+      <div class="tile dark" style="width:220px;height:220px"><img src="../assets/brand/mark.svg" width="150" height="150" alt="The door mark on ink" /></div>
+      <div class="tile light" style="width:220px;height:220px"><img src="../assets/brand/mark.svg" width="150" height="150" alt="The door mark on bone" /></div>
+    </div>
+    <h3>Clearspace &amp; minimum size</h3>
+    <ul class="dos">
+      <li>Clearspace on all sides equals the moon’s diameter (≈ 12 mark-units).</li>
+      <li>Minimum size: 24&nbsp;px on screen, 8&nbsp;mm in print. Below that, use the ring + door only.</li>
+      <li>On photography, place the mark only over shadowed areas; add a 40–60% ink shade behind it if needed.</li>
+    </ul>
+    <h3>Never</h3>
+    <ul class="donts">
+      <li>Never rotate, skew, outline, drop-shadow or gradient-fill the mark.</li>
+      <li>Never swap the blood drop for red brighter than Blood #7d1220 — the horror is quiet.</li>
+      <li>Never place type inside the ring, and never paint a second title over the plates.</li>
+    </ul>
+    <p class="muted">Files: <a href="../assets/brand/mark.svg" style="color:var(--gold)">mark.svg</a> · rasterised inside <b>icon-512 / 192 / 32</b>.</p>
+  </section>
+
+  <section>
+    <h2>02 · LOCKUPS</h2>
+    <p>The vertical lockup is the default. The horizontal lockup is for wide placements
+    (banners, headers, press). The wordmark alone is for captions and watermarks.
+    Bone over ink is the house style; the ink variant exists for light paper only.</p>
+    <div class="row">
+      <div class="tile dark" style="flex:1;min-width:260px"><img src="../assets/brand/lockup-vertical.png" style="width:min(300px,70%)" alt="Vertical lockup, bone on ink" /></div>
+      <div class="tile light" style="flex:1;min-width:260px"><img src="../assets/brand/lockup-vertical-ink.png" style="width:min(300px,70%)" alt="Vertical lockup, ink on bone" /></div>
+    </div>
+    <div class="row" style="margin-top:20px">
+      <div class="tile dark" style="flex:1;min-width:320px"><img src="../assets/brand/lockup-horizontal.png" style="width:min(640px,95%)" alt="Horizontal lockup, bone on ink" /></div>
+    </div>
+    <div class="row" style="margin-top:20px">
+      <div class="tile light" style="flex:1;min-width:320px"><img src="../assets/brand/lockup-horizontal-ink.png" style="width:min(640px,95%)" alt="Horizontal lockup, ink on bone" /></div>
+    </div>
+    <p class="muted">Vector: <a href="../assets/brand/logo-vertical.svg" style="color:var(--gold)">logo-vertical.svg</a> ·
+    <a href="../assets/brand/logo-horizontal.svg" style="color:var(--gold)">logo-horizontal.svg</a> ·
+    <a href="../assets/brand/wordmark.svg" style="color:var(--gold)">wordmark.svg</a>.
+    Transparent PNG: <a href="../assets/brand/lockup-vertical.png" style="color:var(--gold)">vertical</a> ·
+    <a href="../assets/brand/lockup-horizontal.png" style="color:var(--gold)">horizontal</a> (+ <b>-ink</b> variants).</p>
+  </section>
+
+  <section>
+    <h2>03 · COLOUR</h2>
+    <p>Ink carries ~70% of every composition. Bone and ash are the voice; gold and candle
+    are the light; blood and moon appear only as accents (~3%). If a layout needs more
+    red than the drop in the mark, it is not LAST NIGHT.</p>
+    <div class="swatches">
+      <div class="swatch"><i style="background:#05060b"></i><b>Ink</b><span>#05060b · ground</span></div>
+      <div class="swatch"><i style="background:#e6e1d2"></i><b>Bone</b><span>#e6e1d2 · wordmark</span></div>
+      <div class="swatch"><i style="background:#cfc6b0"></i><b>Ash</b><span>#cfc6b0 · body, moon-shade</span></div>
+      <div class="swatch"><i style="background:#7d1220"></i><b>Blood</b><span>#7d1220 · the drop, alerts</span></div>
+      <div class="swatch"><i style="background:#a8833c"></i><b>Gold</b><span>#a8833c · ring, rules, tagline</span></div>
+      <div class="swatch"><i style="background:#ffb257"></i><b>Candle</b><span>#ffb257 · window, glow</span></div>
+      <div class="swatch"><i style="background:#8fb6e8"></i><b>Moon</b><span>#8fb6e8 · night light, fog</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>04 · TYPE</h2>
+    <p><b style="color:var(--bone)">Display — Gelasio / Georgia, tracked caps.</b> The wordmark sets
+    letter-spacing at 0.16&nbsp;em; the tagline at 0.40&nbsp;em. Headlines always set in caps with
+    0.10–0.22&nbsp;em. Never bold the display face — hierarchy comes from size, tracking and gold.</p>
+    <p><b style="color:var(--bone)">Labels — Lato / Segoe UI.</b> Small caps labels, buttons and chips
+    (0.30–0.45&nbsp;em tracking), never larger than 26&nbsp;px in a 1080&nbsp;px composition.</p>
+    <p><b style="color:var(--bone)">Data — Consolas / Menlo.</b> Clocks, seeds, telemetry: the house
+    keeps records. Mono appears in product UI, not in marketing.</p>
+    <p style="font-size:34px;letter-spacing:0.16em;color:var(--bone)">Aa Bb Cc — THE HOUSE REMEMBERS</p>
+    <p style="font:14px 'Segoe UI',Roboto,sans-serif;letter-spacing:0.4em;color:var(--gold)">A VAMPIRE SURVIVAL HORROR</p>
+    <p style="font:13px Consolas,Menlo,monospace;color:var(--candle)">00:00 → 05:00 · seed 42 · nightHeat 3</p>
+  </section>
+
+  <section>
+    <h2>05 · VOICE</h2>
+    <p>The brand speaks like the house: spare, ominous, honest. Short sentences. No exclamation
+    marks, no hype, no emojis. The tagline is a promise, not a shout.</p>
+    <ul class="dos">
+      <li>“Survive until dawn.” — the only call to action that matters.</li>
+      <li>“The house remembers.” / “Something knocks.” — mystery lines for teases.</li>
+      <li>“Play free in your browser.” — the plain, honest CTA for store &amp; social.</li>
+    </ul>
+    <ul class="donts">
+      <li>Never “EPIC”, “EXTREME”, “#1”, “jump-scare” language. The horror is psychological.</li>
+      <li>Never explain the monster in marketing. Imply, never expose.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>06 · ART DIRECTION</h2>
+    <p>Two registered styles. <b style="color:var(--bone)">Key art</b> is the painted plate: a gothic
+    house at night, one lit window, fog, moonlight — photoreal, desaturated, ink-shadowed.
+    <b style="color:var(--bone)">Night motif</b> is the procedural silhouette (moon, spires, pines,
+    fog) used for wide banners where no plate exists. Both keep the 70% ink rule.</p>
+    <div class="phones">
+      <figure class="phone"><img src="../assets/brand/loading-9x16.jpg" alt="Key art plate: the house exterior" /><figcaption>KEY ART · EXTERIOR · 768×1365</figcaption></figure>
+      <figure class="phone"><img src="../assets/brand/menu-9x16.jpg" alt="Key art plate: the great hall" /><figcaption>KEY ART · INTERIOR · 768×1365</figcaption></figure>
+    </div>
+    <p class="muted">Do not paint a second title on top of the plates — they already carry the lockup.</p>
+  </section>
+
+  <section>
+    <h2>07 · STORE ASSETS</h2>
+    <div class="assets">
+      <figure class="asset"><div class="frame"><img src="../assets/brand/icon-512.png" style="width:160px;height:160px" alt="App icon 512" /></div>
+        <figcaption><b>icon-512.png</b> · 512×512 · Google Play hi-res icon. Also shipped as <b>icon-192</b> and <b>icon-32</b> (favicon). <a href="../assets/brand/icon-512.png" download>download</a></figcaption></figure>
+      <figure class="asset"><div class="frame"><img src="../assets/brand/feature-1024x500.png" style="width:100%" alt="Feature graphic" /></div>
+        <figcaption><b>feature-1024x500.png</b> · Play feature graphic, night-motif style. <a href="../assets/brand/feature-1024x500.png" download>download</a></figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>08 · SOCIAL TEMPLATES</h2>
+    <p>Ready placements. Key-art crops for feed and story; the night motif for wide headers.
+    All of them are rebuilt by <code>node tools/brandkit.mjs</code>.</p>
+    <div class="assets">
+      <figure class="asset"><div class="frame fill"><img src="../assets/brand/post-1080x1080.png" alt="Instagram square post" /></div>
+        <figcaption><b>post-1080x1080.png</b> · Instagram / feed square. <a href="../assets/brand/post-1080x1080.png" download>download</a></figcaption></figure>
+      <figure class="asset"><div class="frame fill"><img src="../assets/brand/post-1200x675.png" alt="Share post landscape" /></div>
+        <figcaption><b>post-1200x675.png</b> · X / Facebook link post. <a href="../assets/brand/post-1200x675.png" download>download</a></figcaption></figure>
+      <figure class="asset"><div class="frame fill"><img src="../assets/brand/story-1080x1920.png" alt="Story / Reels" /></div>
+        <figcaption><b>story-1080x1920.png</b> · IG / TikTok story, Reels cover. <a href="../assets/brand/story-1080x1920.png" download>download</a></figcaption></figure>
+      <figure class="asset"><div class="frame fill"><img src="../assets/brand/thumb-1280x720.png" alt="Video thumbnail" /></div>
+        <figcaption><b>thumb-1280x720.png</b> · YouTube / video thumbnail base. <a href="../assets/brand/thumb-1280x720.png" download>download</a></figcaption></figure>
+      <figure class="asset"><div class="frame fill"><img src="../assets/brand/banner-youtube-2560x1440.png" alt="YouTube channel banner" /></div>
+        <figcaption><b>banner-youtube-2560x1440.png</b> · YouTube channel art (safe area centred). <a href="../assets/brand/banner-youtube-2560x1440.png" download>download</a></figcaption></figure>
+      <figure class="asset"><div class="frame fill"><img src="../assets/brand/header-x-1500x500.png" alt="X header" /></div>
+        <figcaption><b>header-x-1500x500.png</b> · X / Twitter header. <a href="../assets/brand/header-x-1500x500.png" download>download</a></figcaption></figure>
+      <figure class="asset"><div class="frame fill"><img src="../assets/brand/cover-facebook-820x312.png" alt="Facebook cover" /></div>
+        <figcaption><b>cover-facebook-820x312.png</b> · Facebook page cover. <a href="../assets/brand/cover-facebook-820x312.png" download>download</a></figcaption></figure>
+      <figure class="asset"><div class="frame fill"><img src="../assets/brand/banner-discord-960x540.png" alt="Discord banner" /></div>
+        <figcaption><b>banner-discord-960x540.png</b> · Discord server banner. <a href="../assets/brand/banner-discord-960x540.png" download>download</a></figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>09 · FILE INDEX</h2>
+    <table>
+      <tr><th>File</th><th>Size</th><th>Use</th></tr>
+      <tr><td>mark.svg</td><td>vector</td><td>the mark, any size</td></tr>
+      <tr><td>logo-vertical.svg / lockup-vertical.png (+ -ink)</td><td>vector / 1200×900</td><td>default lockup</td></tr>
+      <tr><td>logo-horizontal.svg / lockup-horizontal.png (+ -ink)</td><td>vector / 1800×460</td><td>wide placements</td></tr>
+      <tr><td>wordmark.svg</td><td>vector</td><td>captions, watermarks</td></tr>
+      <tr><td>icon-512 / 192 / 32.png</td><td>512 · 192 · 32</td><td>store icon, PWA, favicon</td></tr>
+      <tr><td>feature-1024x500.png</td><td>1024×500</td><td>Google Play feature graphic</td></tr>
+      <tr><td>post-1080x1080.png</td><td>1080×1080</td><td>feed square</td></tr>
+      <tr><td>post-1200x675.png</td><td>1200×675</td><td>link share</td></tr>
+      <tr><td>story-1080x1920.png</td><td>1080×1920</td><td>story / reels</td></tr>
+      <tr><td>thumb-1280x720.png</td><td>1280×720</td><td>video thumbnail</td></tr>
+      <tr><td>banner-youtube-2560x1440.png</td><td>2560×1440</td><td>YouTube channel art</td></tr>
+      <tr><td>header-x-1500x500.png</td><td>1500×500</td><td>X header</td></tr>
+      <tr><td>cover-facebook-820x312.png</td><td>820×312</td><td>Facebook cover</td></tr>
+      <tr><td>banner-discord-960x540.png</td><td>960×540</td><td>Discord banner</td></tr>
+      <tr><td>loading-9x16.jpg · menu-9x16.jpg</td><td>768×1365</td><td>key art plates</td></tr>
+    </table>
+    <p class="muted">Regenerate everything: <code>cd tools &amp;&amp; npm i &amp;&amp; node brandkit.mjs</code>.
+    Fonts for the raster pipeline live in <code>tools/fonts/</code> (Gelasio — metric-compatible with the
+    in-game Georgia — and Lato for labels).</p>
+  </section>
+</body>
+</html>
