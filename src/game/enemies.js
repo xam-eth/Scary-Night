@@ -13,6 +13,7 @@
  */
 
 import { clamp, lerp, damp, TAU, rand, randInt, chance, dist, dist2, approachAngle, angDiff, visualAngle, Rng } from '../core/util.js';
+import { paintContactShadow } from './enemy3d.js';
 import { ENEMY_TYPES, VARIANTS } from '../core/config.js';
 import { ROOM } from './mansion.js';
 
@@ -295,6 +296,16 @@ export class Enemy {
     this.speak(dt, game, sees);
     this.behave(dt, game, sees);
     this.postUpdate(dt, game);
+    const step = Math.hypot(this.vx, this.vy);
+    if (step > 18) {
+      this._stepT = (this._stepT || 0) - dt;
+      if (this._stepT <= 0) {
+        this._stepT = this.key === 'werewolf' ? 0.28 : 0.42;
+        game.particles.burst('dust', this.x, this.y + 4, 2, {
+          color: 'rgba(40,36,30,0.45)', speedMin: 6, speedMax: 22, lifeMin: 0.12, lifeMax: 0.28, sizeMin: 1.2, sizeMax: 2.4,
+        });
+      }
+    }
     // A closed inner gate is a wall. If they are grinding on it, they have to break it.
     if (!this.dead && this.stuckT > 0.5 && this.state !== ESTATE.BREACH && this.state !== ESTATE.CLIMB && this.state !== ESTATE.LEAVE) {
       let near = null, best = 96;
@@ -632,9 +643,7 @@ export class Crawler extends Enemy {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.globalAlpha = this.alpha;
-    // shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.45)';
-    ctx.beginPath(); ctx.ellipse(0, 6, 13, 6, 0, 0, TAU); ctx.fill();
+    paintContactShadow(ctx, this, game, 13, 5.5);
     ctx.rotate(visualAngle(this.angle, game.renderer.tilt));
     if (dying) { ctx.rotate(k * 1.2); ctx.translate(k * 4, 0); ctx.scale(1, 1 - k * 0.5); }
 
@@ -736,8 +745,7 @@ export class Zombie extends Crawler {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.globalAlpha = this.alpha;
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.beginPath(); ctx.ellipse(0, 8, 12, 5, 0, 0, TAU); ctx.fill();
+    paintContactShadow(ctx, this, game, 12, 5);
     ctx.rotate(visualAngle(this.angle, game.renderer.tilt));
     if (dying) { ctx.rotate(k * 0.8); ctx.scale(1, 1 - k * 0.4); }
     const step = Math.sin(t * 3.2 + this.id) * 3;
@@ -868,8 +876,7 @@ export class Hunter extends Enemy {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.globalAlpha = this.alpha;
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.beginPath(); ctx.ellipse(0, 7, 14, 7, 0, 0, TAU); ctx.fill();
+    paintContactShadow(ctx, this, game, 14, 6);
     ctx.rotate(visualAngle(this.angle, game.renderer.tilt) + (dying ? k * 1.35 : 0));
     if (dying) { ctx.scale(1, 1 - k * 0.6); ctx.translate(k * 6, 0); }
 
@@ -1138,8 +1145,7 @@ export class Werewolf extends Enemy {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.globalAlpha = this.alpha;
-    ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    ctx.beginPath(); ctx.ellipse(0, 12, 26, 12, 0, 0, TAU); ctx.fill();
+    paintContactShadow(ctx, this, game, 22, 9);
     ctx.rotate(visualAngle(this.angle, game.renderer.tilt) + (dying ? k * 1.2 : 0));
     if (dying) { ctx.rotate(k * 0.5); ctx.translate(k * 6, 0); ctx.scale(1, 1 - k * 0.55); }
 
@@ -1401,8 +1407,7 @@ export class Stalker extends Enemy {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.globalAlpha = this.alpha * (frozen > 0.5 ? 0.92 : 1);
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.beginPath(); ctx.ellipse(0, 10, 12, 6, 0, 0, TAU); ctx.fill();
+    paintContactShadow(ctx, this, game, 12, 5.5);
     const sway = Math.sin(t * 6) * 3 * walking;
     // the coat: too long for the body inside it
     ctx.fillStyle = '#0a0a10';

@@ -204,6 +204,47 @@ export class Renderer {
     return Math.abs(x - c.x) < c.viewW / 2 + pad && Math.abs(y - c.y) < c.viewH / 2 + pad;
   }
 
+  /**
+   * Same lamps the world uses, sampled at a floor point. Multiply cannot
+   * light a near-black body, so enemy draw reads this and grades itself.
+   */
+  shadeAt(x, y, game) {
+    const lights = (game && game.mansion && game.mansion.lights) || [];
+    let r = 22, g = 26, b = 38;
+    let keyX = -0.4, keyY = -0.8, keyW = 0.15;
+    let lit = 0.12;
+    for (const l of lights) {
+      if (l.on === false) continue;
+      const dx = x - l.x;
+      const dy = y - l.y;
+      const d = Math.hypot(dx, dy);
+      const rad = l.r || 160;
+      const fall = Math.max(0, 1 - d / rad);
+      const i = (l.curI ?? l.i ?? 0) * fall * fall;
+      if (i < 0.02) continue;
+      const c = l.color || [255, 186, 120];
+      r += c[0] * i * 0.45;
+      g += c[1] * i * 0.45;
+      b += c[2] * i * 0.45;
+      lit += i;
+      if (i > keyW) { keyW = i; keyX = dx; keyY = dy; }
+    }
+    const p = game && game.player;
+    if (p && p.lightR) {
+      const d = Math.hypot(x - p.x, y - p.y);
+      const fall = Math.max(0, 1 - d / p.lightR);
+      const i = (p.lightI || 0) * fall;
+      r += 176 * i;
+      g += 194 * i;
+      b += 224 * i;
+      lit += i;
+    }
+    return {
+      r: Math.min(255, r), g: Math.min(255, g), b: Math.min(255, b),
+      lit: Math.min(1, lit), keyX, keyY, keyW,
+    };
+  }
+
   /* ---------------- lighting ---------------- */
   lightBegin(ambient) {
     const lc = this.lightCtx;

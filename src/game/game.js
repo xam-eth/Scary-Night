@@ -19,7 +19,7 @@ import {
   NIGHT_DURATION, DAWN_AT, COUNTDOWN_AT, SILENCE_AT, PANIC_AT, PLAYER, DOOR, RES,
   phaseAt, DIFFICULTY, TUNING, UPGRADES, upgradeLevel, SHARDS, CODEX, nightHeat, threatMix,
 } from '../core/config.js';
-import { Mansion, ROOM } from './mansion.js';
+import { Mansion, ROOM, isTallProp, propFootY, drawFurnitureShape } from './mansion.js';
 import { Player, PSTATE } from './player.js';
 import { Enemy, Crawler, Hunter, Werewolf, Bolt } from './enemies.js';
 import { Director, MOOD } from './director.js';
@@ -32,6 +32,7 @@ import { House } from './house.js';
 import { Haunts } from './haunts.js';
 import { Ads } from '../shop/ads.js';
 import { Valen3D } from './valen3d.js';
+import { Enemy3D } from './enemy3d.js';
 import { IAP } from '../shop/iap.js';
 import { drawHUD, drawWorldPrompts, urgentGuidance, pauseButtonBox, weaponChipBox } from './hud.js';
 import { WEAPONS, weaponById, nextWeapon } from './weapons.js';
@@ -2071,17 +2072,48 @@ export class Game {
       ctx.restore();
     }
 
-    // ---------- entities (sorted by y for a pseudo-3D read) ----------
-    const ents = [];
-    for (const e of this.enemies) ents.push(e);
-    ents.sort((a, b) => (a.y - b.y));
-    // enemies under the player if further up the screen
-    let playerDrawn = false;
-    for (const e of ents) {
-      if (!playerDrawn && e.y > p.y) { this.drawPlayerLayer(ctx); playerDrawn = true; }
+    // ---------- bodies and tall props, one depth order ----------
+    // A table in front of a crawler hides the crawler. A body in front of the
+    // table hides the table. Valen uses the same foot-y as the swarm.
+    Enemy3D.assign(this.enemies, p);
+    const layer = [];
+    for (const e of this.enemies) layer.push({ y: e.y, enemy: e });
+    for (const f of m.furniture) {
+      if (!isTallProp(f)) continue;
+      layer.push({ y: propFootY(f), prop: f });
+    }
+    layer.push({ y: p.y, player: true });
+    for (const proof of Enemy3D.proofs || []) layer.push({ y: proof.y, proof });
+    layer.sort((a, b) => a.y - b.y);
+    for (const item of layer) {
+      if (item.player) { this.drawPlayerLayer(ctx); continue; }
+      if (item.prop) {
+        const f = item.prop;
+        if (!r.isVisible(f.x, f.y, Math.max(f.w, f.h) + 60)) continue;
+        ctx.save();
+        drawFurnitureShape(ctx, f, this, t);
+        ctx.restore();
+        continue;
+      }
+      if (item.proof) {
+        if (!r.isVisible(item.proof.x, item.proof.y, 160)) continue;
+        ctx.save();
+        r.upright(ctx, item.proof.x, item.proof.y);
+        Enemy3D.draw(ctx, item.proof, this);
+        ctx.restore();
+        continue;
+      }
+      const e = item.enemy;
       if (!r.isVisible(e.x, e.y, 120)) continue;
-      ctx.save(); r.upright(ctx, e.x, e.y);
-      e.draw(ctx, this);
+      ctx.save();
+      r.upright(ctx, e.x, e.y);
+      if (!e.dead && Math.hypot(e.vx, e.vy) > 16) {
+        const ph = Math.sin(t * (e.key === 'werewolf' ? 16 : 9) + e.id);
+        ctx.translate(e.x, e.y);
+        ctx.scale(1 + ph * 0.03, 1 - Math.abs(ph) * 0.035);
+        ctx.translate(-e.x, -e.y);
+      }
+      if (!Enemy3D.draw(ctx, e, this)) e.draw(ctx, this);
       ctx.restore();
       // v1.0 variant tell: a cold tint ring — readable at a glance in the dark
       if (e.variant && e.tint && !e.dead) {
@@ -2093,7 +2125,6 @@ export class Game {
         ctx.restore();
       }
     }
-    if (!playerDrawn) this.drawPlayerLayer(ctx);
     this.drawFoodCues(ctx);
     this.drawDrinks(ctx);
 
@@ -2105,7 +2136,7 @@ export class Game {
     }
 
     // ---------- furniture + architecture above the floor ----------
-    m.drawFurniture(ctx, this);
+    m.drawFurniture(ctx, this, { skipTall: true });
     m.drawEntrances(ctx, this);
     m.drawLightFixtures(ctx, this);
 
@@ -2170,6 +2201,7 @@ export class Game {
     }
 
     // ---------- character self-light (moonlight on the GLB frame) ----------
+    Enemy3D.paintLit(ctx, this);
     this.player.drawAfterDark(ctx, this);
 
     // ---------- warm additive pass ----------

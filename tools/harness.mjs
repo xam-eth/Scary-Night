@@ -760,7 +760,32 @@ if (args.systems) {
   const wide = { w: game.renderer.w, h: game.renderer.h, zoom: game.renderer.cam.zoom };
   game.renderer.resize(390, 844, 1);
   const pv = game.renderer.view;
-  line(pv.top === 0 && pv.h === 844 && pv.w === 390, 'a phone canvas is full-bleed, not a middle band');
+  const { selectGlbSlots, ENEMY_GLB_CAP, ENEMY_MODELS, requiredClips, SlotBook, Enemy3D } = await import('../src/game/enemy3d.js');
+  const { Crawler } = await import('../src/game/enemies.js');
+  const swarm = Array.from({ length: 24 }, (_, i) => ({ id: i + 1, key: 'crawler', dead: false, x: i * 30, y: 0 }));
+  const capped = selectGlbSlots(swarm, { x: 0, y: 0 }, ENEMY_GLB_CAP, () => true);
+  line(capped.length === ENEMY_GLB_CAP && capped[0].id === 1, `nearest ${ENEMY_GLB_CAP} are the skinned cap`);
+  line(selectGlbSlots(swarm, { x: 0, y: 0 }, ENEMY_GLB_CAP, () => false).length === 0, 'an unready model stays on the 2D path');
+  line(!ENEMY_MODELS.zombie.map.walk && ENEMY_MODELS.zombie.map.die === 'defeat_03' && requiredClips('werewolf')[0] === 'run', 'zombie flee is not a walk');
+  const book = new SlotBook(ENEMY_GLB_CAP);
+  book.sync(capped);
+  book.sync([]);
+  const reused = book.sync(capped.map((e) => ({ ...e, id: e.id + 50 })));
+  line(reused.made === ENEMY_GLB_CAP && reused.live === ENEMY_GLB_CAP, 'the pool reuses a dead slot instead of allocating');
+  game.freshRun();
+  game.screen = 'playing';
+  game.enemies = [];
+  for (let i = 0; i < 30; i++) game.enemies.push(new Crawler(400 + (i % 6) * 28, 900 + Math.floor(i / 6) * 24, {}));
+  let swarmThrew = false;
+  try { for (let i = 0; i < 8; i++) { game.update(dt); game.render(); } }
+  catch (err) { swarmThrew = true; console.log(err); }
+  line(!swarmThrew && game.enemies.length === 30, 'a full swarm still fights when no enemy GLB is behavior-ready');
+  line(Enemy3D.diagnostics().skinned <= ENEMY_GLB_CAP, `skinned meshes stay inside the cap (${Enemy3D.diagnostics().skinned})`);
+  Enemy3D.forceFail('zombie');
+  try { game.render(); } catch (err) { swarmThrew = true; }
+  line(!swarmThrew && game.screen === 'playing', 'a forced load failure leaves the night on the 2D bodies');
+  game.renderer.resize(390, 844, 1);
+  line(game.renderer.view.top === 0 && game.renderer.view.h === 844 && game.renderer.view.w === 390, 'a phone canvas is full-bleed, not a middle band');
   line(game.renderer.cam.zoom >= 0.9 && game.renderer.cam.zoom <= 1.2, `phone cover zoom stays readable (${game.renderer.cam.zoom.toFixed(2)})`);
   game.renderer.resize(wide.w, wide.h, 1);
   line(game.renderer.view.top === 0 && game.renderer.view.h === wide.h, 'a wide canvas still fills its frame');

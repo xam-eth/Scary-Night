@@ -142,6 +142,65 @@ try {
   await new Promise((r) => setTimeout(r, 280));
   await shoot(page, '04c-shot');
 
+  const enemyDiag = await page.evaluate(async () => {
+    const started = performance.now();
+    let diag = window.__LN_API.enemy3d();
+    while (diag?.types?.zombie?.loading && performance.now() - started < 20000) {
+      await new Promise((r) => setTimeout(r, 250));
+      diag = window.__LN_API.enemy3d();
+    }
+    return diag;
+  });
+  console.log('enemy3d:', JSON.stringify(enemyDiag));
+  const spots = await page.evaluate(() => {
+    const g = window.__LN;
+    const lamp = g.mansion.lights.find((l) => l.id === 'chandelier') || g.mansion.lights[0];
+    let dark = { x: 1700, y: 980, lit: 1 };
+    const room = g.mansion.rooms.basement;
+    const blocked = (x, y) => g.mansion.furniture.some((f) => x > f.x - 18 && x < f.x + f.w + 18 && y > f.y - 10 && y < f.y + f.h + 16);
+    for (let y = room.y + 70; y < room.y + room.h - 70; y += 28) {
+      for (let x = room.x + 70; x < room.x + room.w - 70; x += 28) {
+        if (blocked(x, y)) continue;
+        const shade = g.renderer.shadeAt(x, y, g);
+        if (shade.lit < dark.lit) dark = { x, y, lit: shade.lit };
+      }
+    }
+    return { lamp: { x: lamp.x, y: lamp.y }, dark };
+  });
+  console.log('enemy spots', JSON.stringify(spots));
+  await page.evaluate((spots) => {
+    const g = window.__LN;
+    if (!g._followHeld) g._followHeld = g.renderer.followCamera.bind(g.renderer);
+    g.renderer.followCamera = () => {};
+    g.player.x = spots.lamp.x - 8;
+    g.player.y = spots.lamp.y + 78;
+    g.renderer.snapCamera(spots.lamp.x, spots.lamp.y + 36);
+    window.__LN_API.enemyProof('zombie', spots.lamp.x + 34, spots.lamp.y + 16);
+    g.render();
+  }, spots);
+  await shoot(page, '12-enemy-lit');
+  await page.evaluate((spots) => {
+    const g = window.__LN;
+    if (!g._followHeld) g._followHeld = g.renderer.followCamera.bind(g.renderer);
+    g.renderer.followCamera = () => {};
+    g._updateHeld = g.update.bind(g);
+    g.update = () => {};
+    g.player.lightR = 0;
+    g.player.lightI = 0;
+    g.player.x = spots.dark.x - 36;
+    g.player.y = spots.dark.y + 36;
+    g.renderer.snapCamera(spots.dark.x, spots.dark.y + 10);
+    window.__LN_API.enemyProof('zombie', spots.dark.x + 8, spots.dark.y);
+    g.render();
+  }, spots);
+  await shoot(page, '13-enemy-dark');
+  await page.evaluate(() => {
+    const g = window.__LN;
+    if (g._updateHeld) g.update = g._updateHeld;
+    if (g._followHeld) g.renderer.followCamera = g._followHeld;
+    window.__LN_API.clearEnemyProof();
+  });
+
   // low blood: eye-glow tell + panic tint territory
   await page.evaluate(() => {
     window.__LN_API.setTime(262);

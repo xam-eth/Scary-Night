@@ -1536,10 +1536,11 @@ export class Mansion {
     }
   }
 
-  drawFurniture(ctx, game) {
+  drawFurniture(ctx, game, opts = {}) {
     const t = game.time;
     for (const f of this.furniture) {
       if (f.type === 'none') continue;
+      if (opts.skipTall && isTallProp(f)) continue;
       if (!game.renderer.isVisible(f.x, f.y, Math.max(f.w, f.h) + 60)) continue;
       ctx.save();
       drawFurnitureShape(ctx, f, game, t);
@@ -1806,6 +1807,16 @@ export class Mansion {
   }
 }
 
+/** A prop tall enough to hide a body standing behind it. Rails stay with the floor pass. */
+export function isTallProp(f) {
+  if (!f || f.type === 'none' || f.type === 'stairRail') return false;
+  return (f.h || 0) >= 48;
+}
+
+export function propFootY(f) {
+  return f.y + (f.h || 0);
+}
+
 /* ================= furniture drawing ================= */
 
 function shade(hex, mul) {
@@ -1835,7 +1846,7 @@ function shadowBlob(ctx, x, y, w, h, a = 0.45) {
   ctx.restore();
 }
 
-function drawFurnitureShape(ctx, f, game, t) {
+export function drawFurnitureShape(ctx, f, game, t) {
   const x = f.x, y = f.y, w = f.w, h = f.h;
   switch (f.type) {
     /* ---- v1.0: chapel + conservatory furniture ---- */

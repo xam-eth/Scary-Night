@@ -11,6 +11,7 @@ import { phaseAt } from './core/config.js';
 import { drawTouchControls } from './game/hud.js';
 import { drawCoach } from './game/coach.js';
 import { Valen3D } from './game/valen3d.js';
+import { Enemy3D } from './game/enemy3d.js';
 import { Ads } from './shop/ads.js';
 import { IAP } from './shop/iap.js';
 
@@ -78,6 +79,15 @@ window.__LN_API = {
   hold: (action, on) => { input.keys[action] = !!on; },
   valen: () => Valen3D.diagnostics(),
   retryValen: () => Valen3D.retry(),
+  enemy3d: () => Enemy3D.diagnostics(),
+  enemyProof: (key, x, y) => Enemy3D.setProofs([{ key, x, y }]),
+  enemyFrame: (key) => {
+    const rec = Enemy3D.types[key];
+    const frame = rec && rec.preview;
+    return frame ? frame.toDataURL('image/png') : null;
+  },
+  clearEnemyProof: () => Enemy3D.setProofs(null),
+  forceEnemyFail: (key) => Enemy3D.forceFail(key),
   setWeapon: (id) => game.setWeapon(id),
   moveTo: (x, y) => {
     const p = game.player;
@@ -149,7 +159,9 @@ if (veil) {
     requestAnimationFrame(tick);
   };
   Valen3D.init();
+  Enemy3D.init();
   requestAnimationFrame(tick);
 } else {
   Valen3D.init();
+  Enemy3D.init();
 }

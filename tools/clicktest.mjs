@@ -186,6 +186,29 @@ await clickOk('SETTINGS', 'settings');
   }
 }
 
+console.log('\n=== ENEMY GLB FALLBACK ===');
+{
+  const d = await page.evaluate(async () => {
+    const started = performance.now();
+    let diag = window.__LN_API.enemy3d();
+    while (diag && diag.types && diag.types.zombie && diag.types.zombie.loading && performance.now() - started < 8000) {
+      await new Promise((r) => setTimeout(r, 200));
+      diag = window.__LN_API.enemy3d();
+    }
+    window.__LN.screen = 'playing';
+    window.__LN.enemies = window.__LN.enemies || [];
+    window.__LN.render();
+    window.__LN_API.forceEnemyFail('zombie');
+    window.__LN.render();
+    return window.__LN_API.enemy3d();
+  });
+  const z = d && d.types && d.types.zombie;
+  ok('enemy diagnostics are on the same path as Valen', !!z, JSON.stringify(z || d));
+  ok('zombie is not driven until walk and attack exist', !!(z && z.behaviorReady === false),
+    z ? `missing=${(z.missing || []).join(',')} clips=${(z.clips || []).join(',')}` : 'no diag');
+  ok('skinned cap holds', !!(d && d.skinned <= d.cap), `skinned=${d && d.skinned}`);
+  ok('a forced load failure still renders', !!(z && z.failed === true));
+}
 console.log('\n=== ERRORS ===');
 ok('no runtime errors during the whole click run', errors.length === 0, errors.slice(0, 6).join(' | ') || 'clean');
 
