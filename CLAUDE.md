@@ -211,7 +211,12 @@ handles get claimed and real URLs land; this file stays the summary.
   `posts_delete`/`posts_unpublish_post` but a live post can already have been
   screenshotted/reposted).
   For static images, upload real files with `media_generate_upload_link`
-  before posting.
+  before posting — **or**, since this repo is public on GitHub, skip that
+  human-in-the-loop step entirely and pass a `raw.githubusercontent.com/
+  <owner>/<repo>/<branch>/<path>` URL straight into `media_urls`. Zernio
+  fetches it server-side; no manual upload needed. Confirmed working
+  2026-09-28 (see §8). Only works for files already committed and pushed —
+  a local-only edit isn't reachable yet.
 - `queue_preview_queue` / `queue_*` manage a posting queue per profile if a
   recurring slot cadence gets set up later.
 - `analytics_get_analytics`, `analytics_get_best_time_to_post`,
@@ -303,8 +308,28 @@ don't advertise a sale/price before Play Console prices are actually set.
 
 ## 8. Lessons learned (append-only log — newest entry on top, never delete)
 
-*(empty — this is a new marketing effort as of 2026-09-28. The first entry
-should land after the first posts get real analytics back, not before.)*
+### 2026-09-28 — first live post; media-attach doesn't need a human upload step
+- What we tried: end-to-end workflow test at the owner's request — post
+  `assets/brand/post-1080x1080.png` with caption to the new Facebook Page,
+  published for real (not just drafted), specifically to prove the pipeline
+  works without the owner manually clicking an upload link.
+- What happened: `media_generate_upload_link` is human-in-the-loop by
+  design (generates a URL for a person to upload through in a browser) —
+  not usable for a fully automated post. Instead, since this repo is
+  public, passed the file's `raw.githubusercontent.com` URL straight into
+  `posts_create`/`posts_publish_now`'s `media_urls` — Zernio fetched it
+  server-side with no manual step. Published successfully as
+  `facebook` post `6aba8e403a9411d799bf7648`. The draft created moments
+  earlier to sanity-check the media attach (`6aba8cf2...`) was deleted
+  right after as a redundant duplicate once the real publish confirmed it
+  worked.
+- What we're changing because of it: default to the raw-GitHub-URL method
+  for any already-committed brand asset going forward (documented in §5) —
+  reserve `media_generate_upload_link` for media that only exists locally
+  with the owner (e.g. something not yet in the repo). Too early for
+  engagement analytics on this post (0 followers, published minutes ago) —
+  that's a separate future entry once `analytics_get_analytics` has
+  something real to say.
 
 Template for each entry:
 ```
