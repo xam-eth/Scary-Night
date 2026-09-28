@@ -148,6 +148,13 @@ Connected right now (checked 2026-09-28):
 | TikTok Ads | phagos_space | `6aa6cb92726ebfe037e56053` | connected, paid |
 | X / Twitter | phagos_space | `6aa75077726ebfe037e7abc8` | connected, organic |
 
+**Handle mismatch, flagged 2026-09-28:** both connected accounts use the
+handle `phagos_space`, which doesn't read as LAST NIGHT-branded — looks
+like a studio/personal handle. This is a decision for the owner (rename the
+existing accounts vs. launch branded profiles alongside them), written up
+with both options in `docs/SOCIAL-PROFILES.md` §0. Not resolved yet — don't
+assume either direction when planning new profile setups.
+
 **Not connected**, despite a full brand kit already built for them:
 Instagram, YouTube, Facebook, Discord. Zernio supports all of them
 (16 platforms total). Connecting these is a decision for the account owner,
@@ -160,6 +167,14 @@ No live game URL is recorded anywhere in this repo (README only documents
 `python3 -m http.server 8080` for local preview). **Do not invent a play
 link in any post.** Get the real hosted URL from the team before any post
 that needs a CTA link; until then, link-less awareness content only.
+
+**Page/profile setup copy:** ready-to-paste Page name, bio, description,
+CTA and asset mapping for Facebook (the one slated for ads), X, TikTok,
+YouTube, Instagram and Discord lives in `docs/SOCIAL-PROFILES.md` (written
+2026-09-28). It reuses only assets already in `assets/brand/` — nothing new
+to generate — and leaves every link/CTA field blank pending the two open
+items above (live URL, public support email). Update that file in place as
+handles get claimed and real URLs land; this file stays the summary.
 
 ## 5. Zernio operating notes (how to actually post from here)
 
