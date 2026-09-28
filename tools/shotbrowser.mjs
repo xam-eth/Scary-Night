@@ -349,8 +349,65 @@ try {
     await pg.evaluate(() => { window.__LN.screen = 'playing'; });
   };
 
+  /* ---------- the narrator's plate (#52 B) ----------
+   * The story has to read on the phone and in the short landscape most people
+   * actually hold. Waits are on SIM time again.
+   */
+  const shootNarration = async (pg, tag) => {
+    const until = (fn, timeout = 25000) => pg.waitForFunction(fn, { timeout, polling: 40 }).catch(() => {});
+    // A still, not a race: hold the line open, shoot it, then step on. The
+    // plate is meant to move on its own — this only stops it long enough to
+    // be photographed.
+    const freeze = () => pg.evaluate(() => {
+      const n = window.__LN.narration;
+      // the run-start fade is a transition, not a grade: clear it or the still
+      // is photographed through it
+      window.__LN.fadeFromBlack = 0;
+      if (n) { n.t = 0.9; n.lineDur = 3600; }
+    });
+    const nextLine = () => pg.evaluate(() => { if (window.__LN.narration) window.__LN.advanceNarration(); });
+
+    await pg.evaluate(() => {
+      const g = window.__LN;
+      window.__LN_API.stopMove();
+      // a save that has never heard her: night one opens with the narration
+      g.save.beats = {};
+      g.save.pendingDawn = [];
+      g.save.nightsSurvived = 0;
+      g.seenIntroThisSession = false;
+      g._skipNarration = false;
+      g.narration = null;
+      g.beginNight();
+      // end the intro card on the clock (not with skipIntro, which would also
+      // shut the narrator) so the capture lands on the narration, not on it
+      g.introT = (g.introLen || 3) + 1;
+    });
+    await until(() => window.__LN.screen === 'narration' && window.__LN.narration && window.__LN.narration.i === 0, 40000);
+    await freeze();
+    await shoot(pg, `${tag}-narration1-opening`);
+    // the house answers in the second person
+    await nextLine();
+    await freeze();
+    await shoot(pg, `${tag}-narration2-house`);
+    // and the act card rides the same plate
+    await nextLine();
+    await nextLine();
+    await until(() => window.__LN.narration && window.__LN.narration.kind === 'act');
+    await freeze();
+    await shoot(pg, `${tag}-narration3-act`);
+    await pg.evaluate(() => window.__LN.skipNarration());
+  };
+
   await shootPeaks(m, '14-phone');
   await shootPeaks(page, '15-desktop');
+
+  await shootNarration(m, '16-phone');
+  const ls = await browser.newPage();
+  await ls.setViewport({ width: 844, height: 390, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  await ls.goto(URL_BASE + '/', { waitUntil: 'domcontentloaded', timeout: 90000 });
+  await waitValen(ls, 60000);
+  await shootNarration(ls, '17-short');
+  await ls.close();
 
   console.log('DONE');
 } finally {

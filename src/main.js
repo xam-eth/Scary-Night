@@ -62,7 +62,16 @@ if (fsBtn) {
 window.__LN = game;
 window.__LN_API = {
   beginNight: () => game.beginNight(),
-  skipIntro: () => { if (game.screen === 'intro') game.introT = (game.introLen || 3) + 1; },
+  skipIntro: () => {
+    if (game.screen === 'intro') game.introT = (game.introLen || 3) + 1;
+    // Capture asks for the night, so anything the narrator would have queued
+    // behind the intro stays shut too.
+    game.skipNarration();
+  },
+  replayOpening: () => game.replayOpening(),
+  narration: () => (game.narration
+    ? { kind: game.narration.kind, act: game.narration.act, i: game.narration.i, of: game.narration.list.length, t: +game.narration.t.toFixed(2) }
+    : null),
   goals: () => (game.objectives && game.objectives.hudState()) || null,
   shop: () => (window.__LN_IAP ? window.__LN_IAP.diagnostics() : null),
   setTime: (t) => { game.time = t; game.phase = phaseAt(t); game.danger = game.phase.danger; },

@@ -4,6 +4,11 @@
  * and room murmurs. Dawn-cards and the Act III choice consume what this table
  * queues. Urgent guidance pre-empts a murmur, then the murmur resumes.
  *
+ * Two surfaces are narrated on a plate instead of the strip: `narration`
+ * (the opening, in Valen's voice with the house answering) and `actCard`
+ * (the act title + one line at each act turn, §8). They ride the same
+ * interstitial as a dawn-card and are consumed the same way.
+ *
  * Once-only beats persist on save.beats. Dawn-cards wait in save.pendingDawn
  * until the interstitial consumes them.
  */
@@ -11,6 +16,69 @@
 import { playLean } from './economy.js';
 
 export const BEATS = [
+  /* ---- opening narration: night one, her voice, then the house ----
+   * Authored, not a rules card: the intro plate already says what to do.
+   * `voice` picks the type treatment — Valen is first person and italic,
+   * the house is second person and small caps.
+   */
+  {
+    id: 'open-woke',
+    trigger: { event: 'open', night: 1 },
+    surface: 'narration',
+    once: true,
+    voice: 'valen',
+    text: 'I woke hungry. Somewhere in this house a door I do not remember closing is open.',
+  },
+  {
+    id: 'open-house',
+    trigger: { event: 'open', night: 1 },
+    surface: 'narration',
+    once: true,
+    voice: 'house',
+    text: 'You have woken here before. You will again.',
+  },
+  {
+    id: 'open-dawn',
+    trigger: { event: 'open', night: 1 },
+    surface: 'narration',
+    once: true,
+    voice: 'valen',
+    text: 'Dawn comes at five. It has never once taken me with it.',
+  },
+  /* ---- act-title cards: the three turns of §8 ----
+   * `title` is the act card. `epigraph` is the house (second person, the §8
+   * line). `text` is Valen (first person, one line, never the same line twice).
+   */
+  {
+    id: 'act-waking',
+    trigger: { event: 'act', act: 1 },
+    surface: 'actCard',
+    once: true,
+    voice: 'valen',
+    title: 'ACT I — THE WAKING',
+    epigraph: 'Something woke you.',
+    text: 'The house feels like mine. It is wrong the way a dream is wrong.',
+  },
+  {
+    id: 'act-remembers',
+    trigger: { event: 'act', act: 2 },
+    surface: 'actCard',
+    once: true,
+    voice: 'valen',
+    title: 'ACT II — THE HOUSE REMEMBERS',
+    epigraph: 'You have done this before.',
+    text: 'The doors are the same. So is the knock. So am I.',
+  },
+  {
+    id: 'act-long-dawn',
+    trigger: { event: 'act', act: 3 },
+    surface: 'actCard',
+    once: true,
+    voice: 'valen',
+    title: 'ACT III — THE LONG DAWN',
+    epigraph: 'The house will never let you leave.',
+    text: 'I have stopped counting the dawns. The house has not.',
+  },
   {
     id: 'dawn-waking',
     trigger: { event: 'dawn', dawn: 1 },
@@ -147,6 +215,12 @@ export const BEATS = [
 ];
 
 const FRAG_NAMES = {
+  'open-woke': 'WAKING HUNGRY',
+  'open-house': 'THE HOUSE ANSWERS',
+  'open-dawn': 'THE DAWN',
+  'act-waking': 'THE WAKING',
+  'act-remembers': 'THE HOUSE REMEMBERS',
+  'act-long-dawn': 'THE LONG DAWN',
   'dawn-waking': 'WAKING',
   'dawn-past': 'HER PAST',
   'dawn-kept': 'KEPT',
@@ -178,7 +252,8 @@ export function ackBeat(save, id) {
   save.beats[id] = 1;
   const beat = BY_ID[id];
   if (!beat) return;
-  const keep = beat.surface === 'room' || beat.surface === 'dawnCard' || (beat.trigger && beat.trigger.event === 'knock');
+  const keep = beat.surface === 'room' || beat.surface === 'dawnCard' || beat.surface === 'narration'
+    || beat.surface === 'actCard' || (beat.trigger && beat.trigger.event === 'knock');
   if (!keep) return;
   save.seen = save.seen || {};
   save.seen['frag:' + id] = true;
@@ -317,9 +392,25 @@ function matches(beat, query) {
   if (t.nightMin != null && !(query.night >= t.nightMin)) return false;
   const rooms = roomsOf(t);
   if (rooms && !rooms.includes(query.room)) return false;
+  if (t.act != null && t.act !== query.act) return false;
   if (t.knock != null && t.knock !== query.knock) return false;
   if (t.state != null && t.state !== query.state) return false;
   return true;
+}
+
+/**
+ * Every narration line due at this moment, in table order. Used by the
+ * opening plate, which plays three lines back to back. Does not mark seen.
+ */
+export function narrationLines(save, query, { includeSeen = false } = {}) {
+  if (!query || !query.surface) return [];
+  const out = [];
+  for (const beat of BEATS) {
+    if (beat.surface !== 'narration') continue;
+    if (!includeSeen && beat.once !== false && beatSeen(save, beat.id)) continue;
+    if (matches(beat, query)) out.push(beat);
+  }
+  return out;
 }
 
 /** First unseen beat for this surface and moment. Does not mark it seen. */

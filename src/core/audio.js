@@ -450,6 +450,15 @@ S.dawnChime = (t, o) => {
     osc(t + i * 0.45, 3.4, { out: o.out, gain: 0.05 * v, type: 'triangle', freq: f * 2, pan: (i - 1.5) * 0.25, rev: 0.8, attack: 0.05 });
   });
 };
+/* The narrator's plate: a low swell under a spoken line. Deliberately small —
+ * the words carry it, and it must never fight the dawn swell for the frame. */
+S.narrationSwell = (t, o) => {
+  const v = o.vol ?? 1;
+  osc(t, 3.0, { out: o.out, gain: 0.075 * v, type: 'sine', freq: 147, to: 110, pan: -0.15, rev: 0.9, attack: 0.5 });
+  osc(t + 0.2, 2.4, { out: o.out, gain: 0.045 * v, type: 'triangle', freq: 220, to: 174.6, pan: 0.18, rev: 0.7, attack: 0.4 });
+  noise(t, 2.6, { out: o.out, gain: 0.022 * v, type: 'lowpass', freq: 520, q: 0.6, pan: 0, rev: 0.5, attack: 0.6 });
+};
+
 S.death = (t, o) => {
   const v = o.vol ?? 1;
   osc(t, 4.5, { out: o.out, gain: 0.28 * v, type: 'sawtooth', freq: 130, to: 32, pan: 0, rev: 0.9, attack: 0.02, filt: 'lowpass', filtQ: 3 });

@@ -36,7 +36,7 @@ import { Enemy3D } from './enemy3d.js';
 import { IAP } from '../shop/iap.js';
 import { drawHUD, drawWorldPrompts, urgentGuidance, pauseButtonBox, weaponChipBox } from './hud.js';
 import { WEAPONS, weaponById, nextWeapon } from './weapons.js';
-import { nextBeat, ackBeat, beatById, endingReady } from './narrative.js';
+import { nextBeat, ackBeat, beatById, endingReady, narrationLines, beatSeen } from './narrative.js';
 import { updateCoach, drawCoachWorld } from './coach.js';
 import { Climax, PEAK } from './climax.js';
 import * as UI from '../ui/screens.js';
@@ -141,6 +141,10 @@ export class Game {
     this.slowScale = 1;
     this.climax = new Climax();
     this.peaks = PEAK;
+    // The narrator's plate: null, or { list, i, t, kind, act, after, lineDur }.
+    this.narration = null;
+    this._openingPending = false;
+    this._skipNarration = false;
     this.nightDuration = NIGHT_DURATION;
     this.timeLeft = NIGHT_DURATION;
     this.phase = phaseAt(0);
@@ -370,6 +374,8 @@ export class Game {
 
   toMenu() {
     this.pauseConfirm = false;
+    this.narration = null;
+    this._openingPending = false;
     this.settlePurse('leave');
     this.paused = false;
     this.screen = 'menu';
@@ -541,11 +547,18 @@ export class Game {
     this.freshRun();
     const repeat = this.seenIntroThisSession;
     this.seenIntroThisSession = true;
+    // The opening belongs to a save that has never heard it — not to the first
+    // press of PLAY. A player who retries, restarts, or walks in on the second
+    // attempt of a session still gets night one told to them once.
+    const owesOpening = !beatSeen(this.save, 'open-woke');
     if (repeat) {
+      this._openingPending = owesOpening;
+      this.narration = null;
       this.screen = 'playing';
       this.fadeFromBlack = 0.45;
       this.finishIntro();
     } else {
+      this._openingPending = owesOpening;
       this.screen = 'intro';
       this.introT = 0;
       this.fadeFromBlack = 1;
@@ -609,6 +622,7 @@ export class Game {
       case 'menu': this.updateMenu(dt); break;
       case 'settings': case 'upgrades': case 'collection': case 'help': case 'shop': case 'privacy': break;
       case 'intro': this.updateIntro(dt); break;
+      case 'narration': this.updateNarration(dt); break;
       case 'playing': this.updatePlaying(this.dt); break;
       case 'paused': break;
       case 'dying': this.updateDying(dt); break;
@@ -686,6 +700,24 @@ export class Game {
   }
 
   finishIntro() {
+    // The story is narrated, not only murmured (docs/STORY.md §2.3). Night one
+    // opens with three authored lines, then the Act I card, then the night.
+    const opening = this._openingPending
+      ? narrationLines(this.save, { surface: 'narration', event: 'open', night: 1 })
+      : [];
+    this._openingPending = false;
+    if (opening.length && this.startNarration(opening, { kind: 'open', after: 'play' })) return;
+    if ((this.save.nightsSurvived || 0) === 0) {
+      const act = nextBeat(this.save, { surface: 'actCard', event: 'act', act: 1 });
+      if (act && this.startNarration([act], { kind: 'act', act: 1, after: 'play' })) return;
+    }
+    this.startNightProper();
+  }
+
+  /** What `finishIntro` used to be: the night itself, the hook, the first knock. */
+  startNightProper() {
+    this._skipNarration = false;
+    this.narration = null;
     this.screen = 'playing';
     this.audio.play('uiConfirm', { vol: 0.6 });
     if (!this.save.tutorialSeen) { this.save.tutorialSeen = true; this.showTutorialHints = true; writeSave(this.save); }
@@ -693,6 +725,97 @@ export class Game {
     this.director.scheduleKnock(this, {
       force: true, entranceId: 'diningDoor', outcome: 'crawler', wait: 18, mustEnter: true, known: true,
     });
+  }
+
+  /* ---------------- the narrator's plate ---------------- */
+
+  /**
+   * Open the plate over a list of beats. Returns false when there is nothing
+   * to show (or when capture has asked to step straight through), so callers
+   * can fall through to whatever comes next.
+   */
+  startNarration(list, { kind = 'open', act = 0, after = 'play' } = {}) {
+    if (!list || !list.length) return false;
+    if (this._skipNarration) {
+      for (const b of list) ackBeat(this.save, b.id);
+      writeSave(this.save);
+      return false;
+    }
+    this.narration = { list, i: 0, t: 0, kind, act, after, lineDur: kind === 'act' ? 3.4 : 2.9 };
+    this.screen = 'narration';
+    this.ui = [];
+    this.audio.play('narrationSwell', { vol: 0.6, bus: 'music' });
+    return true;
+  }
+
+  updateNarration(dt) {
+    const n = this.narration;
+    if (!n) { this.startNightProper(); return; }
+    n.t += dt;
+    this.mansion.update(dt, this);
+    this.player.anim(dt);
+    // The tap that ended the previous plate must not also end this line.
+    const armed = n.t > 0.45;
+    const tap = !!(this.input.uiTap || this._narrationTap || this._introTap);
+    if (n.t >= n.lineDur || (armed && (tap || this.input.attackPressed || this.input.interactPressed || this.input.keys.confirm))) {
+      this.input.uiTap = null;
+      this._narrationTap = false;
+      this._introTap = false;
+      this.advanceNarration();
+    }
+  }
+
+  advanceNarration() {
+    const n = this.narration;
+    if (!n) return;
+    const beat = n.list[n.i];
+    if (beat) { ackBeat(this.save, beat.id); writeSave(this.save); }
+    n.i += 1;
+    n.t = 0;
+    if (n.i >= n.list.length) this.finishNarration();
+  }
+
+  finishNarration() {
+    const n = this.narration;
+    this.narration = null;
+    if (!n) { this.startNightProper(); return; }
+    if (n.after === 'menu') { this.setScreen('menu'); return; }
+    if (n.after === 'dawn') { this.screen = 'dawn'; this.dawnT = 5.0; return; }
+    // after the opening, the act card rides the same interstitial
+    if (n.kind === 'open') {
+      const act = nextBeat(this.save, { surface: 'actCard', event: 'act', act: 1 });
+      if (act && this.startNarration([act], { kind: 'act', act: 1, after: 'play' })) return;
+    }
+    this.startNightProper();
+  }
+
+  /** Step straight through the plate (SKIP, and the capture harness). */
+  skipNarration() {
+    this._skipNarration = true;
+    const n = this.narration;
+    if (!n) return false;
+    for (const b of n.list) ackBeat(this.save, b.id);
+    // skipping the opening skips the card queued behind it: one gesture, one
+    // sequence, and a retry does not then drop the player into a card
+    if (n.kind === 'open') {
+      const act = nextBeat(this.save, { surface: 'actCard', event: 'act', act: 1 });
+      if (act) ackBeat(this.save, act.id);
+    }
+    writeSave(this.save);
+    const after = n.after;
+    this.narration = null;
+    if (after === 'menu') { this.setScreen('menu'); return true; }
+    if (after === 'dawn') { this.screen = 'dawn'; this.dawnT = 5.0; return true; }
+    this.startNightProper();
+    return true;
+  }
+
+  /** Replay the authored opening from the menu. Never forgets what was seen. */
+  replayOpening() {
+    const list = narrationLines(this.save, { surface: 'narration', event: 'open', night: 1 }, { includeSeen: true });
+    if (!list.length) return false;
+    this.renderer.snapCamera(this.player.x, this.player.y);
+    return this.startNarration(list, { kind: 'open', after: 'menu' });
   }
 
   /* ---------------- the night ---------------- */
@@ -1905,6 +2028,15 @@ export class Game {
     writeSave(this.save);
     this.screen = 'dawn';
     this.dawnT = 5.0;
+    // The act turn rides the same interstitial: Act II begins after the third
+    // survived dawn, Act III after the seventh. The ending's dawn is never an
+    // act turn — that screen is the choice, and the choice wins.
+    const survived = this.save.nightsSurvived || 0;
+    const actN = survived === 3 ? 2 : survived === 7 ? 3 : 0;
+    if (actN && !endingReady(this.save)) {
+      const act = nextBeat(this.save, { surface: 'actCard', event: 'act', act: actN });
+      if (act && this.startNarration([act], { kind: 'act', act: actN, after: 'dawn' })) return;
+    }
   }
 
   chooseEnding(which) {
@@ -2011,6 +2143,7 @@ export class Game {
     // ---- screens ----
     switch (this.screen) {
       case 'intro': UI.drawIntro(this, ctx, w, h); break;
+      case 'narration': UI.drawNarration(this, ctx, w, h); break;
       case 'paused': UI.drawPause(this, ctx, w, h); break;
       case 'settings': UI.drawSettings(this, ctx, w, h); break;
       case 'upgrades': UI.drawUpgrades(this, ctx, w, h); break;
@@ -2596,6 +2729,9 @@ export class Game {
           if (tap.x > b.x && tap.x < b.x + b.w && tap.y > b.y && tap.y < b.y + b.h) { hit = b; }
         }
         if (hit && hit.onClick) { this.audio.play('uiConfirm', { vol: 0.4 }); hit.onClick(); }
+        // A tap that hits nothing is still an answer on the narrator's plate:
+        // it steps the line on. No dead input, and SKIP still wins the hit.
+        else if (this.screen === 'narration') this._narrationTap = true;
       }
     }
     if (input.keys.confirm && !this._confirmHeld) {

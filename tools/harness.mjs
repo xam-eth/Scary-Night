@@ -669,11 +669,13 @@ if (args.systems) {
   game.beginNight();
   line(game.screen === 'intro', 'the first attempt still opens on the intro');
   game.beginNight();
-  line(game.screen === 'playing', 'a retry fades in and skips the intro');
+  // A retry skips the intro CARD. The narrator still plays if night one has
+  // never been told — that is the whole point of the surface.
+  line(game.screen !== 'intro', 'a retry fades in and skips the intro card');
 
-  const { BEATS, nextBeat, ackBeat, endingFrame, fragmentsKnown } = await import('../src/game/narrative.js');
+  const { BEATS, nextBeat, ackBeat, endingFrame, fragmentsKnown, narrationLines } = await import('../src/game/narrative.js');
   line(BEATS.length > 0 && BEATS.every((b) => b.id && b.trigger && b.surface && b.text && !/placeholder|\[draft\]/i.test(b.text)), 'beats are data, not placeholders');
-  line(BEATS.every((b) => b.surface === 'strip' || b.surface === 'dawnCard' || b.surface === 'room'), 'every beat names strip, dawn-card, or room');
+  line(BEATS.every((b) => b.surface === 'strip' || b.surface === 'dawnCard' || b.surface === 'room' || b.surface === 'narration' || b.surface === 'actCard'), 'every beat names a surface the game can draw: strip, dawn-card, room, narration, act card');
   const storySave = { beats: {}, pendingDawn: [] };
   const waking = nextBeat(storySave, { surface: 'dawnCard', event: 'dawn', dawn: 1 });
   line(waking && waking.id === 'dawn-waking' && /servant/.test(waking.text), 'night 1 dawn card is the waking');
@@ -752,11 +754,72 @@ if (args.systems) {
   line(arc.indexOf('dawn-waking') < arc.indexOf('dawn-past') && arc.indexOf('night-faces') < arc.indexOf('night-leave'), 'earlier nights speak before the late ones');
   line(arc.length === new Set(arc).size, 'no beat repeats across the arc');
   line(BEATS.every((b) => b.text && b.text.length <= 120 && !/TODO|lorem|placeholder/i.test(b.text)), 'every line is final and short enough for the strip');
+  line(BEATS.every((b) => b.surface !== 'actCard' || ((b.title || '').length <= 40 && (b.epigraph || '').length <= 60)), 'an act card stays an act card: short title, short epigraph');
   game.screen = 'ending';
   game.endingT = 1;
   game.render();
   const endingBtns = game.ui.filter((b) => b.label === 'WALK INTO THE DAWN' || b.label === 'TURN BACK');
   line(endingBtns.length === 2 && endingBtns.every((b) => b.h >= 44), 'both endings sit on the thumb, 44px or taller');
+  // ---- the narrator's plate (#52 B): the story is told, not only murmured ----
+  const narrSave = { beats: {}, pendingDawn: [], seen: {} };
+  const opening = narrationLines(narrSave, { surface: 'narration', event: 'open', night: 1 });
+  line(opening.length === 3 && opening[0].id === 'open-woke', 'night one has three authored lines waiting');
+  line(opening.filter((b) => b.voice === 'house').length === 1, 'and the house answers in the second person');
+  line(narrationLines(narrSave, { surface: 'narration', event: 'open', night: 2 }).length === 0, 'the opening is night one, not every night');
+  for (const b of opening) ackBeat(narrSave, b.id);
+  line(narrationLines(narrSave, { surface: 'narration', event: 'open', night: 1 }).length === 0, 'a seen opening does not play twice');
+  line(narrationLines(narrSave, { surface: 'narration', event: 'open', night: 1 }, { includeSeen: true }).length === 3, 'but the menu may replay it without forgetting it');
+  const cardA1 = nextBeat(narrSave, { surface: 'actCard', event: 'act', act: 1 });
+  const cardA2 = nextBeat(narrSave, { surface: 'actCard', event: 'act', act: 2 });
+  const cardA3 = nextBeat(narrSave, { surface: 'actCard', event: 'act', act: 3 });
+  line(cardA1.title === 'ACT I — THE WAKING' && cardA1.epigraph === 'Something woke you.', 'act I is The Waking, and the house says so');
+  line(cardA2.title === 'ACT II — THE HOUSE REMEMBERS' && cardA2.epigraph === 'You have done this before.', 'act II is The House Remembers');
+  line(cardA3.title === 'ACT III — THE LONG DAWN' && cardA3.epigraph === 'The house will never let you leave.', 'act III is The Long Dawn');
+  ackBeat(narrSave, cardA1.id);
+  line(!nextBeat(narrSave, { surface: 'actCard', event: 'act', act: 1 }), 'an act turn is once, like every other beat');
+  line(!nextBeat(narrSave, { surface: 'narration', event: 'act', act: 1 }), 'a card never leaks onto the strip surface');
+
+  // the flow: intro -> opening -> act I -> the night, and a retry straight in
+  game.save.beats = {};
+  game.save.pendingDawn = [];
+  game.save.nightsSurvived = 0;
+  game.seenIntroThisSession = false;
+  game.narration = null;
+  game._skipNarration = false;
+  game.beginNight();
+  line(game.screen === 'intro', 'the first attempt still opens on the intro');
+  game.introT = 99;
+  game.update(dt);
+  line(game.screen === 'narration' && game.narration && game.narration.kind === 'open', 'the opening narration plays after the intro card');
+  for (let i = 0; i < 60 * 30 && game.screen === 'narration'; i++) game.update(dt);
+  line(game.screen === 'playing', 'and hands the night over when it is done');
+  line(game.save.beats['open-woke'] === 1 && game.save.beats['act-waking'] === 1, 'the opening and the act card are both remembered on the save');
+  game.beginNight();
+  line(game.screen === 'playing', 'a retry does not sit through the narrator again');
+  // the act turn rides the dawn interstitial, and never the ending's
+  game.save.beats = {};
+  game.save.pendingDawn = [];
+  game.save.nightsSurvived = 2;
+  game.screen = 'playing';
+  game.beginDawn();
+  line((game.save.pendingDawn || [])[0] === 'dawn-past', 'dawn three still holds its own card');
+  game.finishDawnCard();
+  line(game.screen === 'narration' && game.narration.act === 2, 'act II rides the same interstitial after the third dawn');
+  for (let i = 0; i < 60 * 12 && game.screen === 'narration'; i++) game.update(dt);
+  line(game.screen === 'dawn', 'and the results still follow it');
+  // Act III must not steal the choice
+  game.save.beats['knock-true-dawn'] = 1;
+  game.save.nightsSurvived = 7;
+  game.save.ending = null;
+  game.save.pendingDawn = [];
+  game.beginDawn();
+  game.finishDawnCard();
+  line(game.screen === 'narration' && game.narration.act === 3, 'act III rides the seventh dawn, before night eight');
+  for (let i = 0; i < 60 * 12 && game.screen === 'narration'; i++) game.update(dt);
+  line(game.screen === 'dawn', 'and act III hands the night to the results, not the ending');
+  game.save.ending = null;
+  game.screen = 'playing';
+
   // ---- the four peaks (#52 A): every peak fires at its trigger, once ----
   const { Climax, PEAK } = await import('../src/game/climax.js');
   const Swarm = (await import('../src/game/enemies.js')).Crawler;
