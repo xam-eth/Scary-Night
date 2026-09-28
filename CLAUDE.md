@@ -121,7 +121,22 @@ re-export it — screenshot/record it live instead, see `tools/harness.mjs
 static above is *pre-gameplay* key art. There is currently **no gameplay
 footage, GIF, or edited vertical video** in the repo — and per the 2026
 research below, that is the single highest-leverage missing asset. Filed as
-an issue, see §6.
+an issue, see §6. Re-checked 2026-09-28 (later same day): still zero
+`.mp4`/`.gif`/`.webm`/`.mov` files anywhere in the repo, no movement on the
+issue — this gap is unchanged and is still the top blocker on cadence.
+
+**Off-brand — do not use in marketing:** `assets/loading-last-night.jpg`
+(root of `assets/`, not in `assets/brand/`). A wide AI-generated-style house
+plate with "LAST NIGHT" set in a different typeface than the locked
+wordmark (Gelasio tracked caps, §2/`assets/brand/wordmark.svg`). Not
+referenced anywhere in `index.html` or `src/`, and it violates the
+registered art direction (`brand/index.html` §06 — key art is photoreal/
+desaturated/ink-shadowed, no second painted title over a plate). Left in
+place rather than deleted in case something outside marketing depends on
+it — flagged as a question in
+[xam-eth/Scary-Night#48](https://github.com/xam-eth/Scary-Night/issues/48).
+Until that's resolved: never pull this file into a post, banner, or store
+asset.
 
 ## 4. Distribution channels (source of truth: Zernio `accounts_list`)
 
