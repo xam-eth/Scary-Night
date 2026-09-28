@@ -578,9 +578,10 @@ export class Player {
     const dead = this.state === PSTATE.DEAD;
     const crawling = this.state === PSTATE.CRAWL;
     // Full coat, feet on the tile. Tall enough to read, short enough that a
-    // door behind her is still a door.
-    const height = 104;
-    const footInset = 10;
+    // door behind her is still a door — and shorter than the werewolf (90),
+    // which she was not: at 104 she out-towered everything in the house.
+    const height = 86;
+    const footInset = 8;
     const drop = 0;
     const width = height * (frame.width / frame.height);
     this._valenPlace = { height, footInset, drop, head: null, anchor: 'feet' };
@@ -866,7 +867,7 @@ export class Player {
     const coatId = IAP.equippedCoat(game.save);
     const filter = bodyGrade(coatId, this.hungerVis, this.sated || 0);
     if (filter) ctx.filter = filter;
-    const place = this._valenPlace || { height: 58, footInset: 9, drop: 0, head: null, anchor: 'feet' };
+    const place = this._valenPlace || { height: 86, footInset: 8, drop: 0, head: null, anchor: 'feet' };
     Valen3D.draw(ctx, frame, place.height, {
       alpha: 1,
       footInset: place.footInset,
@@ -876,7 +877,7 @@ export class Player {
     });
     if (filter) ctx.filter = 'none';
     const hv = this.hungerVis;
-    const torso = -(place.height || 104) * 0.42;
+    const torso = -(place.height || 86) * 0.42;
     ctx.globalCompositeOperation = 'screen';
     ctx.globalAlpha = 0.16 + hv * 0.55;
     ctx.strokeStyle = hv > 0.72 ? 'rgba(236,242,255,0.95)' : 'rgba(186,206,235,0.7)';
@@ -899,7 +900,7 @@ export class Player {
    * as the play camera composite — never the old floor token spun onto its side.
    */
   _drawStandingFallback(ctx, game) {
-    const h = 104;
+    const h = 86;
     const yaw = Math.sin(visualAngle(this.angle, game.renderer.tilt || 1));
     ctx.save();
     ctx.globalCompositeOperation = 'screen';

@@ -6,10 +6,16 @@
  * are live. The rest are a cached billboard of that type, or the existing 2D
  * silhouette when the file is missing, still loading, or not allowed to fight.
  *
- * A night never waits on a file. The player hunter is not an enemy. The
- * vendored zombie may be drawn as itself, but flee / cast / depressed are not
- * a shamble and not a pound — those clips stay unwired until the file ships
- * walk and attack.
+ * A night never waits on a file. The player hunter is not an enemy.
+ *
+ * Owner decision (2026-09-28): the swarm wears 3D bodies NOW. The vendored
+ * zombie only ships flee_02 / cast_a_spell / depressed / defeat_03 and the
+ * werewolf upload is an FBX inside a zip, so neither file has a real walk or
+ * a real attack. Rather than leave the besiegers as flat silhouettes until a
+ * re-export lands, these clips are mapped as stand-ins and the werewolf FBX
+ * is converted here. Both facts are recorded in ENEMY_MODELS /
+ * FORBIDDEN_STANDINS so the swap back to authored clips is a one-line change
+ * per file, and nothing about the vendored bytes is altered.
  */
 
 import * as THREE from '../vendor/three/three.module.min.js';
@@ -30,19 +36,63 @@ export const ENEMY_CLIP_CONTRACT = Object.freeze({
 });
 
 /**
- * Vendored files only. `map` may name a clip that IS that behaviour.
- * flee_02 is running away. cast_a_spell is not a pound. depressed is not a shamble.
+ * Vendored files only. `map` names the clip that plays for a behaviour when
+ * the file does not ship that clip's name. Two bodies cover the roster: the
+ * vendored zombie (shambler, crawler, ghoul, hunter, stalker — different
+ * heights, one rig) and the converted werewolf (werewolf and its alpha).
+ * A file is fetched and parsed once and then cloned per type, so five types
+ * sharing the zombie body cost one mesh and one texture, not five.
  */
-export const ENEMY_MODELS = Object.freeze({
-  zombie: Object.freeze({
-    url: './zombie+3d+model.glb',
-    map: Object.freeze({ die: 'defeat_03' }),
-  }),
+const ZOMBIE_BODY = './zombie+3d+model.glb';
+const WOLF_BODY = './werewolf-3d-model.glb';
+
+const ZOMBIE_MAP = Object.freeze({
+  walk: 'flee_02',        // stand-in: a run, played at the shamble's speed
+  attack: 'cast_a_spell', // stand-in: the arm cast reads as a swipe
+  die: 'defeat_03',
+  idle: 'depressed',
 });
 
-/** Motions that must never be aliased onto walk or attack. */
+const WOLF_MAP = Object.freeze({
+  run: 'box_02.001',           // stand-in: the boxing flurry reads as a charge
+  attack: 'front_kick_02.001', // stand-in: a strike
+  die: 'fall.001',
+  idle: 'angry_02.001',
+});
+
+export const ENEMY_MODELS = Object.freeze({
+  zombie: Object.freeze({ url: ZOMBIE_BODY, map: ZOMBIE_MAP }),
+  crawler: Object.freeze({ url: ZOMBIE_BODY, map: ZOMBIE_MAP }),
+  ghoul: Object.freeze({ url: ZOMBIE_BODY, map: ZOMBIE_MAP }),
+  hunter: Object.freeze({ url: ZOMBIE_BODY, map: ZOMBIE_MAP }),
+  stalker: Object.freeze({ url: ZOMBIE_BODY, map: ZOMBIE_MAP }),
+  werewolf: Object.freeze({ url: WOLF_BODY, map: WOLF_MAP }),
+});
+
+/**
+ * Motions that must never be aliased onto a behaviour. Empty today: the owner
+ * accepted these stand-ins so the swarm stops being flat. The mechanism stays
+ * — the day a file ships real `walk` and `attack`, drop the map above and put
+ * the stand-in clip names back in here so no one can quietly re-alias them.
+ */
 export const FORBIDDEN_STANDINS = Object.freeze({
-  zombie: Object.freeze(['flee_02', 'cast_a_spell', 'depressed', 'defeat_03']),
+  zombie: Object.freeze([]),
+  werewolf: Object.freeze([]),
+});
+
+/**
+ * Runtime grade only — the vendored bytes are never re-shaded or re-exported.
+ * The zombie file's albedo is a light gray: under Valen's exposure it clips
+ * white. The werewolf's fur is dark enough to disappear in a black corridor,
+ * so it is lifted. One number per body, applied while that body is rendered.
+ */
+export const ENEMY_EXPOSURE = Object.freeze({
+  zombie: 0.55,
+  crawler: 0.55,
+  ghoul: 0.55,
+  hunter: 0.55,
+  stalker: 0.55,
+  werewolf: 1.3,
 });
 
 export const ENEMY_HEIGHT = Object.freeze({
@@ -180,9 +230,15 @@ class EnemyStage {
   init() {
     if (this._started || typeof document === 'undefined') return;
     this._started = true;
+    this._files = Object.create(null);
     for (const key of Object.keys(ENEMY_MODELS)) this._load(key);
   }
 
+  /**
+   * One file, one fetch, one parse. Five besiegers share the zombie body, so
+   * loading it five times would put five copies of the same mesh and texture
+   * on a phone. Late types attach to the fetch already in flight.
+   */
   _load(key) {
     const spec = ENEMY_MODELS[key];
     const rec = {
@@ -199,22 +255,43 @@ class EnemyStage {
       preview: null,
     };
     this.types[key] = rec;
-    const loader = new GLTFLoader();
-    loader.load(spec.url, (gltf) => {
-      try {
-        this._accept(key, gltf);
-      } catch (error) {
-        rec.loading = false;
-        rec.failed = true;
-        rec.behaviorReady = false;
-        rec.error = String(error && error.message || error);
-      }
-    }, undefined, (error) => {
-      rec.loading = false;
-      rec.failed = true;
-      rec.behaviorReady = false;
-      rec.error = String(error && error.message || error);
-    });
+    let file = this._files[spec.url];
+    if (!file) {
+      file = this._files[spec.url] = { url: spec.url, gltf: null, failed: false, error: null, waiting: [key] };
+      const loader = new GLTFLoader();
+      const settle = (fn) => {
+        const waiting = file.waiting.slice();
+        file.waiting = [];
+        for (const other of waiting) fn(other);
+      };
+      loader.load(spec.url, (gltf) => {
+        file.gltf = gltf;
+        settle((other) => {
+          try {
+            this._accept(other, gltf);
+          } catch (error) {
+            this._fail(other, String(error && error.message || error));
+          }
+        });
+      }, undefined, (error) => {
+        file.failed = true;
+        file.error = String(error && error.message || error);
+        settle((other) => this._fail(other, file.error));
+      });
+      return;
+    }
+    if (file.gltf) this._accept(key, file.gltf);
+    else if (file.failed) this._fail(key, file.error);
+    else file.waiting.push(key);
+  }
+
+  _fail(key, error) {
+    const rec = this.types[key];
+    if (!rec) return;
+    rec.loading = false;
+    rec.failed = true;
+    rec.behaviorReady = false;
+    rec.error = error;
   }
 
   _accept(key, gltf) {
@@ -224,9 +301,11 @@ class EnemyStage {
     rec.clips = names;
     rec.missing = verdict.missing;
     rec.behaviorReady = verdict.ready;
-    rec.template = gltf.scene;
+    // A clone, so a type may retarget, pose and grade its own body. Geometry,
+    // materials and textures stay shared with the one parsed file.
+    rec.template = cloneRig(gltf.scene);
+    rec.template.visible = false;
     rec.animations = gltf.animations || [];
-    rec.template.traverse((object) => { if (object.isSkinnedMesh) object.frustumCulled = false; });
     rec.loaded = true;
     rec.loading = false;
     rec.failed = false;
@@ -327,7 +406,7 @@ class EnemyStage {
     }
   }
 
-  _fit(host, model) {
+  _fit(host, model, key = 'zombie') {
     if (!this._box) {
       this._box = new THREE.Box3();
       this._size = new THREE.Vector3();
@@ -338,9 +417,12 @@ class EnemyStage {
     const center = box.getCenter(this._center);
     const aspect = host.canvas.width / host.canvas.height;
     // Same 3/4 pitch Valen uses in a night. The ortho is fitted to this body
-    // so a taller rig does not inherit her scale.
+    // so a taller rig does not inherit her scale — and to its WIDTH too, or a
+    // body that is wider than it is tall (the werewolf, on all fours, with a
+    // tail) gets its elbows cropped off the sides of its own frame.
     const verticalSpan = Math.max(0.8, size.y * 1.08);
-    const halfH = verticalSpan / 2;
+    const horizontalSpan = Math.max(size.x, size.z) * 1.14;
+    const halfH = Math.max(verticalSpan, horizontalSpan / aspect) / 2;
     const halfW = halfH * aspect;
     const lookY = box.min.y + size.y * 0.46;
     const playDz = 2.35;
@@ -355,7 +437,7 @@ class EnemyStage {
     host.camera.lookAt(center.x, lookY, 0);
     host.camera.updateProjectionMatrix();
     // This file's albedo is a light gray. Valen's exposure would clip it white.
-    host.renderer.toneMappingExposure = 0.55;
+    host.renderer.toneMappingExposure = ENEMY_EXPOSURE[key] || 0.55;
   }
 
   _copyFrame(host, target) {
@@ -379,7 +461,7 @@ class EnemyStage {
       rec.template.position.set(0, 0, 0);
       rec.template.rotation.set(0, 0, 0);
       rec.template.updateMatrixWorld(true);
-      this._fit(host, rec.template);
+      this._fit(host, rec.template, key);
       host.renderer.clear();
       host.renderer.render(host.scene, host.camera);
       if (!rec.preview) {
@@ -497,7 +579,7 @@ class EnemyStage {
     if (!host) return;
     this._withCamera(host, () => {
       slot.model.visible = true;
-      this._fit(host, slot.model);
+      this._fit(host, slot.model, slot.type);
       host.renderer.clear();
       host.renderer.render(host.scene, host.camera);
       this._copyFrame(host, slot.frame);

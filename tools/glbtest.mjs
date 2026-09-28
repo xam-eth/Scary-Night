@@ -187,19 +187,49 @@ if (zombie) {
   ok('zombie clips are exactly the uploaded set',
     names.length === ZOMBIE_CLIPS.length && ZOMBIE_CLIPS.every((name) => names.includes(name)), names.join(', '));
   const verdict = behaviorReady('zombie', names);
-  ok('zombie is not behavior-ready — walk and attack are missing',
-    verdict.ready === false && verdict.missing.includes('walk') && verdict.missing.includes('attack'),
-    verdict.missing.join(', '));
+  // Owner decision 2026-09-28: the file has no walk and no attack, and the
+  // swarm wears 3D bodies anyway. The stand-ins are named in the registry.
+  ok('zombie is behavior-ready through the owner-accepted stand-ins',
+    verdict.ready === true && verdict.missing.length === 0, verdict.missing.join(', '));
 }
-ok('registry points at the vendored zombie and maps die only',
-  ENEMY_MODELS.zombie.url === `./${ZOMBIE_NAME}` && ENEMY_MODELS.zombie.map.die === 'defeat_03'
-    && !ENEMY_MODELS.zombie.map.walk && !ENEMY_MODELS.zombie.map.attack);
-ok('flee, cast, and depressed are not stand-ins', standinViolation('zombie').length === 0
-  && FORBIDDEN_STANDINS.zombie.includes('flee_02') && FORBIDDEN_STANDINS.zombie.includes('cast_a_spell'));
-ok('werewolf zip is not wired as a GLB', !ENEMY_MODELS.werewolf && !ENEMY_MODELS.alpha);
+ok('registry maps the whole roster onto the vendored bodies',
+  ['zombie', 'crawler', 'ghoul', 'hunter', 'stalker'].every((key) => ENEMY_MODELS[key].url === `./${ZOMBIE_NAME}`)
+    && ENEMY_MODELS.zombie.map.die === 'defeat_03'
+    && ENEMY_MODELS.zombie.map.walk === 'flee_02' && ENEMY_MODELS.zombie.map.attack === 'cast_a_spell');
+ok('a stand-in is named in the map, never silent', standinViolation('zombie').length === 0
+  && FORBIDDEN_STANDINS.zombie.length === 0 && (ENEMY_MODELS.zombie.map.idle || '') === 'depressed');
+
+/** The werewolf upload is an FBX inside a zip. Converted once, vendored, byte-exact. */
+const WOLF_NAME = 'werewolf-3d-model.glb';
+const WOLF_SHA256 = 'c2533322a4f11cc958a08049894083b16db9c671770aafd48afb4bfef4e184e3';
+const WOLF_CLIPS = ['front_kick_02.001', 'angry_02.001', 'box_02.001', 'fall.001'];
+const wolfPath = path.join(ROOT, WOLF_NAME);
+ok('converted werewolf GLB is vendored', fs.existsSync(wolfPath), WOLF_NAME);
+const wolf = fs.existsSync(wolfPath) ? readGlb(wolfPath) : null;
+ok('werewolf file is a complete glTF 2.0 binary', !!wolf);
+if (wolf) {
+  const digest = createHash('sha256').update(wolf.bytes).digest('hex');
+  ok('werewolf bytes are the converted file', digest === WOLF_SHA256, digest);
+  ok('werewolf stays inside the mobile budget', wolf.bytes.length < 6 * 1024 * 1024, `${wolf.bytes.length} bytes`);
+  const json = wolf.json;
+  ok('werewolf is a rigged mesh', json.meshes?.length === 1 && json.skins?.length === 1,
+    `${json.skins?.[0]?.joints?.length || 0} joints`);
+  ok('werewolf skin has its joints', (json.skins?.[0]?.joints?.length || 0) === 65);
+  ok('werewolf texture stays embedded', (json.images?.length || 0) === 1 && (json.textures?.length || 0) === 1);
+  const names = (json.animations || []).map((animation) => animation.name).sort();
+  ok('werewolf clips are exactly the converted set',
+    names.length === WOLF_CLIPS.length && WOLF_CLIPS.every((name) => names.includes(name)), names.join(', '));
+  const verdict = behaviorReady('werewolf', names);
+  ok('werewolf is behavior-ready through the owner-accepted stand-ins',
+    verdict.ready === true && verdict.missing.length === 0, verdict.missing.join(', '));
+}
+ok('the werewolf upload is kept as provenance for the conversion',
+  fs.existsSync(path.join(ROOT, 'werewolf+3d+model.zip'))
+    && fs.readFileSync(path.join(ROOT, 'werewolf+3d+model.zip')).subarray(0, 2).toString('ascii') === 'PK');
+ok('the converted werewolf is wired as a GLB',
+  ENEMY_MODELS.werewolf.url === `./${WOLF_NAME}` && ENEMY_MODELS.werewolf.map.die === 'fall.001'
+    && ENEMY_MODELS.werewolf.map.run === 'box_02.001' && ENEMY_MODELS.werewolf.map.attack === 'front_kick_02.001');
 const wolfZip = path.join(ROOT, 'werewolf+3d+model.zip');
-ok('werewolf upload is still a zip, not a converted GLB',
-  fs.existsSync(wolfZip) && fs.readFileSync(wolfZip).subarray(0, 2).toString('ascii') === 'PK');
 ok('clip contract matches the roster',
   requiredClips('zombie').join(',') === 'walk,attack,die'
     && requiredClips('werewolf').join(',') === 'run,attack,die'
@@ -225,9 +255,9 @@ const crush = book.sync(Array.from({ length: 20 }, (_, i) => ({ id: 200 + i, key
 ok('a full swarm cannot grow the pool past the cap', crush.live === ENEMY_GLB_CAP && crush.made === ENEMY_GLB_CAP && crush.starved === 12);
 
 const enemyCode = fs.readFileSync(path.join(ROOT, 'src/game/enemy3d.js'), 'utf8');
-ok('runtime does not alias flee or cast onto the state machine',
-  !/walk:\s*['"]flee_02['"]/.test(enemyCode) && !/attack:\s*['"]cast_a_spell['"]/.test(enemyCode)
-    && !/attack:\s*['"]depressed['"]/.test(enemyCode));
+ok('a stand-in clip is only ever named in the registry map, never in the state machine',
+  !/clipForState[\s\S]{0,200}flee_02/.test(enemyCode) && !/_pose[\s\S]{0,200}cast_a_spell/.test(enemyCode)
+    && enemyCode.includes('FORBIDDEN_STANDINS'));
 
 console.log(failures === 0 ? '\nenemy GLB registry: all PASS' : `\nenemy GLB registry: ${failures} FAILURE(S)`);
 process.exit(failures === 0 ? 0 : 1);

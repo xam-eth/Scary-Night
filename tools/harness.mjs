@@ -931,7 +931,13 @@ if (args.systems) {
   const capped = selectGlbSlots(swarm, { x: 0, y: 0 }, ENEMY_GLB_CAP, () => true);
   line(capped.length === ENEMY_GLB_CAP && capped[0].id === 1, `nearest ${ENEMY_GLB_CAP} are the skinned cap`);
   line(selectGlbSlots(swarm, { x: 0, y: 0 }, ENEMY_GLB_CAP, () => false).length === 0, 'an unready model stays on the 2D path');
-  line(!ENEMY_MODELS.zombie.map.walk && ENEMY_MODELS.zombie.map.die === 'defeat_03' && requiredClips('werewolf')[0] === 'run', 'zombie flee is not a walk');
+  // Owner decision: the swarm wears 3D bodies now, on stand-in clips, and the
+  // stand-ins are named in the registry rather than smuggled into the poses.
+  line(ENEMY_MODELS.zombie.map.walk === 'flee_02' && ENEMY_MODELS.zombie.map.attack === 'cast_a_spell'
+    && ENEMY_MODELS.zombie.map.die === 'defeat_03' && requiredClips('werewolf')[0] === 'run',
+    'zombie flee is a named stand-in, not a silent walk');
+  line(['zombie', 'crawler', 'ghoul', 'hunter', 'stalker', 'werewolf'].every((key) => ENEMY_MODELS[key] && ENEMY_MODELS[key].url),
+    'every besieger in the roster has a body wired to it');
   const book = new SlotBook(ENEMY_GLB_CAP);
   book.sync(capped);
   book.sync([]);

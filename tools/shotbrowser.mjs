@@ -404,7 +404,9 @@ try {
   await shootNarration(m, '16-phone');
   const ls = await browser.newPage();
   await ls.setViewport({ width: 844, height: 390, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
-  await ls.goto(URL_BASE + '/', { waitUntil: 'domcontentloaded', timeout: 90000 });
+  // The swarm now ships two bodies (7.5 MB) beside Valen's own, so a cold
+  // software-WebGL page needs longer than the old 90s to be ready to shoot.
+  await ls.goto(URL_BASE + '/', { waitUntil: 'domcontentloaded', timeout: 180000 });
   await waitValen(ls, 60000);
   await shootNarration(ls, '17-short');
   await ls.close();

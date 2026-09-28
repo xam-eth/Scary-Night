@@ -4,7 +4,7 @@
  * action actually happens, not when the player is merely nearby.
  */
 
-import { TAU, writeSave } from '../core/util.js';
+import { TAU, writeSave, clamp } from '../core/util.js';
 import { PLAYER } from '../core/config.js';
 
 // The servant door is already knocking. Learn the stick, then go to it.
@@ -29,6 +29,24 @@ bootGuideArt();
 
 function artReady(img) {
   return !!(img && img.complete && img.naturalWidth > 0);
+}
+
+/**
+ * One scale for every guidance icon — the bouncing pointer, the tapping hand,
+ * the door chips and the screen-edge chevrons. They used to be four unrelated
+ * fixed pixel heights (132 / 128 / 96 / 72), so the same tutorial read huge on
+ * a phone and tiny on a desktop. A 390px-wide phone is the reference at 1.0.
+ */
+export const GUIDE_SIZE = Object.freeze({ pointer: 86, hand: 80, chip: 58, bearing: 44 });
+
+export function guideScale(w, h) {
+  return clamp(Math.sqrt(Math.min(w || 390, h || 844) / 390), 0.72, 1.18);
+}
+
+/** Guidance icon height for this viewport. One knob, used by every surface. */
+export function guideSize(game, which) {
+  const r = (game && game.renderer) || {};
+  return (GUIDE_SIZE[which] || 78) * guideScale(r.w, r.h);
 }
 
 /** Screen-space waymark. ang 0 points right. Falls back if the asset is not in yet. */
@@ -307,7 +325,7 @@ export function drawCoachWorld(game, ctx) {
   if (sp && artReady(guideArt.arrow)) {
     const dpr = game.renderer.dpr || 1;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    drawGuideIcon(ctx, guideArt.arrow, ARROW_TIP, sp.x, sp.y + bob, 0, 132);
+    drawGuideIcon(ctx, guideArt.arrow, ARROW_TIP, sp.x, sp.y + bob, 0, guideSize(game, 'pointer'));
   } else {
     if (game.renderer.upright) game.renderer.upright(ctx, mark.x, mark.y);
     ctx.translate(mark.x, mark.y - clear.lift + bob);
@@ -333,12 +351,13 @@ export function drawCoach(game, ctx, w, h) {
   const cue = cueFor(game);
   if (!cue) return;
 
+  const gs = guideScale(w, h);
   if (cue.kind === 'drag') {
     const s = input.stick;
     const hx = s.homeX || w * 0.16;
     const hy = s.homeY || h - 120;
     const hr = s.r || 52;
-    drawDrag(ctx, hx, hy, hr, game.time);
+    drawDrag(ctx, hx, hy, hr, game.time, gs);
     chip(ctx, w, h, 'DRAG UP', 'TO WALK');
     return;
   }
@@ -346,14 +365,14 @@ export function drawCoach(game, ctx, w, h) {
   if (cue.kind === 'button') {
     const b = input.buttons[cue.id];
     if (!b || b.hidden) {
-      drawWorldCue(game, ctx, w, h);
+      drawWorldCue(game, ctx, w, h, null, gs);
       return;
     }
-    pointAtButton(ctx, w, h, b, input, game.time, cue.title, cue.sub);
+    pointAtButton(ctx, w, h, b, input, game.time, cue.title, cue.sub, gs);
     return;
   }
 
-  drawWorldCue(game, ctx, w, h, cue);
+  drawWorldCue(game, ctx, w, h, cue, gs);
 }
 
 function cueFor(game) {
@@ -389,7 +408,7 @@ function cueFor(game) {
   return null;
 }
 
-function drawWorldCue(game, ctx, w, h, cue) {
+function drawWorldCue(game, ctx, w, h, cue, gs = 1) {
   const mark = worldMark(game);
   if (!mark || !game.renderer.worldToScreen) return;
   const label = (cue && cue.label) || 'GO';
@@ -406,7 +425,7 @@ function drawWorldCue(game, ctx, w, h, cue) {
   chip(ctx, w, h, label, sub);
 }
 
-function pointAtButton(ctx, w, h, b, input, time, title, sub) {
+function pointAtButton(ctx, w, h, b, input, time, title, sub, gs = 1) {
   const aim = aimHand(b, w, h, input);
   const pulse = 0.55 + 0.45 * Math.abs(Math.sin(time * 5));
   ctx.save();
@@ -417,7 +436,7 @@ function pointAtButton(ctx, w, h, b, input, time, title, sub) {
   ctx.stroke();
   ctx.restore();
   ripple(ctx, b.x, b.y, time);
-  drawTapHand(ctx, aim.tipX, aim.tipY, aim.angle, time);
+  drawTapHand(ctx, aim.tipX, aim.tipY, aim.angle, time, GUIDE_SIZE.hand * gs);
   chip(ctx, w, h, title, sub);
 }
 
@@ -454,7 +473,7 @@ function aimHand(b, w, h, input) {
   return best;
 }
 
-function drawDrag(ctx, hx, hy, hr, time) {
+function drawDrag(ctx, hx, hy, hr, time, gs = 1) {
   const u = (time % 1.25) / 1.25;
   const slide = u < 0.7 ? u / 0.7 : 1;
   const y = hy + hr * 0.15 - slide * (hr * 0.85);
@@ -469,10 +488,10 @@ function drawDrag(ctx, hx, hy, hr, time) {
   ctx.setLineDash([]);
   ctx.restore();
   ripple(ctx, hx, hy, time * 0.85);
-  drawTapHand(ctx, hx, y, -Math.PI / 2, 0.5 + slide);
+  drawTapHand(ctx, hx, y, -Math.PI / 2, 0.5 + slide, GUIDE_SIZE.hand * gs);
 }
 
-function drawTapHand(ctx, tipX, tipY, angle, time) {
+function drawTapHand(ctx, tipX, tipY, angle, time, height = GUIDE_SIZE.hand) {
   const cycle = ((time % 1.1) + 1.1) % 1.1;
   const press = cycle < 0.22 ? Math.sin((cycle / 0.22) * Math.PI) : 0;
   const bob = Math.sin(time * 6.5) * 3.5 * (1 - press);
@@ -480,7 +499,7 @@ function drawTapHand(ctx, tipX, tipY, angle, time) {
     const inset = 2 + bob * 0.35 - press * 12;
     const x = tipX - Math.cos(angle) * inset;
     const y = tipY - Math.sin(angle) * inset;
-    drawGuideIcon(ctx, guideArt.hand, HAND_TIP, x, y, angle + Math.PI / 2, 128);
+    drawGuideIcon(ctx, guideArt.hand, HAND_TIP, x, y, angle + Math.PI / 2, height);
     if (press > 0.15) ripple(ctx, tipX, tipY, cycle);
     return;
   }
@@ -589,23 +608,23 @@ function edgeArrow(ctx, view, sp, label, time) {
   ctx.save();
   ctx.globalAlpha = pulse;
   if (artReady(guideArt.arrow)) {
-    drawGuideIcon(ctx, guideArt.arrow, ARROW_TIP, x, y, ang - Math.PI / 2, 96);
+    drawGuideIcon(ctx, guideArt.arrow, ARROW_TIP, x, y, ang - Math.PI / 2, GUIDE_SIZE.chip * gs);
   } else {
     ctx.translate(x, y);
     ctx.rotate(ang);
     ctx.fillStyle = '#f0d078';
     ctx.beginPath();
-    ctx.moveTo(16, 0);
-    ctx.lineTo(-9, -8);
-    ctx.lineTo(-9, 8);
+    ctx.moveTo(16 * gs, 0);
+    ctx.lineTo(-9 * gs, -8 * gs);
+    ctx.lineTo(-9 * gs, 8 * gs);
     ctx.closePath();
     ctx.fill();
     ctx.rotate(-ang);
   }
-  ctx.font = '500 11px "Segoe UI", Roboto, sans-serif';
+  ctx.font = `500 ${Math.round(11 * clamp(gs, 0.9, 1.15))}px "Segoe UI", Roboto, sans-serif`;
   ctx.fillStyle = '#f0d078';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(label, artReady(guideArt.arrow) ? x - dx * 20 : 0, artReady(guideArt.arrow) ? y - dy * 20 : 18);
+  ctx.fillText(label, artReady(guideArt.arrow) ? x - dx * 20 * gs : 0, artReady(guideArt.arrow) ? y - dy * 20 * gs : 18 * gs);
   ctx.restore();
 }
