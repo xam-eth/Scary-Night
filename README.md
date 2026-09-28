@@ -96,6 +96,8 @@ as a failure path (no WebGL / headless harness), never as the on-screen characte
 ```
 index.html            canvas, veil, fullscreen button
 styles.css            page shell
+brand/                brand kit: guidelines page + logo, icon, store & social assets
+                      (regenerate with `node tools/brandkit.mjs`)
 src/main.js           boot, resize, audio unlock, fixed-step loop
 src/core/util.js      math, seeded RNG, clock formatting, save layer
 src/core/config.js    all timings, phases, enemy stats, upgrades, beats
