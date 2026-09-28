@@ -8,6 +8,12 @@ Status: **spine locked** (owner decisions below). The authored beat text here is
 the canon; `[draft]` lines are placeholders for the writing pass to refine, never
 to contradict.
 
+**Owner update (this rev):** Valen is now **armed** — she takes up the hunters'
+weapons (claw / sword / crossbow-shot), §7.5 — and the story is delivered by a
+**named narrating voice** surfaced as on-screen narration text (Valen first
+person + the house second person), §2.3 / §3 / §10. Neither changes the spine
+(P1–P3): she is still the besieged, cursed, sympathetic monster.
+
 ---
 
 ## 0. Logline
@@ -15,10 +21,11 @@ to contradict.
 **LAST NIGHT is not about surviving. It is about not being allowed to die.**
 
 A vampire wakes hungry in a house that will not let her leave. Every night the
-siege comes; she feeds to live; the dawn that should burn her only resets the
-walls. The story is *why* — uncovered across repeated nights — and a final
-choice: walk into the true dawn and be free, or stay and become the house's
-monster forever.
+siege comes; she feeds to live, and she takes up the hunters' own weapons —
+their steel, their bolts — to cut a path through it; the dawn that should burn
+her only resets the walls. The story is *why* — uncovered across repeated
+nights — and a final choice: walk into the true dawn and be free, or stay and
+become the house's monster forever.
 
 ## 1. Pillars (owner-locked)
 
@@ -26,7 +33,9 @@ monster forever.
   her enemies to feed on. The loop is punishment *and* protection. Dawn does not
   free her; it resets the siege. ("The house remembers" is literal.)
 - **P2 — Sympathetic tragedy.** We fear her *and* pity her (Carmilla). Her hunger
-  is not villainy — it is a curse she carries. The player must relate to the
+  is not villainy — it is a curse she carries. That she is **armed** — the claw,
+  and the hunters' stolen sword and crossbow — makes her deadly, not heroic: she
+  fights to last the night, not to save anyone. The player must relate to the
   monster.
 - **P3 — The ending is a choice.** At the arc's climax: **break the loop** (walk
   into the true dawn — burn, be free — **DAWNBREAKER**, tragic release) **or**
@@ -45,13 +54,24 @@ pre-rendered cutscenes**. "Cinematic" is achieved through:
 2. **Death/repetition IS the story (roguelite).** Each night and each dawn
    advances the arc; the loop is not a backdrop, it is the plot. Beats are hung on
    the existing reveal cadence (`REVEALS` in `src/game/economy.js`, #15).
-3. **The monster's interior voice.** A spare, gothic first/second-person murmur —
-   her thoughts and the house's whisper — delivered in fragments, never exposition.
+3. **A named narrating voice (the "pembawa narasi").** The story is *told*, not
+   only implied — the way the genre's gothic narrators do it (Darkest Dungeon's
+   Ancestor). **Valen narrates in the first person** — her memory, her dread, her
+   dry contempt — and **the house answers in the second person** ("You have done
+   this before."). This voice is surfaced as **on-screen narration text**: an
+   opening narration, act-title narration cards, and narrator lines over the key
+   beats. It is a *character* speaking, not a tutorial — still gothic, still
+   spare, but a deliberate narrating presence, not only a background murmur.
 
 Delivery surfaces (all already exist or are seamed):
+- **Opening narration** — a short first-person narration on the first night (and
+  from the menu/attract): who she is, where she woke, what the house is. The
+  conventional game intro-narration slot, in Valen's voice.
+- **Act-title narration cards** — at each act turn, a title + a narrated line
+  (*Act I — The Waking*, etc.), spoken by the narrator over a graded plate.
 - **Dawn-cards** — a short procedural interstitial after each survived dawn (the
   room in first light + one line + grade + audio). The strongest cinematic slot.
-- **Bottom narrative strip** — the reusable slot from #31; in-run diegetic lines.
+- **Bottom narrative strip** — the reusable slot from #31; in-run narrated lines.
 - **Environmental room fragments** — each named room holds one discoverable detail.
 - **The knock** — the recurring mystery/voice (its "gift" outcome can carry a
   memory fragment).
@@ -65,9 +85,11 @@ because **something woke her**. She is not proud and not repentant — she is
 *tired*, and the hunger never is. She remembers almost nothing at first; the
 house gives her memory back one night at a time, and she does not always want it.
 
-Voice: sparse, cold, occasionally tender. First person for her interior
-("I know this door. I sealed it."), second person for the house's address to her
-("You have done this before."). Never over-explains. `[draft]` lines below.
+Voice: sparse, cold, occasionally tender — and she is **the narrator**. First
+person for her interior *and* her narration to the player ("I know this door. I
+sealed it."); the house answers in the second person ("You have done this
+before."). She never over-explains, but she *does* tell the story aloud — the
+opening narration and the act cards are her. `[draft]` lines below.
 
 ## 4. The house — the antagonist (a place, not a person)
 
@@ -118,6 +140,27 @@ her buried self / the house's guilt). `Codex knock line stays canon.`
 - **The stalker** — moves only unseen, never breaks a door, is simply *inside*
   when you open one. The truest face of the curse: it is patient because the house
   has forever. `"Running is consent."` — you cannot outrun what you are.
+
+## 7.5 The weapons — Valen armed (owner update)
+
+She does not fight bare forever. The hunters came for her with **steel and
+bolts**, died on the palisade, and the house kept their tools with the rest of
+its dead. She takes them up — a piece of the people who came to end her, turned
+on the things the house sends:
+
+- **The claw** — her true self. Free, always hers; the meal and the weapon are
+  the same. When the hunger is loudest she has nothing else, and nothing else is
+  as intimate. Short reach, no mercy.
+- **The sword** — a hunter's blade off the gatehouse wall. Reach and a clean
+  arc, for when the claw would cost her too much blood.
+- **The crossbow / the shot** — their own bolt, turned outward. Distance is a
+  mercy she was never shown.
+
+The irony is the point (P1/P2): the arms raised to kill the monster now serve
+her, and it redeems nothing — it only buys the night. Diegetically the weapons
+are **found in the house** (the gatehouse, the study, the dead), never bought;
+they are tools, not power sold, so the never-sell-power line (`docs/DESIGN.md`,
+#20) stays intact — money never buys a claw or a bolt.
 
 ## 8. The arc (three acts, hung on the night cadence)
 
@@ -172,9 +215,11 @@ final decision, so it feels earned, not menu-picked.
   vampire." Objects and bodies, not lore-dumps.
 - **Ambiguity is a feature (within P1/P2).** The house's motive stays double —
   prison or protection — until the end, and even then not fully closed.
-- **Diegetic always.** No narrator explaining rules; her voice and the house's.
-- **Mobile-legible.** Lines are short enough for the bottom strip and a dawn-card
-  at phone width.
+- **A character voice, not a lecture.** The narrator *is* Valen (first person)
+  and the house (second person) — surfaced as on-screen narration text like
+  conventional games. It tells the story; it never explains rules or systems.
+- **Mobile-legible.** Lines are short enough for the bottom strip, an opening
+  narration, an act card, and a dawn-card at phone width.
 
 ## 11. Canon vs new
 - **Canon (keep):** the CODEX entries, "you woke hungry / the servant door,"
@@ -183,6 +228,9 @@ final decision, so it feels earned, not menu-picked.
 - **New (this bible):** the loop-as-prison premise, the dawn paradox as the
   mystery, the cast reframed as her past, the three-act arc, the ending choice,
   the delivery system.
+- **New (owner update):** Valen **armed** with the hunters' weapons (§7.5); a
+  **named narrator** (Valen / the house) surfaced as on-screen narration —
+  opening narration + act cards (§2.3, §3, §10).
 
 ## 12. Implementation seams → Epic (Narrative & Cinematics)
 - A **narrative director** (data-driven beats → the bottom strip #31 slot,
@@ -194,9 +242,13 @@ final decision, so it feels earned, not menu-picked.
 - **Environmental room fragments** (one discoverable detail per named room).
 - **The arc content + the knock's fragment thread** (the authored beats here).
 - **The ending choice** (branching climax; DAWNBREAKER vs stay).
+- **Narrator surfaces** (owner update) — an **opening narration** and
+  **act-title narration cards** in Valen's voice, built on the narrative
+  director; the story is *narrated* on screen, not only murmured on the strip.
 
 ## 13. Guardrails
-- Diegetic, gothic, restrained — no exposition dumps, no narrator.
+- Gothic, restrained, **narrated by a character** (Valen / the house), surfaced
+  as on-screen narration text — never an exposition dump or a rules tutorial.
 - Mobile-first; lines fit the strip and dawn-cards at phone width.
 - No new art/video assets — procedural + the room plates + grade + audio only.
 - Don't break the systems in `docs/DESIGN.md`; the story rides the existing loop,
