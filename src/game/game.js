@@ -33,7 +33,7 @@ import { Haunts } from './haunts.js';
 import { Ads } from '../shop/ads.js';
 import { Valen3D } from './valen3d.js';
 import { IAP } from '../shop/iap.js';
-import { drawHUD, drawWorldPrompts, urgentGuidance } from './hud.js';
+import { drawHUD, drawWorldPrompts, urgentGuidance, pauseButtonBox } from './hud.js';
 import { nextBeat, ackBeat, beatById, endingReady } from './narrative.js';
 import { updateCoach, drawCoachWorld } from './coach.js';
 import * as UI from '../ui/screens.js';
@@ -350,6 +350,7 @@ export class Game {
   }
 
   togglePause(on) {
+    this.pauseConfirm = false;
     if (this.screen === 'playing' && on !== false) {
       this.paused = true; this.screen = 'paused'; this.ui = []; this.uiIndex = 0;
     } else if (this.screen === 'paused') {
@@ -358,6 +359,7 @@ export class Game {
   }
 
   toMenu() {
+    this.pauseConfirm = false;
     this.settlePurse('leave');
     this.paused = false;
     this.screen = 'menu';
@@ -2346,6 +2348,16 @@ export class Game {
       else if (this.screen === 'paused') this.togglePause(false);
     }
     if (!input.keys.pause) this._pauseHeld = false;
+    if (this.screen === 'playing' && input.uiTap) {
+      const box = pauseButtonBox(this.renderer.w, this.renderer.h);
+      const tap = input.uiTap;
+      if (tap.x >= box.x && tap.x <= box.x + box.w && tap.y >= box.y && tap.y <= box.y + box.h) {
+        input.uiTap = null;
+        this.audio.play('uiConfirm', { vol: 0.4 });
+        this.togglePause(true);
+        return;
+      }
+    }
     if (this.screen === 'intro') {
       if (input.uiTap) { this._introTap = true; input.uiTap = null; }
       return;

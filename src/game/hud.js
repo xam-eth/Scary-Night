@@ -48,6 +48,35 @@ function withPriority(ctx, em, ax, ay, draw) {
   ctx.restore();
 }
 
+/** Top-left, clear of the thumb cluster. The stage already sits inside the safe area. */
+export function pauseButtonBox(w, h) {
+  const size = 48;
+  const inset = 8;
+  return { x: inset, y: Math.max(inset, h < 500 ? 6 : inset), w: size, h: size };
+}
+
+function drawPauseButton(game, ctx, w, h) {
+  const b = pauseButtonBox(w, h);
+  game.ui.push({ x: b.x, y: b.y, w: b.w, h: b.h, label: 'PAUSE', onClick: () => game.togglePause(true) });
+  ctx.save();
+  ctx.fillStyle = 'rgba(6,7,12,0.78)';
+  ctx.strokeStyle = 'rgba(212,186,120,0.85)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.rect(b.x, b.y, b.w, b.h);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = '#f0e6d4';
+  const barW = 5;
+  const barH = 18;
+  const gap = 6;
+  const cx = b.x + b.w / 2;
+  const cy = b.y + b.h / 2;
+  ctx.fillRect(cx - gap - barW, cy - barH / 2, barW, barH);
+  ctx.fillRect(cx + gap, cy - barH / 2, barW, barH);
+  ctx.restore();
+}
+
 function drawTopScrim(ctx, w, h) {
   const scrimH = Math.min(132, h * 0.18);
   const g = ctx.createLinearGradient(0, 0, 0, scrimH);
@@ -64,6 +93,7 @@ export function drawHUD(game, ctx, w, h) {
   const em = hudEmphasis(game);
   const phone = w < 840 || h < 500;
   drawTopScrim(ctx, w, h);
+  drawPauseButton(game, ctx, w, h);
   drawTopBar(game, ctx, w, h, em, pulse);
   drawBuildBadge(game, ctx, w, h, em.badge);
   withPriority(ctx, em.clock, w / 2, phone ? 58 : h * 0.07, () => drawClock(game, ctx, w, h, pulse, em.clock));
@@ -354,7 +384,8 @@ function drawTopBar(game, ctx, w, h, em, pulse) {
     ? `rgba(230,${80 + 40 * Math.abs(Math.sin(game.time * 5))},70,0.96)`
     : 'rgba(232,220,206,0.92)';
   if (low) ctx.shadowColor = 'rgba(160,20,30,0.8)', ctx.shadowBlur = 8;
-  ctx.fillText(`BLOOD  ${pct}%`, 12, y);
+  const pause = pauseButtonBox(w, h);
+  ctx.fillText(`BLOOD  ${pct}%`, pause.x + pause.w + 8, y);
   ctx.shadowBlur = 0;
   ctx.globalAlpha = flash ? 1 : em.badge;
   ctx.textAlign = 'right';

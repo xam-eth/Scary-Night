@@ -655,13 +655,35 @@ export function drawPause(game, ctx, w, h) {
   ctx.fillText('PAUSED', w / 2, titleY);
   ctx.restore();
 
-  const bw = phone ? Math.min(w - 28, 420) : Math.min(240, w * 0.7);
+  const bw = phone ? Math.min(w - 28, 420) : Math.min(280, w * 0.7);
+  if (game.pauseConfirm) {
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(232,220,200,0.9)';
+    ctx.font = `400 ${phone ? 14 : 16}px ${SERIF}`;
+    wrapText(ctx, 'The house keeps the floor. The rest of this night is lost.', w / 2, titleY + 36, Math.min(w - 40, 420), phone ? 20 : 22);
+    ctx.restore();
+    const bh = 48;
+    const y1 = h - (phone ? 148 : 160);
+    const stay = uiButton(game, {
+      x: w / 2 - bw / 2, y: y1, w: bw, h: bh, label: 'STAY', small: true, accent: '#6a6a80',
+      onClick: () => { game.pauseConfirm = false; },
+    });
+    buttonVisual(ctx, stay.b, { active: stay.hover, label: 'STAY', small: true, accent: '#6a6a80' });
+    const leave = uiButton(game, {
+      x: w / 2 - bw / 2, y: y1 + bh + 10, w: bw, h: bh, label: 'LEAVE', small: true, accent: '#8a3038',
+      onClick: () => game.toMenu(),
+    });
+    buttonVisual(ctx, leave.b, { active: leave.hover, label: 'LEAVE', small: true, accent: '#8a3038' });
+    return;
+  }
   const items = [
     { label: 'RESUME', onClick: () => game.togglePause(false) },
     { label: 'RESTART NIGHT', onClick: () => game.beginNight() },
-    { label: 'SETTINGS', onClick: () => game.setScreen('settings', 'paused') }, // v1.0 FIX: 'pause' was no real screen — BACK from settings black-holed the game
-    { label: 'HOW TO SURVIVE', onClick: () => game.setScreen('help', 'paused') }, // same black-hole as the SETTINGS row above
-    { label: 'ABANDON', onClick: () => game.toMenu() },
+    { label: 'SETTINGS', onClick: () => game.setScreen('settings', 'paused') },
+    { label: 'HOW TO SURVIVE', onClick: () => game.setScreen('help', 'paused') },
+    { label: 'MAIN MENU', onClick: () => { game.pauseConfirm = true; } },
   ];
   const gap = h < 520 ? 4 : 8;
   const bh = clamp((h * 0.62 - gap * (items.length - 1)) / items.length, 28, 46);

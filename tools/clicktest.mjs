@@ -144,6 +144,8 @@ ok('menu intact after the tour', (await screen()) === 'menu');
 ok('reached playing', await settle('playing'), `screen=${await screen()}`);
 
 console.log('\n=== PAUSE (real keys) + PAUSE MENU (real clicks) ===');
+{ const r = await clickOk('PAUSE', 'paused'); ok('pause button opens the menu', r.pass, r.why); }
+{ const r = await clickOk('RESUME', 'playing'); ok('resume returns to the night', r.pass, r.why); }
 await page.keyboard.down('Escape'); await pump(2); await page.keyboard.up('Escape'); await pump(2);
 ok('ESC pauses', (await screen()) === 'paused', `screen=${await screen()}`);
 { const r = await clickOk('SETTINGS', 'settings'); ok('pause→settings reachable', r.pass, r.why); }
@@ -151,7 +153,8 @@ ok('ESC pauses', (await screen()) === 'paused', `screen=${await screen()}`);
 await page.keyboard.down('Escape'); await pump(2); await page.keyboard.up('Escape'); await pump(2);
 ok('ESC unpauses', (await screen()) === 'playing', `screen=${await screen()}`);
 await page.keyboard.down('Escape'); await pump(2); await page.keyboard.up('Escape'); await pump(2);
-{ const r = await clickOk('ABANDON', 'menu'); ok('abandon returns to menu', r.pass, r.why); }
+{ const r = await clickOk('MAIN MENU', 'paused'); ok('main menu asks before leaving', r.pass, r.why); }
+{ const r = await clickOk('LEAVE', 'menu'); ok('leave returns home and banks the floor', r.pass, r.why); }
 
 console.log('\n=== DEATH → TRY AGAIN ===');
 await clickLabel('PLAY'); await settle('playing', 400);
