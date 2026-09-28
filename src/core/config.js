@@ -244,6 +244,41 @@ export const BEATS = [
   { t: 292, id: 'lastPush', text: null, fn: 'spawnWave', args: { type: 'crawler', count: 2, breakIn: true } },
 ];
 
+/* ---------------- the climax ----------------
+ * Four engineered peaks. Each one is a real gameplay beat AND a 2–3s, 9:16,
+ * sound-off spectacle — the clip that stops a scroll. Tuned here, not in the
+ * systems, so the whole shape of a night's peaks can be read in one place.
+ *
+ *   crescendo  the last ~20s before dawn: every door at once, the swarm floods
+ *   frenzy     a feed-chain flips the blood moon: slow-mo, then overdrive
+ *   duel       the alpha werewolf: the lights cut, the swarm leaves, 1v1
+ *   dawnbreak  surviving to dawn: a golden wave that immolates what is left
+ */
+export const CLIMAX = {
+  crescendoAt: 280,          // 20s of siege left in a 300s night
+  crescendoDur: 22,
+  crescendoDoorEvery: 1.5,   // one more door leans in every beat
+  crescendoDoorBite: 0.045,  // ...and each one costs this share of its max hp
+
+  frenzyChain: 3,            // feeds inside the window
+  frenzyWindow: 9,
+  frenzyDur: 7,
+  frenzyCooldown: 42,
+  frenzySlowT: 0.5,          // half a second of slow motion on the turn
+  frenzySlowScale: 0.3,
+  frenzyDamage: 2.2,
+  frenzySpeed: 1.22,
+  frenzyRate: 1.85,
+
+  duelAfter: 150,            // never in the first quiet half...
+  duelBefore: 266,           // ...and never inside the crescendo
+  duelMinNights: 1,          // night 1 is the guided win: the duel waits
+  duelCut: 1.6,              // lights out, monster fills the frame
+  duelFight: 20,             // then it is a 1v1, whether or not you want one
+
+  dawnWaveDur: 2.3,          // the sun crosses the house
+};
+
 /* ---------------- knocking system ----------------
  * A knock is a promise the game makes and only sometimes keeps.
  */

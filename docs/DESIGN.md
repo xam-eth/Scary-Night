@@ -264,6 +264,10 @@ pay-to-win), Deconstructor of Fun (Archero; Fortnite), Mobile Free To Play
 - #24 diegetic blood (body = clock) · #25 the feed verb · #26 attract-mode loop
   vignette · #27 adaptive HUD priority
 
+**Batch #52 — remaining build** (consolidated)
+- #52-A the climax system (§14) · #52-B narrator surfaces (`docs/STORY.md` §12) ·
+  #52-C enemy GLB models + wiring (#50/#43) · #52-D guide-icon size sync
+
 ---
 
 ## 13. Guardrails (every issue)
@@ -277,6 +281,51 @@ pay-to-win), Deconstructor of Fun (Archero; Fortnite), Mobile Free To Play
   after settlement/consume/acknowledge (`src/shop/config.js`, `docs/IAP.md`).
 - The byte-exact GLB rule stands (`tools/glbtest.mjs` 18/18) — cosmetics composite
   over the model, never modify it.
+
+---
+
+## 14. The four peaks — engineered climax (batch #52, section A)
+
+**Why.** The night is a slow burn, and a slow burn is what keeps a player. It is
+not what makes one: a slow-burn horror game has **no three-second spectacle**,
+and mobile lives or dies on the clip that stops the scroll. So the game builds
+deliberate peaks — moments that are *both* a real gameplay high *and* a 2–3s,
+9:16, high-contrast, sound-off frame. These frames are also the raw capture for
+the marketing request (#48).
+
+**The four peaks** (all tuning in `CLIMAX`, `src/core/config.js`; all logic in
+`src/game/climax.js`):
+
+| # | peak | trigger | the gameplay beat | the frame |
+|---|------|---------|-------------------|-----------|
+| 1 | **Siege crescendo** | last 20s before dawn, once per night | the director spends its whole budget: two fronts, doors leaning in, the heartbeat and the score spike | every door shuddering, the swarm flooding, the frame edges breathing red |
+| 2 | **Blood moon frenzy** | 3 feeds inside 9s (a feed-chain), 42s cooldown | 0.5s of slow motion, then overdrive: ×2.2 claw, ×1.85 rate, ×1.22 speed, blood in the air | the moon rises, the grade goes red, one word — FRENZY — and a bar |
+| 3 | **Boss duel** | once per night, 150s–266s, from night 2 | the swarm is held and leaves; an **alpha werewolf** gets a backlit entrance, then a 1v1 with a name and a bar | the lights cut, a shape fills the frame, one pool of red |
+| 4 | **Dawnbreak** | surviving to dawn | the sun crosses the house as a wave and **immolates the swarm in order**; Valen lifts a hand | white-gold crash, then a golden wave, her hand against it |
+
+**Design rules.**
+
+- **A peak is a real beat, never a cutscene.** The player keeps the stick the
+  whole time. The crescendo escalates the real wave and really damages doors;
+  the frenzy is a real player state (`player.frenzy`), not a filter; the duel
+  really stops the director from spawning; the dawn wave really is what kills
+  what is left standing.
+- **Ad-first framing.** Each peak is one word, one bar, or one silhouette —
+  never a paragraph. Grades, particles and synth only: no new art, no video.
+- **The horror identity holds.** The frenzy is *desperate*, not heroic: it is
+  seven seconds of not being careful, it costs blood like everything else, and
+  it ends. The dawn is a release the house did not intend to give her.
+- **Nothing is forked.** The peaks hang off the systems that already own pacing
+  and light: the director (`spawnsHeld`, `heartBoost`, `panicBoost`, the budget),
+  the renderer's `post()` grade (`edge`, `red`), the existing blood-moon light
+  grade, and the dawn screen. `Climax` asks; the systems decide.
+
+**Capture + tests.** `tools/shotbrowser.mjs` shoots every peak at phone (390×844)
+and desktop (`14-phone-peak*`, `15-desktop-peak*`); the waits are on *sim* time
+because headless rAF is slower than 60Hz. `tools/harness.mjs --systems` asserts
+each trigger fires once, that the frenzy is a state (and that it multiplies a
+claw), that the duel holds the swarm, and that the dawn wave burns the house in
+order rather than all at once. `__LN_API.peak(name)` forces any peak for capture.
 
 ---
 

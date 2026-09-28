@@ -377,6 +377,9 @@ export class Renderer {
     const {
       vignette = 0.5, danger = 0, lowBlood = 0, heartbeat = 0, heal = 0,
       blackout = 0, time = 0,
+      // peaks: the frame edges breathing red (crescendo / frenzy) and the
+      // full-frame blood grade (frenzy). Both are grades, not new systems.
+      edge = 0, red = 0,
     } = opts;
     this.time = time;
     ctx.save();
@@ -396,6 +399,35 @@ export class Renderer {
       g.addColorStop(0, 'rgba(0,0,0,0)');
       g.addColorStop(1, `rgba(120,6,16,${0.28 * lowBlood})`);
       ctx.fillStyle = g;
+      ctx.fillRect(0, 0, this.w, this.h);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+
+    // the crescendo and the frenzy: the edges of the frame breathe red with
+    // the heartbeat, so the peak reads even with the sound off
+    if (edge > 0.01) {
+      const e = clamp(edge * (0.72 + heartbeat * 0.55), 0, 1);
+      ctx.globalCompositeOperation = 'screen';
+      const ge = ctx.createRadialGradient(this.w / 2, this.h / 2, this.h * (0.30 - heartbeat * 0.03), this.w / 2, this.h / 2, this.h * 0.98);
+      ge.addColorStop(0, 'rgba(0,0,0,0)');
+      ge.addColorStop(0.55, `rgba(120,8,18,${0.20 * e})`);
+      ge.addColorStop(1, `rgba(168,12,26,${0.62 * e})`);
+      ctx.fillStyle = ge;
+      ctx.fillRect(0, 0, this.w, this.h);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    if (red > 0.01) {
+      const r2 = clamp(red, 0, 1);
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.globalAlpha = clamp(0.28 * r2, 0, 0.4);
+      ctx.fillStyle = `rgb(255,${255 - 90 * r2 | 0},${255 - 96 * r2 | 0})`;
+      ctx.fillRect(0, 0, this.w, this.h);
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'screen';
+      const gr = ctx.createRadialGradient(this.w / 2, this.h / 2, this.h * 0.05, this.w / 2, this.h / 2, this.h * 0.85);
+      gr.addColorStop(0, 'rgba(0,0,0,0)');
+      gr.addColorStop(1, `rgba(150,10,24,${0.3 * r2})`);
+      ctx.fillStyle = gr;
       ctx.fillRect(0, 0, this.w, this.h);
       ctx.globalCompositeOperation = 'source-over';
     }

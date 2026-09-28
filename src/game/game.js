@@ -38,6 +38,7 @@ import { drawHUD, drawWorldPrompts, urgentGuidance, pauseButtonBox, weaponChipBo
 import { WEAPONS, weaponById, nextWeapon } from './weapons.js';
 import { nextBeat, ackBeat, beatById, endingReady } from './narrative.js';
 import { updateCoach, drawCoachWorld } from './coach.js';
+import { Climax, PEAK } from './climax.js';
 import * as UI from '../ui/screens.js';
 
 /* ================= pickups ================= */
@@ -135,12 +136,19 @@ export class Game {
     this.now = 0;
     this.dt = 1 / 60;
     this.timeScale = 1;
+    // The peaks. slowScale is the frenzy's half-second of slow motion; the
+    // rest are grades the renderer and the HUD read off `climax` each frame.
+    this.slowScale = 1;
+    this.climax = new Climax();
+    this.peaks = PEAK;
     this.nightDuration = NIGHT_DURATION;
     this.timeLeft = NIGHT_DURATION;
     this.phase = phaseAt(0);
     this.danger = 0.06;
     this.threat = 0;
     this.bloodMoon = 0;
+    this.moonBoost = 0;
+    this.duelDark = 0;
     this.blackoutT = 0;
     this.lightningFlash = 0;
     this.powerOut = false;
@@ -419,6 +427,11 @@ export class Game {
     }
     // ---- director ----
     this.director = new Director();
+    // ---- the four peaks are available again tonight ----
+    this.climax.reset();
+    this.slowScale = 1;
+    this.moonBoost = 0;
+    this.duelDark = 0;
     // ---- clocks ----
     this.time = TUNING.startAt || 0;
     this.timeLeft = NIGHT_DURATION - this.time;
@@ -556,7 +569,11 @@ export class Game {
 
   update(rawDt) {
     const dt = Math.min(rawDt, 1 / 20);
-    this.dt = dt * this.timeScale;
+    // The climax runs on real time (a peak that lasts seven seconds lasts
+    // seven seconds), and it may ask the night to slow down for a beat.
+    this.climax.update(dt, this);
+    this.slowScale = this.climax.slowScale;
+    this.dt = dt * this.timeScale * this.slowScale;
     this.now += rawDt;
     this.fpsSmooth = lerp(this.fpsSmooth, 1 / Math.max(rawDt, 0.0001), 0.05);
     // v1.0 FIX (live click test): ui was cleared HERE at the top of update(),
@@ -710,9 +727,15 @@ export class Game {
     // smoothed danger
     const targetDanger = clamp(ph.danger + this.threat * 0.12, 0, 1.15);
     this.danger = damp(this.danger, targetDanger, 0.7, dt);
-    this.bloodMoon = this.time >= PANIC_AT ? clamp((this.time - PANIC_AT) / 25, 0, 1) : 0;
+    // The blood moon is the late-night grade AND the frenzy's. Whichever is
+    // higher wins: the peak is allowed to borrow the existing light rig.
+    this.bloodMoon = Math.max(
+      this.time >= PANIC_AT ? clamp((this.time - PANIC_AT) / 25, 0, 1) : 0,
+      this.climax.moonBoost,
+    );
+    this.duelDark = this.climax.duelDark;
     this.blackoutT = Math.max(0, this.blackoutT - dt);
-    this.powerOut = this.blackoutT > 0;
+    this.powerOut = this.blackoutT > 0 || this.duelDark > 0.35;
     this.nightBrief();
     this.bloodTick = Math.max(0, (this.bloodTick || 0) - dt);
     this.bloodGulp = Math.max(0, (this.bloodGulp || 0) - dt);
@@ -774,6 +797,8 @@ export class Game {
       }
       e.attackers = atk;
       e.lastTouched = e.attackers > 0 ? this.time : (e.lastTouched || -99);
+      // buckling: the wood shuddering under the crescendo
+      if (e.buckling > 0) e.buckling = Math.max(0, e.buckling - dt * 1.6);
     }
 
     // ---- director ----
@@ -813,7 +838,11 @@ export class Game {
     this.noteRoom(p);
     if (p.lowBlood) this.offerNarrative({ surface: 'strip', event: 'state', state: 'lowBlood', night: (this.save.nightsSurvived || 0) + 1 });
     this.tickStory(dt);
-    this.renderer.followCamera(p.x, p.y, dt, lookX, lookY + biasY, this.mansion.camBounds);
+    // A peak may own the camera for a beat: the duel pushes in on the alpha so
+    // it fills the frame. Nothing else moves the camera off the player.
+    const focus = this.climax.focus;
+    if (focus) this.renderer.followCamera(focus.x, focus.y, dt, lookX, biasY, this.mansion.camBounds);
+    else this.renderer.followCamera(p.x, p.y, dt, lookX, lookY + biasY, this.mansion.camBounds);
 
     // ---- stats / codex ----
     this.stats.bloodMin = Math.min(this.stats.bloodMin, p.bloodPct * 100);
@@ -1303,9 +1332,17 @@ export class Game {
       let diff = Math.abs(((a - player.swingAngle + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
       const touching = d < player.radius + (e.radius || 12) + 14;
       if (!touching && diff > arc / 2) continue;
-      const dmg = tool.damage * player.damageMul;
+      const dmg = tool.damage * player.damageMul * (player.frenzy ? player.frenzy.dmg : 1);
       e.hurt(dmg, this, player.x, player.y);
       hits++;
+      // The frenzy shreds: every connected claw throws blood across the frame.
+      if (player.frenzy) {
+        const a2 = Math.atan2(e.y - player.y, e.x - player.x);
+        this.particles.burst('blood', e.x, e.y, 10, {
+          color: 'rgba(198,20,32,0.9)', angle: a2, spread: 1.1, speedMin: 60, speedMax: 240,
+          lifeMin: 0.24, lifeMax: 0.7, sizeMin: 2, sizeMax: 6, grav: 120,
+        });
+      }
       heft = Math.max(heft, (e.type && e.type.bloodValue) || 16);
       const kb = e.key === 'werewolf' ? 30 : e.key === 'ghoul' ? 48 : e.key === 'stalker' ? 60 : 110;
       e.vx += Math.cos(a) * kb; e.vy += Math.sin(a) * kb;
@@ -1313,9 +1350,9 @@ export class Game {
     this.stats.clawSwings = (this.stats.clawSwings || 0) + 1;
     this.stats.clawHits = (this.stats.clawHits || 0) + hits;
     if (hits) {
-      this.renderer.shake(0.16 + hits * 0.04);
+      this.renderer.shake(0.16 + hits * 0.04 + (player.frenzy ? 0.22 : 0));
       this.audio.play(tool.hitSound, { vol: 0.5, weight: tool.hitWeight + heft / 40 });
-      this.renderer.addFlash(0.04, tool.fx === 'arc' ? '#f0e6d0' : '#ffffff');
+      this.renderer.addFlash(player.frenzy ? 0.07 : 0.04, player.frenzy ? '#ff3a44' : (tool.fx === 'arc' ? '#f0e6d0' : '#ffffff'));
     }
     this.makeNoise(player.x, player.y, tool.fx === 'arc' ? 420 : 360);
   }
@@ -1395,6 +1432,8 @@ export class Game {
   onEnemyKilled(enemy) {
     const p = this.player;
     this.stats.kills++;
+    // a kill is a feed; a chain of them is what turns the moon red
+    this.climax.noteFeed(this);
     const gain = enemy.type.bloodValue * p.recoveryMul;
     p.heal(gain, this);
     p.sated = Math.min(1.25, 0.7 + gain / 48);
@@ -1718,6 +1757,10 @@ export class Game {
 
   beginDying() {
     if (this.screen === 'dying') return;
+    // A peak does not survive her. The slow-motion beat especially: the death
+    // slow-down owns time from here on.
+    this.climax.endFrenzy(this);
+    if (this.climax.duel) this.climax.endDuel(this);
     this.screen = 'dying';
     this.dyingT = 0;
     this.deathScreenT = 0;
@@ -1800,13 +1843,10 @@ export class Game {
     this.messages.length = 0;
     this.knocks.length = 0;
     if (this.director.knock) this.director.knock = null;
-    // everything outside turns to ash
-    for (const e of this.enemies) {
-      if (e.dead) continue;
-      e.dead = true; e.state = 'dying'; e.deathT = 0; e.ash = true;
-      this.particles.burst('glow', e.x, e.y, 16, { color: 'rgba(220,190,150,0.7)', sizeMin: 4, sizeMax: 14, lifeMin: 0.5, lifeMax: 1.6, speedMin: 10, speedMax: 50 });
-      this.particles.burst('dust', e.x, e.y, 20, { color: 'rgba(120,110,100,0.5)', sizeMin: 4, sizeMax: 12, lifeMin: 0.6, lifeMax: 1.8, speedMin: 20, speedMax: 60 });
-    }
+    // Dawnbreak: the sun does not delete the swarm, it crosses the house and
+    // burns it. Everything still standing is handed to the wave (climax.js);
+    // the wave is what turns them to ash, one by one, in front of the player.
+    this.climax.startDawnWave(this);
     const firstDawn = this.noteDeed('dawned');
     const named = IAP.owns(this.save, 'title_dawnbreaker');
     const laneName = houseTitle(this.save);
@@ -1965,6 +2005,8 @@ export class Game {
       if (this.screen === 'playing') drawHUD(this, ctx, w, h);
       this.drawMessages(ctx, w, h);
     }
+    // ---- the peaks: the four frames the night is for ----
+    if (this.screen === 'playing' || this.screen === 'dawn') UI.drawPeakOverlay(this, ctx, w, h);
 
     // ---- screens ----
     switch (this.screen) {
@@ -2055,6 +2097,26 @@ export class Game {
 
     // ---------- baked architecture ----------
     m.drawFloor(ctx);
+    // ---------- the duel: a monster is scarier as a silhouette ----------
+    // Drawn under the actors on purpose: the light is behind it, so what the
+    // player reads is the SHAPE, which is the whole point of a reveal.
+    const duelBoss = this.climax.boss;
+    if (duelBoss && this.climax.duel && this.duelDark > 0.02 && r.isVisible(duelBoss.x, duelBoss.y, 560)) {
+      const k = clamp(this.duelDark, 0, 1);
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      const gx = duelBoss.x, gy = duelBoss.y - 46;
+      const gg = ctx.createRadialGradient(gx, gy, 8, gx, gy, 330);
+      gg.addColorStop(0, `rgba(255,158,104,${0.9 * k})`);
+      gg.addColorStop(0.32, `rgba(226,72,54,${0.52 * k})`);
+      gg.addColorStop(0.7, `rgba(140,20,26,${0.22 * k})`);
+      gg.addColorStop(1, 'rgba(70,8,12,0)');
+      ctx.fillStyle = gg;
+      ctx.beginPath();
+      ctx.arc(gx, gy, 330, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+    }
     // ---------- decals ----------
     this.decals.draw(ctx);
     // ---------- props under entities ----------
@@ -2173,12 +2235,20 @@ export class Game {
 
     // ---------- lighting ----------
     r.fadeLift = this.blackoutT > 0 ? 0.7 : 1;
+    // the duel's lights-out: the same lift the blackout uses, borrowed
+    if (this.duelDark > 0.02) r.fadeLift *= 1 - 0.88 * this.duelDark;
     r.fadeColor = this.bloodMoon > 0.3 ? '#9a8088' : '#8490a4';
     r.lightBegin(m.ambientFor(this));
     p.submitLight(r, this);
     m.submitLights(r, this);
     for (const e of this.enemies) {
       if (e.submitLight && !e.dead && r.isVisible(e.x, e.y, 220)) e.submitLight(r, this);
+    }
+    // the duel's reveal: one pool of red in a house with no lights in it
+    if (duelBoss && this.climax.duel) {
+      const hot = this.climax.duel.stage === 'cut' ? 1 : 0.55;
+      r.addLight(duelBoss.x, duelBoss.y - 10, 320, 0.95 * hot, [255, 92, 66]);
+      r.addLight(duelBoss.x, duelBoss.y - 40, 150, 0.7 * hot, [255, 130, 90]);
     }
     // muzzle flashes / impacts
     for (const b of this.bolts) r.addLight(b.x, b.y, 70, 0.3, [255, 220, 170]);
@@ -2230,7 +2300,34 @@ export class Game {
       heartbeat: this.hbPulse,
       blackout: this.screen === 'dying' ? clamp(this.dyingT / 4, 0, 0.8) : 0,
       time: this.now,
+      // the peaks' grades: red edges on the crescendo and the frenzy, a blood
+      // wash while the moon is up
+      edge: this.climax.edge,
+      red: this.climax.red,
     });
+
+    // ---------- dawnbreak: the sun crosses the house and burns the swarm ----------
+    const wave = this.climax.dawnWave;
+    if (wave) {
+      const s = this.renderer.worldToScreen(wave.front, 0);
+      const bw = Math.max(180, this.renderer.w * 0.34);
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      const g = ctx.createLinearGradient(s.x - bw, 0, s.x + bw * 0.3, 0);
+      g.addColorStop(0, 'rgba(255,190,110,0)');
+      g.addColorStop(0.52, `rgba(255,204,136,${0.5 * this.climax.gold})`);
+      g.addColorStop(0.86, `rgba(255,250,236,${1.0 * this.climax.gold})`);
+      g.addColorStop(0.94, `rgba(255,236,196,${0.55 * this.climax.gold})`);
+      g.addColorStop(1, 'rgba(255,226,180,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(s.x - bw, 0, bw * 1.3, this.renderer.h);
+      const wash = ctx.createLinearGradient(0, 0, this.renderer.w, this.renderer.h);
+      wash.addColorStop(0, `rgba(255,220,164,${0.42 * this.climax.gold})`);
+      wash.addColorStop(1, `rgba(255,170,120,${0.16 * this.climax.gold})`);
+      ctx.fillStyle = wash;
+      ctx.fillRect(0, 0, this.renderer.w, this.renderer.h);
+      ctx.restore();
+    }
 
     // ---------- dawn light wash ----------
     if (this.screen === 'dawn') {

@@ -1724,3 +1724,137 @@ export function drawShop(game, ctx, w, h) {
   const r4 = uiButton(game, { x: phone ? 20 + bw : w / 2 + 8, y: h - (phone ? 50 : (wide ? 66 : 52)), w: bw, h: bh, label: backLabel, onClick: () => game.setScreen(back, 'shop'), small: true, accent: '#a8833c' });
   buttonVisual(ctx, r4.b, { active: r4.hover || r4.selected, label: backLabel, small: true, accent: '#a8833c' });
 }
+
+/* ============================================================
+ * THE PEAKS (src/game/climax.js)
+ *
+ * Drawn over the world, never as a menu: the crescendo, the frenzy, the duel
+ * and the dawnbreak are part of the night. Everything here has to read in a
+ * 2–3 second 9:16 clip with the sound off, at phone width and in short
+ * landscape, which is why it is one word, one bar, one silhouette — never a
+ * paragraph. No debug text, ever: these frames are the ad.
+ * ============================================================ */
+
+function capsule(ctx, x, y, ww, hh, r) {
+  const rr = Math.min(r, ww / 2, hh / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + rr, y);
+  ctx.lineTo(x + ww - rr, y);
+  ctx.arcTo(x + ww, y, x + ww, y + rr, rr);
+  ctx.lineTo(x + ww, y + hh - rr);
+  ctx.arcTo(x + ww, y + hh, x + ww - rr, y + hh, rr);
+  ctx.lineTo(x + rr, y + hh);
+  ctx.arcTo(x, y + hh, x, y + hh - rr, rr);
+  ctx.lineTo(x, y + rr);
+  ctx.arcTo(x, y, x + rr, y, rr);
+  ctx.closePath();
+}
+
+/** 2. The blood moon is up: one word, and how much of it is left. */
+function drawFrenzyPlate(game, ctx, w, h, phone, short) {
+  const f = game.climax.frenzy;
+  if (!f) return;
+  const left = clamp(1 - f.t / f.dur, 0, 1);
+  const a = clamp(f.t / 0.22, 0, 1) * clamp((f.dur - f.t) / 0.9, 0, 1);
+  const y = short ? h * 0.3 : h * 0.32;
+  const size = clamp(short ? w * 0.085 : w * (phone ? 0.16 : 0.08), 26, 86);
+  ctx.save();
+  ctx.globalAlpha = a;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `400 ${size}px ${SERIF}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = (size * 0.2).toFixed(1) + 'px';
+  ctx.shadowColor = 'rgba(206,20,34,0.9)';
+  ctx.shadowBlur = 30;
+  ctx.fillStyle = '#f4dedb';
+  ctx.fillText('FRENZY', w / 2, y);
+  ctx.shadowBlur = 0;
+  const bw = Math.min(w * 0.52, 300);
+  const bh = short ? 3 : 5;
+  const bx = w / 2 - bw / 2;
+  const by = y + size * 0.62;
+  ctx.fillStyle = 'rgba(6,7,10,0.6)';
+  ctx.fillRect(bx, by, bw, bh);
+  ctx.fillStyle = '#d0202e';
+  ctx.fillRect(bx, by, bw * left, bh);
+  ctx.font = `500 ${short ? 9 : 11}px ${SANS}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
+  ctx.fillStyle = 'rgba(232,190,186,0.8)';
+  ctx.fillText('THE MOON IS UP', w / 2, by + bh + (short ? 11 : 16));
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+  ctx.restore();
+}
+
+/** 3. The duel: the thing in the dark has a name and a bar of its own. */
+function drawBossPlate(game, ctx, w, h, boss, phone, short) {
+  const d = game.climax.duel;
+  const a = clamp((d.t - 0.25) / 0.5, 0, 1) * clamp((d.dur - d.t) / 0.4, 0, 1);
+  const y = phone ? 132 : h * 0.27;
+  const bw = Math.min(w * 0.46, 320);
+  const bx = w / 2 - bw / 2;
+  ctx.save();
+  ctx.globalAlpha = a;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = `500 ${short ? 10 : 12}px ${SANS}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '3.4px';
+  ctx.fillStyle = 'rgba(232,110,96,0.95)';
+  ctx.shadowColor = 'rgba(0,0,0,0.9)';
+  ctx.shadowBlur = 8;
+  ctx.fillText('THE ALPHA', w / 2, y);
+  ctx.shadowBlur = 0;
+  const hp = clamp(boss.hp / boss.hpMax, 0, 1);
+  const bh = short ? 3 : 5;
+  ctx.fillStyle = 'rgba(6,7,10,0.72)';
+  ctx.fillRect(bx, y + 11, bw, bh);
+  ctx.fillStyle = '#8e1b26';
+  ctx.fillRect(bx, y + 11, bw * hp, bh);
+  ctx.strokeStyle = 'rgba(232,110,96,0.35)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(bx + 0.5, y + 11.5, bw - 1, bh - 1);
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+  ctx.restore();
+}
+
+/** 4. Dawnbreak: she lifts a hand she has not needed in a hundred years. */
+function drawShieldingHand(ctx, w, h, k) {
+  const s = Math.min(w, h * 1.15);
+  ctx.save();
+  ctx.globalAlpha = clamp(k, 0, 1);
+  ctx.translate(w * 0.46, h * 0.86);
+  ctx.rotate(-0.42);
+  // forearm
+  ctx.fillStyle = 'rgba(7,6,9,0.95)';
+  capsule(ctx, -s * 0.15, -s * 0.1, s * 0.3, s * 0.62, s * 0.15);
+  ctx.fill();
+  // palm and fingers, tipped toward the sun
+  ctx.beginPath();
+  ctx.ellipse(0, -s * 0.13, s * 0.2, s * 0.15, 0, 0, TAU);
+  ctx.fill();
+  for (let i = 0; i < 4; i++) {
+    const fx = -s * 0.15 + i * s * 0.1;
+    capsule(ctx, fx - s * 0.038, -s * 0.34 - (i === 1 || i === 2 ? s * 0.03 : 0), s * 0.076, s * 0.24, s * 0.038);
+    ctx.fill();
+  }
+  // the light gets past her: a gold rim along the top of the hand
+  ctx.globalCompositeOperation = 'screen';
+  ctx.strokeStyle = 'rgba(255,214,150,0.9)';
+  ctx.shadowColor = 'rgba(255,200,130,0.95)';
+  ctx.shadowBlur = 22;
+  ctx.lineWidth = Math.max(1.6, s * 0.008);
+  ctx.beginPath();
+  ctx.ellipse(0, -s * 0.13, s * 0.2, s * 0.15, 0, Math.PI * 1.05, Math.PI * 1.95);
+  ctx.stroke();
+  ctx.restore();
+}
+
+export function drawPeakOverlay(game, ctx, w, h) {
+  const c = game.climax;
+  if (!c) return;
+  const phone = isPhone(w, h);
+  const short = h < 520;
+  if (c.frenzy) drawFrenzyPlate(game, ctx, w, h, phone, short);
+  const boss = c.boss;
+  if (boss && c.duel) drawBossPlate(game, ctx, w, h, boss, phone, short);
+  if (c.shield > 0.01) drawShieldingHand(ctx, w, h, c.shield);
+}

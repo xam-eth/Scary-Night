@@ -922,7 +922,7 @@ export class Mansion {
       if (l.type === 'candle' && game.blackoutT > 0) l.f *= 0.12;
       if ((l.type === 'lamp') && game.blackoutT > 0) l.f *= 0.06;
       // the blood moon / panic phase washes everything red
-      l.curI = l.i * (l.f ?? 1) * (1 - this.bloodMoon * 0.25) * (game.powerOut ? 0.6 : 1);
+      l.curI = l.i * (l.f ?? 1) * (1 - this.bloodMoon * 0.25) * (game.powerOut ? 0.6 : 1) * (1 - (game.duelDark || 0));
     }
     // fire in the library dies down during a blackout, embers only
   }
@@ -1556,6 +1556,11 @@ export class Mansion {
       const w = e.w, h = e.h;
       ctx.save();
       ctx.translate(e.x, e.y);
+      // the crescendo: the wood itself shudders in its frame
+      if (e.buckling > 0) {
+        const bk = Math.min(1, e.buckling);
+        ctx.translate(Math.sin(game.now * 47 + e.x) * 2.4 * bk, Math.cos(game.now * 41 + e.y) * 2.4 * bk);
+      }
       if (!horiz) ctx.rotate(Math.PI / 2);
 
       // v1.0 (QA P1-6) — legibility at range: an entrance with company gets a

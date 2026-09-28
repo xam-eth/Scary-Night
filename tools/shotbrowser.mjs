@@ -263,6 +263,95 @@ try {
   await m.screenshot({ path: path.join(OUT, '07-mobile-play.png') });
   console.log('shot: 07-mobile-play.png');
 
+  /* ---------- the four peaks (#52 A) ----------
+   * The market hook: each peak has to read as a 2–3s, high-contrast, sound-off
+   * frame at phone width and on desktop. Forced through the real trigger path
+   * (__LN_API.peak -> climax.force), so these are the frames a player gets.
+   *
+   * Waits are on SIM time, not wall clock: headless software WebGL runs rAF
+   * slower than 60Hz, so a setTimeout would land on a different frame every
+   * run. Every shot below waits for the peak's own clock instead.
+   */
+  const shootPeaks = async (pg, tag) => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const until = (fn, timeout = 30000) => pg.waitForFunction(fn, { timeout, polling: 40 }).catch(() => {});
+    const reset = (t) => pg.evaluate((tt) => {
+      const g = window.__LN;
+      window.__LN_API.stopMove();
+      g.screen = 'playing';
+      g.save.nightsSurvived = 4;
+      g.save.ending = null;
+      g.player.frenzy = null;
+      g.player.blood = g.player.bloodMax * 0.82;   // the peak is the frame, not a dying state
+      g.player.state = 'idle';
+      g.player.starveT = 0;
+      g.player.iframes = 3;
+      g.blackoutT = 0;
+      g.hungerFailing = false;
+      g.hungerWarned = true;
+      g.time = tt;
+      g.enemies.length = 0;
+      g.messages.length = 0;
+      g.climax.reset();
+    }, t);
+
+    // 1 — siege crescendo: every door at once, the swarm coming in
+    await reset(284);
+    await pg.evaluate(() => window.__LN_API.peak('crescendo'));
+    await until(() => window.__LN.climax.crescendo && window.__LN.climax.crescendo.t > 2.2);
+    await wait(120);
+    await shoot(pg, `${tag}-peak1-crescendo`);
+
+    // 2 — blood moon frenzy: surrounded, then the moon comes up
+    await reset(150);
+    await pg.evaluate(() => {
+      const g = window.__LN;
+      const list = g.director.spawnWave(g, ['zombie', 'zombie', 'zombie', 'crawler'], {}) || [];
+      // bring the crowd to her instead of sending her outside: the frenzy
+      // frame is the room she is already standing in, full of them
+      const pl = g.player;
+      list.forEach((e, i) => {
+        const a = (i / Math.max(1, list.length)) * Math.PI * 2 + 0.7;
+        const spot = g.mansion.freeSpot(pl.x + Math.cos(a) * 118, pl.y + Math.sin(a) * 118, 18, 12);
+        e.x = spot.x; e.y = spot.y;
+        e.state = 'hunt';
+        e.seenPlayer = e.type.loseSight;
+        e.lastKnown = { x: pl.x, y: pl.y };
+      });
+    });
+    await until(() => window.__LN.enemies.filter((e) => !e.dead && Math.hypot(e.x - window.__LN.player.x, e.y - window.__LN.player.y) < 200).length >= 3);
+    await pg.evaluate(() => window.__LN_API.peak('frenzy'));
+    await until(() => window.__LN.climax.frenzy && window.__LN.climax.frenzy.t > 0.7);
+    await pg.evaluate(() => window.__LN_API.press('attack', 600));
+    await until(() => window.__LN.climax.frenzy && window.__LN.climax.frenzy.t > 1.15);
+    await wait(120);
+    await shoot(pg, `${tag}-peak2-frenzy`);
+
+    // 3 — boss duel: the lights cut, the alpha fills the frame
+    await reset(200);
+    await pg.evaluate(() => window.__LN_API.peak('duel'));
+    await until(() => window.__LN.climax.duel && window.__LN.climax.duel.t > 0.85);
+    await wait(120);
+    await shoot(pg, `${tag}-peak3-duel`);
+
+    // 4 — dawnbreak: the real dawn, the sun crossing the house
+    await reset(299.4);
+    await pg.evaluate(() => {
+      const g = window.__LN;
+      g.climax.crescendoUsed = true;      // let the sunrise own this frame
+      g.save.pendingDawn = [];
+      g.save.beats = {};
+    });
+    await pg.waitForFunction(() => window.__LN.screen === 'dawn', { timeout: 20000, polling: 40 }).catch(() => {});
+    await until(() => window.__LN.climax.dawnWave && window.__LN.climax.dawnWave.t > 1.15);
+    await wait(120);
+    await shoot(pg, `${tag}-peak4-dawnbreak`);
+    await pg.evaluate(() => { window.__LN.screen = 'playing'; });
+  };
+
+  await shootPeaks(m, '14-phone');
+  await shootPeaks(page, '15-desktop');
+
   console.log('DONE');
 } finally {
   await browser.close();

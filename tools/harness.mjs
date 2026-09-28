@@ -561,7 +561,7 @@ if (args.systems) {
 
   const { hideDeathSecond, unlocked, rankCount, tellFor, purseFloor, drainPerSecond, projectDawn, curveSweep, grantLaneTitle, houseTitle } = await import('../src/game/economy.js');
   const { dealNightGoals, forbiddenPair, CORE_GOALS } = await import('../src/game/objectives.js');
-  const { TUNING, nightHeat, threatMix } = await import('../src/core/config.js');
+  const { TUNING, nightHeat, threatMix, CLIMAX } = await import('../src/core/config.js');
   const hideAt = hideDeathSecond({ nightsSurvived: 1 });
   line(hideAt > 180 && hideAt < 210, `hoard-and-hide dies at ${hideAt.toFixed(0)}s (want 03:00–03:30)`);
   const n1 = drainPerSecond({ nightsSurvived: 0 });
@@ -757,6 +757,108 @@ if (args.systems) {
   game.render();
   const endingBtns = game.ui.filter((b) => b.label === 'WALK INTO THE DAWN' || b.label === 'TURN BACK');
   line(endingBtns.length === 2 && endingBtns.every((b) => b.h >= 44), 'both endings sit on the thumb, 44px or taller');
+  // ---- the four peaks (#52 A): every peak fires at its trigger, once ----
+  const { Climax, PEAK } = await import('../src/game/climax.js');
+  const Swarm = (await import('../src/game/enemies.js')).Crawler;
+  TUNING.noSpawns = false;
+  game.save.nightsSurvived = 2;
+  game.save.pendingDawn = [];
+  game.save.ending = null;
+
+  // 1. siege crescendo — the pre-dawn window, and only the pre-dawn window
+  game.freshRun();
+  game.screen = 'playing';
+  game.time = CLIMAX.crescendoAt - 2;
+  run(4);
+  line(!game.climax.crescendo, 'the crescendo waits for the last twenty seconds');
+  game.time = CLIMAX.crescendoAt + 0.1;
+  run(1);
+  line(game.climax.active === PEAK.CRESCENDO, 'the last twenty seconds are a siege');
+  const inside0 = game.enemies.filter((e) => !e.dead).length;
+  line(inside0 > 0, `the crescendo floods the house, it does not just tint it (${inside0} out)`);
+  line(game.mansion.entrances.some((e) => e.buckling > 0), 'every door takes the house leaning on it');
+  line(game.climax.heartBoost > 0 && game.climax.panicBoost > 0, 'the crescendo spikes the heartbeat and the score');
+  const crescendoWave = game.climax.crescendo;
+  game.climax.crescendo = null;
+  run(2);
+  line(!game.climax.crescendo, 'the crescendo fires once, not every frame');
+  game.climax.crescendo = crescendoWave;
+  line(game.climax.peaksFired.filter((p) => p === PEAK.CRESCENDO).length === 1, 'and once per night, not per second');
+
+  // 2. blood moon frenzy — a feed chain, a real state, a slow-motion beat
+  game.freshRun();
+  game.screen = 'playing';
+  game.time = 120;
+  for (let i = 0; i < CLIMAX.frenzyChain; i++) { game.stats.kills++; game.climax.noteFeed(game); }
+  line(game.climax.active === PEAK.FRENZY, 'a feed chain turns the moon red');
+  line(!!game.player.frenzy && game.player.frenzy.dmg > 1 && game.player.frenzy.rate > 1, 'the frenzy is a state: overdrive, not a filter');
+  run(3);
+  line(game.slowScale < 1, `the frenzy opens on a slow-motion beat (${game.slowScale.toFixed(2)}x)`);
+  line(game.climax.moonBoost > 0 && game.bloodMoon >= game.climax.moonBoost, 'the blood moon rises and the light grade goes with it');
+  const dummy = () => {
+    game.enemies.length = 0;
+    const c = new Swarm(game.player.x + 26, game.player.y, {});
+    c.hp = 999; c.hpMax = 999;
+    game.enemies.push(c);
+    return c;
+  };
+  game.player.swingAngle = 0;
+  game.player.frenzy = null;
+  const plainHp = dummy();
+  game.playerAttackHit(game.player);
+  const plain = 999 - plainHp.hp;
+  game.player.frenzy = { dmg: CLIMAX.frenzyDamage, spd: CLIMAX.frenzySpeed, rate: CLIMAX.frenzyRate };
+  const hotHp = dummy();
+  game.playerAttackHit(game.player);
+  const hot = 999 - hotHp.hp;
+  line(hot > plain * 1.5, `the frenzy shreds (${plain.toFixed(0)} -> ${hot.toFixed(0)} a claw)`);
+  game.climax.endFrenzy(game);
+  line(!game.player.frenzy && game.slowScale === 1 || !game.player.frenzy, 'the frenzy ends and takes the overdrive with it');
+  run(2);
+  line(game.slowScale === 1, 'and time goes back to normal');
+
+  // 3. boss duel — the swarm actually stops
+  game.freshRun();
+  game.screen = 'playing';
+  game.time = 200;
+  game.save.nightsSurvived = 3;
+  for (let i = 0; i < 4; i++) game.enemies.push(new Swarm(600 + i * 40, 700, {}));
+  game.climax.force(game, PEAK.DUEL);
+  const alpha = game.climax.boss;
+  line(!!alpha && alpha.key === 'werewolf' && alpha.variant === 'alpha', 'the duel brings the alpha, not a random one');
+  line(game.climax.spawnsHeld, 'the siege pauses for the entrance');
+  line(game.enemies.filter((e) => e !== alpha && e.leaving).length === 4, 'the swarm leaves the room for the 1v1');
+  game.director.budget = 5;
+  game.director.quietUntil = 0;
+  run(2);
+  line(game.director.budget <= 0.5, 'no wave walks into the frame during the duel');
+  line(game.climax.duelDark > 0 || game.climax.duel.stage === 'fight', 'the lights cut for the entrance');
+  line(!!game.climax.focus, 'the camera gives the monster the frame');
+  const duelBoss = game.climax.boss;
+  duelBoss.hp = 0;
+  duelBoss.dead = true;
+  run(2);
+  line(!game.climax.duel && !game.climax.spawnsHeld, 'the house gets the night back when the alpha falls');
+
+  // 4. dawnbreak — the sun crosses the house and burns what is left
+  game.freshRun();
+  game.screen = 'playing';
+  game.time = 300;
+  game.save.pendingDawn = [];
+  game.enemies.length = 0;
+  for (let i = 0; i < 6; i++) game.enemies.push(new Swarm(300 + i * 400, 700, {}));
+  game.beginDawn();
+  line(!!game.climax.dawnWave, 'dawn arrives as a wave, not a delete');
+  line(game.enemies.every((e) => !e.dead), 'the swarm is still standing when the sun gets up');
+  run(48);
+  const burned = game.enemies.filter((e) => e.dead).length;
+  line(burned > 0 && burned < 6, `the wave burns the house in order, not all at once (${burned}/6)`);
+  line(game.climax.shield > 0, 'she lifts a hand against it');
+  for (let i = 0; i < 300 && game.climax.dawnWave; i++) game.update(dt);
+  line(game.enemies.every((e) => e.dead), 'by the end of the wave nothing is left standing');
+  line(!game.climax.dawnWave && game.climax.shield === 0, 'and the peak releases the dawn to the results');
+  game.screen = 'playing';
+
   const wide = { w: game.renderer.w, h: game.renderer.h, zoom: game.renderer.cam.zoom };
   game.renderer.resize(390, 844, 1);
   const pv = game.renderer.view;

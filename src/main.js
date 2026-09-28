@@ -66,11 +66,15 @@ window.__LN_API = {
   goals: () => (game.objectives && game.objectives.hudState()) || null,
   shop: () => (window.__LN_IAP ? window.__LN_IAP.diagnostics() : null),
   setTime: (t) => { game.time = t; game.phase = phaseAt(t); game.danger = game.phase.danger; },
+  peak: (name) => game.climax.force(game, name),
+  peaks: () => Object.values(game.peaks || {}),
+  climax: () => game.climax.diagnostics(),
   state: () => ({
     screen: game.screen, time: game.time, blood: game.player.blood, bloodPct: game.player.bloodPct,
     enemies: game.enemies.length, alive: game.enemies.filter((e) => !e.dead).length,
     mood: game.director.mood, danger: game.danger, doors: game.mansion.doors.map((d) => d.hp),
     kills: game.stats.kills, planks: game.player.planks, hud: game.hudSnapshot ? game.hudSnapshot() : null,
+    peak: game.climax ? game.climax.active : null,
   }),
   press: (action, ms = 120) => {
     input.keys[action] = true;

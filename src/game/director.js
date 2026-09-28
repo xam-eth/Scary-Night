@@ -175,6 +175,9 @@ export class Director {
     const heat = nightHeat(game.save && game.save.nightsSurvived) * (first ? 0.45 : 1);
     const regen = lerp(DIRECTOR.budgetRegen[0], DIRECTOR.budgetRegen[1], game.danger) * this.waveRegen * d.spawn * heat;
     this.budget = Math.min(DIRECTOR.budgetMax * Math.min(heat, 2.2), this.budget + regen * dt);
+    // A peak may hold the swarm: the duel is a 1v1, and a wave walking into
+    // the frame during the entrance would spoil it (and the clip).
+    if (game.climax && game.climax.spawnsHeld) { this.budget = Math.min(this.budget, 0.4); return; }
 
     const alive = game.enemies.filter((e) => !e.dead).length;
     const maxAlive = Math.min(14, Math.round(lerp(DIRECTOR.maxAlive[0], DIRECTOR.maxAlive[1], game.danger) * Math.max(0.8, d.spawn) * heat));
@@ -682,6 +685,7 @@ export class Director {
     rate += game.danger * 0.55;
     if (game.phase.id === 'panic') rate += 0.5;
     if (game.phase.id === 'silence') rate += 0.25;
+    if (game.climax) rate += game.climax.heartBoost || 0;   // the peaks have a pulse too
     let strength = clamp(rate / 3.4, 0, 1);
     if (Math.abs(game.time - (game.lastHurtT ?? -9)) < 1.5) rate += 0.5;
     return { rate: clamp(rate, 0.55, 3.7), strength };
@@ -704,6 +708,11 @@ export class Director {
     // the last ten seconds: strip everything but the heartbeat
     const silence = game.time >= SILENCE_AT ? clamp((game.time - SILENCE_AT) / 2.5, 0, 1) : 0;
     if (this.mood === MOOD.RELIEF) { intensity *= 0.5; danger *= 0.35; }
+    // a peak floors the panic layer so the score swells with the frame
+    if (game.climax && game.climax.panicBoost) {
+      panic = Math.max(panic, game.climax.panicBoost);
+      intensity = Math.max(intensity, clamp(0.6 + game.climax.panicBoost * 0.4, 0, 1.15));
+    }
 
     game.musicState = { intensity, danger, panic, silence };
     if (game.audio) {
@@ -737,6 +746,8 @@ export class Director {
     // later nights stays in the book until they have seen dawn once.
     const first = !game.save || !(game.save.nightsSurvived > 0);
     if (first && (beat.fn === 'spawnWave' || beat.fn === 'windowBreak' || beat.fn === 'behindYou' || beat.fn === 'blackout')) return;
+    // The duel owns the frame: a scripted wave is not invited either.
+    if (beat.fn === 'spawnWave' && game.climax && game.climax.spawnsHeld) return;
     const args = beat.args || {};
     switch (beat.fn) {
       case 'creakNear': {

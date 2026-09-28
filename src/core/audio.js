@@ -518,6 +518,50 @@ S.chandelier = (t, o) => {
   for (let i = 0; i < 10; i++) noise(t + rand(0.1, 1.4), 0.06, { out: o.out, gain: 0.09 * v, type: 'bandpass', freq: rand(900, 3000), q: 5, pan: rand(-0.6, 0.6), rev: 0.6, attack: 0.001 });
 };
 
+/* ---- the four peaks. Procedural, like everything else in here. ---- */
+
+/* 1. Siege crescendo: a rolling battery on the wood, then the night holds its breath. */
+S.siege = (t, o) => {
+  const v = o.vol ?? 1;
+  for (let i = 0; i < 6; i++) {
+    const dt = i * 0.16;
+    noise(t + dt, 0.3, { out: o.out, gain: 0.2 * v, type: 'lowpass', freq: rand(180, 320), q: 1.2, pan: rand(-0.7, 0.7), rev: 0.5, attack: 0.004 });
+    osc(t + dt, 0.34, { out: o.out, gain: 0.15 * v, type: 'sine', freq: rand(58, 78), to: 30, pan: rand(-0.5, 0.5), rev: 0.4, attack: 0.002 });
+  }
+  osc(t, 2.4, { out: o.out, gain: 0.1 * v, type: 'sawtooth', freq: 92, to: 62, pan: 0, rev: 0.8, attack: 0.25, filt: 'lowpass', filtQ: 3 });
+  noise(t, 2.0, { out: o.out, gain: 0.07 * v, type: 'bandpass', freq: 900, q: 0.8, pan: 0, rev: 0.6, attack: 0.5, sweep: 1.6 });
+};
+
+/* 2. Blood moon: a rise that takes almost a second, then the drop. */
+S.bloodMoon = (t, o) => {
+  const v = o.vol ?? 1;
+  const n = noise(t, 0.9, { out: o.out, gain: 0.11 * v, type: 'bandpass', freq: 220, q: 1.6, pan: 0, rev: 0.7, attack: 0.5, rate: 1 });
+  if (n && n.f) n.f.frequency.linearRampToValueAtTime(1400, t + 0.85);
+  osc(t, 1.0, { out: o.out, gain: 0.13 * v, type: 'sawtooth', freq: 110, to: 330, pan: -0.2, rev: 0.6, attack: 0.55, filt: 'lowpass', filtQ: 5 });
+  osc(t + 0.9, 1.4, { out: o.out, gain: 0.32 * v, type: 'sine', freq: 90, to: 34, pan: 0, rev: 0.5, attack: 0.002 });
+  noise(t + 0.9, 0.7, { out: o.out, gain: 0.18 * v, type: 'lowpass', freq: 700, q: 0.8, pan: 0, rev: 0.5, attack: 0.002 });
+  osc(t + 0.95, 1.2, { out: o.out, gain: 0.09 * v, type: 'triangle', freq: 294, to: 196, pan: 0.2, rev: 0.8, attack: 0.01 });
+};
+
+/* 3. Boss duel: the house loses its lights and something answers from the dark. */
+S.bossCut = (t, o) => {
+  const v = o.vol ?? 1;
+  noise(t, 0.5, { out: o.out, gain: 0.24 * v, type: 'lowpass', freq: 1200, q: 0.7, pan: 0, rev: 0.7, attack: 0.01, sweep: 0.12 });
+  osc(t, 1.8, { out: o.out, gain: 0.18 * v, type: 'sine', freq: 150, to: 38, pan: 0, rev: 0.6, attack: 0.01 });
+  S.growl(t + 0.45, { ...o, vol: v * 1.5 });
+  osc(t + 0.5, 2.0, { out: o.out, gain: 0.11 * v, type: 'sawtooth', freq: 62, to: 44, pan: 0, rev: 0.8, attack: 0.2, filt: 'lowpass', filtQ: 4 });
+};
+
+/* 4. Dawnbreak: the sun arrives as noise, then a major chord in gold. */
+S.dawnbreak = (t, o) => {
+  const v = o.vol ?? 1;
+  noise(t, 1.6, { out: o.out, gain: 0.18 * v, type: 'highpass', freq: 900, q: 0.6, pan: 0, rev: 0.8, attack: 0.02, sweep: 2.4 });
+  [261.63, 392, 523.25, 659.25].forEach((f, i) => {
+    osc(t + i * 0.12, 3.2 - i * 0.3, { out: o.out, gain: 0.1 * v, type: 'sine', freq: f, pan: (i - 1.5) * 0.3, rev: 1, attack: 0.05 });
+  });
+  osc(t, 1.2, { out: o.out, gain: 0.16 * v, type: 'sine', freq: 70, to: 46, pan: 0, rev: 0.6, attack: 0.01 });
+};
+
 function distCurve(amount) {
   const n = 1024, curve = new Float32Array(n);
   for (let i = 0; i < n; i++) {

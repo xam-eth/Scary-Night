@@ -82,6 +82,7 @@ export class Player {
     this.bloodSpent = 0;
     this.stairOffset = 0;
     this.speedMul = 1;
+    this.frenzy = null;      // { dmg, spd, rate } while the blood moon is up
     this.damageMul = 1;
     this.repairMul = 1;
     this.recoveryMul = 1;
@@ -172,7 +173,9 @@ export class Player {
       my += Math.cos(this.breathe * 2.7) * 0.06 * wob / 12;
     }
 
-    let speed = (wantRun ? PLAYER.runSpeed : PLAYER.walkSpeed) * this.speedMul;
+    // The frenzy is seven seconds of not being careful: faster, and it shows.
+    const fz = this.frenzy ? this.frenzy.spd : 1;
+    let speed = (wantRun ? PLAYER.runSpeed : PLAYER.walkSpeed) * this.speedMul * fz;
     if (this.state === PSTATE.DRINK) speed *= 0;
     if (this.hurtT > 0) speed *= 0.55;
     if (starving) speed *= 0.6;
@@ -196,8 +199,8 @@ export class Player {
     if (this.dashT > 0) {
       this.dashT -= dt;
       const a = this.dashDir ?? this.angle;
-      tvx = Math.cos(a) * PLAYER.dashSpeed * this.speedMul;
-      tvy = Math.sin(a) * PLAYER.dashSpeed * this.speedMul;
+      tvx = Math.cos(a) * PLAYER.dashSpeed * this.speedMul * fz;
+      tvy = Math.sin(a) * PLAYER.dashSpeed * this.speedMul * fz;
       if (chance(0.6)) {
         this.trail.push({ x: this.x, y: this.y, a: this.angle, t: 0.28 });
       }
@@ -308,7 +311,8 @@ export class Player {
 
   startAttack(game) {
     this.attackT = PLAYER.attackWindup + PLAYER.attackActive;
-    this.attackCd = PLAYER.attackCooldown / (this.attackSpeedMul || 1);
+    const frz = this.frenzy ? this.frenzy.rate : 1;
+    this.attackCd = PLAYER.attackCooldown / ((this.attackSpeedMul || 1) * frz);
     this.attackHit = false;
     this.swingAngle = this.angle;
     // Visual only. The hit window stays attackWindup + attackActive; the claw
@@ -336,7 +340,7 @@ export class Player {
     }
     if (bestA !== null) { this.swingAngle = bestA; this.angle = bestA; }
     this.state = PSTATE.ATTACK;
-    const clawCost = PLAYER.attackCost * (this.bloodPct < 0.15 ? 0 : 1) / (this.attackSpeedMul || 1);
+    const clawCost = PLAYER.attackCost * (this.bloodPct < 0.15 ? 0 : 1) / ((this.attackSpeedMul || 1) * (this.frenzy ? 1.6 : 1));
     this.blood = Math.max(0, this.blood - clawCost);
     if (clawCost > 0) game.bloodTick = Math.max(game.bloodTick || 0, 0.45);
     this.bloodSpent += PLAYER.attackCost;
