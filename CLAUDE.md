@@ -140,28 +140,51 @@ asset.
 
 ## 4. Distribution channels (source of truth: Zernio `accounts_list`)
 
-Connected right now (checked 2026-09-28):
+Connected right now (re-checked 2026-09-28, later same day — this changed
+since the morning check, see the log line below):
 
 | Platform | Handle | Account ID | Status |
 |---|---|---|---|
-| TikTok | phagos_space | `6aa6ca78726ebfe037e55afa` | connected, organic |
-| TikTok Ads | phagos_space | `6aa6cb92726ebfe037e56053` | connected, paid |
-| X / Twitter | phagos_space | `6aa75077726ebfe037e7abc8` | connected, organic |
+| TikTok | phagos_space | `6aa6ca78726ebfe037e55afa` | connected, organic — **not yet renamed** |
+| X / Twitter | last_nighti (display "last_night") | `6aba3372941047d17613f0cc` | connected, organic, 39 followers |
+| Facebook | Last Night | `6aba677c28ae0fa04bafbea3` | connected, 0 followers — brand new Page |
 
-**Handle mismatch, flagged 2026-09-28:** both connected accounts use the
-handle `phagos_space`, which doesn't read as LAST NIGHT-branded — looks
-like a studio/personal handle. This is a decision for the owner (rename the
-existing accounts vs. launch branded profiles alongside them), written up
-with both options in `docs/SOCIAL-PROFILES.md` §0. Not resolved yet — don't
-assume either direction when planning new profile setups.
+**What changed since the morning:** the X account was **renamed** from
+`phagos_space` to `@last_nighti` (followers carried over — 39, confirming
+it's a rename in place, not a fresh account) — looks like Option A from
+`docs/SOCIAL-PROFILES.md` §0 was taken for X. TikTok is still
+`phagos_space`, unrenamed — if the intent is one consistent identity across
+platforms (the whole point of §0), TikTok still needs the same treatment.
+A **Facebook Page ("Last Night") now exists and is connected** — this is
+the one `docs/SOCIAL-PROFILES.md` §1 was written for; Zernio's API doesn't
+expose bio/About text, so verify by hand whether that copy actually got
+pasted in, don't assume it did. **TikTok Ads (`6aa6cb92...`) is no longer
+connected** — the "paid organic" plan in §7 needs that account back before
+it can boost anything.
+
+**Fallout:** the X draft post created this morning
+(`6aba046e47e37cd27fea172b`) auto-**cancelled** when `phagos_space` was
+renamed/disconnected (error: "Account 'phagos_space' was disconnected").
+Re-created as `6aba76c429ab78851327e57e` on the new `@last_nighti` account,
+still `is_draft: true`. The TikTok draft (`6aba046d183cfe1b2f5386fe`) was
+unaffected. **Lesson for next time:** a rename/reconnect on a platform
+silently kills anything queued/drafted on the old account id — after any
+account change, re-check `posts_list` for casualties rather than assuming
+drafts survive.
+
+**Confirms the §0 read, not just a guess:** `posts_list` shows
+`phagos_space`'s post history includes unrelated content — another game
+("PHAGOS", an immune-system game), web3/Ronin commentary, Tokyo Game Show
+takes — none of it LAST NIGHT. This was a shared studio account, not a
+misconfigured one.
 
 **Not connected**, despite a full brand kit already built for them:
-Instagram, YouTube, Facebook, Discord. Zernio supports all of them
-(16 platforms total). Connecting these is a decision for the account owner,
-not something this session can do — flag it, don't silently work around it.
-Until they're connected, don't produce content plans that assume a posting
-channel that doesn't exist yet; keep the live plan scoped to TikTok + X, and
-keep the rest in "ready to activate" status in §7.
+Instagram, YouTube, Discord. Zernio supports all of them (16 platforms
+total). Connecting these is a decision for the account owner, not something
+this session can do — flag it, don't silently work around it. Until
+they're connected, don't produce content plans that assume a posting
+channel that doesn't exist yet; keep the live plan scoped to TikTok + X +
+Facebook, and keep the rest in "ready to activate" status in §7.
 
 No live game URL is recorded anywhere in this repo (README only documents
 `python3 -m http.server 8080` for local preview). **Do not invent a play
