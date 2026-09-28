@@ -257,6 +257,17 @@ S.slash = (t, o) => {
   noise(t, 0.13, { out: o.out, gain: 0.34 * v, type: 'highpass', freq: 1100, q: 0.8, pan: o.pan, rev: 0.2, attack: 0.004, sweep: 0.5 });
   osc(t, 0.16, { out: o.out, gain: 0.14 * v, type: 'sawtooth', freq: 620, to: 120, pan: o.pan, rev: 0.2, attack: 0.002, filt: 'bandpass', filtQ: 3 });
 };
+S.steel = (t, o) => {
+  const v = o.vol ?? 1;
+  noise(t, 0.2, { out: o.out, gain: 0.3 * v, type: 'highpass', freq: 1600, q: 0.6, pan: o.pan, rev: 0.22, attack: 0.002, sweep: 0.35 });
+  osc(t, 0.32, { out: o.out, gain: 0.16 * v, type: 'triangle', freq: 920, to: 180, pan: o.pan, rev: 0.38, attack: 0.001, filt: 'bandpass', filtQ: 5 });
+  osc(t, 0.4, { out: o.out, gain: 0.07 * v, type: 'sine', freq: 1480, to: 360, pan: o.pan, rev: 0.45, attack: 0.006 });
+};
+S.shot = (t, o) => {
+  const v = o.vol ?? 1;
+  noise(t, 0.07, { out: o.out, gain: 0.46 * v, type: 'bandpass', freq: 1900, q: 1.6, pan: o.pan, rev: 0.16, attack: 0.001, sweep: 0.22 });
+  osc(t, 0.12, { out: o.out, gain: 0.22 * v, type: 'sawtooth', freq: 160, to: 48, pan: o.pan, rev: 0.22, attack: 0.001, filt: 'lowpass', filtQ: 2 });
+};
 S.hitFlesh = (t, o) => {
   const heft = Math.min(1.8, o.weight || 1);
   const v = (o.vol ?? 1) * (0.85 + heft * 0.25);

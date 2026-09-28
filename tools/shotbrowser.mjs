@@ -118,7 +118,7 @@ try {
   await page.evaluate(() => { window.__LN_API.stopMove(); });
   await shoot(page, '03-walk');
 
-  // attack: box_01 clip mid-swing — freeze on the active window
+  // attack: claw clip mid-swing — freeze on the active window
   await page.evaluate(() => {
     const p = window.__LN.player;
     window.__LN_API.hold('attack', false);
@@ -126,6 +126,21 @@ try {
   });
   await new Promise((r) => setTimeout(r, 220));
   await shoot(page, '04-attack');
+
+  await page.evaluate(() => {
+    window.__LN_API.setWeapon('sword');
+    window.__LN.player.startAttack(window.__LN);
+  });
+  await new Promise((r) => setTimeout(r, 240));
+  await shoot(page, '04b-sword');
+
+  await page.evaluate(() => {
+    window.__LN_API.setWeapon('shot');
+    window.__LN.player.angle = -Math.PI / 2;
+    window.__LN.player.startAttack(window.__LN);
+  });
+  await new Promise((r) => setTimeout(r, 280));
+  await shoot(page, '04c-shot');
 
   // low blood: eye-glow tell + panic tint territory
   await page.evaluate(() => {

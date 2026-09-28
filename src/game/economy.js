@@ -246,6 +246,7 @@ export function migrateSave(save) {
   save.pendingDawn = save.pendingDawn || [];
   save.coachFed = !!save.coachFed;
   save.coachKnock = !!save.coachKnock;
+  if (save.weapon !== 'claw' && save.weapon !== 'sword' && save.weapon !== 'shot') save.weapon = 'claw';
   if (!save._migratedLanes && save.upgrades) {
     const map = { blood: 'g_blood', speed: 's_move', repair: 'w_rep', damage: 'g_dmg', recovery: 'g_rec' };
     let n = rankCount(save);

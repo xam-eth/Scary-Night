@@ -10,8 +10,10 @@ import { fileURLToPath } from 'node:url';
 import { VALEN_CLIPS, VALEN_MODEL_URL, valenClipForState } from '../src/game/valen3d.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const SOURCE_NAME = 'new_character_glb_box_01_run_walk_c0d0d3.glb';
-const SOURCE_SHA256 = 'd56e7adb6c986125a2ca01ecf1676f42f3a8f85c29efe1d864a0b8afae981abe';
+const SOURCE_NAME = 'hunter_run_walk_claw_sword_shot.glb';
+const SOURCE_SHA256 = 'a86d3c27533db4363aacc214df7e3aff0136ff2f6b1f418d101fdbca0b82974f';
+const BIN_SHA256 = '7f87da42950fead15d4920af63026ffe81fc8a392eca288f15333502fc5508c5';
+const CLIP_NAMES = ['run', 'walk', 'claw', 'shot', 'sword'];
 let failures = 0;
 
 function ok(name, condition, detail = '') {
@@ -78,19 +80,23 @@ ok('uploaded file is a complete glTF 2.0 binary', !!glb);
 if (glb) {
   const { bytes, json } = glb;
   const digest = createHash('sha256').update(bytes).digest('hex');
-  ok('source GLB bytes remain untouched', digest === SOURCE_SHA256, digest);
-  ok('all three authored textures remain embedded', (json.images?.length || 0) === 3 && (json.textures?.length || 0) === 3,
+  ok('vendored GLB bytes remain the renamed hunter file', digest === SOURCE_SHA256, digest);
+  const binStart = glb.binaryOffset;
+  const binLen = bytes.readUInt32LE(binStart - 8);
+  const binDigest = createHash('sha256').update(bytes.subarray(binStart, binStart + binLen)).digest('hex');
+  ok('mesh and animation samples are the original Tripo bytes', binDigest === BIN_SHA256, binDigest);
+  ok('authored textures remain embedded', (json.images?.length || 0) === 2 && (json.textures?.length || 0) === 2,
     `${json.images?.length || 0} images`);
-  ok('the complete 65-joint skin is present', json.skins?.length === 1 && json.skins[0].joints?.length === 65,
+  ok('the hunter skin is present', json.skins?.length === 1 && json.skins[0].joints?.length === 78,
     `${json.skins?.[0]?.joints?.length || 0} joints`);
 
   const animations = json.animations || [];
-  const names = animations.map((animation) => animation.name);
-  ok('three authored clips are present', animations.length === 3, names.join(', '));
-  ok('uploaded clips are box_01, run and walk',
-    ['box_01', 'run', 'walk'].every((name) => names.includes(name)), names.join(', '));
+  const names = animations.map((animation) => animation.name).sort();
+  ok('five authored clips are present', animations.length === 5, names.join(', '));
+  ok('clips are exactly run, walk, claw, shot, sword',
+    CLIP_NAMES.every((name) => names.includes(name)) && names.length === CLIP_NAMES.length, names.join(', '));
   ok('every authored clip has bone channels and samplers',
-    animations.every((animation) => animation.channels?.length === 195 && animation.samplers?.length === 195),
+    animations.every((animation) => animation.channels?.length === 234 && animation.samplers?.length === 234),
     animations.map((animation) => `${animation.name}:${animation.channels?.length || 0}`).join(', '));
 
   const skin = skinStats(glb);
@@ -101,13 +107,17 @@ if (glb) {
     `${skin.normalised}/${skin.vertices}`);
 }
 
-ok('runtime loads the exact uploaded filename', VALEN_MODEL_URL === `./${SOURCE_NAME}`, VALEN_MODEL_URL);
-ok('clip mapping uses the user-approved semantics',
+ok('runtime loads the vendored hunter filename', VALEN_MODEL_URL === `./${SOURCE_NAME}`, VALEN_MODEL_URL);
+ok('clip mapping uses claw for the unarmed attack',
   VALEN_CLIPS.idle === null
     && valenClipForState('idle') === null
     && valenClipForState('walk') === 'walk'
     && valenClipForState('run') === 'run'
-    && valenClipForState('attack') === 'box_01');
+    && valenClipForState('attack') === 'claw'
+    && valenClipForState('attack', 'sword') === 'sword'
+    && valenClipForState('attack', 'shot') === 'shot'
+    && VALEN_CLIPS.shot === 'shot'
+    && VALEN_CLIPS.sword === 'sword');
 
 const retired = [
   'vampire character 3d model.glb',
@@ -116,6 +126,8 @@ const retired = [
   'assets/models/vampire_runtime.glb',
   'assets/models/vampire_valen_runtime.glb',
   'tools/bakeglb.mjs',
+  'new_character_glb_box_01_run_walk_c0d0d3.glb',
+  'western+gunslinger+3d+model (1).glb',
 ];
 ok('obsolete sources and rebuild pipeline are absent', retired.every((name) => !fs.existsSync(path.join(ROOT, name))));
 

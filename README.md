@@ -83,15 +83,14 @@ Everything except the player is generated at runtime: no image files, no audio
 files and no third-party libraries — the art is drawn procedurally on a 2D
 canvas and the sound is synthesised with the Web Audio API.
 
-**The player is the uploaded GLB, loaded as-is.** `new_character_glb_box_01_run_walk_c0d0d3.glb`
-is fetched byte-for-byte (never decoded, unpacked, baked or re-exported — it is
-SHA-256-checked by `node tools/glbtest.mjs`) and handed to a vendored Three.js
-`GLTFLoader`. Three evaluates the asset's original 65-joint skin and authored
-clips (`walk`, `run`, `box_01` punch; idle = the authored rest pose) on a small
-transparent WebGL canvas, and the 2D renderer composites that live frame as the
-upright character. Root motion from the clips is cancelled in memory only, so
-the GLB file itself stays untouched. The procedural silhouette survives strictly
-as a failure path (no WebGL / headless harness), never as the on-screen character.
+**The player is the vendored hunter GLB.** `hunter_run_walk_claw_sword_shot.glb`
+is fetched byte-for-byte (SHA-256-checked by `node tools/glbtest.mjs`) and handed
+to a vendored Three.js `GLTFLoader`. Clip names were renamed to `run`, `walk`,
+`claw`, `shot`, and `sword`; the mesh and animation sample bytes are the Tripo
+original. Three evaluates that skin on a small transparent WebGL canvas, and the
+2D renderer composites the live frame as the upright character. The procedural
+silhouette survives strictly as a failure path (no WebGL / headless harness),
+never as the on-screen character.
 
 ```
 index.html            canvas, veil, fullscreen button

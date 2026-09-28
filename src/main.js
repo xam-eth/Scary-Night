@@ -78,6 +78,7 @@ window.__LN_API = {
   hold: (action, on) => { input.keys[action] = !!on; },
   valen: () => Valen3D.diagnostics(),
   retryValen: () => Valen3D.retry(),
+  setWeapon: (id) => game.setWeapon(id),
   moveTo: (x, y) => {
     const p = game.player;
     const dx = x - p.x, dy = y - p.y;

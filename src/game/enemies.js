@@ -1514,7 +1514,7 @@ export class Bolt {
       const s = game.mansion.solidAt(this.x, this.y);
       if (s) { this.hit(game, true); return; }
       const p = game.player;
-      if (p.alive && dist(this.x, this.y, p.x, p.y) < p.radius + 5) {
+      if (this.owner !== p && p.alive && dist(this.x, this.y, p.x, p.y) < p.radius + 5) {
         if (p.takeDamage(this.damage, game, this.x - Math.cos(this.angle) * 40, this.y - Math.sin(this.angle) * 40, 'bolt')) {
           this.hit(game, false);
           game.showCombatText('BOLT', p.x, p.y, '#ff8080');
@@ -1522,8 +1522,9 @@ export class Bolt {
         return;
       }
       for (const o of game.enemies) {
-        if (o !== this.owner && !o.dead && dist(this.x, this.y, o.x, o.y) < o.radius + 4 && o.key !== 'hunter') {
-          o.hurt(this.damage * 0.5, game, this.x, this.y);
+        const hunterBolt = this.owner && this.owner.key === 'hunter';
+        if (o !== this.owner && !o.dead && dist(this.x, this.y, o.x, o.y) < o.radius + 4 && !(hunterBolt && o.key === 'hunter')) {
+          o.hurt(hunterBolt ? this.damage * 0.5 : this.damage, game, this.x, this.y);
           this.hit(game, false);
           return;
         }
@@ -1536,7 +1537,7 @@ export class Bolt {
     this.dead = true;
     game.audio.play(wall ? 'boltImpact' : 'hitFlesh', { x: this.x, y: this.y, cam: game.renderer.cam, vol: 0.7 });
     game.particles.burst('spark', this.x, this.y, 6, { color: 'rgba(220,220,240,0.8)', sizeMin: 1, sizeMax: 2.5, speedMin: 20, speedMax: 90, lifeMin: 0.1, lifeMax: 0.3, glow: true });
-    if (wall) game.decals.splat(this.x, this.y, 3, 'rgba(30,30,40,0.35)', 2);
+    game.decals.splat(this.x, this.y, wall ? 3 : 5, wall ? 'rgba(30,30,40,0.35)' : 'rgba(90,20,24,0.4)', wall ? 2 : 3);
   }
   draw(ctx, game) {
     ctx.save();

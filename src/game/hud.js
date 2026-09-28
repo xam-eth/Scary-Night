@@ -12,6 +12,7 @@ import { PAL } from '../core/render.js';
 import { PLAYER, UPGRADES, SHARDS } from '../core/config.js';
 import { unlocked, projectDawn, LANES } from './economy.js';
 import { drawGuideArrow } from './coach.js';
+import { weaponById } from './weapons.js';
 
 const SERIF = 'Georgia, "Palatino Linotype", "Times New Roman", serif';
 const SANS = '"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
@@ -426,7 +427,7 @@ function drawGuidanceStrip(game, ctx, w, h) {
   ctx.textBaseline = 'middle';
   ctx.font = `500 ${h < 520 ? 12 : 13}px ${SANS}`;
   setLetter(ctx, 0.8);
-  const maxW = Math.min((view ? view.w : w) - 36, 420);
+  const maxW = Math.min(w - 36, 420);
   const words = String(shown).split(' ');
   const lines = [];
   let cur = '';
@@ -872,6 +873,21 @@ function drawBearings(game, ctx, w, h) {
  * random; Hades puts a cooldown on the button itself, not in a manual.
  */
 
+export function weaponChipBox(input, w, h) {
+  const size = 44;
+  const dash = input && input.buttons && input.buttons.dash;
+  const stick = input && input.stick;
+  if (!dash || !dash.y) return { x: w - 8 - size, y: h - 78, w: size, h: size };
+  const stickRight = stick ? (stick.homeX || w * 0.16) + (stick.r || 54) + 16 : 80;
+  let x = dash.x - dash.r - 10 - size;
+  let y = dash.y - size / 2;
+  if (x < stickRight) {
+    x = Math.max(8, dash.x - size / 2);
+    y = dash.y - dash.r - 8 - size;
+  }
+  return { x, y: Math.max(8, y), w: size, h: size };
+}
+
 export function drawTouchControls(game, ctx, w, h) {
   const input = game.input;
   if (!input || !input.gameplay) return;
@@ -972,7 +988,25 @@ export function drawTouchControls(game, ctx, w, h) {
   };
   const dashCd = p && PLAYER.dashCooldown ? clamp(p.dashCd / PLAYER.dashCooldown, 0, 1) : 0;
   const atkCd = p && PLAYER.attackCooldown ? clamp(p.attackCd / PLAYER.attackCooldown, 0, 1) : 0;
-  drawBtn(input.buttons.attack, 'CLAW', 'F', { big: true, cd: atkCd });
+  const tool = weaponById(p && p.weapon);
+  drawBtn(input.buttons.attack, tool.label, 'F', { big: true, cd: atkCd });
+  const chip = weaponChipBox(input, w, h);
+  game._weaponChip = chip;
+  ctx.save();
+  ctx.fillStyle = 'rgba(8,9,14,0.72)';
+  ctx.strokeStyle = 'rgba(212,186,120,0.8)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.rect(chip.x, chip.y, chip.w, chip.h);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = '#f0e6d4';
+  ctx.font = `500 9px ${SANS}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '0.4px';
+  ctx.fillText(tool.label, chip.x + chip.w / 2, chip.y + chip.h / 2);
+  ctx.restore();
   drawBtn(input.buttons.dash, 'DASH', 'SHIFT', { cd: dashCd });
   drawBtn(input.buttons.interact, 'USE', 'E');
   drawBtn(input.buttons.repair, 'FIX', 'R');

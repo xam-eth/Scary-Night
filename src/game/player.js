@@ -16,6 +16,7 @@ import { PAL } from '../core/render.js';
 import { Valen3D } from './valen3d.js';
 import { IAP } from '../shop/iap.js';
 import { drainPerSecond, laneStats } from './economy.js';
+import { weaponById } from './weapons.js';
 
 function coatFilter(id) {
   if (id === 'coat_bloodmoon' || id === 'coat_glutton') return 'hue-rotate(-22deg) saturate(1.7) brightness(0.96)';
@@ -62,6 +63,7 @@ export class Player {
     this.attackT = 0;
     this.attackCd = 0;
     this.attackHit = false;
+    this.weapon = 'claw';
     this.dashT = 0;
     this.dashCd = 0;
     this.iframes = 0;
@@ -255,7 +257,8 @@ export class Player {
     if (this.attackT > 0) {
       this.attackT -= dt;
       const prog = 1 - this.attackT / (PLAYER.attackWindup + PLAYER.attackActive);
-      if (!this.attackHit && prog > 0.35) {
+      const tool = weaponById(this.weapon);
+      if (!this.attackHit && prog > tool.fireAt) {
         this.attackHit = true;
         game.playerAttackHit(this);
       }
@@ -319,7 +322,8 @@ export class Player {
     for (const e of game.enemies) {
       if (e.dead) continue;
       const d = dist(this.x, this.y, e.x, e.y);
-      const reach = PLAYER.attackRange + (e.radius || 0);
+      const tool = weaponById(this.weapon);
+      const reach = (tool.kind === 'ranged' ? Math.min(tool.range, 220) : tool.range) + (e.radius || 0);
       if (d > reach) continue;
       const a = Math.atan2(e.y - this.y, e.x - this.x);
       const off = Math.abs(angDiff(a, this.angle));
@@ -336,7 +340,8 @@ export class Player {
     this.blood = Math.max(0, this.blood - clawCost);
     if (clawCost > 0) game.bloodTick = Math.max(game.bloodTick || 0, 0.45);
     this.bloodSpent += PLAYER.attackCost;
-    game.audio.play('slash', { pan: 0, vol: 0.55 });
+    const tool = weaponById(this.weapon);
+    if (tool.kind !== 'ranged') game.audio.play(tool.sound, { pan: 0, vol: 0.55 });
   }
 
   takeDamage(amount, game, fromX, fromY, kind = 'hit') {
@@ -373,10 +378,10 @@ export class Player {
 
   /* ================= drawing =================
    *
-   * The character IS the uploaded GLB. valen3d.js hands GLTFLoader the exact
-   * bytes of new_character_glb_box_01_run_walk_c0d0d3.glb — no decoding, no
-   * unpacking, no baked sprite sheet, no mesh rewrite — and Three evaluates the
-   * authored skin and clips (walk / run / box_01) on a transparent WebGL stage.
+   * The character IS the vendored hunter GLB. valen3d.js hands GLTFLoader the
+   * bytes of hunter_run_walk_claw_sword_shot.glb — no decoding, no unpacking,
+   * no baked sprite sheet, no mesh rewrite — and Three evaluates the authored
+   * skin and clips (walk / run / claw) on a transparent WebGL stage.
    * That single frame is composited here as the upright sprite; Canvas adds
    * only world anchoring (shadow, halo, VFX), never body geometry.
    *
@@ -408,6 +413,7 @@ export class Player {
       attackProgress,
       // Standing 3/4. upright() keeps her on her feet; overhead was only a head.
       view: 'play',
+      weapon: this.weapon || 'claw',
     });
 
     // shadow
@@ -479,11 +485,38 @@ export class Player {
   drawSwing(ctx, game) {
     const age = this.slashAge;
     if (age == null || age > 0.5 || this.state === PSTATE.DEAD) return;
+    const tool = weaponById(this.weapon);
+    if (tool.kind === 'ranged') {
+      if (age > 0.22) return;
+      const fade = 1 - age / 0.22;
+      const a = this.swingAngle ?? this.angle;
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      ctx.globalCompositeOperation = 'screen';
+      const ox = Math.cos(a) * 18;
+      const oy = Math.sin(a) * 18;
+      const g = ctx.createRadialGradient(ox, oy, 0, ox, oy, 18);
+      g.addColorStop(0, `rgba(255, 220, 150, ${(0.9 * fade).toFixed(3)})`);
+      g.addColorStop(1, 'rgba(255, 140, 40, 0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(ox, oy, 18, 0, TAU);
+      ctx.fill();
+      ctx.strokeStyle = `rgba(255, 236, 200, ${(0.8 * fade).toFixed(3)})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(ox, oy);
+      ctx.lineTo(ox + Math.cos(a) * 36, oy + Math.sin(a) * 36);
+      ctx.stroke();
+      ctx.restore();
+      return;
+    }
     const sweep = clamp(age / 0.16, 0, 1);
     const fade = sweep * (age < 0.2 ? 1 : clamp(1 - (age - 0.2) / 0.3, 0, 1));
     if (fade < 0.04) return;
     const a = this.swingAngle ?? this.angle;
-    const arc = PLAYER.attackArc;
+    const arc = tool.arc;
+    const reach = tool.range;
     const start = a - arc / 2 + (1 - sweep) * arc * 0.35;
     const end = a - arc / 2 + sweep * arc;
 
@@ -493,12 +526,19 @@ export class Player {
     ctx.globalCompositeOperation = 'screen';
     ctx.lineCap = 'round';
     for (let i = 0; i < 3; i++) {
-      const rad = PLAYER.attackRange * (0.52 + i * 0.18);
+      const rad = reach * (0.52 + i * 0.18);
       const rgb = i === 1 ? ink.hot : ink.edge;
       ctx.strokeStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${((i === 1 ? 0.9 : 0.72) * fade).toFixed(3)})`;
       ctx.lineWidth = i === 1 ? 3.6 : 2.4;
       ctx.beginPath();
       ctx.arc(0, 0, rad, start, end);
+      ctx.stroke();
+    }
+    if (tool.fx === 'arc') {
+      ctx.strokeStyle = `rgba(214, 206, 186, ${(0.85 * fade).toFixed(3)})`;
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.arc(0, 0, reach * 0.92, start, end);
       ctx.stroke();
     }
     ctx.restore();
@@ -588,7 +628,7 @@ export class Player {
     // projection keeps them welded to the animated skull at any yaw.
     // (Local space here: the context is already translated to the feet.)
     if (!isGhost && !dead && !crawling && this.lowBlood) {
-      const head = Valen3D.screenPoint('mixamorig:Head');
+      const head = Valen3D.screenPoint('mixamorig:Head') || Valen3D.screenPoint('Head');
       let hx = 0, hy = -height * 0.72;
       if (head && frame.width) {
         hx = (head.x / frame.width) * width - width / 2;

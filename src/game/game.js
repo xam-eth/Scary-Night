@@ -33,7 +33,8 @@ import { Haunts } from './haunts.js';
 import { Ads } from '../shop/ads.js';
 import { Valen3D } from './valen3d.js';
 import { IAP } from '../shop/iap.js';
-import { drawHUD, drawWorldPrompts, urgentGuidance, pauseButtonBox } from './hud.js';
+import { drawHUD, drawWorldPrompts, urgentGuidance, pauseButtonBox, weaponChipBox } from './hud.js';
+import { WEAPONS, weaponById, nextWeapon } from './weapons.js';
 import { nextBeat, ackBeat, beatById, endingReady } from './narrative.js';
 import { updateCoach, drawCoachWorld } from './coach.js';
 import * as UI from '../ui/screens.js';
@@ -400,6 +401,7 @@ export class Game {
     // Wake in the servant-door opening, south of the slab. Dragging up on the
     // stick walks into that door. The long table used to sit in the way.
     this.player = new Player(720, 200);
+    this.equipSavedWeapon();
     this.player.applyUpgrades(this.save);
     this.player.blood = this.player.bloodMax * 0.48;
     // Night one can bar the shaking door without a scavenger hunt. Later
@@ -1257,24 +1259,53 @@ export class Game {
     }
   }
 
+  equipSavedWeapon() {
+    const id = WEAPONS[this.save && this.save.weapon] ? this.save.weapon : 'claw';
+    if (this.player) this.player.weapon = id;
+    if (this.save) this.save.weapon = id;
+  }
+
+  setWeapon(id) {
+    if (!WEAPONS[id] || !this.player) return;
+    this.player.weapon = id;
+    if (this.save) {
+      this.save.weapon = id;
+      writeSave(this.save);
+    }
+  }
+
+  cycleWeapon() {
+    if (!this.player) return;
+    this.setWeapon(nextWeapon(this.player.weapon));
+    this.audio.play('uiClick', { vol: 0.35 });
+  }
+
   playerAttackHit(player) {
+    const tool = weaponById(player.weapon);
+    // Coat tint stays on the swing. The weapon is a layer, not a replacement.
     this.spawnCoatClaw(player, IAP.fxLook(this.save));
-    const arc = PLAYER.attackArc;
+    this.spawnWeaponFx(player, tool);
+    if (tool.kind === 'ranged') {
+      this.spawnBolt(player, player.swingAngle || player.angle || 0, tool);
+      this.stats.shotsFired = (this.stats.shotsFired || 0) + 1;
+      this.makeNoise(player.x, player.y, 420);
+      return;
+    }
+    const arc = tool.arc;
     let hits = 0;
     let heft = 16;
     for (const e of this.enemies) {
       if (e.dead) continue;
       const d = dist(e.x, e.y, player.x, player.y);
-      if (d > PLAYER.attackRange + e.radius) continue;
+      if (d > tool.range + e.radius) continue;
       const a = Math.atan2(e.y - player.y, e.x - player.x);
       let diff = Math.abs(((a - player.swingAngle + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
       const touching = d < player.radius + (e.radius || 12) + 14;
       if (!touching && diff > arc / 2) continue;
-      const dmg = PLAYER.attackDamage * player.damageMul;
+      const dmg = tool.damage * player.damageMul;
       e.hurt(dmg, this, player.x, player.y);
       hits++;
       heft = Math.max(heft, (e.type && e.type.bloodValue) || 16);
-      // knockback
       const kb = e.key === 'werewolf' ? 30 : e.key === 'ghoul' ? 48 : e.key === 'stalker' ? 60 : 110;
       e.vx += Math.cos(a) * kb; e.vy += Math.sin(a) * kb;
     }
@@ -1282,11 +1313,36 @@ export class Game {
     this.stats.clawHits = (this.stats.clawHits || 0) + hits;
     if (hits) {
       this.renderer.shake(0.16 + hits * 0.04);
-      this.audio.play('hitFlesh', { vol: 0.48, weight: 0.7 + heft / 28 });
-      this.renderer.addFlash(0.04, '#ffffff');
+      this.audio.play(tool.hitSound, { vol: 0.5, weight: tool.hitWeight + heft / 40 });
+      this.renderer.addFlash(0.04, tool.fx === 'arc' ? '#f0e6d0' : '#ffffff');
     }
-    // clawing is loud
-    this.makeNoise(player.x, player.y, 360);
+    this.makeNoise(player.x, player.y, tool.fx === 'arc' ? 420 : 360);
+  }
+
+  /** Visual + audio for the equipped row. Coat FX already fired. */
+  spawnWeaponFx(player, tool) {
+    const ang = player.swingAngle || player.angle || 0;
+    if (tool.kind === 'ranged') {
+      this.audio.play(tool.sound, { x: player.x, y: player.y, cam: this.renderer.cam, vol: 0.72 });
+    }
+    if (tool.fx === 'arc') {
+      const steps = 8;
+      for (let i = 0; i < steps; i++) {
+        const t = (i / (steps - 1) - 0.5) * tool.arc;
+        const a = ang + t;
+        const r = tool.range * (0.62 + (i % 3) * 0.08);
+        this.particles.burst('spark', player.x + Math.cos(a) * r, player.y + Math.sin(a) * r, 1, {
+          color: 'rgba(220, 210, 186, 0.92)', speedMin: 16, speedMax: 64, lifeMin: 0.08, lifeMax: 0.2, sizeMin: 1.2, sizeMax: 2.6, glow: true,
+        });
+      }
+    } else if (tool.fx === 'muzzle') {
+      const ox = player.x + Math.cos(ang) * (tool.offset || 22);
+      const oy = player.y + Math.sin(ang) * (tool.offset || 22);
+      this.particles.burst('spark', ox, oy, 9, {
+        color: 'rgba(255, 206, 130, 0.95)', angle: ang, spread: 0.4, speedMin: 50, speedMax: 180, lifeMin: 0.05, lifeMax: 0.16, sizeMin: 1.4, sizeMax: 3.4, glow: true,
+      });
+      this.renderer.addFlash(0.06, '#e6c078');
+    }
   }
 
   /** The equipped coat's claw signature — visual only, no stat rides the
@@ -1530,15 +1586,20 @@ export class Game {
     this.combatTexts.push({ text, x, y, color, life: 0.9 });
   }
 
-  spawnBolt(owner, angle) {
+  spawnBolt(owner, angle, spec) {
+    const off = (spec && spec.offset) || 22;
+    const speed = (spec && spec.boltSpeed) || owner.type.boltSpeed;
+    const damage = (spec && spec.damage) || owner.type.boltDamage;
     const b = new Bolt(
-      owner.x + Math.cos(angle) * 22,
-      owner.y + Math.sin(angle) * 22,
-      angle, owner.type.boltSpeed, owner.type.boltDamage, owner,
+      owner.x + Math.cos(angle) * off,
+      owner.y + Math.sin(angle) * off,
+      angle, speed, damage, owner,
     );
     this.bolts.push(b);
-    this.audio.play('crossbow', { x: owner.x, y: owner.y, cam: this.renderer.cam, vol: 0.85 });
-    this.showCombatText('!', owner.x, owner.y - 30, '#e8c060');
+    if (!spec) {
+      this.audio.play('crossbow', { x: owner.x, y: owner.y, cam: this.renderer.cam, vol: 0.85 });
+      this.showCombatText('!', owner.x, owner.y - 30, '#e8c060');
+    }
   }
 
   addPickup(x, y, kind, amount) {
@@ -2095,6 +2156,18 @@ export class Game {
     // after the multiply so the night cannot swallow them.
     drawCoachWorld(this, ctx);
     p.drawSwing(ctx, this);
+    for (const b of this.bolts) {
+      if (b.dead || !r.isVisible(b.x, b.y, 80)) continue;
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      ctx.strokeStyle = 'rgba(255, 214, 150, 0.9)';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(b.x - Math.cos(b.angle) * 14, b.y - Math.sin(b.angle) * 14);
+      ctx.lineTo(b.x + Math.cos(b.angle) * 8, b.y + Math.sin(b.angle) * 8);
+      ctx.stroke();
+      ctx.restore();
+    }
 
     // ---------- character self-light (moonlight on the GLB frame) ----------
     this.player.drawAfterDark(ctx, this);
@@ -2348,6 +2421,20 @@ export class Game {
       else if (this.screen === 'paused') this.togglePause(false);
     }
     if (!input.keys.pause) this._pauseHeld = false;
+    if (input.keys.weapon && !this._weaponHeld && this.screen === 'playing') {
+      this._weaponHeld = true;
+      this.cycleWeapon();
+    }
+    if (!input.keys.weapon) this._weaponHeld = false;
+    if (this.screen === 'playing' && input.uiTap && this._weaponChip) {
+      const chip = this._weaponChip;
+      const tap = input.uiTap;
+      if (tap.x >= chip.x && tap.x <= chip.x + chip.w && tap.y >= chip.y && tap.y <= chip.y + chip.h) {
+        input.uiTap = null;
+        this.cycleWeapon();
+        return;
+      }
+    }
     if (this.screen === 'playing' && input.uiTap) {
       const box = pauseButtonBox(this.renderer.w, this.renderer.h);
       const tap = input.uiTap;

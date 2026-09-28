@@ -9,18 +9,21 @@
 import * as THREE from '../vendor/three/three.module.min.js';
 import { GLTFLoader } from '../vendor/three/GLTFLoader.js';
 
-export const VALEN_MODEL_URL = './new_character_glb_box_01_run_walk_c0d0d3.glb';
+export const VALEN_MODEL_URL = './hunter_run_walk_claw_sword_shot.glb';
 export const VALEN_CLIPS = Object.freeze({
-  idle: null,       // user-approved bind/rest pose
+  idle: null,       // bind/rest pose — this rig has no idle clip
   walk: 'walk',
   run: 'run',
-  attack: 'box_01',
+  attack: 'claw',   // unarmed default; sword and shot are weapon clips (#46)
+  claw: 'claw',
+  shot: 'shot',
+  sword: 'sword',
 });
 
-export function valenClipForState(state) {
+export function valenClipForState(state, weapon = 'claw') {
   if (state === 'walk') return VALEN_CLIPS.walk;
   if (state === 'run') return VALEN_CLIPS.run;
-  if (state === 'attack') return VALEN_CLIPS.attack;
+  if (state === 'attack') return VALEN_CLIPS[weapon] || VALEN_CLIPS.attack;
   return VALEN_CLIPS.idle;
 }
 
@@ -123,10 +126,9 @@ class ValenRuntime {
         this.camera = camera;
 
         const loader = new GLTFLoader();
-        // The character IS this asset (bought, original bytes). A 27 MB fetch
-        // is the one thing in the boot path that can blink on a weak link — so
-        // it gets three attempts with backoff before the failure state, and a
-        // public retry() after that. Never silently settle for the fallback.
+        // The character IS this asset. A weak link gets three attempts with
+        // backoff before the failure state, and a public retry() after that.
+        // A night never blocks on the model — the canvas silhouette stands in.
         const ATTEMPTS = 3;
         const attempt = (n) => loader.load(
           VALEN_MODEL_URL,
@@ -168,7 +170,7 @@ class ValenRuntime {
 
   _acceptModel(gltf) {
     const names = new Set(gltf.animations.map((clip) => clip.name));
-    for (const required of [VALEN_CLIPS.attack, VALEN_CLIPS.run, VALEN_CLIPS.walk]) {
+    for (const required of [VALEN_CLIPS.claw, VALEN_CLIPS.run, VALEN_CLIPS.walk, VALEN_CLIPS.shot, VALEN_CLIPS.sword]) {
       if (!names.has(required)) throw new Error(`Valen GLB is missing animation clip "${required}"`);
     }
 
@@ -194,7 +196,7 @@ class ValenRuntime {
 
     this.mixer = new THREE.AnimationMixer(this.model);
     for (const clip of gltf.animations) this.clips[clip.name] = clip;
-    for (const name of [VALEN_CLIPS.walk, VALEN_CLIPS.run, VALEN_CLIPS.attack]) {
+    for (const name of [VALEN_CLIPS.walk, VALEN_CLIPS.run, VALEN_CLIPS.claw, VALEN_CLIPS.shot, VALEN_CLIPS.sword]) {
       const action = this.mixer.clipAction(this.clips[name]);
       action.enabled = true;
       action.clampWhenFinished = true;
@@ -204,7 +206,7 @@ class ValenRuntime {
       this.actions[name] = action;
     }
 
-    this.hips = this._rigObject('mixamorig:Hips');
+    this.hips = this._rigObject('mixamorig:Hips') || this._rigObject('Hip') || this._rigObject('Pelvis');
     this.restHips = this.hips ? this.hips.position.clone() : null;
     this.loading = false;
     this.ready = true;
@@ -260,9 +262,9 @@ class ValenRuntime {
 
   /** Top-down token: crown, face, and the shoulders. Not the coat, not the boots. */
   _frameHead() {
-    const head = this._rigObject('mixamorig:Head');
-    const neck = this._rigObject('mixamorig:Neck');
-    const top = this._rigObject('mixamorig:HeadTop_End');
+    const head = this._rigObject('mixamorig:Head') || this._rigObject('Head');
+    const neck = this._rigObject('mixamorig:Neck') || this._rigObject('NeckTwist01');
+    const top = this._rigObject('mixamorig:HeadTop_End') || head;
     if (!head || !this.bounds) return;
     const hp = this._hp || (this._hp = new THREE.Vector3());
     const np = this._np || (this._np = new THREE.Vector3());
@@ -293,7 +295,7 @@ class ValenRuntime {
    * transparent frame. Walk/run use collision-resolved stride phase, while the
    * attack clip is compressed to the gameplay attack window.
    */
-  render({ state = 'idle', angle = Math.PI / 2, speed = 0, stepPhase = 0, attackProgress = 0, view = 'portrait' } = {}) {
+  render({ state = 'idle', angle = Math.PI / 2, speed = 0, stepPhase = 0, attackProgress = 0, view = 'portrait', weapon = 'claw' } = {}) {
     if (!this.ready || !this.renderer || !this.model || !this.mixer) return null;
     this._applyCamera(view);
 
@@ -302,18 +304,21 @@ class ValenRuntime {
     const runBlend = smoothstep(140, 180, speed);  // v1.2: match state threshold (160) + walk/run speeds (122/196)
     const walkWeight = locomotion * (1 - runBlend);
     const runWeight = locomotion * runBlend;
-    const attackWeight = state === 'attack' ? 1 : 0;
     const phase = wrap01(stepPhase / (Math.PI * 2));
 
     const walkAction = this.actions[VALEN_CLIPS.walk];
     const runAction = this.actions[VALEN_CLIPS.run];
-    const attackAction = this.actions[VALEN_CLIPS.attack];
+    const attackName = VALEN_CLIPS[weapon] || VALEN_CLIPS.attack;
     walkAction.setEffectiveWeight(walkWeight);
     runAction.setEffectiveWeight(runWeight);
-    attackAction.setEffectiveWeight(attackWeight);
     walkAction.time = phase * this.clips[VALEN_CLIPS.walk].duration;
     runAction.time = phase * this.clips[VALEN_CLIPS.run].duration;
-    attackAction.time = clamp01(attackProgress) * this.clips[VALEN_CLIPS.attack].duration;
+    for (const name of [VALEN_CLIPS.claw, VALEN_CLIPS.shot, VALEN_CLIPS.sword]) {
+      const action = this.actions[name];
+      const on = attacking && name === attackName;
+      action.setEffectiveWeight(on ? 1 : 0);
+      if (on) action.time = clamp01(attackProgress) * this.clips[name].duration;
+    }
     this.mixer.update(0);
 
     // Walk and run contain authored forward root translation. World movement

@@ -15,7 +15,7 @@ const KEYMAP = {
   ShiftLeft: 'dash', ShiftRight: 'dash',
   KeyE: 'interact', Space: 'interact',
   KeyR: 'repair', KeyB: 'barricade',
-  KeyF: 'attack',
+  KeyF: 'attack', KeyQ: 'weapon',
   Escape: 'pause', Enter: 'confirm', KeyP: 'pause',
   KeyM: 'map',
   F1: 'debug',

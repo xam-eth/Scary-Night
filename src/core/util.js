@@ -132,6 +132,7 @@ export const defaultSave = () => ({
     shake: 1, flashes: 1, captions: 1, difficulty: 'standard',
     invertPanic: 0,
   },
+  weapon: 'claw',             // hunter tool. Never a stat, never a purchase.
   tutorialSeen: false,
   coachFed: false,
   coachKnock: false,
