@@ -191,6 +191,20 @@ No live game URL is recorded anywhere in this repo (README only documents
 link in any post.** Get the real hosted URL from the team before any post
 that needs a CTA link; until then, link-less awareness content only.
 
+**Paid ads — checked 2026-09-28, not runnable yet.** A `metaads` OAuth
+connection exists (`6aba95faa8080a310a8c71e8`, token healthy) but
+`ad_accounts_list_ad_accounts` returns zero ad accounts — there is no
+billing-capable Meta Ad Account (`act_...`) behind the token, so nothing
+can spend. Creating one is a Business Manager action (business
+verification + payment method) for the account owner, not something this
+session can do. TikTok Ads is disconnected (see above). Full plan —
+blockers, campaign structure, targeting, budget framework, the pixel event
+plan — is written up in `docs/ADS-STRATEGY.md`, ready to execute the moment
+an ad account exists and the live URL lands. Don't create or activate any
+real campaign before both of those are true; `ad_campaigns_create_ad_campaign`
+defaults to `status: PAUSED` for exactly this reason — keep it that way
+until a human reviews the ad in Ads Manager, regardless of budget size.
+
 **Page/profile setup copy:** ready-to-paste Page name, bio, description,
 CTA and asset mapping for Facebook (the one slated for ads), X, TikTok,
 YouTube, Instagram and Discord lives in `docs/SOCIAL-PROFILES.md` (written
