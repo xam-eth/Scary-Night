@@ -417,7 +417,7 @@ function drawWorldCue(game, ctx, w, h, cue, gs = 1) {
   const view = game.renderer.view || { left: 0, top: 0, w, h };
   const on = sp.x > view.left + 36 && sp.x < view.left + view.w - 36 && sp.y > view.top + 24 && sp.y < view.top + view.h - 28;
   if (!on) {
-    edgeArrow(ctx, view, sp, label, game.time);
+    edgeArrow(ctx, view, sp, label, game.time, gs);
     return;
   }
   // On screen, the floor arrow is the pointer. A second chevron here was
@@ -594,7 +594,7 @@ function chip(ctx, w, h, title, sub) {
   ctx.restore();
 }
 
-function edgeArrow(ctx, view, sp, label, time) {
+function edgeArrow(ctx, view, sp, label, time, gs = 1) {
   const cx = view.left + view.w / 2, cy = view.top + view.h / 2;
   const ang = Math.atan2(sp.y - cy, sp.x - cx);
   const dx = Math.cos(ang), dy = Math.sin(ang);

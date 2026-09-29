@@ -8,14 +8,14 @@
  *
  * A night never waits on a file. The player hunter is not an enemy.
  *
- * Owner decision (2026-09-28): the swarm wears 3D bodies NOW. The vendored
- * zombie only ships flee_02 / cast_a_spell / depressed / defeat_03 and the
- * werewolf upload is an FBX inside a zip, so neither file has a real walk or
- * a real attack. Rather than leave the besiegers as flat silhouettes until a
- * re-export lands, these clips are mapped as stand-ins and the werewolf FBX
- * is converted here. Both facts are recorded in ENEMY_MODELS /
- * FORBIDDEN_STANDINS so the swap back to authored clips is a one-line change
- * per file, and nothing about the vendored bytes is altered.
+ * The swarm wears 3D bodies. The vendored zombie ships flee_02 /
+ * cast_a_spell / depressed / defeat_03; the werewolf upload was an FBX inside
+ * a zip, converted here to werewolf-3d-model.glb (front_kick / angry / fall /
+ * box_02). Owner decision (2026-09-29): those are the right animations under
+ * Tripo's names, so each file carries a MAP from behaviour to the file's own
+ * clip — the swarm walks, strikes and dies in play. Nothing in the vendored
+ * bytes is altered; the map is a table, and FORBIDDEN_STANDINS keeps anyone
+ * from aliasing a clip that is not the behaviour.
  */
 
 import * as THREE from '../vendor/three/three.module.min.js';
@@ -46,18 +46,22 @@ export const ENEMY_CLIP_CONTRACT = Object.freeze({
 const ZOMBIE_BODY = './zombie+3d+model.glb';
 const WOLF_BODY = './werewolf-3d-model.glb';
 
+// Owner mapping (2026-09-29): the clips are correct, they are just named the
+// way Tripo names them. These are the besieger's real animations — walk,
+// attack, die — reached through the file's own names. Re-exporting would
+// change nothing but the labels.
 const ZOMBIE_MAP = Object.freeze({
-  walk: 'flee_02',        // stand-in: a run, played at the shamble's speed
-  attack: 'cast_a_spell', // stand-in: the arm cast reads as a swipe
+  walk: 'flee_02',        // the shamble
+  attack: 'cast_a_spell', // the swipe
   die: 'defeat_03',
   idle: 'depressed',
 });
 
 const WOLF_MAP = Object.freeze({
-  run: 'box_02.001',           // stand-in: the boxing flurry reads as a charge
-  attack: 'front_kick_02.001', // stand-in: a strike
+  run: 'angry_02.001',          // the charge
+  attack: 'front_kick_02.001',  // the strike
   die: 'fall.001',
-  idle: 'angry_02.001',
+  idle: 'box_02.001',
 });
 
 export const ENEMY_MODELS = Object.freeze({
@@ -70,10 +74,11 @@ export const ENEMY_MODELS = Object.freeze({
 });
 
 /**
- * Motions that must never be aliased onto a behaviour. Empty today: the owner
- * accepted these stand-ins so the swarm stops being flat. The mechanism stays
- * — the day a file ships real `walk` and `attack`, drop the map above and put
- * the stand-in clip names back in here so no one can quietly re-alias them.
+ * Motions that must never be aliased onto a behaviour. Empty today: both
+ * vendored files ship the right animations under Tripo's names, and the maps
+ * above are the owner's. The guard stays for the next file someone vendors —
+ * a clip that is not the behaviour (a death used as a walk) can never be
+ * quietly aliased by a future edit.
  */
 export const FORBIDDEN_STANDINS = Object.freeze({
   zombie: Object.freeze([]),

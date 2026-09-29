@@ -931,11 +931,14 @@ if (args.systems) {
   const capped = selectGlbSlots(swarm, { x: 0, y: 0 }, ENEMY_GLB_CAP, () => true);
   line(capped.length === ENEMY_GLB_CAP && capped[0].id === 1, `nearest ${ENEMY_GLB_CAP} are the skinned cap`);
   line(selectGlbSlots(swarm, { x: 0, y: 0 }, ENEMY_GLB_CAP, () => false).length === 0, 'an unready model stays on the 2D path');
-  // Owner decision: the swarm wears 3D bodies now, on stand-in clips, and the
-  // stand-ins are named in the registry rather than smuggled into the poses.
+  // Owner mapping: Tripo's clip names ARE the walk / attack / die of these
+  // files, and they live in the registry rather than being smuggled into poses.
   line(ENEMY_MODELS.zombie.map.walk === 'flee_02' && ENEMY_MODELS.zombie.map.attack === 'cast_a_spell'
     && ENEMY_MODELS.zombie.map.die === 'defeat_03' && requiredClips('werewolf')[0] === 'run',
-    'zombie flee is a named stand-in, not a silent walk');
+    'the zombie walks on flee_02 by the owner map, not by accident');
+  line(ENEMY_MODELS.werewolf.map.run === 'angry_02.001' && ENEMY_MODELS.werewolf.map.attack === 'front_kick_02.001'
+    && ENEMY_MODELS.werewolf.map.die === 'fall.001' && ENEMY_MODELS.werewolf.map.idle === 'box_02.001',
+    'the werewolf charges on angry and strikes on front_kick');
   line(['zombie', 'crawler', 'ghoul', 'hunter', 'stalker', 'werewolf'].every((key) => ENEMY_MODELS[key] && ENEMY_MODELS[key].url),
     'every besieger in the roster has a body wired to it');
   const book = new SlotBook(ENEMY_GLB_CAP);
