@@ -2111,6 +2111,9 @@ export class Game {
       }
       r.beginWorld();
     }
+    // One shadow map per frame for the whole house (issue #54), not one per
+    // body: the first body placed refreshes it and the rest reuse it.
+    if (Valen3D.beginFrame) Valen3D.beginFrame();
     if (gameVisible) this.renderWorld(dtSafe(this));
     r.resetForUI();
     if (gameVisible) r.drawFrameFade();
@@ -2270,6 +2273,9 @@ export class Game {
     // ---------- bodies and tall props, one depth order ----------
     // A table in front of a crawler hides the crawler. A body in front of the
     // table hides the table. Valen uses the same foot-y as the swarm.
+    // The house's own light field, so every body is lit by the lamp that is
+    // lighting the floor it is standing on (issue #54).
+    Enemy3D.setLightSampler((x, y) => r.keyLightAt(x, y));
     Enemy3D.assign(this.enemies, p);
     const layer = [];
     for (const e of this.enemies) layer.push({ y: e.y, enemy: e });

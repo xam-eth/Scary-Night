@@ -98,19 +98,69 @@ class ValenRuntime {
         renderer.outputColorSpace = THREE.SRGBColorSpace;
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
         renderer.toneMappingExposure = 1.18;
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        // One shadow pass per FRAME, not one per body: the house's light moves
+        // slowly and a phone cannot afford eight depth maps to prove it. The
+        // stage asks for a fresh map at the top of each frame (beginFrame).
+        renderer.shadowMap.autoUpdate = false;
         this.canvas = canvas;
         this.renderer = renderer;
 
         const scene = new THREE.Scene();
         const stage = new THREE.Group();
         scene.add(stage);
-        scene.add(new THREE.HemisphereLight(0x9aaed4, 0x160b12, 1.7));
+        const hemi = new THREE.HemisphereLight(0x9aaed4, 0x160b12, 1.7);
+        scene.add(hemi);
+        this.hemi = hemi;
         const key = new THREE.DirectionalLight(0xffdfc2, 2.65);
         key.position.set(-2.2, 3.4, 4.2);
         scene.add(key);
+        this.key = key;
         const rim = new THREE.DirectionalLight(0x718fd2, 1.85);
         rim.position.set(2.8, 2.1, -3.5);
         scene.add(rim);
+
+        // ---- the shared space (issue #54 Phase B) ----
+        // This scene used to hold nothing but the body: the world was a 2D
+        // canvas underneath and the body was stamped onto it, which is why it
+        // read as pasted on. The floor and the lamp live in here now, so the
+        // body stands ON the floor and drops a real shadow-mapped shadow of
+        // its own geometry, from the same light that lights the room.
+        //
+        // The floor is a shadow catcher and not a textured copy of the 2D
+        // world: that world is already painted with its own lamps and its own
+        // shadows, and lighting it twice makes both of them wrong. What the
+        // scene supplies is the thing the painting cannot — depth, contact,
+        // and one light rig shared by the floor and everything standing on it.
+        const ground = new THREE.Mesh(
+          new THREE.PlaneGeometry(40, 40),
+          new THREE.ShadowMaterial({ color: 0x05070c, opacity: 0.62, transparent: true, depthWrite: false }),
+        );
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = 0;
+        ground.receiveShadow = true;
+        ground.renderOrder = -1;
+        scene.add(ground);
+        this.ground = ground;
+
+        const lamp = new THREE.DirectionalLight(0xffd7a8, 1.35);
+        lamp.castShadow = true;
+        lamp.shadow.mapSize.set(512, 512);
+        const shadowCam = lamp.shadow.camera;
+        shadowCam.left = -2.4; shadowCam.right = 2.4;
+        shadowCam.top = 2.4; shadowCam.bottom = -2.4;
+        shadowCam.near = 0.05; shadowCam.far = 14;
+        lamp.shadow.bias = -0.0016;
+        lamp.shadow.normalBias = 0.02;
+        lamp.shadow.radius = 3;
+        lamp.position.set(-1.6, 2.6, 2.2);
+        scene.add(lamp);
+        scene.add(lamp.target);
+        this.lamp = lamp;
+        this.rim = rim;
+        this._studio = { hemi: 1.7, key: 2.65, rim: 1.85, lamp: 1.35 };
+
         this.scene = scene;
         this.stage = stage;
 
@@ -181,6 +231,8 @@ class ValenRuntime {
     // and can otherwise cull valid later frames of the run clip.
     this.model.traverse((object) => {
       if (object.isSkinnedMesh) object.frustumCulled = false;
+      // She is in the room now, so she casts onto it.
+      if (object.isMesh) { object.castShadow = true; object.receiveShadow = false; }
     });
     this.stage.add(this.model);
     this.model.updateMatrixWorld(true);
@@ -231,21 +283,26 @@ class ValenRuntime {
     const b = this.bounds;
     if (!b || !this.camera) return;
     const aspect = this.canvas.width / this.canvas.height;
+    let verticalSpan = 1;
     if (view === 'overhead') {
       this._frameHead();
     } else if (view === 'play') {
-      const verticalSpan = Math.max(1.05, b.size.y * 1.2);
+      // Room under the feet: the body drops a real shadow on the shared floor
+      // now, and a frame that ends at the ankle cuts it off with a straight
+      // edge. The span is wider and the eye sits lower to make space; draw()
+      // puts the size back, so she is still the height she is tuned to be.
+      verticalSpan = Math.max(1.35, b.size.y * 1.55);
       const halfHeight = verticalSpan / 2;
       const halfWidth = halfHeight * aspect;
       this.camera.left = -halfWidth;
       this.camera.right = halfWidth;
       this.camera.top = halfHeight;
       this.camera.bottom = -halfHeight;
-      const lookY = b.min.y + b.size.y * 0.46;
+      const lookY = b.min.y + b.size.y * 0.4;
       this.camera.position.set(b.center.x, lookY + PLAY_DY, PLAY_DZ);
       this.camera.lookAt(b.center.x, lookY, 0);
     } else {
-      const verticalSpan = Math.max(1.12, b.size.y * 1.14);
+      verticalSpan = Math.max(1.12, b.size.y * 1.14);
       const halfHeight = verticalSpan / 2;
       const halfWidth = halfHeight * aspect;
       this.camera.left = -halfWidth;
@@ -258,6 +315,10 @@ class ValenRuntime {
     this.camera.near = 0.05;
     this.camera.far = 12;
     this.camera.updateProjectionMatrix();
+    // How much of the frame the body fills, so draw() can size the BODY to the
+    // height the game asks for instead of sizing the frame (which now holds a
+    // floor and a shadow as well as her).
+    this._fill = view === 'overhead' ? 1 : Math.min(1, b.size.y / verticalSpan);
   }
 
   /** Top-down token: crown, face, and the shoulders. Not the coat, not the boots. */
@@ -295,9 +356,74 @@ class ValenRuntime {
    * transparent frame. Walk/run use collision-resolved stride phase, while the
    * attack clip is compressed to the gameplay attack window.
    */
-  render({ state = 'idle', angle = Math.PI / 2, speed = 0, stepPhase = 0, attackProgress = 0, view = 'portrait', weapon = 'claw' } = {}) {
+  /**
+   * Point the shared rig at the house's own light for one body standing at a
+   * world point. `world` is { x, y, light } where light comes from
+   * renderer.keyLightAt(x, y) — the lamp that lights this patch of floor is
+   * the lamp that lights the body standing on it. No world means the menu /
+   * shop / intro, which keep the studio rig they always had.
+   */
+  /** Top of frame: the next body to be placed may refresh the shadow map. */
+  beginFrame() {
+    this._shadowSpent = false;
+  }
+
+  /** The plate, the intro and the shop: the studio rig, and no floor. */
+  _applyStudioRig() {
+    const lamp = this.lamp;
+    if (!lamp) return;
+    const s0 = this._studio || { hemi: 1.7, key: 2.65, rim: 1.85, lamp: 1.35 };
+    lamp.position.set(-1.6, 2.6, 2.2);
+    lamp.target.position.set(0, 0, 0);
+    lamp.target.updateMatrixWorld();
+    lamp.intensity = s0.lamp;
+    lamp.color.setRGB(1, 0.843, 0.658);
+    if (this.hemi) this.hemi.intensity = s0.hemi;
+    if (this.key) this.key.intensity = s0.key;
+    if (this.rim) this.rim.intensity = s0.rim;
+    if (this.ground) this.ground.visible = false;
+  }
+
+  _applyRig(world) {
+    const lamp = this.lamp;
+    if (!lamp) return;
+    if (!world) { this._applyStudioRig(); return; }
+    const l = world.light || { dx: -0.45, dy: -0.9, level: 0.3, color: [150, 172, 214] };
+    // A lamp close by sits low and throws a long shadow; moonlight from a
+    // window is high and cold, and barely casts at all.
+    // Ceiling height, not table height: a mansion hangs its light from above,
+    // and a high lamp throws the short compact shadow that reads as CONTACT.
+    // A low lamp throws a three-metre shadow straight off the edge of the
+    // sprite, which is the opposite of grounded.
+    const height = 4.4 + 1.8 * (1 - clamp01(l.level));
+    const reach = 2.8;
+    lamp.position.set(l.dx * reach, height, -l.dy * reach);
+    lamp.target.position.set(0, 0, 0);
+    lamp.target.updateMatrixWorld();
+    // The light's DIRECTION is the house's for this frame — one body sets it
+    // and the rest of the room agrees, which is also what makes the floor and
+    // everything standing on it look lit by the same lamp. How much of it
+    // reaches each body is still that body's own business.
+    if (!this._shadowSpent) {
+      this._shadowSpent = true;
+      lamp.shadow.needsUpdate = true;
+    }
+    const level = clamp01(l.level);
+    lamp.intensity = 0.34 + level * 1.6;
+    const c = l.color || [255, 186, 120];
+    lamp.color.setRGB(clamp01(c[0] / 255 * 1.15), clamp01(c[1] / 255 * 1.05), clamp01(c[2] / 255 * 1.05));
+    // A dark corner dims the body the same way the painted floor dims: the
+    // rig is the house's, so the two can never disagree about the light.
+    if (this.hemi) this.hemi.intensity = 0.55 + level * 1.15;
+    if (this.key) this.key.intensity = 0.75 + level * 1.95;
+    if (this.rim) this.rim.intensity = 0.5 + level * 1.4;
+    if (this.ground) this.ground.visible = true;
+  }
+
+  render({ state = 'idle', angle = Math.PI / 2, speed = 0, stepPhase = 0, attackProgress = 0, view = 'portrait', weapon = 'claw', world = null } = {}) {
     if (!this.ready || !this.renderer || !this.model || !this.mixer) return null;
     this._applyCamera(view);
+    this._applyRig(world);
 
     const attacking = state === 'attack';
     const locomotion = attacking ? 0 : smoothstep(4, 24, speed);
@@ -461,11 +587,15 @@ class ValenRuntime {
     return this._token;
   }
 
-  draw(ctx, canvas, height, { alpha = 1, footInset = 7, anchor = 'feet', head = null, drop = 0 } = {}) {
+  draw(ctx, canvas, height, { alpha = 1, footInset = 7, anchor = 'feet', head = null, drop = 0, stand = false } = {}) {
     if (!canvas) return false;
-    const width = height * (canvas.width / canvas.height);
+    // `stand`: `height` is the BODY's height on screen, not the frame's. The
+    // play frame carries floor and shadow below the feet as well as her, so
+    // without this she would shrink the moment the shadow got room to show.
+    const frameHeight = stand ? height / Math.max(0.25, this._fill || 1) : height;
+    const width = frameHeight * (canvas.width / canvas.height);
     let x = -width / 2;
-    let y = -height + footInset;
+    let y = -frameHeight + footInset;
     if (anchor === 'head' && head) {
       // Draw the skull's own silhouette, not a rectangle of the render.
       // A fixed crop cuts the coat on a straight edge and looks pasted on.

@@ -309,6 +309,10 @@ class EnemyStage {
     // A clone, so a type may retarget, pose and grade its own body. Geometry,
     // materials and textures stay shared with the one parsed file.
     rec.template = cloneRig(gltf.scene);
+    // They are standing in the room too, not stamped on it (#54 Phase B).
+    rec.template.traverse((object) => {
+      if (object.isMesh) { object.castShadow = true; object.receiveShadow = false; }
+    });
     rec.template.visible = false;
     rec.animations = gltf.animations || [];
     rec.loaded = true;
@@ -425,11 +429,14 @@ class EnemyStage {
     // so a taller rig does not inherit her scale — and to its WIDTH too, or a
     // body that is wider than it is tall (the werewolf, on all fours, with a
     // tail) gets its elbows cropped off the sides of its own frame.
-    const verticalSpan = Math.max(0.8, size.y * 1.08);
+    // Room under the feet as well as around the elbows: each body drops a real
+    // shadow on the shared floor now, and the crop that sizes it is the body's
+    // own projected box, so widening the frame costs nothing but shadow.
+    const verticalSpan = Math.max(1.05, size.y * 1.45);
     const horizontalSpan = Math.max(size.x, size.z) * 1.14;
     const halfH = Math.max(verticalSpan, horizontalSpan / aspect) / 2;
     const halfW = halfH * aspect;
-    const lookY = box.min.y + size.y * 0.46;
+    const lookY = box.min.y + size.y * 0.4;
     const playDz = 2.35;
     const playDy = Math.tan(38 * Math.PI / 180) * playDz;
     host.camera.left = -halfW;
@@ -546,7 +553,7 @@ class EnemyStage {
       }
       enemy._glb = slot;
       this._pose(slot, enemy);
-      this._renderSlot(slot);
+      this._renderSlot(slot, enemy);
       const bill = this.billboards[enemy.key] || (this.billboards[enemy.key] = document.createElement('canvas'));
       if (bill.width !== slot.frame.width) {
         bill.width = slot.frame.width;
@@ -579,16 +586,22 @@ class EnemyStage {
     slot.model.updateMatrixWorld(true);
   }
 
-  _renderSlot(slot) {
+  _renderSlot(slot, enemy = null) {
     const host = this._host();
     if (!host) return;
     this._withCamera(host, () => {
       slot.model.visible = true;
+      // The lamp that lights this patch of floor lights the thing standing on
+      // it: each body takes the shadow of its own position in the house.
+      if (enemy && host._applyRig) {
+        host._applyRig({ x: enemy.x, y: enemy.y, light: this._lightAt ? this._lightAt(enemy.x, enemy.y) : null });
+      }
       this._fit(host, slot.model, slot.type);
       host.renderer.clear();
       host.renderer.render(host.scene, host.camera);
       this._copyFrame(host, slot.frame);
-      slot.crop = this._opaqueBox(slot.frame);
+      const box = this._box && this._size ? this._box.setFromObject(slot.model) : null;
+      slot.crop = (box ? this._bodyBox(host, box) : null) || this._opaqueBox(slot.frame);
       slot.model.visible = false;
     });
   }
@@ -602,6 +615,43 @@ class EnemyStage {
     if (rec && rec.behaviorReady && this.billboards[enemy.key]) return { frame: this.billboards[enemy.key], crop: rec.crop };
     return null;
   }
+
+  /**
+   * The body's box in the render, projected through the shared camera.
+   *
+   * The opaque-pixel box used to do this job, but the body now drops a real
+   * shadow onto the shared floor and that shadow is inside the frame: cropping
+   * to the opaque pixels would swallow the shadow, shrink the body by whatever
+   * the shadow happened to measure that frame, and lift its feet off the
+   * ground. This is the geometry's own box, so the shadow can spill outside
+   * it and the body keeps its size and its footing.
+   */
+  _bodyBox(host, box) {
+    const cam = host.camera;
+    if (!cam || !box || !host.canvas) return null;
+    const v = this._vec || (this._vec = new THREE.Vector3());
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (let i = 0; i < 8; i++) {
+      v.set(i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z);
+      v.project(cam);
+      const px = (v.x * 0.5 + 0.5) * host.canvas.width;
+      const py = (1 - (v.y * 0.5 + 0.5)) * host.canvas.height;
+      if (px < minX) minX = px;
+      if (px > maxX) maxX = px;
+      if (py < minY) minY = py;
+      if (py > maxY) maxY = py;
+    }
+    if (!isFinite(minX) || maxX - minX < 2 || maxY - minY < 2) return null;
+    const pad = 3;
+    const x0 = Math.max(0, Math.floor(minX - pad));
+    const y0 = Math.max(0, Math.floor(minY - pad));
+    const x1 = Math.min(host.canvas.width, Math.ceil(maxX + pad));
+    const y1 = Math.min(host.canvas.height, Math.ceil(maxY + pad));
+    return { x: x0, y: y0, w: Math.max(2, x1 - x0), h: Math.max(2, y1 - y0) };
+  }
+
+  /** The house's light field, handed over by the renderer each frame (#54). */
+  setLightSampler(fn) { this._lightAt = fn; }
 
   _opaqueBox(canvas) {
     let ctx;
@@ -714,14 +764,17 @@ class EnemyStage {
     ctx.save();
     ctx.translate(enemy.x, enemy.y);
     ctx.globalAlpha = (enemy.alpha == null ? 1 : enemy.alpha) * alpha;
-    if (opts.shadow !== false) {
-      ctx.fillStyle = `rgba(0,0,0,${(0.28 + (shade.keyW || 0) * 0.28).toFixed(3)})`;
-      ctx.beginPath();
-      ctx.ellipse(Math.cos(ang) * (4 + (shade.keyW || 0) * 8), 7, (enemy.radius || 12) * 0.85 + (shade.keyW || 0) * 4, 4.4, ang * 0.12, 0, Math.PI * 2);
-      ctx.fill();
+    // No painted puddle: the contact shadow under this body is the real one it
+    // casts on the shared floor, and it is already inside the frame. Drawing
+    // both would read as two shadows.
+    if (crop) {
+      const scale = h / crop.h;
+      const dw = shown.width * scale;
+      const dh = shown.height * scale;
+      ctx.drawImage(shown, -w / 2 - crop.x * scale, -h + 6 - crop.y * scale, dw, dh);
+    } else {
+      ctx.drawImage(shown, -w / 2, -h + 8, w, h);
     }
-    if (crop) ctx.drawImage(shown, crop.x, crop.y, crop.w, crop.h, -w / 2, -h + 6, w, h);
-    else ctx.drawImage(shown, -w / 2, -h + 8, w, h);
     ctx.restore();
   }
 

@@ -418,14 +418,19 @@ export class Player {
       // Standing 3/4. upright() keeps her on her feet; overhead was only a head.
       view: 'play',
       weapon: this.weapon || 'claw',
+      // Where she is standing, and the light that is on her there (issue #54).
+      world: { x: this.x, y: this.y, light: game.renderer.keyLightAt(this.x, this.y) },
     });
 
-    // shadow
+    // A painted smudge only: the real one is the shadow-mapped contact shadow
+    // the body drops on the shared floor (#54). This grounds the 2D fallback
+    // silhouette and keeps a little weight under the feet in a dark corner,
+    // where the lamp is too weak to throw a shadow at all.
     ctx.save();
-    ctx.globalAlpha = dead ? 0.5 : 0.42;
+    ctx.globalAlpha = dead ? 0.22 : 0.16;
     ctx.fillStyle = '#000';
     ctx.beginPath();
-    ctx.ellipse(this.x, this.y + 8, 14 * (dead ? 1.3 : 1), 7, 0, 0, TAU);
+    ctx.ellipse(this.x, this.y + 8, 12 * (dead ? 1.3 : 1), 6, 0, 0, TAU);
     ctx.fill();
     ctx.restore();
 
@@ -580,7 +585,10 @@ export class Player {
     // Full coat, feet on the tile. Tall enough to read, short enough that a
     // door behind her is still a door — and shorter than the werewolf (90),
     // which she was not: at 104 she out-towered everything in the house.
-    const height = 86;
+    // This is HER height, not the render's: the play frame carries the floor
+    // she stands on and the shadow she throws as well as her (issue #54), and
+    // draw() sizes the body to this number and lets the rest spill.
+    const height = 72;
     const footInset = 8;
     const drop = 0;
     const width = height * (frame.width / frame.height);
@@ -867,17 +875,20 @@ export class Player {
     const coatId = IAP.equippedCoat(game.save);
     const filter = bodyGrade(coatId, this.hungerVis, this.sated || 0);
     if (filter) ctx.filter = filter;
-    const place = this._valenPlace || { height: 86, footInset: 8, drop: 0, head: null, anchor: 'feet' };
+    const place = this._valenPlace || { height: 72, footInset: 8, drop: 0, head: null, anchor: 'feet' };
     Valen3D.draw(ctx, frame, place.height, {
       alpha: 1,
       footInset: place.footInset,
       anchor: place.anchor,
       head: place.head,
+      // place.height is HER height, not the render's (issue #54: the frame
+      // now holds the floor she stands on and the shadow she throws).
+      stand: place.anchor !== 'head',
       drop: place.drop,
     });
     if (filter) ctx.filter = 'none';
     const hv = this.hungerVis;
-    const torso = -(place.height || 86) * 0.42;
+    const torso = -(place.height || 72) * 0.42;
     ctx.globalCompositeOperation = 'screen';
     ctx.globalAlpha = 0.16 + hv * 0.55;
     ctx.strokeStyle = hv > 0.72 ? 'rgba(236,242,255,0.95)' : 'rgba(186,206,235,0.7)';
@@ -900,7 +911,7 @@ export class Player {
    * as the play camera composite — never the old floor token spun onto its side.
    */
   _drawStandingFallback(ctx, game) {
-    const h = 86;
+    const h = 72;   // the body's height, matching the GLB composite
     const yaw = Math.sin(visualAngle(this.angle, game.renderer.tilt || 1));
     ctx.save();
     ctx.globalCompositeOperation = 'screen';

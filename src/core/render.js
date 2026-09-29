@@ -259,11 +259,39 @@ export class Renderer {
     const s = this.lightScale * c.zoom;
     lc.globalCompositeOperation = 'lighter';
     lc.setTransform(s, 0, 0, s * this.tilt, v.cx * this.lightScale - c.x * s, v.cy * this.lightScale - c.y * s * this.tilt);
+    this._lights = [];
+  }
+
+  /**
+   * The frame's lights, remembered for the 3D rig (issue #54 Phase B). The
+   * bodies are lit by the same lamps that light the floor, so a lamp warms
+   * both and a dark corner dims both — the two can never disagree about where
+   * the light in this house is coming from.
+   */
+  keyLightAt(x, y) {
+    const list = this._lights || [];
+    let best = null;
+    let bestWeight = 0;
+    let level = 0;
+    for (const entry of list) {
+      const d = Math.hypot(x - entry.x, y - entry.y);
+      const weight = entry.intensity / (1 + d / Math.max(1, entry.radius * 0.8));
+      level += weight;
+      if (weight > bestWeight) { bestWeight = weight; best = entry; }
+    }
+    // Nothing near: moonlight from the windows, high and cold.
+    if (!best) return { dx: -0.45, dy: -0.9, level: 0, color: [150, 172, 214] };
+    const d = Math.hypot(x - best.x, y - best.y) || 1;
+    // Standing inside the lamp itself has no direction. Nudge it, or the
+    // shadow collapses to a dot directly under the feet.
+    if (d < 8) return { dx: -0.32, dy: 0.72, level: Math.min(1, level), color: best.color };
+    return { dx: (x - best.x) / d, dy: (y - best.y) / d, level: Math.min(1, level), color: best.color };
   }
 
   /** Radial light. color/intensity are multiplied into the lightmap. */
   addLight(x, y, radius, intensity, color = [255, 186, 120]) {
     if (!this.isVisible(x, y, radius)) return;
+    if (this._lights) this._lights.push({ x, y, radius, intensity: clamp(intensity, 0, 2.4), color });
     const lc = this.lightCtx;
     const g = lc.createRadialGradient(x, y, 0, x, y, radius);
     const c = color;
