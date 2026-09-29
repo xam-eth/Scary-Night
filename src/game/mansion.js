@@ -1577,6 +1577,12 @@ export class Mansion {
         ctx.restore();
       }
 
+      // A door with a real mesh in the 3D room does not also need its painted
+      // twin (issue #55) — the mesh IS the door now, and two doors stacked on
+      // one doorway reads as a smear. The cues above still draw (they are
+      // HUD, not oak) and everything below is the mesh's job.
+      if (e.kind === 'door' && e.env3d) { ctx.restore(); continue; }
+
       // frame
       ctx.fillStyle = '#161419';
       const ext = e.kind === 'door' ? 6 : 3;

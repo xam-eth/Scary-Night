@@ -33,6 +33,7 @@ import { Haunts } from './haunts.js';
 import { Ads } from '../shop/ads.js';
 import { Valen3D } from './valen3d.js';
 import { Enemy3D } from './enemy3d.js';
+import { EnvKit } from './envkit.js';
 import { IAP } from '../shop/iap.js';
 import { drawHUD, drawWorldPrompts, urgentGuidance, pauseButtonBox, weaponChipBox } from './hud.js';
 import { WEAPONS, weaponById, nextWeapon } from './weapons.js';
@@ -2259,6 +2260,27 @@ export class Game {
     m.drawProps(ctx, this);
     this.house.draw(ctx, this);   // the cat, the drafts — before the actors
     this.haunts.drawWatchers(ctx, this);   // the things at the edge of the light
+    // ---------- the room itself, in three dimensions (issue #55) ----------
+    // Doors first: real meshes, on the shared floor, under the shared lamp.
+    // Drawn before the actors so she walks in FRONT of a door she opened, and
+    // after the floor so the painted room stays as the ground beneath them.
+    EnvKit.init();
+    if (EnvKit.ready) {
+      EnvKit.sync(this.mansion.entrances);
+      const env = EnvKit.render({
+        camX: r.cam.x, camY: r.cam.y, zoom: r.cam.zoom, tilt: r.tilt,
+        w: r.view.w, h: r.view.h, dpr: r.dpr,
+        shakeX: r.cam.sx, shakeY: r.cam.sy,
+        light: r.keyLightAt(r.cam.x, r.cam.y),
+      });
+      if (env) {
+        ctx.save();
+        ctx.setTransform(r.dpr, 0, 0, r.dpr, 0, 0);
+        ctx.drawImage(env, r.view.left, r.view.top, r.view.w, r.view.h);
+        ctx.restore();
+      }
+    }
+
     // ---------- dust motes (air, not floor — billboard around the view) ----------
     ctx.save(); r.upright(ctx, this.renderer.cam.x, this.renderer.cam.y);
     this.drawAmbientMotes(ctx);

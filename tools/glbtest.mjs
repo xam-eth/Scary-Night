@@ -261,5 +261,66 @@ ok('a clip is only ever named in the registry map, never in the state machine',
   !/clipForState[\s\S]{0,200}flee_02/.test(enemyCode) && !/_pose[\s\S]{0,200}cast_a_spell/.test(enemyCode)
     && enemyCode.includes('FORBIDDEN_STANDINS'));
 
-console.log(failures === 0 ? '\nenemy GLB registry: all PASS' : `\nenemy GLB registry: ${failures} FAILURE(S)`);
+/* ---------- the modular environment kit (issue #55) ----------
+ * CC0, vendored byte-exact. These are the numbers that catch someone
+ * re-exporting a piece on a different grid, which would quietly resize the
+ * whole room.
+ */
+console.log('\nenvironment kit:');
+
+const KIT_SHA256 = Object.freeze({
+  'barrel.glb': '9fae6a79056241baf253fe9272dc7a7ddb174e1caf153eb5013c58a596722148',
+  'candle.glb': 'a884f27540b8b91e3d47914453cbf2c4d48f4ca8504ace9960a8d9b4e79a6c48',
+  'chair.glb': '5f133281686d398304c0a458c4d407dd483eeea8aba67220b585ceb89366efa2',
+  'chest.glb': 'f72fd2201cd42ad399928a0b7bcc34d5b0e6d0624aeaf824fef81852109955f8',
+  'column.glb': '761adf0fcc1a86ab1c42740b7a8ad340d73982f94257e7892b2c7998f98c304e',
+  'crate.glb': '6dacda267f04769f8ebbb7e991885785054923ea3d5eb19e833768a911d5b661',
+  'crates_stacked.glb': '43182b077ead9b033804300ef453b7402bdc979f00cfce2d7f0c91dcf6bb5d3c',
+  'door_gate.glb': '68e766c2b4eb05c4bf2c0fcd908ea5dc5192dda56cfdd5d56b7cbf446063220c',
+  'doorway.glb': '2be5369a2d1d1d8795150b2156d8343b3e37620d78de256cb03276c54ea70c97',
+  'floor_stone.glb': '5b6bbbc683f6729d094732056f157a928435de97ec3cf94c341c7465907fe17b',
+  'floor_wood.glb': 'd22eb1c1fb6ab434e8c9599ecb2cd00c2e34a713783603ba7a3e2cbb1611709d',
+  'pillar.glb': 'e31da496461921475384c62ce761cd23924892bd6f32aeea68bd913545caee33',
+  'shelf.glb': '886feece503686307dd041c986b1ea6f1fd63792c7e4217eb16f95904e6a9767',
+  'stairs.glb': '5ba16e5d919aaa8958435c4b73c1f8a94c98febeacf716faa1359f24e6b27d70',
+  'table.glb': 'dc5beae322011acbce5c3dccb3c5cbaffae9757ad67d6ab0cf574c11b7ce014c',
+  'torch.glb': 'a617c159e02932db48ca81ec46f1f100acc8904fb6ece43e919d2f93c13950e9',
+  'wall.glb': 'f2f343a7bdf2d45947e3f354494e16095a923485e05637e3804e3b81ce11d921',
+  'wall_broken.glb': 'ee7598ef2b88aaeb7b61e46d5f1da1a059de3860b080b38b7a507ca2f461302c',
+  'wall_corner.glb': '3c8cbcbf3abf78c9dc49f440b152340ef681fee9cccf9ca6ed27b6670a34eb81',
+  'wall_cracked.glb': '344fb9a709a51b7f04131fded75a5ad38e829d74fcf1784d848f3df0703f804c',
+  'wall_window.glb': '8c75cb77edc51c94b91c5625828391fb56c70bf31e2235cf5abf718eae0d842a'
+});
+
+const KIT_FILES = Object.keys(KIT_SHA256);
+let kitMeshes = 0;
+for (const name of KIT_FILES) {
+  const file = path.join(ROOT, 'assets', 'env-kit', name);
+  let glb = null;
+  try { glb = readGlb(file); } catch (error) { /* reported below */ }
+  const bytes = fs.existsSync(file) ? fs.readFileSync(file) : null;
+  const digest = bytes ? createHash('sha256').update(bytes).digest('hex') : null;
+  const meshes = glb ? (glb.json.meshes || []).length : 0;
+  kitMeshes += meshes;
+  ok(`${name} is a valid GLB with geometry`,
+    !!glb && meshes > 0 && !!((glb.json.accessors || []).length) && digest === KIT_SHA256[name],
+    glb ? `meshes=${meshes}` : 'unreadable');
+}
+ok('the whole vendored kit is present and unchanged', KIT_FILES.length === 21 && kitMeshes >= 21);
+
+const credits = path.join(ROOT, 'assets', 'env-kit', 'CREDITS.md');
+ok('the kit ships its licence note', fs.existsSync(credits) && /CC0/i.test(fs.readFileSync(credits, 'utf8')));
+
+const envCode = fs.readFileSync(path.join(ROOT, 'src/game/envkit.js'), 'utf8');
+ok('the env reads the vendored kit and nothing else',
+  envCode.includes("./assets/env-kit/") && envCode.includes('KIT_SCALE')
+    && envCode.includes('Valen3D.scene') && !/\.fbx|\.zip/i.test(envCode));
+ok('a missing piece never blocks a night',
+  /this\.failed = true/.test(envCode) && /never blocks on an asset/.test(envCode));
+
+const mansionCode = fs.readFileSync(path.join(ROOT, 'src/game/mansion.js'), 'utf8');
+ok('a door with a mesh does not also paint its twin', mansionCode.includes('e.env3d'));
+
+
+console.log(failures === 0 ? '\nGLB registry + environment kit: all PASS' : `\n${failures} FAILURE(S)`);
 process.exit(failures === 0 ? 0 : 1);
