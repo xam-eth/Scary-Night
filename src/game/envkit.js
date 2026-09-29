@@ -29,13 +29,39 @@ export const KIT_DIR = './assets/env-kit/';
  */
 export const KIT_SCALE = 33;
 
-/** Only what the doors need today. The room kit lands with the floor. */
+/**
+ * What the room needs: doors (phase C1) and now the floor and the walls.
+ * Props land next; the loader does not care how many names are in here.
+ */
 const FILES = Object.freeze({
   doorway: 'doorway.glb',
   gate: 'door_gate.glb',
   broken: 'wall_broken.glb',
   crate: 'crate.glb',
+  floorWood: 'floor_wood.glb',
+  floorStone: 'floor_stone.glb',
+  wall: 'wall.glb',
+  wallCorner: 'wall_corner.glb',
+  wallCracked: 'wall_cracked.glb',
 });
+
+/**
+ * Autored footprints, in kit units, read off the vendored geometry.
+ *
+ *   wall         4 long (x -2..2), 4 tall, 1 thick — centred on its own line
+ *   wall_corner  an L, legs reaching -x and +z from the corner point
+ *   floor_*      4x4, 0.15 thick, centred
+ *
+ * The corner piece is chiral: no rotation turns {-x, +z} into {+x, +z}, so
+ * each corner of a room gets its own angle. They are listed below, worked out
+ * from the L above rather than guessed.
+ */
+const TILE = 4;                       // kit units per floor/wall cell
+const CORNER_REACH = 2.5;             // how far a corner's legs run
+const CORNER_ANGLES = [Math.PI / 2, 0, -Math.PI / 2, Math.PI];   // TL, TR, BR, BL
+
+/** Which floor a room is paved with. 'marble', 'tile' and 'stone' share a slab. */
+const FLOOR_FOR = (kind) => (kind === 'wood' || kind === 'glass' ? 'floorWood' : 'floorStone');
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -51,9 +77,12 @@ class EnvKitRuntime {
     this.renderer = null;
     this.canvas = null;
     this.doors = new Map();
+    this.room = null;          // the mansion the room was built from
+    this.roomMeshes = null;
+    this.roomCounts = null;
     this.diagnostics = () => ({
       ready: this.ready, loading: this.loading, failed: this.failed, error: this.error,
-      pieces: Object.keys(this.pieces), doors: this.doors.size,
+      pieces: Object.keys(this.pieces), doors: this.doors.size, room: this.roomCounts || null,
     });
   }
 
@@ -182,11 +211,170 @@ class EnvKitRuntime {
   }
 
   /**
+   * One InstancedMesh for a list of placements. A whole floor is ~180 tiles
+   * and a mansion's walls ~150 cells: five draw calls instead of five hundred
+   * objects, which is the only reason a phone can carry a real room.
+   */
+  _instanced(name, placements) {
+    const src = this.pieces[name];
+    if (!src || !placements.length) return null;
+    let geo = null; let mat = null;
+    src.scene.traverse((node) => { if (node.isMesh && !geo) { geo = node.geometry; mat = node.material; } });
+    if (!geo) return null;
+    const mesh = new THREE.InstancedMesh(geo, mat, placements.length);
+    const dummy = new THREE.Object3D();
+    for (let i = 0; i < placements.length; i++) {
+      const p = placements[i];
+      dummy.position.set(p.x, p.y || 0, p.z);
+      dummy.rotation.set(0, p.ry || 0, 0);
+      dummy.scale.set(p.sx == null ? 1 : p.sx, p.sy == null ? 1 : p.sy, p.sz == null ? 1 : p.sz);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(i, dummy.matrix);
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.frustumCulled = false;
+    mesh.userData.placements = placements;
+    this.group.add(mesh);
+    return mesh;
+  }
+
+  /**
+   * The camera looks down the room from +z, so a wall between the camera and
+   * the player is a wall in front of her: it would cover the floor she is
+   * about to cross with an oak panel. Fold those away — zero scale, same
+   * instance — and put them back when she walks past. Cheap: 170 matrices,
+   * no allocation, one buffer upload.
+   */
+  _foldNear(camY) {
+    if (!this.roomMeshes) return;
+    if (this._foldedAt != null && Math.abs(this._foldedAt - camY) < 12) return;
+    this._foldedAt = camY;
+    if (!this._dummy) this._dummy = new THREE.Object3D();
+    const dummy = this._dummy;
+    for (const key of ['wall', 'cracked', 'corner']) {
+      const mesh = this.roomMeshes[key];
+      if (!mesh) continue;
+      const list = mesh.userData.placements;
+      for (let i = 0; i < list.length; i++) {
+        const p = list[i];
+        const near = p.z > camY;
+        dummy.position.set(p.x, 0, p.z);
+        dummy.rotation.set(0, p.ry || 0, 0);
+        dummy.scale.set(near ? 0 : p.sx, near ? 0 : p.sy, near ? 0 : p.sz);
+        dummy.updateMatrix();
+        mesh.setMatrixAt(i, dummy.matrix);
+      }
+      mesh.instanceMatrix.needsUpdate = true;
+    }
+  }
+
+  /**
+   * Floor and walls for every room, instanced, built once. The 2D mansion
+   * stays the only map: these are its rects and its door openings, so a wall
+   * can never stand where the sim says there is a way through.
+   */
+  buildRoom(mansion) {
+    if (!this.ready || !mansion || !mansion.rooms || this.room === mansion) return;
+    const s = KIT_SCALE;
+    const cell = TILE * s;                 // one grid cell, in world px
+    const reach = CORNER_REACH * s;        // how far a corner's legs run
+    const rooms = Object.values(mansion.rooms || {});
+    // A door already fills its own gap, so the wall run steps around it.
+    const openings = (mansion.doors || []).map((d) => {
+      const horiz = d.axis === 'h';
+      const len = horiz ? d.w : d.h;
+      const mid = horiz ? d.x : d.y;
+      return { horiz, line: horiz ? d.y : d.x, from: mid - len / 2, to: mid + len / 2 };
+    });
+    const blocked = (horiz, line, a, b) => openings.some((o) =>
+      o.horiz === horiz && Math.abs(o.line - line) < 70 && o.to > a - 10 && o.from < b + 10);
+
+    const floors = { floorWood: [], floorStone: [] };
+    const walls = [];
+    const cracked = [];
+    const corners = [];
+
+    for (const room of rooms) {
+      // ---- floor: the room's own rect, tiled to fit exactly ----
+      const nx = Math.max(1, Math.round(room.w / cell));
+      const nz = Math.max(1, Math.round(room.h / cell));
+      const tx = room.w / nx;
+      const tz = room.h / nz;
+      const list = floors[FLOOR_FOR(room.floor)];
+      for (let j = 0; j < nz; j++) {
+        for (let i = 0; i < nx; i++) {
+          // A piece is authored 4 units wide and the scene measures in px, so
+          // the scale that makes it span tx px is tx / TILE — not tx / cell.
+          list.push({
+            x: room.x + (i + 0.5) * tx, y: 0, z: room.y + (j + 0.5) * tz,
+            sx: tx / TILE, sy: s, sz: tz / TILE,
+          });
+        }
+      }
+
+      // ---- walls: the four edges, between the corners ----
+      const x0 = room.x; const x1 = room.x + room.w;
+      const y0 = room.y; const y1 = room.y + room.h;
+      const runs = [
+        { horiz: true, line: y0, from: x0, to: x1 },
+        { horiz: true, line: y1, from: x0, to: x1 },
+        { horiz: false, line: x0, from: y0, to: y1 },
+        { horiz: false, line: x1, from: y0, to: y1 },
+      ];
+      for (const run of runs) {
+        const a = run.from + reach;
+        const b = run.to - reach;
+        const span = b - a;
+        if (span < cell * 0.5) continue;
+        const cells = Math.max(1, Math.round(span / cell));
+        const size = span / cells;
+        for (let i = 0; i < cells; i++) {
+          const from = a + i * size;
+          const to = from + size;
+          if (blocked(run.horiz, run.line, from, to)) continue;   // a door stands here
+          const mid = (from + to) / 2;
+          const stretch = size / TILE;          // the cell spans `size` px
+          const height = s;                     // 4 units tall, like the door
+          // one cell in nine is a tired wall, so a long room is not a ruler
+          const tired = (((mid * 7 + run.line * 13) | 0) % 9) === 3;
+          (tired ? cracked : walls).push(run.horiz
+            ? { x: mid, y: 0, z: run.line, ry: 0, sx: stretch, sy: height, sz: s }
+            : { x: run.line, y: 0, z: mid, ry: Math.PI / 2, sx: stretch, sy: height, sz: s });
+        }
+      }
+
+      // ---- corners: the L is chiral, so each corner gets its own angle ----
+      corners.push(
+        { x: x0, y: 0, z: y0, ry: CORNER_ANGLES[0], sx: s, sy: s, sz: s },
+        { x: x1, y: 0, z: y0, ry: CORNER_ANGLES[1], sx: s, sy: s, sz: s },
+        { x: x1, y: 0, z: y1, ry: CORNER_ANGLES[2], sx: s, sy: s, sz: s },
+        { x: x0, y: 0, z: y1, ry: CORNER_ANGLES[3], sx: s, sy: s, sz: s },
+      );
+    }
+
+    this.roomMeshes = {
+      wood: this._instanced('floorWood', floors.floorWood),
+      stone: this._instanced('floorStone', floors.floorStone),
+      wall: this._instanced('wall', walls),
+      cracked: this._instanced('wallCracked', cracked),
+      corner: this._instanced('wallCorner', corners),
+    };
+    this.roomCounts = {
+      floor: floors.floorWood.length + floors.floorStone.length,
+      walls: walls.length + cracked.length, corners: corners.length,
+    };
+    this.room = mansion;
+  }
+
+  /**
    * Point every mesh at the door state. Read-only on the sim: hp, open,
    * broken and barricade all stay exactly where the 2D game put them.
    */
-  sync(entrances) {
+  sync(entrances, mansion = null) {
     if (!this.ready || !this.group) return;
+    if (mansion) this.buildRoom(mansion);
     for (const e of entrances) {
       if (e.kind !== 'door') continue;
       const v = this._doorView(e);
@@ -251,6 +439,7 @@ class EnvKitRuntime {
     cam.lookAt(tx, 0, ty);
     cam.updateProjectionMatrix();
 
+    this._foldNear(camY);
     if (Valen3D._applyRig) Valen3D._applyRig({ x: camX, y: camY, light });
     if (Valen3D.renderer) this.renderer.toneMappingExposure = Valen3D.renderer.toneMappingExposure * 1.1;
 

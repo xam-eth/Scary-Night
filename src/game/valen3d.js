@@ -417,7 +417,16 @@ class ValenRuntime {
     if (this.hemi) this.hemi.intensity = 0.55 + level * 1.15;
     if (this.key) this.key.intensity = 0.75 + level * 1.95;
     if (this.rim) this.rim.intensity = 0.5 + level * 1.4;
-    if (this.ground) this.ground.visible = true;
+    // No floor plate in the character pass. The plane was a shadow catcher
+    // filling the whole billboard, and ShadowMaterial painted every pixel it
+    // covered — including the ones no shadow reached — so each body arrived
+    // on the 2D canvas inside a black RECTANGLE rather than a silhouette.
+    // Under a lamp it was a dark box round her; in the dark it was a hole.
+    // The body still takes the house's light and rim from the rig above; what
+    // it no longer carries is its own floor. Weight under the feet is the
+    // painted smudge in player.js, and the floor she stands on is drawn by
+    // the room (envkit), which is where a floor belongs.
+    if (this.ground) this.ground.visible = false;
   }
 
   render({ state = 'idle', angle = Math.PI / 2, speed = 0, stepPhase = 0, attackProgress = 0, view = 'portrait', weapon = 'claw', world = null } = {}) {

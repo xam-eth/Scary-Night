@@ -2118,23 +2118,12 @@ export class Game {
     if (gameVisible) this.renderWorld(dtSafe(this));
     r.resetForUI();
     if (gameVisible) r.drawFrameFade();
-    if (gameVisible && this.player && this.player.alive && r.worldToScreen) {
-      const s = r.worldToScreen(this.player.x, this.player.y);
-      const hv = this.player.hungerVis || 0;
-      const sated = this.player.sated || 0;
-      if (hv > 0.32 || sated > 0.08) {
-        ctx.save();
-        ctx.globalCompositeOperation = 'screen';
-        ctx.strokeStyle = sated > 0.08
-          ? `rgba(255,150,110,${0.4 + sated * 0.5})`
-          : `rgba(220,230,255,${0.22 + (hv - 0.32) * 1.05})`;
-        ctx.lineWidth = hv > 0.75 ? 3.4 + hv * 2 : 1.4 + hv * 2.2;
-        ctx.beginPath();
-        ctx.arc(s.x, s.y - 52, 22 + hv * 14, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
-      }
-    }
+    // Removed: a ring used to be stroked around her here — blue-white as she
+    // starved, blood-orange once she had fed. It read as a HUD gauge bolted
+    // to her body rather than as light, and the moonlit rim she already
+    // carries (player.js) says "this is you" without drawing a border round
+    // her. Hunger lives in the bars and in the vignette, where a gauge
+    // belongs — not in a circle painted on the character.
 
     // ---- HUD ----
     if (this.screen === 'playing' || this.screen === 'dying') {
@@ -2266,7 +2255,7 @@ export class Game {
     // after the floor so the painted room stays as the ground beneath them.
     EnvKit.init();
     if (EnvKit.ready) {
-      EnvKit.sync(this.mansion.entrances);
+      EnvKit.sync(this.mansion.entrances, this.mansion);
       const env = EnvKit.render({
         camX: r.cam.x, camY: r.cam.y, zoom: r.cam.zoom, tilt: r.tilt,
         w: r.view.w, h: r.view.h, dpr: r.dpr,
