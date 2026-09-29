@@ -622,8 +622,10 @@ export function duck(amount = 0.45, seconds = 1.2) {
 
 let wind, windGain, windFilter, gust, gustGain, fireGain, fireFilter;
 let droneG, tensionG, panicG, shimmerG;
+let droneVoices = null, tensionFilter = null, tensionTrem = null;
 let lowBloodG;
 let clockNext = 0, creakNext = 0, dripNext = 0, fireNext = 0, whisperNext = 0, gustNext = 0;
+let motifNext = 0;
 let musicBaseGain = 0.75;
 
 function loopNoise(buf, { freq, q, type = 'bandpass' }) {
@@ -675,40 +677,100 @@ function buildLoops() {
 function buildMusic() {
   const mk = (gain) => { const g = ctx.createGain(); g.gain.value = 0; g.connect(musicBus); return g; };
 
-  // ---- night drone (always present)
+  /* ---- the bed: a chapel in A minor that never quite settles ----
+   * Sub, fifth and octave carry the weight. The third above them is the voice
+   * that wanders, because a drone that never moves is a hum, not a score, and
+   * a hum is what makes a horror game feel cheap on a phone speaker. */
   droneG = mk(0);
-  const per = [55, 82.4, 110, 164.8];  // A1 E2 A2 E3 — open fifth, mournful
-  per.forEach((f, i) => {
-    const o = ctx.createOscillator(); o.type = i % 2 ? 'sine' : 'triangle'; o.frequency.value = f * (1 + (i - 1.5) * 0.0016);
-    const g = ctx.createGain(); g.gain.value = [0.5, 0.32, 0.22, 0.1][i];
-    const fl = ctx.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = 420;
+  droneVoices = [];
+  const bed = [
+    { f: 55, type: 'sine', g: 0.5, drift: 0 },          // A1 — the floor
+    { f: 82.41, type: 'sine', g: 0.3, drift: 0.4 },     // E2 — the fifth
+    { f: 110, type: 'triangle', g: 0.2, drift: 0.8 },   // A2 — the octave
+    { f: 130.81, type: 'triangle', g: 0.13, drift: 1.6 }, // C3 — the minor third, wandering
+    { f: 164.81, type: 'sine', g: 0.08, drift: 1.1 },   // E3
+  ];
+  for (const v of bed) {
+    const o = ctx.createOscillator(); o.type = v.type; o.frequency.value = v.f;
+    const g = ctx.createGain(); g.gain.value = v.g;
+    const fl = ctx.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = 300 + v.f * 1.6; fl.Q.value = 0.8;
     o.connect(fl); fl.connect(g); g.connect(droneG);
     o.start(0);
-    // slow beating
-    const lfo = ctx.createOscillator(); lfo.frequency.value = 0.05 + i * 0.021;
-    const lg = ctx.createGain(); lg.gain.value = f * 0.004;
+    // slow beating between the voices, so the chord breathes
+    const lfo = ctx.createOscillator(); lfo.frequency.value = 0.031 + v.f * 0.00019;
+    const lg = ctx.createGain(); lg.gain.value = v.f * 0.0035 * (0.4 + v.drift);
     lfo.connect(lg); lg.connect(o.frequency); lfo.start(0);
-  });
-  // airy shimmer
-  const sh = loopNoise(noiseBuf, { freq: 2600, q: 1.4, type: 'bandpass' });
+    droneVoices.push({ o, g, fl, base: v.f });
+  }
+  // the cut opens and closes, like a door left ajar somewhere behind you
+  const bedLfo = ctx.createOscillator(); bedLfo.frequency.value = 0.048;
+  const bedLfoG = ctx.createGain(); bedLfoG.gain.value = 175;
+  bedLfo.connect(bedLfoG); bedLfoG.connect(droneVoices[2].fl.frequency); bedLfo.start(0);
+  // air in the rafters
+  const sh = loopNoise(noiseBuf, { freq: 2400, q: 1.1, type: 'bandpass' });
   const shg = ctx.createGain(); shg.gain.value = 0.02;
   sh.g.connect(shg); shg.connect(droneG);
 
-  // ---- tension layer (dissonant cluster, fades in with danger)
+  /* ---- the pressure: a knot of sawtooths that tightens as the night does ----
+   * A against A# against D#: not a chord, an argument. The filter opens and a
+   * tremolo starts only once the night actually means it. */
   tensionG = mk(0);
-  const tf = ctx.createBiquadFilter(); tf.type = 'lowpass'; tf.frequency.value = 900; tf.Q.value = 2;
-  tf.connect(tensionG);
-  [110, 116.5, 233.1, 246.9].forEach((f, i) => {
+  const tf = ctx.createBiquadFilter(); tf.type = 'lowpass'; tf.frequency.value = 620; tf.Q.value = 3.4;
+  const trem = ctx.createGain(); trem.gain.value = 1;
+  tf.connect(trem); trem.connect(tensionG);
+  for (const f of [110, 116.54, 155.56, 233.08]) {
     const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f;
-    const g = ctx.createGain(); g.gain.value = 0.06 / (1 + i * 0.25);
+    const g = ctx.createGain(); g.gain.value = 0.052;
     o.connect(g); g.connect(tf); o.start(0);
-    const lfo = ctx.createOscillator(); lfo.frequency.value = 0.13 + i * 0.07;
-    const lg = ctx.createGain(); lg.gain.value = 0.03;
-    lfo.connect(lg); lg.connect(g.gain); lfo.start(0);
-  });
+    const lfo = ctx.createOscillator(); lfo.frequency.value = 0.07 + f * 0.00035;
+    const lg = ctx.createGain(); lg.gain.value = f * 0.0025;
+    lfo.connect(lg); lg.connect(o.frequency); lfo.start(0);
+  }
+  const tremLfo = ctx.createOscillator(); tremLfo.frequency.value = 3.4;
+  const tremDepth = ctx.createGain(); tremDepth.gain.value = 0;
+  tremLfo.connect(tremDepth); tremDepth.connect(trem.gain); tremLfo.start(0);
+  tensionFilter = tf;
+  tensionTrem = tremDepth;
 
-  // ---- panic pulse (rhythmic low pulse, scheduled in update)
+  // ---- panic pulse (a low hit, scheduled in update)
   panicG = mk(0);
+}
+
+/**
+ * The house's tune. Sparse, modal, and it sours as the night closes in: plain
+ * A minor while the house is still pretending, a flattened second once the
+ * night has teeth, and a tired low version at the end. It sits under
+ * everything on purpose — you should feel it before you notice you heard it.
+ */
+const MOTIF = Object.freeze([
+  [440, 523.25, 659.25, 587.33, 523.25],   // A  C  E  D  C  — the house as it was
+  [440, 523.25, 622.25, 587.33, 466.16],   // ...a semitone sour
+  [440, 493.88, 587.33, 554.37, 415.30],   // ...and the tired, low version
+]);
+
+function scheduleMotif(t, danger) {
+  const line = danger > 0.6 ? MOTIF[2] : danger > 0.28 ? MOTIF[1] : MOTIF[0];
+  const vol = 0.05 + danger * 0.022;
+  for (let i = 0; i < line.length; i++) {
+    const at = t + i * 0.62;
+    const last = i === line.length - 1;
+    // the music box: a triangle with a short life, and its own soft octave
+    osc(at, last ? 2.6 : 1.5, {
+      out: musicBus, gain: vol, type: 'triangle', freq: line[i],
+      pan: (i % 2 ? 0.22 : -0.22) + (danger > 0.6 ? 0.28 : 0), rev: 1, attack: 0.012,
+    });
+    osc(at + 0.012, last ? 1.9 : 1.0, {
+      out: musicBus, gain: vol * 0.4, type: 'sine', freq: line[i] * 2,
+      pan: i % 2 ? 0.3 : -0.3, rev: 1, attack: 0.008,
+    });
+    // the room it is standing in, only on the first and last note
+    if (i === 0 || last) {
+      osc(at, 3.0, {
+        out: musicBus, gain: vol * 0.9, type: 'sine', freq: 110, to: last ? 82.41 : 110,
+        pan: 0, rev: 0.8, attack: 0.05,
+      });
+    }
+  }
 }
 
 let lastPanic = 0;
@@ -745,9 +807,13 @@ export function updateAudio(dt, st = {}) {
 
   // ---- music layers
   const duckAmt = 1 - silenceMusic;
-  droneG.gain.setTargetAtTime((0.5 + intensity * 0.25) * duckAmt, t, 1.4);
-  tensionG.gain.setTargetAtTime(clamp(danger * 0.85, 0, 0.9) * duckAmt, t, 1.8);
-  panicG.gain.setTargetAtTime(clamp(panic * 0.9, 0, 0.95) * duckAmt, t, 1.0);
+  droneG.gain.setTargetAtTime((0.42 + intensity * 0.3) * duckAmt, t, 1.6);
+  tensionG.gain.setTargetAtTime(clamp(danger * 0.9, 0, 0.95) * duckAmt, t, 1.8);
+  panicG.gain.setTargetAtTime(clamp(panic * 0.95, 0, 1) * duckAmt, t, 1.0);
+  // the night turns the screws: the pressure opens up and starts to shake
+  if (tensionFilter) tensionFilter.frequency.setTargetAtTime(520 + danger * 1400 + panic * 900, t, 1.2);
+  if (tensionTrem) tensionTrem.gain.setTargetAtTime(clamp(danger, 0, 1) * 0.42, t, 1.5);
+  if (droneVoices && droneVoices[3]) droneVoices[3].fl.frequency.setTargetAtTime(300 + intensity * 900, t, 2.0);
 
   // ---- panic pulse scheduling (heart of the panic phase)
   if (panic > 0.02) {
@@ -756,7 +822,15 @@ export function updateAudio(dt, st = {}) {
       lastPanic = t;
       osc(t, 0.5, { out: panicG, gain: 0.3, type: 'sine', freq: 55, to: 34, attack: 0.01, rev: 0.15, pan: 0 });
       noise(t, 0.2, { out: panicG, gain: 0.1, type: 'lowpass', freq: 200, q: 2, attack: 0.005, rev: 0.1, pan: 0 });
+      // a chase has a clock in it: one muted tick above the thud
+      noise(t + 0.14, 0.1, { out: panicG, gain: 0.05 * (0.4 + panic), type: 'bandpass', freq: 2600, q: 6, attack: 0.002, rev: 0.3, pan: 0.15 });
     }
+  }
+
+  // ---- the house's tune, sparse enough to be a place and not a loop
+  if (t > motifNext) {
+    motifNext = t + rand(17, 29) / (1 + danger * 0.7);
+    if (duckAmt > 0.4) scheduleMotif(t + 0.25, danger);
   }
 
   // ---- heartbeat

@@ -156,123 +156,136 @@ function drawBrandPlate(ctx, w, h, { focus = 0.18, dim = 0.55 } = {}) {
 
 /* ================= menu scene ================= */
 
-/** Silent attract loop. Clock, a door failing, a walk, a drink. No captions. */
+/**
+ * The attract loop: the house is awake and she is in it.
+ *
+ * Not a diagram of a clock and a door. A slow push-in on the hall, a lamp
+ * that will not settle, dust in the beam, Valen breathing — then she walks a
+ * few steps, then something knocks and the frame takes the hit.
+ *
+ * Silent on purpose: a menu that starts talking before you touch it is a menu
+ * people mute. Everything is a function of `idle`, so the loop is
+ * deterministic and cannot jitter between two frames of the same second.
+ */
 function drawAttract(game, ctx, w, h, idle) {
-  const LOOP = 6.6;
+  const LOOP = 15;
   const u = ((idle - 2.4) % LOOP + LOOP) % LOOP;
-  const bx = w * 0.1;
-  const by = h * 0.155;
+  const t = u / LOOP;
   const bw = w * 0.8;
-  const bh = Math.min(h * 0.3, h * 0.47 - by);
-  if (bh < 72) return;
-  const drain = u < 1.6 ? 1 : u < 3.5 ? 1 - (u - 1.6) / 1.9 : 0.08;
-  const walk = u < 2.2 ? u / 2.2 : 1;
-  const feeding = u > 3.35 && u < 5.35;
-  const feedK = feeding ? (u - 3.35) / 1.7 : (u >= 5.35 ? 1 : 0);
+  if (Math.min(h * 0.3, h * 0.47 - h * 0.155) < 72) return;
 
+  // beats: she stands · she walks a few steps · something knocks · she settles
+  const walkU = clamp((u - 5.4) / 3.2, 0, 1);
+  const walking = walkU > 0.02 && walkU < 0.98;
+  const step = walkU * walkU * (3 - 2 * walkU);
+  const knockU = clamp((u - 9.6) / 2.1, 0, 1);
+  const knockHit = Math.sin(Math.PI * knockU);
+
+  // ---- the hall, breathing in, drifting, and taking the knock ----
   ctx.save();
-  ctx.beginPath();
-  ctx.rect(bx, by, bw, bh);
-  ctx.clip();
-  const door = game.mansion && (game.mansion.diningDoor || (game.mansion.doors && game.mansion.doors[0]));
-  if (door && door.inside) {
-    const zoom = Math.min(bw / 520, bh / 280);
+  const push = 1.05 + 0.028 * Math.sin(t * TAU);
+  const drift = Math.sin(t * TAU) * 7;
+  const jolt = knockHit * 3.4;
+  ctx.translate(w / 2, h * 0.32);
+  ctx.scale(push, push);
+  ctx.translate(-w / 2 + drift + Math.sin(u * 47) * jolt, -h * 0.32);
+  drawBrandPlate(ctx, w, h, { focus: 0.46, dim: 0 });
+  ctx.restore();
+
+  // ---- the lamp: warm, and it will not settle ----
+  const flick = clamp(0.78 + 0.22 * Math.sin(u * 11.3) * Math.sin(u * 3.7 + 1.2) - knockHit * 0.4, 0.12, 1);
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  const lampX = w * 0.74;
+  const lampY = h * 0.2;
+  const lg = ctx.createRadialGradient(lampX, lampY, 6, lampX, lampY, Math.max(w, h) * 0.5);
+  lg.addColorStop(0, `rgba(255,198,124,${0.3 * flick})`);
+  lg.addColorStop(0.32, `rgba(176,116,58,${0.13 * flick})`);
+  lg.addColorStop(1, 'rgba(120,70,30,0)');
+  ctx.fillStyle = lg;
+  ctx.fillRect(0, 0, w, h);
+  ctx.restore();
+
+  // ---- dust in the beam ----
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  for (let i = 0; i < 44; i++) {
+    const sx = hash2(i, 11);
+    const sy = hash2(i, 23);
+    const sr = hash2(i, 37);
+    const rise = (u * (7 + sr * 15) + sy * h) % (h * 0.62);
+    const x = sx * (w + 60) + Math.sin(u * 0.6 + i) * 7 - 30;
+    const y = h * 0.52 - rise;
+    const a = (0.05 + sr * 0.13) * (0.55 + 0.45 * Math.sin(u * 1.7 + i * 1.3));
+    ctx.fillStyle = `rgba(255,234,200,${a.toFixed(3)})`;
+    ctx.beginPath();
+    ctx.arc(x, y, 0.6 + sr * 1.5, 0, TAU);
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // ---- the knock: a red edge from the servant door, and the frame takes it ----
+  if (knockHit > 0.01) {
     ctx.save();
-    ctx.globalAlpha = 0.5;
-    ctx.translate(bx + bw * 0.42, by + bh * 0.58);
-    ctx.scale(zoom, zoom);
-    ctx.translate(-door.inside.x, -door.inside.y);
-    game.mansion.drawFloor(ctx);
-    if (game.mansion.drawProps) game.mansion.drawProps(ctx, game);
+    const kg = ctx.createLinearGradient(0, 0, w * 0.46, 0);
+    kg.addColorStop(0, `rgba(148,24,32,${0.34 * knockHit})`);
+    kg.addColorStop(1, 'rgba(148,24,32,0)');
+    ctx.fillStyle = kg;
+    ctx.fillRect(0, 0, w * 0.46, h);
     ctx.restore();
-  } else {
-    ctx.fillStyle = '#12141c';
-    ctx.fillRect(bx, by, bw, bh);
-  }
-  ctx.fillStyle = 'rgba(6,7,12,0.38)';
-  ctx.fillRect(bx, by, bw, bh);
-
-  ctx.font = `500 13px ${MONO}`;
-  ctx.fillStyle = 'rgba(232,220,200,0.96)';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  const secs = Math.max(16, 250 - u * 8);
-  const mm = String((secs / 60) | 0).padStart(2, '0');
-  const ss = String((secs % 60) | 0).padStart(2, '0');
-  ctx.fillText(`DAWN IN  ${mm}:${ss}`, bx + bw / 2, by + 18);
-
-  const doorX = bx + bw * 0.78;
-  const doorY = by + bh * 0.46;
-  ctx.fillStyle = '#2a1c12';
-  ctx.fillRect(doorX - 18, doorY - 36, 36, 70);
-  ctx.strokeStyle = drain > 0.4 ? 'rgba(170,190,110,0.95)' : 'rgba(220,48,48,0.95)';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(doorX - 18, doorY - 36, 36, 70);
-  const barW = 84;
-  const barY = doorY + 42;
-  ctx.fillStyle = 'rgba(232,220,200,0.35)';
-  ctx.fillRect(doorX - barW / 2, barY, barW, 12);
-  ctx.fillStyle = drain > 0.45 ? '#9ec46a' : '#ff3a3a';
-  ctx.fillRect(doorX - barW / 2, barY, barW * Math.max(0.08, drain), 12);
-  if (u > 1.15 && u < 5.4) {
-    ctx.fillStyle = '#07080c';
-    ctx.beginPath();
-    ctx.ellipse(doorX - 46, doorY + 16, 22, 12, 0, 0, TAU);
-    ctx.fill();
-    ctx.fillStyle = '#e01828';
-    ctx.beginPath();
-    ctx.arc(doorX - 56, doorY + 12, 3, 0, TAU);
-    ctx.fill();
   }
 
-  const vx = bx + 56 + walk * (bw * 0.38);
-  const vy = by + bh * 0.72;
+  // ---- she is in the hall ----
+  const frame = Valen3D.render({
+    state: walking ? 'walk' : 'idle',
+    angle: walking ? -0.44 : lerp(0.32, -0.14, knockHit),
+    speed: walking ? 118 : 0,
+    stepPhase: (u * 6.4) % (Math.PI * 2),
+    attackProgress: 0,
+    view: 'portrait',
+  });
+  const px = lerp(w * 0.43, w * 0.57, step) + Math.sin(u * 1.3) * 2;
+  const py = h * 0.46 + Math.sin(u * 1.1) * 2.2;
   ctx.save();
-  ctx.translate(vx, vy);
-  ctx.fillStyle = '#101118';
+  ctx.translate(Math.sin(u * 41) * jolt, 0);
+  ctx.save();
+  ctx.globalAlpha = 0.5;
+  const sg = ctx.createLinearGradient(px, py, px + 160, py - 160);
+  sg.addColorStop(0, 'rgba(0,0,0,0.8)');
+  sg.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = sg;
   ctx.beginPath();
-  ctx.ellipse(0, 8, 26, 34, 0, 0, TAU);
+  ctx.moveTo(px - 18, py + 8);
+  ctx.lineTo(px + 14, py + 8);
+  ctx.lineTo(px + 170, py - 150);
+  ctx.lineTo(px + 136, py - 178);
+  ctx.closePath();
   ctx.fill();
-  ctx.fillStyle = feedK > 0.4 ? '#f2c4ae' : (u < 1.1 ? '#9a9084' : '#e4d4c4');
-  ctx.beginPath();
-  ctx.arc(0, -30, 15, 0, TAU);
-  ctx.fill();
-  ctx.strokeStyle = feedK > 0.4 ? 'rgba(255,150,110,0.85)' : 'rgba(206,220,255,0.7)';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(0, -8, 40, 0, TAU);
-  ctx.stroke();
   ctx.restore();
-
-  if (feeding) {
-    const sx = doorX - 46;
-    const sy = doorY + 12;
-    for (let i = 0; i < 9; i++) {
-      const t = clamp(feedK * 1.25 - i * 0.07, 0, 1);
-      const x = sx + (vx - sx) * t;
-      const y = sy + (vy - 30 - sy) * t - Math.sin(t * Math.PI) * 22;
-      ctx.globalAlpha = 0.95;
-      ctx.fillStyle = '#e01828';
-      ctx.beginPath();
-      ctx.arc(x, y, 3.6, 0, TAU);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-    const pipW = Math.min(78, bw * 0.3);
-    ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    ctx.fillRect(bx + bw / 2 - pipW / 2, by + 32, pipW, 5);
-    ctx.fillStyle = '#e01828';
-    ctx.fillRect(bx + bw / 2 - pipW / 2, by + 32, pipW * clamp(feedK, 0, 1), 5);
+  if (frame) {
+    const sc = h / 760;
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.scale(sc, sc);
+    Valen3D.draw(ctx, frame, (h * 0.2) / sc, { footInset: 8 });
+    ctx.restore();
   }
   ctx.restore();
-  ctx.strokeStyle = 'rgba(168,131,60,0.5)';
-  ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
 
-  // The narrator is reachable from the menu: replay the opening without
+  // ---- the frame holds it ----
+  ctx.save();
+  const vg = ctx.createRadialGradient(w / 2, h * 0.34, Math.min(w, h) * 0.22, w / 2, h * 0.34, Math.max(w, h) * 0.7);
+  vg.addColorStop(0, 'rgba(4,5,9,0)');
+  vg.addColorStop(1, 'rgba(4,5,9,0.58)');
+  ctx.fillStyle = vg;
+  ctx.fillRect(0, 0, w, h);
+  ctx.restore();
+
+  // The narrator stays reachable from the menu: replay the opening without
   // joining the night. (Not a menu row — the stack must not grow.)
   const rbW = Math.min(228, bw);
   const rb = uiButton(game, {
-    x: bx + (bw - rbW) / 2, y: by + bh + 12, w: rbW, h: 34, label: 'THE OPENING', small: true,
+    x: w / 2 - rbW / 2, y: h * 0.44, w: rbW, h: 34, label: 'THE OPENING', small: true,
     onClick: () => game.replayOpening(),
   });
   buttonVisual(ctx, rb.b, { active: rb.hover, label: 'THE OPENING', small: true, accent: '#6a6a80' });

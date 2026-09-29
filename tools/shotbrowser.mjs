@@ -100,6 +100,25 @@ try {
   await page.evaluate(() => new Promise((r) => setTimeout(r, 1100)));
   await shoot(page, '01-menu');
 
+  // ---- the attract loop: the house is awake, and she is in it ----
+  // Three beats of the same 15s loop: she stands, she walks, something knocks.
+  // The loop is PINNED for each shot: the knock window is two seconds wide and
+  // a software-WebGL frame takes longer than that to arrive, so a screenshot
+  // taken by luck lands somewhere else entirely.
+  await page.evaluate(() => {
+    window.__LN.save.privacyAck = true;
+    window.__LN.setScreen('menu');
+    window.__pin = null;
+    const pin = () => { if (window.__pin != null) window.__LN.menuIdle = window.__pin; requestAnimationFrame(pin); };
+    pin();
+  });
+  for (const [name, idle] of [['01-attract-stand', 5.4], ['01-attract-walk', 9.4], ['01-attract-knock', 13.0]]) {
+    await page.evaluate((v) => { window.__pin = v; }, idle);
+    await new Promise((r) => setTimeout(r, 500));
+    await shoot(page, name);
+  }
+  await page.evaluate(() => { window.__pin = null; });
+
   await page.evaluate(() => {
     window.__LN_API.beginNight();
   });
