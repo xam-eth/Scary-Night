@@ -312,99 +312,144 @@ class EnvKitRuntime {
   }
 
   /**
-   * Floor and walls for every room, instanced, built once. The 2D mansion
-   * stays the only map: these are its rects and its door openings, so a wall
-   * can never stand where the sim says there is a way through.
+   * Floor and walls, instanced, built once — from the mansion's OWN plan.
+   *
+   * The first pass walked the room rectangles. That was wrong in the one
+   * place it mattered: it floored the rooms and left the passages between
+   * them painted, and it stood the walls on the rectangles instead of on the
+   * wall solids the collision and the painted house actually use. Walk out of
+   * a room and the floor you were standing on stopped at the doorstep.
+   *
+   * So: the floor follows everywhere a body can stand (the nav grid, plus the
+   * thresholds a closed door closes off), and the walls are the wall solids
+   * themselves, gap by gap. A mesh now stands exactly where the house is.
    */
   buildRoom(mansion) {
-    if (!this.ready || !mansion || !mansion.rooms || this.room === mansion) return;
+    if (!this.ready || !mansion || !mansion.solids || this.room === mansion) return;
     const s = KIT_SCALE;
-    const cell = TILE * s;                 // one grid cell, in world px
-    const reach = CORNER_REACH * s;        // how far a corner's legs run
+    const cell = TILE * s;
+    const walls = (mansion.solids || []).filter((w) => w.type === 'wall');
     const rooms = Object.values(mansion.rooms || {});
-    // A door already fills its own gap, so the wall run steps around it.
-    const openings = (mansion.doors || []).map((d) => {
-      const horiz = d.axis === 'h';
-      const len = horiz ? d.w : d.h;
-      const mid = horiz ? d.x : d.y;
-      return { horiz, line: horiz ? d.y : d.x, from: mid - len / 2, to: mid + len / 2 };
-    });
-    const blocked = (horiz, line, a, b) => openings.some((o) =>
-      o.horiz === horiz && Math.abs(o.line - line) < 70 && o.to > a - 10 && o.from < b + 10);
+    const entrances = mansion.entrances || [];
 
+    const inWall = (x, y) => walls.some((w) =>
+      x > w.x - 2 && x < w.x + w.w + 2 && y > w.y - 2 && y < w.y + w.h + 2);
+    const roomAt = (x, y) => rooms.find((r) =>
+      x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h) || null;
+    const canStand = (x, y) => {
+      if (!mansion.navCellOf || !mansion.navFree) return false;
+      const c = mansion.navCellOf(x, y);
+      return mansion.navFree(c.gx, c.gy);
+    };
+    // A shut door blocks the nav grid, and a doorway with no floor under it
+    // is a hole in the ground exactly where she walks most.
+    const atThreshold = (x, y) => entrances.some((e) =>
+      Math.abs(x - e.x) < (e.w || 0) / 2 + cell * 0.5 && Math.abs(y - e.y) < (e.h || 0) / 2 + cell * 0.5);
+
+    // ---- floor ----
     const floors = { floorWood: [], floorStone: [] };
-    const walls = [];
+    const b = mansion.bounds || { x: -540, y: -520, w: 3140, h: 2480 };
+    const nx = Math.max(1, Math.ceil(b.w / cell));
+    const ny = Math.max(1, Math.ceil(b.h / cell));
+    const tw = b.w / nx;
+    const th = b.h / ny;
+    for (let j = 0; j < ny; j++) {
+      for (let i = 0; i < nx; i++) {
+        const cx = b.x + (i + 0.5) * tw;
+        const cy = b.y + (j + 0.5) * th;
+        // Nine probes, not one. A tile is 130px and a passage can be 100px
+        // wide, so a centre-only test steps right over the corridors — which
+        // is how the first pass left the passages between rooms bare, with
+        // floor under the rooms and nothing under the doorway.
+        let room = null;
+        let use = false;
+        for (let sy2 = -1; sy2 <= 1 && !use; sy2++) {
+          for (let sx2 = -1; sx2 <= 1 && !use; sx2++) {
+            const px2 = cx + sx2 * tw * 0.33;
+            const pz2 = cy + sy2 * th * 0.33;
+            if (inWall(px2, pz2)) continue;
+            const here = roomAt(px2, pz2);
+            if (here) { room = here; use = true; }
+            else if (canStand(px2, pz2) || atThreshold(px2, pz2)) use = true;
+          }
+        }
+        if (!use) continue;
+        floors[FLOOR_FOR(room ? room.floor : 'stone')].push({
+          x: cx, y: 0, z: cy, sx: tw / TILE, sy: s, sz: th / TILE,
+        });
+      }
+    }
+
+    // ---- walls: the solids themselves, so a panel is the wall ----
+    const wallCells = [];
     const cracked = [];
-    const corners = [];
-
-    for (const room of rooms) {
-      // ---- floor: the room's own rect, tiled to fit exactly ----
-      const nx = Math.max(1, Math.round(room.w / cell));
-      const nz = Math.max(1, Math.round(room.h / cell));
-      const tx = room.w / nx;
-      const tz = room.h / nz;
-      const list = floors[FLOOR_FOR(room.floor)];
-      for (let j = 0; j < nz; j++) {
-        for (let i = 0; i < nx; i++) {
-          // A piece is authored 4 units wide and the scene measures in px, so
-          // the scale that makes it span tx px is tx / TILE — not tx / cell.
-          list.push({
-            x: room.x + (i + 0.5) * tx, y: 0, z: room.y + (j + 0.5) * tz,
-            sx: tx / TILE, sy: s, sz: tz / TILE,
-          });
-        }
+    for (const w of walls) {
+      const horiz = w.w >= w.h;
+      const len = horiz ? w.w : w.h;
+      const line = horiz ? w.y + w.h / 2 : w.x + w.w / 2;
+      const from = horiz ? w.x : w.y;
+      const cells = Math.max(1, Math.round(len / cell));
+      const size = len / cells;
+      for (let i = 0; i < cells; i++) {
+        const mid = from + (i + 0.5) * size;
+        // one panel in nine is a tired one, so a long wall is not a ruler
+        const tired = (((mid * 7 + line * 13) | 0) % 9) === 3;
+        (tired ? cracked : wallCells).push(horiz
+          ? { x: mid, y: 0, z: line, ry: 0, sx: size / TILE, sy: s, sz: s }
+          : { x: line, y: 0, z: mid, ry: Math.PI / 2, sx: size / TILE, sy: s, sz: s });
       }
+    }
 
-      // ---- walls: the four edges, between the corners ----
-      const x0 = room.x; const x1 = room.x + room.w;
-      const y0 = room.y; const y1 = room.y + room.h;
-      const runs = [
-        { horiz: true, line: y0, from: x0, to: x1 },
-        { horiz: true, line: y1, from: x0, to: x1 },
-        { horiz: false, line: x0, from: y0, to: y1 },
-        { horiz: false, line: x1, from: y0, to: y1 },
+    // ---- corners: where a run meets a run, an L stands ----
+    // The L is chiral. Its legs reach -x and +z before any rotation, so each
+    // pairing of directions has exactly one angle that fits.
+    const DIR = { '+x': 0, '-x': 1, '+z': 2, '-z': 3 };
+    const CORNER_ANGLE = { '1,2': 0, '0,2': Math.PI / 2, '0,3': Math.PI, '1,3': -Math.PI / 2 };
+    const endsOf = (w) => {
+      const horiz = w.w >= w.h;
+      const line = horiz ? w.y + w.h / 2 : w.x + w.w / 2;
+      if (horiz) {
+        return [
+          { x: w.x, z: line, into: DIR['+x'] },            // its start looks east
+          { x: w.x + w.w, z: line, into: DIR['-x'] },
+        ];
+      }
+      return [
+        { x: line, z: w.y, into: DIR['+z'] },
+        { x: line, z: w.y + w.h, into: DIR['-z'] },
       ];
-      for (const run of runs) {
-        const a = run.from + reach;
-        const b = run.to - reach;
-        const span = b - a;
-        if (span < cell * 0.5) continue;
-        const cells = Math.max(1, Math.round(span / cell));
-        const size = span / cells;
-        for (let i = 0; i < cells; i++) {
-          const from = a + i * size;
-          const to = from + size;
-          if (blocked(run.horiz, run.line, from, to)) continue;   // a door stands here
-          const mid = (from + to) / 2;
-          const stretch = size / TILE;          // the cell spans `size` px
-          const height = s;                     // 4 units tall, like the door
-          // one cell in nine is a tired wall, so a long room is not a ruler
-          const tired = (((mid * 7 + run.line * 13) | 0) % 9) === 3;
-          (tired ? cracked : walls).push(run.horiz
-            ? { x: mid, y: 0, z: run.line, ry: 0, sx: stretch, sy: height, sz: s }
-            : { x: run.line, y: 0, z: mid, ry: Math.PI / 2, sx: stretch, sy: height, sz: s });
+    };
+    const corners = [];
+    const seen = new Set();
+    const hs = walls.filter((w) => w.w >= w.h);
+    const vs = walls.filter((w) => w.w < w.h);
+    for (const h of hs) {
+      for (const he of endsOf(h)) {
+        for (const v of vs) {
+          for (const ve of endsOf(v)) {
+            if (Math.abs(he.x - ve.x) > 40 || Math.abs(he.z - ve.z) > 40) continue;
+            const key = [he.into, ve.into].sort((a, b) => a - b).join(',');
+            const ry = CORNER_ANGLE[key];
+            if (ry == null) continue;
+            const spot = `${Math.round(he.x)},${Math.round(he.z)}`;
+            if (seen.has(spot)) continue;
+            seen.add(spot);
+            corners.push({ x: he.x, y: 0, z: he.z, ry, sx: s, sy: s, sz: s });
+          }
         }
       }
-
-      // ---- corners: the L is chiral, so each corner gets its own angle ----
-      corners.push(
-        { x: x0, y: 0, z: y0, ry: CORNER_ANGLES[0], sx: s, sy: s, sz: s },
-        { x: x1, y: 0, z: y0, ry: CORNER_ANGLES[1], sx: s, sy: s, sz: s },
-        { x: x1, y: 0, z: y1, ry: CORNER_ANGLES[2], sx: s, sy: s, sz: s },
-        { x: x0, y: 0, z: y1, ry: CORNER_ANGLES[3], sx: s, sy: s, sz: s },
-      );
     }
 
     this.roomMeshes = {
       wood: this._instanced('floorWood', floors.floorWood),
       stone: this._instanced('floorStone', floors.floorStone),
-      wall: this._instanced('wall', walls),
+      wall: this._instanced('wall', wallCells),
       cracked: this._instanced('wallCracked', cracked),
       corner: this._instanced('wallCorner', corners),
     };
     this.roomCounts = {
       floor: floors.floorWood.length + floors.floorStone.length,
-      walls: walls.length + cracked.length, corners: corners.length,
+      walls: wallCells.length + cracked.length, corners: corners.length,
     };
     this.room = mansion;
   }
