@@ -17,6 +17,7 @@
  */
 
 import { PLAYER, RES, nightHeat, threatMix } from '../core/config.js';
+import { fortressLevel } from './hunt.js';
 
 export const LARDER_BLOOD = 6;
 export const NIGHT1_DRAIN = 0.48;
@@ -244,6 +245,22 @@ export function migrateSave(save) {
   save.milestones = save.milestones || {};
   save.beats = save.beats || {};
   save.pendingDawn = save.pendingDawn || [];
+  // THE HUNT (docs/PURPOSE.md): an old save joins the hunt at its beginning,
+  // with the nights it already survived counted as intel owed, not thrown away.
+  save.hunt = save.hunt || { track: 0, intel: [], materials: 0, nights: 0, lastGain: null };
+  save.hunt.intel = Array.isArray(save.hunt.intel) ? save.hunt.intel : [];
+  save.hunt.track = Math.max(0, Number(save.hunt.track) || 0);
+  save.hunt.materials = Math.max(0, Math.round(Number(save.hunt.materials) || 0));
+  save.hunt.nights = Math.max(0, Math.round(Number(save.hunt.nights) || 0));
+  if (!save.hunt.nights && save.nightsSurvived > 0) {
+    // A save that has already seen a few nights does not join the hunt blind:
+    // those nights count as ground covered — but capped well short of the end,
+    // so the finale is still something you play, not something you are granted.
+    save.hunt.track = Math.min(40, save.nightsSurvived * 2.5);
+    save.hunt.nights = save.nightsSurvived;
+    if (!save.hunt.intel.includes('deed:first-night')) save.hunt.intel.push('deed:first-night');
+  }
+  save.fortressLevel = fortressLevel(save);
   save.coachFed = !!save.coachFed;
   save.coachKnock = !!save.coachKnock;
   if (save.weapon !== 'claw' && save.weapon !== 'sword' && save.weapon !== 'shot') save.weapon = 'claw';

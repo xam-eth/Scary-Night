@@ -29,6 +29,7 @@ import {
   nextRank, rankCost, rankCount, LANE_CAP, LARDER_BLOOD, unlocked, markUnlocks, grantLaneTitle, houseTitle,
 } from './economy.js';
 import { House } from './house.js';
+import { bankNight } from './hunt.js';
 import { Haunts } from './haunts.js';
 import { Ads } from '../shop/ads.js';
 import { Valen3D } from './valen3d.js';
@@ -451,7 +452,8 @@ export class Game {
     this.countdown = null;
     this.countdownShown = 0;
     const doorN = this.mansion.doors.length;
-    this.stats = { kills: 0, doorsSurviving: doorN, doorsTotal: doorN, closestCall: 0, waveCount: 0, hits: 0, bloodMin: 100, roomsVisited: 0, roomsSeen: {} };
+    // roomsSeen / enemySeen are tonight's eyes — the hunt banks what they saw
+    this.stats = { kills: 0, doorsSurviving: doorN, doorsTotal: doorN, closestCall: 0, waveCount: 0, hits: 0, bloodMin: 100, roomsVisited: 0, roomsSeen: {}, enemySeen: {} };
     this.larderUsed = false;
     this._lastRoom = null;
     if (this.mansion.studyWard) { this.mansion.studyWard.until = 0; this.mansion.studyWard.readyAt = 0; }
@@ -972,6 +974,8 @@ export class Game {
     this.stats.bloodMin = Math.min(this.stats.bloodMin, p.bloodPct * 100);
     for (const e of this.enemies) {
       if (!this.save.seen[e.key]) { this.save.seen[e.key] = true; }
+      // what came for me tonight — studying the pack IS the hunt (PURPOSE §3)
+      if (e.key) this.noteFoe(e.key);
     }
 
     // ---- win / lose ----
@@ -1126,6 +1130,46 @@ export class Game {
     this._roomLine = roomLine;
     this._roomLineAt = this.time;
     this.offerNarrative({ surface: 'room', event: 'room', room: id, night: (this.save.nightsSurvived || 0) + 1 });
+  }
+
+  /** What came for her tonight. The pack is the Master's; studying it is the hunt. */
+  noteFoe(key) {
+    const seen = this.stats.enemySeen || (this.stats.enemySeen = {});
+    seen[key] = true;
+  }
+
+  /**
+   * The discrete facts tonight earned, as intel ids (src/game/hunt.js): the
+   * foes that came, the rooms she stood in, the peaks she survived, and what
+   * she actually did. Deduping is the hunt's job — a fact banks once, ever.
+   */
+  nightIntel(won) {
+    const ids = [];
+    for (const key of Object.keys(this.stats.enemySeen || {})) ids.push(`foe:${key}`);
+    for (const id of Object.keys(this.stats.roomsSeen || {})) ids.push(`room:${id}`);
+    for (const p of this.climax.peaksFired || []) ids.push(`peak:${p}`);
+    if (won) ids.push('deed:first-night');
+    if ((this.stats.kills || 0) >= 25) ids.push('deed:kills-25');
+    if ((this.stats.doorsSurviving || 0) >= (this.stats.doorsTotal || 4)) ids.push('deed:doors-held');
+    return ids;
+  }
+
+  /**
+   * Bank the night into the hunt, on a death and on a dawn alike. This is the
+   * spine's hard rule made code (docs/PURPOSE.md §2 P2): no night yields
+   * nothing, so TRY AGAIN reads as one step closer rather than one more try.
+   */
+  bankHunt(won) {
+    const gain = bankNight(this.save, {
+      won,
+      survived: won ? NIGHT_DURATION : this.time,
+      kills: this.stats.kills || 0,
+      intel: this.nightIntel(won),
+    });
+    this.save.fortressLevel = gain.level;
+    this.lastGain = gain;
+    writeSave(this.save);
+    return gain;
   }
 
   /**
@@ -1905,6 +1949,10 @@ export class Game {
     // the night keeps its stats (objectives pay out with it, partial credit)
     this.finalizeShards(this.time);
     this.settleNight(this.time);
+    // THE HUNT: the night was not wasted. Whatever she learned tonight is
+    // banked before the screen that tells her she died — so the screen that
+    // follows can say what the death bought (docs/PURPOSE.md §2 P2).
+    this.bankHunt(false);
     this.save.bestTime = Math.max(this.save.bestTime, this.time);
     const kills = this.stats.kills;
     if (this.save.bestDefeated === undefined || kills > this.save.bestDefeated) this.save.bestDefeated = kills;
@@ -1998,6 +2046,7 @@ export class Game {
     // results
     this.finalizeShards(NIGHT_DURATION);
     this.settleNight(NIGHT_DURATION);
+    this.bankHunt(true);
     this.save.nightsSurvived++;
     this.offerNarrative({ surface: 'dawnCard', event: 'dawn', dawn: this.save.nightsSurvived });
     this.newRecord = NIGHT_DURATION > this.save.bestTime;

@@ -820,6 +820,57 @@ if (args.systems) {
   game.save.ending = null;
   game.screen = 'playing';
 
+  // ---- THE HUNT (#57): every night banks progress, won or lost ----
+  const { bankNight, huntProgress, huntPct, fortressLevel, fortressState, nearingEnd } = await import('../src/game/hunt.js');
+  const { migrateSave } = await import('../src/game/economy.js');
+  const huntSave = { nightsSurvived: 0 };
+  const night1 = bankNight(huntSave, { won: false, survived: 120, kills: 6,
+    intel: ['foe:crawler', 'room:kitchen', 'peak:crescendo'] });
+  line(night1.trackDelta > 0 && night1.materials > 0,
+    `a LOST night still banks progress (+${night1.trackDelta.toFixed(1)} track, ${night1.materials} materials)`);
+  line(night1.intel.length === 3, `the night's facts are banked as intel (${night1.intel.length})`);
+  const afterOne = huntProgress(huntSave);
+  const night2 = bankNight(huntSave, { won: false, survived: 90, kills: 4, intel: ['foe:crawler', 'room:kitchen'] });
+  line(night2.intel.length === 0, 'the second crawler banks no intel — a fact is learned once, ever');
+  line(night2.trackDelta > 0, `but the night still moves the hunt (+${night2.trackDelta.toFixed(1)})`);
+  line(huntProgress(huntSave) > afterOne, 'the track only ever moves forward');
+  const empty = bankNight(huntSave, { won: false, survived: 0, kills: 0, intel: [] });
+  line(empty.trackDelta > 0 && empty.materials > 0,
+    `the hard rule: even a night that produced nothing pays (+${empty.trackDelta.toFixed(1)} track, ${empty.materials} materials)`);
+  const tampered = { hunt: { track: 400, intel: [], materials: 0, nights: 3 } };
+  bankNight(tampered, { won: true, survived: 300, kills: 30, intel: [] });
+  line(huntProgress(tampered) <= 100, `the track cannot pass the end of the hunt (${huntPct(tampered)}%)`);
+  const migrated = migrateSave({ ...huntSave, upgrades: {}, builds: {} });
+  line(migrated.hunt && migrated.hunt.intel.length === huntSave.hunt.intel.length
+    && huntProgress(migrated) === huntProgress(huntSave), 'the hunt rides the save through a migration');
+  line(migrateSave({ nightsSurvived: 6, upgrades: {}, builds: {} }).hunt.track > 0,
+    'a save that already saw nights joins the hunt with the ground it covered');
+  line(fortressLevel({ hunt: { track: 0, intel: [] } }) === 0 && fortressLevel({ hunt: { track: 90, intel: [] } }) === 4,
+    `the house climbs with the hunt (${fortressState({ hunt: { track: 0, intel: [] } }).name} -> ${fortressState({ hunt: { track: 90, intel: [] } }).name})`);
+  line(nearingEnd({ hunt: { track: 90, intel: [] } }) && !nearingEnd({ hunt: { track: 0, intel: [] } }),
+    'and the hunt tells you when it is nearly over');
+  // through the game's own call: a death banks, a dawn banks further
+  game.freshRun();
+  game.screen = 'playing';
+  game.stats.kills = 9;
+  game.stats.enemySeen = { crawler: true };
+  game.stats.roomsSeen = { kitchen: true };
+  game.time = 140;
+  const deathGain = game.bankHunt(false);
+  line(deathGain.trackDelta > 0 && game.lastGain === deathGain, 'dying calls the bank — the death screen has a gain to show');
+  const beforeDawn = huntProgress(game.save);
+  game.time = 300;
+  const dawnGain = game.bankHunt(true);
+  line(dawnGain.trackDelta > 0 && (game.save.hunt.intel || []).includes('deed:first-night'),
+    `a dawn banks the biggest step (+${dawnGain.trackDelta.toFixed(1)}), and the night she held is on the record`);
+  const freshHunt = { nightsSurvived: 0 };
+  const firstDawn = bankNight(freshHunt, { won: true, survived: 300, kills: 12, intel: ['deed:first-night'] });
+  line(firstDawn.intel.includes('deed:first-night') && firstDawn.trackDelta > empty.trackDelta,
+    `the first dawn is itself a fact — and worth more than a wasted minute (+${firstDawn.trackDelta.toFixed(1)} vs +${empty.trackDelta.toFixed(1)})`);
+  line(huntProgress(game.save) > beforeDawn, 'and the dawn moves the track further than the death did');
+  game.save.hunt = { track: 0, intel: [], materials: 0, nights: 0, lastGain: null };
+  game.lastGain = null;
+
   // ---- the four peaks (#52 A): every peak fires at its trigger, once ----
   const { Climax, PEAK } = await import('../src/game/climax.js');
   const Swarm = (await import('../src/game/enemies.js')).Crawler;

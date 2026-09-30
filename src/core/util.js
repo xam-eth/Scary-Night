@@ -143,6 +143,17 @@ export const defaultSave = () => ({
   deeds: {},                // what the player has actually done; the shop waits on these
   beats: {},                // once-only narrative beats the director has delivered
   pendingDawn: [],          // dawn-card ids waiting for the interstitial
+  /* THE HUNT — the spine (docs/PURPOSE.md). One forward-only meter: how close
+   * the Hunter is to being able to kill the Master. Every night moves it, won
+   * or lost, so no run is ever wasted. See src/game/hunt.js. */
+  hunt: {
+    track: 0,               // 0..100, forward only
+    intel: [],              // ids of the facts learned about the Master (deduped for life)
+    materials: 0,           // what a night yielded toward arming yourself
+    nights: 0,              // nights banked toward the hunt
+    lastGain: null,         // the last night's readout, for the death/dawn screens
+  },
+  fortressLevel: 0,         // the house's visible state, derived from the track
 });
 
 function deepMerge(base, over) {
