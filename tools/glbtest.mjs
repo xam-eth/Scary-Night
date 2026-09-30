@@ -339,6 +339,20 @@ for (const piece of ['table', 'chair', 'shelf', 'chest', 'barrel', 'stacked', 'c
   ok(`the kit's ${piece} has somewhere to stand`, propsCode.includes(piece));
 }
 ok('a fire on the floor gets something burning', /l\.type !== 'fire'/.test(envCode));
+
+// the room keeps up with the walls the sim closes and breaks
+const roomCode = envCode.slice(envCode.indexOf('buildRoom(mansion)'), envCode.indexOf("The house's furniture"));
+ok('every window in the house stands in the wall, not a hole in it',
+  /kind !== 'window'/.test(roomCode) && /window: this\._instanced\('window'/.test(envCode)
+    && /windowBroken: this\._instanced\('broken'/.test(envCode));
+ok('a smashed window swaps its glass panel for the broken wall',
+  /off: !!e\.broken/.test(envCode) && /w\.wasBroken/.test(envCode)
+    && /smashed\]/.test(envCode));
+ok('the grand staircase is kit stairs, not paint',
+  /staircase: 'stairs'/.test(envCode) && /stairs: 'stairs\.glb'/.test(envCode)
+    && /stairs: \[\]/.test(envCode));
+ok('furniture stands on the middle of the rect it is drawn from, not its corner',
+  /f\.x \+ \(f\.w \|\| 0\) \/ 2/.test(envCode) && /f\.y \+ \(f\.h \|\| 0\) \/ 2/.test(envCode));
 ok('a prop with a mesh does not also paint its twin',
   /f\.env3d/.test(mansionCode) && /p\.env3d/.test(mansionCode) && /f\.env3d/.test(gameCode));
 ok('the reach is measured as the room is drawn, not on the floor',

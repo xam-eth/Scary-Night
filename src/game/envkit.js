@@ -43,6 +43,8 @@ const FILES = Object.freeze({
   wall: 'wall.glb',
   wallCorner: 'wall_corner.glb',
   wallCracked: 'wall_cracked.glb',
+  window: 'wall_window.glb',
+  stairs: 'stairs.glb',
   table: 'table.glb',
   chair: 'chair.glb',
   shelf: 'shelf.glb',
@@ -76,10 +78,20 @@ const PROP_FOR = Object.freeze({
   cabinet: 'chest',
   barrel: 'barrel',
   crates: 'stacked',
+  staircase: 'stairs',
   shelf: 'stacked', wineRack: 'stacked',
 });
 /** Pieces with no footprint of their own get a scale, not a measurement. */
 const PROP_SCALE = Object.freeze({ planter: 2.2, basin: 2.2, candleStand: 1.6, candelabra: 1.9 });
+/**
+ * Pieces that keep the wall's scale for their HEIGHT however wide they have
+ * to grow. The stairs are a 5.1-unit flight against a 4-unit wall: filling a
+ * 250px opening needs one and a half times the kit, and grown in all three
+ * directions they stand two walls tall and turn the hall into a shaft. Spread
+ * them sideways instead — a wide, shallow flight, which is what a grand
+ * staircase is, and 5.1 units over a 4-unit run is the kit's own pitch.
+ */
+const PROP_RISE_AT_WALL = new Set(['stairs']);
 const PROP_RANGE = Object.freeze({ default: [0.7, 2.4], column: [1.4, 3.0] });
 
 /**
@@ -117,6 +129,7 @@ class EnvKitRuntime {
     this.room = null;          // the mansion the room was built from
     this.roomMeshes = null;
     this.roomCounts = null;
+    this.windows = [];         // one entry per window: which instances are its two states
     this.props = null;         // the mansion the furniture was built from
     this.propMeshes = null;
     this.propCounts = null;
@@ -124,6 +137,7 @@ class EnvKitRuntime {
       ready: this.ready, loading: this.loading, failed: this.failed, error: this.error,
       pieces: Object.keys(this.pieces), doors: this.doors.size,
       room: this.roomCounts || null, props: this.propCounts || null,
+      windows: this.windows.length,
     });
   }
 
@@ -263,22 +277,35 @@ class EnvKitRuntime {
     src.scene.traverse((node) => { if (node.isMesh && !geo) { geo = node.geometry; mat = node.material; } });
     if (!geo) return null;
     const mesh = new THREE.InstancedMesh(geo, mat, placements.length);
-    const dummy = new THREE.Object3D();
-    for (let i = 0; i < placements.length; i++) {
-      const p = placements[i];
-      dummy.position.set(p.x, p.y || 0, p.z);
-      dummy.rotation.set(0, p.ry || 0, 0);
-      dummy.scale.set(p.sx == null ? 1 : p.sx, p.sy == null ? 1 : p.sy, p.sz == null ? 1 : p.sz);
-      dummy.updateMatrix();
-      mesh.setMatrixAt(i, dummy.matrix);
-    }
+    mesh.userData.placements = placements;      // instances are written from it below
+    for (let i = 0; i < placements.length; i++) this._writeInstance(mesh, i);
     mesh.instanceMatrix.needsUpdate = true;
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     mesh.frustumCulled = false;
-    mesh.userData.placements = placements;
     this.group.add(mesh);
     return mesh;
+  }
+
+  /**
+   * One instance, written from its placement. `off` is a placement's own way
+   * of saying "not me": a window's broken twin hides while the glass holds.
+   * Folding (below) is the same gesture, so both go through here.
+   */
+  _writeInstance(mesh, i) {
+    if (!mesh) return;
+    const p = mesh.userData.placements[i];
+    if (!p) return;
+    if (!this._dummy) this._dummy = new THREE.Object3D();
+    const d = this._dummy;
+    const hide = p.off || (this._foldedAt != null && p.z > this._foldedAt);
+    d.position.set(p.x, p.y || 0, p.z);
+    d.rotation.set(0, p.ry || 0, 0);
+    d.scale.set(hide ? 0 : (p.sx == null ? 1 : p.sx),
+      hide ? 0 : (p.sy == null ? 1 : p.sy),
+      hide ? 0 : (p.sz == null ? 1 : p.sz));
+    d.updateMatrix();
+    mesh.setMatrixAt(i, d.matrix);
   }
 
   /**
@@ -292,21 +319,11 @@ class EnvKitRuntime {
     if (!this.roomMeshes) return;
     if (this._foldedAt != null && Math.abs(this._foldedAt - camY) < 12) return;
     this._foldedAt = camY;
-    if (!this._dummy) this._dummy = new THREE.Object3D();
-    const dummy = this._dummy;
-    for (const key of ['wall', 'cracked', 'corner']) {
+    for (const key of ['wall', 'cracked', 'corner', 'window', 'windowBroken']) {
       const mesh = this.roomMeshes[key];
       if (!mesh) continue;
       const list = mesh.userData.placements;
-      for (let i = 0; i < list.length; i++) {
-        const p = list[i];
-        const near = p.z > camY;
-        dummy.position.set(p.x, 0, p.z);
-        dummy.rotation.set(0, p.ry || 0, 0);
-        dummy.scale.set(near ? 0 : p.sx, near ? 0 : p.sy, near ? 0 : p.sz);
-        dummy.updateMatrix();
-        mesh.setMatrixAt(i, dummy.matrix);
-      }
+      for (let i = 0; i < list.length; i++) this._writeInstance(mesh, i);
       mesh.instanceMatrix.needsUpdate = true;
     }
   }
@@ -440,16 +457,44 @@ class EnvKitRuntime {
       }
     }
 
+    // ---- windows ----
+    // The wall solids stop at every opening, which is honest for a doorway
+    // (its mesh fills it) and wrong for a window: nine of them stood as holes
+    // you could see the night through. Each gets a panel with a real opening
+    // in it, and its twin — the broken wall the swarm came in by — waiting
+    // behind it, off, until the glass goes.
+    const windows = [];
+    const windowsBroken = [];
+    this.windows = [];
+    for (const e of entrances) {
+      if (e.kind !== 'window') continue;
+      const horiz = e.axis === 'h';
+      const len = horiz ? e.w : e.h;
+      const spot = {
+        x: e.x, y: 0, z: e.y, ry: horiz ? 0 : Math.PI / 2,
+        sx: len / TILE, sy: s, sz: s,
+      };
+      windows.push({ ...spot, off: !!e.broken });
+      windowsBroken.push({ ...spot, off: !e.broken });
+      this.windows.push({
+        id: e.id, e, wasBroken: !!e.broken,
+        intact: windows.length - 1, smashed: windowsBroken.length - 1,
+      });
+    }
+
     this.roomMeshes = {
       wood: this._instanced('floorWood', floors.floorWood),
       stone: this._instanced('floorStone', floors.floorStone),
       wall: this._instanced('wall', wallCells),
       cracked: this._instanced('wallCracked', cracked),
       corner: this._instanced('wallCorner', corners),
+      window: this._instanced('window', windows),
+      windowBroken: this._instanced('broken', windowsBroken),
     };
     this.roomCounts = {
       floor: floors.floorWood.length + floors.floorStone.length,
       walls: wallCells.length + cracked.length, corners: corners.length,
+      windows: windows.length,
     };
     this.room = mansion;
   }
@@ -466,7 +511,10 @@ class EnvKitRuntime {
   buildProps(mansion) {
     if (!this.ready || !mansion || this.props === mansion) return;
     const s = KIT_SCALE;
-    const bins = { table: [], chair: [], shelf: [], chest: [], barrel: [], stacked: [], column: [], candle: [], torch: [] };
+    const bins = {
+      table: [], chair: [], shelf: [], chest: [], barrel: [], stacked: [],
+      column: [], candle: [], torch: [], stairs: [],
+    };
     const place = (piece, item, x, z, fit) => {
       const src = this.pieces[piece];
       if (!src || !bins[piece]) return;
@@ -480,14 +528,32 @@ class EnvKitRuntime {
       const range = PROP_RANGE[piece] || PROP_RANGE.default;
       if (k < range[0] || k > range[1]) return;   // the painted one keeps its place
       const scale = k * s;
+      // A piece is not always modelled around its own middle. The stairs run
+      // from z 0 to 4, so standing their origin on the anchor pushed the whole
+      // flight two metres into the room; the chest sits the same way. Put each
+      // piece's FOOTPRINT CENTRE on the anchor, whichever corner its author
+      // measured from — and carry the offset through the piece's own rotation.
+      const ry = item.rot || 0;
+      const rise = PROP_RISE_AT_WALL.has(piece) ? s : scale;
+      const lx = -(src.min.x + src.size.x / 2) * scale;
+      const lz = -(src.min.z + src.size.z / 2) * scale;
+      const cos = Math.cos(ry), sin = Math.sin(ry);
       bins[piece].push({
-        x, y: -src.min.y * scale, z, ry: item.rot || 0, sx: scale, sy: scale, sz: scale,
+        x: x + lx * cos + lz * sin,
+        y: -src.min.y * rise,
+        z: z - lx * sin + lz * cos,
+        ry, sx: scale, sy: rise, sz: scale,
       });
       item.env3d = true;                          // its 2D twin stands down
     };
+    // Furniture is authored by its TOP-LEFT corner: the painting draws it from
+    // (f.x, f.y) across w and h, and the foot a body is sorted against is
+    // f.y + f.h. A mesh, though, is centred on its own origin — so standing it
+    // on (f.x, f.y) put every table half a table north-west of the box you
+    // bump into. Stand it on the middle of the rect instead.
     for (const f of mansion.furniture || []) {
       const piece = PROP_FOR[f.type];
-      if (piece) place(piece, f, f.x, f.y, null);
+      if (piece) place(piece, f, f.x + (f.w || 0) / 2, f.y + (f.h || 0) / 2, null);
     }
     for (const p of mansion.props || []) {
       const piece = p.type === 'planter' || p.type === 'basin' ? 'column'
@@ -544,6 +610,22 @@ class EnvKitRuntime {
           v.crate.scale.setScalar(KIT_SCALE * (0.42 + bar * 0.3));
         }
       }
+    }
+    // A window's glass is a real state in the sim, so the wall keeps up: the
+    // glass holds, then it does not, and the broken panel the swarm came in
+    // through is standing there the next frame. Two instances, one swap.
+    for (const w of this.windows) {
+      const e = w.e;
+      if (!e || !!e.broken === w.wasBroken) continue;
+      w.wasBroken = !!e.broken;
+      const whole = this.roomMeshes && this.roomMeshes.window;
+      const smashed = this.roomMeshes && this.roomMeshes.windowBroken;
+      if (whole && whole.userData.placements[w.intact]) whole.userData.placements[w.intact].off = !!e.broken;
+      if (smashed && smashed.userData.placements[w.smashed]) smashed.userData.placements[w.smashed].off = !e.broken;
+      this._writeInstance(whole, w.intact);
+      this._writeInstance(smashed, w.smashed);
+      if (whole) whole.instanceMatrix.needsUpdate = true;
+      if (smashed) smashed.instanceMatrix.needsUpdate = true;
     }
   }
 
