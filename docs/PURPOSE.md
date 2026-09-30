@@ -20,6 +20,21 @@ you can corner it and end it. The nights are not endless survival; they are **a 
 closing in**. There is an end: kill the Master, and get out. And there is a personal
 stake — the Master took someone of yours; that is why *you*, specifically, came.
 
+## 1b. The shape (FANTASY → VERB → POWER → GOAL → PROGRESSION → VISUAL)
+Owner framework — every retaining game reads cleanly through it, and the last
+stage is the one most easily skipped:
+- **FANTASY** — I am the Hunter who came to kill the Master of this house.
+- **VERB** — hunt: survive the night, mark, gather, arm.
+- **POWER** — deadlier weapons (silver, blessed bolts, wards) + fuller knowledge
+  of the Master; the Hunter grows sharper as the Master grows exposed.
+- **GOAL** — kill the Master, get out.
+- **PROGRESSION** — Hunt Track → weapon tiers → intel milestones → the Master
+  weakens/reveals → the finale.
+- **VISUAL** — *the stage we were weakest on.* Progress must be **SEEN**, not only
+  metered. A racer sees a cooler/faster car; a Clash player sees the base grow;
+  **without reading a tutorial the picture already says "I am building toward
+  something."** A `%` bar does not do this. See P6.
+
 ## 2. The five pillars (each proven in the games we researched)
 
 ### P1 — Destination (there is an END)
@@ -58,6 +73,21 @@ its full story only after ten clears). The personal-stake twist lands near the f
   reveal — the "next unlock" pull.
 - **The Hunt (long):** corner and kill the Master → the ending.
 
+### P6 — VISUALIZE the progression (make it SEEN, not just metered)
+Progress must read at a glance, without a tutorial — the way a Clash base visibly
+grows and a racer's car visibly gets cooler. A `%` bar is not enough. Three visible
+embodiments:
+- **The Refuge = a Hunt Board / Trophy Wall** (the anchor, like the Clash base). The
+  dawn hub fills over time: pinned photos + notes on the Master, red-string intel,
+  **trophies/heads** of what you've killed, a **weapon rack** that grows. One look
+  says *"I'm building the case to kill it."* This is where the 3D work (the env-kit)
+  finally serves retention — a hub room that visibly grows.
+- **The Hunter's visible arsenal** (like the racer's car). Weapon/gear upgrades **show
+  on the body** — a silver blade that glints, a bigger crossbow, wards on the belt —
+  not just a stat.
+- **The Master, progressively revealed.** Shadow → glimpse → full form, showing
+  wounds/weakness as intel accrues — you *see* it become huntable.
+
 ## 3. How the frozen systems fold in (repurposed under the spine, not revived as-is)
 - **Economy** → the **death-into-progress engine**: currency/materials feed weapon tiers
   and intel, all serving the hunt (not an abstract compulsion economy). Bank-vs-risk
@@ -81,8 +111,10 @@ needs, unified by one purpose.
 1. **HUNT TRACK + death-into-progress** — a persistent meter + a per-night "what you
    gained" screen (intel/materials/track), shown on **every** death and dawn. *(This
    alone converts the loop from score-chase to progress — build it first.)*
-2. **The informant + the refuge hub** — one character, a dawn hub screen, lines that react
-   to the track. Relatedness.
+2. **The informant + the refuge hub — built as the visible Hunt Board / Trophy Wall (P6).**
+   One character, a dawn hub that **visibly fills** (pinned Master intel, trophies, a
+   growing weapon rack) and lines that react to the track. Relatedness **and** the
+   "I'm building something" glance in one screen.
 3. **Tonight's hunt objective** — a short goal surfaced at night start + resolved at dawn.
 4. **The finale** — the Master becomes huntable at the track threshold; the Boss-Duel peak
    is the kill. An ending.
