@@ -2313,7 +2313,8 @@ export class Game {
     // after the floor so the painted room stays as the ground beneath them.
     EnvKit.init();
     if (EnvKit.ready) {
-      EnvKit.sync(this.mansion.entrances, this.mansion);
+      // the house she has made of it: the fortress level rides the hunt (#59)
+      EnvKit.sync(this.mansion.entrances, this.mansion, this.save.fortressLevel);
       const env = EnvKit.render({
         camX: r.cam.x, camY: r.cam.y, zoom: r.cam.zoom, tilt: r.tilt,
         w: r.view.w, h: r.view.h, dpr: r.dpr,

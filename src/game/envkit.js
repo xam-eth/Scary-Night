@@ -52,6 +52,10 @@ const FILES = Object.freeze({
   barrel: 'barrel.glb',
   stacked: 'crates_stacked.glb',
   column: 'column.glb',
+  // A fluted stone pillar, 4 units tall. Nothing in the house asked for one
+  // until the fortress did: it is the only piece of the kit the last state of
+  // the house uses (issue #59), and it has been waiting in the folder.
+  pillar: 'pillar.glb',
   candle: 'candle.glb',
   torch: 'torch.glb',
 });
@@ -95,6 +99,138 @@ const PROP_RISE_AT_WALL = new Set(['stairs']);
 const PROP_RANGE = Object.freeze({ default: [0.7, 2.4], column: [1.4, 3.0] });
 
 /**
+ * THE FORTRESS — the dressing bins (#59, docs/PURPOSE.md P6).
+ *
+ * Progression has to be SEEN, not metered: this is the Clash-base beat, the
+ * one glance that says "I changed the place I defend." So the house itself
+ * climbs five states as the hunt advances, and every piece of it comes out of
+ * the kit already vendored — no new assets, no new draw-call budget to speak
+ * of (one instanced mesh per bin, whatever the level).
+ *
+ *   ABANDONED HOUSE   nothing. An empty, dark house with its own furniture.
+ *   SAFE HOUSE        a lit candle in each door jamb.
+ *   FORTIFIED HOUSE   planks nailed across every door that still stands.
+ *   HUNTER'S KEEP     silver ward posts either side of each door, a weapon
+ *                     station in the hall, crates dragged into cover.
+ *   THE LAST FORTRESS stone pillars flanking the front door, torches, cover.
+ */
+const FORTRESS_BINS = ['candle', 'crate', 'stacked', 'column', 'pillar', 'chest', 'table', 'barrel', 'torch'];
+/** The pale blue-white of a silver ward, as an instance tint. */
+const WARD_SILVER = 0xbcd0e6;
+
+/**
+ * Where the fortress's dressing goes, worked out from the plan of the house.
+ *
+ * Pure on purpose: it needs the plan and the size of each piece — nothing
+ * from the GPU — so the harness can assert the whole climb of the house
+ * without a renderer (issue #59). `boxes` is the kit's own measurement of
+ * each piece: { size: {x,y,z}, min: {x,y,z} }.
+ *
+ * A placement is { x, y, z, ry, sx, sy, sz } in world space, plus two
+ * optional notes: `tint` (an instance colour) and `follows` (the id of the
+ * door whose fate this piece shares — a plank on a broken door comes down).
+ */
+export function planFortress(mansion, level, boxes) {
+  const lv = clamp(Math.round(level || 0), 0, 4);
+  const bins = {};
+  for (const k of FORTRESS_BINS) bins[k] = [];
+
+  /**
+   * One dressing piece at a world spot, at an exact world size. The kit
+   * author measured each piece from its own origin, so the footprint centre
+   * goes on the spot and the piece's own size is divided out of the scale.
+   */
+  const put = (piece, x, z, sx, sy, sz, ry = 0, lift = 0, tint = null, follows = null) => {
+    const src = boxes && boxes[piece];
+    if (!src || !bins[piece]) return null;
+    const lx = -(src.min.x + src.size.x / 2) * sx;
+    const lz = -(src.min.z + src.size.z / 2) * sz;
+    const cos = Math.cos(ry), sin = Math.sin(ry);
+    const p = {
+      x: x + lx * cos + lz * sin,
+      y: -src.min.y * sy + lift,
+      z: z - lx * sin + lz * cos,
+      ry, sx, sy, sz, tint, follows,
+    };
+    bins[piece].push(p);
+    return p;
+  };
+  /** World size -> scale, for the piece's own units. */
+  const fit = (piece, wpx, hpx, dpx) => {
+    const src = boxes && boxes[piece];
+    if (!src) return [1, 1, 1];
+    return [wpx / src.size.x, hpx / src.size.y, dpx / src.size.z];
+  };
+
+  if (lv < 1) return bins;                  // ABANDONED HOUSE: nothing has been earned yet
+
+  const doors = ((mansion && mansion.entrances) || []).filter((e) => e.kind === 'door' && e.inside);
+  for (const e of doors) {
+    const horiz = e.axis === 'h';
+    const len = horiz ? e.w : e.h;
+    const ry = horiz ? 0 : Math.PI / 2;
+    const dx = Math.sign((e.inside.x - e.x) || 1);      // which way is indoors
+    const dy = Math.sign((e.inside.y - e.y) || 1);
+    const jamb = len / 2 + 22;
+
+    for (const side of [-1, 1]) {
+      // ---- SAFE HOUSE: a lit candle in each jamb, on the inside ----
+      const cx = e.x + (horiz ? side * jamb : dx * 30);
+      const cz = e.y + (horiz ? dy * 30 : side * jamb);
+      put('candle', cx, cz, ...fit('candle', 17, 55, 17));
+      // ---- HUNTER'S KEEP: a silver ward post either side of the door ----
+      if (lv >= 3) {
+        const wx = e.x + (horiz ? side * (jamb + 26) : dx * 30);
+        const wz = e.y + (horiz ? dy * 30 : side * (jamb + 26));
+        put('column', wx, wz, ...fit('column', 30, 58, 30), 0, 0, WARD_SILVER);
+      }
+    }
+
+    // ---- FORTIFIED HOUSE: planks nailed across the opening ----
+    // The kit has no plank, so a crate is squashed into one: the same oak,
+    // laid across the door at the height she would nail it. They share the
+    // door's fate — `follows` is how the builder finds them again.
+    if (lv >= 2) {
+      const pw = len + 26;                              // they oversail the jambs
+      const plank = fit('crate', pw, 9, 20);
+      for (const [hy, tilt] of [[24, 0.07], [56, -0.06]]) {
+        put('crate', e.x + (horiz ? 0 : dx * 16), e.y + (horiz ? dy * 16 : 0),
+          plank[0], plank[1], plank[2], ry + tilt, hy, null, e.id);
+      }
+    }
+
+    // ---- THE LAST FORTRESS: stone pillars, and a torch, either side of the front ----
+    if (lv >= 4 && e.id === 'frontDoor') {
+      for (const side of [-1, 1]) {
+        const px = e.x + (horiz ? side * (len / 2 + 100) : dx * 100);
+        const pz = e.y + (horiz ? dy * 100 : side * (len / 2 + 100));
+        put('pillar', px, pz, ...fit('pillar', 52, 138, 52));
+        put('torch', px + (horiz ? side * 30 : 0), pz + (horiz ? 0 : side * 30),
+          ...fit('torch', 40, 77, 45));
+      }
+    }
+  }
+
+  // ---- HUNTER'S KEEP: a weapon station in the hall, and a line of cover ----
+  const hall = (mansion && mansion.rooms && mansion.rooms.hall) || null;
+  if (hall && lv >= 3) {
+    const wx = hall.x + Math.min(150, hall.w * 0.22);
+    const wz = hall.y + hall.h - 180;
+    put('table', wx, wz, ...fit('table', 78, 74, 78));
+    put('barrel', wx - 62, wz + 10, ...fit('barrel', 54, 60, 54));
+    put('chest', wx + 64, wz + 14, ...fit('chest', 62, 35, 53));
+    // Crates dragged into a line across the hall with the door left clear:
+    // two flanking it at HUNTER'S KEEP, the full barricade at the top.
+    const line = lv >= 4 ? [200, 340, 480, 760, 900, 1040] : [480, 760];
+    for (const bx of line) {
+      if (bx < hall.x + 40 || bx > hall.x + hall.w - 40) continue;
+      put('stacked', bx, hall.y + hall.h - 70, ...fit('stacked', 70, 72, 76));
+    }
+  }
+  return bins;
+}
+
+/**
  * Autored footprints, in kit units, read off the vendored geometry.
  *
  *   wall         4 long (x -2..2), 4 tall, 1 thick — centred on its own line
@@ -133,11 +269,20 @@ class EnvKitRuntime {
     this.props = null;         // the mansion the furniture was built from
     this.propMeshes = null;
     this.propCounts = null;
+    /* THE FORTRESS (#59): the house she has made of the house she was given.
+     * One number — the level the hunt has earned — and the dressing that goes
+     * with it. Rebuilt only when the level or the mansion changes. */
+    this.fortress = null;
+    this.fortressMeshes = null;
+    this.fortressCounts = null;
+    this.fortressLevel = 0;
+    this.fortressPlanks = [];  // dressing that follows a door: a broken door wears none
     this.diagnostics = () => ({
       ready: this.ready, loading: this.loading, failed: this.failed, error: this.error,
       pieces: Object.keys(this.pieces), doors: this.doors.size,
       room: this.roomCounts || null, props: this.propCounts || null,
       windows: this.windows.length,
+      fortress: this.fortressLevel, fortressPieces: this.fortressCounts || null,
     });
   }
 
@@ -575,12 +720,75 @@ class EnvKitRuntime {
   }
 
   /**
+   * Dress the house for the level the hunt has earned, out of the same kit.
+   *
+   * The dressing that CAN follow the real defence state does: planks sit on a
+   * door she has actually barricaded, and fall away the moment the door is
+   * broken — because a plank across a hole is a lie. The rest is what the
+   * progression bought, and it is rebuilt only when the level changes.
+   */
+  buildFortress(mansion, level) {
+    if (!this.ready || !mansion) return;
+    const lv = clamp(Math.round(level || 0), 0, 4);
+    if (this.fortress === mansion && this.fortressLevel === lv) return;
+    this._clearFortress();
+
+    const bins = planFortress(mansion, lv, this.pieces);
+    this.fortressMeshes = {};
+    this.fortressCounts = {};
+    for (const key of Object.keys(bins)) {
+      if (!bins[key].length) continue;
+      const mesh = this._instanced(key, bins[key]);
+      if (!mesh) continue;
+      // Silver wards: one instance tint, no new asset. A post flanking a door
+      // is just a post until it is plated, and the plating is what she bought.
+      if (bins[key].some((p) => p.tint != null)) {
+        const c = new THREE.Color();
+        for (let i = 0; i < bins[key].length; i++) {
+          c.set(bins[key][i].tint == null ? 0xffffff : bins[key][i].tint);
+          mesh.setColorAt(i, c);
+        }
+        if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+      }
+      this.fortressMeshes[key] = mesh;
+      this.fortressCounts[key] = bins[key].length;
+    }
+    // which dressing answers to a door: broken tonight, the planks come down
+    const byId = new Map((mansion.entrances || []).map((e) => [e.id, e]));
+    for (let i = 0; i < (bins.crate || []).length; i++) {
+      const p = bins.crate[i];
+      const e = p.follows ? byId.get(p.follows) : null;
+      if (e) this.fortressPlanks.push({ e, p, index: i });
+    }
+    this.fortress = mansion;
+    this.fortressLevel = lv;
+  }
+
+  /** Take the dressing down: the level moved, or the mansion did. */
+  _clearFortress() {
+    for (const key of Object.keys(this.fortressMeshes || {})) {
+      const mesh = this.fortressMeshes[key];
+      if (!mesh) continue;
+      this.group.remove(mesh);
+      if (mesh.dispose) mesh.dispose();
+    }
+    this.fortressMeshes = null;
+    this.fortressCounts = null;
+    this.fortressPlanks = [];
+    this.fortress = null;
+  }
+
+  /**
    * Point every mesh at the door state. Read-only on the sim: hp, open,
    * broken and barricade all stay exactly where the 2D game put them.
    */
-  sync(entrances, mansion = null) {
+  sync(entrances, mansion = null, level = null) {
     if (!this.ready || !this.group) return;
-    if (mansion) { this.buildRoom(mansion); this.buildProps(mansion); }
+    if (mansion) {
+      this.buildRoom(mansion);
+      this.buildProps(mansion);
+      this.buildFortress(mansion, level == null ? this.fortressLevel : level);
+    }
     for (const e of entrances) {
       if (e.kind !== 'door') continue;
       const v = this._doorView(e);
@@ -610,6 +818,21 @@ class EnvKitRuntime {
           v.crate.scale.setScalar(KIT_SCALE * (0.42 + bar * 0.3));
         }
       }
+    }
+    // A plank across a hole is a lie. The dressing a door wears follows the
+    // door: she nails the planks up, the night takes the door, and they come
+    // down with it. Everything else the fortress owns is earned and stays.
+    if (this.fortressPlanks.length && this.fortressMeshes) {
+      const mesh = this.fortressMeshes.crate;
+      let dirty = false;
+      for (const plank of this.fortressPlanks) {
+        const off = !!(plank.e && plank.e.broken);
+        if (plank.p.off === off) continue;
+        plank.p.off = off;
+        this._writeInstance(mesh, plank.index);
+        dirty = true;
+      }
+      if (dirty && mesh) mesh.instanceMatrix.needsUpdate = true;
     }
     // A window's glass is a real state in the sim, so the wall keeps up: the
     // glass holds, then it does not, and the broken panel the swarm came in
@@ -662,7 +885,13 @@ class EnvKitRuntime {
     cam.updateProjectionMatrix();
 
     this._foldNear(camY);
-    if (Valen3D._applyRig) Valen3D._applyRig({ x: camX, y: camY, light });
+    // A keep is brighter than a ruin. Every level of the fortress hangs more
+    // light in the house, so the room itself tells her she has been here
+    // before — the lamp is hers now, not the house's.
+    const rigLight = (this.fortressLevel > 0 && light)
+      ? { ...light, level: Math.min(1, (light.level || 0) + this.fortressLevel * 0.05) }
+      : light;
+    if (Valen3D._applyRig) Valen3D._applyRig({ x: camX, y: camY, light: rigLight });
     if (Valen3D.renderer) this.renderer.toneMappingExposure = Valen3D.renderer.toneMappingExposure * 1.1;
 
     const stage = Valen3D.stage;

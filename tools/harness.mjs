@@ -871,6 +871,64 @@ if (args.systems) {
   game.save.hunt = { track: 0, intel: [], materials: 0, nights: 0, lastGain: null };
   game.lastGain = null;
 
+  // ---- THE FORTRESS (#59): the house she is building, out of the same kit ----
+  const { planFortress } = await import('../src/game/envkit.js');
+  // the kit's own measurements, so the plan can be checked without a GPU
+  const BOX = (x, y, z, mx = -x / 2, mz = -z / 2, my = 0) => ({ size: { x, y, z }, min: { x: mx, y: my, z: mz } });
+  const BOXES = {
+    candle: BOX(0.33, 1.05, 0.33), crate: BOX(1.5, 1.5, 1.5), stacked: BOX(2.09, 2.14, 2.25),
+    column: BOX(0.7, 1.4, 0.7), pillar: BOX(1.5, 4, 1.5), chest: BOX(1.7, 0.97, 1.45, -0.85, -1.16),
+    table: BOX(2, 1.886, 2), barrel: BOX(1.8, 2, 1.8), torch: BOX(0.55, 1.06, 0.62, -0.275, -0.62),
+  };
+  const planHouse = {
+    rooms: { hall: { id: 'hall', x: 80, y: 760, w: 1120, h: 740 } },
+    entrances: [
+      { id: 'frontDoor', kind: 'door', axis: 'h', x: 623, y: 1500, w: 126, h: 26, inside: { x: 623, y: 1444 } },
+      { id: 'diningDoor', kind: 'door', axis: 'h', x: 700, y: 40, w: 120, h: 26, inside: { x: 700, y: 96 } },
+      { id: 'kitchenDoor', kind: 'door', axis: 'v', x: 300, y: -326, w: 26, h: 240, inside: { x: 244, y: -326 } },
+    ],
+  };
+  const count = (bins) => Object.values(bins).reduce((n, l) => n + l.length, 0);
+  const plans = [0, 1, 2, 3, 4].map((lv) => planFortress(planHouse, lv, BOXES));
+  line(count(plans[0]) === 0, 'ABANDONED HOUSE: nothing has been earned yet, and nothing is dressed');
+  line(count(plans[1]) > 0 && count(plans[2]) > count(plans[1]) && count(plans[3]) > count(plans[2])
+    && count(plans[4]) > count(plans[3]),
+    `every level dresses more of the house (${plans.map((p) => count(p)).join(' → ')} pieces)`);
+  line(plans[1].candle.length === 6 && !plans[1].crate.length, `SAFE HOUSE: a candle in every jamb (${plans[1].candle.length}), no planks yet`);
+  line(plans[2].crate.length === 6 && plans[2].crate.every((p) => p.follows),
+    `FORTIFIED HOUSE: two planks on every door (${plans[2].crate.length}), and each one answers to its door`);
+  line(!plans[2].column.length && plans[3].column.length === 6 && plans[3].column.every((p) => p.tint != null),
+    `HUNTER'S KEEP: silver ward posts either side of every door (${plans[3].column.length}, plated)`);
+  line(plans[3].table.length === 1 && plans[3].chest.length === 1 && plans[3].barrel.length === 1,
+    'HUNTER\'S KEEP: a weapon station stands in the hall');
+  line(plans[4].pillar.length === 2 && plans[4].torch.length === 2 && !plans[3].pillar.length,
+    'THE LAST FORTRESS: pillars and torches flank the front door — and only at the top');
+  line(plans[4].stacked.length > plans[3].stacked.length,
+    `the line of cover grows with the house (${plans[3].stacked.length} → ${plans[4].stacked.length} crates)`);
+  // the dressing lands where the house is, not in the air or a wall
+  const inHall = (p) => p.x > 80 && p.x < 1200 && p.z > 760 && p.z < 1500;
+  line(plans[4].stacked.every(inHall)
+    && plans[4].pillar.every((p) => Math.abs(p.z - 1500) <= 120 && Math.abs(p.x - 623) > 63),
+    'the cover line stands inside the hall, and the pillars flank the front door instead of blocking it');
+  line(plans[2].crate.every((p) => p.y > 20 && p.y < 70), `the planks are nailed at plank height (${plans[2].crate[0].y.toFixed(0)}px)`);
+  // a door the night took does not keep wearing planks
+  const brokenHouse = { ...planHouse, entrances: [{ ...planHouse.entrances[0], broken: true }, ...planHouse.entrances.slice(1)] };
+  line(planFortress(brokenHouse, 2, BOXES).crate.length === 6, 'a broken door is still dressed by the planner — the builder takes the planks down, night by night');
+  // the level rides the save and survives a reload
+  const fortSave = { nightsSurvived: 0 };
+  bankNight(fortSave, { won: true, survived: 300, kills: 20, intel: [] });
+  line(fortressLevel(fortSave) >= 0 && migrateSave({ ...fortSave, upgrades: {}, builds: {} }).fortressLevel === fortressLevel(fortSave),
+    `the fortress level is derived, and a reload reads the same house (level ${fortressLevel(fortSave)})`);
+  let climbed = -1;
+  const climbSave = { nightsSurvived: 0 };
+  for (let n = 1; n <= 12; n++) {
+    bankNight(climbSave, { won: n % 3 === 0, survived: n % 3 === 0 ? 300 : 150, kills: 10, intel: [] });
+    const lv = fortressLevel(climbSave);
+    if (lv > climbed) climbed = lv;
+    if (lv < climbed) { climbed = -99; break; }
+  }
+  line(climbed >= 3, `twelve nights of hunting climb the house to level ${climbed} (${fortressState(climbSave).name})`);
+
   // ---- the four peaks (#52 A): every peak fires at its trigger, once ----
   const { Climax, PEAK } = await import('../src/game/climax.js');
   const Swarm = (await import('../src/game/enemies.js')).Crawler;

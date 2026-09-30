@@ -430,6 +430,38 @@ try {
   await shootNarration(ls, '17-short');
   await ls.close();
 
+  /* ---------- THE FORTRESS (#59) — the same doorway, two states ----------
+   * Visible progression is the point of the whole build, and it has to be
+   * provable in ONE glance: the house she was given, and the house she made
+   * of it, from the same camera, standing in the same spot, on a phone.
+   * Nothing else moves between the two frames — not the time of night, not
+   * the camera, not the weather. Only what the hunt bought.
+   */
+  const shootFortress = async (pg, tag) => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    await pg.evaluate(async () => {
+      window.__env = (await import('./src/game/envkit.js')).EnvKit;
+      const g = window.__LN;
+      window.__LN_API.stopMove();
+      g.screen = 'playing';
+      g.enemies.length = 0;
+      // outside the front door, looking north at the house she defends
+      g.player.x = 620; g.player.y = 1650; g.player.blood = g.player.bloodMax;
+      g.renderer.snapCamera(620, 1650);
+    });
+    await wait(1400);
+    for (const lv of [0, 4]) {
+      await pg.evaluate((level) => {
+        const g = window.__LN;
+        g.save.fortressLevel = level;
+        window.__env.sync(g.mansion.entrances, g.mansion, level);
+      }, lv);
+      await wait(1600);
+      await shoot(pg, `${tag}-fortress-L${lv}`);
+    }
+  };
+  await shootFortress(m, '18-phone');
+
   console.log('DONE');
 } finally {
   await browser.close();

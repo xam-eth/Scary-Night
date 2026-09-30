@@ -13,7 +13,7 @@ import { PAL } from '../core/render.js';
 import { UPGRADES, upgradeLevel, DIFFICULTY, CODEX, NIGHT_DURATION, GAME_VERSION } from '../core/config.js';
 import { unlocked, nextRevealLine, LANES, nextRank, rankCost, rankCount, LANE_CAP, houseTitle } from '../game/economy.js';
 import { fragmentsKnown, endingFrame } from '../game/narrative.js';
-import { intelLine, huntPct, huntProgress, fortressState, huntTells } from '../game/hunt.js';
+import { intelLine, huntPct, huntProgress, fortressState, huntTells, FORTRESS_STATES } from '../game/hunt.js';
 import { drawPlateCover } from '../game/roomplates.js';
 import { Valen3D } from '../game/valen3d.js';
 import { IAP, CATALOG } from '../shop/iap.js';
@@ -1493,11 +1493,13 @@ function drawHuntGain(game, ctx, w, h, y, heading = 'WHAT THE NIGHT TAUGHT YOU')
 
   // the house is becoming hers (P6) — and the end is in sight
   if (gain.levelUp) {
+    // The Clash-base beat, in one line: what the house was, and what it is now.
     const st = fortressState(game.save);
+    const from = FORTRESS_STATES[gain.levelBefore] || FORTRESS_STATES[0];
     ctx.font = `italic 400 ${phone ? 11 : 12.5}px ${SERIF}`;
     if ('letterSpacing' in ctx) ctx.letterSpacing = '1px';
     ctx.fillStyle = 'rgba(232,200,140,0.95)';
-    ctx.fillText(`THE HOUSE IS BECOMING YOURS · ${st.name}`, w / 2, y);
+    ctx.fillText(`THE HOUSE IS BECOMING YOURS · ${from.name} ▸ ${st.name}`, w / 2, y);
     y += phone ? 15 : 17;
   }
   for (const tell of huntTells(game.save)) {
