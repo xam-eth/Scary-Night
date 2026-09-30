@@ -77,11 +77,14 @@ its full story only after ten clears). The personal-stake twist lands near the f
 Progress must read at a glance, without a tutorial — the way a Clash base visibly
 grows and a racer's car visibly gets cooler. A `%` bar is not enough. Three visible
 embodiments:
-- **The Refuge = a Hunt Board / Trophy Wall** (the anchor, like the Clash base). The
-  dawn hub fills over time: pinned photos + notes on the Master, red-string intel,
-  **trophies/heads** of what you've killed, a **weapon rack** that grows. One look
-  says *"I'm building the case to kill it."* This is where the 3D work (the env-kit)
-  finally serves retention — a hub room that visibly grows.
+- **The FORTRESS transformation** (the anchor, like the Clash base — see
+  `docs/SIGNATURE-SCENES.md` hero #2). The **mansion itself visibly changes** as you
+  progress: `ABANDONED HOUSE → SAFE HOUSE → FORTIFIED HOUSE → HUNTER'S KEEP → THE LAST
+  FORTRESS` — reinforced doors, barricades, silver wards, traps, a weapon station, the
+  candles and furniture becoming defenses. One look at the room says *"I changed the
+  place I defend — I'm building something."* This is the strongest visible-progression
+  cue and where the 3D env-kit finally serves retention. (A trophy/weapon rack on the
+  wall is one element of it.)
 - **The Hunter's visible arsenal** (like the racer's car). Weapon/gear upgrades **show
   on the body** — a silver blade that glints, a bigger crossbow, wards on the belt —
   not just a stat.
