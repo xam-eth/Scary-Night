@@ -1186,6 +1186,7 @@ export class Mansion {
   drawProps(ctx, game) {
     const t = game.time;
     for (const p of this.props) {
+      if (p.env3d) continue;          // a mesh is standing in its place (#55)
       if (!game.renderer.isVisible(p.x, p.y, 320)) continue;
       switch (p.type) {
         case 'stakes': {
@@ -1540,6 +1541,7 @@ export class Mansion {
     const t = game.time;
     for (const f of this.furniture) {
       if (f.type === 'none') continue;
+      if (f.env3d) continue;          // a mesh is standing in its place (#55)
       if (opts.skipTall && isTallProp(f)) continue;
       if (!game.renderer.isVisible(f.x, f.y, Math.max(f.w, f.h) + 60)) continue;
       ctx.save();

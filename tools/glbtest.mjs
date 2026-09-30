@@ -322,5 +322,28 @@ const mansionCode = fs.readFileSync(path.join(ROOT, 'src/game/mansion.js'), 'utf
 ok('a door with a mesh does not also paint its twin', mansionCode.includes('e.env3d'));
 
 
+/* ---------- the modular room ---------- */
+console.log('\nmodular room:');
+
+const gameCode = fs.readFileSync(path.join(ROOT, 'src', 'game', 'game.js'), 'utf8');
+const weaponsCode = fs.readFileSync(path.join(ROOT, 'src', 'game', 'weapons.js'), 'utf8');
+const coachCode = fs.readFileSync(path.join(ROOT, 'src', 'game', 'coach.js'), 'utf8');
+
+ok('floor, walls and props are instanced, never one object each',
+  /_instanced\(/.test(envCode) && /buildRoom\(/.test(envCode) && /buildProps\(/.test(envCode)
+    && !/new THREE\.Mesh\(/.test(envCode));
+
+// every piece named in the issue has to be placed by something
+const propsCode = envCode.slice(envCode.indexOf('buildProps(mansion)'), envCode.indexOf('Point every mesh at the door state'));
+for (const piece of ['table', 'chair', 'shelf', 'chest', 'barrel', 'stacked', 'column', 'candle', 'torch']) {
+  ok(`the kit's ${piece} has somewhere to stand`, propsCode.includes(piece));
+}
+ok('a fire on the floor gets something burning', /l\.type !== 'fire'/.test(envCode));
+ok('a prop with a mesh does not also paint its twin',
+  /f\.env3d/.test(mansionCode) && /p\.env3d/.test(mansionCode) && /f\.env3d/.test(gameCode));
+ok('the reach is measured as the room is drawn, not on the floor',
+  /swingDist\(/.test(gameCode) && /swingDist\(/.test(coachCode) && /tilt/.test(weaponsCode));
+ok('a swing dead to the right keeps its aim', /swingAngle \?\? player\.angle/.test(gameCode));
+
 console.log(failures === 0 ? '\nGLB registry + environment kit: all PASS' : `\n${failures} FAILURE(S)`);
 process.exit(failures === 0 ? 0 : 1);

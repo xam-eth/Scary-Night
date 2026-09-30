@@ -2300,7 +2300,7 @@ export class Game {
     const layer = [];
     for (const e of this.enemies) layer.push({ y: e.y, enemy: e });
     for (const f of m.furniture) {
-      if (!isTallProp(f)) continue;
+      if (!isTallProp(f) || f.env3d) continue;   // a mesh stands in its place (#55)
       layer.push({ y: propFootY(f), prop: f });
     }
     layer.push({ y: p.y, player: true });

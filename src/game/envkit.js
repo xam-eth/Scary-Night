@@ -43,7 +43,44 @@ const FILES = Object.freeze({
   wall: 'wall.glb',
   wallCorner: 'wall_corner.glb',
   wallCracked: 'wall_cracked.glb',
+  table: 'table.glb',
+  chair: 'chair.glb',
+  shelf: 'shelf.glb',
+  chest: 'chest.glb',
+  barrel: 'barrel.glb',
+  stacked: 'crates_stacked.glb',
+  column: 'column.glb',
+  candle: 'candle.glb',
+  torch: 'torch.glb',
 });
+
+/**
+ * The house's own furniture, mapped onto the kit.
+ *
+ * Scale is the piece's: a chair is 1.2 kit units to a wall's 4, so at one
+ * shared scale a chair is 40px against Valen's 72 — the kit and the woman
+ * agree, and nothing here resizes either. Each piece is scaled to the
+ * footprint the 2D prop already had and BAILED OUT if that needs more than
+ * the clamp: a 560px refectory table would have to become a 2.5m long table
+ * standing 130cm high, and a mesh that does not fit its own collision box is
+ * worse than the painted one it replaced.
+ *
+ * One honest substitution: the kit's `shelf` is a wall bracket, 0.45 units —
+ * 15px, a hip-high ledge. The mansion's bookcases are floor-standing, so
+ * they borrow the crate stack, which is the right height and the right
+ * silhouette from across a dark room.
+ */
+const PROP_FOR = Object.freeze({
+  longTable: 'table', sideTable: 'table', desk: 'table', pottingBench: 'table', altar: 'table',
+  chair: 'chair', armchair: 'chair', sofa: 'chair', pew: 'chair',
+  cabinet: 'chest',
+  barrel: 'barrel',
+  crates: 'stacked',
+  shelf: 'stacked', wineRack: 'stacked',
+});
+/** Pieces with no footprint of their own get a scale, not a measurement. */
+const PROP_SCALE = Object.freeze({ planter: 2.2, basin: 2.2, candleStand: 1.6, candelabra: 1.9 });
+const PROP_RANGE = Object.freeze({ default: [0.7, 2.4], column: [1.4, 3.0] });
 
 /**
  * Autored footprints, in kit units, read off the vendored geometry.
@@ -80,9 +117,13 @@ class EnvKitRuntime {
     this.room = null;          // the mansion the room was built from
     this.roomMeshes = null;
     this.roomCounts = null;
+    this.props = null;         // the mansion the furniture was built from
+    this.propMeshes = null;
+    this.propCounts = null;
     this.diagnostics = () => ({
       ready: this.ready, loading: this.loading, failed: this.failed, error: this.error,
-      pieces: Object.keys(this.pieces), doors: this.doors.size, room: this.roomCounts || null,
+      pieces: Object.keys(this.pieces), doors: this.doors.size,
+      room: this.roomCounts || null, props: this.propCounts || null,
     });
   }
 
@@ -369,12 +410,66 @@ class EnvKitRuntime {
   }
 
   /**
+   * The house's furniture, instanced, standing on the anchors the 2D mansion
+   * already uses. Candles and torches go where their light already is, so the
+   * light that used to be a pool painted on the floor comes out of something.
+   *
+   * They draw with the room, under the actors. A prop never hides the player —
+   * which is a choice, and the same one the painted furniture made when it
+   * stood in the depth queue: you can always see her.
+   */
+  buildProps(mansion) {
+    if (!this.ready || !mansion || this.props === mansion) return;
+    const s = KIT_SCALE;
+    const bins = { table: [], chair: [], shelf: [], chest: [], barrel: [], stacked: [], column: [], candle: [], torch: [] };
+    const place = (piece, item, x, z, fit) => {
+      const src = this.pieces[piece];
+      if (!src || !bins[piece]) return;
+      const foot = Math.max(src.size.x, src.size.z) * s;
+      let k = fit;
+      if (k == null) {
+        const span = Math.max(item.w || 0, item.h || 0);
+        if (!span) return;
+        k = span / foot;
+      }
+      const range = PROP_RANGE[piece] || PROP_RANGE.default;
+      if (k < range[0] || k > range[1]) return;   // the painted one keeps its place
+      const scale = k * s;
+      bins[piece].push({
+        x, y: -src.min.y * scale, z, ry: item.rot || 0, sx: scale, sy: scale, sz: scale,
+      });
+      item.env3d = true;                          // its 2D twin stands down
+    };
+    for (const f of mansion.furniture || []) {
+      const piece = PROP_FOR[f.type];
+      if (piece) place(piece, f, f.x, f.y, null);
+    }
+    for (const p of mansion.props || []) {
+      const piece = p.type === 'planter' || p.type === 'basin' ? 'column'
+        : (p.type === 'candleStand' || p.type === 'candelabra' ? 'candle' : null);
+      if (piece) place(piece, p, p.x, p.y, PROP_SCALE[p.type] || 1.6);
+    }
+    for (const l of mansion.lights || []) {
+      if (l.type !== 'fire') continue;
+      place('torch', { x: l.x, y: l.y }, l.x, l.y, 2.2);
+    }
+    this.propMeshes = {};
+    this.propCounts = {};
+    for (const key of Object.keys(bins)) {
+      const mesh = this._instanced(key, bins[key]);
+      if (mesh) this.propMeshes[key] = mesh;
+      if (bins[key].length) this.propCounts[key] = bins[key].length;
+    }
+    this.props = mansion;
+  }
+
+  /**
    * Point every mesh at the door state. Read-only on the sim: hp, open,
    * broken and barricade all stay exactly where the 2D game put them.
    */
   sync(entrances, mansion = null) {
     if (!this.ready || !this.group) return;
-    if (mansion) this.buildRoom(mansion);
+    if (mansion) { this.buildRoom(mansion); this.buildProps(mansion); }
     for (const e of entrances) {
       if (e.kind !== 'door') continue;
       const v = this._doorView(e);
