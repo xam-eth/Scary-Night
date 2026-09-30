@@ -6,6 +6,7 @@
 
 import { TAU, writeSave, clamp } from '../core/util.js';
 import { PLAYER } from '../core/config.js';
+import { swingDist } from './weapons.js';
 
 // The servant door is already knocking. Learn the stick, then go to it.
 // Planks for the fort come after that choice, not before the door falls.
@@ -210,9 +211,11 @@ function pendingLesson(game) {
 
 function enemyInReach(game) {
   const p = game.player;
+  // Same measure the swing uses, so the tip fires exactly when the claw would
+  // land (weapons.js) — not a floor-space guess that disagrees with the arc.
   return game.enemies.some((e) => {
     if (e.dead) return false;
-    return Math.hypot(e.x - p.x, e.y - p.y) <= PLAYER.attackRange + (e.radius || 12) - 2;
+    return swingDist(game, p, e) <= PLAYER.attackRange + (e.radius || 12) - 2;
   });
 }
 

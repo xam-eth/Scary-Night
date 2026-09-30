@@ -13,7 +13,7 @@ import { Input } from '../core/input.js';
 import { Renderer, Particles, Decals, PAL } from '../core/render.js';
 import {
   clamp, lerp, damp, rand, randInt, chance, pick, dist, TAU, fmtClock,
-  loadSave, writeSave, defaultSave, Rng,
+  loadSave, writeSave, defaultSave, Rng, angDiff, visualAngle,
 } from '../core/util.js';
 import {
   NIGHT_DURATION, DAWN_AT, COUNTDOWN_AT, SILENCE_AT, PANIC_AT, PLAYER, DOOR, RES,
@@ -36,7 +36,7 @@ import { Enemy3D } from './enemy3d.js';
 import { EnvKit } from './envkit.js';
 import { IAP } from '../shop/iap.js';
 import { drawHUD, drawWorldPrompts, urgentGuidance, pauseButtonBox, weaponChipBox } from './hud.js';
-import { WEAPONS, weaponById, nextWeapon } from './weapons.js';
+import { WEAPONS, weaponById, nextWeapon, swingBearing, swingDist } from './weapons.js';
 import { nextBeat, ackBeat, beatById, endingReady, narrationLines, beatSeen } from './narrative.js';
 import { updateCoach, drawCoachWorld } from './coach.js';
 import { Climax, PEAK } from './climax.js';
@@ -1448,12 +1448,21 @@ export class Game {
     const arc = tool.arc;
     let hits = 0;
     let heft = 16;
+    // The swing connects inside the arc the player SAW. Reach and bearing are
+    // measured on screen, where the claw was drawn — a circle, not the floor
+    // ellipse it used to be (see weapons.js). Only this test moved; the knock-
+    // back below is still a shove along the floor.
+    const tilt = (this.renderer && this.renderer.tilt) || 1;
+    // `??` and not `||`: a swing dead to the right IS the angle 0, and `||`
+    // would throw it away and aim the cone wherever she happened to be
+    // walking — which is exactly the "the claw missed" report.
+    const facing = visualAngle(player.swingAngle ?? player.angle ?? 0, tilt);
     for (const e of this.enemies) {
       if (e.dead) continue;
-      const d = dist(e.x, e.y, player.x, player.y);
+      const d = swingDist(this, player, e);
       if (d > tool.range + e.radius) continue;
       const a = Math.atan2(e.y - player.y, e.x - player.x);
-      let diff = Math.abs(((a - player.swingAngle + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+      const diff = Math.abs(angDiff(swingBearing(this, player, e), facing));
       const touching = d < player.radius + (e.radius || 12) + 14;
       if (!touching && diff > arc / 2) continue;
       const dmg = tool.damage * player.damageMul * (player.frenzy ? player.frenzy.dmg : 1);
@@ -1492,7 +1501,7 @@ export class Game {
       for (let i = 0; i < steps; i++) {
         const t = (i / (steps - 1) - 0.5) * tool.arc;
         const a = ang + t;
-        const r = tool.range * (0.62 + (i % 3) * 0.08);
+        const r = tool.range * (0.72 + (i % 3) * 0.14);   // out to the reach, not short of it
         this.particles.burst('spark', player.x + Math.cos(a) * r, player.y + Math.sin(a) * r, 1, {
           color: 'rgba(220, 210, 186, 0.92)', speedMin: 16, speedMax: 64, lifeMin: 0.08, lifeMax: 0.2, sizeMin: 1.2, sizeMax: 2.6, glow: true,
         });
@@ -2177,7 +2186,7 @@ export class Game {
     const p = this.player;
     for (const e of this.enemies) {
       if (e.dead) continue;
-      const near = p && dist(e.x, e.y, p.x, p.y) < PLAYER.attackRange + (e.radius || 12) + 24;
+      const near = p && swingDist(this, p, e) < PLAYER.attackRange + (e.radius || 12) + 24;
       const hurt = e.hpMax && e.hp / e.hpMax < 0.72;
       if (!near && !hurt) continue;
       const big = (e.type && e.type.bloodValue > 24) ? 1.7 : 1;

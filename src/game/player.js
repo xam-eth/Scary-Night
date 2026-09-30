@@ -323,14 +323,17 @@ export class Player {
     // reads as the attack simply not working. Only bends toward a target that is
     // already inside the cone, so aiming still matters.
     let bestA = null, bestScore = -1;
+    const tool0 = weaponById(this.weapon);
+    // Distance and bearing as they are DRAWN: the reach is a circle on screen,
+    // not an ellipse on the floor, so aim assist and the hit agree (weapons.js).
+    const face = visualAngle(this.angle, (game.renderer && game.renderer.tilt) || 1);
     for (const e of game.enemies) {
       if (e.dead) continue;
-      const d = dist(this.x, this.y, e.x, e.y);
-      const tool = weaponById(this.weapon);
-      const reach = (tool.kind === 'ranged' ? Math.min(tool.range, 220) : tool.range) + (e.radius || 0);
+      const d = swingDist(game, this, e);
+      const reach = (tool0.kind === 'ranged' ? Math.min(tool0.range, 220) : tool0.range) + (e.radius || 0);
       if (d > reach) continue;
-      const a = Math.atan2(e.y - this.y, e.x - this.x);
-      const off = Math.abs(angDiff(a, this.angle));
+      const a = swingBearing(game, this, e);
+      const off = Math.abs(angDiff(a, face));
       // Touch controls face the way you walk, so a thing on your hip is not
       // "in the cone" and the claw used to miss the fight you were in.
       const touching = d < this.radius + (e.radius || 12) + 14;
@@ -338,7 +341,10 @@ export class Player {
       const score = (touching ? 3 : 0) + (1 - Math.min(off, 2.4) / 2.4) + (1 - d / reach);
       if (score > bestScore) { bestScore = score; bestA = a; }
     }
-    if (bestA !== null) { this.swingAngle = bestA; this.angle = bestA; }
+    if (bestA !== null) {
+      const world = swingBearingToWorld(game, bestA);
+      this.swingAngle = world; this.angle = world;
+    }
     this.state = PSTATE.ATTACK;
     const clawCost = PLAYER.attackCost * (this.bloodPct < 0.15 ? 0 : 1) / ((this.attackSpeedMul || 1) * (this.frenzy ? 1.6 : 1));
     this.blood = Math.max(0, this.blood - clawCost);
@@ -526,16 +532,24 @@ export class Player {
     const a = this.swingAngle ?? this.angle;
     const arc = tool.arc;
     const reach = tool.range;
-    const start = a - arc / 2 + (1 - sweep) * arc * 0.35;
-    const end = a - arc / 2 + sweep * arc;
+    const tilt = (game.renderer && game.renderer.tilt) || 1;
+    // Drawn upright and out to the reach itself, because the marks ARE the
+    // reach. In floor space this same ring came out as an ellipse — 88px
+    // across, 50px up and down — while the claw connects in a circle, so a
+    // swing to the side landed on things outside the arc and a swing up or
+    // down missed things inside it. The wedge rides the facing as drawn.
+    const start = -arc / 2 + (1 - sweep) * arc * 0.35;
+    const end = -arc / 2 + sweep * arc;
 
     const ink = clawInk(game);
     ctx.save();
+    if (game.renderer && game.renderer.upright) game.renderer.upright(ctx, this.x, this.y);
     ctx.translate(this.x, this.y);
+    ctx.rotate(visualAngle(a, tilt));
     ctx.globalCompositeOperation = 'screen';
     ctx.lineCap = 'round';
     for (let i = 0; i < 3; i++) {
-      const rad = reach * (0.52 + i * 0.18);
+      const rad = reach * (0.58 + i * 0.21);        // the last mark is the reach
       const rgb = i === 1 ? ink.hot : ink.edge;
       ctx.strokeStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${((i === 1 ? 0.9 : 0.72) * fade).toFixed(3)})`;
       ctx.lineWidth = i === 1 ? 3.6 : 2.4;
@@ -547,7 +561,7 @@ export class Player {
       ctx.strokeStyle = `rgba(214, 206, 186, ${(0.85 * fade).toFixed(3)})`;
       ctx.lineWidth = 2.2;
       ctx.beginPath();
-      ctx.arc(0, 0, reach * 0.92, start, end);
+      ctx.arc(0, 0, reach, start, end);
       ctx.stroke();
     }
     ctx.restore();

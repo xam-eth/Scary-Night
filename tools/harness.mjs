@@ -877,6 +877,26 @@ if (args.systems) {
   line(hot > plain * 1.5, `the frenzy shreds (${plain.toFixed(0)} -> ${hot.toFixed(0)} a claw)`);
   game.climax.endFrenzy(game);
   line(!game.player.frenzy && game.slowScale === 1 || !game.player.frenzy, 'the frenzy ends and takes the overdrive with it');
+  // The room is drawn obliquely, so a floor circle is an ELLIPSE on screen —
+  // 88px across, 50px up. The reach is therefore measured as drawn (see
+  // weapons.js): the same apparent distance must land from every side.
+  const tiltNow = game.renderer.tilt || 1;
+  const reachProbe = (r, deg) => {
+    const th = (deg * Math.PI) / 180;
+    game.enemies.length = 0;
+    const c = new Swarm(game.player.x + Math.cos(th) * r, game.player.y + (Math.sin(th) * r) / tiltNow, {});
+    c.hp = 999; c.hpMax = 999;
+    game.enemies.push(c);
+    game.player.swingAngle = Math.atan2(Math.sin(th) / tiltNow, Math.cos(th));
+    game.playerAttackHit(game.player);
+    return 999 - c.hp > 0;
+  };
+  const sides = [0, 90, 180, 270];
+  const inside = sides.map((d) => reachProbe(58, d));
+  const outside = sides.map((d) => reachProbe(104, d));
+  line(inside.every(Boolean), `the claw lands at the same apparent distance from every side (${inside.join(',')})`);
+  line(outside.every((v) => v === false), `and misses at the same apparent distance from every side (${outside.join(',')})`);
+  game.enemies.length = 0;
   run(2);
   line(game.slowScale === 1, 'and time goes back to normal');
 
