@@ -248,6 +248,7 @@ export function migrateSave(save) {
   // THE HUNT (docs/PURPOSE.md): an old save joins the hunt at its beginning,
   // with the nights it already survived counted as intel owed, not thrown away.
   save.hunt = save.hunt || { track: 0, intel: [], materials: 0, nights: 0, lastGain: null };
+  save.killsBy = save.killsBy || {};
   save.hunt.intel = Array.isArray(save.hunt.intel) ? save.hunt.intel : [];
   save.hunt.track = Math.max(0, Number(save.hunt.track) || 0);
   save.hunt.materials = Math.max(0, Math.round(Number(save.hunt.materials) || 0));

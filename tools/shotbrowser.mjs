@@ -462,6 +462,35 @@ try {
   };
   await shootFortress(m, '18-phone');
 
+  /* ---------- THE REFUGE (#56 P3) — the board she keeps, empty and full -----
+   * The hub is the other half of visible progression: the same room, the same
+   * woman, and a board that fills as the hunt does. Shot twice so the claim
+   * ("it visibly fills") is a pair of frames anyone can look at.
+   */
+  const shootRefuge = async (pg, tag) => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const board = async (level, intel, killsBy, weapon, nights) => {
+      await pg.evaluate(async ([lv, ids, kills, wep, n]) => {
+        const g = window.__LN;
+        g.save.hunt = { track: lv, intel: ids, materials: lv * 2 + 10, nights: n, lastGain: null };
+        g.save.killsBy = kills;
+        g.save.weapon = wep;
+        g.lastGain = null;
+        g.setScreen('refuge', 'victory');
+      }, [level, intel, killsBy, weapon, nights]);
+      await wait(1500);
+    };
+    await board(6, ['foe:crawler'], { crawler: 4 }, 'claw', 1);
+    await shoot(pg, `${tag}-refuge-early`);
+    await board(78, [
+      'foe:crawler', 'foe:zombie', 'foe:werewolf', 'foe:ghoul', 'foe:stalker',
+      'room:basement', 'room:chapel', 'room:study', 'peak:duel', 'peak:dawnbreak',
+      'deed:first-night', 'deed:kills-25',
+    ], { crawler: 41, zombie: 26, werewolf: 9, ghoul: 4, stalker: 2 }, 'sword', 11);
+    await shoot(pg, `${tag}-refuge-late`);
+  };
+  await shootRefuge(m, '19-phone');
+
   console.log('DONE');
 } finally {
   await browser.close();

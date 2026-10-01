@@ -121,6 +121,7 @@ export const defaultSave = () => ({
   relics: 0,                // hard currency. Play drip or money-bought goods. Never power.
   nightsSurvived: 0,
   nightsAttempted: 0,
+  killsBy: {},               // what she has put down, by kind — the refuge wall hangs these
   bestTime: 0,
   bestDefeated: 0,
   upgrades: { blood: 0, speed: 0, repair: 0, damage: 0, recovery: 0 },

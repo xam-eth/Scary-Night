@@ -919,6 +919,48 @@ if (args.systems) {
   bankNight(fortSave, { won: true, survived: 300, kills: 20, intel: [] });
   line(fortressLevel(fortSave) >= 0 && migrateSave({ ...fortSave, upgrades: {}, builds: {} }).fortressLevel === fortressLevel(fortSave),
     `the fortress level is derived, and a reload reads the same house (level ${fortressLevel(fortSave)})`);
+  // ---- the informant + the refuge (#56 P3): one person, who remembers ----
+  const { INFORMANT, informantLine, informantStage, informantIntelLine, boardEntries, WEAPON_NAMES, informantLines, informantCounts } = await import('../src/game/informant.js');
+  const firstNight = { nightsSurvived: 0 };
+  const lastNight = { hunt: { track: 92, intel: [], materials: 0, nights: 11 }, killsBy: {}, weapon: 'claw' };
+  line(informantStage(firstNight) === 0 && informantStage(lastNight) === 4,
+    'she has a different stage of the relationship for a first night and a last one');
+  const saidFirst = informantLine(firstNight, 'dawn', null).text;
+  const saidLast = informantLine(lastNight, 'dawn', null).text;
+  line(saidFirst !== saidLast, `the same dawn is a different sentence eleven nights later ("${saidFirst.slice(0, 32)}…" / "${saidLast.slice(0, 32)}…")`);
+  line(informantLine(firstNight, 'death', null).text !== informantLine(firstNight, 'dawn', null).text,
+    'a death and a dawn are not the same thing to her');
+  const withWolf = informantLine(firstNight, 'dawn', { won: true, intel: ['foe:werewolf'] });
+  line(withWolf.kind === 'intel' && /HOUND/i.test(withWolf.text),
+    `she talks about what you walked in with, not about the weather ("${withWolf.text.slice(0, 44)}…")`);
+  line(informantIntelLine({ intel: ['foe:crawler'] }) === null, 'and has nothing new to say about a fact she has already spoken for');
+  const boardSave = { hunt: { track: 40, intel: ['foe:crawler', 'room:chapel'], materials: 30, nights: 4 }, killsBy: { crawler: 7 }, weapon: 'sword' };
+  const board = boardEntries(boardSave);
+  line(board.intel.length === 2 && board.trophies.length === 1 && board.trophies[0].count === 7,
+    `the board hangs only what she knows: ${board.intel.length} facts, ${board.trophies[0].name} ×${board.trophies[0].count}`);
+  line(board.weapon.name === WEAPON_NAMES.sword, `the rack holds the weapon she actually carries (${board.weapon.name})`);
+  line(boardEntries({ hunt: { track: 0, intel: [] }, killsBy: {} }).intel.length === 0, 'an empty board is empty — nothing on it is invented');
+  const herLines = informantLines();
+  const herCounts = informantCounts();
+  line(INFORMANT.name && herLines.every((t) => t.length > 12 && t.length < 130 && !/TODO|lorem|placeholder/i.test(t)),
+    `every line of hers is final, short enough for the room, and hers (${herCounts.stageLines} stage lines + ${herCounts.reactions} reactions)`);
+  // a kill is hung on the wall by kind, not only counted
+  game.freshRun();
+  game.screen = 'playing';
+  const crawlersBefore = (game.save.killsBy || {}).crawler || 0;
+  game.onEnemyKilled({ key: 'crawler', type: { bloodValue: 10 }, x: game.player.x, y: game.player.y });
+  line(((game.save.killsBy || {}).crawler || 0) === crawlersBefore + 1, 'a kill goes on the refuge wall by kind, not just into a total');
+  // the room itself, rendered: a way forward and a way out, on the thumb
+  game.screen = 'refuge';
+  game.enterRefuge('victory');
+  game.render();
+  const refugeBtns = game.ui.filter((b) => b.label === 'ANOTHER NIGHT' || b.label === 'MAIN MENU' || b.label === 'UPGRADES');
+  line(refugeBtns.length === 3 && refugeBtns.every((b) => b.h >= 40), 'the refuge has a way forward, a way past, and a way out — all on the thumb');
+  line(!!(game.refugeLine && game.refugeLine.text), `and she says something when you walk in ("${String(game.refugeLine.text).slice(0, 40)}…")`);
+  game.screen = 'menu';
+  game.save.killsBy = {};
+  game.lastGain = null;
+
   let climbed = -1;
   const climbSave = { nightsSurvived: 0 };
   for (let n = 1; n <= 12; n++) {

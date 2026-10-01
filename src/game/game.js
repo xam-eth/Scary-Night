@@ -30,6 +30,7 @@ import {
 } from './economy.js';
 import { House } from './house.js';
 import { bankNight } from './hunt.js';
+import { informantLine } from './informant.js';
 import { Haunts } from './haunts.js';
 import { Ads } from '../shop/ads.js';
 import { Valen3D } from './valen3d.js';
@@ -361,8 +362,20 @@ export class Game {
     this.ui = [];
     if (s !== 'playing') this.audio.play('uiClick', { vol: 0.5 });
     if (s === 'settings' || s === 'upgrades' || s === 'collection' || s === 'help' || s === 'shop' || s === 'privacy') {
-      this.settingsReturn = from || (prev === 'paused' ? 'paused' : prev === 'death' ? 'death' : prev === 'victory' ? 'victory' : 'menu');
+      this.settingsReturn = from || (prev === 'paused' ? 'paused' : prev === 'refuge' ? 'refuge' : prev === 'death' ? 'death' : prev === 'victory' ? 'victory' : 'menu');
     }
+    if (s === 'refuge') this.enterRefuge(from);
+  }
+
+  /**
+   * THE REFUGE (#56 P3) — the room between nights, and the one person in it.
+   * She is given her line once, on the way in, so she says the same thing if
+   * you stand and look at her: a person, not a tooltip.
+   */
+  enterRefuge(from) {
+    this.refugeFrom = from || (this.screen === 'death' ? 'death' : 'victory');
+    this.refugeT = 0;
+    this.refugeLine = informantLine(this.save, 'hub', this.lastGain);
   }
 
   togglePause(on) {
@@ -634,6 +647,7 @@ export class Game {
       case 'dawnCard': this.updateDawnCard(dt); break;
       case 'ending': this.endingT = (this.endingT || 0) + dt; break;
       case 'victory': this.victoryScreenT += dt; break;
+      case 'refuge': this.refugeT = (this.refugeT || 0) + dt; break;
     }
 
     // global easing
@@ -1609,6 +1623,11 @@ export class Game {
   onEnemyKilled(enemy) {
     const p = this.player;
     this.stats.kills++;
+    // what you took off its hounds is what hangs on the refuge wall (#56 P3)
+    if (enemy && enemy.key) {
+      const by = this.save.killsBy || (this.save.killsBy = {});
+      by[enemy.key] = (by[enemy.key] || 0) + 1;
+    }
     // a kill is a feed; a chain of them is what turns the moon red
     this.climax.noteFeed(this);
     const gain = enemy.type.bloodValue * p.recoveryMul;
@@ -2206,6 +2225,7 @@ export class Game {
       case 'dawnCard': UI.drawDawnCard(this, ctx, w, h); break;
       case 'ending': UI.drawEnding(this, ctx, w, h); break;
       case 'victory': UI.drawVictory(this, ctx, w, h); break;
+      case 'refuge': UI.drawRefuge(this, ctx, w, h); break;
     }
     if (this.screen === 'playing') UI.drawTutorial(this, ctx, w, h);
     if (TUNING.showDebug) this.drawDebug(ctx, w, h);
@@ -2757,6 +2777,9 @@ export class Game {
       this._pauseHeld = true;
       if (this.screen === 'playing') this.togglePause(true);
       else if (this.screen === 'paused') this.togglePause(false);
+      // leaving the refuge goes back where you came from — it is a room in the
+      // dawn, not a place you get stuck in
+      else if (this.screen === 'refuge') this.setScreen(this.refugeFrom || 'victory');
     }
     if (!input.keys.pause) this._pauseHeld = false;
     if (input.keys.weapon && !this._weaponHeld && this.screen === 'playing') {

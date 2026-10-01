@@ -163,6 +163,22 @@ ok('death screen reached', await settle('death', 2000, 4), `screen=${await scree
 await pump(150); // the death overlay fades its buttons in (~1.5s sim) — click only once they are registered
 { const r = await clickOk('TRY AGAIN', ['intro', 'playing']); ok('TRY AGAIN restarts the night', r.pass, r.why); }
 
+console.log('\n=== THE REFUGE (the dawn hub — #56 P3) ===');
+// Land on the victory screen the way a survived night does, then walk into
+// her room and back out. The buttons are the point: the hub has to answer.
+await page.evaluate(() => {
+  const g = window.__LN;
+  g.screen = 'victory'; g.victoryScreenT = 3; g.bankedNow = 40; g.newRecord = false;
+  g.time = 300; g.stats.kills = 12;
+  g.bankHunt(true);
+});
+await pump(6);
+{ const r = await clickOk('THE REFUGE', 'refuge'); ok('the dawn offers the way back to her', r.pass, r.why); }
+ok('she is in the room, and says something', await page.evaluate(() => !!(window.__LN.refugeLine && window.__LN.refugeLine.text)));
+{ const r = await clickOk('UPGRADES', 'upgrades'); ok('the refuge reaches the upgrades', r.pass, r.why); }
+{ const r = await clickOk('BACK', 'refuge'); ok('back returns to her room, not the menu', r.pass, r.why); }
+{ const r = await clickOk('MAIN MENU', 'menu'); ok('the refuge lets you leave for the menu', r.pass, r.why); }
+
 console.log('\n=== SETTINGS SCREEN (toggles + sliders by click) ===');
 await settle(['death', 'intro', 'playing', 'menu'], 400);
 if ((await screen()) !== 'menu') { await page.evaluate(() => window.__LN.toMenu()); await pump(2); }
