@@ -758,7 +758,7 @@ class EnemyStage {
     const shown = opts.grade === false ? frame : this._graded(frame, shade);
     const crop = opts.crop;
     const ang = Math.atan2(shade.keyY, shade.keyX);
-    const h = ENEMY_HEIGHT[enemy.key] || 74;
+    const h = (ENEMY_HEIGHT[enemy.key] || 74) * (enemy.sizeMul || 1);
     const aspect = crop ? crop.w / Math.max(1, crop.h) : shown.width / Math.max(1, shown.height);
     const w = h * aspect;
     ctx.save();

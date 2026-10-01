@@ -201,6 +201,8 @@ export const VARIANTS = {
   frenzy:   { speedMul: 1.32, damageMul: 0.8, hpMul: 0.85, tint: '#5a1420', label: 'FRENZIED' },
   marksman: { keepAdd: 60, boltDamageMul: 1.35, boltCdMul: 1.25, tint: '#3d3a1c', label: 'MARKSMAN' },
   alpha:    { hpMul: 1.4, damageMul: 1.25, sizeMul: 1.08, tint: '#611b1b', label: 'ALPHA' },
+  // the Master: the same rig the alpha wears, and nothing about it is fair
+  master:   { hpMul: 3.4, damageMul: 1.45, sizeMul: 1.42, tint: '#3d0a16', label: 'THE MASTER' },
 };
 
 /* ---------------- tension director ----------------

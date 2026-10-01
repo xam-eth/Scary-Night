@@ -76,6 +76,9 @@ const INTEL_LIST = [
     line: 'NOT ONE DOOR FELL. THE WOOD HOLDS WHEN I AM THERE TO HOLD IT.' },
   { id: 'deed:hunt-near', kind: 'deed', key: 'hunt-near', track: 0,
     line: 'IT WALKS THE HALL ITSELF NOW. IT KNOWS MY NAME.' },
+  /* ---- the end ---- */
+  { id: 'deed:the-master', kind: 'deed', key: 'the-master', track: 0,
+    line: 'IT IS DEAD. THE HOUSE DOES NOT KNOW WHAT TO DO WITH A MORNING.' },
 ];
 
 export const INTEL = Object.freeze(Object.fromEntries(INTEL_LIST.map((i) => [i.id, i])));
@@ -91,6 +94,31 @@ export const FORTRESS_STATES = Object.freeze([
 /** The track at which the Master can be cornered and the hunt ended. */
 export const HUNT_END_AT = 100;
 
+/* ---- the last night (#56 P1): the hunt has a destination -----------------
+ * The whole spine is a walk toward one door. When the track is full the
+ * Master is not a rumour any more: it comes, and the Boss-Duel is the kill.
+ * Kill it and the hunt is over — that is the ending, earned, not granted.
+ */
+
+/** The track is full: tonight the Master itself will come for her. */
+export function masterReady(save) {
+  return huntProgress(save) >= HUNT_END_AT;
+}
+
+/** It is dead, and the house is hers. Recorded once, ever. */
+export function masterDown(save) {
+  return !!huntBlock(save).masterDown;
+}
+
+/** Put the Master down. The night it happened is the night it is banked on. */
+export function fellMaster(save) {
+  const h = huntBlock(save);
+  if (h.masterDown) return false;
+  h.masterDown = true;
+  h.masterDownNight = h.nights + 1;
+  return true;
+}
+
 /* ---- tonight's errand (P5, the short goal layer) -------------------------
  * Surviving is the clock, not the purpose. Every night the hunt asks for one
  * thing, and the thing it asks for is what the hunt is still missing: the map
@@ -99,6 +127,7 @@ export const HUNT_END_AT = 100;
  * hoards. docs/PURPOSE.md §2 P5.
  */
 export const HUNT_OBJECTIVES = Object.freeze({
+  endit: { id: 'endit', label: 'END IT' },
   nests: { id: 'nests', label: 'FIND WHERE IT NESTS' },
   mark: { id: 'mark', label: 'MARK THE BEAST' },
   stalk: { id: 'stalk', label: 'FACE WHAT IT SENDS' },
@@ -118,6 +147,13 @@ export function pickHuntObjective(save, seed = 1) {
   const h = huntBlock(save);
   const seedN = Math.abs(seed | 0) || 1;
   const knows = (id) => h.intel.includes(id);
+  // Nothing left to learn, nothing left to mark: only the kill. The hunt has
+  // been walking toward this door the whole time and tonight it opens.
+  if (masterReady(save) && !h.masterDown) {
+    h.lastObjective = { id: 'endit', night: h.nights };
+    return { id: 'endit', target: null, label: HUNT_OBJECTIVES.endit.label };
+  }
+
   const cands = [];
   const missing = ROOM_KEYS.filter((k) => !knows('room:' + k));
   // The first two nights are always the map: a hunter who has never been past
@@ -179,6 +215,7 @@ export function huntBlock(save) {
   if (!Array.isArray(h.intel)) h.intel = [];
   h.materials = Math.max(0, Math.round(Number(h.materials) || 0));
   h.nights = Math.max(0, Math.round(Number(h.nights) || 0));
+  h.masterDown = !!h.masterDown;
   return h;
 }
 
@@ -208,7 +245,9 @@ export function nearingEnd(save) {
 export function huntTells(save) {
   const h = huntBlock(save);
   const out = [];
-  if (h.intel.includes('deed:hunt-near')) out.push('IT WALKS THE HALL ITSELF NOW. IT KNOWS MY NAME.');
+  if (h.masterDown) out.push('IT IS DEAD. THE HOUSE HAS NO MASTER THIS MORNING.');
+  else if (masterReady(save)) out.push('THE HUNT IS FULL. IT CAN BE ENDED TONIGHT.');
+  else if (h.intel.includes('deed:hunt-near')) out.push('IT WALKS THE HALL ITSELF NOW. IT KNOWS MY NAME.');
   else if (nearingEnd(save)) out.push('THE HUNT NEARS ITS END. IT KNOWS I AM COMING.');
   return out;
 }
@@ -272,12 +311,16 @@ export function bankNight(save, result = {}) {
   if (objBonus >= 1.2) materials += 8;
   else if (objBonus > 0) materials += 3;
 
+  const wasReady = before >= HUNT_END_AT;
   h.track = clamp(before + delta, before, HUNT_END_AT);   // forward only
   h.materials += materials;
   h.nights += 1;
   const gain = {
     won, survived, kills,
     intel,
+    // the hunt's end, the first dawn it was possible and the night it happened
+    masterReady: !wasReady && h.track >= HUNT_END_AT,
+    masterDown: !!(h.masterDown && h.masterDownNight === h.nights),
     objective: objective
       ? { id: objective.id, label: objective.label || HUNT_OBJECTIVES[objective.id].label, done: !!objective.done, p: clamp(objective.p || 0, 0, 1), bonus: objBonus }
       : null,

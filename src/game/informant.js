@@ -16,7 +16,7 @@
  * because Marthe has watched both, and she says what she knows now.
  */
 
-import { INTEL, huntProgress, FORTRESS_STATES } from './hunt.js';
+import { INTEL, huntProgress, masterReady, FORTRESS_STATES } from './hunt.js';
 
 export const INFORMANT = Object.freeze({
   name: 'MARTHE',
@@ -141,6 +141,7 @@ const ON_INTEL = {
 const WEAPON_NAMES = Object.freeze({ claw: "THE HUNTER'S CLAW", sword: 'THE STOLEN BLADE', shot: 'THE HUNTERS’ CROSSBOW' });
 /** Trophies, drawn from what you have actually put down. */
 const TROPHY_FOR = Object.freeze({
+  master: { glyph: 'crown', name: 'THE MASTER' },
   crawler: { glyph: 'crawl', name: 'CRAWLERS' },
   zombie: { glyph: 'bone', name: 'THE KEPT' },
   werewolf: { glyph: 'fang', name: 'HOUNDS' },
@@ -148,6 +149,22 @@ const TROPHY_FOR = Object.freeze({
   hunter: { glyph: 'bolt', name: 'HUNTERS' },
   stalker: { glyph: 'eye', name: 'THE STALKER' },
 });
+
+/* ---- the last night (she has been keeping the house for this) ---------- */
+const FINALE = {
+  /* the Master is huntable: she has spent every night getting you here */
+  ready: [
+    'THE HUNT IS FULL. TONIGHT IT COMES ITSELF, AND I HAVE NOTHING LEFT TO TEACH YOU.',
+    'I HAVE KEPT EVERYTHING I KNOW FOR ONE NIGHT, AND THIS IS IT. GO AND END IT.',
+    'YOU CAN KILL IT TONIGHT. SAY NOTHING TO ME WHEN YOU COME BACK — JUST COME BACK.',
+  ],
+  /* and the morning after */
+  done: [
+    'IT IS DEAD. I HAVE BEEN ALIVE A LONG TIME AND I DID NOT THINK I WOULD SEE A MORNING LIKE THIS.',
+    'YOU KILLED IT. THE HOUSE IS JUST A HOUSE NOW, AND I DO NOT KNOW WHO I AM IN IT.',
+    'I WAS KEPT BY THE HOUSE. YOU FREED THE HOUSE INSTEAD OF ME. I WILL WORK THAT OUT.',
+  ],
+};
 
 /**
  * Every line she can say, and how many there are — so the QA harness can hold
@@ -157,12 +174,15 @@ export function informantLines() {
   const out = [INFORMANT.line];
   for (const st of STAGES) for (const k of ['hub', 'dawn', 'death']) for (const l of st[k]) out.push(l);
   for (const l of Object.values(ON_INTEL)) out.push(l);
+  for (const l of FINALE.ready) out.push(l);
+  for (const l of FINALE.done) out.push(l);
   return out;
 }
 export const informantCounts = () => ({
   stages: STAGES.length,
   stageLines: STAGES.reduce((n, st) => n + st.hub.length + st.dawn.length + st.death.length, 0),
   reactions: Object.keys(ON_INTEL).length,
+  finale: FINALE.ready.length + FINALE.done.length,
 });
 
 const stageFor = (pct) => {
@@ -198,6 +218,17 @@ export function informantIntelLine(gain) {
 export function informantLine(save, when = 'hub', gain = null) {
   const fresh = gain ? informantIntelLine(gain) : null;
   if (fresh) return { ...fresh, kind: 'intel' };
+  // the last night has its own voice: everything else she might say is small
+  // next to this, and the night you end it she says nothing else at all.
+  const h = (save && save.hunt) || {};
+  if (h.masterDown) {
+    const n = h.nights || 0;
+    return { id: 'finale:done', text: FINALE.done[n % FINALE.done.length], kind: 'finale' };
+  }
+  if (masterReady(save)) {
+    const n = h.nights || 0;
+    return { id: 'finale:ready', text: FINALE.ready[n % FINALE.ready.length], kind: 'finale' };
+  }
   const st = STAGES[stageFor(huntProgress(save))];
   const pool = st[when] || st.hub;
   const n = (save && save.hunt && save.hunt.nights) || 0;

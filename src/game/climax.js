@@ -24,6 +24,7 @@
 import { clamp, lerp, rand, dist } from '../core/util.js';
 import { CLIMAX, DAWN_AT } from '../core/config.js';
 import { Werewolf, applyVariant } from './enemies.js';
+import { masterReady, masterDown } from './hunt.js';
 
 export const PEAK = Object.freeze({
   CRESCENDO: 'crescendo',
@@ -277,6 +278,13 @@ export class Climax {
     // reach of the light — or, from the third night on, the house simply
     // deciding it is time. Never while another peak owns the frame.
     if (this.crescendo || this.frenzy) return;
+    // THE LAST NIGHT (#56 P1). The track is full, so the duel is not a roll
+    // and the thing that comes is not an alpha. It comes, or the night is a
+    // lie about what the hunt has been walking toward.
+    if (masterReady(game.save) && !masterDown(game.save)) {
+      if (game.time >= CLIMAX.duelAfter && !this.duelUsed) this.startDuel(game, null, { master: true });
+      return;
+    }
     const boss = game.enemies.find((e) => !e.dead && e.key === 'werewolf'
       && dist(e.x, e.y, game.player.x, game.player.y) < 900);
     const nights = game.save.nightsSurvived || 0;
@@ -285,7 +293,8 @@ export class Climax {
     this.startDuel(game, boss || null);
   }
 
-  startDuel(game, existing = null) {
+  startDuel(game, existing = null, opts = {}) {
+    const master = !!opts.master;
     this.duelUsed = true;
     this.peaksFired.push(PEAK.DUEL);
     const p = game.player;
@@ -299,13 +308,20 @@ export class Climax {
       const y = p.y + Math.sin(a) * 320;
       const spot = game.mansion.freeSpot(x, y, 26, 14);
       boss = new Werewolf(spot.x, spot.y, {});
-      applyVariant(boss, 'alpha');
+      applyVariant(boss, master ? 'master' : 'alpha');
       game.enemies.push(boss);
-    } else if (!boss.variant) {
-      applyVariant(boss, 'alpha');
+    } else if (!boss.variant || master) {
+      applyVariant(boss, master ? 'master' : 'alpha');
     }
     boss.x = game.mansion.freeSpot(boss.x, boss.y, 26, 14).x;
     boss.duelBoss = true;
+    boss.isMaster = master;
+    if (master) {
+      // three times the wolf, and it does not get bored and wander off
+      boss.hpMax = Math.max(boss.hpMax, 900);
+      boss.hp = boss.hpMax;
+      boss.type = { ...boss.type, leaveAfter: 1e9 };
+    }
     if (boss.hpMax < 300) { boss.hpMax = Math.round(boss.hpMax * 1.3); boss.hp = boss.hpMax; }
     boss.state = 'hunt';
     boss.seenPlayer = boss.type.loseSight;
@@ -323,16 +339,22 @@ export class Climax {
     const d = game.director;
     d.budget = 0;
     d.quietUntil = game.time + CLIMAX.duelCut + CLIMAX.duelFight;
-    this.duel = { t: 0, stage: 'cut', boss, dur: CLIMAX.duelCut + CLIMAX.duelFight };
+    const fight = master ? CLIMAX.duelFight * 1.8 : CLIMAX.duelFight;
+    this.duel = {
+      t: 0, stage: 'cut', boss, dur: CLIMAX.duelCut + fight,
+      master, name: master ? 'THE MASTER' : 'THE ALPHA',
+    };
     // the hold starts now, not on the next frame: the entrance owns the night
     this.spawnsHeld = true;
     this.duelDark = 1;
 
     game.audio.play('bossCut', { vol: 0.95 });
     game.audio.duck(0.35, 2.2);
-    game.renderer.shake(0.6);
-    game.showBanner('THE ALPHA', 2.2);
-    game.showMessage('THE HOUSE BRINGS YOU THE ONE THAT LEADS THEM.', { tone: 'danger', life: 4.2 });
+    game.renderer.shake(master ? 1.1 : 0.6);
+    game.showBanner(master ? 'THE MASTER' : 'THE ALPHA', master ? 3.2 : 2.2);
+    game.showMessage(master
+      ? 'THE HOUSE OPENS. THE THING THAT OWNS IT WALKS IN, AND IT KNOWS YOUR NAME.'
+      : 'THE HOUSE BRINGS YOU THE ONE THAT LEADS THEM.', { tone: 'danger', life: master ? 5.2 : 4.2 });
   }
 
   tickDuel(dt, game) {
@@ -377,8 +399,14 @@ export class Climax {
     if (dead) {
       game.renderer.shake(0.7);
       game.audio.play('stinger', { vol: 0.7 });
-      game.showMessage('THE ALPHA FALLS. THE HOUSE GOES QUIET AGAIN.', { tone: 'cold', life: 4 });
-      this.endDuel(game);
+      if (d.master) {
+        // the hunt ends here — not with a screen of numbers, with a body
+        this.endDuel(game);
+        game.endHunt();
+      } else {
+        game.showMessage('THE ALPHA FALLS. THE HOUSE GOES QUIET AGAIN.', { tone: 'cold', life: 4 });
+        this.endDuel(game);
+      }
       return;
     }
     if (d.t >= d.dur) {
@@ -386,7 +414,9 @@ export class Climax {
       boss.leaving = true;
       boss.state = 'leave';
       boss.leaveT = 0;
-      game.showMessage('IT TIRES OF YOU AND WALKS BACK INTO THE DARK.', { tone: 'cold', life: 3.4 });
+      game.showMessage(d.master
+        ? 'IT STEPS BACK INTO THE DARK, UNBLED. IT WILL COME AGAIN TOMORROW.'
+        : 'IT TIRES OF YOU AND WALKS BACK INTO THE DARK.', { tone: 'cold', life: 4 });
       this.endDuel(game);
     }
   }

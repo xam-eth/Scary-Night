@@ -13,7 +13,7 @@ import { PAL } from '../core/render.js';
 import { UPGRADES, upgradeLevel, DIFFICULTY, CODEX, NIGHT_DURATION, GAME_VERSION } from '../core/config.js';
 import { unlocked, nextRevealLine, LANES, nextRank, rankCost, rankCount, LANE_CAP, houseTitle } from '../game/economy.js';
 import { fragmentsKnown, endingFrame } from '../game/narrative.js';
-import { intelLine, huntPct, huntProgress, fortressState, huntTells, FORTRESS_STATES } from '../game/hunt.js';
+import { intelLine, huntPct, huntProgress, fortressState, huntTells, masterReady, masterDown, FORTRESS_STATES } from '../game/hunt.js';
 import { INFORMANT, informantLine, boardEntries } from '../game/informant.js';
 import { drawPlateCover } from '../game/roomplates.js';
 import { Valen3D } from '../game/valen3d.js';
@@ -1475,6 +1475,17 @@ function drawHuntGain(game, ctx, w, h, y, heading = 'WHAT THE NIGHT TAUGHT YOU',
   ctx.fillText(heading, w / 2, y);
   y += phone ? 15 : 18;
 
+  // The end of the hunt, when this was the night it ended. It outranks
+  // everything else on the card — the other rows are what it cost.
+  if ((gain.masterDown || gain.masterReady) && roomFor(phone ? 16 : 18)) {
+    ctx.font = `500 ${phone ? 10.5 : 12}px ${SANS}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '2.4px';
+    ctx.fillStyle = gain.masterDown ? 'rgba(240,196,120,0.98)' : 'rgba(232,150,110,0.95)';
+    ctx.fillText(gain.masterDown ? 'THE MASTER IS DEAD · THE HUNT IS OVER' : 'THE HUNT IS FULL · IT CAN BE ENDED', w / 2, y);
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+    y += phone ? 16 : 18;
+  }
+
   // tonight's errand, answered: asked at nightfall, paid here. One line — the
   // point is the verdict, not a second spreadsheet.
   if (gain.objective && roomFor(phone ? 15 : 17)) {
@@ -2126,10 +2137,11 @@ function drawBossPlate(game, ctx, w, h, boss, phone, short) {
   ctx.textBaseline = 'middle';
   ctx.font = `500 ${short ? 10 : 12}px ${SANS}`;
   if ('letterSpacing' in ctx) ctx.letterSpacing = '3.4px';
-  ctx.fillStyle = 'rgba(232,110,96,0.95)';
-  ctx.shadowColor = 'rgba(0,0,0,0.9)';
-  ctx.shadowBlur = 8;
-  ctx.fillText('THE ALPHA', w / 2, y);
+  const isMaster = !!(d && d.master);
+  ctx.fillStyle = isMaster ? 'rgba(240,150,110,0.98)' : 'rgba(232,110,96,0.95)';
+  ctx.shadowColor = isMaster ? 'rgba(120,20,20,0.9)' : 'rgba(0,0,0,0.9)';
+  ctx.shadowBlur = isMaster ? 14 : 8;
+  ctx.fillText((d && d.name) || 'THE ALPHA', w / 2, y);
   ctx.shadowBlur = 0;
   const hp = clamp(boss.hp / boss.hpMax, 0, 1);
   const bh = short ? 3 : 5;
@@ -2314,6 +2326,23 @@ function drawTrophy(ctx, glyph, x, y, s) {
     ctx.quadraticCurveTo(s * 0.05, -s * 0.1, s * 0.02, s * 0.55);
     ctx.quadraticCurveTo(-s * 0.28, s * 0.1, -s * 0.32, -s * 0.5);
     ctx.fill();
+  } else if (glyph === 'crown') {                // what killed the house, mounted
+    ctx.strokeStyle = 'rgba(232,192,116,0.95)';
+    ctx.fillStyle = 'rgba(232,192,116,0.95)';
+    ctx.beginPath();                              // the band
+    ctx.moveTo(-s * 0.46, s * 0.24);
+    ctx.lineTo(s * 0.46, s * 0.24);
+    ctx.stroke();
+    ctx.beginPath();                              // the points
+    ctx.moveTo(-s * 0.46, s * 0.24);
+    ctx.lineTo(-s * 0.34, -s * 0.34);
+    ctx.lineTo(-s * 0.14, s * 0.02);
+    ctx.lineTo(0, -s * 0.52);
+    ctx.lineTo(s * 0.14, s * 0.02);
+    ctx.lineTo(s * 0.34, -s * 0.34);
+    ctx.lineTo(s * 0.46, s * 0.24);
+    ctx.closePath();
+    ctx.fill();
   } else if (glyph === 'jaw') {                  // a jaw, hinged open
     ctx.beginPath();
     ctx.moveTo(-s * 0.5, -s * 0.1);
@@ -2419,6 +2448,16 @@ export function drawRefuge(game, ctx, w, h) {
   ctx.fillText(fortressState(game.save).name, w / 2, y);
   if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
   y += phone ? 16 : 20;
+
+  // ---- and whether the hunt can be ended yet ----
+  if (masterDown(game.save) || masterReady(game.save)) {
+    ctx.font = `500 ${phone ? 9.5 : 11}px ${SANS}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '2.2px';
+    ctx.fillStyle = masterDown(game.save) ? 'rgba(232,192,116,0.98)' : 'rgba(232,150,110,0.95)';
+    ctx.fillText(masterDown(game.save) ? 'THE MASTER IS DEAD' : 'TONIGHT IT CAN BE ENDED', w / 2, y);
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+    y += phone ? 16 : 20;
+  }
 
   // ---- the thumb comes first: everything above it has to fit over it ----
   const bwRef = phone ? Math.min(w - 28, 420) : Math.min(240, w * 0.6);

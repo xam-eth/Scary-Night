@@ -29,7 +29,7 @@ import {
   nextRank, rankCost, rankCount, LANE_CAP, LARDER_BLOOD, unlocked, markUnlocks, grantLaneTitle, houseTitle,
 } from './economy.js';
 import { House } from './house.js';
-import { bankNight } from './hunt.js';
+import { bankNight, fellMaster, masterReady, masterDown } from './hunt.js';
 import { informantLine } from './informant.js';
 import { Haunts } from './haunts.js';
 import { Ads } from '../shop/ads.js';
@@ -1166,6 +1166,7 @@ export class Game {
     if (won) ids.push('deed:first-night');
     if ((this.stats.kills || 0) >= 25) ids.push('deed:kills-25');
     if ((this.stats.doorsSurviving || 0) >= (this.stats.doorsTotal || 4)) ids.push('deed:doors-held');
+    if (this.save.hunt && this.save.hunt.masterDown) ids.push('deed:the-master');
     return ids;
   }
 
@@ -1188,6 +1189,29 @@ export class Game {
     this.lastGain = gain;
     writeSave(this.save);
     return gain;
+  }
+
+  /**
+   * #56 P1 — THE END. The Master is dead, so the night is over the moment the
+   * body hits the floor: the dawn sequence the game already knows how to run
+   * (the wave, the shards, the bank, the Act III choice) is the whole ending.
+   * Nothing about this forks the dawn — killing it *is* surviving it.
+   */
+  endHunt() {
+    const h = this.save.hunt;
+    if (h && h.masterDown) return;
+    fellMaster(this.save);
+    writeSave(this.save);
+    this.audio.play('stinger', { vol: 0.9 });
+    this.renderer.shake(1.2);
+    // the dawn clears the message board, so the line is said after it, not before
+    this.beginDawn();
+    this.showMessage('THE MASTER IS DEAD. THE HOUSE DOES NOT KNOW WHAT TO DO WITH A MORNING.', { tone: 'gold', life: 5.4 });
+  }
+
+  /** True on the night the Master itself will come for her. */
+  huntIsFinal() {
+    return masterReady(this.save) && !masterDown(this.save);
   }
 
   /**
@@ -1634,6 +1658,8 @@ export class Game {
       by[enemy.key] = (by[enemy.key] || 0) + 1;
       const tonight = this.stats.killsBy || (this.stats.killsBy = {});
       tonight[enemy.key] = (tonight[enemy.key] || 0) + 1;
+      // the Master hangs on the wall under its own name, not as one more hound
+      if (enemy.isMaster) { by.master = (by.master || 0) + 1; tonight.master = (tonight.master || 0) + 1; }
     }
     // a kill is a feed; a chain of them is what turns the moon red
     this.climax.noteFeed(this);

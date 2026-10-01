@@ -925,6 +925,71 @@ if (args.systems) {
   game.save.hunt = { track: 0, intel: [], materials: 0, nights: 0, lastGain: null };
   game.lastGain = null;
 
+  // ---- THE FINALE (#56 P4): the Master is huntable, and the hunt ends ----
+  const { masterReady, masterDown, fellMaster, HUNT_END_AT } = await import('../src/game/hunt.js');
+  const { VARIANTS } = await import('../src/core/config.js');
+  const { endingReady } = await import('../src/game/narrative.js');
+  const { huntGoal: huntGoalFor } = await import('../src/game/objectives.js');
+
+  // a hunt that is still walking does not get to end
+  const midHunt = { hunt: { track: 60, intel: [], materials: 0, nights: 6, lastObjective: null } };
+  line(!masterReady(midHunt) && !masterDown(midHunt), 'a hunt at 60% has not earned the Master yet');
+  line(pickHuntObjective(midHunt, 3).id !== 'endit',
+    `and the errand is still about the house (${pickHuntObjective(midHunt, 3).label})`);
+
+  // the night the track fills, there is nothing left to ask for but the kill
+  game.freshRun();
+  game.screen = 'playing';
+  game.save.hunt = { track: HUNT_END_AT, intel: [], materials: 0, nights: 9, lastObjective: null };
+  line(masterReady(game.save) && !masterDown(game.save), 'the night the track fills, the Master can be cornered');
+  const finalErrand = pickHuntObjective(game.save, 4);
+  line(finalErrand.id === 'endit', `and the errand is nothing else but the kill (${finalErrand.label})`);
+
+  // the errand is judged by the body, and only by the body
+  const finaleGame = { save: { hunt: { track: HUNT_END_AT, intel: [], materials: 0, nights: 9, lastObjective: null } } };
+  dealHuntObjective(finaleGame.save, 4);
+  const endGoal = huntGoalFor(finaleGame, 4);
+  line(endGoal && endGoal.id === 'hunt:endit' && !endGoal.par(finaleGame),
+    'the errand the hunt hands out on the last night is END IT, unpaid until it is dead');
+  fellMaster(finaleGame.save);
+  line(endGoal.par(finaleGame) && endGoal.progress(finaleGame) === 1, 'and the death is what pays it');
+
+  // the duel that answers it is not the alpha, and not a roll of the dice
+  game.climax.duelUsed = false;
+  game.time = (await import('../src/core/config.js')).CLIMAX.duelAfter + 1;
+  game.climax.rollDuel(game);
+  const masterDuel = game.climax.duel;
+  line(!!(masterDuel && masterDuel.master && masterDuel.name === 'THE MASTER'),
+    `the hunt's end comes as itself (${(masterDuel && masterDuel.name) || 'nothing'})`);
+  const boss = masterDuel && masterDuel.boss;
+  line(!!(boss && boss.isMaster), 'and it wears the werewolf the house already had, not a new monster');
+  line(!!(boss && boss.hpMax >= 900), `with the health of a thing that does not fall quickly (${boss ? Math.round(boss.hpMax) : 0})`);
+  line(!!(boss && boss.sizeMul > 1.3) && VARIANTS.master.sizeMul > VARIANTS.alpha.sizeMul,
+    `and the size it was always meant to have (x${(boss && boss.sizeMul) || 1})`);
+
+  // kill it the way she kills it: through the game's own kill, so the trophy
+  // is taken off the body and not granted by the test
+  boss.dead = true;
+  game.stats.kills = 1;
+  game.onEnemyKilled(boss);
+  game.climax.tickDuel(0.05, game);
+  line(masterDown(game.save) && !game.climax.duel, 'killing it ends the duel and the hunt, not just the monster');
+  line(game.screen === 'ending' || game.screen === 'dawn',
+    `and the morning it earns is presented, not simulated (${game.screen})`);
+  line(endingReady(game.save), 'the ending is something she killed her way to, not a night count');
+  line(!!(game.lastGain && game.lastGain.masterDown), 'the dawn card says which night it was');
+  line((game.save.hunt.intel || []).includes('deed:the-master'), 'the kill is a fact on the board');
+  line((game.save.killsBy || {}).master === 1, 'and it hangs on the wall under its own name');
+  line(!game.huntIsFinal(), 'the hunt has nowhere left to walk');
+  // dead is dead: a new night on the same save does not make it come back
+  game.freshRun();
+  game.screen = 'playing';
+  game.time = (await import('../src/core/config.js')).CLIMAX.duelAfter + 5;
+  game.climax.rollDuel(game);
+  line(!(game.climax.duel && game.climax.duel.master),
+    'and the next night does not make it come back — the house has no Master left to send');
+  line(!masterDown({}) && !masterReady({}), 'a save that never hunted has no Master, dead or otherwise');
+
   // ---- THE FORTRESS (#59): the house she is building, out of the same kit ----
   const { planFortress } = await import('../src/game/envkit.js');
   // the kit's own measurements, so the plan can be checked without a GPU

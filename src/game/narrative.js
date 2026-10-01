@@ -14,6 +14,7 @@
  */
 
 import { playLean } from './economy.js';
+import { INTEL } from './hunt.js';
 
 export const BEATS = [
   /* ---- opening narration: night one, her voice, then the house ----
@@ -267,6 +268,10 @@ export function fragmentsKnown(save) {
     name: b.name || FRAG_NAMES[b.id] || b.id.replace(/-/g, ' ').toUpperCase(),
     text: b.text,
   }));
+  // the hunt's own ending, pinned where the fragments are
+  if (save && save.hunt && save.hunt.masterDown) {
+    rows.push({ id: 'deed:the-master', name: 'THE MASTER', text: INTEL['deed:the-master'].line });
+  }
   if (save && save.ending === 'dawnbreaker') {
     rows.push({ id: 'ending-dawnbreaker', name: 'DAWNBREAKER', text: 'She walked into the dawn the house could not raise. It burned. She was free.' });
   }
@@ -278,13 +283,21 @@ export function fragmentsKnown(save) {
 
 /** Fed-and-daring versus hoarded-and-hid. Frames the choice. Never picks it. */
 export function endingFrame(save) {
+  // the kill is its own frame: the house is hers to walk out of, or to keep
+  if (save && save.hunt && save.hunt.masterDown) {
+    return 'You put the Master down. The house does not know whose it is now.';
+  }
   return playLean(save) === 'daring'
     ? 'You fed in the open. The house knows your mouth.'
     : 'You hid, and the walls kept you. They are used to that.';
 }
 
 export function endingReady(save) {
-  return !!(save && !save.ending && beatSeen(save, 'knock-true-dawn') && (save.nightsSurvived || 0) >= 8);
+  if (!save || save.ending) return false;
+  // The hunt's own end (#56 P1): the Master is dead, so the house is a
+  // question, and the choice is earned rather than handed out at eight nights.
+  if (save.hunt && save.hunt.masterDown) return true;
+  return !!(beatSeen(save, 'knock-true-dawn') && (save.nightsSurvived || 0) >= 8);
 }
 
 /** Small floor objects. Interior of the room, never on a door. */

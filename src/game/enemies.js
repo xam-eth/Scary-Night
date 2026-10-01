@@ -1145,8 +1145,11 @@ export class Werewolf extends Enemy {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.globalAlpha = this.alpha;
-    paintContactShadow(ctx, this, game, 22, 9);
+    paintContactShadow(ctx, this, game, 22 * (this.sizeMul || 1), 9);
     ctx.rotate(visualAngle(this.angle, game.renderer.tilt) + (dying ? k * 1.2 : 0));
+    // a Master is not an alpha with more health — it is bigger than the door
+    const big = this.sizeMul || 1;
+    if (big !== 1) ctx.scale(big, big);
     if (dying) { ctx.rotate(k * 0.5); ctx.translate(k * 6, 0); ctx.scale(1, 1 - k * 0.55); }
 
     const stride = Math.sin(t * (charging ? 18 : 7) + this.id) * (Math.hypot(this.vx, this.vy) > 20 ? 6 : 1.5);
@@ -1484,6 +1487,7 @@ export function applyVariant(e, name) {
   if (!V || !e) return e;
   e.variant = name;
   if (V.hpMul) { e.hpMax *= V.hpMul; e.hp = e.hpMax; }
+  if (V.sizeMul) e.sizeMul = (e.sizeMul || 1) * V.sizeMul;
   if (V.speedMul) e.speedMul *= V.speedMul;
   if (V.damageMul) e.damageMul *= V.damageMul;
   if (V.keepAdd) e.type = { ...e.type, keepDistance: (e.type.keepDistance || 0) + V.keepAdd, boltCooldown: (e.type.boltCooldown || 2) * (V.boltCdMul || 1) };

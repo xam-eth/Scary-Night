@@ -520,6 +520,61 @@ try {
   };
   await shootErrand(m, '20-phone');
 
+  /* ---------- THE FINALE (#56 P1/P4) — the Master, and the morning after ----
+   * The hunt has a destination. Shot as a four: the room that tells her it can
+   * be ended tonight, the thing itself in the frame with its name over it, the
+   * choice the kill earns, and the dawn card that says what the night was.
+   */
+  const shootFinale = async (pg, tag) => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    // 1. the refuge, the night before the end
+    await pg.evaluate(() => {
+      const g = window.__LN;
+      g.save.hunt = { track: 100, intel: ['foe:crawler', 'foe:werewolf', 'room:study', 'deed:first-night'], materials: 210, nights: 12, lastGain: null };
+      g.save.killsBy = { crawler: 41, zombie: 26, werewolf: 9, ghoul: 4, stalker: 2, master: 1 };
+      g.save.weapon = 'sword';
+      g.lastGain = null;
+      g.setScreen('refuge', 'victory');
+    });
+    await wait(1600);
+    await shoot(pg, `${tag}-finale-refuge`);
+
+    // 2. the Master itself, in the dark, with its name over the frame
+    await pg.evaluate(() => {
+      const g = window.__LN;
+      g.beginNight();
+    });
+    await pg.waitForFunction(() => window.__LN && window.__LN.screen === 'intro', { timeout: 30000, polling: 60 }).catch(() => {});
+    await pg.evaluate(() => {
+      const g = window.__LN;
+      g.introT = 99; g.skipNarration(); g.skipNarration(); g.startNightProper();
+    });
+    await pg.waitForFunction(() => window.__LN && window.__LN.screen === 'playing', { timeout: 30000, polling: 60 }).catch(() => {});
+    await wait(1800);
+    await pg.evaluate(() => {
+      const g = window.__LN;
+      g.save.hunt.track = 100;                 // the hunt is full tonight
+      g.climax.duelUsed = false;
+      g.time = 152;                            // just past the duel window
+      g.climax.rollDuel(g);
+    });
+    await wait(2600);                          // the cut plays, the plate comes up
+    await shoot(pg, `${tag}-finale-master`);
+
+    // 3. and the morning it earns
+    await pg.evaluate(() => {
+      const g = window.__LN;
+      const boss = g.climax.duel && g.climax.duel.boss;
+      if (boss) { boss.dead = true; g.onEnemyKilled(boss); }
+    });
+    await wait(1500);
+    await shoot(pg, `${tag}-finale-ending`);
+    await pg.evaluate(() => { const g = window.__LN; if (g.screen === 'ending') g.chooseEnding('dawnbreaker'); });
+    await wait(2800);
+    await shoot(pg, `${tag}-finale-dawn`);
+  };
+  await shootFinale(m, '21-phone');
+
   console.log('DONE');
 } finally {
   await browser.close();

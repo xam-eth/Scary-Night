@@ -174,6 +174,14 @@ export function huntGoal(game, seed) {
     return String((r && r.name) || target || '').toUpperCase();
   };
   const defs = {
+    /* nothing left to learn, nothing left to mark: only the kill */
+    endit: {
+      id: 'hunt:endit', label: HUNT_OBJECTIVES.endit.label,
+      hint: 'THE MASTER COMES TONIGHT',
+      par: (g) => !!(g.save && g.save.hunt && g.save.hunt.masterDown),
+      progress: (g) => ((g.save && g.save.hunt && g.save.hunt.masterDown) ? 1 : 0),
+      reward: { shards: 40, blood: 20 },
+    },
     /* the map, while the house is still unmapped */
     nests: {
       id: 'hunt:nests', label: HUNT_OBJECTIVES.nests.label,
