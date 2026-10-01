@@ -120,6 +120,8 @@ globalThis.devicePixelRatio = 1;
  * replace Math.random with a seeded stream before any game module loads.
  */
 let _seedState = SEED >>> 0;
+/** Rewind the stream, so two nights can be compared like for like. */
+const reseed = (n) => { _seedState = (n >>> 0) || 1; };
 Math.random = function () {
   _seedState |= 0; _seedState = (_seedState + 0x6D2B79F5) | 0;
   let t = Math.imul(_seedState ^ (_seedState >>> 15), 1 | _seedState);
@@ -353,6 +355,58 @@ game.renderer.snapCamera(game.player.x, game.player.y);
 input.layout(1280, 720);
 game.freshRun();
 game.screen = 'playing';
+
+/* ---------------- density: how much of the night a player can SEE ----------
+ * The show is not the simulation. A night can hold eighty creatures and still
+ * look empty if the frame holds two of them, and the phone frame is a keyhole
+ * (353x1120 world units). This mode measures the gap between what the night
+ * contains and what the screen shows — the number the hero scenes (the
+ * "advertisable moments" of docs/SIGNATURE-SCENES.md) live or die by.
+ *   node tools/harness.mjs --mode=density
+ */
+if (MODE === 'density') {
+  const marks = [30, 60, 90, 120, 150, 180, 210, 240, 270, 292];
+  console.log('\n=== DENSITY — what the night holds vs what the frame shows ===');
+  console.log('   (phone frame: 390x693 canvas, zoom 1.10 — the shape the game ships in)');
+  console.log('\n  t   phase      alive  inFrame  atDoors  pointsAttacked  openingsLeft  mix');
+  for (const nights of [0, 4, 8, 12]) {
+    game.save.privacyAck = true;
+    game.save.nightsSurvived = nights;
+    game.renderer.resize(390, 693, 1);
+    input.layout(390, 693);
+    reseed(SEED + nights * 7919);      // each night measured on its own stream
+    game.beginNight();
+    game.introT = 99; game.skipNarration(); game.skipNarration(); game.startNightProper();
+    let mi = 0, peak = 0, peakAt = 0, framePeak = 0, nearPeak = 0;
+    for (let i = 0; i < 300 * 60; i++) {
+      bot.think(game, dt);
+      game.update(dt);
+      const alive = game.enemies.filter((e) => !e.dead).length;
+      if (alive > peak) { peak = alive; peakAt = Math.round(game.time); }
+      const cam = game.renderer.cam;
+      const inFrame = game.enemies.filter((e) => !e.dead
+        && Math.abs(e.x - cam.x) < cam.viewW * 0.5 + 40 && Math.abs(e.y - cam.y) < cam.viewH * 0.5 + 40).length;
+      const near = game.enemies.filter((e) => !e.dead
+        && Math.abs(e.x - cam.x) < 450 && Math.abs(e.y - cam.y) < 450).length;
+      if (inFrame > framePeak) framePeak = inFrame;
+      if (near > nearPeak) nearPeak = near;
+      if (mi < marks.length && game.time >= marks[mi]) {
+        const atDoor = game.enemies.filter((e) => !e.dead && e.state === 'breach').length;
+        const points = game.mansion.entrances.filter((x) => (x.attackers || 0) > 0).length;
+        const open = game.mansion.entrances.filter((x) => !(x.broken)).length;
+        const kinds = {};
+        for (const e of game.enemies) if (!e.dead) kinds[e.key] = (kinds[e.key] || 0) + 1;
+        console.log(` ${String(marks[mi]).padStart(3)}  ${String(game.phase.id).padEnd(9)} ${String(alive).padStart(4)}    ${String(inFrame).padStart(4)}    ${String(atDoor).padStart(4)}       ${String(points).padStart(4)}          ${String(open).padStart(3)}        ${JSON.stringify(kinds)}`);
+        mi++;
+      }
+      if (game.screen !== 'playing') { console.log(`     (night ended: ${game.screen} @ ${Math.round(game.time)}s)`); break; }
+    }
+    const cam2 = game.renderer.cam;
+    console.log(`   NIGHT ${nights + 1}: peak ${peak} alive at t=${peakAt}s · most ever IN FRAME ${framePeak} · within a 900x900 pull-back ${nearPeak}`);
+    console.log(`             kills ${game.stats.kills} · openings ${game.mansion.entrances.filter((x) => !(x.broken)).length}/${game.mansion.entrances.length} standing · frame ${Math.round(cam2.viewW)}x${Math.round(cam2.viewH)} world units (zoom ${cam2.zoom.toFixed(2)})\n`);
+  }
+  process.exit(0);
+}
 
 if (MODE === 'combat') {
   // deterministic check: put a crawler in front of the vampire and claw it
