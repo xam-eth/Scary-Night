@@ -269,7 +269,9 @@ function drawAttract(game, ctx, w, h, idle) {
     ctx.save();
     ctx.translate(px, py);
     ctx.scale(sc, sc);
-    Valen3D.draw(ctx, frame, (h * 0.2) / sc, { footInset: 8 });
+    // `stand`: the plate asks for a hero 20% of the screen tall and means the
+    // BODY, not the photograph around it — her feet land on the plate either way.
+    Valen3D.draw(ctx, frame, (h * 0.2) / sc, { footInset: 8, stand: true });
     ctx.restore();
   }
   ctx.restore();
@@ -330,7 +332,7 @@ export function drawMenuScene(game, ctx, w, h, t) {
   ctx.closePath(); ctx.fill();
   ctx.restore();
   if (vframe) {
-    Valen3D.draw(ctx, vframe, h * 0.2 / scale, { footInset: 8 });
+    Valen3D.draw(ctx, vframe, h * 0.2 / scale, { footInset: 8, stand: true });
   } else {
     // coat
     const coatG = ctx.createLinearGradient(0, -180, 0, 10);

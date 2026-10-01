@@ -23,6 +23,13 @@ import { bakeLight, bakedTint, bakeReport } from './lightbake.js';
 export const KIT_DIR = './assets/env-kit/';
 
 /**
+ * How tall the woman is, in the same world px the kit is scaled in. Every
+ * "is this piece the right size" question is really "is this piece the right
+ * size NEXT TO HER", so her number lives here, where the kit is measured.
+ */
+export const VALEN_HEIGHT = 72;
+
+/**
  * World units per kit unit. The pieces are authored on a 4-unit grid, so a
  * wall and a doorway are both 4 units tall: at 33 that stands ~132px on the
  * camera as tuned — twice Valen, which is what a door in a house this size
@@ -89,14 +96,20 @@ const PROP_FOR = Object.freeze({
 /** Pieces with no footprint of their own get a scale, not a measurement. */
 const PROP_SCALE = Object.freeze({ planter: 2.2, basin: 2.2, candleStand: 1.6, candelabra: 1.9 });
 /**
- * Pieces that keep the wall's scale for their HEIGHT however wide they have
- * to grow. The stairs are a 5.1-unit flight against a 4-unit wall: filling a
- * 250px opening needs one and a half times the kit, and grown in all three
- * directions they stand two walls tall and turn the hall into a shaft. Spread
- * them sideways instead — a wide, shallow flight, which is what a grand
- * staircase is, and 5.1 units over a 4-unit run is the kit's own pitch.
+ * EVERY piece keeps the wall's scale for its HEIGHT however wide it has to
+ * grow sideways to fill the footprint the 2D house gave it.
+ *
+ * This is the difference between furniture and architecture. Scaled all three
+ * ways at once, a chair stretched across its 54px box stood 88px tall —
+ * taller than the woman, who is 72 — and a dining table stood 132, level with
+ * the wall behind it. The house read as a giant's house, and the only thing
+ * in it that was the right size was the thing that was not scaled at all.
+ *
+ * So the height is the piece's own, at the kit's unit: a chair 1.23 units
+ * against a 4-unit wall comes out at 41px, which is half of her — a chair.
+ * A wide footprint spreads a piece sideways, which is what a long table and a
+ * sofa and a flight of stairs actually do.
  */
-const PROP_RISE_AT_WALL = new Set(['stairs']);
 const PROP_RANGE = Object.freeze({ default: [0.7, 2.4], column: [1.4, 3.0] });
 
 /**
@@ -218,6 +231,10 @@ export function planFortress(mansion, level, boxes) {
     return p;
   };
   /** World size -> scale, for the piece's own units. */
+  /* The dressing is the same furniture the house already had, wearing the
+   * kit's heights: a candle in the keep is the 35px candle from the hall, not
+   * a 55px one somebody measured by eye. Heights here are world px against
+   * Valen's 72, the same as everywhere else in the room. */
   const fit = (piece, wpx, hpx, dpx) => {
     const src = boxes && boxes[piece];
     if (!src) return [1, 1, 1];
@@ -239,7 +256,7 @@ export function planFortress(mansion, level, boxes) {
       // ---- SAFE HOUSE: a lit candle in each jamb, on the inside ----
       const cx = e.x + (horiz ? side * jamb : dx * 30);
       const cz = e.y + (horiz ? dy * 30 : side * jamb);
-      put('candle', cx, cz, ...fit('candle', 17, 55, 17));
+      put('candle', cx, cz, ...fit('candle', 17, 35, 17));
       // ---- HUNTER'S KEEP: a silver ward post either side of the door ----
       if (lv >= 3) {
         const wx = e.x + (horiz ? side * (jamb + 26) : dx * 30);
@@ -268,7 +285,7 @@ export function planFortress(mansion, level, boxes) {
         const pz = e.y + (horiz ? dy * 100 : side * (len / 2 + 100));
         put('pillar', px, pz, ...fit('pillar', 52, 138, 52));
         put('torch', px + (horiz ? side * 30 : 0), pz + (horiz ? 0 : side * 30),
-          ...fit('torch', 40, 77, 45));
+          ...fit('torch', 40, 60, 45));
       }
     }
   }
@@ -278,9 +295,9 @@ export function planFortress(mansion, level, boxes) {
   if (hall && lv >= 3) {
     const wx = hall.x + Math.min(150, hall.w * 0.22);
     const wz = hall.y + hall.h - 180;
-    put('table', wx, wz, ...fit('table', 78, 74, 78));
-    put('barrel', wx - 62, wz + 10, ...fit('barrel', 54, 60, 54));
-    put('chest', wx + 64, wz + 14, ...fit('chest', 62, 35, 53));
+    put('table', wx, wz, ...fit('table', 78, 62, 78));
+    put('barrel', wx - 62, wz + 10, ...fit('barrel', 54, 66, 54));
+    put('chest', wx + 64, wz + 14, ...fit('chest', 62, 43, 53));
     // Crates dragged into a line across the hall with the door left clear:
     // two flanking it at HUNTER'S KEEP, the full barricade at the top.
     const line = lv >= 4 ? [200, 340, 480, 760, 900, 1040] : [480, 760];
@@ -337,6 +354,7 @@ class EnvKitRuntime {
     this.fortress = null;
     this.fortressMeshes = null;
     this.fortressCounts = null;
+    this.fortressBins = null;
     this.fortressLevel = 0;
     this.fortressPlanks = [];  // dressing that follows a door: a broken door wears none
     /* THE BAKE (#53 C2): the house's static light, measured once and written
@@ -357,6 +375,7 @@ class EnvKitRuntime {
       room: this.roomCounts || null, props: this.propCounts || null,
       windows: this.windows.length,
       fortress: this.fortressLevel, fortressPieces: this.fortressCounts || null,
+      sizes: this.sizes(),
       bake: this.bakeInfo || null,
       bakes: this.bakeCount,
       lit: this.litReport(),
@@ -706,6 +725,15 @@ class EnvKitRuntime {
       });
     }
 
+    /* Kept, not just drawn: a room you cannot measure is a room you cannot
+     * hold to a size. `sizes()` reads these to say how tall a chair stands
+     * next to the woman, which is the only way to know the kit is scaled to
+     * her and not merely present. */
+    this.roomBins = {
+      floorWood: floors.floorWood, floorStone: floors.floorStone,
+      wall: wallCells, wallCracked: cracked, corner: corners,
+      window: windows, broken: windowsBroken,
+    };
     this.roomMeshes = {
       wood: this._instanced('floorWood', floors.floorWood),
       stone: this._instanced('floorStone', floors.floorStone),
@@ -722,6 +750,50 @@ class EnvKitRuntime {
     };
     this.room = mansion;
     this._buildSerial++;
+  }
+
+  /**
+   * What the room is made of, measured in WORLD px — the same px Valen is 72
+   * of. A chair that stands 40 next to a woman of 72 is a chair; one that
+   * stands 120 is a piece of architecture wearing a chair's name, and the
+   * player reads the room as wrong without being able to say why.
+   *
+   * Read from the placements the room was actually built from, so it cannot
+   * drift from what is on the screen.
+   */
+  sizes() {
+    const out = {};
+    const note = (piece, bins) => {
+      const src = this.pieces[piece];
+      const list = (bins || []).filter((p) => p && p.sy != null);
+      if (!src || !list.length) return;
+      let minH = Infinity, maxH = -Infinity, minW = Infinity, maxW = -Infinity;
+      for (const p of list) {
+        const h = src.size.y * p.sy;
+        const w = Math.max(src.size.x * p.sx, src.size.z * p.sz);
+        if (h < minH) minH = h; if (h > maxH) maxH = h;
+        if (w < minW) minW = w; if (w > maxW) maxW = w;
+      }
+      const r = (v) => Math.round(v);
+      out[piece] = {
+        count: list.length,
+        h: r(minH) === r(maxH) ? r(minH) : [r(minH), r(maxH)],
+        w: r(minW) === r(maxW) ? r(minW) : [r(minW), r(maxW)],
+        hxValen: +(maxH / VALEN_HEIGHT).toFixed(2),
+      };
+    };
+    for (const k of Object.keys(this.roomBins || {})) note(k, this.roomBins[k]);
+    for (const k of Object.keys(this.propBins || {})) note(k, this.propBins[k]);
+    for (const k of Object.keys(this.fortressBins || {})) note(k, this.fortressBins[k]);
+    // the doors are their own views, one group per opening
+    const doors = [];
+    for (const e of ((this.room && this.room.entrances) || [])) {
+      if (e.kind !== 'door') continue;
+      const len = e.axis === 'h' ? e.w : e.h;
+      doors.push({ len: Math.round(len), h: Math.round(4 * KIT_SCALE) });
+    }
+    if (doors.length) out.door = { count: doors.length, h: Math.round(4 * KIT_SCALE), w: [...new Set(doors.map((d) => d.len))].sort((a, b) => a - b), hxValen: +((4 * KIT_SCALE) / VALEN_HEIGHT).toFixed(2) };
+    return out;
   }
 
   /**
@@ -759,7 +831,7 @@ class EnvKitRuntime {
       // piece's FOOTPRINT CENTRE on the anchor, whichever corner its author
       // measured from — and carry the offset through the piece's own rotation.
       const ry = item.rot || 0;
-      const rise = PROP_RISE_AT_WALL.has(piece) ? s : scale;
+      const rise = s;                 // the piece's own height, at the kit's unit
       const lx = -(src.min.x + src.size.x / 2) * scale;
       const lz = -(src.min.z + src.size.z / 2) * scale;
       const cos = Math.cos(ry), sin = Math.sin(ry);
@@ -789,6 +861,7 @@ class EnvKitRuntime {
       if (l.type !== 'fire') continue;
       place('torch', { x: l.x, y: l.y }, l.x, l.y, 2.2);
     }
+    this.propBins = bins;
     this.propMeshes = {};
     this.propCounts = {};
     for (const key of Object.keys(bins)) {
@@ -815,6 +888,7 @@ class EnvKitRuntime {
     this._clearFortress();
 
     const bins = planFortress(mansion, lv, this.pieces);
+    this.fortressBins = bins;
     this.fortressMeshes = {};
     this.fortressCounts = {};
     for (const key of Object.keys(bins)) {
@@ -870,6 +944,7 @@ class EnvKitRuntime {
     }
     this.fortressMeshes = null;
     this.fortressCounts = null;
+    this.fortressBins = null;
     this.fortressPlanks = [];
     this.fortress = null;
   }

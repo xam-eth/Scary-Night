@@ -701,7 +701,9 @@ export class Player {
     // The visible head is painted after the night multiply (drawAfterDark).
     // Drawing it here as well left a darkened rectangle under the skull.
     if (isGhost) {
-      Valen3D.draw(ctx, frame, height, { alpha: 0.5, footInset, anchor: 'feet', drop });
+      // a dash ghost is the same body at the same scale, only fainter — an
+      // afterimage drawn a third smaller reads as a child walking behind her
+      Valen3D.draw(ctx, frame, height, { alpha: 0.5, footInset, anchor: 'feet', drop, stand: true });
     }
     if (filter) ctx.restore();
     // v1.1 debug: small indicator that GLB is active (only in dev/debug builds)

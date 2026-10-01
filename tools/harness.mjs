@@ -1056,6 +1056,31 @@ if (args.systems) {
   line(game.perfReport && game.perfReport().budgetMs === MOBILE_BUDGET.frameMs,
     'and what the night is costing is reported, not guessed');
 
+  // ---- THE BODIES (#54/#55): a silhouette, never a card -------------------
+  //
+  // Every body in this game is a frame cut out of the shared WebGL canvas and
+  // stamped onto the painted world. Twice now something that was not the body
+  // got into that frame and filled it: first the shadow-catcher floor, then
+  // the room itself, and the player and every enemy arrived on the world
+  // inside a rectangle. These are the two guards on that door.
+  const { gradeFrame } = await import('../src/game/enemy3d.js');
+  const { createCanvas } = await import('@napi-rs/canvas');
+  const body = createCanvas(60, 60);
+  const bc = body.getContext('2d');
+  bc.clearRect(0, 0, 60, 60);
+  bc.fillStyle = 'rgb(120,130,150)';
+  bc.beginPath(); bc.arc(30, 30, 12, 0, Math.PI * 2); bc.fill();   // the body
+  const out = createCanvas(60, 60);
+  const out2 = createCanvas(60, 60);
+  const alphaAt = (cv, x, y) => cv.getContext('2d').getImageData(x, y, 1, 1).data[3];
+  const lumAt = (cv, x, y) => { const d = cv.getContext('2d').getImageData(x, y, 1, 1).data; return d[0] * 0.299 + d[1] * 0.587 + d[2] * 0.114; };
+  const gradedLit = gradeFrame(body, { lit: 0.85, r: 255, g: 210, b: 170 }, out);
+  const gradedDark = gradeFrame(body, { lit: 0.15, r: 255, g: 210, b: 170 }, out2);
+  const bodyLit = lumAt(gradedLit, 30, 30), bodyRaw = lumAt(body, 30, 30);
+  line(alphaAt(gradedLit, 2, 2) === 0 && alphaAt(gradedDark, 58, 58) === 0,
+    'a graded body keeps its silhouette: the air around it stays clear under a lamp and in the dark');
+  line(bodyLit > bodyRaw, `and the lamp does what it is for — it lightens the body, not the frame (${bodyRaw.toFixed(0)} -> ${bodyLit.toFixed(0)})`);
+
   // ---- THE ARMOURY (#56 P5): the mid-term ladder ---------------------------
   const { ARMOURY, ARMOURY_BY, armouryNext, armouryHeld, forgeArmoury, huntKit } = await import('../src/game/hunt.js');
   const { kitDamage } = await import('../src/game/weapons.js');

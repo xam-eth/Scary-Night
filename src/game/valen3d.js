@@ -368,6 +368,29 @@ class ValenRuntime {
     this._shadowSpent = false;
   }
 
+  /**
+   * The room shares this scene (#54) so a body stands on the real floor and
+   * throws a real shadow across it. It must NOT share the PORTRAIT.
+   *
+   * A frame that also carries the house arrives on the 2D canvas inside a
+   * solid rectangle — the same disease the old floor plate had, and the same
+   * reason it was taken out: under a lamp she was a lit card, in the dark she
+   * was a hole. The room keeps its own pass, its own camera and its own
+   * shadows; the sitter is photographed alone, on transparency.
+   */
+  soloPass(fn) {
+    const hidden = [];
+    for (const child of this.scene.children) {
+      if (child === this.stage || child.isLight) continue;
+      if (child.visible) { child.visible = false; hidden.push(child); }
+    }
+    try {
+      return fn();
+    } finally {
+      for (const c of hidden) c.visible = true;
+    }
+  }
+
   /** The plate, the intro and the shop: the studio rig, and no floor. */
   _applyStudioRig() {
     const lamp = this.lamp;
@@ -489,7 +512,9 @@ class ValenRuntime {
     if (view === 'overhead') this._frameHead();
     this.renderer.toneMappingExposure = view === 'overhead' ? 1.9 : view === 'play' ? 1.55 : 1.18;
     this.renderer.clear();
-    this.renderer.render(this.scene, this.camera);
+    // The house stood in this frame and filled it: every billboard cut from
+    // it — hers and every enemy's — landed on the world as an opaque card.
+    this.soloPass(() => this.renderer.render(this.scene, this.camera));
     return this.canvas;
   }
 
@@ -516,6 +541,91 @@ class ValenRuntime {
     return {
       x: (point.x * 0.5 + 0.5) * this.canvas.width,
       y: (-point.y * 0.5 + 0.5) * this.canvas.height,
+    };
+  }
+
+  /**
+   * The sitter's own bounds inside the frame, in canvas pixels — the pixels
+   * that are HER, not the photograph around her.
+   *
+   * The alpha scan is what the eye measures. The model's projected box is the
+   * fallback and it runs a fifth too big, because a skinned mesh's bounds are
+   * its bind pose: sizing her by it drew a 72-unit body at 60.
+   */
+  _bodyBox(canvas) {
+    // Her body and each dash ghost ask for this in the same frame, off the
+    // same frame: measure every fourth ask and hand the rest the answer.
+    const ask = (this._boxAsk = (this._boxAsk || 0) + 1);
+    if (this._boxCache && ask % 4 !== 0) return this._boxCache;
+    const scan = this._opaqueBox(canvas);
+    if (scan && scan.h > 8 && scan.w > 4) { this._boxCache = scan; return scan; }
+    if (!this.model || !this.camera || !canvas) return null;
+    if (!this._box3) this._box3 = new THREE.Box3();
+    const box = this._box3.setFromObject(this.model);
+    if (!box || box.isEmpty() || !isFinite(box.min.y)) return null;
+    const v = this._vec3 || (this._vec3 = new THREE.Vector3());
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (let i = 0; i < 8; i++) {
+      v.set(i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z);
+      v.project(this.camera);
+      const px = (v.x * 0.5 + 0.5) * canvas.width;
+      const py = (1 - (v.y * 0.5 + 0.5)) * canvas.height;
+      if (px < minX) minX = px;
+      if (px > maxX) maxX = px;
+      if (py < minY) minY = py;
+      if (py > maxY) maxY = py;
+    }
+    if (maxX - minX < 2 || maxY - minY < 2) return null;
+    const pad = 2;
+    const found = {
+      x: Math.max(0, minX - pad), y: Math.max(0, minY - pad),
+      w: Math.min(canvas.width, maxX + pad) - Math.max(0, minX - pad),
+      h: Math.min(canvas.height, maxY + pad) - Math.max(0, minY - pad),
+    };
+    this._boxCache = found;
+    return found;
+  }
+
+  /**
+   * The body's own pixels in a rendered frame: every opaque pixel, bounded.
+   * Sampled every other pixel — a full read of a 288x320 frame each time she
+   * is drawn is a scan, not a measurement.
+   */
+  _opaqueBox(canvas) {
+    if (!canvas || !canvas.width || !canvas.height) return null;
+    const w = canvas.width, h = canvas.height;
+    if (!this._scan || this._scan.width !== w || this._scan.height !== h) {
+      this._scan = document.createElement('canvas');
+      this._scan.width = w;
+      this._scan.height = h;
+      this._scanCtx = this._scan.getContext('2d', { willReadFrequently: true });
+    }
+    if (!this._scanCtx) return null;
+    this._scanCtx.clearRect(0, 0, w, h);
+    this._scanCtx.drawImage(canvas, 0, 0);
+    let data;
+    try {
+      data = this._scanCtx.getImageData(0, 0, w, h).data;
+    } catch (error) {
+      return null;
+    }
+    let minX = w, minY = h, maxX = -1, maxY = -1;
+    for (let y = 0; y < h; y += 2) {
+      for (let x = 0; x < w; x += 2) {
+        if (data[(y * w + x) * 4 + 3] > 40) {
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+    if (maxX < 0 || maxY < 0) return null;
+    const pad = 2;
+    return {
+      x: Math.max(0, minX - pad), y: Math.max(0, minY - pad),
+      w: Math.min(w, maxX + pad) - Math.max(0, minX - pad),
+      h: Math.min(h, maxY + pad) - Math.max(0, minY - pad),
     };
   }
 
@@ -599,8 +709,26 @@ class ValenRuntime {
   draw(ctx, canvas, height, { alpha = 1, footInset = 7, anchor = 'feet', head = null, drop = 0, stand = false } = {}) {
     if (!canvas) return false;
     // `stand`: `height` is the BODY's height on screen, not the frame's. The
-    // play frame carries floor and shadow below the feet as well as her, so
-    // without this she would shrink the moment the shadow got room to show.
+    // play frame is a photograph with air around the sitter — headroom above
+    // her and floor in front of her — so sizing the FRAME to 72 drew a body
+    // of 46. Measure the body instead, and put its feet on the tile.
+    if (stand) {
+      const box = this._bodyBox(canvas);
+      if (box) {
+        const scale = height / Math.max(1, box.h);
+        const dw = canvas.width * scale;
+        const dh = canvas.height * scale;
+        ctx.save();
+        ctx.globalAlpha *= alpha;
+        // her feet, not the frame's bottom edge, sit on the anchor
+        ctx.drawImage(canvas,
+          -(box.x + box.w / 2) * scale,
+          -(box.y + box.h) * scale + drop,
+          dw, dh);
+        ctx.restore();
+        return true;
+      }
+    }
     const frameHeight = stand ? height / Math.max(0.25, this._fill || 1) : height;
     const width = frameHeight * (canvas.width / canvas.height);
     let x = -width / 2;

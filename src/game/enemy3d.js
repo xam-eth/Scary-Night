@@ -100,6 +100,47 @@ export const ENEMY_EXPOSURE = Object.freeze({
   werewolf: 1.3,
 });
 
+/**
+ * Grade a rendered body with the light of the floor it is standing on, and
+ * return it. The rule this function exists to keep: a body is a SILHOUETTE.
+ * The frame it is cut from is transparent everywhere the body is not, and
+ * nothing here may fill that air in — a lamp that brightens the empty pixels
+ * hands the world a lit rectangle with a monster printed on it. Dark shades
+ * use 'source-atop', which can only paint where paint already is; the lit
+ * branch uses 'screen', which cannot, so it puts the alpha back afterwards.
+ *
+ * Pure apart from the canvas it writes into: the harness holds it to this.
+ */
+export function gradeFrame(frame, shade, out) {
+  if (!frame || !out) return frame;
+  if (out.width !== frame.width || out.height !== frame.height) {
+    out.width = frame.width;
+    out.height = frame.height;
+  }
+  const g = out.getContext('2d');
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.globalCompositeOperation = 'source-over';
+  g.globalAlpha = 1;
+  g.clearRect(0, 0, out.width, out.height);
+  g.drawImage(frame, 0, 0);
+  if (shade.lit < 0.55) {
+    g.globalCompositeOperation = 'source-atop';
+    g.fillStyle = `rgba(7,9,14,${Math.min(0.72, 0.58 + (0.4 - shade.lit) * 0.2).toFixed(3)})`;
+    g.fillRect(0, 0, out.width, out.height);
+  } else {
+    g.globalCompositeOperation = 'screen';
+    g.globalAlpha = Math.min(0.42, (shade.lit - 0.35) * 0.45);
+    g.fillStyle = `rgb(${shade.r | 0},${shade.g | 0},${shade.b | 0})`;
+    g.fillRect(0, 0, out.width, out.height);
+    g.globalCompositeOperation = 'destination-in';
+    g.globalAlpha = 1;
+    g.drawImage(frame, 0, 0);
+  }
+  g.globalCompositeOperation = 'source-over';
+  g.globalAlpha = 1;
+  return out;
+}
+
 export const ENEMY_HEIGHT = Object.freeze({
   crawler: 46,
   zombie: 74,
@@ -342,6 +383,10 @@ class EnemyStage {
         stage: Valen3D.stage,
         camera: Valen3D.camera,
         canvas: Valen3D.canvas,
+        // The room shares this scene so a body throws a real shadow on the
+        // shared floor. It does not share the portrait: a frame carrying the
+        // house is a rectangle on the 2D canvas, not a silhouette.
+        solo: (fn) => Valen3D.soloPass(fn),
       };
     }
     if (Valen3D.loading || Valen3D.ready === false && !Valen3D.failed) return null;
@@ -472,10 +517,25 @@ class EnemyStage {
       rec.template.visible = true;
       rec.template.position.set(0, 0, 0);
       rec.template.rotation.set(0, 0, 0);
+      /* Stand it up before measuring it. A rig's rest pose is the pose it was
+       * authored in, which is nobody's idea of the body: the werewolf rests
+       * in a crouch that measures 253 wide by 119 tall, and a preview baked
+       * from that sized every distant wolf at a hundred and forty per cent.
+       * Play its idle and measure the silhouette the player will see. */
+      const mixer = new THREE.AnimationMixer(rec.template);
+      const map = ENEMY_MODELS[key] && ENEMY_MODELS[key].map;
+      const idle = map && map.idle
+        ? (rec.animations || []).find((clip) => clip.name === map.idle) : null;
+      if (idle) {
+        mixer.clipAction(idle).play();
+        mixer.update(0.12);
+      }
       rec.template.updateMatrixWorld(true);
       this._fit(host, rec.template, key);
-      host.renderer.clear();
-      host.renderer.render(host.scene, host.camera);
+      (host.solo || ((fn) => fn()))(() => {
+        host.renderer.clear();
+        host.renderer.render(host.scene, host.camera);
+      });
       if (!rec.preview) {
         rec.preview = document.createElement('canvas');
         rec.preview.width = host.canvas.width;
@@ -483,6 +543,8 @@ class EnemyStage {
       }
       this._copyFrame(host, rec.preview);
       rec.crop = this._opaqueBox(rec.preview);
+      mixer.stopAllAction();
+      mixer.uncacheRoot(rec.template);
       rec.template.visible = false;
       host.stage.remove(rec.template);
     });
@@ -597,11 +659,25 @@ class EnemyStage {
         host._applyRig({ x: enemy.x, y: enemy.y, light: this._lightAt ? this._lightAt(enemy.x, enemy.y) : null });
       }
       this._fit(host, slot.model, slot.type);
-      host.renderer.clear();
-      host.renderer.render(host.scene, host.camera);
-      this._copyFrame(host, slot.frame);
+      (host.solo || ((fn) => fn()))(() => {
+        host.renderer.clear();
+        host.renderer.render(host.scene, host.camera);
+        this._copyFrame(host, slot.frame);
+      });
+      /* The crop is the TYPE's own measurement — the preview every body of it
+       * was baked from, standing in its idle — not the box the body happens
+       * to fill this frame.
+       *
+       * Two ways to get this wrong, and the house has been wrong both ways.
+       * The bind-pose box runs a third taller than any pose a rig is animated
+       * into, which drew a 74px zombie at 43 and a 90px werewolf at 71: the
+       * house was full of monsters at two thirds of their size. Measuring the
+       * live silhouette instead is worse in the other direction — a walk cycle
+       * swings that box by a quarter of the body's height, so the creature
+       * breathes as it walks and shrinks as it dies. One pose, measured once. */
+      const rec = this.types[slot.type];
       const box = this._box && this._size ? this._box.setFromObject(slot.model) : null;
-      slot.crop = (box ? this._bodyBox(host, box) : null) || this._opaqueBox(slot.frame);
+      slot.crop = (rec && rec.crop) || (box ? this._bodyBox(host, box) : null);
       slot.model.visible = false;
     });
   }
@@ -619,12 +695,9 @@ class EnemyStage {
   /**
    * The body's box in the render, projected through the shared camera.
    *
-   * The opaque-pixel box used to do this job, but the body now drops a real
-   * shadow onto the shared floor and that shadow is inside the frame: cropping
-   * to the opaque pixels would swallow the shadow, shrink the body by whatever
-   * the shadow happened to measure that frame, and lift its feet off the
-   * ground. This is the geometry's own box, so the shadow can spill outside
-   * it and the body keeps its size and its footing.
+   * The fallback, not the measurement: a bind-pose box is bigger than the
+   * pose standing in the frame, so anything sized by it comes out small. It
+   * is here for the frame that cannot be read back.
    */
   _bodyBox(host, box) {
     const cam = host.camera;
@@ -725,32 +798,8 @@ class EnemyStage {
   }
 
   _graded(frame, shade) {
-    if (!frame) return frame;
     if (!this._grade) this._grade = document.createElement('canvas');
-    const c = this._grade;
-    if (c.width !== frame.width || c.height !== frame.height) {
-      c.width = frame.width;
-      c.height = frame.height;
-    }
-    const g = c.getContext('2d');
-    g.setTransform(1, 0, 0, 1, 0, 0);
-    g.globalCompositeOperation = 'source-over';
-    g.globalAlpha = 1;
-    g.clearRect(0, 0, c.width, c.height);
-    g.drawImage(frame, 0, 0);
-    if (shade.lit < 0.55) {
-      g.globalCompositeOperation = 'source-atop';
-      g.fillStyle = `rgba(7,9,14,${Math.min(0.72, 0.58 + (0.4 - shade.lit) * 0.2).toFixed(3)})`;
-      g.fillRect(0, 0, c.width, c.height);
-    } else {
-      g.globalCompositeOperation = 'screen';
-      g.globalAlpha = Math.min(0.42, (shade.lit - 0.35) * 0.45);
-      g.fillStyle = `rgb(${shade.r | 0},${shade.g | 0},${shade.b | 0})`;
-      g.fillRect(0, 0, c.width, c.height);
-    }
-    g.globalCompositeOperation = 'source-over';
-    g.globalAlpha = 1;
-    return c;
+    return gradeFrame(frame, shade, this._grade);
   }
 
   _paint(ctx, enemy, frame, game, alpha, opts = {}) {

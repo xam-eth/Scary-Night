@@ -55,6 +55,10 @@ await page.evaluate(async () => {
   await new Promise((r) => setTimeout(r, 300));
   g.skipNarration();
   window.__env = (await import('./src/game/envkit.js')).EnvKit;
+  window.__valen = (await import('./src/game/valen3d.js')).Valen3D;
+  window.__enemy = (await import('./src/game/enemy3d.js')).Enemy3D;
+  window.__eh = (await import('./src/game/enemy3d.js')).ENEMY_HEIGHT;
+  window.__foes = await import('./src/game/enemies.js');
   window.__three = await import('./src/vendor/three/three.module.min.js');
 });
 await page.waitForFunction(() => window.__LN && window.__LN.screen === 'playing', { timeout: 30000, polling: 100 }).catch(() => {});
@@ -77,6 +81,145 @@ const STOPS = [
   ['study window', 1310, -150], ['gallery window', 380, -240],
   ['oratory window', 2030, -240],
 ];
+/* ---------- the sizes ----------
+ * A room is only the right size next to the thing standing in it, and the
+ * woman is 72 world px because the game says she is. Every piece the kit is
+ * built from is measured against her: the walls and the doors have to stand
+ * over her, and the furniture has to stand UNDER her. Scaled to their 2D
+ * footprints instead, a chair came out at 88px and a dining table at 132 —
+ * level with the wall — and the house read as a giant's house. */
+async function sizeSection() {
+  console.log('\n---- THE SIZES (#55) ----');
+  const sizes = await page.evaluate(() => window.__env.sizes());
+  const rows = Object.keys(sizes).map((k) => ({ piece: k, ...sizes[k] }));
+  const top = (r) => (Array.isArray(r.h) ? r.h[1] : r.h);
+  rows.sort((a, b) => top(b) - top(a));
+  for (const r of rows) {
+    const h = Array.isArray(r.h) ? `${r.h[0]}-${r.h[1]}` : r.h;
+    const w = Array.isArray(r.w) ? `${r.w[0]}-${r.w[1]}` : r.w;
+    console.log(`  ${r.piece.padEnd(12)} n=${String(r.count).padStart(3)}  h ${String(h).padStart(8)}px  w ${String(w).padStart(8)}px  ${String(r.hxValen).padStart(5)}x Valen`);
+  }
+  const ok = (b, msg) => console.log(`  ${b ? 'PASS' : 'FAIL'}  ${msg}`);
+  const at = (k) => sizes[k] || null;
+  const arch = ['wall', 'window', 'door'].filter((k) => at(k));
+  const furniture = ['chair', 'table', 'barrel', 'chest', 'candle', 'stacked', 'column', 'torch'].filter((k) => at(k));
+  ok(arch.length >= 2 && arch.every((k) => at(k).hxValen > 1.2),
+    `the room stands over her (${arch.map((k) => `${k} ${at(k).hxValen}x`).join(', ')})`);
+  ok(furniture.length >= 4 && furniture.every((k) => at(k).hxValen < 1.05),
+    `and its furniture stands under her (${furniture.map((k) => `${k} ${at(k).hxValen}x`).join(', ')})`);
+  ok(!!at('chair') && at('chair').hxValen < 0.75 && at('chair').hxValen > 0.3,
+    `a chair is a chair, not a throne or a stool (${at('chair').hxValen}x her)`);
+}
+
+async function bodySection() {
+  console.log('\n---- THE BODIES (#54/#55) ----');
+  const herCov = await page.evaluate(async () => {
+    const V = window.__valen, g = window.__LN;
+    V.render({ state: 'walk', speed: 122, stepPhase: 1.2, view: 'play', weapon: 'claw',
+      angle: Math.PI / 2, world: { x: g.player.x, y: g.player.y, light: g.renderer.keyLightAt(g.player.x, g.player.y) } });
+    const cv = V.canvas;
+    const tmp = document.createElement('canvas');
+    tmp.width = cv.width; tmp.height = cv.height;
+    const t = tmp.getContext('2d', { willReadFrequently: true });
+    t.drawImage(cv, 0, 0);
+    const d = t.getImageData(0, 0, tmp.width, tmp.height).data;
+    let solid = 0;
+    for (let i = 3; i < d.length; i += 4) if (d[i] > 240) solid++;
+    return { solid: +(solid / (d.length / 4) * 100).toFixed(1), w: tmp.width, h: tmp.height };
+  });
+  console.log(`  her frame            ${herCov.solid}% of ${herCov.w}x${herCov.h} is body, the rest is air`);
+  /* Which box the draw is sized from: the pixels that are her, or the model's
+   * bind pose, which runs a fifth tall and would shrink her by that much. */
+  const box = await page.evaluate(() => {
+    const V = window.__valen;
+    const scan = V._opaqueBox(V.canvas);
+    const geo = V._bodyBox ? V._bodyBox(V.canvas) : null;
+    return { scan, geo, canvas: `${V.canvas.width}x${V.canvas.height}` };
+  });
+  if (box.scan) console.log(`  her body in it       ${box.scan.w}x${box.scan.h}px of ${box.canvas} — measured off the pixels, not the bind pose`);
+
+  await page.evaluate(async () => {
+    const g = window.__LN;
+    g.enemies.length = 0;
+    const e = new window.__foes.Werewolf(g.player.x + 130, g.player.y - 10, {});
+    e.state = 'idle';
+    g.enemies.push(e);
+  });
+  await wait(2500);
+  const foeCov = await page.evaluate(() => {
+    const g = window.__LN, E = window.__enemy;
+    const e = g.enemies[0];
+    const packed = e && E.frameFor(e);
+    const cv = packed && packed.frame;
+    if (!cv) return null;
+    const tmp = document.createElement('canvas');
+    tmp.width = cv.width; tmp.height = cv.height;
+    const t = tmp.getContext('2d', { willReadFrequently: true });
+    t.drawImage(cv, 0, 0);
+    const d = t.getImageData(0, 0, tmp.width, tmp.height).data;
+    let solid = 0;
+    for (let i = 3; i < d.length; i += 4) if (d[i] > 240) solid++;
+    return { solid: +(solid / (d.length / 4) * 100).toFixed(1), w: tmp.width, h: tmp.height, crop: packed.crop };
+  });
+  console.log(`  werewolf frame       ${foeCov ? foeCov.solid + '% of ' + foeCov.w + 'x' + foeCov.h + ' is body' : 'none'}`);
+  await page.evaluate(() => { window.__LN.enemies.length = 0; });
+  await wait(1200);
+
+  /* And is a monster the size the game says it is? A body is stamped from a
+   * frame with a `crop` — the part of that frame that is the creature. Crop it
+   * to the bind pose and a 74px zombie comes out at 43; crop it to its own
+   * silhouette every frame and it breathes as it walks. */
+  const foes = await page.evaluate(async () => {
+    const g = window.__LN, E = window.__enemy, H = window.__eh;
+    g.enemies.length = 0;
+    let i = 0;
+    for (const K of ['Werewolf', 'Zombie', 'Ghoul', 'Hunter', 'Stalker', 'Crawler']) {
+      if (!window.__foes[K]) continue;
+      const e = new window.__foes[K](g.player.x + 110 + i * 80, g.player.y - 10, {});
+      e.state = 'idle'; e.stateT = 0;
+      g.enemies.push(e);
+      i++;
+    }
+    await new Promise((r) => setTimeout(r, 2500));
+    const out = [];
+    for (const e of g.enemies) {
+      const packed = E.frameFor(e);
+      if (!packed || !packed.frame || !packed.crop) { out.push({ key: e.key, design: H[e.key] || null, drawn: null }); continue; }
+      const f = packed.frame;
+      const tmp = document.createElement('canvas');
+      tmp.width = f.width; tmp.height = f.height;
+      const t = tmp.getContext('2d', { willReadFrequently: true });
+      t.drawImage(f, 0, 0);
+      const d = t.getImageData(0, 0, f.width, f.height).data;
+      let minY = 1e9, maxY = -1;
+      for (let y = 0; y < f.height; y++) for (let x = 0; x < f.width; x++) {
+        if (d[(y * f.width + x) * 4 + 3] > 40) { if (y < minY) minY = y; if (y > maxY) maxY = y; }
+      }
+      const scale = (H[e.key] || 74) / packed.crop.h;
+      out.push({ key: e.key, design: H[e.key] || null, drawn: maxY < 0 ? null : +(((maxY - minY) * scale).toFixed(1)) });
+    }
+    return out;
+  });
+  for (const f of foes) {
+    if (f.drawn == null) { console.log(`  ${f.key.padEnd(9)} — no frame`); continue; }
+    console.log(`  ${String(f.key).padEnd(9)} design ${String(f.design).padStart(3)}px  drawn ${String(f.drawn).padStart(5)}px  = ${String(Math.round(f.drawn / f.design * 100)).padStart(3)}%`);
+  }
+  await page.evaluate(() => { window.__LN.enemies.length = 0; });
+  await wait(1200);
+
+  const ok = (b, msg) => console.log(`  ${b ? 'PASS' : 'FAIL'}  ${msg}`);
+  ok(herCov.solid > 1 && herCov.solid < 45, `she is cut out, not carded (${herCov.solid}% of her frame is her)`);
+  ok(!!foeCov && foeCov.solid > 1 && foeCov.solid < 45,
+    `and so is the thing in the room with her (${foeCov ? foeCov.solid : 'no frame'}% body)`);
+  const measured = foes.filter((f) => f.drawn != null && f.design);
+  ok(measured.length >= 3 && measured.every((f) => f.drawn > f.design * 0.6 && f.drawn < f.design * 1.4),
+    `and each of them is the height the game gave it (${measured.map((f) => `${f.key} ${Math.round(f.drawn / f.design * 100)}%`).join(', ')})`);
+  const tallest = measured.reduce((a, f) => (!a || f.drawn > a.drawn ? f : a), null);
+  const lowest = measured.reduce((a, f) => (!a || f.drawn < a.drawn ? f : a), null);
+  ok(!!tallest && !!lowest && tallest.drawn > lowest.drawn * 1.6,
+    `the roster has a shape to it: ${tallest ? tallest.key : '?'} towers over ${lowest ? lowest.key : '?'} (${tallest ? Math.round(tallest.drawn) : 0} vs ${lowest ? Math.round(lowest.drawn) : 0}px)`);
+}
+
 async function bakeSection() {
 /* -------------------------------------------------------------------------
  * THE BAKE (#53 C2) — the house lighting itself, measured on the pixels.
@@ -201,6 +344,8 @@ const ONLY = (process.argv[2] || '').toLowerCase();
 
 if (ONLY === 'bake') {
   await bakeSection();
+  await sizeSection();
+  await bodySection();
   await browser.close();
   server.kill('SIGTERM');
   process.exit(0);
@@ -533,6 +678,8 @@ console.log(`windows drawn: ${winOk}/${winTried} of the ones a player can stand 
 
 console.log('\n---- THE BAKE (#53 C2) ----');
 await bakeSection();
+await sizeSection();
+await bodySection();
 
 await browser.close();
 server.kill('SIGTERM');
