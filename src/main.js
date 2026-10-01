@@ -12,6 +12,7 @@ import { drawTouchControls } from './game/hud.js';
 import { drawCoach } from './game/coach.js';
 import { Valen3D } from './game/valen3d.js';
 import { Enemy3D } from './game/enemy3d.js';
+import { EnvKit } from './game/envkit.js';
 import { Ads } from './shop/ads.js';
 import { IAP } from './shop/iap.js';
 
@@ -91,6 +92,8 @@ window.__LN_API = {
   },
   hold: (action, on) => { input.keys[action] = !!on; },
   valen: () => Valen3D.diagnostics(),
+  env: () => EnvKit.diagnostics(),
+  envFlat: (on) => EnvKit.flatTint(!!on),
   retryValen: () => Valen3D.retry(),
   enemy3d: () => Enemy3D.diagnostics(),
   enemyProof: (key, x, y) => Enemy3D.setProofs([{ key, x, y }]),

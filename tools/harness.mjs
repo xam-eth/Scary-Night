@@ -990,6 +990,72 @@ if (args.systems) {
     'and the next night does not make it come back — the house has no Master left to send');
   line(!masterDown({}) && !masterReady({}), 'a save that never hunted has no Master, dead or otherwise');
 
+  // ---- PHASE C2 (#53): the bake and the budget -----------------------------
+  const { bakeLight, bakedTint, bakeReport, staticSources, BAKE_CELL } = await import('../src/game/lightbake.js');
+  const { MOBILE_BUDGET, QUALITY_TIERS, budgetReport, tintPlacements } = await import('../src/game/envkit.js');
+
+  const house = game.mansion;
+  const sources = staticSources(house);
+  const bake0 = bakeLight(house);
+  const info0 = bakeReport(bake0);
+  line(sources.length > 8 && info0.cells > 500,
+    `the house's static light is measured once, not per frame (${sources.length} sources, ${info0.cells} cells of ${BAKE_CELL})`);
+  line(info0.ms <= MOBILE_BUDGET.bakeMs,
+    `and the whole bake costs less than one frame is allowed to (${info0.ms}ms of ${MOBILE_BUDGET.bakeMs}ms)`);
+
+  // the light is where the lamps are, with the renderer's own falloff
+  const chandelier = (house.lights || []).find((l) => l.id === 'chandelier');
+  const atLamp = bake0.sample(chandelier.x, chandelier.y);
+  const atFar = bake0.sample(chandelier.x + chandelier.r * 2.2, chandelier.y);
+  line(atLamp.level > 0.8 && atFar.level < atLamp.level * 0.5,
+    `a lamp is a pool, not a wash — ${atLamp.level.toFixed(2)} under the chandelier, ${atFar.level.toFixed(2)} down the hall`);
+  const corner = bake0.sample(house.bounds.x + 40, house.bounds.y + house.bounds.h - 40);
+  line(corner.level < atLamp.level, `and the far corners are still dark (${corner.level.toFixed(2)})`);
+
+  // the tint: warm light is amber, moonlight is cold, and neither is black
+  const fire = bakedTint(bake0.sample(1120, 636));
+  const moon = bakedTint(bake0.sample(2000, 180));
+  const dark = bakedTint(corner);
+  line(fire[0] > fire[2] && moon[2] > moon[0],
+    `the fire tints amber and the glass tints blue (fire ${fire.map((v) => v.toFixed(2))}, moon ${moon.map((v) => v.toFixed(2))})`);
+  line(dark[0] < fire[0] && dark[0] > 0.15,
+    `and an unlit corner keeps its silhouette instead of going black (${dark.map((v) => v.toFixed(2))})`);
+
+  // the fortress lights the house it built: candles in the jambs, in the bake
+  const candles = [
+    { x: 560, y: 1500, r: 135, i: 0.6, color: [255, 170, 105], type: 'candle' },
+    { x: 690, y: 1500, r: 135, i: 0.6, color: [255, 170, 105], type: 'candle' },
+  ];
+  const bake1 = bakeLight(house, { extra: candles });
+  line(bake1.mean > bake0.mean,
+    `a lit house is measurably brighter than the ruin it was (mean ${bake0.mean.toFixed(4)} -> ${bake1.mean.toFixed(4)})`);
+  const jamb = tintPlacements([{ x: 560, z: 1500 }], bake1)[0];
+  const jamb0 = tintPlacements([{ x: 560, z: 1500 }], bake0)[0];
+  line(jamb[0] > jamb0[0], 'and the thing standing in that light is painted with it');
+
+  // the budget: a ceiling, named, and the ladder down from it
+  line(MOBILE_BUDGET.instances > 0 && MOBILE_BUDGET.frameMs > 0 && MOBILE_BUDGET.bakeMs > 0,
+    `the mobile budget is written down (${MOBILE_BUDGET.instances} instances, ${MOBILE_BUDGET.meshes} draw calls, ${MOBILE_BUDGET.frameMs}ms a frame)`);
+  line(budgetReport({ wall: 400, floor: 300 }).fits && !budgetReport({ wall: 4000 }).fits,
+    'and a room that breaks it is told so, by name');
+  line(!budgetReport({ wall: 4000 }).fits && budgetReport({ wall: 4000 }).over.join().includes('instances'),
+    'the verdict says which ceiling broke, not just that one did');
+  line(QUALITY_TIERS.length === 4 && QUALITY_TIERS[3].room && QUALITY_TIERS[3].props && QUALITY_TIERS[3].fortress
+    && !QUALITY_TIERS[0].room && !QUALITY_TIERS[0].props && !QUALITY_TIERS[0].fortress,
+    'there is a ladder down: the whole house at the top, the painted house at the bottom');
+  let mono = true;
+  for (let i = 1; i < QUALITY_TIERS.length; i++) {
+    const a = QUALITY_TIERS[i - 1], b = QUALITY_TIERS[i];
+    if (b.shadow < a.shadow) mono = false;
+    if ((a.room && !b.room) || (a.props && !b.props) || (a.fortress && !b.fortress)) mono = false;
+  }
+  line(mono, 'and no rung of it takes away something the rung below kept');
+  line(game.quality === QUALITY_TIERS.length - 1 && game.setQuality(1) === 1 && game.setQuality(-5) === 0,
+    'the governor starts with the whole house and clamps at the painted one');
+  game.setQuality(QUALITY_TIERS.length - 1);
+  line(game.perfReport && game.perfReport().budgetMs === MOBILE_BUDGET.frameMs,
+    'and what the night is costing is reported, not guessed');
+
   // ---- THE ARMOURY (#56 P5): the mid-term ladder ---------------------------
   const { ARMOURY, ARMOURY_BY, armouryNext, armouryHeld, forgeArmoury, huntKit } = await import('../src/game/hunt.js');
   const { kitDamage } = await import('../src/game/weapons.js');

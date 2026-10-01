@@ -77,7 +77,134 @@ const STOPS = [
   ['study window', 1310, -150], ['gallery window', 380, -240],
   ['oratory window', 2030, -240],
 ];
+async function bakeSection() {
+/* -------------------------------------------------------------------------
+ * THE BAKE (#53 C2) — the house lighting itself, measured on the pixels.
+ *
+ * Every lamp in this house is nailed down, so the light a wall stands in is
+ * answered once per house and written into the instance colours. Three
+ * claims, each checked against the framebuffer rather than the plan: the
+ * room's instances are NOT all one colour, a wall under the chandelier is
+ * brighter on screen than a wall in a corner with no lamp in it, and the
+ * answer is measured once a house instead of once a frame.
+ */
+console.log('\n---- THE BAKE (#53 C2) ----');
+const BAKE_STOPS = [
+  ['main hall, under the chandelier', 620, 1000],
+  ['library', 1330, 350],
+  ['basement, no lamp down there', 1500, 1160],
+];
+const lost = await page.evaluate(() => {
+  const gl = window.__env.renderer && window.__env.renderer.getContext();
+  return !!(gl && gl.isContextLost && gl.isContextLost());
+});
+if (lost) {
+  console.log('  FAIL  the WebGL context was lost before the bake could be measured — re-run');
+  return;
+}
+const bakesBefore = await page.evaluate(() => window.__env.diagnostics().bakes);
+const bakeRows = [];
+for (const [name, x, y] of BAKE_STOPS) {
+  await page.evaluate(([px_, py_]) => {
+    const g = window.__LN;
+    g.enemies.length = 0;
+    // pin the rung: a headless browser is slow enough that the governor will
+    // have climbed down, and then this would be measuring the governor
+    g.setQuality(3);
+    g.player.x = px_; g.player.y = py_; g.player.blood = g.player.bloodMax;
+    g.renderer.snapCamera(px_, py_);
+  }, [x, y]);
+  await wait(2200);
+  const m = await page.evaluate(() => {
+    const E = window.__env, g = window.__LN, r = g.renderer;
+    const gl = E.renderer.getContext();
+    const cw = E.canvas.width, ch = E.canvas.height;
+    const px = new Uint8Array(cw * ch * 4);
+    // pin the rung in the same breath as the measurement: a headless browser
+    // is slow enough that the governor climbs down on its own, and then this
+    // would be measuring the governor instead of the bake
+    g.setQuality(3);
+    const drew = E.render({ camX: r.cam.x, camY: r.cam.y, zoom: r.cam.zoom, tilt: r.tilt,
+      w: r.view.w, h: r.view.h, dpr: r.dpr, light: r.keyLightAt(r.cam.x, r.cam.y) });
+    gl.readPixels(0, 0, cw, ch, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    // the kit draws on a transparency: only its own pixels count
+    let sum = 0, n = 0;
+    for (let i = 0; i < px.length; i += 4) {
+      if (px[i + 3] < 8) continue;
+      sum += px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114;
+      n++;
+    }
+    const d = E.diagnostics();
+    return { lum: n ? sum / n : 0, covered: n, drew: !!drew, quality: d.quality,
+      lit: d.lit, bake: d.bake, budget: d.budget, bakes: d.bakes };
+  });
+  bakeRows.push([name, m]);
+  const room = m.lit && m.lit.room;
+  console.log(`  ${name.padEnd(34)} on-screen lum ${m.lum.toFixed(1).padStart(5)} at rung ${m.quality}`
+    + ` | room tint ${room ? `${room.min}–${room.max}` : 'none'}`);
+}
+
+// the same frame, painted flat: if the bake is doing anything you can see,
+// these are two different pictures
+await page.evaluate(([x, y]) => {
+  const g = window.__LN;
+  g.setQuality(3);
+  g.player.x = x; g.player.y = y; g.renderer.snapCamera(x, y);
+}, [620, 1000]);
+await wait(1800);
+const ab = await page.evaluate(() => {
+  const E = window.__env, g = window.__LN, r = g.renderer;
+  g.setQuality(3);
+  const gl = E.renderer.getContext();
+  const cw = E.canvas.width, ch = E.canvas.height;
+  const shot = () => {
+    const px = new Uint8Array(cw * ch * 4);
+    E.render({ camX: r.cam.x, camY: r.cam.y, zoom: r.cam.zoom, tilt: r.tilt,
+      w: r.view.w, h: r.view.h, dpr: r.dpr, light: r.keyLightAt(r.cam.x, r.cam.y) });
+    gl.readPixels(0, 0, cw, ch, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    return px;
+  };
+  const A = shot();
+  E.flatTint(true);
+  const B = shot();
+  E.flatTint(false);
+  shot();
+  let diff = 0, big = 0, n = 0;
+  for (let i = 0; i < A.length; i += 4) {
+    if (A[i + 3] < 8 && B[i + 3] < 8) continue;
+    const la = A[i] * 0.299 + A[i + 1] * 0.587 + A[i + 2] * 0.114;
+    const lb = B[i] * 0.299 + B[i + 1] * 0.587 + B[i + 2] * 0.114;
+    const d = Math.abs(la - lb);
+    diff += d; if (d > 8) big++; n++;
+  }
+  return { diff: n ? diff / n : 0, pct: n ? (big / n) * 100 : 0, n };
+});
+console.log(`  ${'bake vs the same room painted flat'.padEnd(34)} mean |diff| ${ab.diff.toFixed(1)} over ${ab.n} px, ${ab.pct.toFixed(1)}% of them changed`);
+
+const byLum = bakeRows.slice().sort((a, b) => b[1].lum - a[1].lum);
+const lit = byLum[0][1], dark = byLum[byLum.length - 1][1];
+const bakesAfter = await page.evaluate(() => window.__env.diagnostics().bakes);
+const ok = (b, msg) => console.log(`  ${b ? 'PASS' : 'FAIL'}  ${msg}`);
+ok(!!(lit.lit && lit.lit.room) && lit.lit.room.max - lit.lit.room.min > 0.15,
+  `the room is lit by the house, not by a constant (room tint ${lit.lit.room.min}–${lit.lit.room.max})`);
+ok(bakeRows.every(([, m]) => m.quality === 3) && lit.covered > 1000 && dark.covered > 1000 && lit.lum > dark.lum * 1.05,
+  `and the brightest room reads brighter on screen than the darkest (${byLum[0][0]} ${lit.lum.toFixed(1)} vs ${byLum[byLum.length - 1][0]} ${dark.lum.toFixed(1)})`);
+ok(ab.pct > 5, 'and the bake is visible: repainting the room changes the picture');
+ok(bakesAfter === bakesBefore,
+  `measured once a house, not once a frame (${bakesBefore} bakes across ${BAKE_STOPS.length} stops and ~8s of play)`);
+ok(lit.budget.fits,
+  `inside the mobile budget (${lit.budget.instances} instances in ${lit.budget.meshes} draw calls)`);
+ok(lit.bake.ms <= 24, `and the bake itself costs less than a frame (${lit.bake.ms}ms)`);
+}
+
 const ONLY = (process.argv[2] || '').toLowerCase();
+
+if (ONLY === 'bake') {
+  await bakeSection();
+  await browser.close();
+  server.kill('SIGTERM');
+  process.exit(0);
+}
 const rows = [];
 for (let n = 0; n < STOPS.length; n++) {
   if (ONLY && !STOPS[n][0].toLowerCase().includes(ONLY)) continue;
@@ -403,6 +530,9 @@ for (const w of winList) {
     + `  [window y ${m.wy} vs camera ${m.camY}${m.folded ? ' — folded' : ''}]`);
 }
 console.log(`windows drawn: ${winOk}/${winTried} of the ones a player can stand in front of`);
+
+console.log('\n---- THE BAKE (#53 C2) ----');
+await bakeSection();
 
 await browser.close();
 server.kill('SIGTERM');

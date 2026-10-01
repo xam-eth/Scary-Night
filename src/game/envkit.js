@@ -18,6 +18,7 @@
 import * as THREE from '../vendor/three/three.module.min.js';
 import { GLTFLoader } from '../vendor/three/GLTFLoader.js';
 import { Valen3D } from './valen3d.js';
+import { bakeLight, bakedTint, bakeReport } from './lightbake.js';
 
 export const KIT_DIR = './assets/env-kit/';
 
@@ -117,6 +118,67 @@ const PROP_RANGE = Object.freeze({ default: [0.7, 2.4], column: [1.4, 3.0] });
 const FORTRESS_BINS = ['candle', 'crate', 'stacked', 'column', 'pillar', 'chest', 'table', 'barrel', 'torch'];
 /** The pale blue-white of a silver ward, as an instance tint. */
 const WARD_SILVER = 0xbcd0e6;
+
+/* ---------------------------------------------------------------------------
+ * THE MOBILE BUDGET (#53 guardrails: mobile-first, and say what the ceiling
+ * is instead of hoping for it).
+ *
+ * A phone cannot afford the room a desktop can, and it should not try. These
+ * are the ceilings the kit is allowed to draw inside. They are measured, not
+ * guessed: `budgetReport` is fed the counts the room actually built, and the
+ * tiers below are what the governor steps through when a device cannot hold
+ * the frame. Losing the furniture is a smaller loss than losing the frame.
+ */
+export const MOBILE_BUDGET = Object.freeze({
+  instances: 1200,     // total kit instances drawn in one room pass
+  meshes: 28,          // one draw call per instanced piece
+  shadowMap: 512,      // the shared shadow map, squared
+  frameMs: 24,         // the frame a mid phone is expected to hold (~42fps)
+  /* A rebake is allowed one frame's worth, and it only ever happens when the
+   * HOUSE changes — a new mansion, or the fortress going up a level — both of
+   * which arrive behind a screen transition. Never per frame: the bake is
+   * measured once and read for the rest of the night. */
+  bakeMs: 24,
+});
+
+/**
+ * What each quality tier is allowed to draw, from the painted house alone (0)
+ * to the whole room (3). Pure: the harness holds the ladder to it without a
+ * GPU, and the governor climbs it one rung at a time.
+ */
+export const QUALITY_TIERS = Object.freeze([
+  { tier: 0, room: false, props: false, fortress: false, shadow: 256, note: 'the painted house carries the night' },
+  { tier: 1, room: true, props: false, fortress: false, shadow: 256, note: 'the room, and none of its furniture' },
+  { tier: 2, room: true, props: true, fortress: false, shadow: 512, note: 'the room and its furniture' },
+  { tier: 3, room: true, props: true, fortress: true, shadow: 512, note: 'the whole house, dressed' },
+]);
+
+/** Verdict on a set of counts. `over` names every ceiling that was broken. */
+export function budgetReport(counts) {
+  const instances = Object.values(counts || {}).reduce((n, v) => n + (Number(v) || 0), 0);
+  const meshes = Object.keys(counts || {}).filter((k) => (Number(counts[k]) || 0) > 0).length;
+  const over = [];
+  if (instances > MOBILE_BUDGET.instances) over.push(`instances ${instances}/${MOBILE_BUDGET.instances}`);
+  if (meshes > MOBILE_BUDGET.meshes) over.push(`draw calls ${meshes}/${MOBILE_BUDGET.meshes}`);
+  return { instances, meshes, fits: !over.length, over };
+}
+
+/**
+ * The colour every placement is painted, measured off the bake. Pure — no
+ * THREE, no GPU — so the harness can prove the room is lit by the house and
+ * not by a constant. A plank in a dark hall comes out cold; the same plank
+ * under the chandelier comes out amber.
+ */
+export function tintPlacements(placements, bake) {
+  const out = [];
+  if (!placements || !bake) return out;
+  const s = { level: 0, warm: 0, color: [0, 0, 0] };
+  for (const p of placements) {
+    bake.sample(p.x, p.z == null ? p.y : p.z, s);
+    out.push(bakedTint(s, [1, 1, 1]));
+  }
+  return out;
+}
 
 /**
  * Where the fortress's dressing goes, worked out from the plan of the house.
@@ -277,12 +339,29 @@ class EnvKitRuntime {
     this.fortressCounts = null;
     this.fortressLevel = 0;
     this.fortressPlanks = [];  // dressing that follows a door: a broken door wears none
+    /* THE BAKE (#53 C2): the house's static light, measured once and written
+     * into the instance colours. Rebaked when the house changes — a new
+     * mansion, a new fortress level, a candle in a jamb that was not there
+     * last night — and never per frame. */
+    this.bake = null;
+    this.bakeKey = '';
+    this.bakeInfo = null;
+    this.bakeCount = 0;   // measured in bakes, not frames: it should read 1 a night
+    /* The governor's rung: 3 is the whole house, 0 is the painted one. */
+    this.quality = QUALITY_TIERS.length - 1;
+    this._buildSerial = 0;    // bumped whenever the room is rebuilt: rebake
+    this._fortressLights = [];   // the candles the fortress hung, as bake sources
     this.diagnostics = () => ({
       ready: this.ready, loading: this.loading, failed: this.failed, error: this.error,
       pieces: Object.keys(this.pieces), doors: this.doors.size,
       room: this.roomCounts || null, props: this.propCounts || null,
       windows: this.windows.length,
       fortress: this.fortressLevel, fortressPieces: this.fortressCounts || null,
+      bake: this.bakeInfo || null,
+      bakes: this.bakeCount,
+      lit: this.litReport(),
+      quality: this.quality,
+      budget: this.budget(),
     });
   }
 
@@ -642,6 +721,7 @@ class EnvKitRuntime {
       windows: windows.length,
     };
     this.room = mansion;
+    this._buildSerial++;
   }
 
   /**
@@ -717,6 +797,7 @@ class EnvKitRuntime {
       if (bins[key].length) this.propCounts[key] = bins[key].length;
     }
     this.props = mansion;
+    this._buildSerial++;
   }
 
   /**
@@ -753,6 +834,21 @@ class EnvKitRuntime {
       this.fortressMeshes[key] = mesh;
       this.fortressCounts[key] = bins[key].length;
     }
+    /* The candles the house earned are light the mansion never knew about, so
+     * they are handed to the bake instead: a keep is measurably brighter than
+     * the ruin it was, and nothing per frame got more expensive. */
+    this._fortressLights = [];
+    for (const key of ['candle', 'torch']) {
+      for (const p of bins[key] || []) {
+        const lit = key === 'torch';
+        this._fortressLights.push({
+          x: p.x, y: p.z == null ? p.y : p.z,
+          r: lit ? 260 : 135, i: lit ? 0.85 : 0.6,
+          color: lit ? [255, 150, 70] : [255, 170, 105], type: 'candle',
+        });
+      }
+    }
+
     // which dressing answers to a door: broken tonight, the planks come down
     const byId = new Map((mansion.entrances || []).map((e) => [e.id, e]));
     for (let i = 0; i < (bins.crate || []).length; i++) {
@@ -788,6 +884,8 @@ class EnvKitRuntime {
       this.buildRoom(mansion);
       this.buildProps(mansion);
       this.buildFortress(mansion, level == null ? this.fortressLevel : level);
+      // the house is standing: light it once, not every frame
+      this.bakeHouse(mansion, this._fortressLights);
     }
     for (const e of entrances) {
       if (e.kind !== 'door') continue;
@@ -850,6 +948,145 @@ class EnvKitRuntime {
       if (whole) whole.instanceMatrix.needsUpdate = true;
       if (smashed) smashed.instanceMatrix.needsUpdate = true;
     }
+  }
+
+  /**
+   * THE BAKE (#53 C2) — measure the house's static light once and paint it
+   * into the room.
+   *
+   * Every lamp in this house is nailed down. So the light a wall stands in is
+   * not a per-frame question: it is measured onto a grid when the house
+   * changes and written into the instance colours, and after that it costs
+   * nothing at all. The room the player is NOT in is finally lit by the room
+   * it is in, instead of by the rig that follows her around.
+   */
+  bakeHouse(mansion, extra = null) {
+    if (!this.ready || !mansion) return null;
+    const key = `${this._buildSerial}|${this.fortressLevel}|${(extra || []).length}`;
+    if (this.bake && this.bakeKey === key) return this.bake;
+    const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    this.bake = bakeLight(mansion, { extra: extra || [] });
+    this.bakeKey = key;
+    this.bakeInfo = bakeReport(this.bake);
+    this.bakeInfo.ms = +(((typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()) - now).toFixed(1);
+    this.bakeCount++;
+    this._applyBake();
+    return this.bake;
+  }
+
+  /** Write the bake into the instance colours of everything built so far. */
+  _applyBake() {
+    if (!this.bake) return;
+    if (!this._bakeColor) this._bakeColor = new THREE.Color();
+    if (!this._tintColor) this._tintColor = new THREE.Color();
+    const c = this._bakeColor;
+    const tc = this._tintColor;
+    for (const group of [this.roomMeshes, this.propMeshes, this.fortressMeshes]) {
+      if (!group) continue;
+      for (const key of Object.keys(group)) {
+        const mesh = group[key];
+        const list = mesh && mesh.userData && mesh.userData.placements;
+        if (!list || !list.length) continue;
+        const tints = tintPlacements(list, this.bake);
+        for (let i = 0; i < tints.length; i++) {
+          let [r, g, b] = tints[i];
+          // a silver ward post is silver AND stood in this room's light
+          const own = list[i] && list[i].tint;
+          if (own != null) { tc.set(own); r *= tc.r; g *= tc.g; b *= tc.b; }
+          c.setRGB(r, g, b);
+          mesh.setColorAt(i, c);
+        }
+        if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+      }
+    }
+  }
+
+  /**
+   * The governor's hand (#53: mobile-first). Step the room down a rung when a
+   * device cannot hold the frame — furniture before architecture, draw calls
+   * before the whole room, and the painted house as the floor. Never the
+   * other way round: a dropped frame is a worse night than a bare one.
+   */
+  setQuality(tier) {
+    // a tier that is not a number is not a request: keep the rung we are on
+    const want = Number.isFinite(tier) ? Math.round(tier) : this.quality;
+    const t = QUALITY_TIERS[clamp(want, 0, QUALITY_TIERS.length - 1)] || QUALITY_TIERS[this.quality];
+    this.quality = t.tier;
+    const show = (group, on) => {
+      if (!group) return;
+      for (const key of Object.keys(group)) if (group[key]) group[key].visible = !!on;
+    };
+    show(this.roomMeshes, t.room);
+    show(this.propMeshes, t.props);
+    show(this.fortressMeshes, t.fortress);
+    // the shadow map is the expensive half of the frame: it shrinks first
+    const lamp = Valen3D && Valen3D.lamp;
+    if (lamp && lamp.shadow && lamp.shadow.mapSize && lamp.shadow.mapSize.x !== t.shadow) {
+      lamp.shadow.mapSize.set(t.shadow, t.shadow);
+      if (lamp.shadow.map) { lamp.shadow.map.dispose(); lamp.shadow.map = null; }
+    }
+    return t.tier;
+  }
+
+  /** What the room is drawing, against the ceiling it is allowed to draw. */
+  budget() {
+    const counts = {};
+    for (const group of [this.roomCounts, this.propCounts, this.fortressCounts]) {
+      if (!group) continue;
+      for (const k of Object.keys(group)) counts[k] = (counts[k] || 0) + (Number(group[k]) || 0);
+    }
+    return budgetReport(counts);
+  }
+
+  /**
+   * What the bake actually painted: the spread of light across the room. If
+   * the room were lit by a constant, `min` and `max` would be the same number.
+   * It is how you prove the house is lighting itself without looking at it.
+   */
+  litReport() {
+    const spread = (group) => {
+      if (!group) return null;
+      let min = 9, max = -9, sum = 0, n = 0;
+      for (const key of Object.keys(group)) {
+        const ic = group[key] && group[key].instanceColor;
+        if (!ic || !ic.array) continue;
+        const a = ic.array;
+        for (let i = 0; i < a.length; i += 3) {
+          const l = (a[i] + a[i + 1] + a[i + 2]) / 3;
+          if (l < min) min = l;
+          if (l > max) max = l;
+          sum += l; n++;
+        }
+      }
+      return n ? { min: +min.toFixed(3), max: +max.toFixed(3), mean: +(sum / n).toFixed(3), count: n } : null;
+    };
+    return { room: spread(this.roomMeshes), props: spread(this.propMeshes), fortress: spread(this.fortressMeshes) };
+  }
+
+  /**
+   * QA (#53 C2): paint every instance flat, or put the bake back. It exists
+   * so a frame can be shot twice — the house as it is lit, and the same house
+   * pretending every corner is noon — and the two pictures compared. The
+   * player never calls it; the harness and the browser checks do.
+   */
+  flatTint(on) {
+    const c = this._bakeColor || (this._bakeColor = new THREE.Color());
+    for (const group of [this.roomMeshes, this.propMeshes, this.fortressMeshes]) {
+      if (!group) continue;
+      for (const key of Object.keys(group)) {
+        const mesh = group[key];
+        const list = mesh && mesh.userData && mesh.userData.placements;
+        const ic = mesh && mesh.instanceColor;
+        if (!list || !ic) continue;
+        if (on) {
+          c.setRGB(1, 1, 1);
+          for (let i = 0; i < list.length; i++) mesh.setColorAt(i, c);
+        }
+        ic.needsUpdate = true;
+      }
+    }
+    if (!on) this._applyBake();
+    return !!on;
   }
 
   /**

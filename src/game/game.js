@@ -35,7 +35,7 @@ import { Haunts } from './haunts.js';
 import { Ads } from '../shop/ads.js';
 import { Valen3D } from './valen3d.js';
 import { Enemy3D } from './enemy3d.js';
-import { EnvKit } from './envkit.js';
+import { EnvKit, MOBILE_BUDGET, QUALITY_TIERS } from './envkit.js';
 import { IAP } from '../shop/iap.js';
 import { drawHUD, drawWorldPrompts, urgentGuidance, pauseButtonBox, weaponChipBox } from './hud.js';
 import { WEAPONS, weaponById, nextWeapon, swingBearing, swingDist, kitDamage } from './weapons.js';
@@ -136,6 +136,10 @@ export class Game {
     Ads.suppressed = !!(this.save.iap && this.save.iap.owned && this.save.iap.owned.remove_ads);
     this.screen = 'menu';
     this.settingsReturn = 'menu';
+    // #53 C2 — the rung the house draws at: 3 is the whole house, 0 is the
+    // painted one. Set here, before the first frame, because a night is not
+    // the only thing that renders.
+    this.quality = QUALITY_TIERS.length - 1;
     this.time = 0;
     this.now = 0;
     this.dt = 1 / 60;
@@ -1472,6 +1476,56 @@ export class Game {
   }
 
   /**
+   * #53 C2 — the governor. What the frame ACTUALLY costs, measured on the
+   * device that is playing it, and the rung the house is allowed to draw at.
+   *
+   * The brief's guardrail is mobile-first, and a budget nobody measures is a
+   * wish. So: a rolling frame cost, judged every second and a half, and a
+   * step down when a device cannot hold it — furniture before architecture,
+   * the painted house as the floor. A dropped frame is a worse night than a
+   * bare one. It climbs back up if the device was only busy, not slow.
+   */
+  _trackFrame() {
+    const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    const d = now - (this._lastFrameAt || now);
+    this._lastFrameAt = now;
+    if (!(d > 0) || d > 500) return;          // first frame, or a tab that was away
+    this._frameMs = this._frameMs == null ? d : this._frameMs + (d - this._frameMs) * 0.06;
+    if (this.screen !== 'playing' && this.screen !== 'intro') return;   // the menu is not the budget
+    this._frameCheck = (this._frameCheck || 0) + d;
+    if (this._frameCheck < 1500) return;
+    this._frameCheck = 0;
+    const budget = MOBILE_BUDGET.frameMs;
+    const q = this.quality;
+    if (this._frameMs > budget * 1.35 && q > 0) this.setQuality(q - 1);
+    else if (this._frameMs < budget * 0.6 && q < QUALITY_TIERS.length - 1) this.setQuality(q + 1);
+  }
+
+  /** The rung the house draws at. 3 is the whole house, 0 is the painted one. */
+  setQuality(tier) {
+    const want = Number.isFinite(tier) ? Math.round(tier) : this.quality;
+    const t = Math.max(0, Math.min(QUALITY_TIERS.length - 1, want));
+    if (t === this.quality) return t;
+    this.quality = t;
+    EnvKit.setQuality(t);
+    // a step down is a medical procedure, not a hobby: give it room to work
+    this._frameCheck = -2500;
+    return t;
+  }
+
+  /** What the night is costing, for the diagnostics and for the harness. */
+  perfReport() {
+    return {
+      frameMs: this._frameMs == null ? null : +this._frameMs.toFixed(1),
+      budgetMs: MOBILE_BUDGET.frameMs,
+      quality: this.quality,
+      tier: QUALITY_TIERS[this.quality] ? QUALITY_TIERS[this.quality].note : null,
+      budget: EnvKit.budget ? EnvKit.budget() : null,
+      bake: EnvKit.bakeInfo || null,
+    };
+  }
+
+  /**
    * #56 P5 — forge the rung the hunt has earned, wherever she is standing.
    * At the refuge Marthe's voice is on it; at the door of a new night the kit
    * is simply ready. Either way the ladder never waits on a shop, and a death
@@ -2251,6 +2305,9 @@ export class Game {
     const ctx = r.ctx;
     const w = r.w, h = r.h;
 
+    // #53 C2 — every frame pays the budget, so every frame is measured
+    this._trackFrame();
+
     // fresh immediate-mode registration surface (see update() note)
     this.ui.length = 0;
 
@@ -2423,6 +2480,8 @@ export class Game {
     if (EnvKit.ready) {
       // the house she has made of it: the fortress level rides the hunt (#59)
       EnvKit.sync(this.mansion.entrances, this.mansion, this.save.fortressLevel);
+      // a rebuilt room inherits the rung the governor chose, not the default
+      if (EnvKit.quality !== this.quality) EnvKit.setQuality(this.quality);
       const env = EnvKit.render({
         camX: r.cam.x, camY: r.cam.y, zoom: r.cam.zoom, tilt: r.tilt,
         w: r.view.w, h: r.view.h, dpr: r.dpr,
