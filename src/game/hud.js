@@ -996,9 +996,14 @@ export function drawTouchControls(game, ctx, w, h) {
   drawBtn(input.buttons.attack, tool.label, 'F', { big: true, cd: atkCd });
   const chip = weaponChipBox(input, w, h);
   game._weaponChip = chip;
+  // #56 P5 — the kit she carries: the chip wears the metal (cold silver, warm
+  // gold) and three pips fill as Marthe tempers it. The ladder is readable at
+  // a glance without a word of tutorial.
+  const kit = (p && p.kit) || null;
   ctx.save();
   ctx.fillStyle = 'rgba(8,9,14,0.72)';
-  ctx.strokeStyle = 'rgba(212,186,120,0.8)';
+  ctx.strokeStyle = !kit ? 'rgba(212,186,120,0.8)'
+    : (kit.blessed || kit.ward) ? 'rgba(226,196,128,0.95)' : 'rgba(206,222,255,0.95)';
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   ctx.rect(chip.x, chip.y, chip.w, chip.h);
@@ -1009,7 +1014,17 @@ export function drawTouchControls(game, ctx, w, h) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   if ('letterSpacing' in ctx) ctx.letterSpacing = '0.4px';
-  ctx.fillText(tool.label, chip.x + chip.w / 2, chip.y + chip.h / 2);
+  ctx.fillText(tool.label, chip.x + chip.w / 2, chip.y + chip.h / 2 - (kit ? 4 : 0));
+  if (kit) {
+    const held = [kit.silver, kit.blessed, kit.ward];
+    const pw = 6, gap = 4;
+    let px = chip.x + chip.w / 2 - (held.length * pw + (held.length - 1) * gap) / 2;
+    for (const has of held) {
+      ctx.fillStyle = has ? 'rgba(238,228,196,0.95)' : 'rgba(150,140,120,0.26)';
+      ctx.fillRect(px, chip.y + chip.h - 10, pw, 3);
+      px += pw + gap;
+    }
+  }
   ctx.restore();
   drawBtn(input.buttons.dash, 'DASH', 'SHIFT', { cd: dashCd });
   drawBtn(input.buttons.interact, 'USE', 'E');

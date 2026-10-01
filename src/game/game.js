@@ -29,7 +29,7 @@ import {
   nextRank, rankCost, rankCount, LANE_CAP, LARDER_BLOOD, unlocked, markUnlocks, grantLaneTitle, houseTitle,
 } from './economy.js';
 import { House } from './house.js';
-import { bankNight, fellMaster, masterReady, masterDown } from './hunt.js';
+import { bankNight, fellMaster, masterReady, masterDown, forgeArmoury, huntKit } from './hunt.js';
 import { informantLine } from './informant.js';
 import { Haunts } from './haunts.js';
 import { Ads } from '../shop/ads.js';
@@ -38,7 +38,7 @@ import { Enemy3D } from './enemy3d.js';
 import { EnvKit } from './envkit.js';
 import { IAP } from '../shop/iap.js';
 import { drawHUD, drawWorldPrompts, urgentGuidance, pauseButtonBox, weaponChipBox } from './hud.js';
-import { WEAPONS, weaponById, nextWeapon, swingBearing, swingDist } from './weapons.js';
+import { WEAPONS, weaponById, nextWeapon, swingBearing, swingDist, kitDamage } from './weapons.js';
 import { nextBeat, ackBeat, beatById, endingReady, narrationLines, beatSeen } from './narrative.js';
 import { updateCoach, drawCoachWorld } from './coach.js';
 import { Climax, PEAK } from './climax.js';
@@ -376,7 +376,12 @@ export class Game {
   enterRefuge(from) {
     this.refugeFrom = from || (this.screen === 'death' ? 'death' : 'victory');
     this.refugeT = 0;
-    this.refugeLine = informantLine(this.save, 'hub', this.lastGain);
+    // THE ARMOURY (#56 P5): she has been keeping the forge hot for this. The
+    // rung is made the moment the hunt has both halves of it — the facts she
+    // came home with and the materials she gathered — and it is given, not
+    // sold: the reward lands at the hub, so the ladder never becomes a shop.
+    const forged = this.forgeWhatIsDue(true);
+    this.refugeLine = informantLine(this.save, 'hub', { ...(this.lastGain || {}), forged: forged ? forged.id : null });
   }
 
   togglePause(on) {
@@ -434,6 +439,13 @@ export class Game {
     this.player = new Player(720, 200);
     this.equipSavedWeapon();
     this.player.applyUpgrades(this.save);
+    // the hunt's own kit: what Marthe has tempered, and a fresh ward tonight.
+    // This is the line that arms her — a kit set anywhere earlier is a kit set
+    // before the save was read.
+    this.player.kit = huntKit(this.save);
+    this.player.wardSpent = false;
+    this.player.wardFlash = 0;
+    this.forgeWhatIsDue(false);
     this.player.blood = this.player.bloodMax * 0.48;
     // Night one can bar the shaking door without a scavenger hunt. Later
     // nights start leaner; the fort still costs three planks.
@@ -1459,6 +1471,42 @@ export class Game {
     } else this.makeNoise(p.x, p.y, 130 * quiet);
   }
 
+  /**
+   * #56 P5 — forge the rung the hunt has earned, wherever she is standing.
+   * At the refuge Marthe's voice is on it; at the door of a new night the kit
+   * is simply ready. Either way the ladder never waits on a shop, and a death
+   * can finish a rung as surely as a dawn can — the forge takes facts and
+   * materials, not victories.
+   */
+  forgeWhatIsDue(atRefuge) {
+    const forged = forgeArmoury(this.save);
+    if (!forged) { this.forgedNow = null; return null; }
+    writeSave(this.save);
+    if (this.player) this.player.kit = huntKit(this.save);
+    this.forgedNow = forged;
+    this.audio.play('tellGift', { vol: atRefuge ? 0.8 : 0.6 });
+    this.showMessage(`FORGED · ${forged.name} — ${forged.effect}`, { tone: 'gold', life: 5 });
+    return forged;
+  }
+
+  /**
+   * #56 P5 — the ward took the blow instead of her. Said out loud, once, so
+   * the player learns what the third rung of the ladder actually buys.
+   */
+  onWardTook(dmg, raw) {
+    const p = this.player;
+    this.audio.play('tellGift', { vol: 0.55 });
+    this.audio.play('playerHurt', { vol: 0.4 });
+    // One caption is all the screen holds, and the hurt line is said after
+    // this one — so the ward speaks last, or it is never read at all.
+    this._wardSay = true;
+    this.particles.burst('spark', p.x, p.y + 2, 16, {
+      color: 'rgba(206,222,255,0.95)', speedMin: 60, speedMax: 210, lifeMin: 0.2, lifeMax: 0.55, sizeMin: 1.4, sizeMax: 3.2, glow: true,
+    });
+    this.renderer.addFlash(0.1, '#c8d8ff');
+    this.stats.wardTook = Math.round((raw || 0) - (dmg || 0));
+  }
+
   onPlayerHurt(dmg, fromX, fromY, kind) {
     this.objectives.onHurt();
     const p = this.player;
@@ -1483,6 +1531,10 @@ export class Game {
       this.showMessage('THE COAT TAKES THE STAIN. THE CLAW DOES NOT GROW.', { tone: 'cold', life: 2.8 });
     }
     this.audio.duck(0.55, 0.7);
+    if (this._wardSay) {
+      this._wardSay = false;
+      this.showMessage('THE WARDS TAKE IT. THE BELT GOES WARM AND THEN COLD.', { tone: 'gold', life: 3.6 });
+    }
   }
 
   onBloodGained(amount) {
@@ -1551,7 +1603,8 @@ export class Game {
       const diff = Math.abs(angDiff(swingBearing(this, player, e), facing));
       const touching = d < player.radius + (e.radius || 12) + 14;
       if (!touching && diff > arc / 2) continue;
-      const dmg = tool.damage * player.damageMul * (player.frenzy ? player.frenzy.dmg : 1);
+      // the metal she carries is part of the swing: silver finds the hounds
+      const dmg = tool.damage * player.damageMul * kitDamage(player.kit, e) * (player.frenzy ? player.frenzy.dmg : 1);
       e.hurt(dmg, this, player.x, player.y);
       hits++;
       // The frenzy shreds: every connected claw throws blood across the frame.
@@ -1864,6 +1917,8 @@ export class Game {
       owner.y + Math.sin(angle) * off,
       angle, speed, damage, owner,
     );
+    // the kit travels with the bolt: a blessed bolt is not the same wood
+    if (owner === this.player) b.kit = this.player.kit || null;
     this.bolts.push(b);
     if (!spec) {
       this.audio.play('crossbow', { x: owner.x, y: owner.y, cam: this.renderer.cam, vol: 0.85 });
@@ -2523,12 +2578,18 @@ export class Game {
       if (b.dead || !r.isVisible(b.x, b.y, 80)) continue;
       ctx.save();
       ctx.globalCompositeOperation = 'screen';
-      ctx.strokeStyle = 'rgba(255, 214, 150, 0.9)';
-      ctx.lineWidth = 2.2;
+      // a blessed bolt carries its own light (#56 P5)
+      const blessed = !!(b.kit && b.kit.blessed);
+      ctx.strokeStyle = blessed ? 'rgba(255, 242, 206, 0.98)' : 'rgba(255, 214, 150, 0.9)';
+      ctx.lineWidth = blessed ? 3 : 2.2;
       ctx.beginPath();
       ctx.moveTo(b.x - Math.cos(b.angle) * 14, b.y - Math.sin(b.angle) * 14);
       ctx.lineTo(b.x + Math.cos(b.angle) * 8, b.y + Math.sin(b.angle) * 8);
       ctx.stroke();
+      if (blessed) {
+        ctx.fillStyle = 'rgba(255, 236, 180, 0.9)';
+        ctx.beginPath(); ctx.arc(b.x, b.y, 2.6, 0, TAU); ctx.fill();
+      }
       ctx.restore();
     }
 

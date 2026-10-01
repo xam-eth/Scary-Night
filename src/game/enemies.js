@@ -15,6 +15,7 @@
 import { clamp, lerp, damp, TAU, rand, randInt, chance, dist, dist2, approachAngle, angDiff, visualAngle, Rng } from '../core/util.js';
 import { paintContactShadow } from './enemy3d.js';
 import { ENEMY_TYPES, VARIANTS } from '../core/config.js';
+import { kitDamage } from './weapons.js';
 import { ROOM } from './mansion.js';
 
 export const ESTATE = {
@@ -1533,7 +1534,7 @@ export class Bolt {
       for (const o of game.enemies) {
         const hunterBolt = this.owner && this.owner.key === 'hunter';
         if (o !== this.owner && !o.dead && dist(this.x, this.y, o.x, o.y) < o.radius + 4 && !(hunterBolt && o.key === 'hunter')) {
-          o.hurt(hunterBolt ? this.damage * 0.5 : this.damage, game, this.x, this.y);
+          o.hurt((hunterBolt ? this.damage * 0.5 : this.damage) * kitDamage(this.kit, o), game, this.x, this.y);
           this.hit(game, false);
           return;
         }

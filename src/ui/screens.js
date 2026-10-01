@@ -13,7 +13,7 @@ import { PAL } from '../core/render.js';
 import { UPGRADES, upgradeLevel, DIFFICULTY, CODEX, NIGHT_DURATION, GAME_VERSION } from '../core/config.js';
 import { unlocked, nextRevealLine, LANES, nextRank, rankCost, rankCount, LANE_CAP, houseTitle } from '../game/economy.js';
 import { fragmentsKnown, endingFrame } from '../game/narrative.js';
-import { intelLine, huntPct, huntProgress, fortressState, huntTells, masterReady, masterDown, FORTRESS_STATES } from '../game/hunt.js';
+import { intelLine, huntPct, huntProgress, fortressState, huntTells, masterReady, masterDown, armouryNext, FORTRESS_STATES } from '../game/hunt.js';
 import { INFORMANT, informantLine, boardEntries } from '../game/informant.js';
 import { drawPlateCover } from '../game/roomplates.js';
 import { Valen3D } from '../game/valen3d.js';
@@ -676,6 +676,17 @@ export function drawIntro(game, ctx, w, h) {
     draw(errand.label, { f: Math.max(13, 17 * sc), style: SERIF, ls: 2.5, y: ny + 0.038, c: '#e8dfc8' });
     draw(errand.hint, { f: Math.max(10, 12 * sc), style: SANS, ls: 1, y: ny + 0.068, c: 'rgba(186,178,160,0.82)' });
     ny += 0.104;
+  }
+  // THE LADDER — the hunt's middle goal layer (docs/PURPOSE.md §2 P5): not
+  // what tonight asks of her, and not the end of the hunt, but the thing being
+  // built between the two. One line at nightfall, so the pull is never a menu.
+  const rung = armouryNext(game.save);
+  if (rung) {
+    const wait = !rung.hasIntel ? `${rung.need - rung.facts} MORE FACTS`
+      : !rung.hasCost ? `${rung.cost - rung.materials} MORE MATERIALS`
+      : 'READY';
+    draw(`MARTHE IS MAKING · ${rung.name} · ${wait}`, { f: Math.max(9, 10.5 * sc), style: SANS, ls: 2, y: ny + 0.012, c: 'rgba(196,210,238,0.8)' });
+    ny += 0.038;
   }
   draw('00:00  →  05:00', { f: 20 * sc, style: MONO, ls: 4 * sc, y: ny + 0.02, c: 'rgba(220,214,198,0.9)' });
   const hintY = ny + 0.08;
@@ -2544,16 +2555,32 @@ export function drawRefuge(game, ctx, w, h) {
     ly += phone ? 4 : 6;
   }
 
-  // the rack: the weapon she carries, and what she has gathered
+  // the rack: the weapon she carries, the temperings it wears, and the rung
+  // the hunt is still reaching for (#56 P5 — the mid-term goal layer)
   if (roomFor(phone ? 16 : 18)) {
+    const marks = (board.weapon.temper || []).join(' · ');
     ctx.font = `400 ${phone ? 9.5 : 11}px ${SANS}`;
-    ctx.fillStyle = 'rgba(196,186,164,0.85)';
-    ctx.fillText(`${board.weapon.name}`, cardX + 12, Math.min(ly, boardFloor - 2));
+    ctx.fillStyle = (board.weapon.temper || []).length ? 'rgba(214,226,246,0.92)' : 'rgba(196,186,164,0.85)';
+    ctx.fillText(board.weapon.name + (marks ? ` · ${marks}` : ''), cardX + 12, Math.min(ly, boardFloor - 2));
+    ly += phone ? 14 : 16;
   }
-  if (roomFor(phone ? 30 : 34)) {
+  if (roomFor(phone ? 16 : 18)) {
+    const n = board.weapon.next;
+    ctx.font = `400 ${phone ? 8.5 : 10}px ${SANS}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '1px';
+    ctx.fillStyle = 'rgba(200,160,74,0.85)';
+    const line = !n ? 'THE KIT IS FULLY TEMPERED'
+      : !n.hasIntel ? `NEXT · ${n.name} · ${n.need - n.facts} MORE FACTS`
+      : !n.hasCost ? `NEXT · ${n.name} · ${n.cost - n.materials} MORE MATERIALS`
+      : `NEXT · ${n.name} · READY`;
+    ctx.fillText(line, cardX + 12, Math.min(ly, boardFloor - 2));
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+    ly += phone ? 14 : 16;
+  }
+  if (roomFor(phone ? 16 : 18)) {
     ctx.font = `400 ${phone ? 8.5 : 10}px ${SANS}`;
     ctx.fillStyle = 'rgba(160,152,134,0.75)';
-    ctx.fillText(`◆ ${board.materials} MATERIALS · ${board.nights} NIGHTS BANKED`, cardX + 12, Math.min(ly + 14, boardFloor - 1));
+    ctx.fillText(`◆ ${board.materials} MATERIALS · ${board.nights} NIGHTS BANKED`, cardX + 12, Math.min(ly, boardFloor - 1));
   }
   ctx.restore();      // the board's clip
 

@@ -16,7 +16,7 @@
  * because Marthe has watched both, and she says what she knows now.
  */
 
-import { INTEL, huntProgress, masterReady, FORTRESS_STATES } from './hunt.js';
+import { INTEL, huntProgress, masterReady, FORTRESS_STATES, ARMOURY, ARMOURY_BY, armouryHeld, armouryNext } from './hunt.js';
 
 export const INFORMANT = Object.freeze({
   name: 'MARTHE',
@@ -176,6 +176,7 @@ export function informantLines() {
   for (const l of Object.values(ON_INTEL)) out.push(l);
   for (const l of FINALE.ready) out.push(l);
   for (const l of FINALE.done) out.push(l);
+  for (const t of ARMOURY) out.push(t.line);
   return out;
 }
 export const informantCounts = () => ({
@@ -183,6 +184,7 @@ export const informantCounts = () => ({
   stageLines: STAGES.reduce((n, st) => n + st.hub.length + st.dawn.length + st.death.length, 0),
   reactions: Object.keys(ON_INTEL).length,
   finale: FINALE.ready.length + FINALE.done.length,
+  forges: ARMOURY.length,
 });
 
 const stageFor = (pct) => {
@@ -216,6 +218,12 @@ export function informantIntelLine(gain) {
  * what you walked in with.
  */
 export function informantLine(save, when = 'hub', gain = null) {
+  // what she just made for you is the newest thing in the room — it outranks
+  // even the fact you came home with
+  const forgedId = gain && gain.forged;
+  if (forgedId && ARMOURY_BY[forgedId]) {
+    return { id: 'forge:' + forgedId, text: ARMOURY_BY[forgedId].line, kind: 'forge' };
+  }
   const fresh = gain ? informantIntelLine(gain) : null;
   if (fresh) return { ...fresh, kind: 'intel' };
   // the last night has its own voice: everything else she might say is small
@@ -247,7 +255,14 @@ export function boardEntries(save) {
   const trophies = Object.keys(TROPHY_FOR)
     .filter((k) => (killsBy[k] || 0) > 0)
     .map((k) => ({ key: k, name: TROPHY_FOR[k].name, glyph: TROPHY_FOR[k].glyph, count: killsBy[k] }));
-  const weapon = { key: (save && save.weapon) || 'claw', name: WEAPON_NAMES[(save && save.weapon) || 'claw'] };
+  // the rack: the weapon she carries, the temperings it wears, and the rung
+  // the hunt is still reaching for (#56 P5 — the mid-term pull)
+  const weapon = {
+    key: (save && save.weapon) || 'claw',
+    name: WEAPON_NAMES[(save && save.weapon) || 'claw'],
+    temper: armouryHeld(save).map((t) => t.name),
+    next: armouryNext(save),
+  };
   return {
     intel,
     trophies,

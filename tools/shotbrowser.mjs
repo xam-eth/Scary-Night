@@ -575,6 +575,64 @@ try {
   };
   await shootFinale(m, '21-phone');
 
+  /* ---------- THE ARMOURY (#56 P5) — the mid-term ladder -------------------
+   * The next unlock has to be SEEN, not read in a menu: the rack wears what
+   * Marthe tempered, the board names the rung the hunt is still reaching for,
+   * the belt is lit while the ward holds, and the swing carries the metal.
+   */
+  const shootArmoury = async (pg, tag) => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    // 1. the hub, the morning a rung is made: six facts and 44 materials
+    await pg.evaluate(() => {
+      const g = window.__LN;
+      g.save.hunt = { track: 34, intel: ['foe:crawler', 'foe:zombie', 'foe:werewolf', 'foe:ghoul', 'foe:stalker', 'room:kitchen'], materials: 44, nights: 5, forged: [], lastGain: null };
+      g.save.killsBy = { crawler: 12, zombie: 4 };
+      g.save.weapon = 'sword';
+      g.lastGain = null;
+      g.setScreen('refuge', 'victory');
+    });
+    await wait(1600);
+    await shoot(pg, `${tag}-armoury-refuge`);
+
+    // 2. the night she carries the lot: the ward is lit, the chip is full
+    await pg.evaluate(() => {
+      const g = window.__LN;
+      g.save.hunt.forged = ['silver', 'blessed', 'ward'];
+      g.save.hunt.materials = 20;
+      g.beginNight();
+    });
+    await pg.waitForFunction(() => window.__LN && window.__LN.screen === 'intro', { timeout: 30000, polling: 60 }).catch(() => {});
+    await pg.evaluate(() => {
+      const g = window.__LN;
+      g.introT = 99; g.skipNarration(); g.skipNarration(); g.startNightProper();
+    });
+    await pg.waitForFunction(() => window.__LN && window.__LN.screen === 'playing', { timeout: 30000, polling: 60 }).catch(() => {});
+    await wait(1800);
+    await shoot(pg, `${tag}-armoury-kit`);
+
+    // 3. the ward takes the first blow of the night
+    await pg.evaluate(() => {
+      const g = window.__LN; const p = g.player;
+      p.blood = p.bloodMax; p.iframes = 0;
+      p.takeDamage(40, g);
+    });
+    await wait(500);
+    await shoot(pg, `${tag}-armoury-ward`);
+
+    // 4. and the metal, in the swing
+    await pg.evaluate(() => {
+      const g = window.__LN;
+      g.player.kit = { silver: true, blessed: true, ward: true };
+      g.player.blood = g.player.bloodMax;
+      g.player.attackCd = 0;
+      g.player.startAttack(g);
+      g.playerAttackHit(g.player);
+    });
+    await wait(120);
+    await shoot(pg, `${tag}-armoury-swing`);
+  };
+  await shootArmoury(m, '22-phone');
+
   console.log('DONE');
 } finally {
   await browser.close();

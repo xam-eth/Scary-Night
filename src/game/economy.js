@@ -252,6 +252,7 @@ export function migrateSave(save) {
   save.hunt.intel = Array.isArray(save.hunt.intel) ? save.hunt.intel : [];
   save.hunt.track = Math.max(0, Number(save.hunt.track) || 0);
   save.hunt.materials = Math.max(0, Math.round(Number(save.hunt.materials) || 0));
+  if (!Array.isArray(save.hunt.forged)) save.hunt.forged = [];
   save.hunt.nights = Math.max(0, Math.round(Number(save.hunt.nights) || 0));
   if (!save.hunt.nights && save.nightsSurvived > 0) {
     // A save that has already seen a few nights does not join the hunt blind:

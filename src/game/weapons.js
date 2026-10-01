@@ -114,6 +114,19 @@ function angDiff(a, b) {
   return ((a - b + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
 }
 
+/**
+ * THE KIT'S BITE (#56 P5). Claw, sword and crossbow stay a row — the ladder
+ * is the metal, not the weapon, so this multiplier rides whatever she carries:
+ * silver finds the hounds and the Master, the blessing finds everything.
+ */
+export function kitDamage(kit, target) {
+  if (!kit) return 1;
+  let m = 1;
+  if (kit.silver && target && (target.key === 'werewolf' || target.isMaster)) m *= 1.35;
+  if (kit.blessed) m *= 1.2;
+  return m;
+}
+
 export function weaponById(id) {
   return WEAPONS[id] || WEAPONS.claw;
 }

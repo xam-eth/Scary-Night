@@ -990,6 +990,94 @@ if (args.systems) {
     'and the next night does not make it come back — the house has no Master left to send');
   line(!masterDown({}) && !masterReady({}), 'a save that never hunted has no Master, dead or otherwise');
 
+  // ---- THE ARMOURY (#56 P5): the mid-term ladder ---------------------------
+  const { ARMOURY, ARMOURY_BY, armouryNext, armouryHeld, forgeArmoury, huntKit } = await import('../src/game/hunt.js');
+  const { kitDamage } = await import('../src/game/weapons.js');
+
+  line(ARMOURY.length === 3 && ARMOURY.every((t) => t.intel > 0 && t.cost > 0 && t.line && t.effect),
+    `the ladder has three rungs, and each one costs both knowing and gathering (${ARMOURY.map((t) => t.name).join(' · ')})`);
+
+  // the gate: nothing is forged on wanting it alone
+  const poor = { hunt: { track: 20, intel: [], materials: 999, nights: 4, forged: [] } };
+  line(!forgeArmoury(poor) && armouryNext(poor).name === 'SILVERED' && !armouryNext(poor).hasIntel,
+    'materials alone forge nothing — the hunt has to know something first');
+  const SIX_FACTS = ['foe:crawler', 'foe:zombie', 'foe:werewolf', 'foe:ghoul', 'foe:stalker', 'room:kitchen'];
+  const learned = { hunt: { track: 20, intel: [...SIX_FACTS], materials: 4, nights: 6, forged: [] } };
+  line(!forgeArmoury(learned) && armouryNext(learned).hasIntel && !armouryNext(learned).hasCost,
+    `and the facts alone forge nothing either (${armouryNext(learned).cost - armouryNext(learned).materials} materials short)`);
+
+  // both halves: it is made, and it is paid for
+  learned.hunt.materials = 40;
+  const made = forgeArmoury(learned);
+  line(made && made.id === 'silver' && learned.hunt.materials === 10 && learned.hunt.forged.length === 1,
+    `with both in hand she forges it, and the materials are spent (${learned.hunt.materials} left)`);
+  line(!forgeArmoury(learned), 'and the same rung is never forged twice');
+  line(huntKit(learned).silver && !huntKit(learned).blessed, 'the kit carries what is made and nothing more');
+  line(armouryNext(learned).name === 'BLESSED', `and the ladder points at the next rung (${armouryNext(learned).name})`);
+
+  // the whole ladder, climbed
+  const everyFact = Object.keys((await import('../src/game/hunt.js')).INTEL);
+  const rich = { hunt: { track: 90, intel: everyFact, materials: 400, nights: 12, forged: [] } };
+  const madeAll = ['silver', 'blessed', 'ward'].map(() => forgeArmoury(rich));
+  line(madeAll.every(Boolean) && rich.hunt.forged.length === 3 && !armouryNext(rich),
+    'all three can be made, and then the ladder is finished');
+  line(rich.hunt.materials === 400 - ARMOURY.reduce((n, t) => n + t.cost, 0),
+    `and it cost exactly what it said (${ARMOURY.reduce((n, t) => n + t.cost, 0)} materials)`);
+  line(armouryHeld(rich).map((t) => t.name).join(' · ') === 'SILVERED · BLESSED · WARDED',
+    'the rack reads the temperings in the order they were made');
+
+  // the bite: silver finds the hounds, the blessing finds everything
+  const kit = huntKit(rich);
+  line(kitDamage(kit, { key: 'crawler' }) === 1.2 && kitDamage(kit, { key: 'werewolf' }) > 1.6
+    && kitDamage(kit, { isMaster: true }) === kitDamage(kit, { key: 'werewolf' }),
+    `silver is for the hounds and the Master, the blessing is for all of them (x${kitDamage(kit, { key: 'werewolf' }).toFixed(2)} vs a hound)`);
+  line(kitDamage(huntKit(learned), { key: 'crawler' }) === 1 && kitDamage(null, { key: 'werewolf' }) === 1,
+    'and an untempered kit changes nothing — the weapons stay a row, not a ladder');
+  const masterHp = 900;
+  line(Math.round(masterHp / kitDamage(kit, { isMaster: true })) < masterHp * 0.7,
+    `which is what makes the Master killable: ${masterHp} hp is ${Math.round(masterHp / kitDamage(kit, { isMaster: true }))} against a full kit`);
+
+  // a death finishes a rung as surely as a dawn does
+  const died = { nightsSurvived: 0 };
+  const d1 = bankNight(died, { won: false, survived: 40, kills: 3, intel: [...SIX_FACTS] });
+  died.hunt.materials = 40;
+  line(!!forgeArmoury(died), `a night she lost still forged it — the forge takes facts, not victories (+${d1.materials} materials)`);
+
+  // the ward: one blow a night, and only the first one
+  game.freshRun();
+  game.screen = 'playing';
+  // she is armed by the night itself, not by the test: what the save carries
+  // is what she walks in with, and the ward is fresh every night
+  game.save.hunt.forged = ['silver', 'blessed', 'ward'];
+  game.freshRun();
+  line(game.player.kit && game.player.kit.ward && game.player.wardSpent === false,
+    'the kit is carried in with the night — forged at the hub, on her at the door');
+  game.player.kit = { silver: false, blessed: false, ward: true };
+  game.player.wardSpent = false;
+  game.player.blood = 200; game.player.bloodMax = 200; game.player.iframes = 0;
+  const tough = game.difficulty ? game.difficulty.damage : 1;
+  game.player.takeDamage(40, game);
+  const first = 200 - game.player.blood;
+  game.player.iframes = 0;
+  game.player.takeDamage(40, game);
+  const second = 200 - first - game.player.blood;
+  line(first < 40 * tough * 0.5 && second > first * 2,
+    `the ward takes the first blow of a night and nothing after it (${first.toFixed(1)} then ${second.toFixed(1)})`);
+
+  // the save carries the temperings
+  const carried = migrateSave({ ...rich, upgrades: {}, builds: {} });
+  line(carried.hunt.forged.length === 3 && huntKit(carried).ward, 'the kit rides the save through a migration');
+
+  // she says what she made, and the board remembers what is next
+  const { informantLine: herLine, boardEntries: herBoard } = await import('../src/game/informant.js');
+  const forgeLine = herLine(rich, 'hub', { forged: 'ward' });
+  line(forgeLine.kind === 'forge' && forgeLine.text === ARMOURY_BY.ward.line,
+    `the night she makes it, that is all she talks about ("${forgeLine.text.slice(0, 34)}…")`);
+  const racked = herBoard(rich);
+  line(racked.weapon.temper.length === 3 && !racked.weapon.next, 'the rack wears all three temperings when all three are made');
+  line(herBoard(learned).weapon.next && herBoard(learned).weapon.next.name === 'BLESSED',
+    'and still points at the next rung while one is missing');
+
   // ---- THE FORTRESS (#59): the house she is building, out of the same kit ----
   const { planFortress } = await import('../src/game/envkit.js');
   // the kit's own measurements, so the plan can be checked without a GPU

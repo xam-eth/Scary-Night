@@ -151,6 +151,7 @@ export const defaultSave = () => ({
     track: 0,               // 0..100, forward only
     intel: [],              // ids of the facts learned about the Master (deduped for life)
     materials: 0,           // what a night yielded toward arming yourself
+    forged: [],             // the temperings Marthe has already made (ARMOURY)
     nights: 0,              // nights banked toward the hunt
     lastGain: null,         // the last night's readout, for the death/dawn screens
   },

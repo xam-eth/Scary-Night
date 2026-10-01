@@ -119,6 +119,81 @@ export function fellMaster(save) {
   return true;
 }
 
+/* ---- THE ARMOURY (#56 P5) — the mid-term ladder --------------------------
+ * The three weapons are a row, not a ladder: claw, sword and crossbow are
+ * choices about how you fight, and raising one above the others would make
+ * the other two wrong. What climbs instead is the metal she carries.
+ *
+ * Three temperings, each waiting on the same two things: what the hunt has
+ * LEARNED (intel) and what it has GATHERED (materials). Both are banked by
+ * every night, won or lost — so the ladder is death-into-progress too, and a
+ * bad night still buys the next rung. Marthe forges the moment both are in
+ * the room, which is why the reward lands at the hub and not in a shop.
+ *
+ * docs/PURPOSE.md §5 (goal layer 2) and §2 (materials toward weapons that can
+ * actually hurt the Master).
+ */
+export const ARMOURY = Object.freeze([
+  { id: 'silver', name: 'SILVERED', intel: 6, cost: 30,
+    effect: 'SILVER BITES THE HOUNDS',
+    line: 'I PUT SILVER IN THE STEEL. THE HOUNDS WILL FEEL THE DIFFERENCE.' },
+  { id: 'blessed', name: 'BLESSED', intel: 12, cost: 70,
+    effect: 'THE BLESSING BITES EVERYTHING',
+    line: 'I SAID THE WORDS OVER EVERY BOLT. THE HOUSE HEARD ME SAY THEM.' },
+  { id: 'ward', name: 'WARDED', intel: 18, cost: 120,
+    effect: 'THE FIRST BLOW OF A NIGHT DOES NOT LAND',
+    line: 'I SEWED THE WARDS INTO YOUR BELT. THE FIRST BLOW WILL NOT LAND.' },
+]);
+
+export const ARMOURY_BY = Object.freeze(Object.fromEntries(ARMOURY.map((t) => [t.id, t])));
+
+/** The temperings already forged, in ladder order. */
+export function armouryHeld(save) {
+  const h = huntBlock(save);
+  return ARMOURY.filter((t) => h.forged.includes(t.id));
+}
+
+/** What she carries into the night, as the fight reads it. */
+export function huntKit(save) {
+  const h = huntBlock(save);
+  return {
+    silver: h.forged.includes('silver'),
+    blessed: h.forged.includes('blessed'),
+    ward: h.forged.includes('ward'),
+  };
+}
+
+/**
+ * The next rung, and exactly what it is still waiting on. `need` is the gate,
+ * `facts` is what the hunt knows now; `materials` is what is on the table.
+ */
+export function armouryNext(save) {
+  const h = huntBlock(save);
+  const t = ARMOURY.find((x) => !h.forged.includes(x.id));
+  if (!t) return null;
+  const facts = (h.intel || []).length;
+  const materials = h.materials || 0;
+  return {
+    ...t, need: t.intel, facts, materials,
+    hasIntel: facts >= t.intel,
+    hasCost: materials >= t.cost,
+  };
+}
+
+/**
+ * Forge the next rung if the hunt has earned it — the facts are in and the
+ * materials are on the table. Costs nothing when it does not fire, and never
+ * forges twice. Returns the tier forged, or null.
+ */
+export function forgeArmoury(save) {
+  const next = armouryNext(save);
+  if (!next || !next.hasIntel || !next.hasCost) return null;
+  const h = huntBlock(save);
+  h.materials = Math.max(0, h.materials - next.cost);
+  h.forged.push(next.id);
+  return ARMOURY_BY[next.id];
+}
+
 /* ---- tonight's errand (P5, the short goal layer) -------------------------
  * Surviving is the clock, not the purpose. Every night the hunt asks for one
  * thing, and the thing it asks for is what the hunt is still missing: the map
@@ -215,6 +290,9 @@ export function huntBlock(save) {
   if (!Array.isArray(h.intel)) h.intel = [];
   h.materials = Math.max(0, Math.round(Number(h.materials) || 0));
   h.nights = Math.max(0, Math.round(Number(h.nights) || 0));
+  if (!Array.isArray(h.forged)) h.forged = [];
+  // a save cannot claim a tempering the ladder does not have
+  h.forged = h.forged.filter((id) => !!ARMOURY_BY[id]);
   h.masterDown = !!h.masterDown;
   return h;
 }

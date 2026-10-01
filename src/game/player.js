@@ -88,6 +88,12 @@ export class Player {
     this.recoveryMul = 1;
     this.blink = 0;
     this.scarAlpha = 0;
+    /* #56 P5 — the kit she carries: what Marthe tempered (null until the hunt
+     * is under way), and the ward, which is spent once a night and reforged
+     * with the sunrise like everything else. */
+    this.kit = null;
+    this.wardSpent = false;
+    this.wardFlash = 0;
   }
 
   get alive() { return this.state !== PSTATE.DEAD; }
@@ -123,6 +129,7 @@ export class Player {
     if (this.blink > 0) this.blink -= dt;
     if (this.iframes > 0) this.iframes -= dt;
     if (this.hurtT > 0) this.hurtT -= dt;
+    if (this.wardFlash > 0) this.wardFlash = Math.max(0, this.wardFlash - dt * 1.6);
     if (this.attackCd > 0) this.attackCd -= dt;
     if (this.dashCd > 0) this.dashCd -= dt;
 
@@ -358,6 +365,14 @@ export class Player {
     if (this.iframes > 0 || this.state === PSTATE.DEAD) return false;
     let dmg = amount * game.difficulty.damage;
     if (TUNING.godMode) dmg = 0;
+    // THE WARD (#56 P5): the first blow of a night lands on the wards sewn
+    // into her belt, not on her. One a night — it is a charm, not a shield.
+    if (this.kit && this.kit.ward && !this.wardSpent && dmg > 0) {
+      this.wardSpent = true;
+      this.wardFlash = 1;
+      dmg *= 0.35;
+      game.onWardTook(dmg, amount);
+    }
     this.blood = Math.max(0, this.blood - dmg);
     this.iframes = PLAYER.iframes;
     this.hurtT = 0.42;
@@ -473,6 +488,36 @@ export class Player {
       ctx.restore();
     }
 
+    // THE WARD (#56 P5), worn where she can see it: a ring of cold marks at
+    // her feet while it holds, and a flare the night it is spent. Seen before
+    // it is ever explained — the belt is lit, so there is something on her.
+    if (this.kit && this.kit.ward && !dead) {
+      const held = !this.wardSpent;
+      const flare = this.wardFlash;
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      if (held) {
+        const pulse = 0.34 + 0.12 * Math.sin(t * 2.2);
+        ctx.strokeStyle = `rgba(196,214,248,${pulse.toFixed(3)})`;
+        ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.ellipse(this.x, this.y + 9, 24, 9, 0, 0, TAU); ctx.stroke();
+        // four marks, at the quarters: wards, not a glow
+        for (let i = 0; i < 4; i++) {
+          const a = t * 0.5 + (i / 4) * TAU;
+          const mx = this.x + Math.cos(a) * 24, my = this.y + 9 + Math.sin(a) * 9;
+          ctx.fillStyle = `rgba(214,230,255,${(0.5 + 0.2 * Math.sin(t * 2.2 + i)).toFixed(3)})`;
+          ctx.beginPath(); ctx.arc(mx, my, 1.7, 0, TAU); ctx.fill();
+        }
+      }
+      if (flare > 0) {
+        const k = 1 - flare;
+        ctx.strokeStyle = `rgba(220,236,255,${(flare * 0.8).toFixed(3)})`;
+        ctx.lineWidth = 2.4;
+        ctx.beginPath(); ctx.ellipse(this.x, this.y + 9, 24 + k * 46, 9 + k * 18, 0, 0, TAU); ctx.stroke();
+      }
+      ctx.restore();
+    }
+
     // dash afterimages
     for (const tr of this.trail) {
       ctx.save();
@@ -542,6 +587,11 @@ export class Player {
     const end = -arc / 2 + sweep * arc;
 
     const ink = clawInk(game);
+    // #56 P5 — the metal is visible in the swing: silver goes cold and throws
+    // a glint at the leading edge, the blessing rims the reach in warm gold.
+    const kit = this.kit || {};
+    const inkEdge = kit.silver ? [176, 200, 240] : ink.edge;
+    const inkHot = kit.blessed ? [255, 224, 148] : (kit.silver ? [236, 246, 255] : ink.hot);
     ctx.save();
     if (game.renderer && game.renderer.upright) game.renderer.upright(ctx, this.x, this.y);
     ctx.translate(this.x, this.y);
@@ -550,7 +600,7 @@ export class Player {
     ctx.lineCap = 'round';
     for (let i = 0; i < 3; i++) {
       const rad = reach * (0.58 + i * 0.21);        // the last mark is the reach
-      const rgb = i === 1 ? ink.hot : ink.edge;
+      const rgb = i === 1 ? inkHot : inkEdge;
       ctx.strokeStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${((i === 1 ? 0.9 : 0.72) * fade).toFixed(3)})`;
       ctx.lineWidth = i === 1 ? 3.6 : 2.4;
       ctx.beginPath();
@@ -562,6 +612,20 @@ export class Player {
       ctx.lineWidth = 2.2;
       ctx.beginPath();
       ctx.arc(0, 0, reach, start, end);
+      ctx.stroke();
+    }
+    if (kit.silver) {                 // the glint at the leading edge
+      ctx.strokeStyle = `rgba(244, 250, 255, ${(0.95 * fade).toFixed(3)})`;
+      ctx.lineWidth = 2.6;
+      ctx.beginPath();
+      ctx.arc(0, 0, reach * 0.94, Math.min(start, end - 0.05), end);
+      ctx.stroke();
+    }
+    if (kit.blessed) {                // the blessing, a warm rim past the reach
+      ctx.strokeStyle = `rgba(255, 214, 130, ${(0.55 * fade).toFixed(3)})`;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.arc(0, 0, reach * 1.06, start, end);
       ctx.stroke();
     }
     ctx.restore();
