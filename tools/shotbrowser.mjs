@@ -491,6 +491,35 @@ try {
   };
   await shootRefuge(m, '19-phone');
 
+  /* ---------- TONIGHT'S ERRAND (#56 P5) — the night card and the dawn -----
+   * The short goal layer: one thing the hunt asks for, shown at nightfall and
+   * answered at dawn. Shot as a pair so the whole loop is on record.
+   */
+  const shootErrand = async (pg, tag) => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    await pg.evaluate(() => { const g = window.__LN; g.save.privacyAck = true; g.beginNight(); });
+    await pg.waitForFunction(() => window.__LN && window.__LN.screen === 'intro', { timeout: 30000, polling: 60 }).catch(() => {});
+    await wait(1600);
+    await shoot(pg, `${tag}-errand-nightfall`);
+    await pg.evaluate(() => {
+      const g = window.__LN;
+      g.introT = 99; g.skipNarration();
+      g.skipNarration(); g.startNightProper();
+    });
+    await pg.waitForFunction(() => window.__LN && window.__LN.screen === 'playing', { timeout: 30000, polling: 60 }).catch(() => {});
+    await wait(2000);
+    await shoot(pg, `${tag}-errand-hunt`);
+    await pg.evaluate(() => {
+      const g = window.__LN;
+      g.stats.kills = 14; g.time = 300; g.stats.pickupsTaken = 4;   // the errand, done
+      g.settleNight(300); g.bankHunt(true);
+      g.screen = 'victory'; g.victoryScreenT = 3; g.bankedNow = 40; g.newRecord = false;
+    });
+    await wait(1600);
+    await shoot(pg, `${tag}-errand-dawn`);
+  };
+  await shootErrand(m, '20-phone');
+
   console.log('DONE');
 } finally {
   await browser.close();

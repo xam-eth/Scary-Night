@@ -13,6 +13,7 @@
  */
 
 import { clamp } from '../core/util.js';
+import { dealHuntObjective, HUNT_OBJECTIVES, huntNightSeed } from './hunt.js';
 
 export const GOALS = [
   {
@@ -153,6 +154,65 @@ export const GOALS = [
   },
 ];
 
+/* ================= tonight's hunt errand (docs/PURPOSE.md §2 P5) ==========
+ * Surviving to 05:00 is the clock; this is the reason to go out. One errand a
+ * night, chosen by the hunt itself (what the board is still missing), and it
+ * is dealt as a real goal so the HUD, the banner, the settle and the shard
+ * payout all work without a second system. The hunt's own reward — track and
+ * materials — is banked with the night in src/game/hunt.js.
+ */
+const houndKills = (g) => {
+  const by = (g.stats && g.stats.killsBy) || {};
+  return (by.werewolf || 0) + (by.ghoul || 0) + (by.hunter || 0);
+};
+
+export function huntGoal(game, seed) {
+  const pick = dealHuntObjective(game.save, seed);
+  const target = pick.target;
+  const roomName = () => {
+    const r = game.mansion && game.mansion.room && game.mansion.room(target);
+    return String((r && r.name) || target || '').toUpperCase();
+  };
+  const defs = {
+    /* the map, while the house is still unmapped */
+    nests: {
+      id: 'hunt:nests', label: HUNT_OBJECTIVES.nests.label,
+      hint: () => `${roomName()} — UNMARKED ON THE BOARD`,
+      par: (g) => !!(g.stats.roomsSeen || {})[target],
+      progress: (g) => ((g.stats.roomsSeen || {})[target] ? 1 : 0),
+      reward: { shards: 22, blood: 8 },
+    },
+    /* the pack, while its hounds are still unmarked */
+    mark: {
+      id: 'hunt:mark', label: HUNT_OBJECTIVES.mark.label,
+      hint: 'BLEED ONE OF ITS HOUNDS',
+      par: (g) => houndKills(g) >= 1,
+      progress: (g) => clamp(houndKills(g), 0, 1),
+      reward: { shards: 26, blood: 10 },
+    },
+    /* its stalker, once it starts sending one */
+    stalk: {
+      id: 'hunt:stalk', label: HUNT_OBJECTIVES.stalk.label,
+      hint: 'LIVE SIXTY SECONDS AFTER IT COMES',
+      par: (g, st) => st.flags.stalkerAt != null && g.time - st.flags.stalkerAt >= 60,
+      progress: (g, st) => (st.flags.stalkerAt == null ? 0 : clamp((g.time - st.flags.stalkerAt) / 60, 0.2, 1)),
+      reward: { shards: 30, blood: 8 },
+    },
+    /* and on the long nights, what the house hoards */
+    hoard: {
+      id: 'hunt:hoard', label: HUNT_OBJECTIVES.hoard.label,
+      hint: 'COLLECT FOUR DROPS TONIGHT',
+      par: (g) => ((g.stats && g.stats.pickupsTaken) || 0) >= 4,
+      progress: (g) => clamp(((g.stats && g.stats.pickupsTaken) || 0) / 4, 0, 1),
+      reward: { shards: 20, planks: 1 },
+    },
+  };
+  const def = defs[pick.id] || defs.hoard;
+  const goal = { ...def, hunt: true, huntId: pick.id, target: target || null };
+  if (typeof goal.hint === 'function') goal.hint = goal.hint();
+  return goal;
+}
+
 const eastGlass = (game) => game.mansion.entrances.filter((e) => e.id === 'glassNorth' || e.id === 'glassEast' || e.id === 'chapelWindow');
 
 const GOALS_PER_NIGHT = 3;
@@ -197,6 +257,7 @@ export function dealNightGoals(seed) {
 export class Objectives {
   constructor() {
     this.list = [];
+    this.hunt = null;
     this.flags = {};
     this.cleanStreak = 0;
     this.doneCount = 0;
@@ -213,12 +274,18 @@ export class Objectives {
     this.banner = null;
     this.lastKills = 0;
     this.completed = new Set();
+    this.hunt = null;
     const seed = game.runSeed ?? game.time ?? 1;
     const pick = dealNightGoals(seed);
-    this.list = pick.map((g) => ({
+    // seeded by the night, not by the run: retrying a night keeps its errand
+    const hunt = huntGoal(game, huntNightSeed(game.save));
+    this.hunt = { goal: hunt, state: hunt.par(game, this) ? 'done' : 'open', t: 0, p: 0 };
+    // The errand leads: it is the reason tonight is not the same as last night.
+    this.list = [this.hunt, ...pick.map((g) => ({
       goal: g, state: g.par(game, this) ? 'done' : 'open', t: 0,
-    }));
-    game.showMessage('THE NIGHT HAS A SHAPE: ' + pick.map((p) => p.hint.toUpperCase()).slice(0, 2).join(' · '), { tone: 'gold', life: 5.2 });
+    }))];
+    game.showMessage('TONIGHT — ' + hunt.label + ' · ' + hunt.hint, { tone: 'gold', life: 5.6 });
+    game.showMessage('THE NIGHT HAS A SHAPE: ' + pick.map((p) => p.hint.toUpperCase()).slice(0, 2).join(' · '), { tone: 'cold', life: 5.2 });
   }
 
   /** Explicit events the poller cannot see. */
@@ -239,6 +306,10 @@ export class Objectives {
       this.flags.knockSurvived = true;
     }
     if (this.banner) { this.banner.t += dt; if (this.banner.t > 4) this.banner = null; }
+    // the stalker is not a notify — it is a thing in the room. Notice it there.
+    if (this.flags.stalkerAt == null && game.enemies.some((e) => e.key === 'stalker' && !e.dead)) {
+      this.flags.stalkerAt = game.time;
+    }
 
     for (const slot of this.list) {
       slot.t += dt;
@@ -267,6 +338,22 @@ export class Objectives {
       return { done: this.doneCount, shards: 0, list: this.list.map((s) => ({ id: s.goal.id, label: s.goal.label, hint: s.goal.hint, state: s.state })) };
     }
     this._settled = true;
+    // The errand is judged on the night as it ended, not on the last tick that
+    // happened to run: a player who picks the fourth drop up on her way to the
+    // door did the thing, however the frame budget fell.
+    if (this.hunt && this.hunt.state === 'open') {
+      const g = this.hunt.goal;
+      this.hunt.p = clamp(g.progress(game, this), 0, 1);
+      if (g.par(game, this)) {
+        this.hunt.state = 'done';
+        this.hunt.p = 1;
+        this.doneCount++;
+        this.shardBank += g.reward.shards || 0;
+        game.audio.play('chandelier', { vol: 0.5 });
+        game.showMessage(g.label + ' — DONE', { tone: 'gold', life: 4 });
+        this.banner = { text: g.label, t: 0 };
+      }
+    }
     // last-second par checks that only make sense at dawn
     for (const slot of this.list) {
       if (slot.goal.endOfNight && slot.state === 'open' && slot.goal.par(game, this)) {
@@ -281,11 +368,22 @@ export class Objectives {
     return { done: this.doneCount, shards, list: this.list.map((s) => ({ id: s.goal.id, label: s.goal.label, hint: s.goal.hint, state: s.state })) };
   }
 
+  /** What tonight's errand came to, for the hunt to bank (src/game/hunt.js). */
+  huntReport() {
+    const s = this.hunt;
+    if (!s) return null;
+    return {
+      id: s.goal.huntId, label: s.goal.label, target: s.goal.target || null,
+      done: s.state === 'done', p: clamp(s.p ?? (s.state === 'done' ? 1 : 0), 0, 1),
+    };
+  }
+
   hudState() {
     if (!this.list.length) return null;
     const open = this.list.filter((s) => s.state === 'open').slice(0, 2);
     return {
-      open: open.map((s) => ({ label: s.goal.label, hint: s.goal.hint, progress: s.p ?? 0 })),
+      open: open.map((s) => ({ label: s.goal.label, hint: s.goal.hint, progress: s.p ?? 0, hunt: !!s.goal.hunt })),
+      hunt: this.hunt ? { label: this.hunt.goal.label, hint: this.hunt.goal.hint, progress: this.hunt.p ?? 0, done: this.hunt.state === 'done' } : null,
       done: this.list.filter((s) => s.state === 'done').length,
       total: this.list.length,
       bank: this.shardBank,

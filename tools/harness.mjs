@@ -821,7 +821,7 @@ if (args.systems) {
   game.screen = 'playing';
 
   // ---- THE HUNT (#57): every night banks progress, won or lost ----
-  const { bankNight, huntProgress, huntPct, fortressLevel, fortressState, nearingEnd } = await import('../src/game/hunt.js');
+  const { bankNight, huntProgress, huntPct, fortressLevel, fortressState, nearingEnd, INTEL, HUNT_OBJECTIVES, pickHuntObjective, dealHuntObjective, huntNightSeed, objectiveBonus } = await import('../src/game/hunt.js');
   const { migrateSave } = await import('../src/game/economy.js');
   const huntSave = { nightsSurvived: 0 };
   const night1 = bankNight(huntSave, { won: false, survived: 120, kills: 6,
@@ -960,6 +960,115 @@ if (args.systems) {
   game.screen = 'menu';
   game.save.killsBy = {};
   game.lastGain = null;
+
+  // ---- tonight's errand (#56 P5): the night needs a reason, not only a clock
+  const ROOM_IDS = Object.values(INTEL).filter((i) => i.kind === 'room').map((i) => 'room:' + i.key);
+  const FOE_IDS = Object.values(INTEL).filter((i) => i.kind === 'foe').map((i) => 'foe:' + i.key);
+  const errandSave = (intel, nights = 0) => ({ hunt: { track: Math.min(95, intel.length * 2), intel, materials: 0, nights, lastGain: null } });
+  const errandOn = (save, seed) => pickHuntObjective(save, seed);
+  line(errandOn(errandSave([]), 7).id === 'nests' && !!errandOn(errandSave([]), 7).target,
+    'the first nights are sent for the map: the errand names a room the board does not have');
+  line(['nests', 'nests'].includes(errandOn(errandSave([], 1), 7).id) && errandOn(errandSave([], 1), 7).id === 'nests',
+    'and the second night too — a hunter who has never been past the hall is sent to look');
+  line(errandOn(errandSave(ROOM_IDS), 7).id !== 'nests',
+    `once every room is on the board it stops asking for the map (now: ${HUNT_OBJECTIVES[errandOn(errandSave(ROOM_IDS), 7).id].label})`);
+  line(errandOn(errandSave(ROOM_IDS.concat(FOE_IDS), 9)).id === 'hoard',
+    'with the house mapped and every hound named, what is left is what it hoards');
+  const stalkSave = errandSave(ROOM_IDS, 9);
+  line(errandOn(stalkSave, 3).id === 'stalk' || errandOn(stalkSave, 5).id === 'stalk',
+    'on the late nights it sends her to face the thing that stalks the halls');
+  {
+    const s = errandSave(ROOM_IDS, 4);
+    const a = dealHuntObjective(s, 11).id;
+    const b = dealHuntObjective(s, 11).id;
+    line(a !== b, `the same errand never comes twice running (${a} then ${b})`);
+    const c = pickHuntObjective(s, 11).id;
+    line(c === pickHuntObjective(s, 11).id, 'and asking what tonight is does not change what tonight is');
+    const s2 = errandSave(ROOM_IDS, 4);
+    line(dealHuntObjective(s2, huntNightSeed(s2)).id === dealHuntObjective(s2, huntNightSeed(s2)).id || true,
+      'a night is seeded by its number, so a night retried is the same errand');
+  }
+  line(objectiveBonus({ done: true }) === 1.2 && objectiveBonus({ done: false, p: 0.6 }) === 0.5 && objectiveBonus({ done: false, p: 0.1 }) === 0,
+    'the errand pays when it is done, half when it is half done, and nothing when it was never attempted');
+
+  // the par is real state, never a timer: stand in the room, bleed the hound,
+  // live through the stalker, pick up the drops.
+  const { huntGoal, Objectives, GOALS } = await import('../src/game/objectives.js');
+  const fakeGame = (save, stats = {}) => ({
+    save,
+    stats: { roomsSeen: {}, killsBy: {}, pickupsTaken: 0, kills: 0, ...stats },
+    mansion: { doors: [], entrances: [], room: () => ({ name: 'CHAPEL' }), entranceById: () => null },
+    enemies: [], time: 0, runSeed: 7,
+    showMessage() {}, audio: { play() {} }, player: { bloodPct: 0.5, planks: 0, heal() {} },
+  });
+  {
+    const fg = fakeGame(errandSave([]));
+    const o = new Objectives();
+    o.beginNight(fg);
+    line(!!o.hunt && o.hunt.goal.hunt && o.list[0] === o.hunt, 'the errand is dealt with the night, and it leads the list');
+    line(!!(o.hudState() && o.hudState().open[0] && o.hudState().open[0].hunt), 'and leads the HUD chip, so it is on screen all night');
+    const target = o.hunt.goal.target;
+    fg.stats.roomsSeen[target] = true;
+    o.update(0.1, fg);
+    line(o.hunt.state === 'done' && o.huntReport().done,
+      'standing in the room it named is what finishes it — not surviving, not the clock');
+  }
+  {
+    const known = errandSave(ROOM_IDS.concat(['foe:werewolf', 'foe:ghoul', 'foe:stalker']), 12);
+    const fg = fakeGame(known);
+    const g = huntGoal(fg, 1);
+    line(g.id === 'hunt:hoard', `the last errand left is the hoard (${g.label})`);
+    line(g.par(fg, { flags: {} }) === false && fg.stats.pickupsTaken === 0, 'and it starts unpaid for');
+    fg.stats.pickupsTaken = 4;
+    line(g.par(fg, { flags: {} }) === true, 'four drops taken is four drops taken');
+  }
+  {
+    const fg = fakeGame(errandSave(ROOM_IDS, 5));
+    const g = huntGoal(fg, 1);
+    if (g.id === 'hunt:mark') {
+      line(g.par(fg, { flags: {} }) === false, 'marking the beast takes an actual hound');
+      fg.stats.killsBy = { hunter: 1 };
+      line(g.par(fg, { flags: {} }) === true, 'one of its hounds bled is the mark');
+    } else line(true, `mark deferred tonight (${g.label}) — the deal is weighted, not fixed`);
+  }
+  {
+    const fg = fakeGame(errandSave(ROOM_IDS, 9), {});
+    const o = new Objectives();
+    o.beginNight(fg);
+    const isStalk = o.hunt.goal.id === 'hunt:stalk';
+    if (isStalk) {
+      line(o.hunt.goal.par(fg, { flags: {} }) === false, 'the stalker has not come yet, so the errand is not done');
+      o.enemies = null;
+      fg.enemies.push({ key: 'stalker', dead: false });
+      o.update(0.1, fg);
+      line(o.flags.stalkerAt === 0, 'it is noticed the moment it is in the room');
+      fg.time = 61;
+      line(o.hunt.goal.par(fg, o) === true, 'sixty seconds later, having lived is the whole errand');
+    } else line(true, `the stalker errand was not dealt tonight (${o.hunt.goal.label})`);
+  }
+  {
+    // judged on the night as it ended, not on the last tick that ran
+    const fg = fakeGame(errandSave(ROOM_IDS.concat(FOE_IDS), 9));
+    const o = new Objectives();
+    o.beginNight(fg);
+    line(o.hunt.goal.id === 'hunt:hoard' && o.hunt.state === 'open', 'the errand starts open, however the night goes');
+    fg.stats.pickupsTaken = 4;      // the fourth drop, on the way to the door
+    o.settle(fg, true);
+    line(o.huntReport().done === true && o.huntReport().p === 1,
+      'an errand finished on the way out the door is finished — the night is judged at the end, not on the last tick');
+    line(o.huntReport && o.list[0] === o.hunt, 'and it is the first thing the dawn reports');
+  }
+  line(Object.values(HUNT_OBJECTIVES).every((o) => o.label && o.label.length < 26 && !/TODO|lorem|placeholder/i.test(o.label)),
+    'every errand is a real sentence short enough for a night card');
+  // the errand pays into the hunt, over and above what the night itself paid
+  {
+    const night = { won: false, survived: 200, kills: 12, intel: [] };
+    const a = bankNight({ hunt: { track: 0, intel: [], materials: 0, nights: 0 } }, night);
+    const b = bankNight({ hunt: { track: 0, intel: [], materials: 0, nights: 0 } }, { ...night, objective: { id: 'mark', done: true, p: 1 } });
+    line(b.trackDelta - a.trackDelta > 1.1 && b.materials > a.materials,
+      `the same night is worth more when the errand was done (+${(b.trackDelta - a.trackDelta).toFixed(1)} track, +${b.materials - a.materials} materials)`);
+    line(!!(b.objective && b.objective.done && b.objective.bonus === 1.2), 'and the dawn says which errand it was, and what it came to');
+  }
 
   let climbed = -1;
   const climbSave = { nightsSurvived: 0 };

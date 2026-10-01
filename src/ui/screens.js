@@ -654,8 +654,31 @@ export function drawIntro(game, ctx, w, h) {
   for (const b of body) { draw(b, { f: 15 * sc, style: SANS, ls: 2 * sc, y: fy, c: 'rgba(200,192,176,0.8)' }); fy += 0.042; }
   fy = Math.max(0.55, fy + 0.03);
   draw('SURVIVE UNTIL DAWN.', { f: 22 * sc, style: SERIF, ls: 6 * sc, y: fy, c: '#c8a04a' });
-  draw('00:00  →  05:00', { f: 20 * sc, style: MONO, ls: 4 * sc, y: fy + 0.06, c: 'rgba(220,214,198,0.9)' });
-  const hintY = fy + 0.12;
+
+  // TONIGHT'S ERRAND — the hunt's short goal layer (docs/PURPOSE.md §2 P5).
+  // Surviving is the clock; this is the reason to go out, and it is dealt
+  // before the first door shakes so the night has a shape from the start.
+  let ny = fy + 0.062;
+  const errand = game.objectives && game.objectives.hunt ? game.objectives.hunt.goal : null;
+  if (errand) {
+    ctx.save();
+    ctx.globalAlpha = a * 0.45;
+    ctx.strokeStyle = 'rgba(200,160,74,0.55)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(w * 0.26, h * (ny - 0.022));
+    ctx.lineTo(w * 0.74, h * (ny - 0.022));
+    ctx.stroke();
+    ctx.restore();
+    // Type is floored, not only scaled: at 0.58 the card's own body type is
+    // 8.7px, and an errand nobody can read is not an errand.
+    draw('TONIGHT', { f: 9.5, style: SANS, ls: 3, y: ny, c: 'rgba(200,160,74,0.8)' });
+    draw(errand.label, { f: Math.max(13, 17 * sc), style: SERIF, ls: 2.5, y: ny + 0.038, c: '#e8dfc8' });
+    draw(errand.hint, { f: Math.max(10, 12 * sc), style: SANS, ls: 1, y: ny + 0.068, c: 'rgba(186,178,160,0.82)' });
+    ny += 0.104;
+  }
+  draw('00:00  →  05:00', { f: 20 * sc, style: MONO, ls: 4 * sc, y: ny + 0.02, c: 'rgba(220,214,198,0.9)' });
+  const hintY = ny + 0.08;
   ctx.globalAlpha = a * 0.6;
   ctx.font = `400 12px ${SANS}`;
   if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
@@ -1430,34 +1453,55 @@ export function drawHelp(game, ctx, w, h) {
  * Drawn as a hunter's journal: the intel first (what you learned), then what
  * you carry, then the one meter that only ever moves forward.
  */
-function drawHuntGain(game, ctx, w, h, y, heading = 'WHAT THE NIGHT TAUGHT YOU') {
+function drawHuntGain(game, ctx, w, h, y, heading = 'WHAT THE NIGHT TAUGHT YOU', floorY = Infinity) {
   const gain = game.lastGain;
   if (!gain) return y;
   const phone = isPhone(w, h);
   const maxW = w - 34;
+  // The block stops at its floor: on a dawn the screen is full of buttons and
+  // stat rows, and a hunt readout that runs under the thumb is worse than a
+  // short one. Rows are drawn in order of worth, so what gets dropped first is
+  // the flavour, never the meter and never her.
+  const roomFor = (need) => y + need <= floorY;
 
   ctx.save();
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
+  if (!roomFor(phone ? 15 : 18)) { ctx.restore(); return y; }
   ctx.font = `500 ${phone ? 9.5 : 11}px ${SANS}`;
   if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
   ctx.fillStyle = 'rgba(200,160,74,0.85)';
   ctx.fillText(heading, w / 2, y);
   y += phone ? 15 : 18;
 
+  // tonight's errand, answered: asked at nightfall, paid here. One line — the
+  // point is the verdict, not a second spreadsheet.
+  if (gain.objective && roomFor(phone ? 15 : 17)) {
+    const ob = gain.objective;
+    const verdict = ob.done ? 'DONE' : (ob.bonus > 0 ? 'HALF DONE' : 'MISSED');
+    const text = `TONIGHT · ${ob.label} — ${verdict}${ob.bonus > 0 ? `  +${ob.bonus.toFixed(1)}` : ''}`;
+    const px = fitType(ctx, text, maxW, phone ? 10 : 11.5, SANS, 500);
+    ctx.font = `500 ${px}px ${SANS}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '1.5px';
+    ctx.fillStyle = ob.done ? 'rgba(214,178,96,0.95)' : 'rgba(160,152,138,0.8)';
+    ctx.fillText(text, w / 2, y);
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+    y += phone ? 15 : 17;
+  }
+
   // the freshest facts first — two is what fits and what reads
   const shown = gain.intel.slice(0, 2);
   for (const id of shown) {
     const line = intelLine(id);
-    if (!line) continue;
+    if (!line || !roomFor(phone ? 14 : 16)) continue;
     const px = fitType(ctx, line, maxW - 16, phone ? 11.5 : 13, SERIF, 400);
     ctx.font = `italic 400 ${px}px ${SERIF}`;
     ctx.fillStyle = 'rgba(226,212,178,0.92)';
     ctx.fillText(line, w / 2, y);
     y += phone ? 14 : 16;
   }
-  if (gain.intel.length > shown.length) {
+  if (gain.intel.length > shown.length && roomFor(phone ? 14 : 16)) {
     ctx.font = `400 10px ${SANS}`;
     if ('letterSpacing' in ctx) ctx.letterSpacing = '1.5px';
     ctx.fillStyle = 'rgba(170,160,140,0.7)';
@@ -1466,6 +1510,7 @@ function drawHuntGain(game, ctx, w, h, y, heading = 'WHAT THE NIGHT TAUGHT YOU')
   }
 
   // what the night paid, in one line
+  if (!roomFor(phone ? 16 : 19)) { ctx.restore(); return y; }
   ctx.font = `500 ${phone ? 10.5 : 12}px ${SANS}`;
   if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
   ctx.fillStyle = 'rgba(196,190,172,0.9)';
@@ -1473,6 +1518,7 @@ function drawHuntGain(game, ctx, w, h, y, heading = 'WHAT THE NIGHT TAUGHT YOU')
   y += phone ? 16 : 19;
 
   // THE HUNT — one meter, ten cells, forward only
+  if (!roomFor(phone ? 30 : 34)) { ctx.restore(); return y; }
   const pct = huntPct(game.save);
   const cells = 10;
   const cellW = phone ? 15 : 18;
@@ -1493,7 +1539,7 @@ function drawHuntGain(game, ctx, w, h, y, heading = 'WHAT THE NIGHT TAUGHT YOU')
   y += phone ? 14 : 16;
 
   // the house is becoming hers (P6) — and the end is in sight
-  if (gain.levelUp) {
+  if (gain.levelUp && roomFor(phone ? 15 : 17)) {
     // The Clash-base beat, in one line: what the house was, and what it is now.
     const st = fortressState(game.save);
     const from = FORTRESS_STATES[gain.levelBefore] || FORTRESS_STATES[0];
@@ -1504,6 +1550,7 @@ function drawHuntGain(game, ctx, w, h, y, heading = 'WHAT THE NIGHT TAUGHT YOU')
     y += phone ? 15 : 17;
   }
   for (const tell of huntTells(game.save)) {
+    if (!roomFor(phone ? 14 : 16)) break;
     ctx.font = `italic 400 ${phone ? 10.5 : 12}px ${SERIF}`;
     if ('letterSpacing' in ctx) ctx.letterSpacing = '1px';
     ctx.fillStyle = 'rgba(206,120,96,0.9)';
@@ -1513,12 +1560,12 @@ function drawHuntGain(game, ctx, w, h, y, heading = 'WHAT THE NIGHT TAUGHT YOU')
   // And the one person who is still in the house, waiting up. She speaks on a
   // death too — the run that ends in blood is the one that needs her most.
   const said = informantLine(game.save, gain.won ? 'dawn' : 'death', gain);
-  if (said && said.text) {
+  if (said && said.text && roomFor(phone ? 14 : 16)) {
     ctx.font = `italic 400 ${phone ? 10.5 : 12}px ${SERIF}`;
     if ('letterSpacing' in ctx) ctx.letterSpacing = '0.4px';
     ctx.fillStyle = 'rgba(196,180,150,0.9)';
     const lines = wrapLines(ctx, said.text, maxW).slice(0, 2);
-    for (const ln of lines) { ctx.fillText(ln, w / 2, y); y += phone ? 14 : 16; }
+    for (const ln of lines) { if (!roomFor(phone ? 14 : 16)) break; ctx.fillText(ln, w / 2, y); y += phone ? 14 : 16; }
     ctx.font = `500 ${phone ? 8 : 9}px ${SANS}`;
     if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
     ctx.fillStyle = 'rgba(150,140,120,0.7)';
@@ -1617,7 +1664,13 @@ export function drawDeath(game, ctx, w, h) {
   }
   // THE HUNT: she died, and the night still paid. The spine's hard rule is
   // that this block is here at all — a death that banks nothing is a score.
-  if (game.lastGain) drawHuntGain(game, ctx, w, h, y + 26, 'WHAT THE NIGHT TAUGHT YOU');
+  if (game.lastGain) {
+    // the death screen's own button stack, so the block can stop above it:
+    // up to three rows (TRY AGAIN, the revive offer, MAIN MENU) off the bottom.
+    const dBh = h < 520 ? 42 : 48, dGap = h < 640 ? 6 : 8;
+    const dTop = Math.min(h * 0.76, h - (3 * (dBh + dGap)) - 14);
+    drawHuntGain(game, ctx, w, h, y + 26, 'WHAT THE NIGHT TAUGHT YOU', dTop - 8);
+  }
   ctx.restore();
 
   if (fade > 0.9) {
@@ -1773,9 +1826,14 @@ export function drawVictory(game, ctx, w, h) {
     ['ENEMIES DEFEATED', String(s.kills)],
     ['NEAREST OF DEATH', s.closestCall > 0 ? Math.round(s.closestCall * 100) + '% BLOOD' : '—'],
   ];
+  const items = [
+    { label: 'THE REFUGE', onClick: () => game.setScreen('refuge', 'victory'), accent: '#a8833c' },
+    { label: 'ANOTHER NIGHT', onClick: () => game.beginNight(), accent: '#a8833c' },
+    { label: 'MAIN MENU', onClick: () => game.toMenu(), accent: '#6a6a80' },
+  ];
   const gap = h < 640 ? 5 : 8;
   const bh = h < 520 ? 36 : 46;
-  const buttonStack = (bh + gap) * 3 - gap;
+  const buttonStack = (bh + gap) * items.length - gap;
   const buttonTop = h - buttonStack - 12;
   const rowH = h < 520 ? 18 : 34;
   ctx.save();
@@ -1817,17 +1875,14 @@ export function drawVictory(game, ctx, w, h) {
   }
   // THE HUNT: a dawn is the biggest step of the night, and the screen says
   // what it was worth. Clamped so it never runs into the buttons.
-  if (game.lastGain) drawHuntGain(game, ctx, w, h, Math.min(y + 30, buttonTop - 134), 'WHAT THE NIGHT PAID');
+  if (game.lastGain) {
+    const huntTop = Math.max(y + 30, buttonTop - 150);
+    drawHuntGain(game, ctx, w, h, huntTop, 'WHAT THE NIGHT PAID', buttonTop - 8);
+  }
   ctx.restore();
 
   if (fade > 0.9) {
     const bw = isPhone(w, h) ? Math.min(w - 28, 420) : Math.min(220, w * 0.72);
-    const items = [
-      { label: 'THE REFUGE', onClick: () => game.setScreen('refuge', 'victory'), accent: '#a8833c' },
-      { label: 'ANOTHER NIGHT', onClick: () => game.beginNight(), accent: '#a8833c' },
-      { label: 'UPGRADES', onClick: () => game.setScreen('upgrades', 'victory'), accent: '#8a7a52' },
-      { label: 'MAIN MENU', onClick: () => game.toMenu(), accent: '#6a6a80' },
-    ];
     let by = buttonTop;
     items.forEach((it, i) => {
       const r = uiButton(game, { x: w / 2 - bw / 2, y: by, w: bw, h: bh, label: it.label, onClick: it.onClick, accent: it.accent, small: true });

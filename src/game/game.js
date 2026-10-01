@@ -65,6 +65,7 @@ class Pickup {
     const p = game.player;
     if (dist(this.x, this.y, p.x, p.y) < 30) {
       this.taken = true;
+      if (game.stats) game.stats.pickupsTaken = (game.stats.pickupsTaken || 0) + 1;
       if (this.kind === 'planks') {
         p.planks = Math.min(PLAYER.carryMax + 4, p.planks + this.amount);
         game.audio.play('woodPickup', { x: this.x, y: this.y, cam: game.renderer.cam, vol: 0.7 });
@@ -466,7 +467,7 @@ export class Game {
     this.countdownShown = 0;
     const doorN = this.mansion.doors.length;
     // roomsSeen / enemySeen are tonight's eyes — the hunt banks what they saw
-    this.stats = { kills: 0, doorsSurviving: doorN, doorsTotal: doorN, closestCall: 0, waveCount: 0, hits: 0, bloodMin: 100, roomsVisited: 0, roomsSeen: {}, enemySeen: {} };
+    this.stats = { kills: 0, killsBy: {}, pickupsTaken: 0, doorsSurviving: doorN, doorsTotal: doorN, closestCall: 0, waveCount: 0, hits: 0, bloodMin: 100, roomsVisited: 0, roomsSeen: {}, enemySeen: {} };
     this.larderUsed = false;
     this._lastRoom = null;
     if (this.mansion.studyWard) { this.mansion.studyWard.until = 0; this.mansion.studyWard.readyAt = 0; }
@@ -1179,6 +1180,9 @@ export class Game {
       survived: won ? NIGHT_DURATION : this.time,
       kills: this.stats.kills || 0,
       intel: this.nightIntel(won),
+      // tonight's errand (docs/PURPOSE.md §2 P5): the reason the night was
+      // not only a clock. Done pays like a fresh fact; half done pays half.
+      objective: this.objectives ? this.objectives.huntReport() : null,
     });
     this.save.fortressLevel = gain.level;
     this.lastGain = gain;
@@ -1623,10 +1627,13 @@ export class Game {
   onEnemyKilled(enemy) {
     const p = this.player;
     this.stats.kills++;
-    // what you took off its hounds is what hangs on the refuge wall (#56 P3)
+    // what you took off its hounds is what hangs on the refuge wall (#56 P3),
+    // and tonight's count is what the hunt's errand is measured against.
     if (enemy && enemy.key) {
       const by = this.save.killsBy || (this.save.killsBy = {});
       by[enemy.key] = (by[enemy.key] || 0) + 1;
+      const tonight = this.stats.killsBy || (this.stats.killsBy = {});
+      tonight[enemy.key] = (tonight[enemy.key] || 0) + 1;
     }
     // a kill is a feed; a chain of them is what turns the moon red
     this.climax.noteFeed(this);

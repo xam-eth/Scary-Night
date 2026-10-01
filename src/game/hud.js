@@ -147,7 +147,9 @@ function drawGoals(game, ctx, w, h, em = 1) {
     ctx.font = `500 12px ${SANS}`;
     setLetter(ctx, 0.6);
     ctx.fillStyle = 'rgba(200,160,74,0.9)';
-    ctx.fillText(`GOALS ${st.done}/${st.total}`, x, y);
+    // The hunt's errand leads the chip: it is tonight, not one of three chores.
+    const lead = st.open[0] && st.open[0].hunt;
+    ctx.fillText(lead ? `◆ TONIGHT` : `GOALS ${st.done}/${st.total}`, x, y);
     if (!short && st.open[0]) {
       ctx.font = `400 11px ${SANS}`;
       setLetter(ctx, 0.3);

@@ -91,6 +91,83 @@ export const FORTRESS_STATES = Object.freeze([
 /** The track at which the Master can be cornered and the hunt ended. */
 export const HUNT_END_AT = 100;
 
+/* ---- tonight's errand (P5, the short goal layer) -------------------------
+ * Surviving is the clock, not the purpose. Every night the hunt asks for one
+ * thing, and the thing it asks for is what the hunt is still missing: the map
+ * while the house is unmapped, the pack while its hounds are unmarked, its
+ * stalker once it starts sending one, and on the long nights, what the house
+ * hoards. docs/PURPOSE.md §2 P5.
+ */
+export const HUNT_OBJECTIVES = Object.freeze({
+  nests: { id: 'nests', label: 'FIND WHERE IT NESTS' },
+  mark: { id: 'mark', label: 'MARK THE BEAST' },
+  stalk: { id: 'stalk', label: 'FACE WHAT IT SENDS' },
+  hoard: { id: 'hoard', label: 'TAKE BACK WHAT IT HOARDS' },
+});
+
+/** The rooms the hunt can still send her into, read off the intel itself. */
+const ROOM_KEYS = Object.values(INTEL).filter((i) => i.kind === 'room').map((i) => i.key);
+
+/**
+ * Which errand tonight. Chosen by what the hunt still needs, with the seed as
+ * the tiebreak, and never the same errand twice running — a rotation the
+ * player can predict stops being a reason to go out. Pure: asking does not
+ * deal, so the hub can name tomorrow's errand without changing it.
+ */
+export function pickHuntObjective(save, seed = 1) {
+  const h = huntBlock(save);
+  const seedN = Math.abs(seed | 0) || 1;
+  const knows = (id) => h.intel.includes(id);
+  const cands = [];
+  const missing = ROOM_KEYS.filter((k) => !knows('room:' + k));
+  // The first two nights are always the map: a hunter who has never been past
+  // the hall is sent to look, and every other errand assumes she knows where
+  // she is standing. `must` outranks the no-repeat rule below.
+  if (missing.length) cands.push({ id: 'nests', target: missing[seedN % missing.length], w: h.nights < 2 ? 99 : 3, must: h.nights < 2 });
+  if (!knows('foe:werewolf') || !knows('foe:ghoul')) cands.push({ id: 'mark', w: 2 });
+  if (h.nights >= 8 && !knows('foe:stalker')) cands.push({ id: 'stalk', w: 2 });
+  cands.push({ id: 'hoard', w: 1 });
+
+  const last = h.lastObjective && h.lastObjective.id;
+  const loose = cands.filter((c) => !c.must);
+  const fresh = loose.filter((c) => c.id !== last);
+  const use = cands.filter((c) => c.must).concat(fresh.length ? fresh : loose);
+  let roll = ((((seedN * 2654435761) >>> 0) * 1103515245 + 12345) >>> 0) / 4294967296
+    * use.reduce((a, c) => a + c.w, 0);
+  let pick = use[use.length - 1];
+  for (const c of use) { roll -= c.w; if (roll <= 0) { pick = c; break; } }
+
+  return { id: pick.id, target: pick.target || null, label: HUNT_OBJECTIVES[pick.id].label };
+}
+
+/**
+ * Deal tonight's errand and put it on the record, so the next night is not
+ * handed the same one. Seeded by the night number rather than by the run, so
+ * a night retried is the same errand — the hunt still wants that thing.
+ */
+export function dealHuntObjective(save, seed = 1) {
+  const h = huntBlock(save);
+  const pick = pickHuntObjective(save, seed);
+  h.lastObjective = { id: pick.id, night: h.nights };
+  return pick;
+}
+
+/** The night number tonight's errand is seeded from. */
+export function huntNightSeed(save) {
+  return (huntBlock(save).nights || 0) + 1;
+}
+
+/**
+ * What tonight's errand is worth to the hunt. Done pays like a fresh fact;
+ * half done pays half of it, because the point is that going out was a step,
+ * not that it went well.
+ */
+export function objectiveBonus(objective) {
+  if (!objective) return 0;
+  if (objective.done) return 1.2;
+  return (objective.p || 0) >= 0.5 ? 0.5 : 0;
+}
+
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 /** The hunt block on a save, whatever an older save happened to carry. */
@@ -179,15 +256,21 @@ export function bankNight(save, result = {}) {
   const before = h.track;
   const levelBefore = fortressLevel(save);
   const intel = newIntel(save, r.intel || []);
+  // tonight's errand: the reason this night was not only a clock (P5)
+  const objective = r.objective || null;
+  const objBonus = objectiveBonus(objective);
 
   let delta = 0;
   delta += (survived / NIGHT_DURATION) * 5;
   delta += Math.min(kills, 40) * 0.12;
   for (const id of intel) delta += (INTEL[id] ? INTEL[id].track : 1);
+  delta += objBonus;
   if (won) delta += 3;
   delta = Math.max(delta, 1.2);                  // the hard rule
 
-  const materials = Math.max(4, Math.round(survived / 60 * 3 + kills * 0.5 + (won ? 8 : 0)));
+  let materials = Math.max(4, Math.round(survived / 60 * 3 + kills * 0.5 + (won ? 8 : 0)));
+  if (objBonus >= 1.2) materials += 8;
+  else if (objBonus > 0) materials += 3;
 
   h.track = clamp(before + delta, before, HUNT_END_AT);   // forward only
   h.materials += materials;
@@ -195,6 +278,9 @@ export function bankNight(save, result = {}) {
   const gain = {
     won, survived, kills,
     intel,
+    objective: objective
+      ? { id: objective.id, label: objective.label || HUNT_OBJECTIVES[objective.id].label, done: !!objective.done, p: clamp(objective.p || 0, 0, 1), bonus: objBonus }
+      : null,
     materials,
     track: h.track,
     trackBefore: before,
