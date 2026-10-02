@@ -505,6 +505,13 @@ if (ONLY === 'bake') {
   server.kill('SIGTERM');
   process.exit(0);
 }
+// `node tools/envqa.mjs plates` — just the photographed rooms, ~2 minutes.
+if (ONLY === 'plates') {
+  await plateSection();
+  await browser.close();
+  server.kill('SIGTERM');
+  process.exit(0);
+}
 const rows = [];
 for (let n = 0; n < STOPS.length; n++) {
   if (ONLY && !STOPS[n][0].toLowerCase().includes(ONLY)) continue;
@@ -831,11 +838,84 @@ for (const w of winList) {
 }
 console.log(`windows drawn: ${winOk}/${winTried} of the ones a player can stand in front of`);
 
+/* ---------- the room plates ----------
+ * Every room wears a photograph of the room it is. It is drawn in world
+ * space, over the floor the kit built — and the kit's floor is opaque, so a
+ * plate laid UNDER the room is a plate nobody ever sees. Eight rooms had one
+ * and not a pixel of it reached the screen; this is the check that would
+ * have caught that. Turn the plates off and the picture has to change.
+ */
+async function plateSection() {
+  const ok = (b, msg) => console.log(`  ${b ? 'PASS' : 'FAIL'}  ${msg}`);
+  console.log('\n---- THE ROOM PLATES (the house is photographed, not boxed) ----');
+  const files = await page.evaluate(async () => {
+    const keys = window.__LN.mansion.roomList.map((r) => r.plate);
+    const out = {};
+    for (const k of keys) {
+      if (!k) { out[k] = 'no plate'; continue; }
+      const img = new Image();
+      img.src = './assets/rooms/' + k + '.jpg';
+      out[k] = await new Promise((res) => {
+        img.onload = () => res(img.naturalWidth + 'x' + img.naturalHeight);
+        img.onerror = () => res('MISSING');
+        setTimeout(() => res('TIMEOUT'), 8000);
+      });
+    }
+    return out;
+  });
+  const rooms = await page.evaluate(() => window.__LN.mansion.roomList.map((r) => ({
+    id: r.id, x: r.x, y: r.y, w: r.w, h: r.h, plate: r.plate,
+  })));
+  const missing = rooms.filter((r) => !/^\d+x\d+$/.test(files[r.plate] || ''));
+  console.log(`  ${rooms.length} rooms, ${rooms.length - missing.length} of them carrying a photograph`
+    + `${missing.length ? ` (missing: ${missing.map((r) => r.id).join(', ')})` : ''}`);
+  const rows = [];
+  for (const room of rooms) {
+    /* eslint-disable no-await-in-loop */
+    const m = await page.evaluate(async (rm) => {
+      const g = window.__LN;
+      const rp = await import('./src/game/roomplates.js');
+      const mode0 = { ...rp.PLATE_MODE };
+      const shot = () => {
+        g.render();
+        const c = g.renderer.canvas;
+        return c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+      };
+      g.screen = 'playing'; g.time = 30; g.enemies.length = 0;
+      g.player.x = rm.x + rm.w / 2; g.player.y = rm.y + rm.h / 2;
+      g.renderer.snapCamera(rm.x + rm.w / 2, rm.y + rm.h / 2);
+      rp.setPlateMode(mode0.mode, mode0.alpha, mode0.inset);
+      const A = shot();
+      rp.setPlateMode(mode0.mode, 0, mode0.inset);
+      const B = shot();
+      rp.setPlateMode(mode0.mode, mode0.alpha, mode0.inset);
+      let sq = 0, n = 0, vd = 0;
+      for (let i = 0; i < A.length; i += 16) {
+        const la = A[i] * 0.299 + A[i + 1] * 0.587 + A[i + 2] * 0.114;
+        const lb = B[i] * 0.299 + B[i + 1] * 0.587 + B[i + 2] * 0.114;
+        const d = la - lb; sq += d * d; n++;
+        if (la < 6) vd++;
+      }
+      return { rms: Math.sqrt(sq / n), void: (vd / n) * 100 };
+    }, room);
+    rows.push([room.id, m]);
+  }
+  const seen = rows.filter(([, m]) => m.rms >= 6);
+  const darkest = rows.slice().sort((a, b) => a[1].rms - b[1].rms)[0];
+  const brightestVoid = rows.slice().sort((a, b) => b[1].void - a[1].void)[0];
+  console.log(`  RMS change with the plates off: ${rows.map(([id, m]) => `${id} ${m.rms.toFixed(1)}`).join('  ')}`);
+  ok(missing.length === 0, `every room in the house is photographed (${rooms.length - missing.length}/${rooms.length} plates load)`);
+  ok(seen.length === rooms.length,
+    `and every photograph reaches the screen — the plate is not buried under the 3D floor (${seen.length}/${rooms.length} change the picture, weakest ${darkest[0]} at RMS ${darkest[1].rms.toFixed(1)})`);
+  ok(brightestVoid[1].void < 2, `and no room is a hole (worst ${brightestVoid[0]} at ${brightestVoid[1].void.toFixed(1)}% pure black)`);
+}
+
 if (MODE !== 'siege') {
   console.log('\n---- THE BAKE (#53 C2) ----');
   await bakeSection();
   await sizeSection();
   await bodySection();
+  await plateSection();
 }
 await siegeSection();
 

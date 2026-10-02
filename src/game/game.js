@@ -36,6 +36,7 @@ import { Ads } from '../shop/ads.js';
 import { Valen3D } from './valen3d.js';
 import { Enemy3D } from './enemy3d.js';
 import { EnvKit, MOBILE_BUDGET, QUALITY_TIERS } from './envkit.js';
+import { drawRoomPlatesOver } from './roomplates.js';
 import { IAP } from '../shop/iap.js';
 import { drawHUD, drawWorldPrompts, urgentGuidance, pauseButtonBox, weaponChipBox } from './hud.js';
 import { WEAPONS, weaponById, nextWeapon, swingBearing, swingDist, kitDamage } from './weapons.js';
@@ -2503,6 +2504,14 @@ export class Game {
         ctx.drawImage(env, r.view.left, r.view.top, r.view.w, r.view.h);
         ctx.restore();
       }
+      /* The room's own photograph, into the floor the kit just drew.
+       * Drawn after it because the kit's floor is opaque — laid underneath,
+       * not one pixel of it reached the screen — and as a tint because a
+       * cover would paint over the walls and the furniture standing in the
+       * middle of it. */
+      r.beginWorld();
+      drawRoomPlatesOver(ctx, m, r);
+      ctx.restore();
     }
 
     // ---------- dust motes (air, not floor — billboard around the view) ----------
