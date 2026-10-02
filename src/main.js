@@ -42,6 +42,28 @@ input.onFirstGesture(() => {
 addEventListener('pointerdown', () => Audio.unlock(), { once: true });
 addEventListener('keydown', () => Audio.unlock(), { once: true });
 
+/* ---------- the room, before she needs it (issue #53 C2) ----------
+ * The kit is twenty-one files and the night used to begin without them: the
+ * first three seconds of every night were a painted floor, and the walls and
+ * the furniture arrived under her feet. Nothing about the night is cheaper
+ * if it loads later, so it loads while she is still in the menu. The kit
+ * waits on Valen's renderer, which is the same thing it waited on before —
+ * only now it waits in the background.
+ */
+(function preloadRoom() {
+  const kick = () => {
+    if (!Valen3D.renderer || !Valen3D.scene) return false;
+    EnvKit.init();
+    return true;
+  };
+  if (!kick()) {
+    const t = setInterval(() => {
+      if (kick() || Valen3D.failed) clearInterval(t);
+    }, 200);
+    setTimeout(() => clearInterval(t), 40000);
+  }
+})();
+
 /* ---------- pause when the tab is hidden ---------- */
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {

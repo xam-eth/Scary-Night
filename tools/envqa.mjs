@@ -89,26 +89,55 @@ const STOPS = [
  * footprints instead, a chair came out at 88px and a dining table at 132 —
  * level with the wall — and the house read as a giant's house. */
 async function sizeSection() {
-  console.log('\n---- THE SIZES (#55) ----');
-  const sizes = await page.evaluate(() => window.__env.sizes());
+  console.log('\n---- THE SIZES, IN METRES (#55) ----');
+  const { sizes, metre, fit } = await page.evaluate(() => ({
+    sizes: window.__env.sizes(), metre: window.__env._metre(), fit: window.__env.propFit || [],
+  }));
+  console.log(`  a metre costs ${metre.toFixed(1)} world px on this camera; she is 1.70m`);
   const rows = Object.keys(sizes).map((k) => ({ piece: k, ...sizes[k] }));
   const top = (r) => (Array.isArray(r.h) ? r.h[1] : r.h);
+  const low = (r) => (Array.isArray(r.h) ? r.h[0] : r.h);
   rows.sort((a, b) => top(b) - top(a));
   for (const r of rows) {
     const h = Array.isArray(r.h) ? `${r.h[0]}-${r.h[1]}` : r.h;
     const w = Array.isArray(r.w) ? `${r.w[0]}-${r.w[1]}` : r.w;
-    console.log(`  ${r.piece.padEnd(12)} n=${String(r.count).padStart(3)}  h ${String(h).padStart(8)}px  w ${String(w).padStart(8)}px  ${String(r.hxValen).padStart(5)}x Valen`);
+    const m = `${(low(r) / metre).toFixed(2)}${Array.isArray(r.h) ? `-${(top(r) / metre).toFixed(2)}` : ''}m`;
+    console.log(`  ${r.piece.padEnd(12)} n=${String(r.count).padStart(3)}  h ${String(h).padStart(8)}px  w ${String(w).padStart(8)}px  ${m.padStart(11)}  ${String(r.hxValen).padStart(5)}x her`);
   }
   const ok = (b, msg) => console.log(`  ${b ? 'PASS' : 'FAIL'}  ${msg}`);
   const at = (k) => sizes[k] || null;
-  const arch = ['wall', 'window', 'door'].filter((k) => at(k));
-  const furniture = ['chair', 'table', 'barrel', 'chest', 'candle', 'stacked', 'column', 'torch'].filter((k) => at(k));
-  ok(arch.length >= 2 && arch.every((k) => at(k).hxValen > 1.2),
-    `the room stands over her (${arch.map((k) => `${k} ${at(k).hxValen}x`).join(', ')})`);
-  ok(furniture.length >= 4 && furniture.every((k) => at(k).hxValen < 1.05),
-    `and its furniture stands under her (${furniture.map((k) => `${k} ${at(k).hxValen}x`).join(', ')})`);
-  ok(!!at('chair') && at('chair').hxValen < 0.75 && at('chair').hxValen > 0.3,
-    `a chair is a chair, not a throne or a stool (${at('chair').hxValen}x her)`);
+  const mOf = (k) => (at(k) ? top(at(k)) / metre : null);
+  const band = (k, lo, hi) => mOf(k) != null && mOf(k) >= lo && mOf(k) <= hi;
+
+  /* The room is no longer measured against her height — it is measured in
+   * metres, and she is 1.7 of them. A wall is a wall whether or not a woman
+   * is standing next to it. */
+  ok(band('wall', 2.3, 3.1) && band('window', 2.3, 3.1),
+    `walls and windows are walls and windows (wall ${mOf('wall').toFixed(2)}m, window ${mOf('window').toFixed(2)}m)`);
+  ok(band('door', 2.0, 2.7), `a door is a door you walk under (${mOf('door').toFixed(2)}m)`);
+  ok(band('chair', 0.7, 1.05), `a chair comes up to her thigh, not her chest (${mOf('chair').toFixed(2)}m)`);
+  ok(band('table', 0.65, 1.1), `a table is a table, not a plinth (${mOf('table').toFixed(2)}m)`);
+  ok(band('barrel', 0.7, 1.1) && band('chest', 0.8, 1.3),
+    `a barrel and a chest are things you lean over (${mOf('barrel').toFixed(2)}m, ${mOf('chest').toFixed(2)}m)`);
+  ok(mOf('stairs') == null || band('stairs', 2.3, 3.4),
+    `the stairs reach the floor above (${mOf('stairs') ? mOf('stairs').toFixed(2) + 'm' : 'none in this house'})`);
+  // a bookcase is allowed to stand over her — it is the furniture she does
+  // not sit at. What must never happen is the old house, where a DINING
+  // TABLE stood 1.2m and a column stood 1.0m.
+  ok(mOf('stacked') == null || band('stacked', 1.0, 2.4),
+    `a bookcase is allowed to stand over her (${mOf('stacked') ? mOf('stacked').toFixed(2) + 'm' : 'none'})`);
+
+  /* The other half of "the sizes are wrong": a piece whose mesh is bigger or
+   * smaller than the box you bump into. You see a floor you cannot walk on,
+   * or walk into furniture that is not there. */
+  const boxed = fit.filter((r) => (r.box.w || r.box.h) && r.solid !== false);
+  const over = boxed.filter((r) => r.over > 8);
+  const under = boxed.filter((r) => r.short > 20);
+  ok(boxed.length > 20 && !over.length,
+    `every one of the ${boxed.length} pieces you can bump into fills its box — none of them stand wider than the floor they own`);
+  ok(!under.length, `and none of them leave a gap you bump into (${under.length} short)`);
+  const tall = fit.length ? fit.reduce((a, r) => Math.max(a, r.tall), 0) : 0;
+  ok(tall / metre < 3.6, `nothing in the house is a giant's (tallest piece ${(tall / metre).toFixed(2)}m)`);
 }
 
 async function bodySection() {

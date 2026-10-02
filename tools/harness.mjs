@@ -1056,6 +1056,29 @@ if (args.systems) {
   line(game.perfReport && game.perfReport().budgetMs === MOBILE_BUDGET.frameMs,
     'and what the night is costing is reported, not guessed');
 
+  // ---- THE ROOM IS MEASURED IN METRES (#55) ------------------------------
+  //
+  // The kit's units are whatever its author modelled them at: a column 1.55
+  // units and a chair 1.23, which made a column barely taller than a chair
+  // and a dining table 1.2m high. So every piece is told how tall it is,
+  // through the camera's own foreshortening, against the one thing in the
+  // house whose height is known: her.
+  const { pxPerMetre, VALEN_HEIGHT, VALEN_METRES, PIECE_METRES, PROP_METRES } = await import('../src/game/envkit.js');
+  const mPortrait = pxPerMetre(0.56);
+  const mWide = pxPerMetre(0.42);
+  line(mPortrait > mWide && Math.abs(mPortrait / mWide - Math.sqrt(1 - 0.42 * 0.42) / Math.sqrt(1 - 0.56 * 0.56)) < 1e-9,
+    `a shallower camera is a cheaper metre (portrait ${mPortrait.toFixed(1)}px/m, wide ${mWide.toFixed(1)}px/m)`);
+  line(Math.abs(mPortrait - VALEN_HEIGHT / (VALEN_METRES * Math.sqrt(1 - 0.56 * 0.56))) < 1e-9
+    && VALEN_METRES === 1.7,
+    `she is the metre stick: ${VALEN_HEIGHT}px of upright sprite is ${VALEN_METRES}m, so the floor is ${mPortrait.toFixed(1)}px/m`);
+  line(PIECE_METRES.table < PIECE_METRES.chair && PIECE_METRES.chair < PIECE_METRES.wall
+    && PIECE_METRES.wall >= 2.3 && PIECE_METRES.wall <= 3.1,
+    `a table is lower than a chair and a chair lower than a wall (${PIECE_METRES.table}m < ${PIECE_METRES.chair}m < ${PIECE_METRES.wall}m)`);
+  line(PROP_METRES.shelf > 1.8 && PROP_METRES.shelf < 2.4 && PROP_METRES.wineRack > 0.9 && PROP_METRES.wineRack < 1.5,
+    `a bookcase is a bookcase and a wine rack is a wine rack, though both borrow the crate stack (${PROP_METRES.shelf}m, ${PROP_METRES.wineRack}m)`);
+  line(PIECE_METRES.stairs >= 2.4 && PIECE_METRES.column >= 2.3,
+    `the stairs and a column reach the ceiling (${PIECE_METRES.stairs}m, ${PIECE_METRES.column}m)`);
+
   // ---- THE BODIES (#54/#55): a silhouette, never a card -------------------
   //
   // Every body in this game is a frame cut out of the shared WebGL canvas and
@@ -1189,6 +1212,15 @@ if (args.systems) {
   const count = (bins) => Object.values(bins).reduce((n, l) => n + l.length, 0);
   const plans = [0, 1, 2, 3, 4].map((lv) => planFortress(planHouse, lv, BOXES));
   line(count(plans[0]) === 0, 'ABANDONED HOUSE: nothing has been earned yet, and nothing is dressed');
+  // the dressing is measured the same way as the furniture it stands beside:
+  // a pillar is 3m of stone, a torch is 1.5m of iron, and neither is a number
+  // somebody guessed in kit units
+  const mp = pxPerMetre(0.56);
+  const pillarM = (plans[4].pillar[0].sy * BOXES.pillar.size.y) / mp;
+  const torchM = (plans[4].torch[0].sy * BOXES.torch.size.y) / mp;
+  const tableM = (plans[3].table[0].sy * BOXES.table.size.y) / mp;
+  line(pillarM > 2.8 && pillarM < 3.4 && torchM > 1.2 && torchM < 1.8 && tableM > 0.6 && tableM < 0.95,
+    `and the fortress is dressed in the same metres (pillar ${pillarM.toFixed(2)}m, torch ${torchM.toFixed(2)}m, table ${tableM.toFixed(2)}m)`);
   line(count(plans[1]) > 0 && count(plans[2]) > count(plans[1]) && count(plans[3]) > count(plans[2])
     && count(plans[4]) > count(plans[3]),
     `every level dresses more of the house (${plans.map((p) => count(p)).join(' → ')} pieces)`);
@@ -1215,6 +1247,66 @@ if (args.systems) {
   // the level rides the save and survives a reload
   const fortSave = { nightsSurvived: 0 };
   bankNight(fortSave, { won: true, survived: 300, kills: 20, intel: [] });
+  // ---- THE ROOM BREATHES (#55) -------------------------------------------
+  //
+  // A room is not a storage unit. The plan was drawn in sprite units and the
+  // furniture came out a metre wide and eleven metres long, which is how a
+  // fifteen-metre dining room ends up half full of table. These are measured
+  // with her shoulders on, because the question is not how much floor there
+  // is but how much of it a body can cross.
+  {
+    const MPX = 50, SHOULDER = 17;
+    const mansion = game.mansion;
+    const solids = mansion.solids || [];
+    const walls = solids.filter((q) => q.type === 'wall');
+    const boxed = solids.filter((q) => q.type !== 'wall');
+    const fur = (mansion.furniture || []).filter((f) => f.w && f.h && f.solid !== false);
+    const metres = (f) => Math.max(f.w, f.h) / MPX;
+    const chair = fur.find((f) => f.type === 'chair');
+    const table = fur.find((f) => f.type === 'longTable');
+    const shelf = fur.find((f) => f.type === 'shelf');
+    line(chair && metres(chair) < 0.8 && table && metres(table) < 6.5 && shelf && metres(shelf) < 3.2,
+      `furniture is the size furniture is (chair ${chair ? metres(chair).toFixed(2) : '?'}m, table ${table ? metres(table).toFixed(2) : '?'}m, bookcase ${shelf ? metres(shelf).toFixed(2) : '?'}m)`);
+    const blocked = (x, y) => boxed.some((q) => x > q.x - SHOULDER && x < q.x + q.w + SHOULDER
+      && y > q.y - SHOULDER && y < q.y + q.h + SHOULDER);
+    let islands = 0, sum = 0, rooms = 0, worst = { name: '?', pct: 100 };
+    for (const [name, r] of Object.entries(mansion.rooms || {})) {
+      if (!r.w) continue;
+      rooms++;
+      const nx = Math.max(1, Math.round(r.w / 16)), ny = Math.max(1, Math.round(r.h / 16));
+      const free = [];
+      for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+        free.push(!blocked(r.x + (i + 0.5) * (r.w / nx), r.y + (j + 0.5) * (r.h / ny)));
+      }
+      const seen = new Uint8Array(free.length);
+      let best = 0, parts = 0;
+      for (let s0 = 0; s0 < free.length; s0++) {
+        if (!free[s0] || seen[s0]) continue;
+        parts++; let n = 0; const st = [s0]; seen[s0] = 1;
+        while (st.length) {
+          const c = st.pop(); n++;
+          const ci = c % nx, cj = (c - ci) / nx;
+          for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+            const ni = ci + di, nj = cj + dj;
+            if (ni < 0 || nj < 0 || ni >= nx || nj >= ny) continue;
+            const k = nj * nx + ni;
+            if (free[k] && !seen[k]) { seen[k] = 1; st.push(k); }
+          }
+        }
+        if (n > best) best = n;
+      }
+      const pct = best / free.length * 100;
+      if (parts > 1) islands++;
+      sum += pct;
+      if (pct < worst.pct) worst = { name, pct };
+    }
+    line(islands === 0, `no room is cut into islands — every floor she can see she can walk (${rooms} rooms)`);
+    line(worst.pct > 68, `and the tightest of them still breathes (${worst.name} ${worst.pct.toFixed(0)}% reachable, ${(sum / rooms).toFixed(0)}% on average)`);
+    const buried = fur.filter((f) => walls.some((w) =>
+      Math.min(f.x + f.w, w.x + w.w) - Math.max(f.x, w.x) > 6
+      && Math.min(f.y + f.h, w.y + w.h) - Math.max(f.y, w.y) > 6));
+    line(!buried.length, `and nothing stands inside a wall (${buried.length} buried)`);
+  }
   line(fortressLevel(fortSave) >= 0 && migrateSave({ ...fortSave, upgrades: {}, builds: {} }).fortressLevel === fortressLevel(fortSave),
     `the fortress level is derived, and a reload reads the same house (level ${fortressLevel(fortSave)})`);
   // ---- the informant + the refuge (#56 P3): one person, who remembers ----

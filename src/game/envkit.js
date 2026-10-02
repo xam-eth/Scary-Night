@@ -34,8 +34,70 @@ export const VALEN_HEIGHT = 72;
  * wall and a doorway are both 4 units tall: at 33 that stands ~132px on the
  * camera as tuned — twice Valen, which is what a door in a house this size
  * should be.
+ *
+ * It is the unit the FOOTPRINTS are fitted in. Heights no longer use it: a
+ * piece stands as many metres tall as the thing it is, which is the next
+ * block down.
  */
 export const KIT_SCALE = 33;
+
+/**
+ * How tall she is, and therefore what a metre costs.
+ *
+ * The camera looks down at `asin(tilt)`, so a thing standing UP is foreshort-
+ * ened by cos of that angle while the floor it stands on is foreshortened by
+ * sin. She is a sprite: she is drawn upright and loses nothing. A mesh beside
+ * her loses cos. So a mesh built at "1 metre = 42px" would stand next to her
+ * looking like a house full of doll's furniture, and the whole room would
+ * read as wrong without anyone being able to say why.
+ *
+ * Divide by cos and the two agree: a 2.6m wall, a 0.78m table and a 1.7m
+ * woman come out of the same number, whichever of them is a mesh.
+ */
+export const VALEN_METRES = 1.7;
+
+/** World px per metre, at the tilt the camera is actually set to. */
+export function pxPerMetre(tilt = 0.56) {
+  const t = Math.max(0.2, Math.min(0.95, tilt));
+  return VALEN_HEIGHT / (VALEN_METRES * Math.sqrt(1 - t * t));
+}
+
+/** The portrait phone the game is built for: 1m = ~51px of floor. */
+export const PX_PER_METRE = pxPerMetre(0.56);
+
+/**
+ * WHAT EVERYTHING IS, IN METRES.
+ *
+ * This is the answer to "the sizes are still wrong". The kit's own units are
+ * whatever its author happened to model them at — its column is 1.55 units
+ * and its chair is 1.23, so at one shared scale a column stands 51px and a
+ * chair 41px: a column barely taller than a chair, in a house whose walls are
+ * 132. Its table is 1.88 units, which made a dining table 1.2m high — level
+ * with her hip. Nothing in the kit is wrong, it is just not measured in
+ * metres, and the house was reading as a giant's house.
+ *
+ * So each piece is told how tall it is. These are real furniture heights.
+ */
+export const PIECE_METRES = Object.freeze({
+  wall: 2.6, wallCracked: 2.6, wallCorner: 2.6, window: 2.6,
+  broken: 1.6, doorway: 2.35, gate: 2.35,
+  floorWood: 0.12, floorStone: 0.12,
+  stairs: 2.7, column: 2.7, pillar: 3.1,
+  table: 0.78, chair: 0.9, chest: 1.0, barrel: 0.9, crate: 0.75,
+  stacked: 1.25, shelf: 1.4, candle: 0.55, torch: 1.5,
+});
+
+/**
+ * The house's own furniture, in metres. A bookcase is not a crate stack and
+ * an altar is not a dining table, so the type answers for its height while
+ * the box it was given answers for its footprint.
+ */
+export const PROP_METRES = Object.freeze({
+  longTable: 0.78, desk: 0.76, sideTable: 0.74, pottingBench: 0.9, altar: 1.02,
+  chair: 0.9, armchair: 0.84, sofa: 0.8, pew: 0.94,
+  cabinet: 1.15, barrel: 0.9, crates: 1.0, shelf: 2.05, wineRack: 1.2,
+  staircase: 2.7, planter: 0.9, basin: 0.8, candleStand: 1.0, candelabra: 1.25,
+});
 
 /**
  * What the room needs: doors (phase C1) and now the floor and the walls.
@@ -96,21 +158,23 @@ const PROP_FOR = Object.freeze({
 /** Pieces with no footprint of their own get a scale, not a measurement. */
 const PROP_SCALE = Object.freeze({ planter: 2.2, basin: 2.2, candleStand: 1.6, candelabra: 1.9 });
 /**
- * EVERY piece keeps the wall's scale for its HEIGHT however wide it has to
- * grow sideways to fill the footprint the 2D house gave it.
+ * A footprint is filled SIDEWAYS, one axis at a time, and the height is
+ * whatever the thing is in metres.
  *
- * This is the difference between furniture and architecture. Scaled all three
- * ways at once, a chair stretched across its 54px box stood 88px tall —
- * taller than the woman, who is 72 — and a dining table stood 132, level with
- * the wall behind it. The house read as a giant's house, and the only thing
- * in it that was the right size was the thing that was not scaled at all.
+ * The old rule scaled a piece by one number taken from the LONGER side of its
+ * box and then bailed out if that number was ugly. Two things went wrong, and
+ * both of them were things a player could feel:
  *
- * So the height is the piece's own, at the kit's unit: a chair 1.23 units
- * against a 4-unit wall comes out at 41px, which is half of her — a chair.
- * A wide footprint spreads a piece sideways, which is what a long table and a
- * sofa and a flight of stairs actually do.
+ *   - a 200x60 wine rack got its number from the 200 and stood 178 DEEP in a
+ *     60-deep box — 118px of floor that looked blocked and was not, which is
+ *     what "susah jalan" is made of. 37 of the 63 pieces had that problem.
+ *   - a 560px refectory table needed 2.8 and bailed at 2.4, so it stayed a
+ *     painted sprite 158px wide inside a 560px hole: you bump into air.
+ *
+ * So each axis is fitted to its own side of the box, and the height is never
+ * part of the fit — a long table is long, and it is still 78cm high.
  */
-const PROP_RANGE = Object.freeze({ default: [0.7, 2.4], column: [1.4, 3.0] });
+const PROP_AXIS = Object.freeze({ min: 0.2, max: 9 });
 
 /**
  * THE FORTRESS — the dressing bins (#59, docs/PURPOSE.md P6).
@@ -205,8 +269,9 @@ export function tintPlacements(placements, bake) {
  * optional notes: `tint` (an instance colour) and `follows` (the id of the
  * door whose fate this piece shares — a plank on a broken door comes down).
  */
-export function planFortress(mansion, level, boxes) {
+export function planFortress(mansion, level, boxes, metre = PX_PER_METRE) {
   const lv = clamp(Math.round(level || 0), 0, 4);
+  const mpx = Number.isFinite(metre) ? metre : PX_PER_METRE;
   const bins = {};
   for (const k of FORTRESS_BINS) bins[k] = [];
 
@@ -230,15 +295,15 @@ export function planFortress(mansion, level, boxes) {
     bins[piece].push(p);
     return p;
   };
-  /** World size -> scale, for the piece's own units. */
-  /* The dressing is the same furniture the house already had, wearing the
-   * kit's heights: a candle in the keep is the 35px candle from the hall, not
-   * a 55px one somebody measured by eye. Heights here are world px against
-   * Valen's 72, the same as everywhere else in the room. */
-  const fit = (piece, wpx, hpx, dpx) => {
+  /** World footprint -> scale, for the piece's own units, at a true height. */
+  /* The dressing is the same furniture the house already had: a candle in the
+   * keep is the same 55cm candle as the one in the hall, and a barrel is 90cm
+   * wherever it stands. Heights are METRES here, through the same camera the
+   * room is drawn from — not a number somebody measured by eye. */
+  const fit = (piece, wpx, metres, dpx) => {
     const src = boxes && boxes[piece];
     if (!src) return [1, 1, 1];
-    return [wpx / src.size.x, hpx / src.size.y, dpx / src.size.z];
+    return [wpx / src.size.x, (metres * mpx) / src.size.y, dpx / src.size.z];
   };
 
   if (lv < 1) return bins;                  // ABANDONED HOUSE: nothing has been earned yet
@@ -256,12 +321,12 @@ export function planFortress(mansion, level, boxes) {
       // ---- SAFE HOUSE: a lit candle in each jamb, on the inside ----
       const cx = e.x + (horiz ? side * jamb : dx * 30);
       const cz = e.y + (horiz ? dy * 30 : side * jamb);
-      put('candle', cx, cz, ...fit('candle', 17, 35, 17));
+      put('candle', cx, cz, ...fit('candle', 17, PIECE_METRES.candle, 17));
       // ---- HUNTER'S KEEP: a silver ward post either side of the door ----
       if (lv >= 3) {
         const wx = e.x + (horiz ? side * (jamb + 26) : dx * 30);
         const wz = e.y + (horiz ? dy * 30 : side * (jamb + 26));
-        put('column', wx, wz, ...fit('column', 30, 58, 30), 0, 0, WARD_SILVER);
+        put('column', wx, wz, ...fit('column', 30, 1.15, 30), 0, 0, WARD_SILVER);
       }
     }
 
@@ -271,7 +336,7 @@ export function planFortress(mansion, level, boxes) {
     // door's fate — `follows` is how the builder finds them again.
     if (lv >= 2) {
       const pw = len + 26;                              // they oversail the jambs
-      const plank = fit('crate', pw, 9, 20);
+      const plank = fit('crate', pw, PIECE_METRES.crate * 0.24, 20);
       for (const [hy, tilt] of [[24, 0.07], [56, -0.06]]) {
         put('crate', e.x + (horiz ? 0 : dx * 16), e.y + (horiz ? dy * 16 : 0),
           plank[0], plank[1], plank[2], ry + tilt, hy, null, e.id);
@@ -283,9 +348,9 @@ export function planFortress(mansion, level, boxes) {
       for (const side of [-1, 1]) {
         const px = e.x + (horiz ? side * (len / 2 + 100) : dx * 100);
         const pz = e.y + (horiz ? dy * 100 : side * (len / 2 + 100));
-        put('pillar', px, pz, ...fit('pillar', 52, 138, 52));
+        put('pillar', px, pz, ...fit('pillar', 52, PIECE_METRES.pillar, 52));
         put('torch', px + (horiz ? side * 30 : 0), pz + (horiz ? 0 : side * 30),
-          ...fit('torch', 40, 60, 45));
+          ...fit('torch', 40, PIECE_METRES.torch, 45));
       }
     }
   }
@@ -295,15 +360,15 @@ export function planFortress(mansion, level, boxes) {
   if (hall && lv >= 3) {
     const wx = hall.x + Math.min(150, hall.w * 0.22);
     const wz = hall.y + hall.h - 180;
-    put('table', wx, wz, ...fit('table', 78, 62, 78));
-    put('barrel', wx - 62, wz + 10, ...fit('barrel', 54, 66, 54));
-    put('chest', wx + 64, wz + 14, ...fit('chest', 62, 43, 53));
+    put('table', wx, wz, ...fit('table', 78, PIECE_METRES.table, 78));
+    put('barrel', wx - 62, wz + 10, ...fit('barrel', 54, PIECE_METRES.barrel, 54));
+    put('chest', wx + 64, wz + 14, ...fit('chest', 62, PIECE_METRES.chest, 53));
     // Crates dragged into a line across the hall with the door left clear:
     // two flanking it at HUNTER'S KEEP, the full barricade at the top.
     const line = lv >= 4 ? [200, 340, 480, 760, 900, 1040] : [480, 760];
     for (const bx of line) {
       if (bx < hall.x + 40 || bx > hall.x + hall.w - 40) continue;
-      put('stacked', bx, hall.y + hall.h - 70, ...fit('stacked', 70, 72, 76));
+      put('stacked', bx, hall.y + hall.h - 70, ...fit('stacked', 70, PIECE_METRES.stacked, 76));
     }
   }
   return bins;
@@ -367,6 +432,11 @@ class EnvKitRuntime {
     this.bakeCount = 0;   // measured in bakes, not frames: it should read 1 a night
     /* The governor's rung: 3 is the whole house, 0 is the painted one. */
     this.quality = QUALITY_TIERS.length - 1;
+    this._foldK = Math.sqrt(1 - 0.56 * 0.56) / 0.56;
+    /* The room is measured in metres against her, and metres cost different
+     * px depending on how steeply the camera looks down. So the tilt the room
+     * was built for is kept, and a change to it rebuilds the room once. */
+    this.tilt = 0.56;
     this._buildSerial = 0;    // bumped whenever the room is rebuilt: rebake
     this._fortressLights = [];   // the candles the fortress hung, as bake sources
     this.diagnostics = () => ({
@@ -382,6 +452,40 @@ class EnvKitRuntime {
       quality: this.quality,
       budget: this.budget(),
     });
+  }
+
+  /** World px per metre at the tilt the room is being drawn from. */
+  _metre() {
+    return pxPerMetre(this.tilt);
+  }
+
+  /** The sy scale that makes a piece stand this many metres tall. */
+  _rise(piece, metres) {
+    const src = this.pieces[piece];
+    if (!src || !src.size.y) return KIT_SCALE;
+    return (metres * this._metre()) / src.size.y;
+  }
+
+  /**
+   * The camera moved, so the metre moved with it.
+   *
+   * Portrait is 0.56 and a wide desktop is 0.42 — a fifth of a metre's worth
+   * of difference in every wall in the house. Turning the phone is the only
+   * thing that changes this, and it is worth one rebuild to keep the room the
+   * size it says it is.
+   */
+  _setTilt(tilt) {
+    const t = Math.max(0.2, Math.min(0.95, Number(tilt) || 0.56));
+    if (Math.abs(t - this.tilt) < 0.005) return;
+    this.tilt = t;
+    // how far a thing of height H reaches across the floor towards the viewer
+    this._foldK = Math.sqrt(1 - t * t) / t;
+    this.room = null;            // the next sync builds it again, at the new metre
+    this.props = null;
+    this.windows = [];
+    this._clearFortress();
+    for (const v of this.doors.values()) this.group.remove(v.group);
+    this.doors.clear();
   }
 
   /** Idempotent: the shared scene belongs to Valen, so wait for her. */
@@ -471,8 +575,9 @@ class EnvKitRuntime {
 
     const frame = this.piece('doorway');
     if (frame) {
-      frame.scale.set(s * stretch, s, s);
-      frame.position.y = -this.pieces.doorway.min.y * s;
+      const rise = this._rise('doorway', PIECE_METRES.doorway);
+      frame.scale.set(s * stretch, rise, s);
+      frame.position.y = -this.pieces.doorway.min.y * rise;
       group.add(frame);
       view.frame = frame;
     }
@@ -480,8 +585,9 @@ class EnvKitRuntime {
     if (gate) {
       const pivot = new THREE.Group();
       pivot.position.set(-len / 2, 0, 0);
-      gate.scale.set(s * stretch, s, s);
-      gate.position.set(len / 2, -this.pieces.gate.min.y * s, 0);
+      const rise = this._rise('gate', PIECE_METRES.gate);
+      gate.scale.set(s * stretch, rise, s);
+      gate.position.set(len / 2, -this.pieces.gate.min.y * rise, 0);
       pivot.add(gate);
       group.add(pivot);
       view.pivot = pivot;
@@ -489,8 +595,9 @@ class EnvKitRuntime {
     }
     const broken = this.piece('broken');
     if (broken) {
-      broken.scale.set(s * stretch, s, s);
-      broken.position.y = -this.pieces.broken.min.y * s;
+      const rise = this._rise('broken', PIECE_METRES.broken);
+      broken.scale.set(s * stretch, rise, s);
+      broken.position.y = -this.pieces.broken.min.y * rise;
       broken.visible = false;
       group.add(broken);
       view.broken = broken;
@@ -513,7 +620,7 @@ class EnvKitRuntime {
    * and a mansion's walls ~150 cells: five draw calls instead of five hundred
    * objects, which is the only reason a phone can carry a real room.
    */
-  _instanced(name, placements) {
+  _instanced(name, placements, folds = false) {
     const src = this.pieces[name];
     if (!src || !placements.length) return null;
     let geo = null; let mat = null;
@@ -526,6 +633,8 @@ class EnvKitRuntime {
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     mesh.frustumCulled = false;
+    mesh.userData.unitH = src.size.y;    // how tall it stands, for the fold
+    mesh.userData.folds = folds;         // only the room folds; furniture never does
     this.group.add(mesh);
     return mesh;
   }
@@ -541,7 +650,15 @@ class EnvKitRuntime {
     if (!p) return;
     if (!this._dummy) this._dummy = new THREE.Object3D();
     const d = this._dummy;
-    const hide = p.off || (this._foldedAt != null && p.z > this._foldedAt);
+    /* THE FOLD. A thing standing between her and the viewer is hidden so it
+     * cannot cover her — but only for as far as it can actually reach. A
+     * 2.6m wall laid down at this camera throws its shadow 197px south of
+     * her; the old rule hid everything south of her to the edge of the
+     * world, which took the whole south wall of every room with it and left
+     * the house open to the night on one side. */
+    const reach = this._foldK * (mesh.userData.unitH || 0) * (p.sy || 1);
+    const hide = p.off
+      || (mesh.userData.folds && this._foldedAt != null && p.z > this._foldedAt + reach);
     d.position.set(p.x, p.y || 0, p.z);
     d.rotation.set(0, p.ry || 0, 0);
     d.scale.set(hide ? 0 : (p.sx == null ? 1 : p.sx),
@@ -635,54 +752,82 @@ class EnvKitRuntime {
         }
         if (!use) continue;
         floors[FLOOR_FOR(room ? room.floor : 'stone')].push({
-          x: cx, y: 0, z: cy, sx: tw / TILE, sy: s, sz: th / TILE,
+          x: cx, y: 0, z: cy, sx: tw / TILE, sy: this._rise('floorStone', PIECE_METRES.floorStone), sz: th / TILE,
         });
       }
     }
 
-    // ---- walls: the solids themselves, so a panel is the wall ----
-    const wallCells = [];
-    const cracked = [];
+    /* ---- the wall runs, merged before anything is built ----
+     *
+     * The mansion's plan is honest about what blocks a body and careless
+     * about how a wall is described: 84 wall solids, 76 of them overlapping
+     * another. A 20px stub sits inside a 246px wall; a 10px stub sits inside
+     * the corner post it was cut from. Drawn literally, every one of those
+     * places is two walls in the same plane — which is what a messy corner
+     * is. The sim needs the pieces; the room needs the run.
+     *
+     * So the solids are flattened into maximal runs first, one merge pass per
+     * axis per line, and only then does anything get built. Nothing here
+     * touches `mansion.solids`: collision, line of sight and the painted
+     * house keep every piece they had.
+     */
+    const DIR = { '+x': 0, '-x': 1, '+z': 2, '-z': 3 };
+    const VEC = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    const CORNER_ANGLE = { '1,2': 0, '0,2': Math.PI / 2, '0,3': Math.PI, '1,3': -Math.PI / 2 };
+    const runs = [];
     for (const w of walls) {
       const horiz = w.w >= w.h;
-      const len = horiz ? w.w : w.h;
       const line = horiz ? w.y + w.h / 2 : w.x + w.w / 2;
       const from = horiz ? w.x : w.y;
-      const cells = Math.max(1, Math.round(len / cell));
-      const size = len / cells;
-      for (let i = 0; i < cells; i++) {
-        const mid = from + (i + 0.5) * size;
-        // one panel in nine is a tired one, so a long wall is not a ruler
-        const tired = (((mid * 7 + line * 13) | 0) % 9) === 3;
-        (tired ? cracked : wallCells).push(horiz
-          ? { x: mid, y: 0, z: line, ry: 0, sx: size / TILE, sy: s, sz: s }
-          : { x: line, y: 0, z: mid, ry: Math.PI / 2, sx: size / TILE, sy: s, sz: s });
-      }
+      runs.push({ horiz, line, from, to: from + (horiz ? w.w : w.h) });
     }
+    const merged = [];
+    for (const r of runs) {
+      /* 20, not 8. A panel is a metre thick and the plan's walls are 26px
+       * apart, so two runs 13px off each other are not two walls — they are
+       * one wall drawn twice, overlapping for the whole of their length. */
+      const twin = merged.find((m) => m.horiz === r.horiz && Math.abs(m.line - r.line) < 20
+        && r.from <= m.to + 4 && r.to >= m.from - 4);
+      if (twin) {
+        twin.from = Math.min(twin.from, r.from);
+        twin.to = Math.max(twin.to, r.to);
+        twin.line = (twin.line + r.line) / 2;          // two stubs, one centreline
+      } else merged.push({ ...r });
+    }
+    const endsOf = (r) => (r.horiz
+      ? [{ x: r.from, z: r.line, into: DIR['+x'] }, { x: r.to, z: r.line, into: DIR['-x'] }]
+      : [{ x: r.line, z: r.from, into: DIR['+z'] }, { x: r.line, z: r.to, into: DIR['-z'] }]);
 
-    // ---- corners: where a run meets a run, an L stands ----
-    // The L is chiral. Its legs reach -x and +z before any rotation, so each
-    // pairing of directions has exactly one angle that fits.
-    const DIR = { '+x': 0, '-x': 1, '+z': 2, '-z': 3 };
-    const CORNER_ANGLE = { '1,2': 0, '0,2': Math.PI / 2, '0,3': Math.PI, '1,3': -Math.PI / 2 };
-    const endsOf = (w) => {
-      const horiz = w.w >= w.h;
-      const line = horiz ? w.y + w.h / 2 : w.x + w.w / 2;
-      if (horiz) {
-        return [
-          { x: w.x, z: line, into: DIR['+x'] },            // its start looks east
-          { x: w.x + w.w, z: line, into: DIR['-x'] },
-        ];
-      }
-      return [
-        { x: line, z: w.y, into: DIR['+z'] },
-        { x: line, z: w.y + w.h, into: DIR['-z'] },
-      ];
+    /* ---- corners: where a run meets a run, an L stands ----
+     *
+     * A corner is not an ornament hung on the junction: its two legs ARE the
+     * last two metres of each wall. Standing an L on top of a panel that
+     * already covered that ground put two faces in exactly the same plane —
+     * 66px of z-fighting at every corner in the house.
+     *
+     * So the L goes down first and the panels stop where it begins. Measured
+     * off the vendored geometry, not guessed: the L's legs reach -x and +z
+     * from its own origin, two units back along each wall and half a unit
+     * past the elbow, and its origin is the crossing of the two wall
+     * centrelines — which is why it wants no footprint correction at all.
+     */
+    const CORNER_LEG = 2 * s;                 // how far a leg runs back along its wall
+    const spotKey = (x, z) => `${Math.round(x)},${Math.round(z)}`;
+    /* A leg two metres long is a wall two metres long. Laid across a doorway
+     * it is a doorway bricked up, so a corner whose leg would cross an
+     * opening is not built: the two runs meet without it, and the door stays
+     * a door. */
+    const legClear = (jx, jz, into) => {
+      const v = VEC[into];
+      const mx = jx + v[0] * CORNER_LEG * 0.6;
+      const mz = jz + v[1] * CORNER_LEG * 0.6;
+      return !entrances.some((e) => Math.abs(mx - e.x) < (e.w || 0) / 2 + 26
+        && Math.abs(mz - e.y) < (e.h || 0) / 2 + 26);
     };
     const corners = [];
-    const seen = new Set();
-    const hs = walls.filter((w) => w.w >= w.h);
-    const vs = walls.filter((w) => w.w < w.h);
+    const joined = new Set();          // every junction that is wearing an L
+    const hs = merged.filter((r) => r.horiz);
+    const vs = merged.filter((r) => !r.horiz);
     for (const h of hs) {
       for (const he of endsOf(h)) {
         for (const v of vs) {
@@ -691,11 +836,82 @@ class EnvKitRuntime {
             const key = [he.into, ve.into].sort((a, b) => a - b).join(',');
             const ry = CORNER_ANGLE[key];
             if (ry == null) continue;
-            const spot = `${Math.round(he.x)},${Math.round(he.z)}`;
-            if (seen.has(spot)) continue;
-            seen.add(spot);
-            corners.push({ x: he.x, y: 0, z: he.z, ry, sx: s, sy: s, sz: s });
+            const spot = spotKey(he.x, he.z);
+            if (joined.has(spot)) continue;
+            if (!legClear(he.x, he.z, he.into) || !legClear(he.x, he.z, ve.into)) continue;
+            joined.add(spot);
+            corners.push({ x: he.x, y: 0, z: he.z, ry, sx: s, sy: this._rise('wallCorner', PIECE_METRES.wallCorner), sz: s });
           }
+        }
+      }
+    }
+
+    /* ---- walls: the runs, less the ground a corner already owns ----
+     *
+     * Not just the ends. A run can overshoot the junction it makes a corner
+     * with — the plan is full of walls that run 26px past the elbow — and an
+     * L laid over a panel that is still standing there is the seam again. So
+     * each corner's legs are subtracted from the run they lie along and the
+     * panels go down in what is left.
+     */
+    const legsOf = (c) => {
+      const cos = Math.cos(c.ry), sin = Math.sin(c.ry);
+      return [[-1, 0], [0, 1]].map(([lx, lz]) => ({ x: lx * cos + lz * sin, z: -lx * sin + lz * cos }));
+    };
+    const covered = new Map();                 // run -> intervals already built
+    for (const c of corners) {
+      for (const leg of legsOf(c)) {
+        for (const r of merged) {
+          let a, b;
+          if (r.horiz) {
+            if (Math.abs(leg.z) > 0.3 || Math.abs(c.z - r.line) > 8) continue;
+            a = c.x; b = c.x + (leg.x > 0 ? CORNER_LEG : -CORNER_LEG);
+          } else {
+            if (Math.abs(leg.x) > 0.3 || Math.abs(c.x - r.line) > 8) continue;
+            a = c.z; b = c.z + (leg.z > 0 ? CORNER_LEG : -CORNER_LEG);
+          }
+          const lo = Math.min(a, b), hi = Math.max(a, b);
+          if (!covered.has(r)) covered.set(r, []);
+          covered.get(r).push([lo, hi]);
+        }
+      }
+    }
+    /* And the last word is geometric, not arithmetic: a panel that still
+     * stands inside a corner's leg is a seam, whatever the bookkeeping said.
+     * Two metres along the leg and half a wall's thickness either side of it
+     * is the L's own ground. */
+    const inALeg = (p) => corners.some((c) => legsOf(c).some((leg) => {
+      const dx = p.x - c.x, dz = p.z - c.z;
+      const along = dx * leg.x + dz * leg.z;
+      const across = Math.abs(dx * -leg.z + dz * leg.x);
+      return along > -10 && along < CORNER_LEG - 6 && across < 20;
+    }));
+    const wallCells = [];
+    const cracked = [];
+    for (const r of merged) {
+      const taken = (covered.get(r) || []).slice().sort((p, q) => p[0] - q[0]);
+      // what is left of the run after the corners have taken their share
+      const free = [];
+      let at = r.from;
+      for (const [lo, hi] of taken) {
+        if (lo > at) free.push([at, Math.min(lo, r.to)]);
+        at = Math.max(at, hi);
+      }
+      if (at < r.to) free.push([at, r.to]);
+      for (const [a, b] of free) {
+        const run = b - a;
+        if (run < cell * 0.45) continue;         // too short to be worth a panel
+        const cells = Math.max(1, Math.round(run / cell));
+        const size = run / cells;
+        for (let i = 0; i < cells; i++) {
+          const mid = a + (i + 0.5) * size;
+          // one panel in nine is a tired one, so a long wall is not a ruler
+          const tired = (((mid * 7 + r.line * 13) | 0) % 9) === 3;
+          const cell2 = r.horiz
+            ? { x: mid, y: 0, z: r.line, ry: 0, sx: size / TILE, sy: this._rise('wall', PIECE_METRES.wall), sz: s }
+            : { x: r.line, y: 0, z: mid, ry: Math.PI / 2, sx: size / TILE, sy: this._rise('wall', PIECE_METRES.wall), sz: s };
+          if (inALeg(cell2)) continue;          // the corner already owns this ground
+          (tired ? cracked : wallCells).push(cell2);
         }
       }
     }
@@ -715,7 +931,7 @@ class EnvKitRuntime {
       const len = horiz ? e.w : e.h;
       const spot = {
         x: e.x, y: 0, z: e.y, ry: horiz ? 0 : Math.PI / 2,
-        sx: len / TILE, sy: s, sz: s,
+        sx: len / TILE, sy: this._rise('window', PIECE_METRES.window), sz: s,
       };
       windows.push({ ...spot, off: !!e.broken });
       windowsBroken.push({ ...spot, off: !e.broken });
@@ -737,11 +953,11 @@ class EnvKitRuntime {
     this.roomMeshes = {
       wood: this._instanced('floorWood', floors.floorWood),
       stone: this._instanced('floorStone', floors.floorStone),
-      wall: this._instanced('wall', wallCells),
-      cracked: this._instanced('wallCracked', cracked),
-      corner: this._instanced('wallCorner', corners),
-      window: this._instanced('window', windows),
-      windowBroken: this._instanced('broken', windowsBroken),
+      wall: this._instanced('wall', wallCells, true),
+      cracked: this._instanced('wallCracked', cracked, true),
+      corner: this._instanced('wallCorner', corners, true),
+      window: this._instanced('window', windows, true),
+      windowBroken: this._instanced('broken', windowsBroken, true),
     };
     this.roomCounts = {
       floor: floors.floorWood.length + floors.floorStone.length,
@@ -787,12 +1003,13 @@ class EnvKitRuntime {
     for (const k of Object.keys(this.fortressBins || {})) note(k, this.fortressBins[k]);
     // the doors are their own views, one group per opening
     const doors = [];
+    const doorTall = PIECE_METRES.doorway * this._metre();
     for (const e of ((this.room && this.room.entrances) || [])) {
       if (e.kind !== 'door') continue;
       const len = e.axis === 'h' ? e.w : e.h;
-      doors.push({ len: Math.round(len), h: Math.round(4 * KIT_SCALE) });
+      doors.push({ len: Math.round(len), h: Math.round(doorTall) });
     }
-    if (doors.length) out.door = { count: doors.length, h: Math.round(4 * KIT_SCALE), w: [...new Set(doors.map((d) => d.len))].sort((a, b) => a - b), hxValen: +((4 * KIT_SCALE) / VALEN_HEIGHT).toFixed(2) };
+    if (doors.length) out.door = { count: doors.length, h: Math.round(doorTall), w: [...new Set(doors.map((d) => d.len))].sort((a, b) => a - b), hxValen: +(doorTall / VALEN_HEIGHT).toFixed(2) };
     return out;
   }
 
@@ -812,34 +1029,51 @@ class EnvKitRuntime {
       table: [], chair: [], shelf: [], chest: [], barrel: [], stacked: [],
       column: [], candle: [], torch: [], stairs: [],
     };
-    const place = (piece, item, x, z, fit) => {
+    /** Every piece, measured against the box you walk into. Read by the QA. */
+    const fit = [];
+    const place = (piece, item, x, z, spread, metres) => {
       const src = this.pieces[piece];
       if (!src || !bins[piece]) return;
-      const foot = Math.max(src.size.x, src.size.z) * s;
-      let k = fit;
-      if (k == null) {
-        const span = Math.max(item.w || 0, item.h || 0);
-        if (!span) return;
-        k = span / foot;
-      }
-      const range = PROP_RANGE[piece] || PROP_RANGE.default;
-      if (k < range[0] || k > range[1]) return;   // the painted one keeps its place
-      const scale = k * s;
+      // HEIGHT: how tall the thing is, in metres, through the camera's own
+      // foreshortening — never part of the footprint fit below.
+      const tall = (metres != null ? metres : PIECE_METRES[piece] || 1) * this._metre();
+      const rise = tall / src.size.y;
+      // FOOTPRINT: each axis answers to its own side of the box the 2D house
+      // gave it, so a long table is long and a wine rack stays against its
+      // wall instead of standing 118px out into the room.
+      const fitAxis = (span, own) => {
+        const k = (span && own) ? span / (own * s) : (spread == null ? 1 : spread);
+        return Math.max(PROP_AXIS.min, Math.min(PROP_AXIS.max, k));
+      };
+      const sx = fitAxis(item.w, src.size.x) * s;
+      const sz = fitAxis(item.h, src.size.z) * s;
       // A piece is not always modelled around its own middle. The stairs run
       // from z 0 to 4, so standing their origin on the anchor pushed the whole
       // flight two metres into the room; the chest sits the same way. Put each
       // piece's FOOTPRINT CENTRE on the anchor, whichever corner its author
       // measured from — and carry the offset through the piece's own rotation.
       const ry = item.rot || 0;
-      const rise = s;                 // the piece's own height, at the kit's unit
-      const lx = -(src.min.x + src.size.x / 2) * scale;
-      const lz = -(src.min.z + src.size.z / 2) * scale;
+      const lx = -(src.min.x + src.size.x / 2) * sx;
+      const lz = -(src.min.z + src.size.z / 2) * sz;
       const cos = Math.cos(ry), sin = Math.sin(ry);
+      /* Kept, because a piece that does not fill the box you walk into is a
+       * thing the player feels and cannot name: the floor looks blocked where
+       * it is free. This is the record the QA reads — the mesh against the
+       * box, in world px, for every piece of furniture in the house. */
+      fit.push({
+        type: item.type, piece,
+        box: { x: item.x, y: item.y, w: item.w || 0, h: item.h || 0 },
+        foot: { w: Math.round(src.size.x * sx), d: Math.round(src.size.z * sz) },
+        tall: Math.round(src.size.y * rise),
+        over: Math.round(Math.max(src.size.x * sx - (item.w || 0), src.size.z * sz - (item.h || 0))),
+        short: Math.round(Math.max((item.w || 0) - src.size.x * sx, (item.h || 0) - src.size.z * sz)),
+        solid: item.solid !== false,
+      });
       bins[piece].push({
         x: x + lx * cos + lz * sin,
         y: -src.min.y * rise,
         z: z - lx * sin + lz * cos,
-        ry, sx: scale, sy: rise, sz: scale,
+        ry, sx, sy: rise, sz,
       });
       item.env3d = true;                          // its 2D twin stands down
     };
@@ -850,18 +1084,36 @@ class EnvKitRuntime {
     // bump into. Stand it on the middle of the rect instead.
     for (const f of mansion.furniture || []) {
       const piece = PROP_FOR[f.type];
-      if (piece) place(piece, f, f.x + (f.w || 0) / 2, f.y + (f.h || 0) / 2, null);
+      if (piece) place(piece, f, f.x + (f.w || 0) / 2, f.y + (f.h || 0) / 2, null, PROP_METRES[f.type]);
     }
     for (const p of mansion.props || []) {
       const piece = p.type === 'planter' || p.type === 'basin' ? 'column'
         : (p.type === 'candleStand' || p.type === 'candelabra' ? 'candle' : null);
-      if (piece) place(piece, p, p.x, p.y, PROP_SCALE[p.type] || 1.6);
+      if (piece) place(piece, p, p.x, p.y, PROP_SCALE[p.type] || 1.6, PROP_METRES[p.type]);
     }
+    /* A brazier standing inside the masonry is not a brazier. The house's
+     * fires are lit where the fire is — a hearth is in the wall — so the
+     * stand is walked out into the room it is meant to light before it is
+     * built, or it is half a torch and half a wall. */
+    const inMasonry = (x, y, r = 26) => (mansion.solids || []).some((q) => q.type === 'wall'
+      && x + r > q.x && x - r < q.x + q.w && y + r > q.y && y - r < q.y + q.h);
+    const outOfTheWall = (x, y) => {
+      if (!inMasonry(x, y)) return { x, y };
+      for (let step = 1; step <= 4; step++) {
+        for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) {
+          const nx = x + dx * step * 48, ny = y + dy * step * 48;
+          if (!inMasonry(nx, ny)) return { x: nx, y: ny };
+        }
+      }
+      return { x, y };
+    };
     for (const l of mansion.lights || []) {
       if (l.type !== 'fire') continue;
-      place('torch', { x: l.x, y: l.y }, l.x, l.y, 2.2);
+      const at = outOfTheWall(l.x, l.y);
+      place('torch', { x: at.x - 22, y: at.y - 22, w: 44, h: 44 }, at.x, at.y, null, PIECE_METRES.torch);
     }
     this.propBins = bins;
+    this.propFit = fit;
     this.propMeshes = {};
     this.propCounts = {};
     for (const key of Object.keys(bins)) {
@@ -887,7 +1139,7 @@ class EnvKitRuntime {
     if (this.fortress === mansion && this.fortressLevel === lv) return;
     this._clearFortress();
 
-    const bins = planFortress(mansion, lv, this.pieces);
+    const bins = planFortress(mansion, lv, this.pieces, this._metre());
     this.fortressBins = bins;
     this.fortressMeshes = {};
     this.fortressCounts = {};
@@ -1173,6 +1425,8 @@ class EnvKitRuntime {
   render(view) {
     if (!this.ready || !this.renderer || !Valen3D.scene) return null;
     const { camX, camY, zoom, tilt, w, h, dpr = 1, shakeX = 0, shakeY = 0, light = null } = view;
+    // a shallower camera is a different metre: the room is rebuilt, once
+    this._setTilt(tilt);
     const cw = Math.max(2, Math.floor(w * dpr));
     const ch = Math.max(2, Math.floor(h * dpr));
     if (this.canvas.width !== cw || this.canvas.height !== ch) {

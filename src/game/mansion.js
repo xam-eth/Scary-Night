@@ -64,6 +64,7 @@ export class Mansion {
     this.bloodMoon = 0;
     this.blackout = 0;
     this.build();
+    this.dressFurniture();
     this.bake();
     this.buildGrid();
     // rasterise walkability only after the collision grid exists
@@ -501,12 +502,19 @@ export class Mansion {
     /* ---------- LIBRARY ---------- */
     // bookshelves create lanes. The south pair is short so the study door
     // can cross to the hall passage instead of dead-ending behind the desk.
-    for (let i = 0; i < 4; i++) this.addF(980 + i * 150, 80, 60, 230, 'shelf', { room: R.library.id });
+    /* 170 along the wall, not 230. At 230 each gap between two bookcases was
+     * a 56px slot sealed at both ends — floor that looks walkable and is not,
+     * which is the worst thing a room can do to somebody being chased. At 170
+     * the lanes open into the corridor that runs under them. */
+    for (let i = 0; i < 4; i++) this.addF(980 + i * 150, 80, 60, 170, 'shelf', { room: R.library.id });
     this.addF(980, 420, 60, 200, 'shelf', { room: R.library.id });
     this.addF(1130, 560, 60, 70, 'shelf', { room: R.library.id });
     this.addF(1280, 560, 60, 70, 'shelf', { room: R.library.id });
     this.addF(1668, 120, 48, 160, 'shelf', { room: R.library.id });
-    this.addF(1000, 300, 420, 76, 'desk', { room: R.library.id });
+    // 330, not 300: at 300 the desk's top edge began 10px inside the four
+    // shelves above it, and two solid meshes standing through each other is
+    // the untidiest thing a room can do.
+    this.addF(1000, 330, 420, 76, 'desk', { room: R.library.id });
     this.addF(1320, 470, 90, 80, 'armchair', { room: R.library.id });
     this.addF(1640, 430, 70, 150, 'cabinet', { room: R.library.id });
     this.addP('fireplace', 1120, 646, { room: R.library.id, w: 220, h: 70 });
@@ -520,11 +528,13 @@ export class Mansion {
     /* ---------- BASEMENT ---------- */
     for (let i = 0; i < 3; i++) this.addF(1320 + i * 150, 900, 90, 90, 'crates', { room: R.basement.id });
     for (let i = 0; i < 2; i++) this.addF(1320, 1100 + i * 150, 200, 60, 'wineRack', { room: R.basement.id });
-    this.addF(1600, 900, 90, 260, 'wineRack', { room: R.basement.id, vertical: true });
+    // 1690,1010 — flush to the right wall and clear of the crate row: it used
+    // to stand at 1600,900 with a stack of crates buried inside it.
+    this.addF(1690, 1010, 90, 260, 'wineRack', { room: R.basement.id, vertical: true });
     this.addF(1560, 1280, 160, 90, 'crates', { room: R.basement.id });
     this.addF(1330, 1330, 70, 70, 'barrel', { room: R.basement.id });
     this.addF(1440, 1390, 70, 70, 'barrel', { room: R.basement.id });
-    this.addP('basin', 1680, 1440, { room: R.basement.id, w: 120, h: 120 });
+    this.addP('basin', 1650, 1360, { room: R.basement.id, w: 70, h: 70 });
     this.addP('candleStand', 1300, 840, { room: R.basement.id, light: true, dim: true });
     this.addP('cobweb', 1290, 830, { room: R.basement.id });
     this.addP('cobweb', 1760, 1470, { room: R.basement.id });
@@ -539,8 +549,10 @@ export class Mansion {
       this.addF(1790 + i * 118, 500, 72, 72, 'planter', { room: R.conserv.id });
     }
     this.addF(1990, 290, 130, 130, 'fountain', { room: R.conserv.id });
-    this.addF(2190, 150, 60, 160, 'pottingBench', { room: R.conserv.id });
-    this.addF(2190, 400, 60, 160, 'pottingBench', { room: R.conserv.id });
+    // 2230, against the glass: at 2190 each bench stood 26px inside the last
+    // planter of its row.
+    this.addF(2230, 150, 60, 160, 'pottingBench', { room: R.conserv.id });
+    this.addF(2230, 400, 60, 160, 'pottingBench', { room: R.conserv.id });
     this.addP('mossPatch', 1820, 300, { room: R.conserv.id });
     this.addP('mossPatch', 2150, 560, { room: R.conserv.id });
     this.addP('urn', 1760, 80, { room: R.conserv.id });
@@ -1130,6 +1142,87 @@ export class Mansion {
     g.beginPath();
     g.moveTo(s.x, s.y); g.lineTo(s.x + 26, s.y + 26); g.moveTo(s.x + 26, s.y); g.lineTo(s.x, s.y + 26);
     g.stroke();
+  }
+
+  /**
+   * THE SIZE FURNITURE ACTUALLY IS.
+   *
+   * The plan was drawn in sprite units, and a sprite is drawn at whatever
+   * size reads well next to a 72px woman: a "chair" is 54px across and the
+   * dining table is 560 long. Measured against the floor — 50 world px to
+   * the metre, which is what the woman's 1.7m buys — that chair is a metre
+   * wide and that table is eleven metres long, in a fifteen metre room. The
+   * rooms were not cramped by design; they were cramped by arithmetic.
+   *
+   * So every piece keeps the spot it was given and takes the size the thing
+   * is in a house. It shrinks TOWARD whichever wall it was standing against
+   * (or about its own middle, if it stood in the middle of the room), so
+   * nothing that was flush is left floating. The solids a body collides with
+   * are updated with it: this is the same furniture, smaller.
+   */
+  dressFurniture() {
+    const M = 50;                       // world px to the metre, on the floor
+    const SIZE = {                      // metres, the two sides of the footprint
+      chair: [0.55, 0.55], armchair: [0.9, 0.9], sofa: [1.7, 0.9], pew: [3.0, 0.5],
+      longTable: [5.0, 1.1], desk: [2.0, 0.8], sideTable: [0.9, 0.6],
+      pottingBench: [1.5, 0.6], altar: [2.0, 0.8], cabinet: [1.5, 0.5],
+      barrel: [0.6, 0.6], crates: [0.8, 0.8], shelf: [2.5, 0.4], wineRack: [1.2, 0.4],
+      staircase: [3.0, 2.6], stairRail: [3.0, 0.4],
+      fountain: [2.0, 2.0], planter: [0.8, 0.8], font: [0.9, 0.9],
+    };
+    const roomOf = (f) => Object.values(this.rooms).find((r) =>
+      f.x + f.w / 2 >= r.x && f.x + f.w / 2 < r.x + r.w
+      && f.y + f.h / 2 >= r.y && f.y + f.h / 2 < r.y + r.h) || null;
+    // A room's rect is measured over its masonry, so the face a chair leans
+    // on is WALL_T inside it. Anchor to the wall and the chair ends up in it.
+    const WALL = 26;
+    /** Shrink one axis: toward the wall it leans on, or about its middle. */
+    const axis = (pos, size, want, lo, hi) => {
+      // never negative: a piece the plan left standing in the masonry keeps
+      // that gap and stays buried in it, which is how a shelf ends up 9px
+      // inside a wall. Clamped, it comes out flush.
+      const dLo = Math.max(0, pos - lo), dHi = Math.max(0, hi - (pos + size));
+      // stood clear of both walls on this axis: it was a centrepiece, so keep
+      // it one — a fountain dragged into a corner is not the same room
+      if (dLo > (hi - lo) * 0.2 && dHi > (hi - lo) * 0.2) return pos + size / 2 - want / 2;
+      return dLo < dHi ? lo + Math.min(dLo, hi - lo - want) : hi - Math.min(dHi, hi - lo - want) - want;
+    };
+    for (const f of this.furniture) {
+      const want = SIZE[f.type];
+      if (!want || !f.w || !f.h) continue;
+      const wide = f.w >= f.h;
+      const nw = (wide ? Math.max(want[0], want[1]) : Math.min(want[0], want[1])) * M;
+      const nh = (wide ? Math.min(want[0], want[1]) : Math.max(want[0], want[1])) * M;
+      const room = roomOf(f);
+      if (room) {
+        f.x = axis(f.x, f.w, nw, room.x + WALL, room.x + room.w - WALL);
+        f.y = axis(f.y, f.h, nh, room.y + WALL, room.y + room.h - WALL);
+      } else {
+        f.x += (f.w - nw) / 2;
+        f.y += (f.h - nh) / 2;
+      }
+      f.w = nw; f.h = nh;
+      const box = this.solids.find((q) => q.f === f);
+      if (box) { box.x = f.x; box.y = f.y; box.w = f.w; box.h = f.h; }
+    }
+    /* The chairs were spaced along an eleven-metre table. They follow it
+     * down, or they stand around a table that is no longer there. */
+    const table = this.furniture.find((f) => f.type === 'longTable');
+    if (table) {
+      const seats = this.furniture.filter((f) => f.type === 'chair' && f.room === table.room);
+      const mid = table.y + table.h / 2;
+      for (const row of [seats.filter((s) => s.y + s.h / 2 < mid), seats.filter((s) => s.y + s.h / 2 >= mid)]) {
+        if (!row.length) continue;
+        row.sort((a, b) => a.x - b.x);
+        const gap = (table.w - row.length * row[0].w) / (row.length + 1);
+        row.forEach((s, i) => {
+          s.x = table.x + gap * (i + 1) + row[0].w * i;
+          s.y = row[0].y < mid ? table.y - s.h - 14 : table.y + table.h + 14;
+          const box = this.solids.find((q) => q.f === s);
+          if (box) { box.x = s.x; box.y = s.y; }
+        });
+      }
+    }
   }
 
   /* ================= drawing ================= */

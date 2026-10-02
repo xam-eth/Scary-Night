@@ -97,9 +97,15 @@ export class Renderer {
     this.tilt = tall ? 0.56 : this.baseTilt;
     this.view = { left: 0, top: 0, w: this.w, h: this.h, cx: this.w / 2, cy: this.h / 2 };
     if (tall) {
+      /* How much of the house is in the frame. This used to be 1120 world px
+       * of floor, which on a 390px phone is a 6.9m slot: she filled a fifth
+       * of the width of it and the room read as a corridor she could not step
+       * around. 1400 is 8.6m — she is a fifth smaller on the screen, the
+       * furniture she has to walk between is in the shot, and the house is
+       * still close enough to read a face in it. */
       const wide = this.view.w / 460;
-      const cover = this.h / (1120 * this.tilt);
-      this.cam.zoom = clamp(Math.max(wide, cover), 0.9, 1.18);
+      const cover = this.h / (1400 * this.tilt);
+      this.cam.zoom = clamp(Math.max(wide, cover), 0.85, 1.18);
     } else {
       this.cam.zoom = clamp(this.view.w / 1010, 0.72, 1.9);
     }
