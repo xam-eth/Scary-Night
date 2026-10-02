@@ -281,6 +281,43 @@ export const CLIMAX = {
   dawnWaveDur: 2.3,          // the sun crosses the house
 };
 
+/* ==========================================================================
+ * THE SIEGE (#60) — the crowd at the walls, and how hard it leans.
+ *
+ * The curve is the owner's escalation: an almost empty first minute is what
+ * makes the flood land. These bodies are cheap — one drawImage each, no rig,
+ * no pathfinder, no skinned slot. The besiegers inside keep the ceiling they
+ * always had; the crowd is the scale you can see from the window.
+ * ========================================================================== */
+export const SIEGE = {
+  cap: 54,                      // most bodies the night ever puts outside
+  curve: [[0, 1], [60, 3], [120, 8], [180, 15], [240, 28]],
+  heat: [0.95, 1.5],            // the curve at night one, and at a late night
+  fronts: [2, 3],               // how many walls the crowd really masses at
+  token: 2,                     // ...while every other wall keeps a couple
+  ring8: 8,                     // one body at a far wall per eight in the yard
+  arrive: [1.5, 0.4],           // seconds between arrivals, calm -> hot
+  speed: [40, 76],              // px/s they walk in at
+  ring: 38,                     // px out from the wall the front rank stands
+  gap: 46,                      // px between bodies in a rank
+  row: 34,                      // px between ranks as the crowd gets thick
+  perRowMax: 9,                 // never a wider line than the frame can hold
+  claw: 0.0009,                 // share of an entrance's max hp, per body, per second
+  clawWindow: 0.0024,           // ...windows give way sooner
+  mercy: 0.35,                  // the crowd never opens the whole house alone:
+                                // as the walls fall, what is left is clawed
+                                // less hard. The besiegers finish the job.
+  clawEvery: 0.32,              // seconds between bites: one hit, one sound, not fifty
+  promoteGap: 1.2,              // seconds a combat slot must stand free first
+  fade: 1.6,                    // seconds to walk back into the fog
+  floodCap: 60,                 // THE FINAL PUSH: the yard is full
+  floodEach: 2,                 // ...every standing entrance has someone at it
+  floodFront: 30,               // ...the wall she is standing at is a wall of bodies
+  floodOther: 8,                // ...and the far fronts are thick too
+  nearShare: 0.45,              // of the night's crowd, the share at the wall she is nearest
+  types: ['crawler', 'zombie', 'zombie', 'ghoul', 'crawler', 'stalker'],
+};
+
 /* ---------------- knocking system ----------------
  * A knock is a promise the game makes and only sometimes keeps.
  */

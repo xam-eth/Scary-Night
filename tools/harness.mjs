@@ -368,7 +368,7 @@ if (MODE === 'density') {
   const marks = [30, 60, 90, 120, 150, 180, 210, 240, 270, 292];
   console.log('\n=== DENSITY — what the night holds vs what the frame shows ===');
   console.log('   (phone frame: 390x693 canvas, zoom 1.10 — the shape the game ships in)');
-  console.log('\n  t   phase      alive  inFrame  atDoors  pointsAttacked  openingsLeft  mix');
+  console.log('\n  t   phase      alive  crowd  inFrame  atDoors  pointsAttacked  openingsLeft  mix');
   for (const nights of [0, 4, 8, 12]) {
     game.save.privacyAck = true;
     game.save.nightsSurvived = nights;
@@ -378,14 +378,23 @@ if (MODE === 'density') {
     game.beginNight();
     game.introT = 99; game.skipNarration(); game.skipNarration(); game.startNightProper();
     let mi = 0, peak = 0, peakAt = 0, framePeak = 0, nearPeak = 0;
+    let crowdPeak = 0, crowdFramePeak = 0, bodyPeak = 0;
+    const onScreen = (o, cam) => Math.abs(o.x - cam.x) < cam.viewW * 0.5 + 40
+      && Math.abs(o.y - cam.y) < cam.viewH * 0.5 + 40;
     for (let i = 0; i < 300 * 60; i++) {
       bot.think(game, dt);
       game.update(dt);
       const alive = game.enemies.filter((e) => !e.dead).length;
       if (alive > peak) { peak = alive; peakAt = Math.round(game.time); }
       const cam = game.renderer.cam;
-      const inFrame = game.enemies.filter((e) => !e.dead
-        && Math.abs(e.x - cam.x) < cam.viewW * 0.5 + 40 && Math.abs(e.y - cam.y) < cam.viewH * 0.5 + 40).length;
+      /* THE SIEGE (#60): the show is the whole frame — the besiegers AND the
+       * crowd at the walls, which is the hook the issue is written for. */
+      const crowd = (game.director.crowd || []).filter((b) => !b.gone);
+      if (crowd.length > crowdPeak) crowdPeak = crowd.length;
+      const crowdFrame = crowd.filter((b) => onScreen(b, cam)).length;
+      if (crowdFrame > crowdFramePeak) crowdFramePeak = crowdFrame;
+      const inFrame = game.enemies.filter((e) => !e.dead && onScreen(e, cam)).length;
+      if (inFrame + crowdFrame > bodyPeak) bodyPeak = inFrame + crowdFrame;
       const near = game.enemies.filter((e) => !e.dead
         && Math.abs(e.x - cam.x) < 450 && Math.abs(e.y - cam.y) < 450).length;
       if (inFrame > framePeak) framePeak = inFrame;
@@ -396,13 +405,15 @@ if (MODE === 'density') {
         const open = game.mansion.entrances.filter((x) => !(x.broken)).length;
         const kinds = {};
         for (const e of game.enemies) if (!e.dead) kinds[e.key] = (kinds[e.key] || 0) + 1;
-        console.log(` ${String(marks[mi]).padStart(3)}  ${String(game.phase.id).padEnd(9)} ${String(alive).padStart(4)}    ${String(inFrame).padStart(4)}    ${String(atDoor).padStart(4)}       ${String(points).padStart(4)}          ${String(open).padStart(3)}        ${JSON.stringify(kinds)}`);
+        const crowdNow = (game.director.crowd || []).filter((b) => !b.gone && onScreen(b, game.renderer.cam)).length;
+        console.log(` ${String(marks[mi]).padStart(3)}  ${String(game.phase.id).padEnd(9)} ${String(alive).padStart(4)}   ${String(crowd.length).padStart(4)}    ${String(inFrame + crowdNow).padStart(4)}    ${String(atDoor).padStart(4)}       ${String(points).padStart(4)}          ${String(open).padStart(3)}        ${JSON.stringify(kinds)}`);
         mi++;
       }
       if (game.screen !== 'playing') { console.log(`     (night ended: ${game.screen} @ ${Math.round(game.time)}s)`); break; }
     }
     const cam2 = game.renderer.cam;
-    console.log(`   NIGHT ${nights + 1}: peak ${peak} alive at t=${peakAt}s · most ever IN FRAME ${framePeak} · within a 900x900 pull-back ${nearPeak}`);
+    console.log(`   NIGHT ${nights + 1}: peak ${peak} besiegers alive at t=${peakAt}s · most ever IN FRAME ${framePeak}`);
+    console.log(`             THE SIEGE: crowd peaked at ${crowdPeak} bodies outside (${crowdFramePeak} of them on screen at once) · ${bodyPeak} bodies in the frame at the busiest moment`);
     console.log(`             kills ${game.stats.kills} · openings ${game.mansion.entrances.filter((x) => !(x.broken)).length}/${game.mansion.entrances.length} standing · frame ${Math.round(cam2.viewW)}x${Math.round(cam2.viewH)} world units (zoom ${cam2.zoom.toFixed(2)})\n`);
   }
   process.exit(0);
@@ -1306,6 +1317,129 @@ if (args.systems) {
       Math.min(f.x + f.w, w.x + w.w) - Math.max(f.x, w.x) > 6
       && Math.min(f.y + f.h, w.y + w.h) - Math.max(f.y, w.y) > 6));
     line(!buried.length, `and nothing stands inside a wall (${buried.length} buried)`);
+  }
+  // ---- THE SIEGE (#60) ----------------------------------------------------
+  //
+  // The hook is scale: "look how many are coming." A house with seven things
+  // in it is a tense survival sim, which is a weaker hook than an army at the
+  // walls. So the house gets an army — and the army is NOT forty more
+  // enemies. These are the promises, measured:
+  //   · the curve is the owner's escalation, and only ever grows
+  //   · a crowd of 24 stands outside the wall, in ranks, inside one frame
+  //   · they take the wood down through the real door-damage path
+  //   · THE FINAL PUSH puts someone at every standing entrance
+  //   · one of them comes inside as a real besieger when a slot frees
+  //   · and not one of them is a pathfinder with a skinned body
+  {
+    const { SIEGE } = await import('../src/core/config.js');
+    const { CrowdBody, CROWD, crowdSpot, outwardOf } = await import('../src/game/enemies.js');
+    const noSpawn0 = TUNING.noSpawns;
+    const dir = game.director;
+    const crowd0 = dir.crowd.length, foes0 = game.enemies.length, phase0 = game.screen;
+    game.screen = 'playing';            // the siege only happens during a night
+    TUNING.noSpawns = false;            // ...and it is a spawn, so let it
+    const px0 = game.player.x, py0 = game.player.y;
+    const gap0 = SIEGE.promoteGap;
+
+    // (1) the curve
+    let mono = SIEGE.curve[0][0] === 0 && SIEGE.curve[0][1] >= 1;
+    for (let i = 1; i < SIEGE.curve.length; i++) {
+      if (SIEGE.curve[i][0] <= SIEGE.curve[i - 1][0] || SIEGE.curve[i][1] <= SIEGE.curve[i - 1][1]) mono = false;
+    }
+    line(mono && SIEGE.cap >= 40 && SIEGE.floodCap > SIEGE.cap && SIEGE.claw > 0 && SIEGE.claw < 0.01,
+      `the night escalates and never goes back (${SIEGE.curve.map((c) => `${c[0]}s:${c[1]}`).join(' · ')}, cap ${SIEGE.cap}, final push ${SIEGE.floodCap})`);
+    line(SIEGE.curve[1][1] <= 3 && SIEGE.curve[2][1] <= 8 && SIEGE.curve[3][1] <= 15 && SIEGE.curve[4][1] >= 20,
+      'the first minute is nearly empty, the last is not (1-3 · 5-8 · 10-15 · 20+ · full siege)');
+
+    // (2) geometry: 24 bodies at one door, outside it, inside one phone frame
+    const door = (game.mansion.entrances || []).find((e) => !e.broken && e.axis) || game.mansion.entrances[0];
+    const spots = [];
+    for (let i = 0; i < 24; i++) spots.push(crowdSpot(door, i, SIEGE.ring));
+    const out = outwardOf(door);
+    const along = { x: -out.y, y: out.x };
+    const proj = (s) => ({
+      across: (s.x - door.x) * along.x + (s.y - door.y) * along.y,
+      deep: (s.x - door.x) * out.x + (s.y - door.y) * out.y,
+    });
+    const ps = spots.map(proj);
+    const wide = Math.max(...ps.map((p) => p.across)) - Math.min(...ps.map((p) => p.across));
+    const thick = Math.max(...ps.map((p) => p.deep)) - Math.min(...ps.map((p) => p.deep));
+    let closest = 1e9;
+    for (let i = 0; i < spots.length; i++) {
+      for (let j = i + 1; j < spots.length; j++) {
+        closest = Math.min(closest, Math.hypot(spots[i].x - spots[j].x, spots[i].y - spots[j].y));
+      }
+    }
+    line(ps.every((p) => p.deep > 0) && closest > 14 && wide <= 520 && thick <= 220,
+      `24 bodies make a crowd, not a queue: ${Math.round(wide)}px along the wall, ${Math.round(thick)}px thick, none inside it (closest pair ${closest.toFixed(0)}px)`);
+
+    // (3) they lean on the wood through the real door path
+    SIEGE.promoteGap = 999;                       // promotion is measured separately
+    const t0 = game.time;
+    game.time = 250;                              // the late night: the crowd is out
+    door.hp = door.hpMax; door.broken = false; door.barricade = 0;
+    game.player.x = door.x; game.player.y = door.y;
+    dir.clearCrowd();
+    dir.crowdFlood = false;
+    dir.crowdFronts = [door];
+    for (let i = 0; i < 12; i++) {
+      const b = dir._addCrowd(game, door, i);
+      const s = crowdSpot(door, i, SIEGE.ring);
+      b.x = s.x; b.y = s.y;
+    }
+    const hp0 = door.hp;
+    for (let i = 0; i < 180; i++) dir.updateCrowd(dt, game);
+    const atDoor = dir.crowd.filter((b) => b.entrance === door);
+    line(door.hp < hp0 - 0.5 && !door.broken,
+      `${atDoor.length} bodies leaning take the wood down through the real door path (hp ${hp0.toFixed(0)} → ${door.hp.toFixed(0)} of ${door.hpMax.toFixed(0)} in 3s)`);
+    line(atDoor.length >= 12 && game.enemies.length === foes0,
+      `and the crowd is not the fight: ${dir.crowd.length} of them in the yard, and not one of them in the enemy list`);
+    const pressed = dir.crowd.filter((b) => b.state === CROWD.PRESS).length;
+    line(pressed >= 12, `they are pressed against it, not standing about (${pressed} pressing)`);
+
+    // (4) THE FINAL PUSH: every standing entrance, and a wall of bodies on the near one
+    dir.clearCrowd();
+    dir.floodCrowd(game);
+    const plan = dir.siegePlan(game);
+    const standing = (game.mansion.entrances || []).filter((e) => !e.broken);
+    const total = [...plan.values()].reduce((a, b) => a + b, 0);
+    line(standing.length > 0 && standing.every((e) => (plan.get(e) || 0) >= SIEGE.floodEach),
+      `THE FINAL PUSH puts someone at every standing entrance (${standing.length} of them)`);
+    line(total >= 40 && Math.max(...plan.values()) >= 20,
+      `...${total} bodies in the yard at once, ${Math.max(...plan.values())} of them at the wall she is standing at`);
+
+    // (5) one of them comes inside as a real besieger when a combat slot frees
+    SIEGE.promoteGap = gap0;
+    dir.clearCrowd();
+    dir.crowdFlood = false;
+    while (game.enemies.length) game.enemies.pop();
+    const breach = (game.mansion.entrances || []).find((e) => !e.broken && e.kind === 'door') || door;
+    breach.open = true;
+    dir.crowdFronts = [breach];
+    const b0 = dir._addCrowd(game, breach, 0);
+    const sp = crowdSpot(breach, 0, SIEGE.ring);
+    b0.x = sp.x; b0.y = sp.y;
+    let frames = 0;
+    while (game.enemies.length === 0 && frames < 60 * 6) { dir.updateCrowd(dt, game); frames++; }
+    line(game.enemies.length > 0 && b0.promoted,
+      `a body at the breach comes inside as a real besieger when a slot frees (after ${(frames / 60).toFixed(1)}s: ${game.enemies.map((e) => e.key).join(', ') || 'none'})`);
+
+    // (6) and none of them is a pathfinder with a skinned body
+    for (let i = 0; i < 60; i++) dir.updateCrowd(dt, game);
+    line(game.enemies.every((e) => !(e instanceof CrowdBody)) && dir.crowd.every((b) => b instanceof CrowdBody),
+      'the crowd and the fight stay two different things — the besiegers keep the ceiling, the crowd keeps the spectacle');
+
+    // put the house back the way the rest of the suite expects it
+    breach.open = false;
+    game.time = t0;
+    door.hp = door.hpMax; door.broken = false;
+    dir.clearCrowd();
+    dir.crowdFlood = false;
+    while (game.enemies.length) game.enemies.pop();
+    game.player.x = px0; game.player.y = py0;
+    game.screen = phase0;
+    TUNING.noSpawns = noSpawn0;
+    line(dir.crowd.length === 0 && crowd0 === 0, 'and a fresh night starts with an empty yard');
   }
   line(fortressLevel(fortSave) >= 0 && migrateSave({ ...fortSave, upgrades: {}, builds: {} }).fortressLevel === fortressLevel(fortSave),
     `the fortress level is derived, and a reload reads the same house (level ${fortressLevel(fortSave)})`);

@@ -462,6 +462,142 @@ try {
   };
   await shootFortress(m, '18-phone');
 
+  /* ---------- THE SIEGE (#60) — the frame the issue exists for ----------
+   * "Look how many are coming." The crowd is driven through the real trigger
+   * path (the crescendo floods the yard) and then simply photographed from
+   * the yard, at a late night, on a phone and on a desktop. Nothing is
+   * posed: the bodies walk in from the dark and press where the plan says.
+   */
+  const shootSiege = async (pg, tag) => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const until = (fn, timeout = 40000) => pg.waitForFunction(fn, { timeout, polling: 40 }).catch(() => {});
+    await pg.evaluate(() => {
+      const g = window.__LN;
+      window.__LN_API.stopMove();
+      g.screen = 'playing';
+      g.save.nightsSurvived = 8;        // a late night: the yard is full
+      g.save.ending = null;
+      g.enemies.length = 0;
+      g.messages.length = 0;
+      g.time = 279;
+      g.player.blood = g.player.bloodMax * 0.88;
+      g.player.state = 'idle';
+      g.player.iframes = 4;
+      g.climax.reset();
+      // out in the yard, looking at the front door: stand back far enough
+      // that the whole crowd is between the camera and the house
+      const front = g.mansion.entrances.find((e) => e.id === 'frontDoor') || g.mansion.entrances[0];
+      const out = front.outside || { x: front.x, y: front.y + 78 };
+      const ux = out.x - front.x, uy = out.y - front.y;
+      const d = Math.hypot(ux, uy) || 1;
+      g.player.x = front.x + (ux / d) * 300;
+      g.player.y = front.y + (uy / d) * 300;
+      g.renderer.snapCamera(g.player.x, g.player.y);
+    });
+    await wait(700);
+    await shoot(pg, `${tag}-siege-yard-empty`);
+    // the real path: THE FINAL PUSH is what fills the yard
+    await pg.evaluate(() => window.__LN_API.peak('crescendo'));
+    await until(() => window.__LN.director.crowdFlood && window.__LN.director.crowd.length >= 24);
+    await until(() => window.__LN.director.crowd.filter((b) => b.state === 'press').length >= 14);
+    await wait(200);
+    // then stand in the yard in front of the wall that actually has the crowd
+    // on it, the way a player would if she went to look
+    await pg.evaluate(() => {
+      const g = window.__LN;
+      const crowd = g.director.crowd.filter((b) => !b.gone);
+      const tally = new Map();
+      for (const b of crowd) if (b.entrance) tally.set(b.entrance, (tally.get(b.entrance) || 0) + 1);
+      let wall = null, most = 0;
+      for (const [e, n] of tally) if (n > most) { most = n; wall = e; }
+      if (!wall) return;
+      const out = wall.outside || { x: wall.x, y: wall.y + 78 };
+      const ux = out.x - wall.x, uy = out.y - wall.y;
+      const d = Math.hypot(ux, uy) || 1;
+      g.player.x = wall.x + (ux / d) * 150;
+      g.player.y = wall.y + (uy / d) * 150;
+      g.player.blood = g.player.bloodMax;
+      g.player.iframes = 999;
+      g.renderer.snapCamera(g.player.x, g.player.y);
+      window.__siegeWall = wall.id;
+      window.__anchor = { x: g.player.x, y: g.player.y };
+    });
+    // hold her there while they walk in: a house full of besiegers shoves,
+    // and the frame is the crowd at the wall, not her being pushed off it
+    for (let i = 0; i < 40; i++) {
+      await wait(200);
+      await pg.evaluate(() => {
+        const g = window.__LN;
+        g.player.x = window.__anchor.x; g.player.y = window.__anchor.y;
+        g.player.iframes = 999; g.player.blood = g.player.bloodMax;
+      });
+    }
+    await pg.evaluate(() => {
+      const g = window.__LN;
+      g.player.x = window.__anchor.x; g.player.y = window.__anchor.y;
+      g.renderer.snapCamera(window.__anchor.x, window.__anchor.y);
+    });
+    const diag = await pg.evaluate(() => {
+      const g = window.__LN;
+      const cam = g.renderer.cam;
+      const on = (o) => Math.abs(o.x - cam.x) < cam.viewW * 0.5 + 40 && Math.abs(o.y - cam.y) < cam.viewH * 0.5 + 40;
+      const crowd = g.director.crowd.filter((b) => !b.gone);
+      const baked = {};
+      const di = window.__LN_API.enemy3d() || {};
+      for (const k of ['crawler', 'zombie', 'ghoul', 'stalker']) {
+        baked[k] = !!(di.types && di.types[k] && di.types[k].preview);
+      }
+      return {
+        wall: window.__siegeWall || '?',
+        crowd: crowd.length,
+        atWall: crowd.filter((b) => b.entrance && b.entrance.id === window.__siegeWall).length,
+        onScreen: crowd.filter(on).length,
+        pressing: crowd.filter((b) => b.state === 'press').length,
+        foes: g.enemies.filter((e) => !e.dead).length,
+        walls: [...new Set(crowd.map((b) => b.entrance && b.entrance.id))].length,
+        standing: g.mansion.entrances.filter((e) => !e.broken).length,
+        baked,
+      };
+    });
+    console.log(`THE SIEGE (${tag}):`, JSON.stringify(diag));
+    // and the proof that they are in the pixels, not just in the array:
+    // render with them, send them away, render again, and read the patch of
+    // canvas each one stands in.
+    const proof = await pg.evaluate(() => {
+      const g = window.__LN, r = g.renderer;
+      const ctx = r.canvas.getContext('2d');
+      const bodies = g.director.crowd.filter((b) => !b.gone && r.isVisible(b.x, b.y, 120));
+      const rects = bodies.map((b) => {
+        const s = r.worldToScreen(b.x, b.y);
+        const h = 74 * (b.sizeMul || 1);
+        return { x: Math.round((s.x - 15) * r.dpr), y: Math.round((s.y - h) * r.dpr), w: Math.round(30 * r.dpr), h: Math.round(h * r.dpr) };
+      });
+      const lum = (q) => {
+        const x0 = Math.max(0, q.x), y0 = Math.max(0, q.y);
+        const w = Math.min(r.canvas.width - x0, q.w), h = Math.min(r.canvas.height - y0, q.h);
+        if (w <= 0 || h <= 0) return null;
+        const d = ctx.getImageData(x0, y0, w, h).data;
+        let s = 0;
+        for (let i = 0; i < d.length; i += 4) s += 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+        return s / (d.length / 4);
+      };
+      g.render();
+      const withCrowd = rects.map(lum);
+      const saved = bodies.map((b) => ({ b, x: b.x, y: b.y }));
+      for (const s of saved) { s.b.x += 99999; s.b.y += 99999; }
+      g.render();
+      const without = rects.map(lum);
+      for (const s of saved) { s.b.x = s.x; s.b.y = s.y; }
+      g.render();
+      const drawn = withCrowd.filter((v, i) => v != null && without[i] != null && Math.abs(v - without[i]) > 1.5).length;
+      return { bodies: bodies.length, drawn };
+    });
+    console.log(`THE SIEGE (${tag}) — in the pixels:`, JSON.stringify(proof));
+    await shoot(pg, `${tag}-siege-full`);
+  };
+  await shootSiege(m, '20-phone');
+  await shootSiege(page, '21-desktop');
+
   /* ---------- THE REFUGE (#56 P3) — the board she keeps, empty and full -----
    * The hub is the other half of visible progression: the same room, the same
    * woman, and a board that fills as the hunt does. Shot twice so the claim

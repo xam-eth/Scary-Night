@@ -153,6 +153,11 @@ export class Climax {
       d.spawnWave(game, nights >= 3 ? ['zombie', 'zombie', 'crawler'] : ['zombie', 'crawler'], { entranceId: other.id });
     }
 
+    /* THE SIEGE (#60): the crescendo used to lean on two doors. The house is
+     * being overrun, so the crowd takes every standing entrance at once —
+     * this is the frame the whole issue exists for. */
+    if (game.director && game.director.floodCrowd) game.director.floodCrowd(game);
+
     // every door takes the house leaning on it at once
     for (const e of game.mansion.entrances) {
       if (e.broken) continue;

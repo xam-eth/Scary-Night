@@ -12,14 +12,14 @@
  */
 
 import {
-  clamp, lerp, damp, rand, randInt, chance, pick, shuffle, dist, fmtClock,
+  clamp, lerp, damp, rand, randInt, chance, pick, shuffle, dist, fmtClock, TAU,
 } from '../core/util.js';
 import {
   PHASES, phaseAt, nextPhase, BEATS, DIRECTOR, KNOCKS, NIGHT_DURATION, nightHeat, threatMix,
-  SPAWN_WARMUP, PANIC_AT, SILENCE_AT, COUNTDOWN_AT, ENEMY_TYPES, TUNING,
+  SPAWN_WARMUP, PANIC_AT, SILENCE_AT, COUNTDOWN_AT, ENEMY_TYPES, TUNING, SIEGE,
 } from '../core/config.js';
 import { tellFor, revealForNight } from './economy.js';
-import { Crawler, Hunter, Werewolf, Stalker, Ghoul, Zombie, applyVariant } from './enemies.js';
+import { Crawler, Hunter, Werewolf, Stalker, Ghoul, Zombie, applyVariant, CrowdBody, CROWD } from './enemies.js';
 import { ROOM } from './mansion.js';
 
 export const MOOD = {
@@ -66,6 +66,17 @@ export class Director {
     this.lastEventT = -99;
     this.intensityCurve = [];
     this.moodsSeen = [];
+    /* THE SIEGE (#60): the crowd at the walls. Not enemies — bodies. They
+     * are the spectacle and the pressure on the doors; the real combatants
+     * stay exactly as many as they ever were. */
+    this.crowd = [];
+    this.crowdT = 0;          // seconds until the next one walks in
+    this.crowdBite = 0;       // seconds until the walls are bitten again
+    this.crowdPeak = 0;       // the most that were ever out there at once
+    this.crowdFree = 0;       // how long a combat slot has been going spare
+    this.crowdFronts = [];    // the walls the siege is really happening at
+    this.crowdFrontT = 0;     // seconds until the fronts may be re-picked
+    this.crowdFlood = false;  // THE FINAL PUSH: every standing entrance
   }
 
   /* ================= main update ================= */
@@ -81,6 +92,8 @@ export class Director {
     }
     // ---- budget & waves ----
     this.updateBudget(dt, game);
+    // ---- THE SIEGE: the crowd at the walls (#60) ----
+    this.updateCrowd(dt, game);
     // ---- knock resolution ----
     this.updateKnock(dt, game);
     // ---- random atmospheric events ----
@@ -180,7 +193,7 @@ export class Director {
     if (game.climax && game.climax.spawnsHeld) { this.budget = Math.min(this.budget, 0.4); return; }
 
     const alive = game.enemies.filter((e) => !e.dead).length;
-    const maxAlive = Math.min(14, Math.round(lerp(DIRECTOR.maxAlive[0], DIRECTOR.maxAlive[1], game.danger) * Math.max(0.8, d.spawn) * heat));
+    const maxAlive = this.maxAlive(game);
     // BREATHING. The curve needs contrast: without quiet stretches, pressure
     // stops reading as pressure at all. Whenever the house is empty, buy the
     // player a genuine lull — shorter as the night gets late.
@@ -335,6 +348,306 @@ export class Director {
     }
     game.onWaveIncoming(spawned, ent);
     return spawned;
+  }
+
+  /* ================= THE SIEGE (#60) =================
+   * The crowd that makes the house look like a house under attack.
+   *
+   * Two populations, on purpose. The besiegers are the fight — full AI, the
+   * existing ceiling, eight skinned bodies at a time. The crowd is the
+   * SCALE: reduced-AI bodies that walk in from the dark, mass at a few walls
+   * and lean on them until the wood gives.
+   *
+   * They do not go to all sixteen entrances evenly — three bodies at sixteen
+   * doors is a spreadsheet, not a siege. A few FRONTS carry the mass (that is
+   * what the camera can hold in one frame) while the rest of the house keeps
+   * a couple each, so the house is surrounded and the frame is full.
+   */
+
+  /** How many bodies the night wants outside right now. */
+  siegeTarget(game) {
+    if (TUNING.noSpawns) return 0;
+    if (this.crowdFlood) return SIEGE.floodCap;
+    const t = game.time;
+    const nights = (game.save && game.save.nightsSurvived) || 0;
+    let want = SIEGE.curve[0][1];
+    for (let i = 0; i < SIEGE.curve.length; i++) {
+      if (t >= SIEGE.curve[i][0]) want = SIEGE.curve[i][1];
+    }
+    // nightHeat runs 1.00 (night one) to 1.56 (night nine and after) — the
+    // crowd is the curve on night one and half as many again by the time the
+    // player has earned it. The first minute stays nearly empty on every
+    // night: the emptiness is what makes the flood land.
+    const k = clamp((nightHeat(nights) - 1) / 0.56, 0, 1);
+    const hot = lerp(SIEGE.heat[0], SIEGE.heat[1], k);
+    return Math.max(0, Math.min(SIEGE.cap, Math.round(want * hot * lerp(0.75, 1, game.danger))));
+  }
+
+  /**
+   * How many full-AI besiegers the night will carry at once — the ceiling
+   * the game has always had. The crowd is not allowed to move it (#60): the
+   * fight stays the same size, the spectacle does not.
+   */
+  maxAlive(game) {
+    const d = game.difficulty;
+    const first = !game.save || !(game.save.nightsSurvived > 0);
+    const heat = nightHeat(game.save && game.save.nightsSurvived) * (first ? 0.45 : 1);
+    return Math.min(14, Math.round(lerp(DIRECTOR.maxAlive[0], DIRECTOR.maxAlive[1], game.danger)
+      * Math.max(0.8, d.spawn) * heat));
+  }
+
+  /** An entrance that still has wood in it, for a body to lean on. */
+  _standingEntrances(game) {
+    return (game.mansion.entrances || []).filter((e) => !e.broken);
+  }
+
+  /** Where bodies are sent when there is nothing left to lean on. */
+  _siegeWalls(game) {
+    const list = this._standingEntrances(game);
+    return list.length ? list : (game.mansion.entrances || []);
+  }
+
+  /**
+   * The walls the siege is really happening at.
+   *
+   * One of them is always the wall nearest the player — she has to be able to
+   * see the number — and the rest come at the house from as far apart as the
+   * plan allows, so it reads as a house surrounded from several sides.
+   */
+  _pickFronts(game) {
+    const standing = this._siegeWalls(game);
+    if (!standing.length) { this.crowdFronts = []; return; }
+    const p = game.player;
+    const want = clamp(Math.round(lerp(SIEGE.fronts[0], SIEGE.fronts[1], game.danger)),
+      SIEGE.fronts[0], SIEGE.fronts[1]);
+    const near = standing.slice()
+      .sort((a, b) => dist(a.x, a.y, p.x, p.y) - dist(b.x, b.y, p.x, p.y))[0];
+    const fronts = [near];
+    while (fronts.length < Math.min(want, standing.length)) {
+      let best = null, bestD = -1;
+      for (const e of standing) {
+        if (fronts.indexOf(e) >= 0) continue;
+        // farthest from every front already chosen: spread around the house
+        let d = Infinity;
+        for (const f of fronts) d = Math.min(d, dist(e.x, e.y, f.x, f.y));
+        d += rand(0, 180);                     // not the same walls every night
+        if (d > bestD) { bestD = d; best = e; }
+      }
+      if (!best) break;
+      fronts.push(best);
+    }
+    this.crowdFronts = fronts;
+  }
+
+  /** Do the fronts still make sense? Re-pick them when they do not. */
+  _checkFronts(dt, game) {
+    this.crowdFrontT = (this.crowdFrontT || 0) - dt;
+    const broken = this.crowdFronts.some((e) => e.broken);
+    const p = game.player;
+    const drift = this.crowdFronts.length
+      ? Math.min(...this.crowdFronts.map((e) => dist(e.x, e.y, p.x, p.y))) : 0;
+    // the wall she is defending has changed, or the wall she was is gone
+    if (!this.crowdFronts.length || broken || (drift > 620 && this.crowdFrontT <= 0)) {
+      this._pickFronts(game);
+      this.crowdFrontT = 6;
+      return true;
+    }
+    return false;
+  }
+
+  /** entrance -> how many bodies belong at it, given what the night wants. */
+  siegePlan(game) {
+    const standing = this._siegeWalls(game);
+    const plan = new Map();
+    if (!standing.length || TUNING.noSpawns) return plan;
+    const fronts = this.crowdFronts.filter((e) => !e.broken && standing.indexOf(e) >= 0);
+    const use = fronts.length ? fronts : [standing[0]];
+    if (this.crowdFlood) {
+      /* THE FINAL PUSH: every standing entrance has someone at it. The wall
+       * she is standing at is the one the camera is on, so it gets the wall
+       * of bodies — that is the frame the whole issue exists for. */
+      plan.set(use[0], SIEGE.floodFront);
+      for (let i = 1; i < use.length; i++) plan.set(use[i], SIEGE.floodOther);
+      for (const e of standing) if (!plan.has(e)) plan.set(e, SIEGE.floodEach);
+      return plan;
+    }
+    const total = this.siegeTarget(game);
+    if (total <= 0) return plan;
+    const others = standing.filter((e) => use.indexOf(e) < 0);
+    // the house only gets ringed once there is a crowd to spare: two bodies
+    // at sixteen doors is a spreadsheet, not a siege
+    const tokens = clamp(Math.floor((total - 4) / SIEGE.ring8), 0, Math.min(others.length, SIEGE.token));
+    // the front she is nearest carries the show; the rest of the house rings her
+    const near = Math.round((total - tokens * SIEGE.token) * SIEGE.nearShare);
+    plan.set(use[0], Math.max(1, near));
+    const rest = Math.max(0, total - tokens * SIEGE.token - near);
+    const share = use.length > 1 ? Math.floor(rest / (use.length - 1)) : 0;
+    let left = Math.max(0, rest - share * (use.length - 1));
+    for (let i = 1; i < use.length; i++) plan.set(use[i], share + (left-- > 0 ? 1 : 0));
+    // the far walls: a couple each, so the house is ringed, not just battered
+    const far = others.slice().sort((a, b) => {
+      const da = Math.min(...use.map((f) => dist(a.x, a.y, f.x, f.y)));
+      const db = Math.min(...use.map((f) => dist(b.x, b.y, f.x, f.y)));
+      return db - da;
+    });
+    for (let i = 0; i < tokens; i++) plan.set(far[i], SIEGE.token);
+    return plan;
+  }
+
+  /** One more body, out in the dark, walking at a wall. */
+  _addCrowd(game, entrance, index) {
+    const walls = this._siegeWalls(game);
+    if (!walls.length) return null;
+    const e = entrance || walls[(Math.random() * walls.length) | 0];
+    const out = e.outside || { x: e.x, y: e.y };
+    /* They come from the field in front of the wall, not from inside the
+     * house: a body that spawns on the wrong side of the door has to walk
+     * back through it, and the whole point is that they came from outside. */
+    const outward = Math.atan2(out.y - e.y, out.x - e.x);
+    const ang = outward + (this.crowdFlood ? rand(-1.0, 1.0) : rand(-1.4, 1.4));
+    // normally they walk in out of the dark; the final push is already here
+    // and coming — dawn is twenty seconds away and they have to arrive
+    const far = this.crowdFlood ? rand(150, 340) : rand(320, 700);
+    const key = SIEGE.types[(Math.random() * SIEGE.types.length) | 0];
+    const body = new CrowdBody(key, out.x + Math.cos(ang) * far, out.y + Math.sin(ang) * far, e);
+    body.index = index || 0;
+    if (this.crowdFlood) body.gait = rand(1.05, 1.35);
+    this.crowd.push(body);
+    this.crowdPeak = Math.max(this.crowdPeak, this.crowd.length);
+    return body;
+  }
+
+  /** Put the bodies where the plan says they belong. */
+  _balanceCrowd(game, plan) {
+    const at = new Map();
+    for (const b of this.crowd) {
+      if (b.gone || b.promoted) continue;
+      const has = at.get(b.entrance) || 0;
+      if (b.entrance && plan.has(b.entrance) && has < plan.get(b.entrance)) {
+        at.set(b.entrance, has + 1);
+        b.index = has;
+      } else {
+        // surplus here: send it where the crowd is thin, or home
+        let spot = null;
+        for (const [e, n] of plan) if ((at.get(e) || 0) < n) { spot = e; break; }
+        if (!spot) { b.dismiss(); continue; }
+        // A body on the far side of the house cannot walk to this wall before
+        // dawn, and a crowd arriving one at a time is not a crowd. The fog
+        // takes it and a fresh one walks in where it is needed.
+        if (dist(b.x, b.y, spot.x, spot.y) > 620) { b.gone = true; continue; }
+        const k = at.get(spot) || 0;
+        at.set(spot, k + 1);
+        b.retarget(spot);
+        b.index = k;
+      }
+    }
+    let guard = 0;
+    for (const [e, n] of plan) {
+      while ((at.get(e) || 0) < n && guard++ < 240) {
+        const k = at.get(e) || 0;
+        at.set(e, k + 1);
+        if (!this._addCrowd(game, e, k)) break;
+      }
+    }
+  }
+
+  /**
+   * THE FINAL PUSH. The crescendo used to lean on two doors; the house is
+   * being overrun, so the crowd takes every standing entrance at once —
+   * this is the frame the whole issue exists for.
+   */
+  floodCrowd(game) {
+    const standing = this._standingEntrances(game);
+    if (!standing.length) return;
+    this.crowdFlood = true;
+    if (!this.crowdFronts.length || this.crowdFronts.every((e) => e.broken)) this._pickFronts(game);
+    this._balanceCrowd(game, this.siegePlan(game));
+  }
+
+  updateCrowd(dt, game) {
+    if (!game || !game.mansion) return;
+    const playing = game.screen === 'playing' || game.screen === 'intro';
+    if (!playing) {
+      for (const b of this.crowd) b.dismiss();
+    }
+    if (playing) this._checkFronts(dt, game);
+    const plan = playing ? this.siegePlan(game) : new Map();
+
+    // ---- arrivals: they trickle in, they do not appear ----
+    this.crowdT -= dt;
+    const want = [...plan.values()].reduce((a, b) => a + b, 0);
+    if (this.crowd.length < want && this.crowdT <= 0 && game.time > 8) {
+      this.crowdT = lerp(SIEGE.arrive[0], SIEGE.arrive[1], game.danger) * rand(0.7, 1.3);
+      // thinnest wall first, so the fronts fill together instead of in turn
+      let thin = null, thinN = Infinity;
+      for (const [e, n] of plan) {
+        const has = this.crowd.filter((b) => !b.gone && b.entrance === e).length;
+        if (has < n && has / Math.max(1, n) < thinN) { thinN = has / Math.max(1, n); thin = e; }
+      }
+      if (thin) {
+        const has = this.crowd.filter((b) => !b.gone && b.entrance === thin).length;
+        this._addCrowd(game, thin, has);
+      }
+    }
+    this._balanceCrowd(game, plan);
+
+    // ---- the walls take it: one bite, one sound, however many are leaning ----
+    this.crowdBite -= dt;
+    const leaning = new Map();
+    for (const b of this.crowd) {
+      b.update(dt, game);
+      if (b.gone) continue;
+      if (b.state !== CROWD.PRESS || !b.entrance || b.entrance.broken) continue;
+      leaning.set(b.entrance, (leaning.get(b.entrance) || 0) + b.press);
+    }
+    if (this.crowdBite <= 0 && leaning.size) {
+      this.crowdBite = SIEGE.clawEvery;
+      // the crowd weakens the house; it does not get to finish it. As the
+      // walls fall the ones left are clawed less hard — otherwise there is no
+      // house left standing for THE FINAL PUSH to happen at.
+      const mercy = clamp(this._standingEntrances(game).length / 8, SIEGE.mercy, 1);
+      for (const [e, mass] of leaning) {
+        if (e.broken || !mass) continue;
+        const share = e.kind === 'window' ? SIEGE.clawWindow : SIEGE.claw;
+        // the same door path a besieger uses: barricades, splinters, the panel
+        game.damageEntrance(e, e.hpMax * share * mass * mercy * SIEGE.clawEvery, this.crowd[0] || null);
+      }
+    }
+    if (this.crowdBite <= 0) this.crowdBite = SIEGE.clawEvery;
+
+    // ---- promotion: a body at a breach comes inside when a slot frees ----
+    const alive = game.enemies.filter((e) => !e.dead).length;
+    const maxAlive = this.maxAlive(game);
+    if (playing && alive < maxAlive) this.crowdFree += dt; else this.crowdFree = 0;
+    if (this.crowdFree >= SIEGE.promoteGap) {
+      const breached = this.crowd.filter((b) => b.state === CROWD.PRESS && b.entrance
+        && (b.entrance.broken || b.entrance.open) && !b.promoted);
+      const any = breached.length ? breached
+        : this.crowd.filter((b) => b.state === CROWD.PRESS && !b.promoted);
+      const pick = any[(Math.random() * any.length) | 0];
+      if (pick) {
+        this.crowdFree = 0;
+        pick.promoted = true;
+        pick.gone = true;
+        if (!TUNING.noSpawns) this.spawnWave(game, [pick.key], { entranceId: pick.entrance.id });
+      }
+    }
+
+    if (this.crowd.some((b) => b.gone)) this.crowd = this.crowd.filter((b) => !b.gone);
+    if (this.crowd.length > SIEGE.floodCap) this.crowd.length = SIEGE.floodCap;
+  }
+
+  /** Dawn, or a fresh night: the fog takes them back. */
+  clearCrowd() {
+    for (const b of this.crowd || []) b.gone = true;
+    this.crowd = [];
+    this.crowdFronts = [];
+    this.crowdFlood = false;
+    this.crowdT = 0;
+    this.crowdBite = 0;
+    this.crowdPeak = 0;
+    this.crowdFree = 0;
+    this.crowdFrontT = 0;
   }
 
   /* ================= knock system ================= */

@@ -13,8 +13,8 @@
  */
 
 import { clamp, lerp, damp, TAU, rand, randInt, chance, dist, dist2, approachAngle, angDiff, visualAngle, Rng } from '../core/util.js';
-import { paintContactShadow } from './enemy3d.js';
-import { ENEMY_TYPES, VARIANTS } from '../core/config.js';
+import { paintContactShadow, Enemy3D, ENEMY_HEIGHT } from './enemy3d.js';
+import { ENEMY_TYPES, VARIANTS, SIEGE } from '../core/config.js';
 import { kitDamage } from './weapons.js';
 import { ROOM } from './mansion.js';
 
@@ -1569,6 +1569,193 @@ export class Bolt {
     ctx.beginPath(); ctx.moveTo(7, -2.4); ctx.lineTo(12, 0); ctx.lineTo(7, 2.4); ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#4a4a52';
     ctx.fillRect(-7, -3.4, 3, 6.8);
+    ctx.restore();
+  }
+}
+
+/* ==========================================================================
+ * THE SIEGE CROWD (issue #60)
+ *
+ * The hook is scale: "look how many are coming." A house with seven things
+ * in it is a tense survival sim, which is a different and weaker hook than
+ * an army at the walls. So the house gets an army — and the army is NOT
+ * forty more enemies.
+ *
+ * A crowd body has no hunt AI, no pathfinding, no line of sight and no
+ * skinned GLB slot. It knows three things: which wall it is going to, where
+ * in the doorway it stands, and how hard it is leaning. It is drawn from the
+ * same baked silhouette the roster already bakes for its proof frames — one
+ * drawImage, no rig, no mixer. The eight nearest real besiegers keep their
+ * skinned bodies and the combatant ceiling is exactly what it was.
+ *
+ * What the crowd does is real, though: it leans on doors and windows through
+ * the same `damageEntrance` path a besieger uses, and when a combat slot
+ * frees, one of the bodies leaning on the breach comes inside as a real
+ * enemy. The spectacle is the pressure, not a backdrop.
+ * ========================================================================== */
+
+export const CROWD = { MARCH: 'march', PRESS: 'press', LEAVE: 'leave' };
+
+/** Which way the outside is, from an entrance. The house looks out; they came in. */
+export function outwardOf(e) {
+  if (e && e.outside) {
+    const dx = e.outside.x - e.x, dy = e.outside.y - e.y;
+    const d = Math.hypot(dx, dy);
+    if (d > 1) return { x: dx / d, y: dy / d };
+  }
+  const f = (e && e.facing) || 'south';
+  return f === 'north' ? { x: 0, y: -1 } : f === 'south' ? { x: 0, y: 1 }
+    : f === 'east' ? { x: 1, y: 0 } : { x: -1, y: 0 };
+}
+
+/**
+ * Where in front of an entrance this body stands.
+ *
+ * Ranks, not a line: the front rank is at the wood, the ones behind press
+ * into it. A crowd reads as a crowd because it is thick — and a block of
+ * bodies the width of the wall is exactly what fits a phone frame, so the
+ * player sees the number instead of reading it in a HUD.
+ */
+export function crowdSpot(e, index, ring) {
+  const out = outwardOf(e);
+  const along = { x: -out.y, y: out.x };
+  const half = (e.axis === 'h' ? e.w : e.h) / 2;
+  // as wide as the opening plus a body either side, never wider than the frame
+  const perRow = clamp(Math.round((half * 2 + 220) / SIEGE.gap), 3, SIEGE.perRowMax);
+  const rank = Math.floor(index / perRow);
+  const col = index % perRow;
+  const lateral = (col - (perRow - 1) / 2) * SIEGE.gap;
+  const depth = ring + rank * SIEGE.row;
+  return {
+    x: e.x + out.x * depth + along.x * lateral,
+    y: e.y + out.y * depth + along.y * lateral,
+  };
+}
+
+export class CrowdBody {
+  constructor(key, x, y, entrance) {
+    this.key = key;
+    this.type = ENEMY_TYPES[key] || ENEMY_TYPES.crawler;
+    this.x = x; this.y = y;
+    this.entrance = entrance || null;
+    this.state = CROWD.MARCH;
+    this.index = 0;                        // place in the rank: 0 is at the wood
+    this.jx = rand(-10, 10);               // no two stand exactly alike
+    this.jy = rand(-8, 8);
+    this.gait = rand(0.85, 1.18);          // not everyone walks at the same pace
+    this.sizeMul = rand(0.9, 1.12);
+    this.flip = chance(0.5) ? -1 : 1;
+    this.bob = rand(0, TAU);
+    this.alpha = 0;                         // they come out of the dark
+    this.press = 0;
+    this.t = 0;
+    this.gone = false;
+    this.promoted = false;
+    this.radius = 11;
+    this.angle = 0;
+    this.dead = false;                      // the layer sorts them like bodies
+  }
+
+  /** Send it at another wall: the one it was leaning on is gone. */
+  retarget(entrance) {
+    this.entrance = entrance || null;
+    this.state = CROWD.MARCH;
+    this.press = 0;
+    if (!entrance) this.state = CROWD.LEAVE;
+  }
+
+  dismiss() { this.state = CROWD.LEAVE; }
+
+  update(dt, game) {
+    this.t += dt;
+    const e = this.entrance;
+
+    // dawn, or a wall that no longer needs leaning on: walk back into the fog
+    if (this.state === CROWD.LEAVE) {
+      const away = { x: this.x - (e ? e.x : game.player.x), y: this.y - (e ? e.y : game.player.y) };
+      const d = Math.hypot(away.x, away.y) || 1;
+      const sp = 90 * this.gait;
+      this.x += (away.x / d) * sp * dt;
+      this.y += (away.y / d) * sp * dt;
+      this.alpha = damp(this.alpha, 0, 1 / Math.max(0.2, SIEGE.fade), dt);
+      if (this.alpha < 0.04) this.gone = true;
+      return;
+    }
+    if (!e) { this.dismiss(); return; }
+
+    const spot = crowdSpot(e, this.index, SIEGE.ring);
+    const dx = spot.x + this.jx - this.x, dy = spot.y + this.jy - this.y;
+    const d = Math.hypot(dx, dy);
+    const speed = lerp(SIEGE.speed[0], SIEGE.speed[1], game.danger) * this.gait;
+    if (d > 6) {
+      const step = Math.min(d, speed * dt);
+      this.x += (dx / d) * step;
+      this.y += (dy / d) * step;
+      this.angle = Math.atan2(dy, dx);
+      this.state = CROWD.MARCH;
+    } else {
+      this.state = CROWD.PRESS;
+      // face the wall it is leaning on
+      this.angle = Math.atan2(e.y - this.y, e.x - this.x);
+    }
+    this.press = this.state === CROWD.PRESS ? damp(this.press, 1, 6, dt) : damp(this.press, 0, 6, dt);
+    this.alpha = damp(this.alpha, 1, 2.6, dt);
+  }
+
+  /**
+   * One drawImage. No rig, no mixer, no gradient: a baked silhouette at the
+   * height the roster already stands at, flipped and bobbed so forty of them
+   * do not read as a stamp.
+   */
+  draw(ctx, game) {
+    const rec = Enemy3D && Enemy3D.types ? Enemy3D.types[this.key] : null;
+    const frame = rec && rec.preview;
+    const crop = rec && rec.crop;
+    if (!frame || !crop || !crop.h) { this._drawFallback(ctx, game); return; }
+    const shade = game.renderer.shadeAt ? game.renderer.shadeAt(this.x, this.y, game) : { lit: 0.4 };
+    /* Drawn exactly the way the roster paints itself (Enemy3D._paint): the
+     * baked canvas is the whole padded frame, and the crop is applied to the
+     * destination. Get this wrong and the crowd comes out twice the size and
+     * standing beside its own shadow. */
+    const h = (ENEMY_HEIGHT[this.key] || 74) * this.sizeMul;
+    const w = h * (crop.w / Math.max(1, crop.h));
+    const bob = Math.sin(this.t * 7 + this.bob) * (this.state === CROWD.MARCH ? 1.6 : 0.7);
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.globalAlpha = this.alpha * (shade.lit < 0.4 ? 0.82 : 1);
+    if (this.flip < 0) ctx.scale(-1, 1);
+    /* Only the crop, at the size of the crop. The baked canvas is mostly the
+     * transparent air around the body, and thirty of those full canvases a
+     * frame is a phone paying to draw nothing. */
+    ctx.drawImage(frame, crop.x, crop.y, crop.w, crop.h, -w / 2, -h + 6 + bob, w, h);
+    /* Moon on a shoulder. Out in the yard the lightmap takes almost everything,
+     * and forty bodies you cannot make out is not a siege, it is a smudge. The
+     * top of the same baked frame, added and nudged up, gives each of them an
+     * edge — shape, not detail, and only where it is dark. */
+    if (shade.lit < 0.5) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = this.alpha * (0.5 - shade.lit) * 1.2;
+      ctx.drawImage(frame, crop.x, crop.y, crop.w, crop.h * 0.45,
+        -w / 2 - 1, -h + 4 + bob, w, h * 0.45);
+    }
+    ctx.restore();
+  }
+
+  /** No baked silhouette yet (or the GLB never loaded): a body is still a body. */
+  _drawFallback(ctx, game) {
+    const h = (ENEMY_HEIGHT[this.key] || 74) * this.sizeMul;
+    const w = h * 0.42;
+    const bob = Math.sin(this.t * 7 + this.bob) * 1.4;
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.globalAlpha = this.alpha;
+    ctx.fillStyle = '#08090d';
+    ctx.beginPath();
+    ctx.ellipse(0, -h * 0.5 + bob, w * 0.5, h * 0.42, 0, 0, TAU);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(0, -h * 0.86 + bob, w * 0.28, 0, TAU);
+    ctx.fill();
     ctx.restore();
   }
 }

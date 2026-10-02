@@ -571,6 +571,8 @@ export class Game {
   }
 
   beginNight() {
+    // the fog took them at dawn; a new night starts with an empty yard (#60)
+    if (this.director) this.director.clearCrowd();
     // v1.0 FIX (live click test): the whole night-start used to sit inside
     // `Audio.unlock().then(...)`. A suspended/hanging AudioContext (audio-less
     // browsers, some WebViews, autoplay quirks) then silently swallowed the
@@ -945,6 +947,13 @@ export class Game {
         if (en.dead) continue;
         if (dist(en.x, en.y, e.outside.x, e.outside.y) < 110 || (en.entranceId === e.id && en.state === 'breach')) atk++;
       }
+      // THE SIEGE (#60): the crowd leaning on the wood counts as attackers too
+      // — the door panel and the corner mark must point at a wall of bodies
+      for (const b of (this.director && this.director.crowd) || []) {
+        if (b.gone || b.entrance !== e || b.state !== 'press') continue;
+        atk += b.press;
+      }
+      atk = Math.round(atk);
       if (atk > 0 && e.attackers === 0) {
         // first hit on a quiet door: the player should *feel* it through the floor
         if (dist(e.x, e.y, this.player.x, this.player.y) < 1500) {
@@ -2516,6 +2525,7 @@ export class Game {
     Enemy3D.assign(this.enemies, p);
     const layer = [];
     for (const e of this.enemies) layer.push({ y: e.y, enemy: e });
+    for (const b of (this.director && this.director.crowd) || []) layer.push({ y: b.y, crowd: b });
     for (const f of m.furniture) {
       if (!isTallProp(f) || f.env3d) continue;   // a mesh stands in its place (#55)
       layer.push({ y: propFootY(f), prop: f });
@@ -2530,6 +2540,14 @@ export class Game {
         if (!r.isVisible(f.x, f.y, Math.max(f.w, f.h) + 60)) continue;
         ctx.save();
         drawFurnitureShape(ctx, f, this, t);
+        ctx.restore();
+        continue;
+      }
+      if (item.crowd) {
+        const b = item.crowd;
+        if (!r.isVisible(b.x, b.y, 120)) continue;
+        ctx.save();
+        b.draw(ctx, this);
         ctx.restore();
         continue;
       }
