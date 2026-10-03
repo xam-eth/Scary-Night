@@ -13,6 +13,15 @@
 <link rel="preload" as="fetch" crossorigin="anonymous" href="./hunter_run_walk_claw_sword_shot.glb" />
 <link rel="preload" as="fetch" crossorigin="anonymous" href="./zombie+3d+model.glb" />
 <link rel="icon" href="./assets/brand/mark.svg" type="image/svg+xml" />
+<link rel="manifest" href="./manifest.webmanifest" />
+<!-- Play Billing in a Trusted Web Activity needs the Digital Goods API, and
+     the Digital Goods API ships as an origin trial. Register the token for
+     THIS origin at https://developer.chrome.com/origintrials (Digital Goods
+     API v2) and paste it below; without it the Play shop falls back to the
+     shard lane and takes no money. Tokens expire — put the date in the
+     release calendar.
+<meta http-equiv="origin-trial" content="PASTE_YOUR_DIGITAL_GOODS_API_V2_TOKEN" />
+-->
 </head>
 <body>
   <div id="stage">
@@ -42,5 +51,15 @@
   </noscript>
 
   <script type="module" src="./src/main.js"></script>
+  <!-- The service worker, only where it means something. On http (localhost,
+       the preview server) it is not registered at all: a cached module graph
+       would hide every edit during development. -->
+  <script>
+    if ('serviceWorker' in navigator && location.protocol === 'https:') {
+      addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => { /* a PWA is a bonus, never a requirement */ });
+      });
+    }
+  </script>
 </body>
 </html>

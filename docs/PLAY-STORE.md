@@ -15,11 +15,19 @@ Official rules used here:
 | Surface | Digital goods (one mercy, two coats, a name) | Midtrans |
 |---|---|---|
 | Browser | Midtrans Snap, IDR | Yes. Client key is public. Server key is only in `server/.env`. |
-| Google Play app | Google Play Billing, via `window.LNBridge` | No. Indonesia is not an alternative-billing region. Selling these SKUs through Midtrans on Play violates the Payments policy. |
+| Google Play app (TWA) | Google Play Billing, via the **Digital Goods API** (`window.getDigitalGoodsService`) | No. Indonesia is not an alternative-billing region. Selling these SKUs through Midtrans on Play violates the Payments policy. |
+| Google Play app (WebView) | Google Play Billing, via `window.LNBridge` | No. Same reason. |
 
-`IAP.init()` already prefers `LNBridge` over Midtrans. The Play wrapper must
-set `window.LNBridge.postMessage` and complete purchases with
-`window.__LN_IAP_result`. Create these Play products, and no others:
+`IAP.init()` prefers `LNBridge` (a WebView wrapper can inject it; a Trusted
+Web Activity cannot inject anything) and falls back to the Digital Goods API
+for the TWA, which is what `android/twa-manifest.json` enables with
+`features.playBilling.enabled`. The LNBridge contract is still the one to
+implement if the app is ever rebuilt as a native WebView shell:
+
+    window.LNBridge.postMessage(JSON.stringify({type:'purchase'|'restore',
+      sku, requestId}))  ->  window.__LN_IAP_result(requestId, result)
+
+Create these Play products, and no others:
 
 | Product id | Play type | After the sheet |
 |---|---|---|
@@ -71,11 +79,17 @@ Physical goods are not sold. Do not add them to Play Billing.
 
 ## Before you press Submit
 
-1. Wrap the site in a Trusted Web Activity or a thin WebView that injects `LNBridge` and uses Play Billing. Do not ship the python preview, and do not ship a build whose only pay button calls Midtrans.
+1. Build the Trusted Web Activity and fill in `bundle.config.json` — the whole
+   run is in `docs/PLAY-BUNDLE.md`. The build refuses to start while the host
+   is still `https://your.host`. Do not ship the python preview, and do not
+   ship a build whose only pay button calls Midtrans: inside a TWA the
+   Midtrans rail is switched off by `IAP.init()`, so check the shop once in
+   the sideloaded APK before you submit.
 2. Host `privacy.html` and `delete.html` on HTTPS. Paste both URLs into Play Console.
 3. Put a real support email on the store listing. The in-repo contact is the public GitHub issues page, which is a contact mechanism, not a substitute for the Console email.
 4. Complete the content-rating questionnaire as 18+ horror.
-5. Upload a 512 icon and a 1024×500 feature graphic. They are not generated here.
+5. Upload a 512 icon and a 1024×500 feature graphic. `node tools/makeicons.mjs`
+   draws both from `assets/brand/mark.svg`, along with the PWA icons.
 6. Set the Midtrans notification URL to `https://your.host/api/iap/callback` for the **web** deploy only. Callbacks must send `signature_key`.
 7. Rotate the Midtrans server key if it has been pasted into chat, email, or a ticket. Then update `server/.env` on the server. Never commit it.
 8. Declare IAP prices in Play Console. The IDR figures in `server/catalog.json` are the web prices, not the Play prices. Play prices are whatever you set in Console.

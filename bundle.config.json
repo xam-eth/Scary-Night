@@ -1,0 +1,27 @@
+{
+  "_readme": [
+    "One source of truth for the Play bundle. Edit the host before you build:",
+    "host + basePath are where the game is served; packageId is PERMANENT on Play",
+    "once the first AAB is uploaded — choose it now, not after."
+  ],
+  "host": "https://your.host",
+  "basePath": "/",
+  "packageId": "com.xameth.lastnight",
+  "appName": "LAST NIGHT",
+  "launcherName": "LAST NIGHT",
+  "shortName": "LAST NIGHT",
+  "description": "Survive until dawn. A 3/4 vampire survival horror game about tension, doors and the sound of knocking.",
+  "versionName": "1.0.0",
+  "versionCode": 1,
+  "minSdkVersion": 23,
+  "display": "standalone",
+  "orientation": "portrait",
+  "themeColor": "#05060b",
+  "backgroundColor": "#05060b",
+  "navigationColor": "#05060b",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android/lastnight-upload.jks",
+    "alias": "lastnight"
+  }
+}

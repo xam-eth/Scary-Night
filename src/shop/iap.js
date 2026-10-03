@@ -15,10 +15,17 @@
  * Not sold: shard packs, stat upgrades, plank pouches, revive bundles,
  * loot boxes, timers, "best value" pressure. Shards stay earned.
  *
- * Google Play Billing (window.LNBridge) is the only rail for a Play build.
- * Consumables must be consumeAsync'd, non-consumables acknowledgePurchase'd,
- * and the game grants only after that flag comes back. A bare {ok:true}
- * is not a purchase. Web uses Midtrans for the same four goods.
+ * Google Play Billing is the only rail for a Play build. Consumables must be
+ * consumed and non-consumables acknowledged before the game grants anything:
+ * a bare {ok:true} is not a purchase. Two ways to reach Play, and only the
+ * first exists in a Trusted Web Activity, because a TWA cannot inject JS:
+ *   - window.LNBridge      a WebView wrapper's own bridge (see below)
+ *   - Digital Goods API    window.getDigitalGoodsService, which Chrome inside
+ *                          a TWA answers through the app's billing delegate
+ *                          (src/shop/digitalgoods.js)
+ * Midtrans is the browser rail only. Inside the TWA it is off: selling these
+ * four goods through anything but Play in a Play-distributed app breaks the
+ * Payments policy. See docs/PLAY-BUNDLE.md.
  *
  * ─── THE IMPLEMENTATION ────────────────────────────────────────────────────
  * Provider abstraction so the web build ships today and native stores bolt
@@ -38,6 +45,7 @@
 import { SHOP_CONFIG, IDR } from './config.js';
 import { LANES, ownsRank, unlocked } from '../game/economy.js';
 import { Ads } from './ads.js';
+import { DigitalGoodsProvider, inTwa } from './digitalgoods.js';
 
 export const IAP_ENABLED = true;          // web: Midtrans. Play: LNBridge wins in init()
 export const SANDBOX_LATENCY_MS = 900;
@@ -263,10 +271,20 @@ export const IAP = {
 
   init() {
     if (!IAP_ENABLED) { this.mode = 'disabled'; return this; }
+    // A WebView wrapper's bridge wins when one exists: it is the same shop,
+    // driven by native code, and it can answer things a TWA cannot.
     const native = new NativeProvider();
     if (native.available) { this.mode = 'native'; this.provider = native; native.install(); return this; }
+    // Then Play Billing through the Digital Goods API — the only rail a
+    // Trusted Web Activity has, and the only one Play allows in it.
+    const play = new DigitalGoodsProvider(findSku);
+    if (play.available) { this.mode = 'native'; this.provider = play; play.install(); return this; }
+    // Midtrans is a browser rail. Inside the app it is not an option at all,
+    // so the shop runs on shards rather than on a rail Play would reject.
     const mid = new MidtransProvider(SHOP_CONFIG.midtrans);
-    if (SHOP_CONFIG.provider === 'midtrans' && mid.available) { this.mode = 'midtrans'; this.provider = mid; return this; }
+    if (SHOP_CONFIG.provider === 'midtrans' && mid.available && !inTwa()) {
+      this.mode = 'midtrans'; this.provider = mid; return this;
+    }
     this.mode = 'sandbox'; this.provider = new SandboxProvider();
     return this;
   },
@@ -355,13 +373,16 @@ export const IAP = {
     this.busy = id; this.lastError = null;
     let res;
     try {
-      res = await this.provider.purchase(sku.id);
+      res = await this.provider.purchase(sku.id, sku);   // the Play rail needs the product type
     } catch (err) {
       res = { ok: false, error: String(err && err.message || err) };
     }
     this.busy = null;
     if (!res.ok) { this.lastError = res.error; return res; }
     if (this.mode === 'native') {
+      // True for both Play rails: the bridge hands back the same flags after
+      // consumeAsync/acknowledgePurchase, the Digital Goods provider after
+      // consume/acknowledge. Neither of them grants on a bare ok.
       const finished = sku.play === 'consumable' ? res.consumed : res.acknowledged;
       if (!finished) { this.lastError = 'play-not-finished'; return { ok: false, error: 'play-not-finished' }; }
     }
