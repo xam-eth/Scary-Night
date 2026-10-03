@@ -2496,6 +2496,7 @@ export class Game {
         w: r.view.w, h: r.view.h, dpr: r.dpr,
         shakeX: r.cam.sx, shakeY: r.cam.sy,
         light: r.keyLightAt(r.cam.x, r.cam.y),
+        foldY: this.player.y,
       });
       if (env) {
         ctx.save();

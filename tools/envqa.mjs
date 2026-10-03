@@ -64,6 +64,33 @@ await page.evaluate(async () => {
   window.__enemy = (await import('./src/game/enemy3d.js')).Enemy3D;
   window.__eh = (await import('./src/game/enemy3d.js')).ENEMY_HEIGHT;
   window.__foes = await import('./src/game/enemies.js');
+  /* Is the instance standing at (x, z) folded away right now? Read off the
+   * instance matrix — what the GPU is actually being handed — rather than
+   * from a second model of the fold, which is how this file once asserted a
+   * rule the room was no longer following. */
+  window.__isFolded = (x, z, tolX = 220, tolZ = 70) => {
+    const E = window.__env, T = window.__three;
+    const m4 = new T.Matrix4(), v = new T.Vector3(), q = new T.Quaternion(), sc = new T.Vector3();
+    for (const group of [E.roomMeshes, E.propMeshes]) {
+      for (const key of Object.keys(group || {})) {
+        const mesh = group[key];
+        if (!mesh || !mesh.userData || !mesh.userData.placements) continue;
+        const list = mesh.userData.placements;
+        for (let i = 0; i < list.length; i++) {
+          const p = list[i];
+          /* Not every zero-scaled instance is folded. A window is two
+           * instances at one spot — glass and broken glass — and one of them
+           * is always switched off on purpose. Only the FOLD hides a piece
+           * the room is otherwise wearing. */
+          if (p.off) continue;
+          if (Math.abs(p.x - x) > tolX || Math.abs(p.z - z) > tolZ) continue;
+          mesh.getMatrixAt(i, m4); m4.decompose(v, q, sc);
+          if (sc.x === 0 && sc.y === 0) return true;
+        }
+      }
+    }
+    return false;
+  };
   window.__three = await import('./src/vendor/three/three.module.min.js');
 });
 await page.waitForFunction(() => window.__LN && window.__LN.screen === 'playing', { timeout: 30000, polling: 100 }).catch(() => {});
@@ -423,7 +450,8 @@ for (const [name, x, y] of BAKE_STOPS) {
     // would be measuring the governor instead of the bake
     g.setQuality(3);
     const drew = E.render({ camX: r.cam.x, camY: r.cam.y, zoom: r.cam.zoom, tilt: r.tilt,
-      w: r.view.w, h: r.view.h, dpr: r.dpr, light: r.keyLightAt(r.cam.x, r.cam.y) });
+      w: r.view.w, h: r.view.h, dpr: r.dpr,
+      foldY: g.player.y, light: r.keyLightAt(r.cam.x, r.cam.y) });
     gl.readPixels(0, 0, cw, ch, gl.RGBA, gl.UNSIGNED_BYTE, px);
     // the kit draws on a transparency: only its own pixels count
     let sum = 0, n = 0;
@@ -458,7 +486,8 @@ const ab = await page.evaluate(() => {
   const shot = () => {
     const px = new Uint8Array(cw * ch * 4);
     E.render({ camX: r.cam.x, camY: r.cam.y, zoom: r.cam.zoom, tilt: r.tilt,
-      w: r.view.w, h: r.view.h, dpr: r.dpr, light: r.keyLightAt(r.cam.x, r.cam.y) });
+      w: r.view.w, h: r.view.h, dpr: r.dpr,
+      foldY: g.player.y, light: r.keyLightAt(r.cam.x, r.cam.y) });
     gl.readPixels(0, 0, cw, ch, gl.RGBA, gl.UNSIGNED_BYTE, px);
     return px;
   };
@@ -508,6 +537,7 @@ if (ONLY === 'bake') {
 // `node tools/envqa.mjs plates` — just the photographed rooms, ~2 minutes.
 if (ONLY === 'plates') {
   await roomBuildSection();
+  await foldSection();
   await browser.close();
   server.kill('SIGTERM');
   process.exit(0);
@@ -545,7 +575,8 @@ for (let n = 0; n < STOPS.length; n++) {
     };
     const shot = (label) => {
       E.render({ camX: r.cam.x, camY: r.cam.y, zoom: r.cam.zoom, tilt: r.tilt,
-        w: r.view.w, h: r.view.h, dpr: r.dpr, light: r.keyLightAt(r.cam.x, r.cam.y) });
+        w: r.view.w, h: r.view.h, dpr: r.dpr,
+        foldY: g.player.y, light: r.keyLightAt(r.cam.x, r.cam.y) });
       grab();
       return label;
     };
@@ -586,7 +617,7 @@ for (let n = 0; n < STOPS.length; n++) {
     for (const e of g.mansion.entrances) {
       if (e.kind !== 'window') continue;
       const p = r.worldToScreen(e.x, e.y);
-      const folded = e.y > r.cam.y;                // folded: it would stand in front of her
+      const folded = window.__isFolded(e.x, e.y, 200, 60);   // read it, don't model it
       const off = Math.abs(p.x - r.view.w / 2) > r.view.w * 0.5
         || Math.abs(p.y - r.view.h / 2) > r.view.h * 0.55;
       if (folded || off) {
@@ -806,7 +837,8 @@ for (const w of winList) {
     };
     const shot = () => {
       E.render({ camX: r.cam.x, camY: r.cam.y, zoom: r.cam.zoom, tilt: r.tilt,
-        w: r.view.w, h: r.view.h, dpr: r.dpr, light: r.keyLightAt(r.cam.x, r.cam.y) });
+        w: r.view.w, h: r.view.h, dpr: r.dpr,
+        foldY: g.player.y, light: r.keyLightAt(r.cam.x, r.cam.y) });
       gl.readPixels(0, 0, cw, ch, gl.RGBA, gl.UNSIGNED_BYTE, px);
     };
     const diff = (a, b) => (a && b) ? Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]) : 999;
@@ -822,7 +854,9 @@ for (const w of winList) {
     shot();
     const wv = E.windows.find((v) => v.id === id);
     return { sx: Math.round(p.x), sy: Math.round(p.y), ds: pts.map((q, i) => diff(A[i], B[i])),
-      folded: wv ? wv.e.y > r.cam.y : null, camY: Math.round(r.cam.y), wy: Math.round(wy) };
+      folded: wv ? window.__isFolded(wv.e.x, wv.e.y, 200, 60) : null,
+      camY: Math.round(r.cam.y), wy: Math.round(wy),
+      herY: Math.round(g.player.y), foldedAt: Math.round(window.__env._foldedAt) };
   }, [w.x, w.y, w.id]);
   const read = m.ds.filter((d) => d !== 999);
   const stone = read.filter((d) => d > 25).length;
@@ -834,7 +868,8 @@ for (const w of winList) {
   if (ok) winOk++;
   console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${w.id.padEnd(16)} from (${vantage.x},${vantage.y})  base@${m.sx},${m.sy}`
     + `  stone/open at +6/20/45/75/105px = ${m.ds.join('/')}`
-    + `  [window y ${m.wy} vs camera ${m.camY}${m.folded ? ' — folded' : ''}]`);
+    + `  [window y ${m.wy} vs camera ${m.camY} vs her ${m.herY}, fold at ${m.foldedAt}`
+    + `${m.folded ? ' — folded' : ''}]`);
 }
 console.log(`windows drawn: ${winOk}/${winTried} of the ones a player can stand in front of`);
 
@@ -950,10 +985,115 @@ async function roomBuildSection() {
     `the room IS the kit — hide it and every room goes with it (${standing.length}/${rows.length}, weakest ${weakest[0]} at ${weakest[1].toFixed(1)})`);
 }
 
-/* `node tools/envqa.mjs --mode=room` runs the one section, for the ten
- * seconds it takes to answer "is this room built or is it a picture". */
+/* ---------- the fold ----------
+ * A wall standing between her and the viewer steps aside, so it cannot cover
+ * her. That is the whole of it: a band, one wall deep, south of where she
+ * is. It is not a licence to take the south half of the house away.
+ *
+ * The condition was inverted once — `p.z > camY + reach` instead of the band
+ * — which hid every wall further than 197px south of her and left the ones
+ * that actually cover her standing. The house then assembled itself around
+ * her as she walked: walls appeared when she came abreast of them and
+ * vanished behind her back. "Ruangan sangat tidak stabil, dan rusak."
+ *
+ * So this reads the instance matrices — what is on the screen, not what the
+ * plan says — at four stops around the house and holds the fold to three
+ * things: it hides few, it hides only what is inside its own reach, and no
+ * wall far from her changes state when she walks.
+ */
+async function foldSection() {
+  const ok = (b, msg) => console.log(`  ${b ? 'PASS' : 'FAIL'}  ${msg}`);
+  console.log('\n---- THE FOLD (a wall between her and the viewer steps aside) ----');
+  /* The last stop is the point of the whole thing: standing with her back to
+   * a wall, the wall between her and the viewer has to step aside. If
+   * nothing folds anywhere, the fold has been fixed by being switched off. */
+  const STOPS = [['main hall', 600, 1100], ['library', 1330, 350], ['dining', 470, 360],
+    ['chapel', 2050, 1150], ['back to the hall wall', 600, 1440]];
+  const read = async (x, y) => page.evaluate(async (px, py) => {
+    const THREE = await import('./src/vendor/three/three.module.min.js');
+    const E = window.__env, g = window.__LN;
+    g.screen = 'playing'; g.enemies.length = 0;
+    g.player.x = px; g.player.y = py; g.renderer.snapCamera(px, py);
+    g.render();
+    const camY = g.renderer.cam.y;
+    const m4 = new THREE.Matrix4(), pos = new THREE.Vector3(), quat = new THREE.Quaternion(), scl = new THREE.Vector3();
+    const out = [];
+    for (const key of ['wall', 'cracked', 'corner', 'window', 'windowBroken']) {
+      const mesh = E.roomMeshes && E.roomMeshes[key];
+      if (!mesh) continue;
+      const list = mesh.userData.placements;
+      for (let i = 0; i < list.length; i++) {
+        const p = list[i];
+        mesh.getMatrixAt(i, m4);
+        m4.decompose(pos, quat, scl);
+        const reach = E._foldK * (mesh.userData.unitH || 0) * (p.sy || 1);
+        out.push({
+          key, z: p.z, reach, off: !!p.off,
+          oldReach: E._foldK * (mesh.userData.unitH || 0) * (p.sy || 1),
+          hidden: scl.x === 0 && scl.y === 0,
+        });
+      }
+    }
+    return { camY, rows: out };
+  }, x, y);
+
+  let worstBand = 0, hiddenTotal = 0, total = 0, leaks = [], mostFolded = 0;
+  for (const [name, px, py] of STOPS) {
+    /* eslint-disable no-await-in-loop */
+    const { camY, rows } = await read(px, py);
+    const hidden = rows.filter((r) => r.hidden && !r.off);
+    const tooFar = hidden.filter((r) => r.z - camY > r.reach + 1);
+    const band = hidden.length ? Math.max(...hidden.map((r) => r.z - camY)) : 0;
+    worstBand = Math.max(worstBand, band);
+    mostFolded = Math.max(mostFolded, hidden.length);
+    hiddenTotal += hidden.length; total += rows.length;
+    if (tooFar.length) leaks.push(`${name}:${tooFar.length}`);
+    /* What the inverted rule took: every wall further than its reach, to
+     * the far edge of the world. Printed beside the fix so the size of the
+     * hole is in the record, not in somebody's memory. */
+    const oldRule = rows.filter((r) => !r.off && r.z - camY > r.oldReach).length;
+    console.log(`        ${name.padEnd(10)} camera z ${Math.round(camY).toString().padStart(5)}`
+      + `  folded ${String(hidden.length).padStart(3)}/${rows.length}`
+      + `  band ${Math.round(band)}px`
+      + `   (the inverted rule took ${oldRule})`
+      + `  ${tooFar.length ? `BEYOND REACH: ${tooFar.length}` : ''}`);
+  }
+  ok(leaks.length === 0,
+    `the fold is a band, not a half-house — nothing is hidden beyond its own reach`
+    + `${leaks.length ? ` (leaking at ${leaks.join(', ')})` : ''}`);
+  ok(mostFolded >= 1,
+    `and the fold still folds — with her back to a wall, that wall steps aside (${mostFolded} at the closest stop)`);
+  ok(hiddenTotal / Math.max(1, total) < 0.12,
+    `and it hides a wall she is standing at, not the house behind her`
+    + ` (${hiddenTotal}/${total} = ${(100 * hiddenTotal / Math.max(1, total)).toFixed(1)}% of the walls folded)`);
+
+  /* Stability: walk 260px north in the hall. Nothing far from her may
+   * change state — that is the wall appearing as she comes abreast of it. */
+  const A = await read(600, 1100);
+  const B = await read(600, 840);
+  const far = A.rows.filter((r) => Math.abs(r.z - A.camY) > 620);
+  let flipped = 0;
+  for (let i = 0; i < A.rows.length; i++) {
+    const a = A.rows[i], b = B.rows[i];
+    if (!far.includes(a)) continue;
+    if (a.hidden !== b.hidden) flipped++;
+  }
+  /* Same walk, inverted rule: a wall blinks every time the threshold passes
+   * over it, and the threshold sweeps the whole house on every step. */
+  const blinkedOld = A.rows.filter((r) => !r.off
+    && ((r.z - A.camY > r.oldReach) !== (r.z - B.camY > r.oldReach))).length;
+  ok(flipped === 0,
+    `walking 260px does not blink the house — ${flipped} of ${far.length} distant walls changed state`
+    + ` (the inverted rule blinked ${blinkedOld} of ${A.rows.length})`);
+}
+
+/* `node tools/envqa.mjs --mode=room` stops after the room: the window sweep
+ * (which always runs, and is the slow part), then the two sections that
+ * answer "is this room built, and is it standing still". No bake, no bodies,
+ * no siege. */
 if (MODE === 'room') {
   await roomBuildSection();
+  await foldSection();
   await browser.close();
   server.kill('SIGTERM');
   process.exit(0);

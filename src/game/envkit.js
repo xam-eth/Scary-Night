@@ -651,15 +651,27 @@ class EnvKitRuntime {
     if (!p) return;
     if (!this._dummy) this._dummy = new THREE.Object3D();
     const d = this._dummy;
-    /* THE FOLD. A thing standing between her and the viewer is hidden so it
-     * cannot cover her — but only for as far as it can actually reach. A
-     * 2.6m wall laid down at this camera throws its shadow 197px south of
-     * her; the old rule hid everything south of her to the edge of the
-     * world, which took the whole south wall of every room with it and left
-     * the house open to the night on one side. */
-    const reach = this._foldK * (mesh.userData.unitH || 0) * (p.sy || 1);
+    /* THE FOLD. A thing standing between her and the viewer steps aside, so
+     * it cannot cover her — and it steps aside for exactly as far as it can
+     * reach, no further.
+     *
+     * Reach, in world px: the camera looks down at asin(tilt), so an object
+     * of height H hides her to a line H / tan(tilt) south of where she
+     * stands, minus her own height, because a panel that only covers her
+     * shoes is depth, not a wall in the way. For a 2.6m wall that is ~90px:
+     * the wall she is standing against, and nothing behind it.
+     *
+     * The band is the whole trick, and it was inverted once — `p.z > at +
+     * reach` instead of between — which folded every wall further than that
+     * away and left the ones actually covering her standing. The house then
+     * assembled itself around her as she walked: a wall appeared the moment
+     * she came abreast of it and dissolved behind her back. The room was not
+     * unstable. Half of it was missing. */
+    const tall = (mesh.userData.unitH || 0) * (p.sy || 1);
+    const reach = Math.max(0, this._foldK * (tall - VALEN_HEIGHT));
     const hide = p.off
-      || (mesh.userData.folds && this._foldedAt != null && p.z > this._foldedAt + reach);
+      || (mesh.userData.folds && this._foldedAt != null
+        && p.z > this._foldedAt && p.z < this._foldedAt + reach);
     d.position.set(p.x, p.y || 0, p.z);
     d.rotation.set(0, p.ry || 0, 0);
     d.scale.set(hide ? 0 : (p.sx == null ? 1 : p.sx),
@@ -1451,7 +1463,10 @@ class EnvKitRuntime {
     cam.lookAt(tx, 0, ty);
     cam.updateProjectionMatrix();
 
-    this._foldNear(camY);
+    /* Fold around HER, not around the camera. The camera lerps; she does
+     * not. Following the camera opened the gap between her and the band on
+     * every fast turn, which is a wall flickering on her own shoulders. */
+    this._foldNear(view.foldY != null ? view.foldY : camY);
     // A keep is brighter than a ruin. Every level of the fortress hangs more
     // light in the house, so the room itself tells her she has been here
     // before — the lamp is hers now, not the house's.
