@@ -15,7 +15,7 @@ import { unlocked, nextRevealLine, LANES, nextRank, rankCost, rankCount, LANE_CA
 import { fragmentsKnown, endingFrame } from '../game/narrative.js';
 import { intelLine, huntPct, huntProgress, fortressState, huntTells, masterReady, masterDown, armouryNext, FORTRESS_STATES } from '../game/hunt.js';
 import { INFORMANT, informantLine, boardEntries } from '../game/informant.js';
-import { drawPlateCover } from '../game/roomplates.js';
+import { drawPlateCover } from './storycards.js';
 import { Valen3D } from '../game/valen3d.js';
 import { IAP, CATALOG } from '../shop/iap.js';
 import { Ads } from '../shop/ads.js';

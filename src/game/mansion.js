@@ -27,7 +27,6 @@
 import { clamp, rand, randInt, chance, hash2, hashRange, Rng, TAU } from '../core/util.js';
 import { PAL } from '../core/render.js';
 import { DOOR } from '../core/config.js';
-import { drawRoomPlates } from './roomplates.js';
 import { drawRoomMarks } from './narrative.js';
 
 export const ROOM = {
@@ -83,24 +82,25 @@ export class Mansion {
     };
 
     // ---- room rects (interior play space) ----
-    const DINING = this.rooms.dining = { id: ROOM.DINING, name: 'DINING ROOM', x: 80, y: 60, w: 780, h: 600, floor: 'wood', dark: 0.72, plate: 'dining' };
-    const LIBRARY = this.rooms.library = { id: ROOM.LIBRARY, name: 'LIBRARY', x: 940, y: 60, w: 780, h: 600, floor: 'wood', dark: 0.78, plate: 'library' };
-    const HALL = this.rooms.hall = { id: ROOM.HALL, name: 'MAIN HALL', x: 80, y: 760, w: 1120, h: 740, floor: 'marble', dark: 0.62, plate: 'hall' };
-    const BASEMENT = this.rooms.basement = { id: ROOM.BASEMENT, name: 'BASEMENT', x: 1280, y: 820, w: 500, h: 680, floor: 'stone', dark: 1.35, plate: 'basement' };
+    const DINING = this.rooms.dining = { id: ROOM.DINING, name: 'DINING ROOM', x: 80, y: 60, w: 780, h: 600, floor: 'wood', dark: 0.72 };
+    const LIBRARY = this.rooms.library = { id: ROOM.LIBRARY, name: 'LIBRARY', x: 940, y: 60, w: 780, h: 600, floor: 'wood', dark: 0.78 };
+    const HALL = this.rooms.hall = { id: ROOM.HALL, name: 'MAIN HALL', x: 80, y: 760, w: 1120, h: 740, floor: 'marble', dark: 0.62 };
+    const BASEMENT = this.rooms.basement = { id: ROOM.BASEMENT, name: 'BASEMENT', x: 1280, y: 820, w: 500, h: 680, floor: 'stone', dark: 1.35 };
     // v1.0 east wing: the Conservatory (glass roof — moonlight you can't govern)
     // and the Chapel (an altar light the house itself seems to respect).
-    const CONSERV = this.rooms.conserv = { id: ROOM.CONSERV, name: 'CONSERVATORY', x: 1746, y: 60, w: 554, h: 580, floor: 'glass', dark: 0.42, plate: 'conserv' };
-    const CHAPEL = this.rooms.chapel = { id: ROOM.CHAPEL, name: 'CHAPEL', x: 1793, y: 806, w: 507, h: 694, floor: 'tile', dark: 0.68, plate: 'chapel' };
+    const CONSERV = this.rooms.conserv = { id: ROOM.CONSERV, name: 'CONSERVATORY', x: 1746, y: 60, w: 554, h: 580, floor: 'glass', dark: 0.42 };
+    const CHAPEL = this.rooms.chapel = { id: ROOM.CHAPEL, name: 'CHAPEL', x: 1793, y: 806, w: 507, h: 694, floor: 'tile', dark: 0.68 };
     // West scullery: a weak door and a larder. You cannot watch it from the hall.
-    const KITCHEN = this.rooms.kitchen = { id: ROOM.KITCHEN, name: 'KITCHEN', x: -300, y: 90, w: 354, h: 500, floor: 'stone', dark: 0.7, plate: 'kitchen' };
+    const KITCHEN = this.rooms.kitchen = { id: ROOM.KITCHEN, name: 'KITCHEN', x: -300, y: 90, w: 354, h: 500, floor: 'stone', dark: 0.7 };
     // North of the library: a lamp that can hold them, and a window that cannot.
-    const STUDY = this.rooms.study = { id: ROOM.STUDY, name: 'STUDY', x: 980, y: -280, w: 720, h: 320, floor: 'wood', dark: 0.66, plate: 'study' };
-    /* Every room wears a photographed plate. The floor you walk is a picture
-     * of the room it belongs to, not another drawn box: dining to study were
-     * the last eight to get one, so the house is photographed throughout. */
-    const GALLERY = this.rooms.gallery = { id: ROOM.GALLERY, name: 'GALLERY', x: 50, y: -380, w: 660, h: 280, floor: 'wood', dark: 0.68, plate: 'gallery' };
-    const GATE = this.rooms.gatehouse = { id: ROOM.GATEHOUSE, name: 'GATEHOUSE', x: -300, y: 620, w: 354, h: 850, floor: 'stone', dark: 0.7, plate: 'gatehouse' };
-    const ORATORY = this.rooms.oratory = { id: ROOM.ORATORY, name: 'ORATORY', x: 1770, y: -380, w: 480, h: 280, floor: 'tile', dark: 0.6, plate: 'oratory' };
+    const STUDY = this.rooms.study = { id: ROOM.STUDY, name: 'STUDY', x: 980, y: -280, w: 720, h: 320, floor: 'wood', dark: 0.66 };
+    /* No room wears a photograph. Every room is built: floor slabs from the
+     * nav grid, wall panels from the wall solids, and furniture instanced
+     * from the same kit — which is what lets the house be rebuilt, piece for
+     * piece, in any engine that can read a GLB. */
+    const GALLERY = this.rooms.gallery = { id: ROOM.GALLERY, name: 'GALLERY', x: 50, y: -380, w: 660, h: 280, floor: 'wood', dark: 0.68 };
+    const GATE = this.rooms.gatehouse = { id: ROOM.GATEHOUSE, name: 'GATEHOUSE', x: -300, y: 620, w: 354, h: 850, floor: 'stone', dark: 0.7 };
+    const ORATORY = this.rooms.oratory = { id: ROOM.ORATORY, name: 'ORATORY', x: 1770, y: -380, w: 480, h: 280, floor: 'tile', dark: 0.6 };
     this.roomList = [DINING, LIBRARY, HALL, BASEMENT, CONSERV, CHAPEL, KITCHEN, STUDY, GALLERY, GATE, ORATORY];
 
     /* ---- outer + inner walls ----
@@ -1231,7 +1231,6 @@ export class Mansion {
 
   drawFloor(ctx) {
     ctx.drawImage(this.floorCanvas, this.bakeOx, this.bakeOy);
-    drawRoomPlates(ctx, this);
     drawRoomMarks(ctx, this);
     if (!this.stakesUp) return;
     ctx.save();

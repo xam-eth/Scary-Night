@@ -281,6 +281,16 @@ pay-to-win), Deconstructor of Fun (Archero; Fortnite), Mobile Free To Play
   after settlement/consume/acknowledge (`src/shop/config.js`, `docs/IAP.md`).
 - The byte-exact GLB rule stands (`tools/glbtest.mjs` 18/18) — cosmetics composite
   over the model, never modify it.
+- **A room is built, never photographed.** Floors, walls, corners, windows,
+  doors and furniture are instanced from `assets/env-kit/*.glb` and placed
+  from the mansion's own plan; a photograph may never be laid into a room,
+  over a room, or under it. Photographs belong to cards and screens — the
+  loading veil, the menu, the dawn card, the ending (`src/ui/storycards.js`),
+  never to a space you can walk. The rule exists for portability: data plus
+  GLB rebuilds the house in any engine (Godot included); one JPG cannot be
+  rebuilt, lit, occluded or walked through. `tools/envqa.mjs --mode=room`
+  enforces it — it counts the kit pieces standing inside every room's own
+  rect and fails if a room stops being made of pieces.
 
 ---
 

@@ -103,7 +103,8 @@ export const PROP_METRES = Object.freeze({
  * What the room needs: doors (phase C1) and now the floor and the walls.
  * Props land next; the loader does not care how many names are in here.
  */
-const FILES = Object.freeze({
+/** Exported: the house can be written out as data, piece by piece (export-house.mjs). */
+export const KIT_FILES = Object.freeze({
   doorway: 'doorway.glb',
   gate: 'door_gate.glb',
   broken: 'wall_broken.glb',
@@ -516,11 +517,11 @@ class EnvKitRuntime {
       Valen3D.scene.add(this.group);
 
       const loader = new GLTFLoader();
-      const names = Object.keys(FILES);
+      const names = Object.keys(KIT_FILES);
       let left = names.length;
       for (const name of names) {
         loader.load(
-          KIT_DIR + FILES[name],
+          KIT_DIR + KIT_FILES[name],
           (gltf) => {
             const box = new THREE.Box3().setFromObject(gltf.scene);
             this.pieces[name] = {

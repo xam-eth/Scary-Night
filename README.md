@@ -202,6 +202,20 @@ Two small map tools are included for development: `tools/geo.mjs` dumps room
 rects, props and entrance coordinates, and `tools/nav.mjs` prints the
 walkability grid and test routes. Both are useful when editing the mansion.
 
+`tools/export-house.mjs` writes the whole house out as data — 11 rooms, 16
+entrances, 84 wall solids and ~720 placements of 16 kit pieces, with the GLB
+each one instances, its transform and its size in metres — so the same house
+can be rebuilt from the same assets in another engine (Godot included). The
+format is documented at the top of the tool and lands in `assets/house.json`.
+
+**A room is built, never photographed.** Floors, walls, corners, windows,
+doors and furniture are instanced from `assets/env-kit/*.glb` and placed from
+the mansion's own plan. Photographs are for cards and screens — the loading
+veil, the menu, the dawn card, the ending — never for a space you can walk.
+`node tools/envqa.mjs --mode=room` enforces it: no room wears a photograph,
+every room has kit pieces standing inside its own rect, and hiding the kit
+has to take the room with it.
+
 ## Shipping it to Google Play
 
 The app is a **Trusted Web Activity**: no second codebase, no port. The game

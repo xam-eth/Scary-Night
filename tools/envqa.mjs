@@ -507,7 +507,7 @@ if (ONLY === 'bake') {
 }
 // `node tools/envqa.mjs plates` — just the photographed rooms, ~2 minutes.
 if (ONLY === 'plates') {
-  await plateSection();
+  await roomBuildSection();
   await browser.close();
   server.kill('SIGTERM');
   process.exit(0);
@@ -838,44 +838,87 @@ for (const w of winList) {
 }
 console.log(`windows drawn: ${winOk}/${winTried} of the ones a player can stand in front of`);
 
-/* ---------- the room plates ----------
- * Every room wears a photograph of the room it is. It is drawn in world
- * space, over the floor the kit built — and the kit's floor is opaque, so a
- * plate laid UNDER the room is a plate nobody ever sees. Eight rooms had one
- * and not a pixel of it reached the screen; this is the check that would
- * have caught that. Turn the plates off and the picture has to change.
+/* ---------- the room is built, not photographed ----------
+ * Eleven rooms, and every one of them is made of pieces: floor slabs cut to
+ * the nav grid, wall panels off the wall solids, corners, windows, doors and
+ * furniture — all instanced from assets/env-kit/*.glb. It is what lets the
+ * house be rebuilt, piece for piece, in any engine that can read a GLB.
+ *
+ * A photograph was draped over all of it once (64bc927), as a tint at alpha
+ * 0.85. The house was already standing underneath; the picture just buried
+ * it, and a room built from assets became a room that was one asset. This is
+ * the check that would have refused that, and now does:
+ *
+ *   1. no room carries a photograph — the field is gone, not unused;
+ *   2. every room has a floor and walls FROM THE KIT, counted instance by
+ *      instance inside its own rect, which a photograph cannot fake;
+ *   3. take the kit away and the room has to go with it.
  */
-async function plateSection() {
+async function roomBuildSection() {
   const ok = (b, msg) => console.log(`  ${b ? 'PASS' : 'FAIL'}  ${msg}`);
-  console.log('\n---- THE ROOM PLATES (the house is photographed, not boxed) ----');
-  const files = await page.evaluate(async () => {
-    const keys = window.__LN.mansion.roomList.map((r) => r.plate);
-    const out = {};
-    for (const k of keys) {
-      if (!k) { out[k] = 'no plate'; continue; }
-      const img = new Image();
-      img.src = './assets/rooms/' + k + '.jpg';
-      out[k] = await new Promise((res) => {
-        img.onload = () => res(img.naturalWidth + 'x' + img.naturalHeight);
-        img.onerror = () => res('MISSING');
-        setTimeout(() => res('TIMEOUT'), 8000);
-      });
-    }
-    return out;
-  });
+  console.log('\n---- THE ROOM IS BUILT (and no room is a photograph) ----');
   const rooms = await page.evaluate(() => window.__LN.mansion.roomList.map((r) => ({
     id: r.id, x: r.x, y: r.y, w: r.w, h: r.h, plate: r.plate,
   })));
-  const missing = rooms.filter((r) => !/^\d+x\d+$/.test(files[r.plate] || ''));
-  console.log(`  ${rooms.length} rooms, ${rooms.length - missing.length} of them carrying a photograph`
-    + `${missing.length ? ` (missing: ${missing.map((r) => r.id).join(', ')})` : ''}`);
+  ok(rooms.every((r) => !r.plate),
+    `no room wears a photograph (${rooms.filter((r) => r.plate).length} of ${rooms.length} still do)`);
+
+  /* Instance by instance, inside each room's own rect — walls stand ON the
+   * edge of it, so the wall family is counted in a band around the room. */
+  const census = await page.evaluate((rs) => {
+    const E = window.__env;
+    /* Keyed by the bin the builder filled, not by the piece file it reads:
+     * the floors are 'wood' and 'stone', the standing pieces are 'wall',
+     * 'cracked', 'corner', 'window' and 'windowBroken'. Doors are not in
+     * here at all — they live in EnvKit.doors, one group per opening. */
+    const FLOORS = ['wood', 'stone'];
+    const WALLS = ['wall', 'cracked', 'corner', 'window', 'windowBroken'];
+    const out = [];
+    for (const r of rs) {
+      const counts = {};
+      for (const group of [E.roomMeshes, E.propMeshes, E.fortressMeshes]) {
+        for (const key of Object.keys(group || {})) {
+          const list = group[key] && group[key].userData && group[key].userData.placements;
+          if (!list) continue;
+          for (const p of list) {
+            const inX = p.x >= r.x && p.x <= r.x + r.w;
+            const inZ = p.z >= r.y && p.z <= r.y + r.h;
+            const band = p.x >= r.x - 60 && p.x <= r.x + r.w + 60
+              && p.z >= r.y - 60 && p.z <= r.y + r.h + 60;
+            if (!(WALLS.includes(key) ? band : (inX && inZ))) continue;
+            counts[key] = (counts[key] || 0) + 1;
+          }
+        }
+      }
+      const sum = (keys) => keys.reduce((a, k) => a + (counts[k] || 0), 0);
+      out.push({
+        id: r.id,
+        floor: sum(FLOORS),
+        walls: sum(WALLS),
+        props: Object.keys(counts).filter((k) => !WALLS.includes(k) && !FLOORS.includes(k))
+          .reduce((a, k) => a + counts[k], 0),
+      });
+    }
+    return out;
+  }, rooms);
+  for (const c of census) {
+    console.log(`        ${c.id.padEnd(12)} floor ${String(c.floor).padStart(3)}   wall ${String(c.walls).padStart(3)}   furniture ${c.props}`);
+  }
+  const bare = census.filter((c) => c.floor < 4 || c.walls < 4);
+  ok(bare.length === 0,
+    `every room is built out of kit pieces on its own floor plan (${census.length - bare.length}/${census.length})`
+    + `${bare.length ? ` — thin: ${bare.map((c) => c.id).join(', ')}` : ''}`);
+  const unfurnished = census.filter((c) => c.props < 1);
+  console.log(`  ${unfurnished.length ? 'note' : 'ok  '}  ${census.length - unfurnished.length}/${census.length} rooms carry furniture from the kit`
+    + `${unfurnished.length ? ` (bare: ${unfurnished.map((c) => c.id).join(', ')})` : ''}`);
+
+  /* Take the kit away and the room has to go with it. A room that is a
+   * picture survives this; a room that is pieces does not. */
   const rows = [];
   for (const room of rooms) {
     /* eslint-disable no-await-in-loop */
-    const m = await page.evaluate(async (rm) => {
+    const m = await page.evaluate((rm) => {
       const g = window.__LN;
-      const rp = await import('./src/game/roomplates.js');
-      const mode0 = { ...rp.PLATE_MODE };
       const shot = () => {
         g.render();
         const c = g.renderer.canvas;
@@ -884,38 +927,43 @@ async function plateSection() {
       g.screen = 'playing'; g.time = 30; g.enemies.length = 0;
       g.player.x = rm.x + rm.w / 2; g.player.y = rm.y + rm.h / 2;
       g.renderer.snapCamera(rm.x + rm.w / 2, rm.y + rm.h / 2);
-      rp.setPlateMode(mode0.mode, mode0.alpha, mode0.inset);
+      window.__env.group.visible = true;
       const A = shot();
-      rp.setPlateMode(mode0.mode, 0, mode0.inset);
+      window.__env.group.visible = false;
       const B = shot();
-      rp.setPlateMode(mode0.mode, mode0.alpha, mode0.inset);
-      let sq = 0, n = 0, vd = 0;
+      window.__env.group.visible = true;
+      let sq = 0, n = 0;
       for (let i = 0; i < A.length; i += 16) {
         const la = A[i] * 0.299 + A[i + 1] * 0.587 + A[i + 2] * 0.114;
         const lb = B[i] * 0.299 + B[i + 1] * 0.587 + B[i + 2] * 0.114;
         const d = la - lb; sq += d * d; n++;
-        if (la < 6) vd++;
       }
-      return { rms: Math.sqrt(sq / n), void: (vd / n) * 100 };
+      return { rms: Math.sqrt(sq / n) };
     }, room);
-    rows.push([room.id, m]);
+    rows.push([room.id, m.rms]);
   }
-  const seen = rows.filter(([, m]) => m.rms >= 6);
-  const darkest = rows.slice().sort((a, b) => a[1].rms - b[1].rms)[0];
-  const brightestVoid = rows.slice().sort((a, b) => b[1].void - a[1].void)[0];
-  console.log(`  RMS change with the plates off: ${rows.map(([id, m]) => `${id} ${m.rms.toFixed(1)}`).join('  ')}`);
-  ok(missing.length === 0, `every room in the house is photographed (${rooms.length - missing.length}/${rooms.length} plates load)`);
-  ok(seen.length === rooms.length,
-    `and every photograph reaches the screen — the plate is not buried under the 3D floor (${seen.length}/${rooms.length} change the picture, weakest ${darkest[0]} at RMS ${darkest[1].rms.toFixed(1)})`);
-  ok(brightestVoid[1].void < 2, `and no room is a hole (worst ${brightestVoid[0]} at ${brightestVoid[1].void.toFixed(1)}% pure black)`);
+  const weakest = rows.slice().sort((a, b) => a[1] - b[1])[0];
+  const standing = rows.filter(([, rms]) => rms >= 6);
+  console.log(`        the kit owns this much of the picture (RMS with it hidden): `
+    + rows.map(([id, rms]) => `${id} ${rms.toFixed(1)}`).join('  '));
+  ok(standing.length === rows.length,
+    `the room IS the kit — hide it and every room goes with it (${standing.length}/${rows.length}, weakest ${weakest[0]} at ${weakest[1].toFixed(1)})`);
 }
 
+/* `node tools/envqa.mjs --mode=room` runs the one section, for the ten
+ * seconds it takes to answer "is this room built or is it a picture". */
+if (MODE === 'room') {
+  await roomBuildSection();
+  await browser.close();
+  server.kill('SIGTERM');
+  process.exit(0);
+}
 if (MODE !== 'siege') {
   console.log('\n---- THE BAKE (#53 C2) ----');
   await bakeSection();
   await sizeSection();
   await bodySection();
-  await plateSection();
+  await roomBuildSection();
 }
 await siegeSection();
 
