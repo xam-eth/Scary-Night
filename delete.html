@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Delete my data — LAST NIGHT</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; background: #07080d; color: #e6dcc4; font: 16px/1.55 Georgia, "Times New Roman", serif; }
+  main { max-width: 40rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+  h1 { font-weight: 400; letter-spacing: .12em; font-size: 1.5rem; }
+  a { color: #e0c070; }
+  p, li, label { color: #cfc6b0; }
+  input, button { font: inherit; }
+  input { width: 100%; padding: .6rem .7rem; background: #12141c; color: #e6dcc4; border: 1px solid #3a3428; }
+  button { margin-top: 1rem; padding: .7rem 1rem; background: #6a1020; color: #f0e6c8; border: 0; cursor: pointer; letter-spacing: .08em; }
+  .note { color: #a8a090; }
+  #out { min-height: 1.4em; }
+</style>
+</head>
+<body>
+<main>
+  <h1>HAPUS DATA SAYA</h1>
+  <p>LAST NIGHT tidak membuat akun. Progres ada di perangkat. Id pembayaran, jika pernah dibuat, terlihat di layar Privacy di dalam game (bentuknya <code>LN-……</code>).</p>
+  <p class="en note">This game does not create an account. Local progress is deleted by clearing the app’s storage, or with Delete my data inside the game. This page deletes the web payment ledger for the on-device id, without reinstalling.</p>
+  <ol>
+    <li>Di Android: Setelan → Aplikasi → LAST NIGHT → Hapus data. Itu menghapus simpanan lokal.</li>
+    <li>Untuk catatan pembayaran web, masukkan id perangkat di bawah. Penghapusan bersifat permanen, bukan pembekuan.</li>
+  </ol>
+  <form id="f">
+    <label for="pid">Id perangkat (LN-…)</label>
+    <input id="pid" name="playerId" autocomplete="off" maxlength="64" required pattern="LN-[A-Za-z0-9-]{4,40}" />
+    <button type="submit">HAPUS CATATAN PEMBAYARAN</button>
+  </form>
+  <p id="out"></p>
+  <p><a href="./privacy.html">Kebijakan privasi</a> · <a href="./index.html">Game</a></p>
+</main>
+<script>
+  document.getElementById('f').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const playerId = document.getElementById('pid').value.trim();
+    const out = document.getElementById('out');
+    out.textContent = '…';
+    try {
+      const res = await fetch('/api/privacy/delete', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ playerId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        out.textContent = 'Server pembayaran tidak terjangkau dari halaman ini, atau id ditolak. Hapus data aplikasi di Android tetap menghapus salinan lokal.';
+        return;
+      }
+      out.textContent = 'Selesai. Catatan yang dihapus: ' + (data.deleted | 0) + '. Salinan di perangkat harus dihapus dari dalam game atau dari setelan Android.';
+    } catch (e) {
+      out.textContent = 'Tidak terhubung ke server. Hapus data aplikasi di Android untuk salinan lokal.';
+    }
+  });
+</script>
+</body>
+</html>

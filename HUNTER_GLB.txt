@@ -1,0 +1,7 @@
+hunter_run_walk_claw_sword_shot.glb
+
+Vendored from the committed Tripo hunter (`western+gunslinger+3d+model (1).glb`).
+Only animation clip names were changed, to: run, walk, claw, shot, sword.
+The mesh, skin, and animation sample bytes are the original buffer, unchanged.
+Rights stay with the asset's owner. The runtime loads this file as-is and
+does not re-export it.
