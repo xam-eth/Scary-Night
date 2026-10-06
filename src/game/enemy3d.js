@@ -555,10 +555,19 @@ class EnemyStage {
     if (!rec || !rec.behaviorReady || !rec.template || rec.failed) return null;
     let slot = this.free.find((item) => item.type === key);
     if (slot) this.free.splice(this.free.indexOf(slot), 1);
-    if (slot) return slot;
-    if (this.slots.length + this.free.length >= this.cap) return null;
     const host = this._host();
     if (!host) return null;
+    if (slot) return slot;
+
+    // Eight live rigs are the mobile budget, not eight lifetime model types.
+    // A freed slot for another skeleton can be rebuilt from the already-loaded
+    // template; otherwise the ninth type would remain a proxy for the rest of
+    // the run even after its GLB and clips had finished loading.
+    if (this.free.length) {
+      slot = this.free.shift();
+      if (slot.model) host.stage.remove(slot.model);
+    } else if (this.slots.length + this.free.length >= this.cap) return null;
+
     const model = cloneRig(rec.template);
     host.stage.add(model);
     const mixer = new THREE.AnimationMixer(model);
@@ -575,13 +584,12 @@ class EnemyStage {
       action.setEffectiveWeight(0);
       actions[need] = action;
     }
-    const frame = document.createElement('canvas');
-    frame.width = host.canvas.width;
-    frame.height = host.canvas.height;
+    const frame = slot ? slot.frame : document.createElement('canvas');
+    if (!slot) { frame.width = host.canvas.width; frame.height = host.canvas.height; }
     return { type: key, model, mixer, actions, enemyId: 0, frame };
   }
 
-  assign(enemies, player) {
+  assign(enemies, player, options = {}) {
     for (const key of Object.keys(this.types)) {
       const rec = this.types[key];
       if (rec && rec.loaded && !rec.failed && !rec.preview) this._bakePreview(key);
@@ -615,13 +623,17 @@ class EnemyStage {
       }
       enemy._glb = slot;
       this._pose(slot, enemy);
-      this._renderSlot(slot, enemy);
-      const bill = this.billboards[enemy.key] || (this.billboards[enemy.key] = document.createElement('canvas'));
-      if (bill.width !== slot.frame.width) {
-        bill.width = slot.frame.width;
-        bill.height = slot.frame.height;
+      if (options.full3D) {
+        this._placeWorld(slot, enemy, options);
+      } else {
+        this._renderSlot(slot, enemy);
+        const bill = this.billboards[enemy.key] || (this.billboards[enemy.key] = document.createElement('canvas'));
+        if (bill.width !== slot.frame.width) {
+          bill.width = slot.frame.width;
+          bill.height = slot.frame.height;
+        }
+        bill.getContext('2d').drawImage(slot.frame, 0, 0);
       }
-      bill.getContext('2d').drawImage(slot.frame, 0, 0);
     }
     return picked;
   }
@@ -645,6 +657,26 @@ class EnemyStage {
     slot.model.rotation.x = 0;
     slot.model.rotation.y = Math.PI / 2 - (enemy.angle || 0);
     slot.model.position.set(0, 0, 0);
+    slot.model.updateMatrixWorld(true);
+  }
+
+  /** Keep the skinned GLB in the shared mansion scene instead of baking it to a sprite. */
+  _placeWorld(slot, enemy, options = {}) {
+    slot.model.scale.set(1, 1, 1);
+    slot.model.position.set(0, 0, 0);
+    slot.model.updateMatrixWorld(true);
+    const box = this._box || (this._box = new THREE.Box3());
+    const size = this._size || (this._size = new THREE.Vector3());
+    box.setFromObject(slot.model);
+    box.getSize(size);
+    const projected = (ENEMY_HEIGHT[enemy.key] || 74) * (enemy.sizeMul || 1);
+    const verticalProjection = options.verticalProjection || Math.sqrt(2 / 3);
+    const targetWorldHeight = projected / verticalProjection;
+    const scale = targetWorldHeight / Math.max(0.001, size.y);
+    slot.model.scale.setScalar(scale);
+    slot.model.position.set(enemy.x, -box.min.y * scale, enemy.y);
+    slot.model.visible = true;
+    slot.model.userData.full3D = true;
     slot.model.updateMatrixWorld(true);
   }
 

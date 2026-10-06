@@ -44,7 +44,17 @@ const browser = await puppeteer.launch({
 });
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const page = await browser.newPage();
-page.on('pageerror', (e) => console.log('PAGEERROR', String(e.message).slice(0, 200)));
+const browserErrors = [];
+page.on('pageerror', (e) => {
+  browserErrors.push(`page: ${e.message}`);
+  console.log('PAGEERROR', String(e.message).slice(0, 200));
+});
+page.on('console', (message) => {
+  if (message.type() === 'error') {
+    browserErrors.push(`console: ${message.text()}`);
+    console.log('CONSOLE ERROR', String(message.text()).slice(0, 200));
+  }
+});
 
 /* ---------- 1. the boot: how late is everything? ---------- */
 await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
@@ -62,6 +72,17 @@ await page.evaluate(async () => {
   window.__env = (await import('./src/game/envkit.js')).EnvKit;
   window.__enemy = (await import('./src/game/enemy3d.js')).Enemy3D;
   window.__foes = await import('./src/game/enemies.js');
+  // Catch regressions where the old Canvas room renderer starts painting the
+  // playfield under the WebGL scene again.
+  window.__legacyWorldDrawCalls = 0;
+  const proto = Object.getPrototypeOf(g.mansion);
+  for (const name of ['drawFloor', 'drawProps', 'drawFurniture']) {
+    const old = proto[name];
+    proto[name] = function (...args) {
+      window.__legacyWorldDrawCalls++;
+      return old.apply(this, args);
+    };
+  }
 });
 await wait(1500);
 const kit = await page.evaluate(() => ({ ready: window.__env.ready, pieces: Object.keys(window.__env.pieces || {}).length }));
@@ -85,6 +106,8 @@ for (let i = 0; i < 160; i++) {
       bake: !!(E.bakeInfo),
       foeFrames: N ? Object.values(N.types || {}).filter((r) => r && r.preview).length : 0,
       foeTypes: N ? Object.keys(N.types || {}).length : 0,
+      foeReady: !!(N && Object.keys(N.types || {}).length
+        && Object.values(N.types || {}).every((r) => r && r.behaviorReady)),
     };
   });
   const t = Date.now() - tNight;
@@ -92,11 +115,243 @@ for (let i = 0; i < 160; i++) {
   if (!seen.room && s.room) { seen.room = t; console.log(`room built               ${t} ms`); }
   if (!seen.props && s.props) { seen.props = t; console.log(`furniture placed         ${t} ms`); }
   if (!seen.bake && s.bake) { seen.bake = t; console.log(`light baked              ${t} ms`); }
-  if (s.foeTypes && s.foeFrames >= s.foeTypes && !seen.foes) { seen.foes = t; console.log(`all ${s.foeTypes} enemy bodies baked   ${t} ms`); }
+  if (s.foeTypes && s.foeReady && !seen.foes) { seen.foes = t; console.log(`all ${s.foeTypes} enemy rigs ready    ${t} ms`); }
   if (seen.screen && seen.room && seen.props && seen.bake && seen.foes) break;
   await wait(120);
 }
 for (const k of ['screen', 'room', 'props', 'bake', 'foes']) if (seen[k] == null) console.log(`${k.padEnd(24)} NEVER`);
+
+/* ---------- full-3D migration gate ---------- */
+const world3d = await page.evaluate(async () => {
+  const world = window.__LN_API.world3d();
+  const game = window.__LN;
+  const env = window.__env;
+  const THREE = await import('./src/vendor/three/three.module.min.js');
+  const points = [
+    [game.player.x, game.player.y],
+    [game.player.x + 200, game.player.y],
+    [game.player.x, game.player.y + 200],
+    [game.player.x - 240, game.player.y + 160],
+    [700, 300],
+  ];
+  const errors = points.map(([x, z]) => {
+    const p = new THREE.Vector3(x, 0, z).project(env.camera);
+    const sx = (p.x * 0.5 + 0.5) * env.canvas.width / game.renderer.dpr;
+    const sy = (1 - (p.y * 0.5 + 0.5)) * env.canvas.height / game.renderer.dpr;
+    const expected = game.renderer.worldToScreen(x, z);
+    return Math.hypot(sx - expected.x - game.renderer.cam.sx, sy - expected.y - game.renderer.cam.sy);
+  });
+  return {
+    world,
+    projectionMaxError: Math.max(...errors),
+    legacyWorldDrawCalls: window.__legacyWorldDrawCalls || 0,
+    overlayAlpha: document.getElementById('game').getContext('2d').getContextAttributes().alpha,
+    stageMode: document.getElementById('stage').dataset.renderMode,
+  };
+});
+const full3DPass = world3d.world.mode === 'webgl-3d'
+  && world3d.world.fullScene
+  && world3d.world.rooms === 11
+  && world3d.world.portals === 26
+  && world3d.world.roomInstances && world3d.world.roomInstances.floor > 0
+  && world3d.world.roomInstances.walls > 0
+  && world3d.world.riggedPlayer
+  && world3d.world.roomMarks3D === 9
+  && world3d.world.decalsMapped
+  && world3d.overlayAlpha
+  && world3d.stageMode === 'webgl-3d'
+  && world3d.legacyWorldDrawCalls === 0
+  && world3d.projectionMaxError < 2;
+console.log(`\n---- FULL 3D WORLD GATE: ${full3DPass ? 'PASS' : 'FAIL'} ----`);
+console.log(`  renderer=${world3d.world.mode}, orthographic=${world3d.world.fullScene}, rooms=${world3d.world.rooms}, portals=${world3d.world.portals}`);
+console.log(`  room meshes=${JSON.stringify(world3d.world.roomInstances)}, rigged player=${world3d.world.riggedPlayer}, 3D room marks=${world3d.world.roomMarks3D}, decals mapped=${world3d.world.decalsMapped}`);
+console.log(`  Canvas overlay alpha=${world3d.overlayAlpha}, camera projection max error=${world3d.projectionMaxError.toFixed(4)}px, legacy Canvas world draw calls=${world3d.legacyWorldDrawCalls}`);
+if (!full3DPass) process.exitCode = 1;
+
+/* ---------- gameplay objects and controls stay live in the 3D scene ---------- */
+const beforeMove = await page.evaluate(() => [window.__LN.player.x, window.__LN.player.y]);
+await page.evaluate(() => window.__LN_API.hold('right', true));
+await wait(500);
+await page.evaluate(() => window.__LN_API.hold('right', false));
+const movementDistance = await page.evaluate((start) => Math.hypot(window.__LN.player.x - start[0], window.__LN.player.y - start[1]), beforeMove);
+const movementPass = movementDistance > 8;
+console.log(`\n---- GAMEPLAY CONTROL: ${movementPass ? 'PASS' : 'FAIL'} ----`);
+console.log(`  keyboard movement=${movementDistance.toFixed(1)} world px`);
+if (!movementPass) process.exitCode = 1;
+
+const testDoorId = await page.evaluate(() => {
+  const g = window.__LN;
+  const door = g.mansion.entrances
+    .filter((item) => item.kind === 'door' && !item.broken && !item.open)
+    .sort((a, b) => Math.hypot(a.inside.x - g.player.x, a.inside.y - g.player.y)
+      - Math.hypot(b.inside.x - g.player.x, b.inside.y - g.player.y))[0];
+  if (!door) return null;
+  g.player.x = door.inside.x;
+  g.player.y = door.inside.y;
+  g.player.vx = g.player.vy = 0;
+  g.updateInteraction(1 / 60);
+  return door.id;
+});
+if (testDoorId) {
+  await page.evaluate(async () => {
+    const g = window.__LN;
+    const World3D = (await import('./src/game/world3d.js')).World3D;
+    g.input.interactPressed = true;
+    g.updateInteraction(1 / 60);
+    g.input.interactPressed = false;
+    World3D.render(g);
+  });
+}
+const doorState = await page.evaluate((id) => {
+  const g = window.__LN;
+  const door = g.mansion.entrances.find((item) => item.id === id);
+  const view = window.__env.doors.get(id);
+  return { open: !!(door && door.open), env3d: !!(door && door.env3d), angle: view && view.pivot ? view.pivot.rotation.y : null };
+}, testDoorId);
+const doorPass = !!testDoorId && doorState.open && doorState.env3d && doorState.angle < -1;
+console.log(`---- DOOR INTERACTION: ${doorPass ? 'PASS' : 'FAIL'} ----`);
+console.log(`  door=${testDoorId}, sim open=${doorState.open}, 3D mesh angle=${doorState.angle}`);
+if (!doorPass) process.exitCode = 1;
+
+const objectSetup = await page.evaluate(async () => {
+  const g = window.__LN;
+  const room = g.mansion.rooms.hall;
+  const pickupAt = g.pickSpotInRoom(room);
+  const boltAt = g.pickSpotInRoom(room);
+  if (!pickupAt || !boltAt) return null;
+  g.addPickup(pickupAt.x, pickupAt.y, 'planks', 1);
+  const pickup = g.pickups[g.pickups.length - 1];
+  pickup.id = 'qa-pickup';
+  const { Bolt } = await import('./src/game/enemies.js');
+  const bolt = new Bolt(boltAt.x, boltAt.y, 0.2, 0, 1, g.player);
+  bolt.id = 'qa-bolt';
+  bolt.vx = bolt.vy = 0;
+  g.bolts.push(bolt);
+  g.particles.burst('blood', pickupAt.x, pickupAt.y, 8, { color: '#c22a35', sizeMin: 2, sizeMax: 5, lifeMin: 0.8, lifeMax: 1.2 });
+  g.particles.burst('mist', boltAt.x, boltAt.y, 4, { color: 'rgba(120,150,205,0.35)', sizeMin: 5, sizeMax: 11, lifeMin: 0.8, lifeMax: 1.2 });
+  g.particles.burst('shard', boltAt.x + 12, boltAt.y, 3, { color: '#d7cfbd', sizeMin: 3, sizeMax: 6, lifeMin: 0.8, lifeMax: 1.2 });
+  g.decals.splat(pickupAt.x, pickupAt.y, 22, 'rgba(100,18,26,0.55)', 8);
+  const World3D = (await import('./src/game/world3d.js')).World3D;
+  World3D.render(g);
+  return { pickup: pickupAt, bolt: boltAt };
+});
+const objectVisibility = await page.evaluate(() => {
+  const W = window.__LN_API.world3d();
+  return {
+    pickup: window.__LN.pickups.find((p) => p.id === 'qa-pickup')?.taken === false,
+    bolt: window.__LN.bolts.find((b) => b.id === 'qa-bolt')?.dead === false,
+    particles: W.visibleParticles,
+    decalsMapped: W.decalsMapped,
+    decalSize: W.decalTextureSize,
+  };
+});
+const meshVisibility = await page.evaluate(async () => {
+  const W = (await import('./src/game/world3d.js')).World3D;
+  return {
+    pickup: !!(W.pickups.get('qa-pickup') && W.pickups.get('qa-pickup').visible),
+    bolt: !!(W.bolts.get('qa-bolt') && W.bolts.get('qa-bolt').visible),
+  };
+});
+const entitiesPass = !!objectSetup && objectVisibility.pickup && objectVisibility.bolt
+  && meshVisibility.pickup && meshVisibility.bolt && objectVisibility.particles >= 10
+  && objectVisibility.decalsMapped && objectVisibility.decalSize && objectVisibility.decalSize[0] <= 2048;
+console.log(`---- PICKUP / BOLT / WORLD VFX: ${entitiesPass ? 'PASS' : 'FAIL'} ----`);
+console.log(`  pickup mesh=${meshVisibility.pickup}, bolt mesh=${meshVisibility.bolt}, particles=${objectVisibility.particles}, decals=${objectVisibility.decalsMapped} (${(objectVisibility.decalSize || []).join('x')})`);
+if (!entitiesPass) process.exitCode = 1;
+
+const pickupCollected = await page.evaluate(async () => {
+  const g = window.__LN;
+  const W = (await import('./src/game/world3d.js')).World3D;
+  const pickup = g.pickups.find((item) => item.id === 'qa-pickup');
+  g.player.x = pickup.x; g.player.y = pickup.y; g.player.vx = g.player.vy = 0;
+  pickup.update(1 / 60, g);
+  W.render(g);
+  return { taken: !!pickup.taken, meshVisible: !!(W.pickups.get('qa-pickup') && W.pickups.get('qa-pickup').visible) };
+});
+const pickupPass = pickupCollected.taken && !pickupCollected.meshVisible;
+console.log(`---- PICKUP COLLECTION: ${pickupPass ? 'PASS' : 'FAIL'} ----`);
+console.log(`  simulation taken=${pickupCollected.taken}, 3D mesh hidden=${!pickupCollected.meshVisible}`);
+if (!pickupPass) process.exitCode = 1;
+
+const enemyScene = await page.evaluate(async () => {
+  const g = window.__LN;
+  const F = window.__foes;
+  g.enemies.length = 0;
+  const types = [F.Crawler, F.Zombie, F.Hunter, F.Werewolf, F.Ghoul, F.Stalker];
+  for (let i = 0; i < 11; i++) {
+    const a = i * Math.PI * 2 / 11;
+    const radius = 120 + i * 34;
+    const Type = types[i % types.length];
+    const enemy = new Type(g.player.x + Math.cos(a) * radius, g.player.y + Math.sin(a) * radius * 0.82, {});
+    enemy.alpha = 1;
+    g.enemies.push(enemy);
+  }
+  g.player.weapon = 'claw';
+  g.player.slashAge = 0.12;
+  g.player.swingAngle = g.player.angle;
+  g.house.cat = { x: g.player.x + 80, y: g.player.y + 50, tx: g.player.x + 140, t: 0.5 };
+  g.haunts.watchers = [{ x: g.player.x + 160, y: g.player.y + 90, t: 0.5, life: 1.5 }];
+  const door = g.mansion.entrances.find((item) => item.id === 'frontDoor');
+  if (door) { door.attackers = 1; g.house.drafts = [{ e: door, t: 0.8 }]; }
+  window.__LN_TIME_SCALE = 0;
+  const World3D = (await import('./src/game/world3d.js')).World3D;
+  World3D.render(g);
+  return true;
+});
+await wait(350);
+const actors = await page.evaluate(() => ({
+  world: window.__LN_API.world3d(),
+  enemySlots: window.__LN_API.enemy3d().skinned,
+  riggedTypes: window.__enemy.slots.map((slot) => slot.type),
+}));
+const allEnemyTypes = ['crawler', 'zombie', 'hunter', 'werewolf', 'ghoul', 'stalker'].every((type) => actors.riggedTypes.includes(type));
+const enemyPass = !!enemyScene && actors.world.visibleRiggedEnemies >= 6 && actors.enemySlots >= 6 && allEnemyTypes
+  && actors.world.proxyActors >= 3 && actors.world.visiblePlayerSwing3D && actors.world.visibleHouseCat3D
+  && actors.world.visibleWatchers3D === 1 && actors.world.visibleDoorCues3D > 0 && actors.world.visibleDrafts3D > 0;
+console.log(`---- ENEMY + HAUNT SCENE: ${enemyPass ? 'PASS' : 'FAIL'} ----`);
+console.log(`  rigged GLB enemies=${actors.world.visibleRiggedEnemies}/${actors.enemySlots}, types=${[...new Set(actors.riggedTypes)].join(',')}, proxy actors=${actors.world.proxyActors}, swing=${actors.world.visiblePlayerSwing3D}, cat=${actors.world.visibleHouseCat3D}, watchers=${actors.world.visibleWatchers3D}, door cues=${actors.world.visibleDoorCues3D}, drafts=${actors.world.visibleDrafts3D}`);
+if (!enemyPass) process.exitCode = 1;
+
+/* Preserve reproducible visual evidence of the active scene at both shapes. */
+const shots = path.join(ROOT, 'tools', 'shots');
+fs.mkdirSync(shots, { recursive: true });
+await page.screenshot({ path: path.join(shots, '3d-migration-mobile.png') });
+const desktopPage = await browser.newPage();
+const desktopErrors = [];
+desktopPage.on('pageerror', (e) => desktopErrors.push(`page: ${e.message}`));
+desktopPage.on('console', (message) => { if (message.type() === 'error') desktopErrors.push(`console: ${message.text()}`); });
+await desktopPage.setViewport({ width: 1280, height: 720, deviceScaleFactor: 1, isMobile: false, hasTouch: false });
+await desktopPage.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'domcontentloaded', timeout: 180000 });
+for (let i = 0; i < 200; i++) {
+  const ready = await desktopPage.evaluate(() => !!window.__LN_API);
+  if (ready) break;
+  await wait(100);
+}
+await desktopPage.evaluate(async () => {
+  const g = window.__LN;
+  g.save.privacyAck = true;
+  g.beginNight(); g.introT = 99; g.skipNarration();
+  await new Promise((r) => setTimeout(r, 300));
+  g.skipNarration();
+});
+let desktopView = null;
+for (let i = 0; i < 160; i++) {
+  desktopView = await desktopPage.evaluate(async () => {
+    const world = window.__LN_API.world3d();
+    const stage = document.getElementById('stage').getBoundingClientRect();
+    return { width: Math.round(stage.width), height: Math.round(stage.height), mode: world.mode, fullScene: world.fullScene, rooms: world.rooms, screen: window.__LN.screen };
+  });
+  if (desktopView.screen === 'playing' && desktopView.fullScene && desktopView.rooms === 11) break;
+  await wait(120);
+}
+await wait(300);
+await desktopPage.screenshot({ path: path.join(shots, '3d-migration-desktop.png') });
+const desktopPass = desktopView.width > 0 && desktopView.height > 0 && desktopView.mode === 'webgl-3d'
+  && desktopView.fullScene && desktopView.rooms === 11 && desktopView.screen === 'playing' && desktopErrors.length === 0;
+console.log(`---- DESKTOP BOOT: ${desktopPass ? 'PASS' : 'FAIL'} ----`);
+console.log(`  viewport=1280x720, game stage=${desktopView.width}x${desktopView.height}, mode=${desktopView.mode}, rooms=${desktopView.rooms}, errors=${desktopErrors.length}`);
+if (!desktopPass) process.exitCode = 1;
+await desktopPage.close();
 
 /* ---------- 2. furniture against the box you walk into ---------- */
 await wait(1500);
@@ -299,6 +554,11 @@ const inWall = await page.evaluate(() => {
 console.log(`\n---- IS ANYTHING STANDING INSIDE A WALL? ----`);
 console.log(`  ${inWall.length ? inWall.length + ' pieces are:' : 'nothing — every piece stands on floor'}`);
 for (const w of inWall.slice(0, 8)) console.log(`      ${w}`);
+console.log(`\n---- BROWSER ERRORS: ${browserErrors.length ? 'FAIL' : 'PASS'} ----`);
+if (browserErrors.length) {
+  for (const error of browserErrors.slice(0, 8)) console.log(`  ${error}`);
+  process.exitCode = 1;
+}
 
 server.kill();
 await browser.close();

@@ -19,6 +19,7 @@ import * as THREE from '../vendor/three/three.module.min.js';
 import { GLTFLoader } from '../vendor/three/GLTFLoader.js';
 import { Valen3D } from './valen3d.js';
 import { bakeLight, bakedTint, bakeReport } from './lightbake.js';
+import { ISO_CAMERA } from '../core/util.js';
 
 export const KIT_DIR = './assets/env-kit/';
 
@@ -57,13 +58,13 @@ export const KIT_SCALE = 33;
 export const VALEN_METRES = 1.7;
 
 /** World px per metre, at the tilt the camera is actually set to. */
-export function pxPerMetre(tilt = 0.56) {
+export function pxPerMetre(tilt = ISO_CAMERA.tilt) {
   const t = Math.max(0.2, Math.min(0.95, tilt));
   return VALEN_HEIGHT / (VALEN_METRES * Math.sqrt(1 - t * t));
 }
 
-/** The portrait phone the game is built for: 1m = ~51px of floor. */
-export const PX_PER_METRE = pxPerMetre(0.56);
+/** The shared isometric room: 1m = ~51.9 world px at its fixed elevation. */
+export const PX_PER_METRE = pxPerMetre(ISO_CAMERA.tilt);
 
 /**
  * WHAT EVERYTHING IS, IN METRES.
@@ -433,11 +434,10 @@ class EnvKitRuntime {
     this.bakeCount = 0;   // measured in bakes, not frames: it should read 1 a night
     /* The governor's rung: 3 is the whole house, 0 is the painted one. */
     this.quality = QUALITY_TIERS.length - 1;
-    this._foldK = Math.sqrt(1 - 0.56 * 0.56) / 0.56;
-    /* The room is measured in metres against her, and metres cost different
-     * px depending on how steeply the camera looks down. So the tilt the room
-     * was built for is kept, and a change to it rebuilds the room once. */
-    this.tilt = 0.56;
+    this._foldK = Math.sqrt(1 - ISO_CAMERA.tilt * ISO_CAMERA.tilt) / ISO_CAMERA.tilt;
+    /* The room is measured against her at the shared isometric elevation.
+     * Keep it with the camera constants so floor and mesh heights agree. */
+    this.tilt = ISO_CAMERA.tilt;
     this._buildSerial = 0;    // bumped whenever the room is rebuilt: rebake
     this._fortressLights = [];   // the candles the fortress hung, as bake sources
     this.diagnostics = () => ({
@@ -467,16 +467,9 @@ class EnvKitRuntime {
     return (metres * this._metre()) / src.size.y;
   }
 
-  /**
-   * The camera moved, so the metre moved with it.
-   *
-   * Portrait is 0.56 and a wide desktop is 0.42 — a fifth of a metre's worth
-   * of difference in every wall in the house. Turning the phone is the only
-   * thing that changes this, and it is worth one rebuild to keep the room the
-   * size it says it is.
-   */
+  /** Recalibrate the metre and fold depth if the shared camera elevation changes. */
   _setTilt(tilt) {
-    const t = Math.max(0.2, Math.min(0.95, Number(tilt) || 0.56));
+    const t = Math.max(0.2, Math.min(0.95, Number(tilt) || ISO_CAMERA.tilt));
     if (Math.abs(t - this.tilt) < 0.005) return;
     this.tilt = t;
     // how far a thing of height H reaches across the floor towards the viewer
@@ -655,11 +648,11 @@ class EnvKitRuntime {
      * it cannot cover her — and it steps aside for exactly as far as it can
      * reach, no further.
      *
-     * Reach, in world px: the camera looks down at asin(tilt), so an object
-     * of height H hides her to a line H / tan(tilt) south of where she
-     * stands, minus her own height, because a panel that only covers her
-     * shoes is depth, not a wall in the way. For a 2.6m wall that is ~90px:
-     * the wall she is standing against, and nothing behind it.
+     * Reach, in projected floor-depth px: at elevation asin(tilt), an object
+     * of height H reaches H / tan(tilt) toward the camera along the diagonal,
+     * minus her own height because a panel over her shoes is not a wall in
+     * the way. The shared 45-degree depth basis keeps that band aligned with
+     * the camera; it folds the wall she is standing behind, not distant rooms.
      *
      * The band is the whole trick, and it was inverted once — `p.z > at +
      * reach` instead of between — which folded every wall further than that
@@ -669,9 +662,10 @@ class EnvKitRuntime {
      * unstable. Half of it was missing. */
     const tall = (mesh.userData.unitH || 0) * (p.sy || 1);
     const reach = Math.max(0, this._foldK * (tall - VALEN_HEIGHT));
+    const depth = (p.x + p.z) / Math.SQRT2;
     const hide = p.off
       || (mesh.userData.folds && this._foldedAt != null
-        && p.z > this._foldedAt && p.z < this._foldedAt + reach);
+        && depth > this._foldedAt && depth < this._foldedAt + reach);
     d.position.set(p.x, p.y || 0, p.z);
     d.rotation.set(0, p.ry || 0, 0);
     d.scale.set(hide ? 0 : (p.sx == null ? 1 : p.sx),
@@ -682,16 +676,15 @@ class EnvKitRuntime {
   }
 
   /**
-   * The camera looks down the room from +z, so a wall between the camera and
-   * the player is a wall in front of her: it would cover the floor she is
-   * about to cross with an oak panel. Fold those away — zero scale, same
-   * instance — and put them back when she walks past. Cheap: 170 matrices,
-   * no allocation, one buffer upload.
+   * The camera looks down the room from the +x,+z diagonal. A wall between
+   * that diagonal and the player can hide the playable floor, so the nearby
+   * band folds away and returns after she passes. The depth key is the same
+   * projected floor axis used by the isometric camera.
    */
-  _foldNear(camY) {
+  _foldNear(depthAtPlayer) {
     if (!this.roomMeshes) return;
-    if (this._foldedAt != null && Math.abs(this._foldedAt - camY) < 12) return;
-    this._foldedAt = camY;
+    if (this._foldedAt != null && Math.abs(this._foldedAt - depthAtPlayer) < 12) return;
+    this._foldedAt = depthAtPlayer;
     for (const key of ['wall', 'cracked', 'corner', 'window', 'windowBroken']) {
       const mesh = this.roomMeshes[key];
       if (!mesh) continue;
@@ -710,9 +703,9 @@ class EnvKitRuntime {
    * wall solids the collision and the painted house actually use. Walk out of
    * a room and the floor you were standing on stopped at the doorstep.
    *
-   * So: the floor follows everywhere a body can stand (the nav grid, plus the
-   * thresholds a closed door closes off), and the walls are the wall solids
-   * themselves, gap by gap. A mesh now stands exactly where the house is.
+   * So: the floor follows the room interiors, open passages and door
+   * thresholds only; outdoor nav-free ground remains the painted courtyard.
+   * The walls are built from the actual shared wall solids, gap by gap.
    */
   buildRoom(mansion) {
     if (!this.ready || !mansion || !mansion.solids || this.room === mansion) return;
@@ -726,15 +719,22 @@ class EnvKitRuntime {
       x > w.x - 2 && x < w.x + w.w + 2 && y > w.y - 2 && y < w.y + w.h + 2);
     const roomAt = (x, y) => rooms.find((r) =>
       x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h) || null;
-    const canStand = (x, y) => {
-      if (!mansion.navCellOf || !mansion.navFree) return false;
-      const c = mansion.navCellOf(x, y);
-      return mansion.navFree(c.gx, c.gy);
-    };
-    // A shut door blocks the nav grid, and a doorway with no floor under it
-    // is a hole in the ground exactly where she walks most.
-    const atThreshold = (x, y) => entrances.some((e) =>
-      Math.abs(x - e.x) < (e.w || 0) / 2 + cell * 0.5 && Math.abs(y - e.y) < (e.h || 0) / 2 + cell * 0.5);
+    const portals = mansion.portals || [];
+    const openPassages = portals.filter((p) => p.kind === 'arch');
+    const doors = entrances.filter((e) => e.kind === 'door');
+    // Only pave the house: room interiors plus the actual openings in its
+    // shared walls. Nav-free space outside is the courtyard's 2D ground, not
+    // an instruction to tile every outdoor cell with stone.
+    const passageAt = (x, y) => openPassages.find((p) => {
+      const along = (p.width || p.a2 - p.a1) / 2 + cell * 0.42;
+      const across = cell * 0.48;
+      return p.axis === 'h'
+        ? Math.abs(x - p.x) < along && Math.abs(y - p.y) < across
+        : Math.abs(x - p.x) < across && Math.abs(y - p.y) < along;
+    }) || null;
+    const doorAt = (x, y) => doors.find((e) =>
+      Math.abs(x - e.x) < (e.w || 0) / 2 + cell * 0.42
+      && Math.abs(y - e.y) < (e.h || 0) / 2 + cell * 0.42) || null;
 
     // ---- floor ----
     const floors = { floorWood: [], floorStone: [] };
@@ -759,8 +759,15 @@ class EnvKitRuntime {
             const pz2 = cy + sy2 * th * 0.33;
             if (inWall(px2, pz2)) continue;
             const here = roomAt(px2, pz2);
-            if (here) { room = here; use = true; }
-            else if (canStand(px2, pz2) || atThreshold(px2, pz2)) use = true;
+            if (here) { room = here; use = true; continue; }
+            const arch = passageAt(px2, pz2);
+            const door = doorAt(px2, pz2);
+            if (arch || door) {
+              room = mansion.room((arch && arch.room) || (door && door.room))
+                || mansion.room(arch && arch.to)
+                || mansion.room(door && door.room);
+              use = true;
+            }
           }
         }
         if (!use) continue;
@@ -772,12 +779,11 @@ class EnvKitRuntime {
 
     /* ---- the wall runs, merged before anything is built ----
      *
-     * The mansion's plan is honest about what blocks a body and careless
-     * about how a wall is described: 84 wall solids, 76 of them overlapping
-     * another. A 20px stub sits inside a 246px wall; a 10px stub sits inside
-     * the corner post it was cut from. Drawn literally, every one of those
-     * places is two walls in the same plane — which is what a messy corner
-     * is. The sim needs the pieces; the room needs the run.
+     * The mansion's plan is honest about what blocks a body and may describe
+     * one physical wall with several overlapping solids. A short stub can sit
+     * inside a longer run or the corner post it was cut from. Drawn literally,
+     * those places become duplicate walls in the same plane. The sim needs
+     * the individual pieces; the room needs the continuous run.
      *
      * So the solids are flattened into maximal runs first, one merge pass per
      * axis per line, and only then does anything get built. Nothing here
@@ -1438,7 +1444,7 @@ class EnvKitRuntime {
   render(view) {
     if (!this.ready || !this.renderer || !Valen3D.scene) return null;
     const { camX, camY, zoom, tilt, w, h, dpr = 1, shakeX = 0, shakeY = 0, light = null } = view;
-    // a shallower camera is a different metre: the room is rebuilt, once
+    // A shallower camera is a different metre: the room is rebuilt, once.
     this._setTilt(tilt);
     const cw = Math.max(2, Math.floor(w * dpr));
     const ch = Math.max(2, Math.floor(h * dpr));
@@ -1449,6 +1455,7 @@ class EnvKitRuntime {
     }
     const t = clamp(tilt, 0.2, 1);
     const theta = Math.asin(t);
+    const azimuth = ISO_CAMERA.azimuth;
     const dist = 2400;
     const cam = this.camera;
     cam.left = -(w / 2) / zoom;
@@ -1457,31 +1464,45 @@ class EnvKitRuntime {
     cam.bottom = -(h / 2) / zoom;
     cam.near = 0.1;
     cam.far = dist * 3;
-    const tx = camX - shakeX / zoom;
-    const ty = camY - shakeY / (zoom * t);
-    cam.position.set(tx, Math.tan(theta) * dist, ty + dist);
-    cam.lookAt(tx, 0, ty);
+    // Match Canvas's inverse projection for screen-space camera shake, then
+    // look from the same 45-degree azimuth and 35.264-degree elevation.
+    const u = -shakeX / (zoom * ISO_CAMERA.horizontal);
+    const v = -shakeY / (zoom * ISO_CAMERA.vertical);
+    const tx = camX + (u + v) * 0.5;
+    const tz = camY + (v - u) * 0.5;
+    cam.position.set(
+      tx + dist * Math.sin(azimuth),
+      Math.tan(theta) * dist,
+      tz + dist * Math.cos(azimuth),
+    );
+    cam.lookAt(tx, 0, tz);
     cam.updateProjectionMatrix();
 
-    /* Fold around HER, not around the camera. The camera lerps; she does
-     * not. Following the camera opened the gap between her and the band on
-     * every fast turn, which is a wall flickering on her own shoulders. */
-    this._foldNear(view.foldY != null ? view.foldY : camY);
+    /* Fold around HER, in the camera's projected floor-depth axis. The camera
+     * lerps; she does not. Following the camera opened a gap on fast turns. */
+    const foldDepth = view.foldDepth != null
+      ? view.foldDepth
+      : (camX + camY) / Math.SQRT2;
+    this._foldNear(foldDepth);
     // A keep is brighter than a ruin. Every level of the fortress hangs more
     // light in the house, so the room itself tells her she has been here
     // before — the lamp is hers now, not the house's.
+    const fullScene = !!view.fullScene;
     const rigLight = (this.fortressLevel > 0 && light)
       ? { ...light, level: Math.min(1, (light.level || 0) + this.fortressLevel * 0.05) }
       : light;
-    if (Valen3D._applyRig) Valen3D._applyRig({ x: camX, y: camY, light: rigLight });
-    if (Valen3D.renderer) this.renderer.toneMappingExposure = Valen3D.renderer.toneMappingExposure * 1.1;
+    // In the full-scene path actors and room share the same light rig and
+    // camera. The isolated sprite pass remains only for menu/legacy captures.
+    if (!fullScene && Valen3D._applyRig) Valen3D._applyRig({ x: camX, y: camY, light: rigLight });
+    if (fullScene) this.renderer.toneMappingExposure = view.exposure == null ? 1.22 : view.exposure;
+    else if (Valen3D.renderer) this.renderer.toneMappingExposure = Valen3D.renderer.toneMappingExposure * 1.1;
 
     const stage = Valen3D.stage;
     const wasVisible = stage ? stage.visible : true;
-    if (stage) stage.visible = false;
+    if (stage && !fullScene) stage.visible = false;
     this.renderer.clear();
     this.renderer.render(Valen3D.scene, cam);
-    if (stage) stage.visible = wasVisible;
+    if (stage && !fullScene) stage.visible = wasVisible;
     return this.canvas;
   }
 }

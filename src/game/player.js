@@ -14,6 +14,7 @@ import { clamp, lerp, damp, dist, TAU, rand, randInt, angDiff, approachAngle, ch
 import { PLAYER, TUNING } from '../core/config.js';
 import { PAL } from '../core/render.js';
 import { Valen3D } from './valen3d.js';
+import { PX_PER_METRE, VALEN_METRES } from './envkit.js';
 import { IAP } from '../shop/iap.js';
 import { drainPerSecond, laneStats } from './economy.js';
 import { weaponById, swingDist, swingBearing, swingBearingToWorld } from './weapons.js';
@@ -168,7 +169,7 @@ export class Player {
     // so a raw stick vector walks a different direction than the thumb pushed.
     // Convert once, here, and use that world heading for velocity, dash and aim.
     const tilt = game.renderer.tilt || 1;
-    const intent = screenDirToWorld(input.move.x, input.move.y, tilt);
+    const intent = screenDirToWorld(input.move.x, input.move.y, game.renderer);
     let mx = intent.x * intent.mag, my = intent.y * intent.mag;
     const mag = intent.mag;
     const wantRun = input.dashDown && mag > 0.3;
@@ -333,7 +334,7 @@ export class Player {
     const tool0 = weaponById(this.weapon);
     // Distance and bearing as they are DRAWN: the reach is a circle on screen,
     // not an ellipse on the floor, so aim assist and the hit agree (weapons.js).
-    const face = visualAngle(this.angle, (game.renderer && game.renderer.tilt) || 1);
+    const face = visualAngle(this.angle, game.renderer);
     for (const e of game.enemies) {
       if (e.dead) continue;
       const d = swingDist(game, this, e);
@@ -415,6 +416,30 @@ export class Player {
    * player is still visible. It is not the character.
    */
 
+  /** Evaluate the authored rig and leave its mesh in the shared 3D world. */
+  sync3D(game) {
+    const dead = this.state === PSTATE.DEAD;
+    const attackDuration = PLAYER.attackWindup + PLAYER.attackActive;
+    const showSlash = !dead && this.slashAge != null && this.slashAge < 0.36;
+    const attackProgress = showSlash
+      ? clamp(this.slashAge / 0.32, 0, 1)
+      : (this.attackT > 0 ? clamp(1 - this.attackT / attackDuration, 0, 1) : 0);
+    return Valen3D.render({
+      state: dead ? PSTATE.IDLE : (showSlash ? PSTATE.ATTACK : this.state),
+      angle: this.angle,
+      speed: dead || showSlash ? 0 : this.speed,
+      stepPhase: this.stepPhase,
+      attackProgress,
+      view: 'play',
+      weapon: this.weapon || 'claw',
+      world: {
+        x: this.x, y: this.y, full3D: true,
+        heightPx: VALEN_METRES * PX_PER_METRE,
+        light: game.renderer.keyLightAt(this.x, this.y),
+      },
+    });
+  }
+
   draw(ctx, game) {
     const t = game.time;
     const sp = this.speed;
@@ -432,7 +457,7 @@ export class Player {
       state: dead ? PSTATE.IDLE : (showSlash ? PSTATE.ATTACK : this.state),
       // Billboards are counter-scaled upright, so feed the projected heading
       // or she looks 15° off every diagonal she walks.
-      angle: visualAngle(this.angle, game.renderer.tilt || 1),
+      angle: visualAngle(this.angle, game.renderer),
       speed: dead || showSlash ? 0 : sp,
       stepPhase: this.stepPhase,
       attackProgress,
@@ -595,7 +620,7 @@ export class Player {
     ctx.save();
     if (game.renderer && game.renderer.upright) game.renderer.upright(ctx, this.x, this.y);
     ctx.translate(this.x, this.y);
-    ctx.rotate(visualAngle(a, tilt));
+    ctx.rotate(visualAngle(a, game.renderer));
     ctx.globalCompositeOperation = 'screen';
     ctx.lineCap = 'round';
     for (let i = 0; i < 3; i++) {
@@ -634,7 +659,7 @@ export class Player {
     ctx.save();
     game.renderer.upright(ctx, this.x, this.y);
     ctx.translate(this.x, this.y);
-    ctx.rotate(visualAngle(a, game.renderer.tilt || 1));
+    ctx.rotate(visualAngle(a, game.renderer));
     ctx.globalCompositeOperation = 'screen';
     ctx.lineCap = 'round';
     for (let i = 0; i < 3; i++) {
@@ -992,7 +1017,7 @@ export class Player {
    */
   _drawStandingFallback(ctx, game) {
     const h = 72;   // the body's height, matching the GLB composite
-    const yaw = Math.sin(visualAngle(this.angle, game.renderer.tilt || 1));
+    const yaw = Math.sin(visualAngle(this.angle, game.renderer));
     ctx.save();
     ctx.globalCompositeOperation = 'screen';
     ctx.globalAlpha = 0.2;
