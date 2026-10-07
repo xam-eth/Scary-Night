@@ -4,6 +4,7 @@
  */
 
 import { PLAYER } from '../core/config.js';
+import { screenDirToWorld } from '../core/util.js';
 
 export const WEAPONS = Object.freeze({
   claw: Object.freeze({
@@ -55,45 +56,37 @@ export const WEAPONS = Object.freeze({
 export const WEAPON_ORDER = Object.freeze(['claw', 'sword', 'shot']);
 
 /* ---------------------------------------------------------------------------
- * Where a swing lands, measured the way the player sees it.
- *
- * The room is drawn obliquely: a metre of floor running away from the camera
- * covers far less screen than a metre running across it (the renderer's
- * `tilt`). A reach that is a circle on the floor is therefore an ELLIPSE on
- * screen — 88px across but only 50px up and down for the same 80px of floor —
- * while the swing itself is drawn upright, as a circle. So the claw used to
- * connect with things visibly outside the arc and miss things visibly inside
- * it, depending on which way you were facing.
- *
- * Squashing the floor delta by the same tilt turns the reach into a circle on
- * screen, which is the shape the swing is drawn in and the shape the eye
- * judges distance by. Only this question uses it. Movement, pathing, aggro
- * and every enemy decision stay in floor space, untouched.
+ * Where a swing lands, measured through the same isometric projection used by
+ * the camera. Reach, bearing and the visible arc now agree along both world
+ * axes; movement and navigation remain in floor space.
  * ------------------------------------------------------------------------- */
 export function swingTilt(game) {
   const r = game && game.renderer;
   return r && r.tilt ? r.tilt : 1;
 }
 
-/** The delta to a point, squashed the way the camera squashes the floor. */
+/** Project a floor-space delta into unzoomed screen-space. */
 export function swingDelta(game, from, to) {
+  const dx = to.x - from.x, dy = to.y - from.y;
+  const r = game && game.renderer;
+  if (r && typeof r.projectDelta === 'function') return r.projectDelta(dx, dy);
   const t = swingTilt(game);
-  return { dx: to.x - from.x, dy: (to.y - from.y) * t };
+  return { dx, dy: dy * t };
 }
 
-/** How far away a body is *as drawn*. This is the number the reach uses. */
+/** How far away a body is as drawn; this is the number the reach uses. */
 export function swingDist(game, from, to) {
   const d = swingDelta(game, from, to);
-  return Math.hypot(d.dx, d.dy);
+  return Math.hypot(d.x ?? d.dx, d.y ?? d.dy);
 }
 
 /** The bearing to a body, in screen terms — the direction the eye reads. */
 export function swingBearing(game, from, to) {
   const d = swingDelta(game, from, to);
-  return Math.atan2(d.dy, d.dx);
+  return Math.atan2(d.y ?? d.dy, d.x ?? d.dx);
 }
 
-/** True when `to` is inside the swing: close enough, inside the arc, or touching. */
+/** True when `to` is inside the visible swing arc and its screen-space reach. */
 export function inSwing(game, from, to, tool, facing) {
   const d = swingDist(game, from, to);
   const reach = tool.range + (to.radius || 12);
@@ -104,8 +97,10 @@ export function inSwing(game, from, to, tool, facing) {
   return off <= tool.arc / 2;
 }
 
-/** A screen bearing back to a floor bearing, for writing a facing. */
+/** A screen bearing back to the world heading stored by gameplay. */
 export function swingBearingToWorld(game, bearing) {
+  const r = game && game.renderer;
+  if (r && r.isometric) return screenDirToWorld(Math.cos(bearing), Math.sin(bearing), r).angle;
   const t = swingTilt(game);
   return Math.atan2(Math.sin(bearing) / t, Math.cos(bearing));
 }

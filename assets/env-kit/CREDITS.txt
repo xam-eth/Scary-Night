@@ -1,0 +1,6 @@
+KayKit Dungeon Remastered 1.0
+Created by Kay Lousberg (KayKit).
+License: CC0 1.0 Universal — https://creativecommons.org/publicdomain/zero/1.0/
+
+The environment kit GLB files in this directory are vendored byte-for-byte for
+runtime use. Attribution is appreciated but not required by CC0.

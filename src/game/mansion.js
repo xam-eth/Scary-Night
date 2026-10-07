@@ -1,27 +1,19 @@
 /* LAST NIGHT — the mansion
  *
- * One hand-authored gothic mansion: six rooms, five windows, five doors.
- * Everything is built in code: geometry, collision, baked floor rendering,
- * light sources, spawn points and the room graph used by enemy navigation.
+ * One hand-authored gothic mansion assembled from a data-driven floor plan:
+ * eleven rooms, shared masonry, internal passages, exterior doors and
+ * windows, room-relative furniture, lights, collision and navigation. The
+ * 2D canvas and modular Three.js room pass consume the same world layout.
  *
- * Floor plan (world pixels):
+ * Floor plan (world pixels; north is negative Y):
  *
- *      +----------------+   +-----------------+   +···············+
- *      |  DINING ROOM   |   |     LIBRARY     |===|  CONSERVATORY |   glass
- *      |  80,60 780x600 |   | 940,60 780x600  |   |  moonlit, 2   |   roof
- *      +----==+---------+   +--------+==------+   +-------==------+   reads
- *           ||  passage             ||  passage                      as
- *      +----++---------------------++----------+                      green-
- *      |              MAIN HALL                 |                     house
- *      |            80,760  1120x740            |   +---------------+
- *      +----------------------+-------==-------+   |    CHAPEL     |
- *                             |    BASEMENT    |===| altar refuge  |
- *                             | 1280,820 500x680  |  +==== door ====+
- *                             +-----------------+   +---------------+
+ *                  GALLERY ─ DINING ─ HALL ─ LIBRARY ─ CONSERVATORY
+ *                       │         │       │        │
+ *                  GATEHOUSE   KITCHEN  STUDY   ORATORY
+ *                       │              BASEMENT ─ CHAPEL
  *
- * The Conservatory hangs off the library's east wall (shared masonry — the
- * gothic window looks *into* it now, which is its own small horror). The
- * Chapel is entered from the basement: worship and hunger one floor apart.
+ * The hall is the cross-wing hub; side rooms connect through deliberate
+ * openings. Shared boundaries are merged so walls and collision agree.
  */
 
 import { clamp, rand, randInt, chance, hash2, hashRange, Rng, TAU } from '../core/util.js';
@@ -48,9 +40,8 @@ const WALL_T = 26;
 
 export class Mansion {
   constructor() {
-    this.bounds = { x: -540, y: -520, w: 3140, h: 2480 };
-    // Camera must be able to follow into the new wings, not stop at the old hall.
-    this.camBounds = { x: -460, y: -420, w: 2860, h: 2020 };
+    this.bounds = { x: -1500, y: -700, w: 4080, h: 2500 };
+    this.camBounds = { x: -2900, y: -2100, w: 6880, h: 5300 };
     this.solids = [];          // {x,y,w,h,type,solid}
     this.furniture = [];
     this.props = [];
@@ -75,162 +66,158 @@ export class Mansion {
   rooms = {};
 
   build() {
-    const S = this.solids;
-    const addWall = (x, y, w, h, type = 'wall') => {
-      const r = { x, y, w, h, type, solid: true };
-      S.push(r); return r;
+    const plan = [
+      { key: 'dining', id: ROOM.DINING, name: 'DINING ROOM', x: -806, y: 0, w: 780, h: 600, floor: 'wood', dark: 0.72 },
+      { key: 'library', id: ROOM.LIBRARY, name: 'LIBRARY', x: 906, y: 0, w: 780, h: 600, floor: 'wood', dark: 0.78 },
+      { key: 'hall', id: ROOM.HALL, name: 'MAIN HALL', x: 0, y: 0, w: 880, h: 620, floor: 'marble', dark: 0.62 },
+      { key: 'basement', id: ROOM.BASEMENT, name: 'BASEMENT', x: 190, y: 646, w: 500, h: 680, floor: 'stone', dark: 1.35 },
+      { key: 'conserv', id: ROOM.CONSERV, name: 'CONSERVATORY', x: 1712, y: 10, w: 554, h: 580, floor: 'glass', dark: 0.42 },
+      { key: 'chapel', id: ROOM.CHAPEL, name: 'CHAPEL', x: 716, y: 646, w: 507, h: 694, floor: 'tile', dark: 0.68 },
+      { key: 'kitchen', id: ROOM.KITCHEN, name: 'KITCHEN', x: -1186, y: 50, w: 354, h: 500, floor: 'stone', dark: 0.7 },
+      { key: 'study', id: ROOM.STUDY, name: 'STUDY', x: 80, y: -346, w: 720, h: 320, floor: 'wood', dark: 0.66 },
+      { key: 'gallery', id: ROOM.GALLERY, name: 'GALLERY', x: -686, y: -306, w: 540, h: 280, floor: 'wood', dark: 0.68 },
+      { key: 'gatehouse', id: ROOM.GATEHOUSE, name: 'GATEHOUSE', x: -593, y: 626, w: 354, h: 850, floor: 'stone', dark: 0.7 },
+      { key: 'oratory', id: ROOM.ORATORY, name: 'ORATORY', x: 1056, y: -306, w: 480, h: 280, floor: 'tile', dark: 0.6 },
+    ];
+    this.rooms = Object.create(null);
+    this.roomList = plan.map((r) => {
+      const room = { ...r };
+      this.rooms[room.key] = room;
+      return room;
+    });
+    this.solids = [];
+    this.furniture = [];
+    this.props = [];
+    this.lights = [];
+    this.entrances = [];
+    this.spawns = [];
+    this.portals = [];
+    this.passages = [];
+    this.bounds = { x: -1500, y: -700, w: 4080, h: 2500 };
+    const cameraPad = 1400;
+    this.camBounds = {
+      x: this.bounds.x - cameraPad, y: this.bounds.y - cameraPad,
+      w: this.bounds.w + cameraPad * 2, h: this.bounds.h + cameraPad * 2,
     };
 
-    // ---- room rects (interior play space) ----
-    const DINING = this.rooms.dining = { id: ROOM.DINING, name: 'DINING ROOM', x: 80, y: 60, w: 780, h: 600, floor: 'wood', dark: 0.72 };
-    const LIBRARY = this.rooms.library = { id: ROOM.LIBRARY, name: 'LIBRARY', x: 940, y: 60, w: 780, h: 600, floor: 'wood', dark: 0.78 };
-    const HALL = this.rooms.hall = { id: ROOM.HALL, name: 'MAIN HALL', x: 80, y: 760, w: 1120, h: 740, floor: 'marble', dark: 0.62 };
-    const BASEMENT = this.rooms.basement = { id: ROOM.BASEMENT, name: 'BASEMENT', x: 1280, y: 820, w: 500, h: 680, floor: 'stone', dark: 1.35 };
-    // v1.0 east wing: the Conservatory (glass roof — moonlight you can't govern)
-    // and the Chapel (an altar light the house itself seems to respect).
-    const CONSERV = this.rooms.conserv = { id: ROOM.CONSERV, name: 'CONSERVATORY', x: 1746, y: 60, w: 554, h: 580, floor: 'glass', dark: 0.42 };
-    const CHAPEL = this.rooms.chapel = { id: ROOM.CHAPEL, name: 'CHAPEL', x: 1793, y: 806, w: 507, h: 694, floor: 'tile', dark: 0.68 };
-    // West scullery: a weak door and a larder. You cannot watch it from the hall.
-    const KITCHEN = this.rooms.kitchen = { id: ROOM.KITCHEN, name: 'KITCHEN', x: -300, y: 90, w: 354, h: 500, floor: 'stone', dark: 0.7 };
-    // North of the library: a lamp that can hold them, and a window that cannot.
-    const STUDY = this.rooms.study = { id: ROOM.STUDY, name: 'STUDY', x: 980, y: -280, w: 720, h: 320, floor: 'wood', dark: 0.66 };
-    /* No room wears a photograph. Every room is built: floor slabs from the
-     * nav grid, wall panels from the wall solids, and furniture instanced
-     * from the same kit — which is what lets the house be rebuilt, piece for
-     * piece, in any engine that can read a GLB. */
-    const GALLERY = this.rooms.gallery = { id: ROOM.GALLERY, name: 'GALLERY', x: 50, y: -380, w: 660, h: 280, floor: 'wood', dark: 0.68 };
-    const GATE = this.rooms.gatehouse = { id: ROOM.GATEHOUSE, name: 'GATEHOUSE', x: -300, y: 620, w: 354, h: 850, floor: 'stone', dark: 0.7 };
-    const ORATORY = this.rooms.oratory = { id: ROOM.ORATORY, name: 'ORATORY', x: 1770, y: -380, w: 480, h: 280, floor: 'tile', dark: 0.6 };
-    this.roomList = [DINING, LIBRARY, HALL, BASEMENT, CONSERV, CHAPEL, KITCHEN, STUDY, GALLERY, GATE, ORATORY];
-
-    /* ---- outer + inner walls ----
-     * gaps = [[start,end,name]] along the wall's axis, turned into entrances below.
+    /*
+     * A clear, connected cross-wing plan: the hall is the hub; dining and
+     * library form its west/east arms; kitchen and conservatory cap those
+     * arms; the gallery, study and oratory are quiet north rooms; the
+     * gatehouse, cellar and chapel make a legible south route. Every room has
+     * an intentional opening and its furniture is authored relative to that
+     * room, so moving a wing can never strand its props or collision boxes.
+     *
+     * Interiors are separated by one 26px wall. Shared boundaries are
+     * collected into one wall run before openings are cut, avoiding doubled
+     * masonry and making the collision plan match the 3D kit exactly.
      */
-    const H = (x1, x2, y, gaps = []) => this.wallRun('h', x1, x2, y, gaps);
-    const V = (y1, y2, x, gaps = []) => this.wallRun('v', y1, y2, x, gaps);
+    const roomByKey = (key) => this.rooms[key];
+    const edgeOf = (room, side) => {
+      if (side === 'north') return { axis: 'h', pos: room.y - WALL_T / 2, from: room.x, to: room.x + room.w };
+      if (side === 'south') return { axis: 'h', pos: room.y + room.h + WALL_T / 2, from: room.x, to: room.x + room.w };
+      if (side === 'west') return { axis: 'v', pos: room.x - WALL_T / 2, from: room.y, to: room.y + room.h };
+      return { axis: 'v', pos: room.x + room.w + WALL_T / 2, from: room.y, to: room.y + room.h };
+    };
+    const edgeKey = (axis, pos) => `${axis}:${Math.round(pos * 100) / 100}`;
+    const edges = new Map();
+    for (const room of this.roomList) {
+      for (const side of ['north', 'east', 'south', 'west']) {
+        const edge = edgeOf(room, side);
+        const key = edgeKey(edge.axis, edge.pos);
+        let line = edges.get(key);
+        if (!line) edges.set(key, (line = { axis: edge.axis, pos: edge.pos, spans: [] }));
+        line.spans.push([edge.from, edge.to]);
+      }
+    }
 
-    // Dining room shell
-    H(54, 886, 40, [[64, 150, null], [340, 470, 'diningWindow'], [640, 760, 'diningDoor']]);   // north — gap into the gallery
-    V(14, 666, 54, [[250, 390, null]]);                                        // west — passage into the kitchen
-    H(54, 886, 640, [[300, 462, null]]);                                       // south (passage to hall)
-    V(40, 666, 860, []);                                                       // east (party wall)
+    const specs = [
+      { id: 'galleryPassage', kind: 'arch', room: 'gallery', side: 'south', at: -416, width: 140, to: 'dining' },
+      { id: 'studyPassage', kind: 'arch', room: 'study', side: 'south', at: 440, width: 156, to: 'hall' },
+      { id: 'oratoryPassage', kind: 'arch', room: 'oratory', side: 'south', at: 1296, width: 136, to: 'library' },
+      { id: 'kitchenPassage', kind: 'arch', room: 'kitchen', side: 'east', at: 300, width: 142, to: 'dining' },
+      { id: 'diningHallPassage', kind: 'arch', room: 'dining', side: 'east', at: 300, width: 160, to: 'hall' },
+      { id: 'hallLibraryPassage', kind: 'arch', room: 'hall', side: 'east', at: 300, width: 160, to: 'library' },
+      { id: 'glassWingPassage', kind: 'arch', room: 'library', side: 'east', at: 300, width: 156, to: 'conserv' },
+      { id: 'galleryGatePassage', kind: 'arch', room: 'dining', side: 'south', at: -416, width: 146, to: 'gatehouse' },
+      { id: 'cellarStair', kind: 'arch', room: 'hall', side: 'south', at: 440, width: 154, to: 'basement' },
+      { id: 'chapelPassage', kind: 'arch', room: 'basement', side: 'east', at: 985, width: 148, to: 'chapel' },
 
-    // Library shell
-    H(914, 1746, 40, [[1510, 1650, null]]);                                    // north — passage into the study, east of the shelves
-    V(14, 666, 914, []);                                                       // west (party wall)
-    H(914, 1746, 640, [[1024, 1164, null]]);                                   // south (passage to hall)
-    V(40, 666, 1720, [[262, 424, null], [500, 600, null]]);                   // east — the gothic window now opens INSIDE, into the glass house
+      { id: 'diningDoor', kind: 'door', name: 'SERVANT DOOR', room: 'dining', side: 'north', at: -746, width: 112 },
+      { id: 'frontDoor', kind: 'door', name: 'FRONT DOOR', room: 'hall', side: 'south', at: 100, width: 136 },
+      { id: 'cellarDoor', kind: 'door', name: 'CELLAR DOOR', room: 'basement', side: 'south', at: 440, width: 126 },
+      { id: 'chapelDoor', kind: 'door', name: 'CHAPEL DOOR', room: 'chapel', side: 'south', at: 969.5, width: 126 },
+      { id: 'kitchenDoor', kind: 'door', name: 'SCULLERY DOOR', room: 'kitchen', side: 'west', at: 300, width: 118 },
+      { id: 'palisade', kind: 'door', name: 'PALISADE GATE', room: 'gatehouse', side: 'west', at: 865, width: 124 },
+      { id: 'postern', kind: 'door', name: 'POSTERN', room: 'gatehouse', side: 'west', at: 1215, width: 116 },
 
-    // Conservatory shell (v1.0) — glass north + glass east, moonlit and exposed
-    H(1733, 2320, 40, [[1800, 1920, null], [1960, 2120, 'glassNorth']]);     // north — passage into the oratory
-    H(1733, 2320, 640, []);                                                    // south
-    V(14, 666, 2320, [[240, 420, 'glassEast']]);                              // east
-
-    // Chapel shell (v1.0) — reached through the basement; one door to the night.
-    // Its north wall is the basement's north wall, extended; its west wall is
-    // the basement's east wall, with a passage cut into it below.
-    H(1780, 2320, 1500, [[1960, 2086, 'chapelDoor']]);                        // south (new exterior door)
-    V(794, 1526, 2320, [[980, 1140, 'chapelWindow']]);                        // east
-
-    // Main hall shell
-    V(734, 1526, 54, [[1080, 1186, null]]);                                    // courtyard passage                              // west
-    H(54, 1246, 734, [[300, 462, null], [1024, 1164, null]]);                  // north
-    H(54, 1246, 1500, [[560, 686, 'frontDoor'], [820, 966, 'hallWindow']]);    // south
-    V(734, 1526, 1200, [[1058, 1202, null]]);                                  // east
-
-    // Basement shell (north wall now runs all the way over the chapel too)
-    V(794, 1526, 1254, [[1058, 1202, null]]);                                  // west
-    H(1246, 2320, 794, []);                                                    // north
-    H(1246, 1806, 1500, [[1400, 1516, 'cellarDoor']]);                         // south
-    V(794, 1526, 1780, [[1058, 1180, null]]);                                  // east → chapel passage
-
-    // Kitchen shell — west of the dining room. The west door is the sacrifice door.
-    H(-326, 67, 64, [[-160, -40, 'kitchenWindow']]);
-    V(38, 616, -326, [[240, 360, 'kitchenDoor']]);
-    H(-326, 67, 616, [[-200, -80, null]]);                                    // south — into the gatehouse
-    // Gallery sits north of the dining passage, clear of the servant door's outside.
-    H(40, 720, -400, [[300, 460, 'galleryWindow']]);
-    H(40, 720, -90, [[64, 150, null]]);
-    V(-413, -90, 40, []);
-    V(-413, -90, 720, []);
-    V(-90, 40, 48, []);
-    V(-90, 40, 164, []);
-    // Gatehouse: the west fort. Two gates on the palisade, one passage back to the hall.
-    V(603, 1500, -326, [[860, 980, 'postern'], [1100, 1240, 'palisade']]);
-    H(-339, 50, 1488, []);
-    // Oratory sits north of the conservatory passage, clear of the skylight's outside.
-    H(1760, 2260, -400, [[1960, 2100, 'oratoryWindow']]);
-    H(1760, 2260, -90, [[1800, 1920, null]]);
-    V(-413, -90, 1760, []);
-    V(-413, -90, 2260, []);
-    V(-90, 40, 1788, []);
-    V(-90, 40, 1936, []);
-    // Study shell — north of the library. One glass window, no second exit.
-    H(954, 1726, -306, [[1240, 1380, 'studyWindow']]);
-    V(-332, 66, 954, []);
-    V(-332, 66, 1726, []);
-
-    // passage side walls (make passages read as corridors)
-    H(280, 300, 640, []); H(462, 482, 640, []);   // dining passage shoulders
-    V(640, 760, 280, []); V(640, 760, 462, []);
-    H(1004, 1024, 640, []); H(1164, 1184, 640, []);
-    V(640, 760, 1004, []); V(640, 760, 1164, []);
-    // basement stair passage (the two side walls of the stairwell opening)
-    H(1180, 1300, 1038, []); H(1180, 1300, 1222, []);
-
-    // invisible threshold: the vampire cannot cross the outer shell, only the
-    // interior is walkable. (Lore: you cannot cross the threshold of the house.)
-    this.threshold = [
-      { x: 54, y: 30, w: 2286, h: 12, solid: false },
-      { x: 54, y: 1512, w: 2286, h: 12, solid: false },
-      { x: 44, y: 30, w: 12, h: 1494, solid: false },
-      { x: 2300, y: 30, w: 12, h: 1494, solid: false },
+      { id: 'diningWindow', kind: 'window', name: 'BAY WINDOW', room: 'dining', side: 'south', at: -700, width: 116 },
+      { id: 'hallWindow', kind: 'window', name: 'TALL WINDOW', room: 'hall', side: 'south', at: 750, width: 116 },
+      { id: 'kitchenWindow', kind: 'window', name: 'SCULLERY WINDOW', room: 'kitchen', side: 'north', at: -1010, width: 112 },
+      { id: 'studyWindow', kind: 'window', name: 'STUDY WINDOW', room: 'study', side: 'north', at: 440, width: 128 },
+      { id: 'galleryWindow', kind: 'window', name: 'GALLERY WINDOW', room: 'gallery', side: 'north', at: -416, width: 132 },
+      { id: 'oratoryWindow', kind: 'window', name: 'ORATORY WINDOW', room: 'oratory', side: 'north', at: 1296, width: 132 },
+      { id: 'glassNorth', kind: 'window', name: 'SKYLIGHT ROW', room: 'conserv', side: 'north', at: 1989, width: 150 },
+      { id: 'glassEast', kind: 'window', name: 'PANE WALL', room: 'conserv', side: 'east', at: 300, width: 166 },
+      { id: 'chapelWindow', kind: 'window', name: 'ROSE WINDOW', room: 'chapel', side: 'east', at: 1000, width: 132 },
     ];
 
-    // ---- entrances (doors & windows) ----
-    const E = (o) => { this.entrances.push(o); return o; };
-    this.frontDoor = E(this.makeDoor('frontDoor', 'FRONT DOOR', 560, 686, 1500, 'h', 'south', ROOM.HALL));
-    this.diningDoor = E(this.makeDoor('diningDoor', 'SERVANT DOOR', 640, 760, 40, 'h', 'north', ROOM.DINING));
-    this.cellarDoor = E(this.makeDoor('cellarDoor', 'CELLAR DOOR', 1400, 1516, 1500, 'h', 'south', ROOM.BASEMENT));
-    this.diningWindow = E(this.makeWindow('diningWindow', 'BAY WINDOW', 340, 470, 40, 'h', 'north', ROOM.DINING));
-    this.hallWindow = E(this.makeWindow('hallWindow', 'TALL WINDOW', 820, 966, 1500, 'h', 'south', ROOM.HALL));
-    // v1.0 — the east wing's own openings. Glass is weaker than oak but it
-    // shows you the dark coming, which is worth something at 3 a.m.
-    this.glassNorth = E(this.makeWindow('glassNorth', 'SKYLIGHT ROW', 1960, 2120, 40, 'h', 'north', ROOM.CONSERV));
-    this.glassEast = E(this.makeWindow('glassEast', 'PANE WALL', 240, 420, 2320, 'v', 'east', ROOM.CONSERV));
-    this.chapelDoor = E(this.makeDoor('chapelDoor', 'CHAPEL DOOR', 1960, 2086, 1500, 'h', 'south', ROOM.CHAPEL));
-    this.chapelWindow = E(this.makeWindow('chapelWindow', 'ROSE WINDOW', 980, 1140, 2320, 'v', 'east', ROOM.CHAPEL));
-    this.kitchenDoor = E(this.makeDoor('kitchenDoor', 'KITCHEN DOOR', 240, 360, -326, 'v', 'west', ROOM.KITCHEN));
-    this.kitchenDoor.hp = this.kitchenDoor.hpMax = this.kitchenDoor.baseHpMax = 78;
-    this.kitchenWindow = E(this.makeWindow('kitchenWindow', 'SCULLERY WINDOW', -160, -40, 64, 'h', 'north', ROOM.KITCHEN));
-    this.studyWindow = E(this.makeWindow('studyWindow', 'STUDY WINDOW', 1240, 1380, -306, 'h', 'north', ROOM.STUDY));
-    this.galleryWindow = E(this.makeWindow('galleryWindow', 'GALLERY WINDOW', 300, 460, -400, 'h', 'north', ROOM.GALLERY));
-    this.oratoryWindow = E(this.makeWindow('oratoryWindow', 'ORATORY WINDOW', 1960, 2100, -400, 'h', 'north', ROOM.ORATORY));
-    this.palisade = E(this.makeDoor('palisade', 'PALISADE GATE', 1100, 1240, -326, 'v', 'west', ROOM.GATEHOUSE));
-    this.palisade.hp = this.palisade.hpMax = this.palisade.baseHpMax = 210;
-    this.postern = E(this.makeDoor('postern', 'POSTERN', 860, 980, -326, 'v', 'west', ROOM.GATEHOUSE));
-    this.postern.hp = this.postern.hpMax = this.postern.baseHpMax = 72;
-    // the old gothic window is now an interior arch between library and glass house
-    this.libraryArch = { x: 1720, y: 343, w: WALL_T, h: 162 };
+    for (const spec of specs) {
+      const room = roomByKey(spec.room);
+      const side = spec.side;
+      const edge = edgeOf(room, side);
+      const a1 = spec.at - spec.width / 2;
+      const a2 = spec.at + spec.width / 2;
+      const x = edge.axis === 'h' ? spec.at : edge.pos;
+      const y = edge.axis === 'h' ? edge.pos : spec.at;
+      const portal = { ...spec, axis: edge.axis, pos: edge.pos, a1, a2, x, y, room: room.id };
+      this.portals.push(portal);
+      if (spec.kind === 'door' || spec.kind === 'window') {
+        const make = spec.kind === 'door' ? this.makeDoor.bind(this) : this.makeWindow.bind(this);
+        const entrance = make(spec.id, spec.name, a1, a2, edge.pos, edge.axis, side, room.id);
+        entrance.exterior = true;
+        entrance.portal = portal;
+        this.entrances.push(entrance);
+        this[spec.id] = entrance;
+      } else if (spec.to) {
+        const target = roomByKey(spec.to);
+        this.passages.push({ a: room.id, b: target.id, x, y, r: spec.width / 2, id: spec.id });
+      }
+    }
 
-    // room graph: which rooms connect through interior passages
-    this.passages = [
-      { a: ROOM.DINING, b: ROOM.HALL, x: 381, y: 700, r: 62 },
-      { a: ROOM.LIBRARY, b: ROOM.HALL, x: 1094, y: 700, r: 62 },
-      { a: ROOM.BASEMENT, b: ROOM.HALL, x: 1240, y: 1130, r: 58 },
-      { a: ROOM.LIBRARY, b: ROOM.CONSERV, x: 1733, y: 550, r: 62 },
-      { a: ROOM.BASEMENT, b: ROOM.CHAPEL, x: 1800, y: 1119, r: 62 },
-      { a: ROOM.KITCHEN, b: ROOM.DINING, x: 54, y: 320, r: 58 },
-      { a: ROOM.STUDY, b: ROOM.LIBRARY, x: 1580, y: 40, r: 58 },
-      { a: ROOM.GALLERY, b: ROOM.DINING, x: 210, y: 40, r: 52 },
-      { a: ROOM.GATEHOUSE, b: ROOM.KITCHEN, x: -140, y: 616, r: 52 },
-      { a: ROOM.GATEHOUSE, b: ROOM.HALL, x: 54, y: 1133, r: 58 },
-      { a: ROOM.ORATORY, b: ROOM.CONSERV, x: 1860, y: 40, r: 52 },
-    ];
+    const gapsByLine = new Map();
+    for (const portal of this.portals) {
+      const key = edgeKey(portal.axis, portal.pos);
+      let gaps = gapsByLine.get(key);
+      if (!gaps) gapsByLine.set(key, (gaps = []));
+      gaps.push([portal.a1, portal.a2]);
+    }
+    for (const line of edges.values()) {
+      const sorted = line.spans.slice().sort((a, b) => a[0] - b[0]);
+      const merged = [];
+      for (const span of sorted) {
+        const last = merged[merged.length - 1];
+        if (last && span[0] <= last[1] + 2) last[1] = Math.max(last[1], span[1]);
+        else merged.push(span.slice());
+      }
+      const openings = gapsByLine.get(edgeKey(line.axis, line.pos)) || [];
+      for (const [from, to] of merged) {
+        const gaps = openings
+          .filter(([a, b]) => b > from && a < to)
+          .map(([a, b]) => [Math.max(from, a), Math.min(to, b)]);
+        this.wallRun(line.axis, from, to, line.pos, gaps);
+      }
+    }
 
     this.furnish();
     this.makeLights();
     this.makeSpawns();
+    this.threshold = [];
+    const libraryOpening = this.portals.find((p) => p.id === 'glassWingPassage');
+    this.libraryArch = libraryOpening ? { x: libraryOpening.x, y: libraryOpening.y, w: WALL_T, h: libraryOpening.width } : null;
+    this.kitchenDoor.hp = this.kitchenDoor.hpMax = this.kitchenDoor.baseHpMax = 78;
+    this.palisade.hp = this.palisade.hpMax = this.palisade.baseHpMax = 210;
+    this.postern.hp = this.postern.hpMax = this.postern.baseHpMax = 72;
     this.buildRing();
   }
 
@@ -244,10 +231,11 @@ export class Mansion {
    * ================================================================= */
   buildNav() {
     this.navCell = 40;
-    this.navX0 = -500;
-    this.navY0 = -480;
-    this.navX1 = 2520;
-    this.navY1 = 1880;
+    const b = this.bounds;
+    this.navX0 = Math.floor((b.x - 80) / this.navCell) * this.navCell;
+    this.navY0 = Math.floor((b.y - 80) / this.navCell) * this.navCell;
+    this.navX1 = Math.ceil((b.x + b.w + 80) / this.navCell) * this.navCell;
+    this.navY1 = Math.ceil((b.y + b.h + 80) / this.navCell) * this.navCell;
     this.navW = Math.ceil((this.navX1 - this.navX0) / this.navCell);
     this.navH = Math.ceil((this.navY1 - this.navY0) / this.navCell);
     this.nav = new Uint8Array(this.navW * this.navH);
@@ -361,7 +349,9 @@ export class Mansion {
 
   /** A walking loop around the outside of the mansion. */
   buildRing() {
-    const x0 = -480, y0 = -460, x1 = 2480, y1 = 1780;
+    const b = this.bounds;
+    const x0 = b.x + 100, y0 = b.y + 100;
+    const x1 = b.x + b.w - 100, y1 = b.y + b.h - 100;
     const step = 250;
     const pts = [];
     for (let x = x0; x < x1; x += step) pts.push({ x, y: y0 });
@@ -459,245 +449,226 @@ export class Mansion {
 
   furnish() {
     const R = this.rooms;
-    /* ---------- MAIN HALL ---------- */
-    // grand staircase (north-west corner), two flights
-    this.addF(96, 772, 250, 210, 'staircase', { room: R.hall.id, solid: true });
-    this.addF(96, 772, 250, 34, 'stairRail', { room: R.hall.id, solid: false });
-    this.addP('carpet', 620, 1110, { w: 300, h: 420, color: 'crimson', seed: 11, room: R.hall.id });
-    this.addF(760, 800, 96, 96, 'sofa', { room: R.hall.id, rot: 0 });
-    this.addF(880, 800, 96, 96, 'sofa', { room: R.hall.id, rot: 0 });
-    this.addF(1000, 1040, 170, 60, 'sideTable', { room: R.hall.id });
-    this.addF(200, 1180, 60, 170, 'sideTable', { room: R.hall.id });
-    this.addF(300, 1330, 210, 66, 'cabinet', { room: R.hall.id });
-    this.addF(1000, 1330, 120, 120, 'armchair', { room: R.hall.id });
-    this.addF(1090, 640 + 120, 0, 0, 'none', { solid: false });
-    // portraits + decor
-    this.addP('portrait', 500, 745, { room: R.hall.id, big: true });
-    this.addP('portrait', 700, 745, { room: R.hall.id });
-    this.addP('portrait', 1080, 745, { room: R.hall.id });
-    this.addP('portrait', 66, 940, { room: R.hall.id, vertical: true });
-    this.addP('candelabra', 620, 900, { room: R.hall.id, light: true });
-    this.addP('candelabra', 620, 1320, { room: R.hall.id, light: true });
-    this.addP('clock', 1160, 880, { room: R.hall.id });
-    this.addP('cobweb', 100, 770, { room: R.hall.id });
-    this.addP('cobweb', 1180, 1480, { room: R.hall.id });
+    const F = (room, fx, fy, w, h, type, o = {}) => this.addF(
+      room.x + room.w * fx - w / 2,
+      room.y + room.h * fy - h / 2,
+      w, h, type, { room: room.id, ...o },
+    );
+    const P = (room, fx, fy, type, o = {}) => this.addP(
+      type, room.x + room.w * fx, room.y + room.h * fy, { room: room.id, ...o },
+    );
 
-    /* ---------- DINING ROOM ---------- */
-    this.addF(180, 250, 560, 150, 'longTable', { room: R.dining.id });
+    /* ---------- MAIN HALL — broad centre, with a clean cross-wing lane ---------- */
+    F(R.hall, 0.20, 0.22, 210, 190, 'staircase');
+    F(R.hall, 0.20, 0.22, 210, 28, 'stairRail', { solid: false });
+    F(R.hall, 0.70, 0.20, 112, 82, 'sofa');
+    F(R.hall, 0.83, 0.20, 112, 82, 'sofa');
+    F(R.hall, 0.77, 0.72, 132, 66, 'sideTable');
+    F(R.hall, 0.19, 0.73, 66, 132, 'sideTable');
+    F(R.hall, 0.50, 0.82, 172, 72, 'cabinet');
+    F(R.hall, 0.78, 0.86, 102, 102, 'armchair');
+    P(R.hall, 0.50, 0.61, 'carpet', { w: 300, h: 380, color: 'crimson', seed: 11 });
+    P(R.hall, 0.45, 0.40, 'candelabra', { light: true });
+    P(R.hall, 0.58, 0.68, 'candelabra', { light: true });
+    P(R.hall, 0.83, 0.38, 'clock');
+    P(R.hall, 0.05, 0.35, 'portrait', { vertical: true, big: true });
+    P(R.hall, 0.95, 0.36, 'portrait', { vertical: true });
+    P(R.hall, 0.08, 0.08, 'cobweb');
+    P(R.hall, 0.91, 0.92, 'cobweb');
+
+    /* ---------- DINING — the servant-door apron stays empty ---------- */
+    F(R.dining, 0.53, 0.53, 360, 110, 'longTable');
     for (let i = 0; i < 8; i++) {
-      const left = i < 4;
-      const idx = i % 4;
-      this.addF(210 + idx * 140, left ? 190 : 410, 54, 54, 'chair', { room: R.dining.id, rot: left ? 0 : Math.PI });
+      const col = (i % 4) / 5 + 0.30;
+      F(R.dining, col, i < 4 ? 0.35 : 0.71, 54, 54, 'chair', { rot: i < 4 ? 0 : Math.PI });
     }
-    // Keep the servant-door apron clear. A cabinet on the gap made the first
-    // knock a door you could hear and not stand in front of.
-    this.addF(300, 110, 150, 60, 'cabinet', { room: R.dining.id });
-    this.addF(100, 90, 120, 54, 'cabinet', { room: R.dining.id });
-    this.addF(700, 480, 120, 120, 'sideTable', { room: R.dining.id });
-    this.addP('carpet', 460, 330, { w: 620, h: 420, color: 'purple', seed: 12, room: R.dining.id });
-    for (let i = 0; i < 5; i++) this.addP('candleStand', 240 + i * 118, 325, { room: R.dining.id, light: i % 2 === 0 });
-    this.addP('candelabra', 460, 325, { room: R.dining.id, light: true, onTable: true });
-    this.addP('portrait', 300, 66, { room: R.dining.id });
-    this.addP('portrait', 660, 66, { room: R.dining.id });
-    this.addP('cobweb', 866, 70, { room: R.dining.id });
+    F(R.dining, 0.18, 0.18, 130, 54, 'cabinet');
+    F(R.dining, 0.82, 0.82, 128, 90, 'sideTable');
+    P(R.dining, 0.53, 0.53, 'carpet', { w: 520, h: 360, color: 'purple', seed: 12 });
+    for (let i = 0; i < 5; i++) P(R.dining, 0.30 + i * 0.10, 0.53, 'candleStand', { light: i % 2 === 0 });
+    P(R.dining, 0.53, 0.53, 'candelabra', { light: true, onTable: true });
+    P(R.dining, 0.27, 0.04, 'portrait');
+    P(R.dining, 0.76, 0.04, 'portrait');
+    P(R.dining, 0.96, 0.07, 'cobweb');
 
-    /* ---------- LIBRARY ---------- */
-    // bookshelves create lanes. The south pair is short so the study door
-    // can cross to the hall passage instead of dead-ending behind the desk.
-    /* 170 along the wall, not 230. At 230 each gap between two bookcases was
-     * a 56px slot sealed at both ends — floor that looks walkable and is not,
-     * which is the worst thing a room can do to somebody being chased. At 170
-     * the lanes open into the corridor that runs under them. */
-    for (let i = 0; i < 4; i++) this.addF(980 + i * 150, 80, 60, 170, 'shelf', { room: R.library.id });
-    this.addF(980, 420, 60, 200, 'shelf', { room: R.library.id });
-    this.addF(1130, 560, 60, 70, 'shelf', { room: R.library.id });
-    this.addF(1280, 560, 60, 70, 'shelf', { room: R.library.id });
-    this.addF(1668, 120, 48, 160, 'shelf', { room: R.library.id });
-    // 330, not 300: at 300 the desk's top edge began 10px inside the four
-    // shelves above it, and two solid meshes standing through each other is
-    // the untidiest thing a room can do.
-    this.addF(1000, 330, 420, 76, 'desk', { room: R.library.id });
-    this.addF(1320, 470, 90, 80, 'armchair', { room: R.library.id });
-    this.addF(1640, 430, 70, 150, 'cabinet', { room: R.library.id });
-    this.addP('fireplace', 1120, 646, { room: R.library.id, w: 220, h: 70 });
-    this.addP('carpet', 1200, 480, { w: 420, h: 300, color: 'dark', seed: 13, room: R.library.id });
-    this.addP('deskLamp', 1420, 340, { room: R.library.id, light: true });
-    this.addP('candleStand', 1660, 300, { room: R.library.id, light: true });
-    this.addP('books', 1230, 330, { room: R.library.id });
-    this.addP('portrait', 1250, 66, { room: R.library.id });
-    this.addP('cobweb', 1700, 70, { room: R.library.id });
+    /* ---------- LIBRARY — perimeter stacks, an open centre aisle ---------- */
+    for (let i = 0; i < 4; i++) F(R.library, 0.16 + i * 0.16, 0.13, 58, 150, 'shelf');
+    F(R.library, 0.91, 0.20, 58, 150, 'shelf');
+    F(R.library, 0.91, 0.80, 58, 150, 'shelf');
+    F(R.library, 0.28, 0.40, 340, 76, 'desk');
+    F(R.library, 0.59, 0.42, 86, 78, 'armchair');
+    F(R.library, 0.68, 0.78, 72, 148, 'cabinet');
+    P(R.library, 0.50, 0.06, 'fireplace', { w: 220, h: 70 });
+    P(R.library, 0.56, 0.67, 'carpet', { w: 360, h: 250, color: 'dark', seed: 13 });
+    P(R.library, 0.62, 0.41, 'deskLamp', { light: true });
+    P(R.library, 0.84, 0.35, 'candleStand', { light: true });
+    P(R.library, 0.33, 0.39, 'books');
+    P(R.library, 0.50, 0.04, 'portrait');
+    P(R.library, 0.96, 0.08, 'cobweb');
 
-    /* ---------- BASEMENT ---------- */
-    for (let i = 0; i < 3; i++) this.addF(1320 + i * 150, 900, 90, 90, 'crates', { room: R.basement.id });
-    for (let i = 0; i < 2; i++) this.addF(1320, 1100 + i * 150, 200, 60, 'wineRack', { room: R.basement.id });
-    // 1690,1010 — flush to the right wall and clear of the crate row: it used
-    // to stand at 1600,900 with a stack of crates buried inside it.
-    this.addF(1690, 1010, 90, 260, 'wineRack', { room: R.basement.id, vertical: true });
-    this.addF(1560, 1280, 160, 90, 'crates', { room: R.basement.id });
-    this.addF(1330, 1330, 70, 70, 'barrel', { room: R.basement.id });
-    this.addF(1440, 1390, 70, 70, 'barrel', { room: R.basement.id });
-    this.addP('basin', 1650, 1360, { room: R.basement.id, w: 70, h: 70 });
-    this.addP('candleStand', 1300, 840, { room: R.basement.id, light: true, dim: true });
-    this.addP('cobweb', 1290, 830, { room: R.basement.id });
-    this.addP('cobweb', 1760, 1470, { room: R.basement.id });
-    this.addP('bones', 1500, 1000, { room: R.basement.id });
-    this.addP('bones', 1620, 1200, { room: R.basement.id });
+    /* ---------- BASEMENT — a dark store room with the basin on its flank ---------- */
+    for (let i = 0; i < 3; i++) F(R.basement, 0.22 + i * 0.18, 0.16, 82, 82, 'crates');
+    F(R.basement, 0.17, 0.48, 190, 58, 'wineRack');
+    F(R.basement, 0.17, 0.72, 190, 58, 'wineRack');
+    F(R.basement, 0.84, 0.26, 64, 210, 'wineRack', { vertical: true });
+    F(R.basement, 0.58, 0.82, 140, 82, 'crates');
+    F(R.basement, 0.27, 0.87, 66, 66, 'barrel');
+    F(R.basement, 0.42, 0.90, 66, 66, 'barrel');
+    P(R.basement, 0.78, 0.78, 'basin', { w: 76, h: 76 });
+    P(R.basement, 0.12, 0.14, 'candleStand', { light: true, dim: true });
+    P(R.basement, 0.88, 0.08, 'cobweb');
+    P(R.basement, 0.91, 0.92, 'cobweb');
+    P(R.basement, 0.48, 0.43, 'bones');
+    P(R.basement, 0.70, 0.57, 'bones');
 
-    /* ---------- CONSERVATORY (v1.0) ----------
-     * Greenhouse off the library. Planters make lanes, the fountain is the
-     * only quiet center, and the glass roof means the moon is a fifth door. */
+    /* ---------- CONSERVATORY — glass, overgrowth, a fountain, clear exits ---------- */
     for (let i = 0; i < 4; i++) {
-      this.addF(1790 + i * 118, 120, 72, 72, 'planter', { room: R.conserv.id });
-      this.addF(1790 + i * 118, 500, 72, 72, 'planter', { room: R.conserv.id });
+      F(R.conserv, 0.18 + i * 0.20, 0.14, 68, 68, 'planter');
+      F(R.conserv, 0.18 + i * 0.20, 0.86, 68, 68, 'planter');
     }
-    this.addF(1990, 290, 130, 130, 'fountain', { room: R.conserv.id });
-    // 2230, against the glass: at 2190 each bench stood 26px inside the last
-    // planter of its row.
-    this.addF(2230, 150, 60, 160, 'pottingBench', { room: R.conserv.id });
-    this.addF(2230, 400, 60, 160, 'pottingBench', { room: R.conserv.id });
-    this.addP('mossPatch', 1820, 300, { room: R.conserv.id });
-    this.addP('mossPatch', 2150, 560, { room: R.conserv.id });
-    this.addP('urn', 1760, 80, { room: R.conserv.id });
-    this.addP('urn', 2280, 80, { room: R.conserv.id });
-    this.addP('candleStand', 1900, 430, { room: R.conserv.id, light: true, dim: true });
-    this.addP('candleStand', 2140, 260, { room: R.conserv.id, light: true, dim: true });
-    this.addP('hangingVine', 1840, 70, { room: R.conserv.id });
-    this.addP('hangingVine', 2060, 70, { room: R.conserv.id });
-    this.addP('hangingVine', 2260, 70, { room: R.conserv.id });
-    this.addP('cobweb', 1750, 636, { room: R.conserv.id });
+    F(R.conserv, 0.52, 0.50, 116, 116, 'fountain');
+    F(R.conserv, 0.88, 0.25, 54, 140, 'pottingBench');
+    F(R.conserv, 0.88, 0.76, 54, 140, 'pottingBench');
+    P(R.conserv, 0.22, 0.50, 'mossPatch');
+    P(R.conserv, 0.76, 0.64, 'mossPatch');
+    P(R.conserv, 0.10, 0.12, 'urn');
+    P(R.conserv, 0.92, 0.12, 'urn');
+    P(R.conserv, 0.32, 0.72, 'candleStand', { light: true, dim: true });
+    P(R.conserv, 0.74, 0.34, 'candleStand', { light: true, dim: true });
+    P(R.conserv, 0.24, 0.05, 'hangingVine');
+    P(R.conserv, 0.58, 0.05, 'hangingVine');
+    P(R.conserv, 0.88, 0.05, 'hangingVine');
+    P(R.conserv, 0.96, 0.96, 'cobweb');
 
-    /* ---------- CHAPEL (v1.0) ----------
-     * Pews in two banks facing the altar; the altar light is a refuge — not
-     * safety, just fewer seconds between heartbeats (enemies slow inside it). */
+    /* ---------- CHAPEL — paired pew banks frame a strong, readable aisle ---------- */
+    F(R.chapel, 0.50, 0.18, 190, 62, 'altar');
     for (let i = 0; i < 3; i++) {
-      this.addF(1846, 1020 + i * 96, 170, 40, 'pew', { room: R.chapel.id });
-      this.addF(2080, 1020 + i * 96, 170, 40, 'pew', { room: R.chapel.id });
+      const fy = 0.43 + i * 0.15;
+      F(R.chapel, 0.28, fy, 156, 38, 'pew');
+      F(R.chapel, 0.72, fy, 156, 38, 'pew');
     }
-    this.addF(1950, 846, 200, 66, 'altar', { room: R.chapel.id });
-    this.addF(2000, 1420, 110, 64, 'font', { room: R.chapel.id, solid: false });
-    this.addP('stainedGlass', 2046, 806, { room: R.chapel.id, w: 210, h: 74 });
-    this.addP('candleStand', 1930, 930, { room: R.chapel.id, light: true });
-    this.addP('candleStand', 2160, 930, { room: R.chapel.id, light: true });
-    this.addP('carpet', 2046, 1220, { w: 170, h: 520, color: 'crimson', seed: 17, room: R.chapel.id });
-    this.addP('urn', 1820, 860, { room: R.chapel.id });
-    this.addP('bones', 2250, 1420, { room: R.chapel.id });
-    this.addP('cobweb', 2290, 830, { room: R.chapel.id });
+    F(R.chapel, 0.86, 0.86, 78, 78, 'font', { solid: false });
+    P(R.chapel, 0.50, 0.04, 'stainedGlass', { w: 210, h: 74 });
+    P(R.chapel, 0.25, 0.26, 'candleStand', { light: true });
+    P(R.chapel, 0.75, 0.26, 'candleStand', { light: true });
+    P(R.chapel, 0.50, 0.64, 'carpet', { w: 178, h: 400, color: 'crimson', seed: 17 });
+    P(R.chapel, 0.12, 0.22, 'urn');
+    P(R.chapel, 0.90, 0.88, 'bones');
+    P(R.chapel, 0.96, 0.08, 'cobweb');
 
-    /* ---------- KITCHEN ----------
-     * Counters make a lane. The larder is the refill. The west door is thin
-     * on purpose: boarding it is a choice, not a default. */
-    this.addF(-250, 140, 160, 54, 'cabinet', { room: R.kitchen.id });
-    this.addF(-80, 140, 110, 54, 'cabinet', { room: R.kitchen.id });
-    this.addF(-260, 430, 70, 70, 'barrel', { room: R.kitchen.id });
-    this.addF(-160, 470, 70, 70, 'barrel', { room: R.kitchen.id });
-    this.addF(-40, 400, 70, 140, 'sideTable', { room: R.kitchen.id });
-    this.addP('larder', -150, 300, { room: R.kitchen.id, w: 86, h: 54 });
-    this.addP('candleStand', -220, 200, { room: R.kitchen.id, light: true });
-    this.addP('candleStand', -60, 480, { room: R.kitchen.id, light: true, dim: true });
-    this.addP('cobweb', -290, 110, { room: R.kitchen.id });
+    /* ---------- KITCHEN — apron between the two doors, larder within reach ---------- */
+    F(R.kitchen, 0.22, 0.16, 148, 52, 'cabinet');
+    F(R.kitchen, 0.72, 0.16, 112, 52, 'cabinet');
+    F(R.kitchen, 0.16, 0.83, 66, 66, 'barrel');
+    F(R.kitchen, 0.82, 0.82, 66, 66, 'barrel');
+    F(R.kitchen, 0.84, 0.50, 58, 128, 'sideTable');
+    P(R.kitchen, 0.70, 0.58, 'larder', { w: 86, h: 54 });
+    P(R.kitchen, 0.25, 0.30, 'candleStand', { light: true });
+    P(R.kitchen, 0.70, 0.80, 'candleStand', { light: true, dim: true });
+    P(R.kitchen, 0.92, 0.10, 'cobweb');
 
-    /* ---------- STUDY ----------
-     * One desk, one lamp. Lighting the ward slows whatever is in the circle.
-     * The north window is the price of using it. */
-    this.addF(1040, -220, 200, 70, 'desk', { room: R.study.id });
-    this.addF(1500, -230, 50, 180, 'shelf', { room: R.study.id });
-    this.addF(1120, -80, 90, 90, 'armchair', { room: R.study.id });
-    this.addP('ward', 1320, -120, { room: R.study.id });
-    this.addP('deskLamp', 1180, -180, { room: R.study.id, light: true });
-    this.addP('candleStand', 1560, -80, { room: R.study.id, light: true, dim: true });
-    this.addP('books', 1080, -190, { room: R.study.id });
-    this.addP('portrait', 1400, -292, { room: R.study.id });
-    this.studyWard = { x: 1320, y: -120, r: 150, until: 0, readyAt: 0 };
+    /* ---------- STUDY — the lamp-lit ward is a meaningful detour, not a trap ---------- */
+    F(R.study, 0.48, 0.28, 210, 70, 'desk');
+    F(R.study, 0.86, 0.64, 54, 160, 'shelf');
+    F(R.study, 0.22, 0.70, 84, 84, 'armchair');
+    P(R.study, 0.51, 0.63, 'ward');
+    P(R.study, 0.47, 0.24, 'deskLamp', { light: true });
+    P(R.study, 0.16, 0.78, 'candleStand', { light: true, dim: true });
+    P(R.study, 0.20, 0.27, 'books');
+    P(R.study, 0.78, 0.04, 'portrait');
+    this.studyWard = { x: R.study.x + R.study.w * 0.51, y: R.study.y + R.study.h * 0.63, r: 150, until: 0, readyAt: 0 };
 
-    /* ---------- GALLERY — photographed floor, a runner, no second exit ---------- */
-    this.addF(140, -250, 140, 32, 'pew', { room: R.gallery.id });
-    this.addF(480, -250, 140, 32, 'pew', { room: R.gallery.id });
-    this.addF(360, -180, 64, 40, 'sideTable', { room: R.gallery.id });
-    this.addP('portrait', 160, -370, { room: R.gallery.id });
-    this.addP('portrait', 600, -370, { room: R.gallery.id, big: true });
-    this.addP('candleStand', 300, -160, { room: R.gallery.id, light: true });
-    this.addP('candleStand', 560, -160, { room: R.gallery.id, light: true, dim: true });
+    /* ---------- GALLERY — quiet portrait room, approached from dining ---------- */
+    F(R.gallery, 0.24, 0.56, 132, 32, 'pew');
+    F(R.gallery, 0.76, 0.56, 132, 32, 'pew');
+    F(R.gallery, 0.50, 0.78, 64, 40, 'sideTable');
+    P(R.gallery, 0.18, 0.06, 'portrait');
+    P(R.gallery, 0.82, 0.06, 'portrait', { big: true });
+    P(R.gallery, 0.42, 0.78, 'candleStand', { light: true });
+    P(R.gallery, 0.68, 0.78, 'candleStand', { light: true, dim: true });
 
-    /* ---------- GATEHOUSE — the fort. Stakes are raised with planks. ---------- */
-    this.addF(-250, 700, 70, 70, 'crates', { room: R.gatehouse.id });
-    this.addF(-90, 760, 70, 50, 'barrel', { room: R.gatehouse.id });
-    this.addF(-240, 1360, 90, 50, 'crates', { room: R.gatehouse.id });
-    this.addP('stakes', -150, 980, { room: R.gatehouse.id });
-    this.addP('candleStand', -220, 860, { room: R.gatehouse.id, light: true });
-    this.addP('candleStand', -70, 1320, { room: R.gatehouse.id, light: true, dim: true });
+    /* ---------- GATEHOUSE — two outer approaches, cover kept to the sides ---------- */
+    F(R.gatehouse, 0.17, 0.27, 72, 72, 'crates');
+    F(R.gatehouse, 0.82, 0.30, 72, 54, 'barrel');
+    F(R.gatehouse, 0.18, 0.82, 86, 52, 'crates');
+    P(R.gatehouse, 0.50, 0.58, 'stakes');
+    P(R.gatehouse, 0.16, 0.45, 'candleStand', { light: true });
+    P(R.gatehouse, 0.82, 0.76, 'candleStand', { light: true, dim: true });
 
-    /* ---------- ORATORY ---------- */
-    this.addF(1960, -300, 110, 40, 'altar', { room: R.oratory.id });
-    this.addP('candleStand', 1840, -200, { room: R.oratory.id, light: true, dim: true });
-    this.addP('candleStand', 2140, -200, { room: R.oratory.id, light: true, dim: true });
-    this.addP('urn', 1820, -280, { room: R.oratory.id });
+    /* ---------- ORATORY — the cold, private counterpoint to the chapel ---------- */
+    F(R.oratory, 0.50, 0.30, 150, 48, 'altar');
+    F(R.oratory, 0.22, 0.74, 94, 42, 'pew', { solid: false });
+    F(R.oratory, 0.78, 0.74, 94, 42, 'pew', { solid: false });
+    P(R.oratory, 0.22, 0.66, 'candleStand', { light: true, dim: true });
+    P(R.oratory, 0.78, 0.66, 'candleStand', { light: true, dim: true });
+    P(R.oratory, 0.12, 0.18, 'urn');
   }
 
   makeLights() {
+    const R = this.rooms;
+    const point = (room, fx = 0.5, fy = 0.5) => ({ x: room.x + room.w * fx, y: room.y + room.h * fy });
     const L = (o) => this.lights.push({ on: true, flicker: 1, seed: rand(0, 100), ...o });
-    // hall chandelier — the room's heart, and the first thing that dies in a blackout
-    L({ id: 'chandelier', x: 620, y: 1000, r: 340, i: 0.95, color: [255, 186, 120], flick: 0.1, room: ROOM.HALL, type: 'chandelier' });
+
+    const hall = point(R.hall, 0.50, 0.48);
+    L({ id: 'chandelier', ...hall, r: 350, i: 0.95, color: [255, 186, 120], flick: 0.1, room: ROOM.HALL, type: 'chandelier' });
     for (const p of this.props) {
       if (p.type === 'candelabra' && p.light) L({ x: p.x, y: p.y, r: 175, i: 0.72, color: [255, 175, 110], flick: 0.3, room: p.room, type: 'candle' });
       if (p.type === 'candleStand' && p.light) L({ x: p.x, y: p.y, r: 135, i: p.dim ? 0.34 : 0.6, color: [255, 170, 105], flick: 0.35, room: p.room, type: 'candle' });
       if (p.type === 'deskLamp' && p.light) L({ x: p.x, y: p.y, r: 155, i: 0.55, color: [255, 190, 130], flick: 0.12, room: p.room, type: 'lamp' });
     }
-    // fireplace
-    L({ id: 'fireplace', x: 1120, y: 636, r: 300, i: 0.95, color: [255, 145, 60], flick: 0.5, room: ROOM.LIBRARY, type: 'fire' });
+
+    const hearth = this.props.find((p) => p.type === 'fireplace');
+    const fireplace = hearth || point(R.library, 0.50, 0.10);
+    L({ id: 'fireplace', x: fireplace.x, y: fireplace.y, r: 300, i: 0.95, color: [255, 145, 60], flick: 0.5, room: ROOM.LIBRARY, type: 'fire' });
     this.fireplaceLight = this.lights[this.lights.length - 1];
 
-    // v1.0 — the altar: a refuge field. Enemies do not fear God; they simply
-    // move worse inside the light. Players can stand in it to breathe, not to
-    // win. The conservatory gets the moon doubled through its glass roof.
-    L({ id: 'altar', x: 2050, y: 900, r: 300, i: 0.8, color: [238, 214, 160], flick: 0.22, room: ROOM.CHAPEL, type: 'relic' });
+    const altar = point(R.chapel, 0.50, 0.18);
+    L({ id: 'altar', ...altar, r: 300, i: 0.8, color: [238, 214, 160], flick: 0.22, room: ROOM.CHAPEL, type: 'relic' });
     this.altarLight = this.lights[this.lights.length - 1];
-    this.chapelAltar = { x: 2050, y: 900, r: 175 };
-    L({ x: 2046, y: 850, r: 190, i: 0.5, color: [190, 190, 235], flick: 0.15, room: ROOM.CHAPEL, type: 'moon' });
-    L({ x: 2000, y: 180, r: 260, i: 0.55, color: [150, 190, 245], flick: 0, room: ROOM.CONSERV, type: 'moon' });
-    L({ x: 2160, y: 430, r: 230, i: 0.5, color: [150, 190, 245], flick: 0, room: ROOM.CONSERV, type: 'moon' });
+    this.chapelAltar = { ...altar, r: 175 };
+    L({ ...point(R.chapel, 0.50, 0.20), r: 190, i: 0.5, color: [190, 190, 235], flick: 0.15, room: ROOM.CHAPEL, type: 'moon' });
 
-    // moonlight through each window (cool, directional)
+    const glass = R.conserv;
+    L({ ...point(glass, 0.33, 0.34), r: 260, i: 0.55, color: [150, 190, 245], flick: 0, room: ROOM.CONSERV, type: 'moon' });
+    L({ ...point(glass, 0.74, 0.68), r: 230, i: 0.5, color: [150, 190, 245], flick: 0, room: ROOM.CONSERV, type: 'moon' });
+
     for (const e of this.entrances) {
       if (e.kind !== 'window') continue;
-      L({
-        x: e.inside.x, y: e.inside.y, r: 250, i: 0.5, color: [150, 190, 245], flick: 0, room: e.room, type: 'moon',
-      });
-      L({
-        x: e.x, y: e.y, r: 210, i: 0.42, color: [140, 180, 240], flick: 0, room: e.room, type: 'moon',
-      });
+      L({ x: e.inside.x, y: e.inside.y, r: 250, i: 0.5, color: [150, 190, 245], flick: 0, room: e.room, type: 'moon' });
+      L({ x: e.x, y: e.y, r: 210, i: 0.42, color: [140, 180, 240], flick: 0, room: e.room, type: 'moon' });
     }
-    // the front door leaks a little cold light
     L({ x: this.frontDoor.inside.x, y: this.frontDoor.inside.y, r: 190, i: 0.35, color: [140, 175, 235], flick: 0, room: ROOM.HALL, type: 'moon' });
-    // basement: one weak lamp, a lot of dark
-    L({ x: 1500, y: 1160, r: 210, i: 0.3, color: [255, 160, 90], flick: 0.6, room: ROOM.BASEMENT, type: 'lamp' });
-    L({ x: -150, y: 320, r: 220, i: 0.45, color: [255, 170, 110], flick: 0.2, room: ROOM.KITCHEN, type: 'lamp' });
-    L({ x: 1320, y: -120, r: 200, i: 0.4, color: [210, 190, 150], flick: 0.08, room: ROOM.STUDY, type: 'lamp' });
-    L({ x: 400, y: -220, r: 220, i: 0.48, color: [255, 176, 110], flick: 0.18, room: ROOM.GALLERY, type: 'candle' });
-    L({ x: -160, y: 1000, r: 220, i: 0.5, color: [255, 150, 80], flick: 0.28, room: ROOM.GATEHOUSE, type: 'fire' });
-    L({ x: 2000, y: -240, r: 230, i: 0.46, color: [170, 190, 230], flick: 0.05, room: ROOM.ORATORY, type: 'moon' });
+
+    const basement = point(R.basement, 0.50, 0.55);
+    const kitchen = point(R.kitchen, 0.50, 0.52);
+    const study = point(R.study, 0.53, 0.62);
+    const gallery = point(R.gallery, 0.50, 0.57);
+    const gatehouse = point(R.gatehouse, 0.50, 0.58);
+    const oratory = point(R.oratory, 0.50, 0.55);
+    L({ id: 'basementLamp', ...basement, r: 210, i: 0.3, color: [255, 160, 90], flick: 0.6, room: ROOM.BASEMENT, type: 'lamp' });
+    L({ id: 'kitchenLamp', ...kitchen, r: 220, i: 0.45, color: [255, 170, 110], flick: 0.2, room: ROOM.KITCHEN, type: 'lamp' });
+    L({ id: 'studyLamp', ...study, r: 200, i: 0.4, color: [210, 190, 150], flick: 0.08, room: ROOM.STUDY, type: 'lamp' });
+    L({ id: 'galleryLamp', ...gallery, r: 220, i: 0.48, color: [255, 176, 110], flick: 0.18, room: ROOM.GALLERY, type: 'candle' });
+    L({ id: 'gatehouseFire', ...gatehouse, r: 220, i: 0.5, color: [255, 150, 80], flick: 0.28, room: ROOM.GATEHOUSE, type: 'fire' });
+    L({ id: 'oratoryMoon', ...oratory, r: 230, i: 0.46, color: [170, 190, 230], flick: 0.05, room: ROOM.ORATORY, type: 'moon' });
   }
 
   makeSpawns() {
     const S = (x, y, entrance, weight = 1) => this.spawns.push({ x, y, entrance, weight });
-    // outside positions clustered near each entrance + a few wanderers
-    S(620, 1760, 'frontDoor'); S(430, 1690, 'frontDoor'); S(860, 1700, 'frontDoor');
-    S(890, 1760, 'hallWindow');
-    S(-430, 1170, 'palisade'); S(-450, 1080, 'palisade'); S(-440, 1280, 'palisade');
-    S(-450, 920, 'postern'); S(-460, 800, 'postern');
-    S(470, -360, 'galleryWindow'); S(360, -370, 'galleryWindow');
-    S(2050, -360, 'oratoryWindow'); S(1900, -350, 'oratoryWindow');
-    S(690, -190, 'diningDoor'); S(520, -210, 'diningDoor');
-    S(400, -200, 'diningWindow');
-    S(2040, -190, 'glassNorth'); S(2210, -210, 'glassNorth');
-    S(2440, 200, 'glassEast'); S(2440, 430, 'glassEast'); S(2420, -60, 'glassEast');
-    S(2023, 1740, 'chapelDoor'); S(2160, 1690, 'chapelDoor');
-    S(2440, 950, 'chapelWindow'); S(2440, 1250, 'chapelWindow');
-    S(1460, 1750, 'cellarDoor'); S(1220, 1690, 'cellarDoor'); S(1700, 1700, 'cellarDoor');
-    S(-460, 300, 'kitchenDoor'); S(-450, 200, 'kitchenDoor'); S(-440, 420, 'kitchenDoor');
-    S(-100, -80, 'kitchenWindow');
-    S(1310, -430, 'studyWindow'); S(1180, -420, 'studyWindow'); S(1460, -410, 'studyWindow');
-    // dark wanderers (behind the house, in the fog)
-    S(-250, 300, null); S(2520, 700, null); S(900, 2050, null); S(300, 2050, null); S(2350, 1900, null);
+    for (const e of this.entrances) {
+      if (!e.exterior || !e.outside) continue;
+      const offsets = e.kind === 'door' ? [-86, 0, 86] : [-72, 72];
+      for (const offset of offsets) {
+        const x = e.outside.x + (e.axis === 'h' ? offset : 0);
+        const y = e.outside.y + (e.axis === 'v' ? offset : 0);
+        S(x, y, e.id, e.kind === 'door' ? 1 : 0.78);
+      }
+    }
+    const b = this.bounds;
+    S(b.x + 120, b.y + b.h * 0.36, null, 0.65);
+    S(b.x + b.w - 120, b.y + b.h * 0.42, null, 0.65);
+    S(b.x + b.w * 0.42, b.y + 120, null, 0.55);
+    S(b.x + b.w * 0.68, b.y + b.h - 120, null, 0.55);
   }
 
   /* ================= collision grid ================= */
@@ -944,44 +915,53 @@ export class Mansion {
   /* ================= baked floor + walls ================= */
 
   bake() {
-    const W = 3400, H = 2400;
+    const pad = 180;
+    const b = this.bounds;
+    const ox = Math.floor((b.x - pad) / 64) * 64;
+    const oy = Math.floor((b.y - pad) / 64) * 64;
+    const W = Math.ceil((b.w + pad * 2) / 64) * 64;
+    const H = Math.ceil((b.h + pad * 2) / 64) * 64;
     const c = document.createElement('canvas');
     c.width = W; c.height = H;
     const g = c.getContext('2d');
     this.floorCanvas = c;
-    this.bakeOx = -520; this.bakeOy = -500;   // world (-520,-500) maps to (0,0)
+    this.bakeOx = ox; this.bakeOy = oy;
     g.translate(-this.bakeOx, -this.bakeOy);
 
-    // ---- exterior ground: dark gravel + dead grass
     g.fillStyle = '#1c2636';
     g.fillRect(this.bakeOx, this.bakeOy, W, H);
     const rng = new Rng(1337);
-    for (let i = 0; i < 2600; i++) {
+    for (let i = 0; i < 3100; i++) {
       const x = this.bakeOx + rng.float(0, W), y = this.bakeOy + rng.float(0, H);
-      const room = this.findRoom(x, y);
-      if (room !== ROOM.OUTSIDE) continue;
+      if (this.findRoom(x, y) !== ROOM.OUTSIDE) continue;
       const v = rng.float(0, 1);
       g.fillStyle = v > 0.7 ? 'rgba(62,72,90,0.45)' : v > 0.4 ? 'rgba(40,48,64,0.5)' : 'rgba(28,34,48,0.55)';
       g.beginPath(); g.ellipse(x, y, rng.float(2, 9), rng.float(1.5, 6), rng.float(0, TAU), 0, TAU); g.fill();
     }
-    // pale gravel path to the front door
-    g.fillStyle = 'rgba(96,102,118,0.4)';
-    g.fillRect(560, 1500, 140, 420);
-
-    // ---- rooms
-    for (const r of this.roomList) this.bakeRoom(g, r);
-
-    // ---- walls
-    for (const s of this.solids) {
-      if (s.type !== 'wall') continue;
-      this.drawWallRect(g, s);
+    g.save();
+    g.lineCap = 'round';
+    g.strokeStyle = 'rgba(96,102,118,0.40)';
+    g.lineWidth = 58;
+    for (const e of this.entrances) {
+      if (e.kind !== 'door' || !e.exterior) continue;
+      const dx = e.outside.x - e.x, dy = e.outside.y - e.y;
+      const d = Math.hypot(dx, dy) || 1;
+      g.beginPath();
+      g.moveTo(e.x, e.y);
+      g.lineTo(e.outside.x + dx / d * 230, e.outside.y + dy / d * 230);
+      g.stroke();
     }
+    g.restore();
 
-    // ---- outer shell shadow
+    for (const r of this.roomList) this.bakeRoom(g, r);
+    for (const s of this.solids) if (s.type === 'wall') this.drawWallRect(g, s);
+
     g.save();
     g.globalCompositeOperation = 'multiply';
-    const shell = { x: 54, y: 40, w: 1692, h: 1486 };
-    const sh = g.createLinearGradient(shell.x, shell.y, shell.x + 90, shell.y + 90);
+    for (const r of this.roomList) {
+      g.fillStyle = 'rgba(8,10,16,0.10)';
+      g.fillRect(r.x - 18, r.y - 18, r.w + 36, r.h + 36);
+    }
     g.restore();
   }
 
@@ -1230,8 +1210,11 @@ export class Mansion {
   /* ================= drawing ================= */
 
   drawFloor(ctx) {
+    const b = this.bounds;
+    const margin = 5000;
+    ctx.fillStyle = '#1c2636';
+    ctx.fillRect(b.x - margin, b.y - margin, b.w + margin * 2, b.h + margin * 2);
     ctx.drawImage(this.floorCanvas, this.bakeOx, this.bakeOy);
-    drawRoomMarks(ctx, this);
     if (!this.stakesUp) return;
     ctx.save();
     ctx.fillStyle = '#24160c';
@@ -1245,13 +1228,20 @@ export class Mansion {
     ctx.restore();
   }
 
-  /** Three planks turn the courtyard into a one-at-a-time lane. */
+  /** Narrative floor fragments draw after the 3D kit floor pass. */
+  drawRoomMarks(ctx) {
+    drawRoomMarks(ctx, this);
+  }
+
+  /** Three planks turn the gatehouse into a one-at-a-time lane. */
   raiseStakes() {
     if (this.stakesUp) return;
     this.stakesUp = true;
+    const room = this.rooms.gatehouse;
+    const x = room.x + room.w - 76;
     const posts = [
-      { x: -248, y: 624, w: 28, h: 236 },
-      { x: -248, y: 950, w: 28, h: 520 },
+      { x, y: room.y + 70, w: 28, h: 270 },
+      { x, y: room.y + 470, w: 28, h: 300 },
     ];
     for (const s of posts) this._indexSolid({ ...s, type: 'fort', solid: true });
   }
@@ -1279,9 +1269,15 @@ export class Mansion {
 
   drawProps(ctx, game) {
     const t = game.time;
+    const wallArt = new Set(['portrait', 'fireplace', 'clock', 'stainedGlass', 'hangingVine']);
     for (const p of this.props) {
       if (p.env3d) continue;          // a mesh is standing in its place (#55)
       if (!game.renderer.isVisible(p.x, p.y, 320)) continue;
+      const billboard = wallArt.has(p.type) && game.renderer.upright;
+      if (billboard) {
+        ctx.save();
+        game.renderer.upright(ctx, p.x, p.y);
+      }
       switch (p.type) {
         case 'stakes': {
           ctx.save();
@@ -1628,6 +1624,7 @@ export class Mansion {
           break;
         }
       }
+      if (billboard) ctx.restore();
     }
   }
 
@@ -1836,6 +1833,7 @@ export class Mansion {
     const l = this.lights.find((x) => x.type === 'chandelier');
     if (!l || !game.renderer.isVisible(l.x, l.y, 260)) return;
     ctx.save();
+    if (game.renderer.upright) game.renderer.upright(ctx, l.x, l.y);
     ctx.translate(l.x, l.y);
     ctx.globalAlpha = 0.9;
     ctx.strokeStyle = '#1a1a22'; ctx.lineWidth = 3;

@@ -242,9 +242,15 @@ const swarm = Array.from({ length: 24 }, (_, i) => ({ id: i + 1, key: 'zombie', 
 const nearest = selectGlbSlots(swarm, { x: 0, y: 0 }, ENEMY_GLB_CAP, () => true);
 ok('nearest cap keeps eight skinned slots', nearest.length === ENEMY_GLB_CAP && nearest[0].id === 1 && nearest[7].id === 8,
   nearest.map((e) => e.id).join(','));
-ok('a model that is not ready stays on the 2D path', selectGlbSlots(swarm, { x: 0, y: 0 }, ENEMY_GLB_CAP, () => false).length === 0);
-const dead = selectGlbSlots([{ id: 1, key: 'zombie', dead: true, x: 0, y: 0 }], { x: 0, y: 0 }, ENEMY_GLB_CAP, () => true);
-ok('a corpse does not take a skinned slot', dead.length === 0);
+ok('an unready model yields its slot to the 3D proxy path', selectGlbSlots(swarm, { x: 0, y: 0 }, ENEMY_GLB_CAP, () => false).length === 0);
+const dyingEnemy = { id: 1, key: 'zombie', dead: true, deathT: 0.25, x: 0, y: 0 };
+const deathSlot = selectGlbSlots([dyingEnemy], { x: 0, y: 0 }, ENEMY_GLB_CAP, () => true);
+ok('a recent death can keep a spare skinned slot for its animation', deathSlot.length === 1 && deathSlot[0] === dyingEnemy);
+const expiredDeath = selectGlbSlots([{ ...dyingEnemy, id: 2, deathT: 1.5 }], { x: 0, y: 0 }, ENEMY_GLB_CAP, () => true);
+ok('an expired death clip releases its skinned slot', expiredDeath.length === 0);
+const dyingWhenFull = [...swarm.slice(0, ENEMY_GLB_CAP), { ...dyingEnemy, id: 99 }];
+const fullPriority = selectGlbSlots(dyingWhenFull, { x: 0, y: 0 }, ENEMY_GLB_CAP, () => true);
+ok('living actors keep priority over death clips at the mobile rig cap', fullPriority.length === ENEMY_GLB_CAP && fullPriority.every((e) => !e.dead));
 
 const book = new SlotBook(ENEMY_GLB_CAP);
 book.sync(nearest);
@@ -308,15 +314,18 @@ for (const name of KIT_FILES) {
 }
 ok('the whole vendored kit is present and unchanged', KIT_FILES.length === 21 && kitMeshes >= 21);
 
-const credits = path.join(ROOT, 'assets', 'env-kit', 'CREDITS.md');
+const credits = path.join(ROOT, 'assets', 'env-kit', 'CREDITS.txt');
 ok('the kit ships its licence note', fs.existsSync(credits) && /CC0/i.test(fs.readFileSync(credits, 'utf8')));
 
 const envCode = fs.readFileSync(path.join(ROOT, 'src/game/envkit.js'), 'utf8');
 ok('the env reads the vendored kit and nothing else',
   envCode.includes("./assets/env-kit/") && envCode.includes('KIT_SCALE')
     && envCode.includes('Valen3D.scene') && !/\.fbx|\.zip/i.test(envCode));
-ok('a missing piece never blocks a night',
-  /this\.failed = true/.test(envCode) && /never blocks on an asset/.test(envCode));
+const worldCode = fs.readFileSync(path.join(ROOT, 'src/game/world3d.js'), 'utf8');
+const gameplayCode = fs.readFileSync(path.join(ROOT, 'src/game/game.js'), 'utf8');
+ok('a missing WebGL piece reports a 3D error instead of painting a Canvas fallback',
+  /this\.failed = true/.test(envCode) && /EnvKit\.failed/.test(worldCode)
+    && /3D MANSION COULD NOT BE BUILT/.test(gameplayCode) && !/renderWorld\(/.test(gameplayCode));
 
 const mansionCode = fs.readFileSync(path.join(ROOT, 'src/game/mansion.js'), 'utf8');
 ok('a door with a mesh does not also paint its twin', mansionCode.includes('e.env3d'));
@@ -329,9 +338,11 @@ const gameCode = fs.readFileSync(path.join(ROOT, 'src', 'game', 'game.js'), 'utf
 const weaponsCode = fs.readFileSync(path.join(ROOT, 'src', 'game', 'weapons.js'), 'utf8');
 const coachCode = fs.readFileSync(path.join(ROOT, 'src', 'game', 'coach.js'), 'utf8');
 
-ok('floor, walls and props are instanced, never one object each',
+const uniqueDecorMeshes = (envCode.match(/new THREE\.Mesh\(/g) || []).length;
+ok('architecture and repeated props are instanced; only the unique animated clock uses separate meshes',
   /_instanced\(/.test(envCode) && /buildRoom\(/.test(envCode) && /buildProps\(/.test(envCode)
-    && !/new THREE\.Mesh\(/.test(envCode));
+    && /new THREE\.InstancedMesh\(/.test(envCode) && /buildDetailProps\(/.test(envCode)
+    && /grandfather-clock-3d/.test(envCode) && uniqueDecorMeshes === 7);
 
 // every piece named in the issue has to be placed by something
 const propsCode = envCode.slice(envCode.indexOf('buildProps(mansion)'), envCode.indexOf('Point every mesh at the door state'));
@@ -353,8 +364,9 @@ ok('the grand staircase is kit stairs, not paint',
     && /stairs: \[\]/.test(envCode));
 ok('furniture stands on the middle of the rect it is drawn from, not its corner',
   /f\.x \+ \(f\.w \|\| 0\) \/ 2/.test(envCode) && /f\.y \+ \(f\.h \|\| 0\) \/ 2/.test(envCode));
-ok('a prop with a mesh does not also paint its twin',
-  /f\.env3d/.test(mansionCode) && /p\.env3d/.test(mansionCode) && /f\.env3d/.test(gameCode));
+ok('every mapped/custom furniture and prop suppresses its retired Canvas twin',
+  /f\.env3d/.test(mansionCode) && /p\.env3d/.test(mansionCode)
+    && /f\.env3d = true/.test(envCode) && /p\.env3d = true/.test(envCode));
 ok('the reach is measured as the room is drawn, not on the floor',
   /swingDist\(/.test(gameCode) && /swingDist\(/.test(coachCode) && /tilt/.test(weaponsCode));
 ok('a swing dead to the right keeps its aim', /swingAngle \?\? player\.angle/.test(gameCode));
