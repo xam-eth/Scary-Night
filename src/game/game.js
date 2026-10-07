@@ -19,7 +19,7 @@ import {
   NIGHT_DURATION, DAWN_AT, COUNTDOWN_AT, SILENCE_AT, PANIC_AT, PLAYER, DOOR, RES,
   phaseAt, DIFFICULTY, TUNING, UPGRADES, upgradeLevel, SHARDS, CODEX, nightHeat, threatMix,
 } from '../core/config.js';
-import { Mansion, ROOM, isTallProp, propFootY, drawFurnitureShape } from './mansion.js';
+import { Mansion, ROOM } from './mansion.js';
 import { Player, PSTATE } from './player.js';
 import { Enemy, Crawler, Hunter, Werewolf, Bolt } from './enemies.js';
 import { Director, MOOD } from './director.js';
@@ -34,13 +34,13 @@ import { informantLine } from './informant.js';
 import { Haunts } from './haunts.js';
 import { Ads } from '../shop/ads.js';
 import { Valen3D } from './valen3d.js';
-import { Enemy3D } from './enemy3d.js';
 import { EnvKit, MOBILE_BUDGET, QUALITY_TIERS } from './envkit.js';
+import { World3D } from './world3d.js';
 import { IAP } from '../shop/iap.js';
-import { drawHUD, drawWorldPrompts, urgentGuidance, pauseButtonBox, weaponChipBox } from './hud.js';
+import { drawHUD, urgentGuidance, pauseButtonBox, weaponChipBox } from './hud.js';
 import { WEAPONS, weaponById, nextWeapon, swingBearing, swingDist, kitDamage } from './weapons.js';
 import { nextBeat, ackBeat, beatById, endingReady, narrationLines, beatSeen } from './narrative.js';
-import { updateCoach, drawCoachWorld } from './coach.js';
+import { updateCoach } from './coach.js';
 import { Climax, PEAK } from './climax.js';
 import * as UI from '../ui/screens.js';
 
@@ -174,7 +174,6 @@ export class Game {
     this.bolts = [];
     this.pickups = [];
     this.particles = new Particles(760);
-    this.decals = new Decals();
     this.messages = [];
     this.storyQueue = [];
     this.storyLine = null;
@@ -216,7 +215,9 @@ export class Game {
     this.log = [];
 
     this.mansion = new Mansion();
-    this.player = new Player(620, 1200);
+    this.decals = new Decals(260, this.mansion.bounds);
+    const hallStart = this.mansion.roomCenter(ROOM.HALL);
+    this.player = new Player(hallStart.x, hallStart.y);
     this.director = new Director();
     this.objectives = new Objectives();   // the night's purpose (src/game/objectives.js)
     this.house = new House();             // ambient life: flicker, cat, piano, drafts
@@ -225,6 +226,12 @@ export class Game {
     this.applySettings();
     this.decals.canvas.getContext('2d');
     window.__LN = this;   // used by the automated playtest harness
+  }
+
+  /** Floor-space pointer target from the active WebGL camera. The mathematical
+   * renderer adapter remains only while the WebGL scene is booting. */
+  screenToFloor(sx, sy) {
+    return World3D.screenToFloor(sx, sy, this) || this.renderer.screenToWorld(sx, sy);
   }
 
   /* ================= save / settings ================= */
@@ -438,9 +445,11 @@ export class Game {
     this.timeouts.length = 0;
     this.knocks.length = 0;
     // ---- player ----
-    // Wake in the servant-door opening, south of the slab. Dragging up on the
-    // stick walks into that door. The long table used to sit in the way.
-    this.player = new Player(720, 200);
+    // Wake just inside the servant door. Keep this anchored to the entrance so
+    // moving a room or changing the camera never strands the opening sequence.
+    const wake = this.mansion.diningDoor.inside;
+    this.player = new Player(wake.x, wake.y + 42);
+    this.player.angle = Math.atan2(this.mansion.diningDoor.y - this.player.y, this.mansion.diningDoor.x - this.player.x);
     this.equipSavedWeapon();
     this.player.applyUpgrades(this.save);
     // the hunt's own kit: what Marthe has tempered, and a fresh ward tonight.
@@ -564,7 +573,7 @@ export class Game {
       for (const e of this.mansion.entrances) if (dist(x, y, e.x, e.y) < 70) ok = false;
       for (const p of this.pickups) if (dist(x, y, p.x, p.y) < 60) ok = false;
       // not right under the player's nose at the start
-      if (dist(x, y, 720, 200) < 120 && room.id === ROOM.DINING) ok = false;
+      if (room.id === ROOM.DINING && this.player && dist(x, y, this.player.x, this.player.y) < 120) ok = false;
       if (ok) return { x, y };
     }
     return null;
@@ -919,7 +928,8 @@ export class Game {
 
     // ---- world ----
     this.mansion.update(dt, this);
-    this.nearFire = clamp(1 - dist(this.player.x, this.player.y, 1120, 636) / 380, 0, 1);
+    const hearth = this.mansion.fireplaceLight || this.mansion.roomCenter(ROOM.LIBRARY);
+    this.nearFire = hearth ? clamp(1 - dist(this.player.x, this.player.y, hearth.x, hearth.y) / 380, 0, 1) : 0;
     this.updateBlackoutPressure(dt);
 
     this.player.update(dt, this);
@@ -1490,9 +1500,9 @@ export class Game {
    *
    * The brief's guardrail is mobile-first, and a budget nobody measures is a
    * wish. So: a rolling frame cost, judged every second and a half, and a
-   * step down when a device cannot hold it — furniture before architecture,
-   * the painted house as the floor. A dropped frame is a worse night than a
-   * bare one. It climbs back up if the device was only busy, not slow.
+   * step down when a device cannot hold it — lower shadow resolution first,
+   * while every rung keeps the full 3D rooms and props. It climbs back up if
+   * the device was only busy, not slow.
    */
   _trackFrame() {
     const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
@@ -1510,7 +1520,7 @@ export class Game {
     else if (this._frameMs < budget * 0.6 && q < QUALITY_TIERS.length - 1) this.setQuality(q + 1);
   }
 
-  /** The rung the house draws at. 3 is the whole house, 0 is the painted one. */
+  /** Quality rung: every tier keeps the full 3D house; tiers tune shadow/detail cost. */
   setQuality(tier) {
     const want = Number.isFinite(tier) ? Math.round(tier) : this.quality;
     const t = Math.max(0, Math.min(QUALITY_TIERS.length - 1, want));
@@ -1653,11 +1663,10 @@ export class Game {
     // measured on screen, where the claw was drawn — a circle, not the floor
     // ellipse it used to be (see weapons.js). Only this test moved; the knock-
     // back below is still a shove along the floor.
-    const tilt = (this.renderer && this.renderer.tilt) || 1;
     // `??` and not `||`: a swing dead to the right IS the angle 0, and `||`
     // would throw it away and aim the cone wherever she happened to be
     // walking — which is exactly the "the claw missed" report.
-    const facing = visualAngle(player.swingAngle ?? player.angle ?? 0, tilt);
+    const facing = visualAngle(player.swingAngle ?? player.angle ?? 0, this.renderer);
     for (const e of this.enemies) {
       if (e.dead) continue;
       const d = swingDist(this, player, e);
@@ -2320,9 +2329,12 @@ export class Game {
     // fresh immediate-mode registration surface (see update() note)
     this.ui.length = 0;
 
-    r.clear(PAL.void);
-
+    // The 3D world is a separate WebGL layer. Canvas is transparent over it
+    // during a run and only paints HUD/screens; menus remain fully screen-space.
+    const gameVisible = ['playing', 'paused', 'intro', 'dying', 'dawn', 'dawnCard', 'ending', 'settings', 'upgrades', 'collection', 'help', 'shop', 'privacy'].includes(this.screen);
     if (this.screen === 'menu') {
+      World3D.setVisible(false);
+      r.clear(PAL.void);
       r.resetForUI();
       UI.drawMenu(this, ctx, w, h);
       if (this.fadeFromBlack > 0) {
@@ -2332,23 +2344,37 @@ export class Game {
       return;
     }
 
-    // ---- the world is drawn for every in-run screen (so pause/death keep it) ----
-    const gameVisible = ['playing', 'paused', 'intro', 'dying', 'dawn', 'dawnCard', 'ending', 'settings', 'upgrades', 'collection', 'help', 'shop', 'privacy'].includes(this.screen);
+    let worldReady = false;
     if (gameVisible) {
-      // v1.1 — if the purchased GLB never loaded, the player sees this once
-      // and the placeholder announces itself every frame after that.
       if (Valen3D.failed && !this._valenWarned) {
         this._valenWarned = true;
-        this.showMessage('THE BODY REFUSES TO RISE — CHARACTER ASSET FAILED TO LOAD. RELOAD THE PAGE.', { tone: 'red', life: 9 });
+        this.showMessage('THE BODY REFUSES TO RISE — USING THE THREE-DIMENSIONAL HUNTER FIGURE.', { tone: 'red', life: 9 });
       }
-      r.beginWorld();
+      if (Valen3D.beginFrame) Valen3D.beginFrame();
+      try {
+        worldReady = World3D.render(this);
+      } catch (error) {
+        World3D.lastError = String(error && error.message || error);
+        console.error('3D world render failed:', error);
+      }
+      r.clear(worldReady ? null : PAL.void);
+      if (!worldReady) {
+        World3D.setVisible(false);
+        r.resetForUI();
+        ctx.fillStyle = '#b9b1a0';
+        ctx.font = '12px Georgia, serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const status = World3D.contextLost ? 'THE 3D DEVICE IS RESTORING…'
+          : World3D.lastError ? 'THE 3D MANSION COULD NOT BE BUILT' : 'BUILDING THE MANSION IN 3D…';
+        ctx.fillText(status, w / 2, h / 2);
+      }
+    } else {
+      World3D.setVisible(false);
+      r.clear(PAL.void);
     }
-    // One shadow map per frame for the whole house (issue #54), not one per
-    // body: the first body placed refreshes it and the rest reuse it.
-    if (Valen3D.beginFrame) Valen3D.beginFrame();
-    if (gameVisible) this.renderWorld(dtSafe(this));
     r.resetForUI();
-    if (gameVisible) r.drawFrameFade();
+    if (gameVisible && worldReady) r.drawFrameFade();
     // Removed: a ring used to be stroked around her here — blue-white as she
     // starved, blood-orange once she had fed. It read as a HUD gauge bolted
     // to her body rather than as light, and the moonlit rim she already
@@ -2360,6 +2386,7 @@ export class Game {
     if (this.screen === 'playing' || this.screen === 'dying') {
       if (this.screen === 'playing') drawHUD(this, ctx, w, h);
       this.drawMessages(ctx, w, h);
+      if (worldReady) this.drawCombatTextOverlay(ctx);
     }
     // ---- the peaks: the four frames the night is for ----
     if (this.screen === 'playing' || this.screen === 'dawn') UI.drawPeakOverlay(this, ctx, w, h);
@@ -2405,410 +2432,27 @@ export class Game {
     }
   }
 
-  drawFoodCues(ctx) {
-    const p = this.player;
-    for (const e of this.enemies) {
-      if (e.dead) continue;
-      const near = p && swingDist(this, p, e) < PLAYER.attackRange + (e.radius || 12) + 24;
-      const hurt = e.hpMax && e.hp / e.hpMax < 0.72;
-      if (!near && !hurt) continue;
-      const big = (e.type && e.type.bloodValue > 24) ? 1.7 : 1;
-      const y = e.y - (e.radius || 12) - 10;
-      ctx.save();
-      ctx.globalAlpha = 0.55 + 0.35 * Math.abs(Math.sin(this.time * 4 + e.x * 0.01));
-      ctx.fillStyle = '#c01828';
-      ctx.beginPath();
-      ctx.moveTo(e.x, y + 7 * big);
-      ctx.bezierCurveTo(e.x - 5 * big, y, e.x - 4 * big, y - 6 * big, e.x, y - 2 * big);
-      ctx.bezierCurveTo(e.x + 4 * big, y - 6 * big, e.x + 5 * big, y, e.x, y + 7 * big);
-      ctx.fill();
-      ctx.restore();
-    }
-  }
-
-  drawDrinks(ctx) {
-    const p = this.player;
-    if (!p || !this.drinks) return;
-    for (const d of this.drinks) {
-      const k = clamp(d.t / d.life, 0, 1);
-      for (let i = 0; i < 8; i++) {
-        const u = clamp(k * 1.2 - i * 0.07, 0, 1);
-        const x = d.ox + (p.x - d.ox) * u;
-        const y = d.oy + (p.y - d.oy) * u - Math.sin(u * Math.PI) * (18 + d.amount * 0.15);
-        ctx.save();
-        ctx.globalAlpha = (1 - k) * (0.45 + (1 - i / 8) * 0.55);
-        ctx.fillStyle = d.color;
-        ctx.beginPath();
-        ctx.arc(x, y, 2.4 + (d.amount > 24 ? 2.2 : 0.8) + (1 - i / 8) * 1.4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      }
-    }
-  }
-
-  renderWorld(dt) {
-    const r = this.renderer;
-    const ctx = r.ctx;
-    const m = this.mansion;
-    const p = this.player;
-    const t = this.time;
-
-    // ---------- baked architecture ----------
-    m.drawFloor(ctx);
-    // ---------- the duel: a monster is scarier as a silhouette ----------
-    // Drawn under the actors on purpose: the light is behind it, so what the
-    // player reads is the SHAPE, which is the whole point of a reveal.
-    const duelBoss = this.climax.boss;
-    if (duelBoss && this.climax.duel && this.duelDark > 0.02 && r.isVisible(duelBoss.x, duelBoss.y, 560)) {
-      const k = clamp(this.duelDark, 0, 1);
-      ctx.save();
-      ctx.globalCompositeOperation = 'screen';
-      const gx = duelBoss.x, gy = duelBoss.y - 46;
-      const gg = ctx.createRadialGradient(gx, gy, 8, gx, gy, 330);
-      gg.addColorStop(0, `rgba(255,158,104,${0.9 * k})`);
-      gg.addColorStop(0.32, `rgba(226,72,54,${0.52 * k})`);
-      gg.addColorStop(0.7, `rgba(140,20,26,${0.22 * k})`);
-      gg.addColorStop(1, 'rgba(70,8,12,0)');
-      ctx.fillStyle = gg;
-      ctx.beginPath();
-      ctx.arc(gx, gy, 330, 0, TAU);
-      ctx.fill();
-      ctx.restore();
-    }
-    // ---------- decals ----------
-    this.decals.draw(ctx);
-    // ---------- props under entities ----------
-    m.drawProps(ctx, this);
-    this.house.draw(ctx, this);   // the cat, the drafts — before the actors
-    this.haunts.drawWatchers(ctx, this);   // the things at the edge of the light
-    // ---------- the room itself, in three dimensions (issue #55) ----------
-    // Doors first: real meshes, on the shared floor, under the shared lamp.
-    // Drawn before the actors so she walks in FRONT of a door she opened, and
-    // after the floor so the painted room stays as the ground beneath them.
-    EnvKit.init();
-    if (EnvKit.ready) {
-      // the house she has made of it: the fortress level rides the hunt (#59)
-      EnvKit.sync(this.mansion.entrances, this.mansion, this.save.fortressLevel);
-      // a rebuilt room inherits the rung the governor chose, not the default
-      if (EnvKit.quality !== this.quality) EnvKit.setQuality(this.quality);
-      const env = EnvKit.render({
-        camX: r.cam.x, camY: r.cam.y, zoom: r.cam.zoom, tilt: r.tilt,
-        w: r.view.w, h: r.view.h, dpr: r.dpr,
-        shakeX: r.cam.sx, shakeY: r.cam.sy,
-        light: r.keyLightAt(r.cam.x, r.cam.y),
-        foldY: this.player.y,
-      });
-      if (env) {
-        ctx.save();
-        ctx.setTransform(r.dpr, 0, 0, r.dpr, 0, 0);
-        ctx.drawImage(env, r.view.left, r.view.top, r.view.w, r.view.h);
-        ctx.restore();
-      }
-      /* Nothing is painted over this. The room IS the kit: 456 floor slabs,
-       * 121 wall panels, 38 corners, nine windows, seven doors and the
-       * furniture of eleven rooms, all instanced from assets/env-kit/*.glb
-       * and lit by the bake. A photograph was laid over it once (64bc927);
-       * it buried the house it was meant to dress, and it made the room a
-       * picture instead of a place built out of pieces. */
-    }
-
-    // ---------- dust motes (air, not floor — billboard around the view) ----------
-    ctx.save(); r.upright(ctx, this.renderer.cam.x, this.renderer.cam.y);
-    this.drawAmbientMotes(ctx);
-    ctx.restore();
-    // ---------- pickups (stand tall like everything alive) ----------
-    for (const pk of this.pickups) {
-      ctx.save(); r.upright(ctx, pk.x, pk.y);
-      pk.draw(ctx, this);
-      ctx.restore();
-    }
-
-    // ---------- bodies and tall props, one depth order ----------
-    // A table in front of a crawler hides the crawler. A body in front of the
-    // table hides the table. Valen uses the same foot-y as the swarm.
-    // The house's own light field, so every body is lit by the lamp that is
-    // lighting the floor it is standing on (issue #54).
-    Enemy3D.setLightSampler((x, y) => r.keyLightAt(x, y));
-    Enemy3D.assign(this.enemies, p);
-    const layer = [];
-    for (const e of this.enemies) layer.push({ y: e.y, enemy: e });
-    for (const b of (this.director && this.director.crowd) || []) layer.push({ y: b.y, crowd: b });
-    for (const f of m.furniture) {
-      if (!isTallProp(f) || f.env3d) continue;   // a mesh stands in its place (#55)
-      layer.push({ y: propFootY(f), prop: f });
-    }
-    layer.push({ y: p.y, player: true });
-    for (const proof of Enemy3D.proofs || []) layer.push({ y: proof.y, proof });
-    layer.sort((a, b) => a.y - b.y);
-    for (const item of layer) {
-      if (item.player) { this.drawPlayerLayer(ctx); continue; }
-      if (item.prop) {
-        const f = item.prop;
-        if (!r.isVisible(f.x, f.y, Math.max(f.w, f.h) + 60)) continue;
-        ctx.save();
-        drawFurnitureShape(ctx, f, this, t);
-        ctx.restore();
-        continue;
-      }
-      if (item.crowd) {
-        const b = item.crowd;
-        if (!r.isVisible(b.x, b.y, 120)) continue;
-        ctx.save();
-        b.draw(ctx, this);
-        ctx.restore();
-        continue;
-      }
-      if (item.proof) {
-        if (!r.isVisible(item.proof.x, item.proof.y, 160)) continue;
-        ctx.save();
-        r.upright(ctx, item.proof.x, item.proof.y);
-        Enemy3D.draw(ctx, item.proof, this);
-        ctx.restore();
-        continue;
-      }
-      const e = item.enemy;
-      if (!r.isVisible(e.x, e.y, 120)) continue;
-      ctx.save();
-      r.upright(ctx, e.x, e.y);
-      if (!e.dead && Math.hypot(e.vx, e.vy) > 16) {
-        const ph = Math.sin(t * (e.key === 'werewolf' ? 16 : 9) + e.id);
-        ctx.translate(e.x, e.y);
-        ctx.scale(1 + ph * 0.03, 1 - Math.abs(ph) * 0.035);
-        ctx.translate(-e.x, -e.y);
-      }
-      if (!Enemy3D.draw(ctx, e, this)) e.draw(ctx, this);
-      ctx.restore();
-      // v1.0 variant tell: a cold tint ring — readable at a glance in the dark
-      if (e.variant && e.tint && !e.dead) {
-        ctx.save();
-        ctx.globalCompositeOperation = 'screen';
-        ctx.globalAlpha = 0.15;
-        ctx.strokeStyle = e.tint; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.ellipse(e.x, e.y + 8, e.radius * 1.5, e.radius * 0.62, 0, 0, Math.PI * 2); ctx.stroke();
-        ctx.restore();
-      }
-    }
-    this.drawFoodCues(ctx);
-    this.drawDrinks(ctx);
-
-    // ---------- bolts ----------
-    for (const b of this.bolts) if (r.isVisible(b.x, b.y, 60)) {
-      ctx.save(); r.upright(ctx, b.x, b.y);
-      b.draw(ctx, this);
-      ctx.restore();
-    }
-
-    // ---------- furniture + architecture above the floor ----------
-    m.drawFurniture(ctx, this, { skipTall: true });
-    m.drawEntrances(ctx, this);
-    m.drawLightFixtures(ctx, this);
-
-    // ---------- particles ----------
-    ctx.save(); r.upright(ctx, this.renderer.cam.x, this.renderer.cam.y);
-    this.particles.draw(ctx);
-    ctx.restore();
-
-    // ---------- the shadow that is not quite there ----------
-    if (this.director.shadow) {
-      const s = this.director.shadow;
-      ctx.save();
-      ctx.globalAlpha = s.a * 0.5;
-      ctx.translate(s.x, s.y);
-      ctx.rotate(Math.atan2(s.vy, s.vx));
-      ctx.fillStyle = '#04050a';
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 26, 11, 0, 0, TAU);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.ellipse(20, 0, 9, 8, 0, 0, TAU);
-      ctx.fill();
-      ctx.restore();
-      ctx.save();
-      ctx.globalCompositeOperation = 'screen';
-      ctx.globalAlpha = s.a * 0.5;
-      const g = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, 60);
-      g.addColorStop(0, 'rgba(90,80,120,0.25)');
-      g.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = g;
-      ctx.beginPath(); ctx.arc(s.x, s.y, 60, 0, TAU); ctx.fill();
-      ctx.restore();
-    }
-
-    // ---------- lighting ----------
-    r.fadeLift = this.blackoutT > 0 ? 0.7 : 1;
-    // the duel's lights-out: the same lift the blackout uses, borrowed
-    if (this.duelDark > 0.02) r.fadeLift *= 1 - 0.88 * this.duelDark;
-    r.fadeColor = this.bloodMoon > 0.3 ? '#9a8088' : '#8490a4';
-    r.lightBegin(m.ambientFor(this));
-    p.submitLight(r, this);
-    m.submitLights(r, this);
-    for (const e of this.enemies) {
-      if (e.submitLight && !e.dead && r.isVisible(e.x, e.y, 220)) e.submitLight(r, this);
-    }
-    // the duel's reveal: one pool of red in a house with no lights in it
-    if (duelBoss && this.climax.duel) {
-      const hot = this.climax.duel.stage === 'cut' ? 1 : 0.55;
-      r.addLight(duelBoss.x, duelBoss.y - 10, 320, 0.95 * hot, [255, 92, 66]);
-      r.addLight(duelBoss.x, duelBoss.y - 40, 150, 0.7 * hot, [255, 130, 90]);
-    }
-    // muzzle flashes / impacts
-    for (const b of this.bolts) r.addLight(b.x, b.y, 70, 0.3, [255, 220, 170]);
-    r.lightEnd();
-    // The guide arrow and the claw are pointers, not floor stains. Drawn
-    // after the multiply so the night cannot swallow them.
-    drawCoachWorld(this, ctx);
-    p.drawSwing(ctx, this);
-    for (const b of this.bolts) {
-      if (b.dead || !r.isVisible(b.x, b.y, 80)) continue;
-      ctx.save();
-      ctx.globalCompositeOperation = 'screen';
-      // a blessed bolt carries its own light (#56 P5)
-      const blessed = !!(b.kit && b.kit.blessed);
-      ctx.strokeStyle = blessed ? 'rgba(255, 242, 206, 0.98)' : 'rgba(255, 214, 150, 0.9)';
-      ctx.lineWidth = blessed ? 3 : 2.2;
-      ctx.beginPath();
-      ctx.moveTo(b.x - Math.cos(b.angle) * 14, b.y - Math.sin(b.angle) * 14);
-      ctx.lineTo(b.x + Math.cos(b.angle) * 8, b.y + Math.sin(b.angle) * 8);
-      ctx.stroke();
-      if (blessed) {
-        ctx.fillStyle = 'rgba(255, 236, 180, 0.9)';
-        ctx.beginPath(); ctx.arc(b.x, b.y, 2.6, 0, TAU); ctx.fill();
-      }
-      ctx.restore();
-    }
-
-    // ---------- character self-light (moonlight on the GLB frame) ----------
-    Enemy3D.paintLit(ctx, this);
-    this.player.drawAfterDark(ctx, this);
-
-    // ---------- warm additive pass ----------
-    r.glowBegin();
-    for (const l of m.lights) {
-      const i = (l.curI ?? l.i) * 0.5;
-      if (i <= 0.02) continue;
-      const g = this.renderer.ctx.createRadialGradient(l.x, l.y, 0, l.x, l.y, l.r * 0.8);
-      const c = this.bloodMoon > 0.4 ? [255, 120, 90] : l.color;
-      g.addColorStop(0, `rgba(${c[0]},${c[1]},${c[2]},${0.10 * i})`);
-      g.addColorStop(1, 'rgba(0,0,0,0)');
-      this.renderer.ctx.fillStyle = g;
-      this.renderer.ctx.beginPath(); this.renderer.ctx.arc(l.x, l.y, l.r * 0.8, 0, TAU); this.renderer.ctx.fill();
-    }
-    r.glowEnd();
-
-    // ---------- fog ----------
-    r.drawFog(Math.max(0.0001, 1 / 60), 0.8 + this.danger * 0.5);
-
-    // ---------- post ----------
-    const lb = clamp(1 - p.bloodPct / 0.32, 0, 1);
-    r.post({
-      vignette: 0.18 + this.danger * 0.08 + (this.bloodMoon) * 0.05,
-      danger: this.danger,
-      lowBlood: lb,
-      heartbeat: this.hbPulse,
-      blackout: this.screen === 'dying' ? clamp(this.dyingT / 4, 0, 0.8) : 0,
-      time: this.now,
-      // the peaks' grades: red edges on the crescendo and the frenzy, a blood
-      // wash while the moon is up
-      edge: this.climax.edge,
-      red: this.climax.red,
-    });
-
-    // ---------- dawnbreak: the sun crosses the house and burns the swarm ----------
-    const wave = this.climax.dawnWave;
-    if (wave) {
-      const s = this.renderer.worldToScreen(wave.front, 0);
-      const bw = Math.max(180, this.renderer.w * 0.34);
-      ctx.save();
-      ctx.globalCompositeOperation = 'screen';
-      const g = ctx.createLinearGradient(s.x - bw, 0, s.x + bw * 0.3, 0);
-      g.addColorStop(0, 'rgba(255,190,110,0)');
-      g.addColorStop(0.52, `rgba(255,204,136,${0.5 * this.climax.gold})`);
-      g.addColorStop(0.86, `rgba(255,250,236,${1.0 * this.climax.gold})`);
-      g.addColorStop(0.94, `rgba(255,236,196,${0.55 * this.climax.gold})`);
-      g.addColorStop(1, 'rgba(255,226,180,0)');
-      ctx.fillStyle = g;
-      ctx.fillRect(s.x - bw, 0, bw * 1.3, this.renderer.h);
-      const wash = ctx.createLinearGradient(0, 0, this.renderer.w, this.renderer.h);
-      wash.addColorStop(0, `rgba(255,220,164,${0.42 * this.climax.gold})`);
-      wash.addColorStop(1, `rgba(255,170,120,${0.16 * this.climax.gold})`);
-      ctx.fillStyle = wash;
-      ctx.fillRect(0, 0, this.renderer.w, this.renderer.h);
-      ctx.restore();
-    }
-
-    // ---------- dawn light wash ----------
-    if (this.screen === 'dawn') {
-      const k = clamp(this.dawnT / 3.5, 0, 1);
-      ctx.save();
-      ctx.globalCompositeOperation = 'screen';
-      const g = ctx.createLinearGradient(0, 0, 0, this.renderer.h);
-      g.addColorStop(0, `rgba(255,196,120,${0.35 * k})`);
-      g.addColorStop(0.6, `rgba(220,140,110,${0.16 * k})`);
-      g.addColorStop(1, `rgba(120,80,90,${0.1 * k})`);
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, this.renderer.w, this.renderer.h);
-      if (this.dawnT > 2.6) {
-        ctx.globalAlpha = clamp((this.dawnT - 2.6) / 2.2, 0, 1);
-        ctx.fillStyle = '#000';
-        // hold the frame, then fade to the results
-      }
-      ctx.restore();
-      if (this.dawnT > 3.4) {
-        ctx.save();
-        ctx.globalAlpha = clamp((this.dawnT - 3.4) / 2.0, 0, 1);
-        ctx.fillStyle = 'rgba(2,3,6,1)';
-        ctx.fillRect(0, 0, this.renderer.w, this.renderer.h);
-        ctx.restore();
-      }
-    }
-  }
-
-  /** The vampire is drawn in the entity sort so enemies can occlude it. */
-  drawPlayerLayer(ctx) {
-    const p = this.player;
-    // Floor cues live in the tilted world, so they point the way she actually
-    // walks. Prompts are drawn AFTER upright is popped — they were previously
-    // counter-scaled around her feet, which shoved door labels and knock
-    // arrows off their targets.
-    if (p.alive) {
-      ctx.save();
-      ctx.translate(p.x, p.y);
-      ctx.rotate(p.angle);
-      ctx.globalAlpha = 0.7;
-      ctx.fillStyle = 'rgba(176, 198, 232, 0.55)';
-      ctx.beginPath();
-      ctx.moveTo(15, 0);
-      ctx.lineTo(32, -5);
-      ctx.lineTo(28, 0);
-      ctx.lineTo(32, 5);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
-    }
-    ctx.save(); this.renderer.upright(ctx, p.x, p.y);
-    p.draw(ctx, this);
-    ctx.restore();
-    if (this.screen === 'playing' || this.screen === 'dying' || this.screen === 'intro') drawWorldPrompts(this, ctx);
-  }
-
-  drawAmbientMotes(ctx) {
-    // slow drifting dust, only in the room the player is in
-    const p = this.player;
-    const r = this.renderer;
+  /* Floating combat feedback is intentionally rendered in HUD coordinates,
+   * not painted into the old 2D world layer. The actor/room remains WebGL. */
+  drawCombatTextOverlay(ctx) {
+    const renderer = this.renderer;
+    const project = renderer && renderer.worldToScreen ? renderer.worldToScreen.bind(renderer) : null;
+    if (!project || !this.combatTexts || !this.combatTexts.length) return;
+    const view = this.renderer.view || { left: 0, top: 0, w: this.renderer.w, h: this.renderer.h };
     ctx.save();
-    ctx.globalCompositeOperation = 'screen';
-    for (let i = 0; i < 26; i++) {
-      const seed = i * 37.1;
-      const room = this.mansion.findRoom(p.x, p.y);
-      if (room === ROOM.OUTSIDE) break;
-      const rm = this.mansion.room(room);
-      if (!rm) break;
-      const x = rm.x + ((seed * 7.3 + this.now * (6 + i % 5)) % rm.w);
-      const y = rm.y + ((seed * 3.7 + Math.sin(this.now * 0.4 + i) * 40 + rm.h * 0.5) % rm.h);
-      if (!r.isVisible(x, y, 40)) continue;
-      const a = 0.05 + 0.09 * Math.abs(Math.sin(this.now * 1.4 + i));
-      ctx.fillStyle = `rgba(200,210,235,${a})`;
-      ctx.beginPath(); ctx.arc(x, y, 1 + (i % 3) * 0.7, 0, TAU); ctx.fill();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '600 12px "Segoe UI", Roboto, sans-serif';
+    for (const entry of this.combatTexts) {
+      const point = project(entry.x, entry.y);
+      if (point.x < view.left - 48 || point.x > view.left + view.w + 48 || point.y < view.top - 48 || point.y > view.top + view.h + 28) continue;
+      const age = clamp(0.9 - entry.life, 0, 0.9);
+      const alpha = clamp(entry.life / 0.22, 0, 1) * clamp((0.9 - age) / 0.12, 0, 1);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = entry.color || '#eee2c9';
+      ctx.shadowColor = 'rgba(0,0,0,0.9)';
+      ctx.shadowBlur = 5;
+      ctx.fillText(entry.text, point.x, point.y - age * 22);
     }
     ctx.restore();
   }

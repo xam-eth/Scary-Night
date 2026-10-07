@@ -645,7 +645,7 @@ export class Crawler extends Enemy {
     ctx.translate(this.x, this.y);
     ctx.globalAlpha = this.alpha;
     paintContactShadow(ctx, this, game, 13, 5.5);
-    ctx.rotate(visualAngle(this.angle, game.renderer.tilt));
+    ctx.rotate(visualAngle(this.angle, game.renderer));
     if (dying) { ctx.rotate(k * 1.2); ctx.translate(k * 4, 0); ctx.scale(1, 1 - k * 0.5); }
 
     const lurch = Math.sin(t * 12 + this.id) * 0.5 + 0.5;
@@ -747,7 +747,7 @@ export class Zombie extends Crawler {
     ctx.translate(this.x, this.y);
     ctx.globalAlpha = this.alpha;
     paintContactShadow(ctx, this, game, 12, 5);
-    ctx.rotate(visualAngle(this.angle, game.renderer.tilt));
+    ctx.rotate(visualAngle(this.angle, game.renderer));
     if (dying) { ctx.rotate(k * 0.8); ctx.scale(1, 1 - k * 0.4); }
     const step = Math.sin(t * 3.2 + this.id) * 3;
     ctx.strokeStyle = '#1a1c16';
@@ -878,7 +878,7 @@ export class Hunter extends Enemy {
     ctx.translate(this.x, this.y);
     ctx.globalAlpha = this.alpha;
     paintContactShadow(ctx, this, game, 14, 6);
-    ctx.rotate(visualAngle(this.angle, game.renderer.tilt) + (dying ? k * 1.35 : 0));
+    ctx.rotate(visualAngle(this.angle, game.renderer) + (dying ? k * 1.35 : 0));
     if (dying) { ctx.scale(1, 1 - k * 0.6); ctx.translate(k * 6, 0); }
 
     const walk = Math.sin(t * 7 + this.id) * (Math.hypot(this.vx, this.vy) > 20 ? 4 : 1.2);
@@ -1147,7 +1147,7 @@ export class Werewolf extends Enemy {
     ctx.translate(this.x, this.y);
     ctx.globalAlpha = this.alpha;
     paintContactShadow(ctx, this, game, 22 * (this.sizeMul || 1), 9);
-    ctx.rotate(visualAngle(this.angle, game.renderer.tilt) + (dying ? k * 1.2 : 0));
+    ctx.rotate(visualAngle(this.angle, game.renderer) + (dying ? k * 1.2 : 0));
     // a Master is not an alpha with more health — it is bigger than the door
     const big = this.sizeMul || 1;
     if (big !== 1) ctx.scale(big, big);
@@ -1562,7 +1562,7 @@ export class Bolt {
     ctx.stroke();
     ctx.globalAlpha = 1;
     ctx.translate(this.x, this.y);
-    ctx.rotate(visualAngle(this.angle, game && game.renderer ? game.renderer.tilt : 1));
+    ctx.rotate(visualAngle(this.angle, game && game.renderer ? game.renderer : 1));
     ctx.fillStyle = '#2b2016';
     ctx.fillRect(-7, -1.2, 14, 2.4);
     ctx.fillStyle = '#c8c8d4';

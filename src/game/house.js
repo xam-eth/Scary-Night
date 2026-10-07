@@ -106,7 +106,7 @@ export class House {
     this.spooked = Math.max(0, this.spooked - dt * 0.08);
   }
 
-  /** World-space VFX pass (drawn by game.renderWorld, under the lights). */
+  /** Simulation-owned world effects; World3D renders these under the scene lights. */
   draw(ctx, game) {
     for (const d of this.drafts) {
       const k = Math.sin(clamp(d.t / 1.6, 0, 1) * Math.PI);

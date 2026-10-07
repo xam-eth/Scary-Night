@@ -1051,9 +1051,8 @@ if (args.systems) {
     'and a room that breaks it is told so, by name');
   line(!budgetReport({ wall: 4000 }).fits && budgetReport({ wall: 4000 }).over.join().includes('instances'),
     'the verdict says which ceiling broke, not just that one did');
-  line(QUALITY_TIERS.length === 4 && QUALITY_TIERS[3].room && QUALITY_TIERS[3].props && QUALITY_TIERS[3].fortress
-    && !QUALITY_TIERS[0].room && !QUALITY_TIERS[0].props && !QUALITY_TIERS[0].fortress,
-    'there is a ladder down: the whole house at the top, the painted house at the bottom');
+  line(QUALITY_TIERS.length === 4 && QUALITY_TIERS.every((tier) => tier.room && tier.props && tier.fortress),
+    'every quality rung keeps all world geometry and dressing visible');
   let mono = true;
   for (let i = 1; i < QUALITY_TIERS.length; i++) {
     const a = QUALITY_TIERS[i - 1], b = QUALITY_TIERS[i];
@@ -1062,7 +1061,7 @@ if (args.systems) {
   }
   line(mono, 'and no rung of it takes away something the rung below kept');
   line(game.quality === QUALITY_TIERS.length - 1 && game.setQuality(1) === 1 && game.setQuality(-5) === 0,
-    'the governor starts with the whole house and clamps at the painted one');
+    'the governor starts with the full 3D house and clamps without removing its rooms');
   game.setQuality(QUALITY_TIERS.length - 1);
   line(game.perfReport && game.perfReport().budgetMs === MOBILE_BUDGET.frameMs,
     'and what the night is costing is reported, not guessed');
@@ -1734,7 +1733,7 @@ if (args.systems) {
   const swarm = Array.from({ length: 24 }, (_, i) => ({ id: i + 1, key: 'crawler', dead: false, x: i * 30, y: 0 }));
   const capped = selectGlbSlots(swarm, { x: 0, y: 0 }, ENEMY_GLB_CAP, () => true);
   line(capped.length === ENEMY_GLB_CAP && capped[0].id === 1, `nearest ${ENEMY_GLB_CAP} are the skinned cap`);
-  line(selectGlbSlots(swarm, { x: 0, y: 0 }, ENEMY_GLB_CAP, () => false).length === 0, 'an unready model stays on the 2D path');
+  line(selectGlbSlots(swarm, { x: 0, y: 0 }, ENEMY_GLB_CAP, () => false).length === 0, 'an unready model yields its slot to a 3D proxy');
   // Owner mapping: Tripo's clip names ARE the walk / attack / die of these
   // files, and they live in the registry rather than being smuggled into poses.
   line(ENEMY_MODELS.zombie.map.walk === 'flee_02' && ENEMY_MODELS.zombie.map.attack === 'cast_a_spell'

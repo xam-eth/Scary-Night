@@ -34,17 +34,30 @@ html, body {
   width: min(100vw, calc((100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) * 9 / 16));
   height: min(calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)), calc(100vw * 16 / 9));
   transform: translate(-50%, -50%);
+  overflow: hidden;
   background: #04050a;
 }
 
+canvas.world3d,
 canvas#game {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
   height: 100%;
+}
+
+canvas.world3d {
+  z-index: 0;
+  pointer-events: none;
+}
+
+canvas#game {
+  z-index: 1;
   touch-action: none;
   image-rendering: auto;
   cursor: crosshair;
-  background: #04050a;
+  background: transparent;
 }
 
 @media (pointer: coarse) {

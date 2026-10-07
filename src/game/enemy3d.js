@@ -2,9 +2,9 @@
  *
  * Valen already owns the WebGL canvas, the camera, and the light rig. Enemy
  * bodies are attached to that same scene, so a lamp and a dark corner grade
- * them the way they grade her. Only the nearest ENEMY_GLB_CAP skinned meshes
- * are live. The rest are a cached billboard of that type, or the existing 2D
- * silhouette when the file is missing, still loading, or not allowed to fight.
+ * them the way they grade her. Only ENEMY_GLB_CAP skinned meshes are live;
+ * overflow, loading, and failed assets use low-poly 3D proxies in the active
+ * game scene. Cached canvas previews remain for portrait/non-gameplay tools.
  *
  * A night never waits on a file. The player hunter is not an enemy.
  *
@@ -24,6 +24,7 @@ import { dist } from '../core/util.js';
 import { Valen3D } from './valen3d.js';
 
 export const ENEMY_GLB_CAP = 8;
+const HURT_FLASH_COLOR = new THREE.Color(0xffe0d8);
 
 /** Optional idle, plus the clips a besieger must ship before the swarm wears it. */
 export const ENEMY_CLIP_CONTRACT = Object.freeze({
@@ -179,13 +180,20 @@ export function behaviorReady(key, clipNames, map = null) {
 /** Nearest-first. Dead bodies and types that cannot fight are not skinned. */
 export function selectGlbSlots(enemies, player, cap, isReady) {
   if (!player || cap <= 0) return [];
-  const eligible = [];
+  const living = [];
+  const dying = [];
   for (const e of enemies) {
-    if (!e || e.dead || !isReady(e.key)) continue;
-    eligible.push(e);
+    if (!e || !isReady(e.key)) continue;
+    if (e.dead || e.state === 'dying') {
+      // Keep a short death clip in the skinned-model budget when there is a
+      // spare slot; living threats retain priority under the mobile cap.
+      if ((e.deathT || 0) < 1.45) dying.push(e);
+    } else living.push(e);
   }
-  eligible.sort((a, b) => dist(a.x, a.y, player.x, player.y) - dist(b.x, b.y, player.x, player.y));
-  return eligible.slice(0, cap);
+  const nearest = (a, b) => dist(a.x, a.y, player.x, player.y) - dist(b.x, b.y, player.x, player.y);
+  living.sort(nearest);
+  dying.sort(nearest);
+  return [...living, ...dying].slice(0, cap);
 }
 
 /**
@@ -240,6 +248,19 @@ function clipForState(key, enemy) {
 
 function cloneRig(root) {
   const clone = root.clone(true);
+  // Skeleton instances share vertex buffers, but variant tint/material changes
+  // must remain per enemy. Clone each source material once for this rig.
+  const materials = new Map();
+  clone.traverse((object) => {
+    if (!object.isMesh || !object.material) return;
+    const cloneMaterial = (material) => {
+      if (!material) return material;
+      let copy = materials.get(material);
+      if (!copy) { copy = material.clone(); materials.set(material, copy); }
+      return copy;
+    };
+    object.material = Array.isArray(object.material) ? object.material.map(cloneMaterial) : cloneMaterial(object.material);
+  });
   const sourceMeshes = [];
   root.traverse((object) => { if (object.isSkinnedMesh) sourceMeshes.push(object); });
   const clonedMeshes = [];
@@ -550,15 +571,27 @@ class EnemyStage {
     });
   }
 
-  _takeModel(key) {
+  _takeModel(key, options = {}) {
     const rec = this.types[key];
     if (!rec || !rec.behaviorReady || !rec.template || rec.failed) return null;
     let slot = this.free.find((item) => item.type === key);
     if (slot) this.free.splice(this.free.indexOf(slot), 1);
-    if (slot) return slot;
-    if (this.slots.length + this.free.length >= this.cap) return null;
-    const host = this._host();
+    const host = options.host || this._host();
     if (!host) return null;
+    if (slot) {
+      if (host.stage && slot.model.parent !== host.stage) host.stage.add(slot.model);
+      return slot;
+    }
+
+    // Eight live rigs are the mobile budget, not eight lifetime model types.
+    // A freed slot for another skeleton can be rebuilt from the already-loaded
+    // template; otherwise the ninth type would remain a proxy for the rest of
+    // the run even after its GLB and clips had finished loading.
+    if (this.free.length) {
+      slot = this.free.shift();
+      if (slot.model && slot.model.parent) slot.model.parent.remove(slot.model);
+    } else if (this.slots.length + this.free.length >= this.cap) return null;
+
     const model = cloneRig(rec.template);
     host.stage.add(model);
     const mixer = new THREE.AnimationMixer(model);
@@ -575,21 +608,25 @@ class EnemyStage {
       action.setEffectiveWeight(0);
       actions[need] = action;
     }
-    const frame = document.createElement('canvas');
-    frame.width = host.canvas.width;
-    frame.height = host.canvas.height;
+    let frame = null;
+    if (!options.full3D) {
+      frame = slot ? slot.frame : document.createElement('canvas');
+      if (!slot) { frame.width = host.canvas.width; frame.height = host.canvas.height; }
+    }
     return { type: key, model, mixer, actions, enemyId: 0, frame };
   }
 
-  assign(enemies, player) {
-    for (const key of Object.keys(this.types)) {
+  assign(enemies, player, options = {}) {
+    // Gameplay uses the live skinned model in the shared WebGL scene. Do not
+    // spend frame time baking billboards unless a non-3D caller requested it.
+    if (!options.full3D) for (const key of Object.keys(this.types)) {
       const rec = this.types[key];
       if (rec && rec.loaded && !rec.failed && !rec.preview) this._bakePreview(key);
     }
     const ready = (key) => !!(this.types[key] && this.types[key].behaviorReady && !this.types[key].failed);
     const picked = selectGlbSlots(enemies, player, this.cap, ready);
     this.book.sync(picked);
-    if (!this._host()) {
+    if (!options.host && !this._host()) {
       for (const enemy of enemies) enemy._glb = null;
       return picked;
     }
@@ -608,20 +645,24 @@ class EnemyStage {
       if (!enemy) continue;
       let slot = this.slots.find((item) => item.enemyId === rec.id);
       if (!slot) {
-        slot = this._takeModel(rec.type);
+        slot = this._takeModel(rec.type, options);
         if (!slot) continue;
         slot.enemyId = rec.id;
         this.slots.push(slot);
       }
       enemy._glb = slot;
       this._pose(slot, enemy);
-      this._renderSlot(slot, enemy);
-      const bill = this.billboards[enemy.key] || (this.billboards[enemy.key] = document.createElement('canvas'));
-      if (bill.width !== slot.frame.width) {
-        bill.width = slot.frame.width;
-        bill.height = slot.frame.height;
+      if (options.full3D) {
+        this._placeWorld(slot, enemy, options);
+      } else {
+        this._renderSlot(slot, enemy);
+        const bill = this.billboards[enemy.key] || (this.billboards[enemy.key] = document.createElement('canvas'));
+        if (bill.width !== slot.frame.width) {
+          bill.width = slot.frame.width;
+          bill.height = slot.frame.height;
+        }
+        bill.getContext('2d').drawImage(slot.frame, 0, 0);
       }
-      bill.getContext('2d').drawImage(slot.frame, 0, 0);
     }
     return picked;
   }
@@ -645,6 +686,59 @@ class EnemyStage {
     slot.model.rotation.x = 0;
     slot.model.rotation.y = Math.PI / 2 - (enemy.angle || 0);
     slot.model.position.set(0, 0, 0);
+    slot.model.updateMatrixWorld(true);
+  }
+
+  /** Keep the skinned GLB in the shared mansion scene instead of baking it to a sprite. */
+  _placeWorld(slot, enemy, options = {}) {
+    slot.model.scale.set(1, 1, 1);
+    slot.model.position.set(0, 0, 0);
+    slot.model.updateMatrixWorld(true);
+    const box = this._box || (this._box = new THREE.Box3());
+    const size = this._size || (this._size = new THREE.Vector3());
+    box.setFromObject(slot.model);
+    box.getSize(size);
+    const projected = (ENEMY_HEIGHT[enemy.key] || 74) * (enemy.sizeMul || 1);
+    const verticalProjection = options.verticalProjection || Math.sqrt(2 / 3);
+    const targetWorldHeight = projected / verticalProjection;
+    const scale = targetWorldHeight / Math.max(0.001, size.y);
+    slot.model.scale.setScalar(scale);
+    slot.model.position.set(enemy.x, -box.min.y * scale, enemy.y);
+    const variant = enemy.variant || '';
+    if (!slot._baseMaterials) {
+      slot._baseMaterials = new Map();
+      slot.model.traverse((object) => {
+        const materials = Array.isArray(object.material) ? object.material : [object.material];
+        for (const material of materials) {
+          if (!material || slot._baseMaterials.has(material)) continue;
+          slot._baseMaterials.set(material, {
+            color: material.color && material.color.clone(),
+            emissive: material.emissive && material.emissive.clone(),
+            emissiveIntensity: material.emissiveIntensity || 0,
+          });
+        }
+      });
+    }
+    if (slot._visualVariant !== variant) {
+      slot._variantTint = enemy.tint ? new THREE.Color(enemy.tint) : null;
+      slot._visualVariant = variant;
+    }
+    const tint = slot._variantTint;
+    const hurt = Math.max(0, Math.min(1, enemy.hurtFlash || 0));
+    for (const [material, base] of slot._baseMaterials) {
+      if (base.color) {
+        material.color.copy(base.color);
+        if (tint) material.color.lerp(tint, variant === 'master' ? 0.38 : 0.24);
+      }
+      if (base.emissive) {
+        material.emissive.copy(base.emissive);
+        if (tint) material.emissive.lerp(tint, variant === 'master' ? 0.28 : 0.12);
+        if (hurt > 0) material.emissive.lerp(HURT_FLASH_COLOR, hurt * 0.72);
+        material.emissiveIntensity = base.emissiveIntensity + hurt * 1.8;
+      }
+    }
+    slot.model.visible = true;
+    slot.model.userData.full3D = true;
     slot.model.updateMatrixWorld(true);
   }
 

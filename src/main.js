@@ -13,12 +13,14 @@ import { drawCoach } from './game/coach.js';
 import { Valen3D } from './game/valen3d.js';
 import { Enemy3D } from './game/enemy3d.js';
 import { EnvKit } from './game/envkit.js';
+import { World3D } from './game/world3d.js';
 import { Ads } from './shop/ads.js';
 import { IAP } from './shop/iap.js';
 
 const canvas = document.getElementById('game');
 const game = new Game(canvas);
 const input = game.input;
+World3D.bindStage(canvas.parentElement);
 Ads.init(game);
 
 /* ---------- sizing ---------- */
@@ -115,6 +117,7 @@ window.__LN_API = {
   hold: (action, on) => { input.keys[action] = !!on; },
   valen: () => Valen3D.diagnostics(),
   env: () => EnvKit.diagnostics(),
+  world3d: () => World3D.diagnostics(),
   envFlat: (on) => EnvKit.flatTint(!!on),
   retryValen: () => Valen3D.retry(),
   enemy3d: () => Enemy3D.diagnostics(),

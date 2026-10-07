@@ -455,7 +455,9 @@ class ValenRuntime {
   render({ state = 'idle', angle = Math.PI / 2, speed = 0, stepPhase = 0, attackProgress = 0, view = 'portrait', weapon = 'claw', world = null } = {}) {
     if (!this.ready || !this.renderer || !this.model || !this.mixer) return null;
     this._applyCamera(view);
-    this._applyRig(world);
+    const full3D = !!(world && world.full3D);
+    if (!full3D) this._applyRig(world);
+    else this.model.scale.set(1, 1, 1);
 
     const attacking = state === 'attack';
     const locomotion = attacking ? 0 : smoothstep(4, 24, speed);
@@ -509,6 +511,23 @@ class ValenRuntime {
     this.model.position.x = -rootX;
     this.model.position.z = -rootZ;
     this.model.updateMatrixWorld(true);
+    if (full3D) {
+      // Place the animated GLB directly in the mansion's world scene. The
+      // previous path rendered it to a tiny transparent canvas and stamped
+      // that image onto a 2D floor; full3D keeps the skinned mesh, depth and
+      // shadows in the shared WebGL scene instead.
+      const sourceHeight = this.bounds && this.bounds.size ? this.bounds.size.y : 1;
+      const scale = (world.heightPx || sourceHeight) / Math.max(0.001, sourceHeight);
+      this.model.scale.setScalar(scale);
+      this.model.position.set(
+        world.x - rootX * scale,
+        (world.floorY || 0) - ((this.bounds && this.bounds.min.y) || 0) * scale,
+        world.y - rootZ * scale,
+      );
+      this.model.visible = world.visible !== false;
+      this.model.updateMatrixWorld(true);
+      return null;
+    }
     if (view === 'overhead') this._frameHead();
     this.renderer.toneMappingExposure = view === 'overhead' ? 1.9 : view === 'play' ? 1.55 : 1.18;
     this.renderer.clear();
