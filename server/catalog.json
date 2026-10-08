@@ -1,0 +1,10 @@
+{
+  "revive1":         { "priceIdr": 19000, "label": "SECOND BLOOD — one chosen mercy" },
+  "coat_bloodmoon":  { "priceIdr": 29000, "label": "BLOODMOON COAT" },
+  "coat_moonsilver": { "priceIdr": 29000, "label": "MOONSILVER COAT" },
+  "dawnbreaker":     { "priceIdr": 79000, "label": "DAWNBREAKER — the house says your name" },
+  "coat_glutton":    { "priceIdr": 29000, "label": "THE GLUTTON'S COAT" },
+  "coat_warden":     { "priceIdr": 29000, "label": "THE WARDEN'S COAT" },
+  "coat_shade":      { "priceIdr": 29000, "label": "THE SHADE'S COAT" },
+  "remove_ads":      { "priceIdr": 45000, "label": "REMOVE ADS — no power in the silence" }
+}

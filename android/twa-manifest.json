@@ -1,0 +1,47 @@
+{
+  "packageId": "com.xameth.lastnight",
+  "host": "your.host",
+  "name": "LAST NIGHT",
+  "launcherName": "LAST NIGHT",
+  "display": "standalone",
+  "orientation": "portrait",
+  "themeColor": "#05060b",
+  "themeColorDark": "#05060b",
+  "navigationColor": "#05060b",
+  "navigationColorDark": "#05060b",
+  "navigationDividerColor": "#05060b",
+  "navigationDividerColorDark": "#05060b",
+  "backgroundColor": "#05060b",
+  "enableNotifications": false,
+  "startUrl": "/index.html",
+  "iconUrl": "https://your.host/assets/brand/icon-512.png",
+  "maskableIconUrl": "https://your.host/assets/brand/icon-maskable-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android/lastnight-upload.jks",
+    "alias": "lastnight"
+  },
+  "appVersionCode": 1,
+  "appVersion": "1.0.0",
+  "shortcuts": [],
+  "generatorApp": "Bubblewrap",
+  "webManifestUrl": "https://your.host/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {
+    "playBilling": {
+      "enabled": true
+    }
+  },
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": false,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://your.host/",
+  "minSdkVersion": 23,
+  "orientationLock": false,
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": []
+}

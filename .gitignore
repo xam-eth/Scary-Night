@@ -1,0 +1,24 @@
+node_modules/
+tools/node_modules/
+tools/shots/
+*.log
+.DS_Store
+shots-browser/
+tools/.cache/
+server/data.json
+server/data.test.json
+.env
+server/.env
+
+# ---- Play bundle: signing, never commit ----
+*.jks
+*.keystore
+*.p12
+android/signing.local.json
+
+# ---- Play bundle: the Android project Bubblewrap generates ----
+# android/twa-manifest.json is the input and IS committed; everything else
+# in android/ is produced by `bubblewrap init` / `bubblewrap update`.
+android/*
+!android/twa-manifest.json
+!android/README.md

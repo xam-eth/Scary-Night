@@ -1,0 +1,21 @@
+QUATERNIUS ULTIMATE MONSTERS — SELECTED RIGS
+
+The original bundle was supplied in the repository's `monsters pack` commit
+(ca83406) as `Ultimate Monsters Bundle-glb.zip`. The runtime files in this
+folder are byte-for-byte copies of selected GLBs from that archive, renamed
+for stable, URL-safe paths. They have not been re-exported or modified.
+
+Original pack: Ultimate Monsters by Quaternius
+Pack page: https://quaternius.com/packs/ultimatemonsters.html
+Bundle: https://poly.pizza/bundle/Ultimate-Monsters-Bundle-5oyGWAmOB6
+License: CC0 1.0 Universal (public domain dedication)
+License text: https://creativecommons.org/publicdomain/zero/1.0/
+
+Runtime copies:
+- demon.glb              (Demon-LnfIziKv4o.glb)
+- green-spiky-blob.glb   (Green Spiky Blob.glb)
+- blue-demon.glb         (Blue Demon.glb)
+- ghost-skull.glb        (Ghost Skull.glb)
+- yeti.glb               (Yeti-ceRHrn8HHE.glb)
+
+The Werewolf remains the existing local rig and is not part of this pack.

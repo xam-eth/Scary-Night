@@ -1,0 +1,132 @@
+/* Weapon tools for the hunter. A row, not a power.
+ * Damage stays the claw's number. Sword reaches farther. Shot travels.
+ * Nothing here is sold, and nothing here raises a stat.
+ */
+
+import { PLAYER } from '../core/config.js';
+import { screenDirToWorld } from '../core/util.js';
+
+export const WEAPONS = Object.freeze({
+  claw: Object.freeze({
+    id: 'claw',
+    clip: 'claw',
+    kind: 'melee',
+    range: PLAYER.attackRange,
+    arc: PLAYER.attackArc,
+    damage: PLAYER.attackDamage,
+    fireAt: 0.35,
+    sound: 'slash',
+    hitSound: 'hitFlesh',
+    hitWeight: 0.7,
+    fx: 'claw',
+    label: 'CLAW',
+  }),
+  sword: Object.freeze({
+    id: 'sword',
+    clip: 'sword',
+    kind: 'melee',
+    range: 98,
+    arc: 2.15,
+    damage: PLAYER.attackDamage,
+    fireAt: 0.42,
+    sound: 'steel',
+    hitSound: 'hitFlesh',
+    hitWeight: 1.35,
+    fx: 'arc',
+    label: 'SWORD',
+  }),
+  shot: Object.freeze({
+    id: 'shot',
+    clip: 'shot',
+    kind: 'ranged',
+    range: 460,
+    arc: 0.4,
+    damage: PLAYER.attackDamage,
+    boltSpeed: 540,
+    offset: 28,
+    fireAt: 0.48,
+    sound: 'shot',
+    hitSound: 'boltImpact',
+    hitWeight: 0.85,
+    fx: 'muzzle',
+    label: 'SHOT',
+  }),
+});
+
+export const WEAPON_ORDER = Object.freeze(['claw', 'sword', 'shot']);
+
+/* ---------------------------------------------------------------------------
+ * Where a swing lands, measured through the same isometric projection used by
+ * the camera. Reach, bearing and the visible arc now agree along both world
+ * axes; movement and navigation remain in floor space.
+ * ------------------------------------------------------------------------- */
+export function swingTilt(game) {
+  const r = game && game.renderer;
+  return r && r.tilt ? r.tilt : 1;
+}
+
+/** Project a floor-space delta into unzoomed screen-space. */
+export function swingDelta(game, from, to) {
+  const dx = to.x - from.x, dy = to.y - from.y;
+  const r = game && game.renderer;
+  if (r && typeof r.projectDelta === 'function') return r.projectDelta(dx, dy);
+  const t = swingTilt(game);
+  return { dx, dy: dy * t };
+}
+
+/** How far away a body is as drawn; this is the number the reach uses. */
+export function swingDist(game, from, to) {
+  const d = swingDelta(game, from, to);
+  return Math.hypot(d.x ?? d.dx, d.y ?? d.dy);
+}
+
+/** The bearing to a body, in screen terms — the direction the eye reads. */
+export function swingBearing(game, from, to) {
+  const d = swingDelta(game, from, to);
+  return Math.atan2(d.y ?? d.dy, d.x ?? d.dx);
+}
+
+/** True when `to` is inside the visible swing arc and its screen-space reach. */
+export function inSwing(game, from, to, tool, facing) {
+  const d = swingDist(game, from, to);
+  const reach = tool.range + (to.radius || 12);
+  if (d > reach) return false;
+  const touching = d < (from.radius || 13) + (to.radius || 12) + 14;
+  if (touching) return true;
+  const off = Math.abs(angDiff(swingBearing(game, from, to), facing));
+  return off <= tool.arc / 2;
+}
+
+/** A screen bearing back to the world heading stored by gameplay. */
+export function swingBearingToWorld(game, bearing) {
+  const r = game && game.renderer;
+  if (r && r.isometric) return screenDirToWorld(Math.cos(bearing), Math.sin(bearing), r).angle;
+  const t = swingTilt(game);
+  return Math.atan2(Math.sin(bearing) / t, Math.cos(bearing));
+}
+
+function angDiff(a, b) {
+  return ((a - b + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+}
+
+/**
+ * THE KIT'S BITE (#56 P5). Claw, sword and crossbow stay a row — the ladder
+ * is the metal, not the weapon, so this multiplier rides whatever she carries:
+ * silver finds the hounds and the Master, the blessing finds everything.
+ */
+export function kitDamage(kit, target) {
+  if (!kit) return 1;
+  let m = 1;
+  if (kit.silver && target && (target.key === 'werewolf' || target.isMaster)) m *= 1.35;
+  if (kit.blessed) m *= 1.2;
+  return m;
+}
+
+export function weaponById(id) {
+  return WEAPONS[id] || WEAPONS.claw;
+}
+
+export function nextWeapon(id) {
+  const i = WEAPON_ORDER.indexOf(id);
+  return WEAPON_ORDER[(i + 1) % WEAPON_ORDER.length];
+}
