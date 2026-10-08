@@ -1074,7 +1074,7 @@ export class Player {
     if (Valen3D.failed) {
       ctx.globalCompositeOperation = 'source-over';
       ctx.globalAlpha = 0.85;
-      ctx.font = '700 9px ui-monospace, Consolas, monospace';
+      ctx.font = '700 9px "Special Elite", ui-monospace, monospace';
       ctx.textAlign = 'center';
       ctx.fillStyle = '#ff5a4a';
       ctx.fillText('CHARACTER ASSET FAILED', 0, -h - 14);

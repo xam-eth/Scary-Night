@@ -80,7 +80,7 @@ export const PLAYER = {
   radius: 13,
   walkSpeed: 122,
   runSpeed: 196,
-  accel: 16,           // how fast velocity chases the target (higher = snappier)
+  accel: 22,           // tighter stop/start so touch steering follows the thumb
   dashSpeed: 330,
   dashTime: 0.19,
   dashCooldown: 1.15,

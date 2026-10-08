@@ -1,6 +1,6 @@
 # LAST NIGHT — Roadmap Rebuild 3D Penuh
 
-**Status (2026-10-07):** target migrasi dunia permainan ke satu pipeline WebGL 3D untuk seluruh 11 ruangan telah dicapai. Atas permintaan terbaru, fold/cutaway yang menyembunyikan dinding saat player bergerak sudah dihapus; QA Chromium memastikan 628 instance aktif dan 140 instance arsitektur tetap tampil dengan matriks tak berubah di enam anchor. `envqa --mode=3d-smoke` dan harness simulasi lulus setelah perubahan ini. **Hardening/release QA masih terbuka:** sweep 17 stop/screenshot belum diulang, `layoutqa` belum diulang setelah perubahan visual, dan matriks combat/state penuh, performa perangkat nyata, serta WebGL context-loss belum diverifikasi.
+**Status (2026-10-08):** target migrasi dunia permainan ke satu pipeline WebGL 3D untuk seluruh 11 ruangan telah dicapai. Fold/cutaway yang menyembunyikan dinding saat player bergerak sudah dihapus; QA Chromium memastikan 628 instance aktif dan 140 instance arsitektur tetap tampil dengan matriks tak berubah di enam anchor. UI kontrol kini memakai ikon vektor relevan (menu tetap menyertakan label), dan tujuh pintu memakai panel kayu pada `doorway.glb`—bukan grille `door_gate.glb`—dengan swing inward yang diease ke 90° saat buka/tutup. `envqa --mode=3d-smoke` kini juga memverifikasi aset, orientasi hinge, kedua transisi, tabrakan/LOS, dan refresh shadow-map pada awal/akhir swing; smoke test serta harness simulasi lulus. **Hardening/release QA masih terbuka:** sweep 17 stop/screenshot belum diulang, `layoutqa` belum diulang setelah perubahan visual, dan matriks combat/state penuh, performa perangkat nyata, serta WebGL context-loss belum diverifikasi.
 
 ## Arah yang dikunci
 
@@ -71,7 +71,7 @@ Ekspor runtime terakhir: **11 ruangan, 26 portal, 16 akses masuk eksterior, 59 s
 ### 2. Mansion 3D lengkap — blockout semua 11 ruang tercapai; polish terbuka
 
 - [x] Seluruh denah `Mansion`/`assets/house.json` dibangun sekaligus. Gate mengukur 11 ruang, 26 portal, 251 floor tiles, 99 panel dinding, 32 sudut, dan 9 jendela dalam scene aktif.
-- [~] Lantai, dinding, jendela, pintu, dan furniture/props berupa geometry 3D. QA membuka `diningDoor` dan melihat pivot mesh bergerak ke sudut **-1,25 rad**; semua variasi jendela/barricade belum diuji satu per satu.
+- [x] Lantai, dinding, jendela, pintu, dan furniture/props berupa geometry 3D. Semua tujuh pintu kini mengambil panel kayu terpisah `wall_doorway_door` dari `doorway.glb`, dipasang pada hinge di tepi daun dan mengayun **90° ke arah interior** dengan easing 0,42 detik; Chromium menguji posisi tertutup, sudut tengah, endpoint buka/tutup, semua orientasi, tabrakan/LOS, cast shadow, dan refresh shadow-map pada awal/akhir swing. Variasi semua state jendela/barricade masih belum diuji satu per satu.
 - [x] Props/furniture ditempatkan dari data runtime/kit. Pemeriksaan fit box tidak menemukan overhang/gap, namun audit layout menemukan **0/70** furnitur dalam jarak 26 px dari dinding dan satu overlap staircase–stairRail berukuran sekitar 150×20 px; tata ruang perlu dirapikan.
 - [x] Cutaway berbasis langkah player dihapus. Wall/floor/prop/detail mempertahankan matriks dan skala penuh ketika player/kamera bergerak; QA Chromium membandingkan enam anchor dan mendapati 0 perubahan pada 140 instance arsitektur. Pintu/jendela/pickup tetap mengikuti state gameplay eksplisit; occlusion depth 3D normal tetap berlaku.
 - [x] Ruang samping dan transisi ada di scene aktif dan terhitung dalam gate; screenshot semua wing per room dan navigasi end-to-end tetap belum ada.
@@ -80,9 +80,9 @@ Ekspor runtime terakhir: **11 ruangan, 26 portal, 16 akses masuk eksterior, 59 s
 
 ### 3. Actor, combat, dan interaksi di world yang sama — render dasar tercapai; playtest combat terbuka
 
-- [x] Hunter rigged dan keenam tipe musuh (`crawler`, `zombie`, `hunter`, `werewolf`, `ghoul`, `stalker`) hadir di scene. Gate terakhir menguji 8 rig GLB aktif dari budget 8 plus 5 proxy actor 3D untuk actor tambahan.
+- [x] Hunter rigged dan keenam tipe musuh (`crawler`, `zombie`, `hunter`, `werewolf`, `ghoul`, `stalker`) hadir di scene. Roster memakai lima rig monster berbeda dari Ultimate Monsters CC0 plus rig Werewolf lokal; tiap tipe memetakan idle/locomotion/attack/death ke klip sumbernya, dan lima rig pack juga memetakan hurt-react ke `hurtFlash`/`staggerT` tanpa mengubah simulasi. QA Chromium menguji keenam rig skinned di scene bersama, dengan cap 8 tetap dijaga.
 - [x] Actor share kamera/depth scene; jalur gameplay memakai skinned model atau proxy geometry 3D, bukan billboard Canvas.
-- [~] Gerak keyboard, visual arc claw, bolt mesh, pickup, pengumpulan pickup, dan interaksi pintu lulus assertion. Damage/hitbox, empat arah aim, sword/crossbow fire, knockback, death, serta sinkronisasi animasi-hit belum diuji end-to-end.
+- [~] Gerak keyboard, visual arc claw, bolt mesh, pickup, pengumpulan pickup, dan interaksi pintu lulus assertion. Smoke test kini memverifikasi `hurtFlash`/`staggerT` memilih klip hit sumber; damage/hitbox, empat arah aim, sword/crossbow fire, knockback, death, serta sinkronisasi hit gameplay tetap belum diuji end-to-end.
 - [~] State pintu/interaksi dan cue rumah/haunt tampil sebagai mesh 3D; semua jenis jendela/barricade dan seluruh props interaktif belum diverifikasi.
 
 **Gate saat ini:** render actor, gerakan, swing visual, bolt/pickup, dan satu pintu dibuktikan di Chromium. **Belum lulus:** playtest attack → hit → death dengan verifikasi offset hitbox/mesh dan seluruh arah aim.
@@ -98,7 +98,7 @@ Ekspor runtime terakhir: **11 ruangan, 26 portal, 16 akses masuk eksterior, 59 s
 
 ### 5. Integrasi gameplay, UI, dan performa perangkat — integrasi dasar lulus; cakupan runtime terbuka
 
-- [~] HUD/touch controls tampil di atas WebGL dan sim tetap menerima gerak, pintu, pickup. Pause, death/restart, dawn, save/load, audio, serta satu run penuh belum diregresikan.
+- [x] HUD/touch controls tampil di atas WebGL; tombol gameplay memakai ikon vektor untuk gerak, serang/senjata, dash, interaksi kontekstual, perbaikan, dan barricade. Menu memakai ikon semantik dengan label tetap terbaca. Gerak, pintu, pickup diuji; pause, death/restart, dawn, save/load, audio, serta satu run penuh belum diregresikan.
 - [~] Chromium lulus boot pada mobile portrait 390×844 dan desktop viewport 1280×720. Desktop stage tetap 405×720 letterboxed; landscape layout, orientation-change, DPR selain 1, tab hidden, serta WebGL context loss belum diuji.
 - [ ] CPU/GPU frame time, draw calls, triangle/instance count, memory budget, dan waktu siap semua room/actor belum diukur.
 - [ ] Belum ada optimization/performance pass akhir untuk device low-end.
@@ -113,7 +113,7 @@ Checklist penerimaan render full-3D:
 - [x] Gate mencatat 0 pemanggilan Canvas world untuk floor/props/furniture selama gameplay; Canvas UI/HUD tetap diizinkan.
 - [x] Gerak, pintu, pickup/collection, bolt/VFX, particles/decals, musuh, swing, watcher dan door cues lulus probe browser yang ada.
 - [~] Screenshot membuktikan stage WebGL di mobile/desktop; desktop letterboxing, semua wing, variasi cutscene dan seluruh jalur Canvas legacy belum diaudit visual.
-- [x] `envqa --mode=3d-smoke` setelah cutaway dihapus lulus body, framebuffer 11 room, geometri statik lintas enam anchor, 9 window, quality-tier visibility, dan browser errors; seluruh 628 instance aktif terlihat dan 0 matriks berubah karena gerak player/kamera.
+- [x] `envqa --mode=3d-smoke` lulus body, framebuffer 11 room, geometri statik lintas enam anchor, 9 window, quality-tier visibility, tujuh pintu (aset/orientasi/swing, collision/LOS, shadow pass), dan browser errors; seluruh 628 instance aktif terlihat dan 0 matriks berubah karena gerak player/kamera.
 - [~] Sweep 17 stop/screenshot belum diulang setelah mode visual statik diterapkan; crowd timing headless tetap diagnostik, bukan bukti performa perangkat.
 - [ ] Traversal aktual semua room/portal, nav/collision, hitbox, mouse/touch aim, dan semua door/window state belum diuji end-to-end.
 - [ ] Run penuh movement → combat → low-health → pause → death/restart → dawn belum dilakukan.
@@ -125,6 +125,7 @@ Checklist penerimaan render full-3D:
 - `src/main.js` — bootstrap UI dan lifecycle input; HUD tetap overlay Canvas.
 - `src/game/game.js` — jalur aktif mengirim state ke `World3D`; metode `renderWorld()` Canvas lama sudah dihapus. Primitive draw dormant pada module mansion/actor masih perlu audit/cleanup.
 - `src/core/render.js` — proyeksi/camera adapter dan utilitas UI masih dipakai; audit serta hapus jalur gambar world yang tidak lagi aktif pada fase cleanup.
+- `src/ui/icons.js`, `src/game/hud.js`, `src/ui/screens.js` — ikon Canvas semantik bersama untuk kontrol sentuh dan navigasi, dengan ukuran/hitbox/input tetap dipertahankan.
 - `src/game/mansion.js` — sumber denah, physics/collision, props dan nav; data sim dipertahankan.
 - `src/game/envkit.js`, `src/game/world3d.js` — scene geometry, camera/render path, actor objects, VFX, lighting; performance, inspeksi occlusion, resource disposal, dan context-loss masih terbuka.
 - `src/game/valen3d.js`, `src/game/enemy3d.js`, `src/game/player.js`, `src/game/enemies.js`, `src/game/weapons.js` — GLB/animation dan koordinasi gameplay; verifikasi hit/death serta asset lifecycle masih terbuka.

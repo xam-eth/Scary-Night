@@ -8,10 +8,16 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="description" content="LAST NIGHT — survive until dawn. A 3/4 vampire survival horror game about tension, doors and the sound of knocking." />
 <title>LAST NIGHT — Survive until dawn.</title>
+<link rel="preload" href="./assets/fonts/im-fell-english-sc-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="preload" href="./assets/fonts/special-elite-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="stylesheet" href="./styles.css" />
 <!-- The player IS this GLB — fetched as the original bytes, straight into GLTFLoader. -->
 <link rel="preload" as="fetch" crossorigin="anonymous" href="./hunter_run_walk_claw_sword_shot.glb" />
-<link rel="preload" as="fetch" crossorigin="anonymous" href="./zombie+3d+model.glb" />
+<link rel="preload" as="fetch" crossorigin="anonymous" href="./assets/monsters/ultimate/demon.glb" />
+<link rel="preload" as="fetch" crossorigin="anonymous" href="./assets/monsters/ultimate/green-spiky-blob.glb" />
+<link rel="preload" as="fetch" crossorigin="anonymous" href="./assets/monsters/ultimate/blue-demon.glb" />
+<link rel="preload" as="fetch" crossorigin="anonymous" href="./assets/monsters/ultimate/ghost-skull.glb" />
+<link rel="preload" as="fetch" crossorigin="anonymous" href="./assets/monsters/ultimate/yeti.glb" />
 <link rel="icon" href="./assets/brand/mark.svg" type="image/svg+xml" />
 <link rel="manifest" href="./manifest.webmanifest" />
 <!-- Play Billing in a Trusted Web Activity needs the Digital Goods API, and
@@ -25,7 +31,7 @@
 </head>
 <body>
   <div id="stage">
-    <canvas id="game" width="1280" height="720" aria-label="Last Night game canvas"></canvas>
+    <canvas id="game" width="1280" height="720" aria-label="Last Night game. Controls: move with WASD or arrow keys, attack with F, dash with Shift, interact with E, repair with R, barricade with B, change weapon with Q, and pause with Escape."></canvas>
   </div>
 
   <div id="veil">
@@ -44,7 +50,7 @@
   </button>
 
   <noscript>
-    <div style="color:#c8bfa8;font-family:Georgia,serif;padding:2rem;text-align:center">
+    <div style="color:#c8bfa8;font-family:'Special Elite','Courier New',monospace;padding:2rem;text-align:center">
       LAST NIGHT needs JavaScript.
       <a href="./privacy.html">Privacy policy</a> · <a href="./delete.html">Delete my data</a>
     </div>

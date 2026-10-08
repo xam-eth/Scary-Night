@@ -1159,6 +1159,7 @@ export class Game {
     const acts = (this.interactTarget && this.interactTarget.actions) || [];
     input.buttons.repair.hidden = !acts.some((a) => a.act === 'repair');
     input.buttons.barricade.hidden = !acts.some((a) => a.act === 'barricade');
+    input.buttons.interact.hot = acts.some((a) => a.act !== 'repair' && a.act !== 'barricade');
   }
 
   noteRoom(p) {
@@ -2337,6 +2338,7 @@ export class Game {
       r.clear(PAL.void);
       r.resetForUI();
       UI.drawMenu(this, ctx, w, h);
+      if (!this.save.privacyAck) UI.drawFocusCaption(this, ctx, w, h);
       if (this.fadeFromBlack > 0) {
         ctx.fillStyle = `rgba(0,0,0,${this.fadeFromBlack})`;
         ctx.fillRect(0, 0, w, h);
@@ -2362,7 +2364,7 @@ export class Game {
         World3D.setVisible(false);
         r.resetForUI();
         ctx.fillStyle = '#b9b1a0';
-        ctx.font = '12px Georgia, serif';
+        ctx.font = '400 12px "IM Fell English SC", Georgia, serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         const status = World3D.contextLost ? 'THE 3D DEVICE IS RESTORING…'
@@ -2409,6 +2411,7 @@ export class Game {
       case 'refuge': UI.drawRefuge(this, ctx, w, h); break;
     }
     if (this.screen === 'playing') UI.drawTutorial(this, ctx, w, h);
+    UI.drawFocusCaption(this, ctx, w, h);
     if (TUNING.showDebug) this.drawDebug(ctx, w, h);
 
     // fade from black on run start
@@ -2442,7 +2445,7 @@ export class Game {
     ctx.save();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = '600 12px "Segoe UI", Roboto, sans-serif';
+    ctx.font = '600 12px "Special Elite", "Courier New", monospace';
     for (const entry of this.combatTexts) {
       const point = project(entry.x, entry.y);
       if (point.x < view.left - 48 || point.x > view.left + view.w + 48 || point.y < view.top - 48 || point.y > view.top + view.h + 28) continue;
@@ -2478,7 +2481,7 @@ export class Game {
       const y = phone ? Math.min(stickTop - 36, h - 176) : h * 0.72;
       const maxW = Math.min(framed ? view.w - 28 : w * 0.72, phone ? 280 : 560);
       const fontPx = phone ? 12 : 14;
-      ctx.font = `500 ${fontPx}px "Segoe UI", Roboto, sans-serif`;
+      ctx.font = `500 ${fontPx}px "Special Elite", "Courier New", monospace`;
       if ('letterSpacing' in ctx) ctx.letterSpacing = '0.4px';
       const lines = [];
       for (const base of String(m.text).split('\n')) {
@@ -2522,7 +2525,7 @@ export class Game {
         ctx.globalAlpha = a;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.font = `400 ${clamp(w * 0.032, 22, 40)}px Georgia, serif`;
+        ctx.font = `400 ${clamp(w * 0.032, 22, 40)}px "IM Fell English SC", Georgia, serif`;
         if ('letterSpacing' in ctx) ctx.letterSpacing = '8px';
         ctx.fillStyle = b.text === 'PANIC' ? '#c8202e' : '#e6dcc4';
         ctx.shadowColor = b.text === 'PANIC' ? 'rgba(180,20,30,0.6)' : 'rgba(0,0,0,0.9)';
@@ -2556,7 +2559,7 @@ export class Game {
         ctx.textBaseline = 'middle';
         ctx.translate(w / 2, h * 0.42);
         ctx.scale(scale, scale);
-        ctx.font = `400 92px Georgia, serif`;
+        ctx.font = `400 92px "IM Fell English SC", Georgia, serif`;
         ctx.fillStyle = '#e8dcc0';
         ctx.shadowColor = 'rgba(200,160,80,0.55)';
         ctx.shadowBlur = 30;
@@ -2583,7 +2586,7 @@ export class Game {
     ctx.save();
     ctx.fillStyle = 'rgba(0,0,0,0.55)';
     ctx.fillRect(0, 0, 520, 16 * lines.length + 12);
-    ctx.font = '12px Consolas, monospace';
+    ctx.font = '400 12px "Special Elite", monospace';
     ctx.textAlign = 'left';
     ctx.fillStyle = '#8ef08a';
     lines.forEach((l, i) => ctx.fillText(l, 8, 18 + i * 16));

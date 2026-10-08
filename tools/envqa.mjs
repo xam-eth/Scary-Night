@@ -108,9 +108,12 @@ console.log('diag:', JSON.stringify(await page.evaluate(() => window.__env.diagn
  * sprite canvases, and skip the long frame-by-frame walk/screenshot sweep. */
 if (MODE === '3d-smoke') {
   await bodySection();
+  await roomMarkOrientationSection();
+  await combatVfxSection();
   await roomBuildSection();
   await staticWorldSection();
   await windowVisibility3DSection();
+  await doorAnimationSection();
   check(pageErrors.length === 0, `no uncaught browser page errors (${pageErrors.length})`);
   await shutdown();
   process.exit(process.exitCode || 0);
@@ -355,6 +358,21 @@ async function bodySection() {
       }
       return { key: enemy.key, rigged, proxy3D, proxyMeshes, projectedHeight };
     });
+    const hitReact = [];
+    for (const enemy of g.enemies.filter((item) => item.key !== 'werewolf')) {
+      enemy.hurtFlash = 0.5;
+      W.render(g);
+      const action = enemy._glb?.actions?.hurt;
+      const duration = action?.getClip().duration || 0;
+      hitReact.push({
+        key: enemy.key,
+        action: !!action,
+        weight: action?.getEffectiveWeight() || 0,
+        progress: duration ? action.time / duration : 0,
+      });
+      enemy.hurtFlash = 0;
+    }
+    W.render(g);
     return {
       hero: {
         ready: !!V.ready,
@@ -364,9 +382,11 @@ async function bodySection() {
         skinnedMeshes: heroSkin,
       },
       actors,
+      hitReact,
       diag: d,
       cap: window.__enemy.cap,
       readyTypes: Object.values(window.__enemy.diagnostics().types).filter((type) => type.behaviorReady).length,
+      modelUrls: Object.fromEntries(Object.entries(window.__enemy.diagnostics().types).map(([key, type]) => [key, type.url])),
       player: { x: g.player.x, y: g.player.y },
     };
   });
@@ -410,11 +430,83 @@ async function bodySection() {
   check(result.hero.ready && result.hero.visible && result.hero.sharedScene && result.hero.skinnedMeshes > 0,
     `the Hunter is a visible skinned GLB in the shared WebGL scene`);
   check(pixelDiff > 0, `hiding the Hunter changes ${pixelDiff} pixels near her position in the WebGL buffer`);
-  check(result.actors.length === 6 && result.actors.every((actor) => actor.rigged || actor.proxy3D),
-    `all six enemy types have a skinned GLB or geometric 3D proxy (${result.actors.filter((actor) => actor.rigged || actor.proxy3D).length}/6)`);
+  check(result.actors.length === 6 && result.readyTypes === 6 && result.actors.every((actor) => actor.rigged),
+    `all six enemy types load and render their behavior-ready skinned GLBs (${result.actors.filter((actor) => actor.rigged).length}/6)`);
   check(result.actors.filter((actor) => actor.rigged).length <= result.cap,
     `skinned enemy slots remain within cap ${result.cap} (${result.actors.filter((actor) => actor.rigged).length} active)`);
+  console.log(`  mapped hit-react actions: ${result.hitReact.map((item) => `${item.key}=${item.action ? `${item.weight.toFixed(2)}@${item.progress.toFixed(2)}` : 'missing'}`).join(', ')}`);
+  check(result.hitReact.length === 5 && result.hitReact.every((item) => item.action
+    && Math.abs(item.weight - 1) < 0.001 && Math.abs(item.progress - 0.5) < 0.06),
+  'damage feedback selects and poses the source hit-react clip on all five pack rigs');
   console.log(`  enemy models behavior-ready: ${result.readyTypes}/6; diagnostics: ${result.diag.visibleRiggedEnemies} rigged, ${result.diag.proxyActors} proxies`);
+  console.log(`  model URLs: ${Object.values(result.modelUrls).join(', ')}`);
+}
+
+async function roomMarkOrientationSection() {
+  console.log('\n---- ROOM-MARK TORUS ORIENTATION ----');
+  const result = await page.evaluate(() => {
+    const marks = window.__world3d.roomMarks;
+    const find = (kind) => {
+      const group = marks.find((item) => item.name.endsWith(`-${kind}`));
+      const torus = group && group.children.find((item) => item.geometry?.type === 'TorusGeometry');
+      return torus ? { angle: torus.rotation.x, side: torus.material.side, visible: group.visible } : null;
+    };
+    return { ward: find('ward'), dish: find('dish'), doubleSide: window.__three.DoubleSide };
+  });
+  console.log(`  ward=${result.ward ? `${result.ward.angle.toFixed(3)}rad, side=${result.ward.side}, visible=${result.ward.visible}` : 'missing'}; dish=${result.dish ? `${result.dish.angle.toFixed(3)}rad, side=${result.dish.side}, visible=${result.dish.visible}` : 'missing'}`);
+  check(!!result.ward && Math.abs(result.ward.angle - Math.PI / 2) < 0.001
+    && result.ward.side === result.doubleSide && result.ward.visible,
+  'the ward room-mark torus is flipped and double-sided so it still reads from above');
+  check(!!result.dish && Math.abs(result.dish.angle - Math.PI / 2) < 0.001
+    && result.dish.side === result.doubleSide && result.dish.visible,
+  'the dish rim torus is flipped and double-sided so it remains visible');
+}
+
+async function combatVfxSection() {
+  console.log('\n---- MELEE SWING VFX (WebGL buffer) ----');
+  const result = await page.evaluate(() => {
+    const g = window.__LN, W = window.__world3d, E = window.__env;
+    g.screen = 'playing';
+    g.player.state = 'idle';
+    g.player.weapon = 'claw';
+    g.player.swingAngle = g.player.angle;
+    g.player.slashAge = 0.12;
+    W.render(g);
+    const ribbon = W.playerSwingRibbon;
+    const edge = W.playerSwing;
+    const gl = E.renderer.getContext();
+    const render = () => {
+      E.renderer.render(W.scene, E.camera);
+      gl.finish();
+      const pixels = new Uint8Array(E.canvas.width * E.canvas.height * 4);
+      gl.readPixels(0, 0, E.canvas.width, E.canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+      return pixels;
+    };
+    const active = render();
+    const before = { ribbonVisible: ribbon && ribbon.visible, edgeVisible: edge && edge.visible };
+    if (ribbon) ribbon.visible = false;
+    if (edge) edge.visible = false;
+    const hidden = render();
+    if (ribbon) ribbon.visible = before.ribbonVisible;
+    if (edge) edge.visible = before.edgeVisible;
+    let changed = 0;
+    for (let i = 0; i < active.length; i += 4) {
+      if (Math.abs(active[i] - hidden[i]) + Math.abs(active[i + 1] - hidden[i + 1]) + Math.abs(active[i + 2] - hidden[i + 2]) > 18) changed++;
+    }
+    return {
+      visible: W.diagnostics().visiblePlayerSwing3D,
+      ribbonVisible: before.ribbonVisible,
+      edgeVisible: before.edgeVisible,
+      ribbonVertices: ribbon?.geometry?.drawRange?.count || 0,
+      edgeVertices: edge?.geometry?.drawRange?.count || 0,
+      ribbonOpacity: ribbon?.material?.opacity || 0,
+      changedPixels: changed,
+    };
+  });
+  console.log(`  ribbon ${result.ribbonVisible ? 'visible' : 'hidden'}, ${result.ribbonVertices} vertices, opacity=${result.ribbonOpacity.toFixed(3)}; edge ${result.edgeVisible ? 'visible' : 'hidden'}, ${result.edgeVertices} vertices; framebuffer delta=${result.changedPixels}px`);
+  check(result.visible && result.ribbonVisible && result.edgeVisible && result.ribbonVertices >= 150 && result.edgeVertices >= 150,
+    'a melee strike creates the filled crescent and bright 3D edge');
+  check(result.changedPixels > 0, `hiding the slash changes ${result.changedPixels} WebGL pixels`);
 }
 
 async function bakeSection() {
@@ -1059,6 +1151,157 @@ async function staticWorldSection() {
     `walking between rooms does not rewrite static wall/prop/detail transforms (${read.changedMatrices} changed instances)`);
   check(read.allQualityGroupsKept,
     `every adaptive quality tier keeps rooms, props, and fortress dressing enabled`);
+}
+
+async function doorAnimationSection() {
+  console.log('\n---- HINGED WOODEN DOORS (asset, inward swing, open and close) ----');
+  const read = await page.evaluate(() => {
+    const g = window.__LN, E = window.__env;
+    const entries = [...E.doors.entries()];
+    const wrapDistance = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
+    const expectedYaw = (door) => door.axis === 'h'
+      ? (door.facing === 'north' ? Math.PI : 0)
+      : (door.facing === 'west' ? -Math.PI / 2 : Math.PI / 2);
+    const allHaveLeaf = entries.length === g.mansion.doors.length
+      && entries.every(([, view]) => view.leaf && view.pivot && view.frame && !view.gate);
+    const embeddedLeavesHidden = entries.every(([, view]) => {
+      const original = view.frame && view.frame.getObjectByName('wall_doorway_door');
+      return original && !original.visible;
+    });
+    const yawError = Math.max(0, ...entries.map(([id, view]) => {
+      const door = g.mansion.entranceById(id);
+      return wrapDistance(view.group.rotation.y, expectedYaw(door));
+    }));
+    const leafCastsShadow = entries.every(([, view]) => {
+      const meshes = [];
+      if (view.leaf) view.leaf.traverse((node) => { if (node.isMesh) meshes.push(node); });
+      return meshes.length > 0 && meshes.every((mesh) => mesh.castShadow === true);
+    });
+    const collisionStates = entries.map(([id]) => {
+      const entrance = g.mansion.entranceById(id);
+      const original = { open: entrance.open, broken: entrance.broken, barricade: entrance.barricade };
+      entrance.barricade = 0;
+      entrance.open = false; entrance.broken = false;
+      const closedBlocks = g.mansion.resolve(entrance.x, entrance.y, 12).hit;
+      const closedBlocksSight = g.mansion.blocksSight(entrance.x, entrance.y);
+      entrance.open = true;
+      const openPasses = !g.mansion.resolve(entrance.x, entrance.y, 12).hit;
+      const openAllowsSight = !g.mansion.blocksSight(entrance.x, entrance.y);
+      entrance.open = false; entrance.broken = true;
+      const brokenPasses = !g.mansion.resolve(entrance.x, entrance.y, 12).hit;
+      entrance.open = original.open; entrance.broken = original.broken; entrance.barricade = original.barricade;
+      return { id, closedBlocks, closedBlocksSight, openPasses, openAllowsSight, brokenPasses };
+    });
+    const collisionAligned = collisionStates.length === g.mansion.doors.length
+      && collisionStates.every((state) => state.closedBlocks && state.closedBlocksSight
+        && state.openPasses && state.openAllowsSight && state.brokenPasses);
+
+    const door = g.mansion.entranceById('frontDoor');
+    const view = E.doors.get('frontDoor');
+    const shadowMap = E.renderer && E.renderer.shadowMap;
+    const originalShadowRender = shadowMap && shadowMap.render;
+    let shadowUpdates = 0, shadowInstrumented = false;
+    if (shadowMap && typeof originalShadowRender === 'function') {
+      try {
+        shadowMap.render = function (...args) {
+          if (this.enabled && (this.autoUpdate || this.needsUpdate)) shadowUpdates++;
+          return originalShadowRender.apply(this, args);
+        };
+        shadowInstrumented = true;
+      } catch (_) { /* a renderer may expose a read-only shadow hook */ }
+    }
+    const saved = {
+      update: g.update, screen: g.screen, now: g.now, open: door.open, broken: door.broken,
+      inputGameplay: g.input.gameplay, playerX: g.player.x, playerY: g.player.y,
+      cameraX: g.renderer.cam.x, cameraY: g.renderer.cam.y, cameraZoom: g.renderer.cam.zoom,
+      lightningFlash: g.lightningFlash,
+    };
+    g.update = () => {};
+    g.screen = 'playing';
+    g.lightningFlash = 0; // isolate door-triggered refreshes from ambient lightning
+    g.input.gameplay = false;
+    g.player.x = door.inside.x;
+    g.player.y = door.inside.y;
+    g.renderer.snapCamera(door.inside.x, door.inside.y);
+    door.open = false;
+    door.broken = false;
+    g.now = 100;
+    g.render();
+    shadowUpdates = 0; // discard the initial room/lighting bake
+    if (shadowMap) shadowMap.needsUpdate = false;
+    const closed = view.pivot.rotation.y;
+    door.open = true;
+    g.now = 100.001;
+    g.render();
+    const openStart = view.pivot.rotation.y;
+    const openStartShadows = shadowUpdates;
+    g.now += 0.21;
+    g.render();
+    const openMid = view.pivot.rotation.y;
+    const openMidShadows = shadowUpdates;
+    g.now += 0.3;
+    g.render();
+    const openEnd = view.pivot.rotation.y;
+    const openEndShadows = shadowUpdates;
+    door.open = false;
+    g.now += 0.001;
+    g.render();
+    const closeStart = view.pivot.rotation.y;
+    const closeStartShadows = shadowUpdates;
+    g.now += 0.21;
+    g.render();
+    const closeMid = view.pivot.rotation.y;
+    const closeMidShadows = shadowUpdates;
+    g.now += 0.3;
+    g.render();
+    const closeEnd = view.pivot.rotation.y;
+    const closeEndShadows = shadowUpdates;
+    if (shadowInstrumented) shadowMap.render = originalShadowRender;
+    g.update = saved.update;
+    g.screen = saved.screen;
+    g.now = saved.now;
+    g.lightningFlash = saved.lightningFlash;
+    g.input.gameplay = saved.inputGameplay;
+    g.player.x = saved.playerX; g.player.y = saved.playerY;
+    g.renderer.snapCamera(saved.cameraX, saved.cameraY);
+    g.renderer.cam.zoom = saved.cameraZoom;
+    door.open = saved.open;
+    door.broken = saved.broken;
+    g.render();
+    const shadowsRefreshAtSwingEndpoints = shadowInstrumented && shadowMap.enabled && !shadowMap.autoUpdate
+      && openStartShadows >= 1 && openMidShadows === openStartShadows
+      && openEndShadows > openMidShadows
+      && closeStartShadows > openEndShadows && closeMidShadows === closeStartShadows
+      && closeEndShadows > closeMidShadows;
+    return {
+      count: entries.length, allHaveLeaf, embeddedLeavesHidden, yawError, leafCastsShadow,
+      collisionAligned, collisionStates,
+      closed, openStart, openMid, openEnd, closeStart, closeMid, closeEnd,
+      shadowInstrumented, shadowAutoUpdate: !!(shadowMap && shadowMap.autoUpdate),
+      shadowEnabled: !!(shadowMap && shadowMap.enabled),
+      openStartShadows, openMidShadows, openEndShadows,
+      closeStartShadows, closeMidShadows, closeEndShadows,
+      shadowsRefreshAtSwingEndpoints,
+      expectedOpen: Math.PI / 2,
+    };
+  });
+  console.log(`        door leaf asset mounted in ${read.count} wall openings; max facing error ${read.yawError.toFixed(4)}rad`);
+  check(read.allHaveLeaf && read.embeddedLeavesHidden,
+    `all doors use the animated wooden leaf from doorway.glb, without the barred gate overlay`);
+  check(read.yawError < 1e-5,
+    `door fronts face outward and hinge swings inward for every wall orientation`);
+  check(read.collisionAligned,
+    `all seven door openings align with collision and line-of-sight (closed blocks; open/broken passes)`);
+  check(read.leafCastsShadow,
+    `every animated wooden leaf mesh casts a shadow`);
+  check(read.shadowsRefreshAtSwingEndpoints,
+    `door shadow maps refresh at swing start/end, not every frame (open ${read.openStartShadows}/${read.openMidShadows}/${read.openEndShadows}; close ${read.closeStartShadows}/${read.closeMidShadows}/${read.closeEndShadows})`);
+  check(Math.abs(read.closed) < 1e-5 && Math.abs(read.openStart) < 0.1
+    && read.openMid > 0.2 && read.openMid < read.expectedOpen - 0.2
+    && Math.abs(read.openEnd - read.expectedOpen) < 1e-5,
+  `opening eases from closed to a precise 90-degree inward swing (${read.openStart.toFixed(2)} → ${read.openMid.toFixed(2)} → ${read.openEnd.toFixed(2)}rad)`);
+  check(read.closeMid > 0.2 && read.closeMid < read.expectedOpen - 0.2 && Math.abs(read.closeEnd) < 1e-5,
+    `closing eases back to the exact closed hinge angle (${read.closeMid.toFixed(2)} → ${read.closeEnd.toFixed(2)}rad)`);
 }
 
 /* `node tools/envqa.mjs --mode=room` stops after the room: the window sweep

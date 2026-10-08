@@ -15,8 +15,8 @@ import { weaponById } from './weapons.js';
 
 const VERTICAL_PROJECTION = Math.sqrt(1 - ISO_CAMERA.tilt * ISO_CAMERA.tilt);
 const ENEMY_COLORS = Object.freeze({
-  crawler: 0x6b3032, zombie: 0x68705f, hunter: 0x4c3b30,
-  ghoul: 0x776b69, werewolf: 0x29272e, stalker: 0x35394b,
+  crawler: 0x596c43, zombie: 0x4d2029, hunter: 0x354978,
+  ghoul: 0x758ca8, werewolf: 0x29272e, stalker: 0x68787e,
 });
 
 const PARTICLE_VERTEX_SHADER = `
@@ -727,7 +727,7 @@ class World3DRuntime {
     const dark = mat(0x17151a);
     const red = mat(0x751923, { emissive: 0x25030a });
     const glass = mat(0xd6e4ef, { metalness: 0.18, roughness: 0.16, transparent: true, opacity: 0.84 });
-    const ward = mat(0xc5a354, { emissive: 0x31220b, metalness: 0.45, roughness: 0.44 });
+    const ward = mat(0xc5a354, { emissive: 0x31220b, metalness: 0.45, roughness: 0.44, side: THREE.DoubleSide });
     for (const mark of ROOM_MARKS) {
       const room = game.mansion.room(mark.room);
       if (!room) continue;
@@ -761,7 +761,7 @@ class World3DRuntime {
         add(new THREE.BoxGeometry(12, 0.5, 1), mat(0xf3f5f8, { emissive: 0x69717a }), 0, 5, 0);
       } else if (mark.kind === 'ward') {
         const circle = add(new THREE.TorusGeometry(16, 1.2, 7, 32), ward, 0, 2, 0);
-        circle.rotation.x = -Math.PI / 2;
+        circle.rotation.x = Math.PI / 2;
         add(new THREE.BoxGeometry(26, 0.8, 0.9), ward, 0, 2.4, 0).rotation.y = Math.PI / 4;
         add(new THREE.BoxGeometry(26, 0.8, 0.9), ward, 0, 2.4, 0).rotation.y = -Math.PI / 4;
       } else if (mark.kind === 'basin') {
@@ -769,8 +769,9 @@ class World3DRuntime {
         add(new THREE.CylinderGeometry(13, 13, 1, 18), red, 0, 8, 0);
       } else if (mark.kind === 'dish') {
         add(new THREE.CylinderGeometry(11, 10, 2, 16), dark, 0, 1.5, 0);
-        const rim = add(new THREE.TorusGeometry(9, 1, 6, 20), gold, 0, 3, 0);
-        rim.rotation.x = -Math.PI / 2;
+        const rim = add(new THREE.TorusGeometry(9, 1, 6, 20), gold.clone(), 0, 3, 0);
+        rim.material.side = THREE.DoubleSide;
+        rim.rotation.x = Math.PI / 2;
       } else if (mark.kind === 'stake') {
         add(new THREE.BoxGeometry(3, 40, 3), wood, 0, 21, 0);
         add(new THREE.BoxGeometry(18, 3, 3), wood, 0, 28, 0);
@@ -954,8 +955,12 @@ class World3DRuntime {
   _syncPlayerSwing(game) {
     const player = game.player;
     const age = player && player.slashAge;
-    if (age == null || age > 0.5 || player.state === 'death') {
+    const hideMelee = () => {
       if (this.playerSwing) this.playerSwing.visible = false;
+      if (this.playerSwingRibbon) this.playerSwingRibbon.visible = false;
+    };
+    if (age == null || age > 0.5 || player.state === 'death') {
+      hideMelee();
       if (this.playerFlash) this.playerFlash.visible = false;
       return;
     }
@@ -966,32 +971,50 @@ class World3DRuntime {
           color: 0xffcc86, transparent: true, opacity: 0,
           blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
         });
-        this.playerFlash = new THREE.Mesh(new THREE.SphereGeometry(9, 10, 7), material);
+        this.playerFlash = new THREE.Mesh(new THREE.SphereGeometry(12, 12, 8), material);
         this.playerFlash.name = 'player-muzzle-flash-3d';
         this.root.add(this.playerFlash);
       }
       const fade = age > 0.22 ? 0 : clamp(1 - age / 0.22, 0, 1);
       const angle = player.swingAngle == null ? player.angle : player.swingAngle;
       this.playerFlash.position.set(player.x + Math.cos(angle) * 18, 34, player.y + Math.sin(angle) * 18);
-      this.playerFlash.scale.setScalar(0.7 + fade * 1.4);
-      this.playerFlash.material.opacity = 0.78 * fade;
+      this.playerFlash.scale.setScalar(0.8 + fade * 1.5);
+      this.playerFlash.material.opacity = 0.82 * fade;
       this.playerFlash.visible = fade > 0.01;
-      if (this.playerSwing) this.playerSwing.visible = false;
+      hideMelee();
       return;
     }
+
     if (!this.playerSwing) {
-      const segments = 24;
+      const segments = 28;
       const geometry = new THREE.BufferGeometry();
       geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(3 * segments * 2 * 3), 3).setUsage(THREE.DynamicDrawUsage));
-      const material = new THREE.LineBasicMaterial({ color: 0xff3a42, transparent: true, opacity: 0, depthWrite: false, toneMapped: false });
+      const material = new THREE.LineBasicMaterial({ color: 0xfff0e8, transparent: true, opacity: 0, depthWrite: false, toneMapped: false });
       this.playerSwing = new THREE.LineSegments(geometry, material);
-      this.playerSwing.name = 'player-claw-arc-3d';
+      this.playerSwing.name = 'player-claw-edge-3d';
       this.playerSwing.frustumCulled = false;
+      this.playerSwing.renderOrder = 5;
       this.root.add(this.playerSwing);
     }
+    if (!this.playerSwingRibbon) {
+      const segments = 28;
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(segments * 6 * 3), 3).setUsage(THREE.DynamicDrawUsage));
+      const material = new THREE.MeshBasicMaterial({
+        color: 0xff4652, transparent: true, opacity: 0,
+        side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
+        depthWrite: false, toneMapped: false,
+      });
+      this.playerSwingRibbon = new THREE.Mesh(geometry, material);
+      this.playerSwingRibbon.name = 'player-claw-ribbon-3d';
+      this.playerSwingRibbon.frustumCulled = false;
+      this.playerSwingRibbon.renderOrder = 4;
+      this.root.add(this.playerSwingRibbon);
+    }
+
     const sweep = clamp(age / 0.16, 0, 1);
     const fade = sweep * (age < 0.2 ? 1 : clamp(1 - (age - 0.2) / 0.3, 0, 1));
-    if (fade < 0.04) { this.playerSwing.visible = false; return; }
+    if (fade < 0.04) { hideMelee(); return; }
     const start = -weapon.arc / 2 + (1 - sweep) * weapon.arc * 0.35;
     const end = -weapon.arc / 2 + sweep * weapon.arc;
     const angle = visualAngle(player.swingAngle == null ? player.angle : player.swingAngle, game.renderer);
@@ -1000,28 +1023,58 @@ class World3DRuntime {
     const right = this._swingRight || (this._swingRight = new THREE.Vector3());
     const up = this._swingUp || (this._swingUp = new THREE.Vector3());
     const origin = this._swingOrigin || (this._swingOrigin = new THREE.Vector3());
-    const point = this._swingPoint || (this._swingPoint = new THREE.Vector3());
     right.setFromMatrixColumn(camera.matrixWorld, 0);
     up.setFromMatrixColumn(camera.matrixWorld, 1);
     origin.set(player.x, 26, player.y);
+
+    const writePoint = (attribute, vertex, a, radius) => {
+      const c = Math.cos(a) * radius;
+      const s = -Math.sin(a) * radius;
+      attribute.setXYZ(vertex,
+        origin.x + right.x * c + up.x * s,
+        origin.y + right.y * c + up.y * s,
+        origin.z + right.z * c + up.z * s);
+    };
+
+    // A filled, tapered crescent carries the slash; the bright segmented edge
+    // keeps it crisp against the 3D floor without resorting to screen flash.
     const positions = this.playerSwing.geometry.getAttribute('position');
-    let vertex = 0;
-    const segments = 24;
-    for (let ring = 0; ring < 3; ring++) {
-      const radius = weapon.range * (0.58 + ring * 0.21);
-      for (let i = 0; i < segments; i++) {
-        const a0 = start + (end - start) * i / segments + angle;
-        const a1 = start + (end - start) * (i + 1) / segments + angle;
-        point.copy(origin).addScaledVector(right, Math.cos(a0) * radius).addScaledVector(up, -Math.sin(a0) * radius);
-        positions.setXYZ(vertex++, point.x, point.y, point.z);
-        point.copy(origin).addScaledVector(right, Math.cos(a1) * radius).addScaledVector(up, -Math.sin(a1) * radius);
-        positions.setXYZ(vertex++, point.x, point.y, point.z);
+    const ribbonPositions = this.playerSwingRibbon.geometry.getAttribute('position');
+    let lineVertex = 0;
+    let ribbonVertex = 0;
+    const segments = 28;
+    for (let i = 0; i < segments; i++) {
+      const a0 = start + (end - start) * i / segments + angle;
+      const a1 = start + (end - start) * (i + 1) / segments + angle;
+      for (let ring = 0; ring < 3; ring++) {
+        const radius = weapon.range * (0.62 + ring * 0.19);
+        writePoint(positions, lineVertex++, a0, radius);
+        writePoint(positions, lineVertex++, a1, radius);
       }
+      const inner = weapon.range * 0.42;
+      const outer = weapon.range * 1.13;
+      // Two triangles: inner0 → outer0 → outer1 and inner0 → outer1 → inner1.
+      writePoint(ribbonPositions, ribbonVertex++, a0, inner);
+      writePoint(ribbonPositions, ribbonVertex++, a0, outer);
+      writePoint(ribbonPositions, ribbonVertex++, a1, outer);
+      writePoint(ribbonPositions, ribbonVertex++, a0, inner);
+      writePoint(ribbonPositions, ribbonVertex++, a1, outer);
+      writePoint(ribbonPositions, ribbonVertex++, a1, inner);
     }
     positions.needsUpdate = true;
-    this.playerSwing.geometry.setDrawRange(0, vertex);
-    this.playerSwing.material.color.setHex(player.kit && player.kit.silver ? 0xcde5ff : player.kit && player.kit.blessed ? 0xffd278 : 0xff4652);
-    this.playerSwing.material.opacity = 0.88 * fade;
+    ribbonPositions.needsUpdate = true;
+    this.playerSwing.geometry.setDrawRange(0, lineVertex);
+    this.playerSwingRibbon.geometry.setDrawRange(0, ribbonVertex);
+
+    const silver = !!(player.kit && player.kit.silver);
+    const blessed = !!(player.kit && player.kit.blessed);
+    const tint = silver ? 0x9fd7ff : blessed ? 0xffc85d : 0xe6283f;
+    const edge = silver ? 0xe7f6ff : blessed ? 0xfff0c2 : 0xffd6d8;
+    this.playerSwingRibbon.material.color.setHex(tint);
+    this.playerSwingRibbon.material.opacity = (player.frenzy ? 0.38 : 0.3) * fade;
+    this.playerSwingRibbon.visible = true;
+    this.playerSwing.material.color.setHex(edge);
+    this.playerSwing.material.opacity = (player.frenzy ? 1 : 0.88) * fade;
     this.playerSwing.visible = true;
     if (this.playerFlash) this.playerFlash.visible = false;
   }

@@ -19,10 +19,11 @@ import { drawPlateCover } from './storycards.js';
 import { Valen3D } from '../game/valen3d.js';
 import { IAP, CATALOG } from '../shop/iap.js';
 import { Ads } from '../shop/ads.js';
+import { buttonIconForLabel, drawGameIcon } from './icons.js';
 
-const SERIF = 'Georgia, "Palatino Linotype", "Times New Roman", serif';
-const SANS = '"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
-const MONO = 'Consolas, "SF Mono", Menlo, monospace';
+const SERIF = '"IM Fell English SC", Georgia, serif';
+const SANS = '"Special Elite", "Courier New", monospace';
+const MONO = '"Special Elite", ui-monospace, monospace';
 
 /** Phone first: portrait, and the short landscape most people actually hold. */
 function isPhone(w, h) { return w < 840 || h < 500; }
@@ -69,7 +70,7 @@ function uiButton(game, { x, y, w, h, label, sub, onClick, disabled, small, alig
   if (hover && game.uiHoverIdx !== idx) { game.uiHoverIdx = idx; game.audio.play('uiHover', { vol: 0.35 }); }
   const selected = game.uiIndex === idx;
   const active = (hover || selected) && !disabled;
-  const b = { x, y, w, h, label, onClick: disabled ? null : onClick, disabled, idx };
+  const b = { x, y, w, h, label, sub, onClick: disabled ? null : onClick, disabled, idx };
   game.ui.push(b);
   return { b, active, hover, selected };
 }
@@ -77,45 +78,92 @@ function uiButton(game, { x, y, w, h, label, sub, onClick, disabled, small, alig
 function buttonVisual(ctx, { x, y, w, h }, { active, disabled, label, sub, small, accent }) {
   ctx.save();
   const a = active ? 1 : 0.72;
-  // backing
+  const gold = accent === '#a8833c';
+  const rgb = gold ? '168,131,60' : '140,150,190';
   const g = ctx.createLinearGradient(x, y, x + w, y);
   g.addColorStop(0, active ? 'rgba(42,28,16,0.94)' : 'rgba(8,9,14,0.88)');
   g.addColorStop(1, active ? 'rgba(22,14,10,0.9)' : 'rgba(8,9,14,0.82)');
   ctx.fillStyle = g;
   ctx.fillRect(x, y, w, h);
-  // frame
-  ctx.strokeStyle = disabled ? 'rgba(90,88,84,0.35)' : `rgba(${accent === '#a8833c' ? '168,131,60' : '140,150,190'},${active ? 0.85 : 0.35})`;
+  ctx.strokeStyle = disabled ? 'rgba(90,88,84,0.35)' : `rgba(${rgb},${active ? 0.85 : 0.35})`;
   ctx.lineWidth = 1;
   ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
   if (active) {
-    ctx.strokeStyle = `rgba(${accent === '#a8833c' ? '168,131,60' : '140,150,190'},0.25)`;
+    ctx.strokeStyle = `rgba(${rgb},0.25)`;
     ctx.strokeRect(x + 3.5, y + 3.5, w - 7, h - 7);
   }
-  // text
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  fitType(ctx, label, Math.max(40, w - 18), small ? 15 : 18, SERIF);
-  ctx.fillStyle = disabled ? 'rgba(140,138,132,0.5)' : active ? '#f2ead6' : 'rgba(214,206,190,' + a + ')';
-  if (active) {
-    ctx.shadowColor = 'rgba(255,200,120,0.35)';
-    ctx.shadowBlur = 12;
+
+  const glyph = buttonIconForLabel(label);
+  const ink = disabled ? 'rgba(140,138,132,0.5)' : active ? '#f2ead6' : `rgba(214,206,190,${a})`;
+  if (glyph) {
+    // Icon controls are intentionally icon-only. The action name remains on
+    // the input record for keyboard help and the external focus caption.
+    drawGameIcon(ctx, glyph, x + w / 2, y + h / 2, Math.min(small ? 20 : 24, h * 0.54, w * 0.54), ink);
+  } else {
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    fitType(ctx, label, Math.max(40, w - 18), small ? 15 : 18, SERIF);
+    ctx.fillStyle = ink;
+    if (active) {
+      ctx.shadowColor = 'rgba(255,200,120,0.35)';
+      ctx.shadowBlur = 12;
+    }
+    ctx.fillText(label, x + w / 2, y + h / 2 + (sub ? -5 : 0));
+    ctx.shadowBlur = 0;
+    if (sub) {
+      fitType(ctx, sub, Math.max(40, w - 18), 11, SANS, 400);
+      ctx.fillStyle = 'rgba(190,182,168,0.6)';
+      ctx.fillText(sub, x + w / 2, y + h / 2 + 14);
+    }
   }
-  ctx.fillText(label, x + w / 2, y + h / 2 + (sub ? -5 : 0));
-  ctx.shadowBlur = 0;
-  if (sub) {
-    fitType(ctx, sub, Math.max(40, w - 16), 11, SANS, 400);
-    ctx.fillStyle = 'rgba(190,182,168,0.6)';
-    ctx.fillText(sub, x + w / 2, y + h / 2 + 14);
-  }
+
   if (active) {
-    // left/right ticks
-    ctx.fillStyle = `rgba(${accent === '#a8833c' ? '200,160,80' : '160,175,220'},0.9)`;
+    ctx.fillStyle = `rgba(${gold ? '200,160,80' : '160,175,220'},0.9)`;
     ctx.beginPath(); ctx.moveTo(x - 10, y + h / 2); ctx.lineTo(x - 4, y + h / 2 - 4); ctx.lineTo(x - 4, y + h / 2 + 4); ctx.closePath(); ctx.fill();
     ctx.beginPath(); ctx.moveTo(x + w + 10, y + h / 2); ctx.lineTo(x + w + 4, y + h / 2 - 4); ctx.lineTo(x + w + 4, y + h / 2 + 4); ctx.closePath(); ctx.fill();
   }
   ctx.restore();
 }
 
+/** External hover/focus caption: icon buttons stay visually clean, but the
+ * player can still discover their action without relying on icon memory. */
+export function drawFocusCaption(game, ctx, w, h) {
+  if (game.screen === 'menu' && game.save && game.save.privacyAck) return;
+  const input = game.input;
+  if (!input || !game.ui || !game.ui.length) return;
+  let index = -1;
+  if (!input.touchSeen) {
+    index = game.ui.findIndex((b) => input.mouse.x >= b.x && input.mouse.x <= b.x + b.w
+      && input.mouse.y >= b.y && input.mouse.y <= b.y + b.h);
+  }
+  if (index < 0 && game.usingKeyboard) index = game.uiIndex;
+  const b = game.ui[index];
+  if (!b || !buttonIconForLabel(b.label)) return;
+
+  const maxW = Math.max(96, Math.min(w - 28, 280));
+  const cx = clamp(b.x + b.w / 2, maxW / 2 + 8, w - maxW / 2 - 8);
+  let y = b.y + b.h + 17;
+  let below = true;
+  if (y + 18 > h - 8) { y = b.y - 12; below = false; }
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = below ? 'top' : 'bottom';
+  fitType(ctx, String(b.label).toUpperCase(), maxW, 11, SERIF, 500);
+  ctx.fillStyle = 'rgba(232,220,198,0.96)';
+  ctx.shadowColor = 'rgba(0,0,0,0.95)';
+  ctx.shadowBlur = 8;
+  ctx.fillText(String(b.label).toUpperCase(), cx, y);
+  ctx.shadowBlur = 0;
+  if (b.sub) {
+    fitType(ctx, b.sub, maxW, 9, SANS, 400);
+    ctx.fillStyle = 'rgba(184,176,160,0.85)';
+    ctx.fillText(b.sub, cx, below ? y + 14 : y - 13);
+  }
+  ctx.strokeStyle = 'rgba(168,131,60,0.65)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(cx - 22, below ? y - 4 : y + 4); ctx.lineTo(cx + 22, below ? y - 4 : y + 4); ctx.stroke();
+  ctx.restore();
+}
 
 const BRAND_PLATE = './assets/brand/menu-9x16.jpg';
 const BRAND_MARK = './assets/brand/mark.svg';
@@ -285,14 +333,7 @@ function drawAttract(game, ctx, w, h, idle) {
   ctx.fillRect(0, 0, w, h);
   ctx.restore();
 
-  // The narrator stays reachable from the menu: replay the opening without
-  // joining the night. (Not a menu row — the stack must not grow.)
-  const rbW = Math.min(228, bw);
-  const rb = uiButton(game, {
-    x: w / 2 - rbW / 2, y: h * 0.44, w: rbW, h: 34, label: 'THE OPENING', small: true,
-    onClick: () => game.replayOpening(),
-  });
-  buttonVisual(ctx, rb.b, { active: rb.hover, label: 'THE OPENING', small: true, accent: '#6a6a80' });
+
 }
 
 export function drawMenuScene(game, ctx, w, h, t) {
@@ -427,84 +468,183 @@ export function drawTitle(game, ctx, w, h, t) {
 /* ================= main menu ================= */
 
 export function drawMenu(game, ctx, w, h) {
-  const t = game.time;
-  drawMenuScene(game, ctx, w, h, t);
-  // The plate already carries the crest and the wordmark. Do not paint a second title over it.
-  // build stamp — small, honest, visible: v1.0.0-beta line
-  ctx.save();
-  ctx.textAlign = 'left';
-  ctx.font = `400 10px ${MONO}`;
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '1px';
-  ctx.fillStyle = 'rgba(180,172,158,0.55)';
-  const stamp = IAP.owns(game.save, 'title_dawnbreaker') ? 'DAWNBREAKER' : houseTitle(game.save);
-  ctx.fillText('v' + GAME_VERSION + '  ·  18+' + (stamp ? '  ·  ' + stamp : ''), 16, h - 16);
-  ctx.restore();
-
-  if (!game.save.privacyAck) {
+  drawMenuScene(game, ctx, w, h, game.time);
+  const B = game.save;
+  if (!B.privacyAck) {
     drawConsent(game, ctx, w, h);
     return;
   }
 
-  // Short landscape phones used to push MAIN-equivalent rows off the bottom.
-  // Fit the stack between the title and the footer instead of hoping h*0.41 works.
-  const B = game.save;
-  const canUpgrade = (B.shards || 0) > 0;
-  const goalLine = B.goals && B.goals.done ? `${B.goals.done} GOALS MET ACROSS ${B.goals.nights} NIGHTS` : 'THE NIGHT HAS GOALS NOW';
-  const marketOpen = unlocked(B, 'market');
-  const defs = [
-    { label: 'PLAY', sub: nextRevealLine(B), onClick: () => game.beginNight() },
-    { label: 'UPGRADES', sub: canUpgrade ? `${B.shards} BLOOD SHARDS` : 'EARNED BY SURVIVING', onClick: () => game.setScreen('upgrades') },
-    ...(marketOpen ? [{ label: 'BLOOD MARKET', sub: 'OPTIONAL. THE NIGHT DOES NOT ASK.', onClick: () => game.setScreen('shop') }] : []),
-    { label: 'COLLECTION', sub: `${Object.keys(B.seen || {}).length}/${CODEX.length} RECORDED`, onClick: () => game.setScreen('collection') },
-    { label: 'SETTINGS', sub: DIFFICULTY[B.settings.difficulty]?.label || 'STANDARD', onClick: () => game.setScreen('settings') },
-  ];
-  const nButtons = defs.length;
   const phone = isPhone(w, h);
-  const footerH = 72;
-  const titleBottom = phone ? h * 0.22 : h * 0.28;
-  const startY = Math.max(titleBottom + 8, h * 0.5);
-  const avail = Math.max(96, h - footerH - startY);
-  const gap = 8;
-  const bh = clamp((avail - gap * (nButtons - 1)) / nButtons, 42, 54);
-  const bw = Math.min(w - 36, 420);
-  const bx = (w - bw) / 2;
-  let by = startY;
+  const marketOpen = unlocked(B, 'market');
+  const seen = Object.keys(B.seen || {}).length;
+  const goalLine = B.goals && B.goals.done
+    ? `${B.goals.done} GOALS KEPT ACROSS ${B.goals.nights || 0} NIGHTS`
+    : 'THE HOUSE KEEPS EVERY PROMISE.';
+  const defs = [
+    { label: 'PLAY', title: 'ENTER THE NIGHT', sub: nextRevealLine(B) || 'THE HOUSE IS WAITING.', icon: 'doorOpen', onClick: () => game.beginNight() },
+    { label: 'UPGRADES', title: 'BLOOD SHARDS', sub: (B.shards || 0) ? `${B.shards} SHARDS WAITING TO BE SPENT.` : 'EARNED ONLY BY SURVIVING.', icon: 'upgrade', onClick: () => game.setScreen('upgrades') },
+    ...(marketOpen ? [{ label: 'BLOOD MARKET', title: 'THE BLOOD MARKET', sub: 'OPTIONAL. THE NIGHT NEVER ASKS.', icon: 'blood', onClick: () => game.setScreen('shop') }] : []),
+    { label: 'COLLECTION', title: 'THE HOUSE RECORD', sub: `${seen} OF ${CODEX.length} ENTRIES REMEMBERED.`, icon: 'book', onClick: () => game.setScreen('collection') },
+    { label: 'SETTINGS', title: 'HOUSE RULES', sub: `DIFFICULTY · ${DIFFICULTY[B.settings.difficulty]?.label || 'STANDARD'}.`, icon: 'settings', onClick: () => game.setScreen('settings') },
+    { label: 'THE OPENING', title: 'REPLAY THE OPENING', sub: 'RETURN TO THE FIRST NIGHT.', icon: 'book', onClick: () => game.replayOpening() },
+  ];
   game.uiIndex = clamp(game.uiIndex, 0, defs.length - 1);
-  defs.forEach((d, i) => {
-    const r = uiButton(game, { x: bx, y: by, w: bw, h: bh, label: d.label, sub: d.sub, onClick: d.onClick });
-    buttonVisual(ctx, r.b, { active: r.hover || (game.usingKeyboard && game.uiIndex === i), label: d.label, sub: d.sub, accent: i === 0 ? '#a8833c' : '#6a6a80' });
-    by += bh + gap;
-  });
 
-  // stats footer
+  // The portrait stays cinematic; the lower third becomes an open command rail,
+  // not a pile of floating cards. Every command node is icon-only.
+  const wash = ctx.createLinearGradient(0, h * 0.48, 0, h);
+  wash.addColorStop(0, 'rgba(4,5,10,0)');
+  wash.addColorStop(0.24, 'rgba(4,5,10,0.34)');
+  wash.addColorStop(1, 'rgba(4,5,10,0.92)');
+  ctx.fillStyle = wash;
+  ctx.fillRect(0, h * 0.48, w, h * 0.52);
+
+  const navY = clamp(h * 0.74, 238, h - (h < 500 ? 112 : 136));
+  const titleY = navY - 55;
+  const eyebrowY = navY - 92;
+  const outerGutter = 18;
+  const cellWidth = defs.length ? Math.max(32, (w - outerGutter * 2) / defs.length) : 32;
+  const nodeSize = Math.min(54, Math.max(32, cellWidth - 8));
+  const railWidth = Math.min(360, Math.max(0, w - outerGutter * 2 - nodeSize));
+  const spacing = defs.length > 1 ? railWidth / (defs.length - 1) : 0;
+  const firstX = w / 2 - railWidth / 2;
+
+  // The night number and a fine register rule act as the dashboard's header.
   ctx.save();
   ctx.textAlign = 'center';
-  ctx.font = `400 ${phone ? 11 : 12}px ${SANS}`;
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '0.4px';
-  ctx.fillStyle = 'rgba(180,172,158,0.6)';
-  const best = B.bestTime > 0 ? fmtClock(B.bestTime) : '--:--';
-  const stat = phone
-    ? `NIGHTS ${B.nightsSurvived}   ·   BEST ${best}   ·   ◆ ${B.shards}`
-    : `NIGHTS SURVIVED ${B.nightsSurvived}     BEST ${best}     SHARDS ${B.shards}`;
-  ctx.fillText(stat, w / 2, h - (phone ? 22 : 34));
-  if (!phone) ctx.fillText(goalLine, w / 2, h - 48);
-  if (!phone) {
-    ctx.font = `400 10px ${SANS}`;
-    ctx.fillStyle = 'rgba(140,134,124,0.45)';
-    const hint = w < 720
-      ? 'DRAG LEFT TO MOVE  ·  BUTTONS ON THE RIGHT  ·  ESC PAUSE'
-      : 'DRAG LEFT TO MOVE  ·  RIGHT BUTTONS ACT  ·  WASD STILL WORKS  ·  F CLAW  ·  E USE  ·  ESC PAUSE';
-    ctx.fillText(hint, w / 2, h - 16);
-  }
+  ctx.textBaseline = 'middle';
+  ctx.font = `400 ${phone ? 9 : 10}px ${MONO}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '1.6px';
+  ctx.fillStyle = 'rgba(200,160,74,0.72)';
+  ctx.fillText(`NIGHT WATCH  /  ${String((B.nightsSurvived || 0) + 1).padStart(2, '0')}`, w / 2, eyebrowY);
+  const ruleW = Math.min(112, w * 0.34);
+  ctx.strokeStyle = 'rgba(168,131,60,0.45)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(w / 2 - ruleW / 2, eyebrowY + 12); ctx.lineTo(w / 2 + ruleW / 2, eyebrowY + 12); ctx.stroke();
   ctx.restore();
 
-  const pr = uiButton(game, {
-    x: phone ? w - 100 : w - 112, y: h - (phone ? 46 : 38), w: phone ? 88 : 96, h: phone ? 34 : 26, label: 'PRIVACY', small: true,
-    onClick: () => game.setScreen('privacy'),
+  // Connecting hairline is the only container; the icons read as a ritual dial.
+  ctx.save();
+  ctx.strokeStyle = 'rgba(174,150,98,0.28)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(firstX, navY); ctx.lineTo(firstX + railWidth, navY); ctx.stroke();
+  ctx.restore();
+
+  let hoverIndex = -1;
+  defs.forEach((item, i) => {
+    const x = defs.length > 1 ? firstX + spacing * i : w / 2;
+    const r = uiButton(game, {
+      x: x - nodeSize / 2, y: navY - nodeSize / 2, w: nodeSize, h: nodeSize,
+      label: item.label, sub: item.sub, small: true, onClick: item.onClick,
+    });
+    const active = r.hover || r.selected;
+    if (r.hover) hoverIndex = i;
+    drawMenuGlyphNode(ctx, r.b, item.icon, active, i === 0);
   });
-  buttonVisual(ctx, pr.b, { active: pr.hover, label: 'PRIVACY', small: true, accent: '#6a6a80' });
+
+  const focus = hoverIndex >= 0 ? hoverIndex : game.uiIndex;
+  const item = defs[focus] || defs[0];
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  fitType(ctx, item.title, w - 36, phone ? 19 : 23, SERIF, 500);
+  ctx.fillStyle = '#e8dfca';
+  ctx.shadowColor = 'rgba(0,0,0,0.92)';
+  ctx.shadowBlur = 10;
+  ctx.fillText(item.title, w / 2, titleY);
+  ctx.shadowBlur = 0;
+  let sub = String(item.sub || '').toUpperCase();
+  ctx.font = `400 ${phone ? 9 : 10}px ${SANS}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '0.35px';
+  const maxSubW = w - 44;
+  while (sub && ctx.measureText(sub).width > maxSubW && sub.length > 10) sub = sub.slice(0, -2);
+  if (sub !== String(item.sub || '').toUpperCase()) sub = sub.replace(/[\s,.;:-]+$/, '') + '…';
+  ctx.fillStyle = 'rgba(196,186,167,0.78)';
+  ctx.fillText(sub, w / 2, titleY + 20);
+  ctx.restore();
+
+  // Open record strip: three live facts, divided by rules rather than cards.
+  const statsY = Math.min(h - 82, navY + 54);
+  const gutter = phone ? 18 : 30;
+  const colW = (w - gutter * 2) / 3;
+  const stats = [
+    { name: 'NIGHTS', value: String(B.nightsSurvived || 0).padStart(2, '0') },
+    { name: 'BEST RUN', value: B.bestTime > 0 ? fmtClock(B.bestTime) : '--:--' },
+    { name: 'SHARDS', value: String(B.shards || 0).padStart(2, '0') },
+  ];
+  ctx.save();
+  ctx.strokeStyle = 'rgba(168,131,60,0.34)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(gutter, statsY - 5); ctx.lineTo(w - gutter, statsY - 5); ctx.stroke();
+  stats.forEach((stat, i) => {
+    const cx = gutter + colW * (i + 0.5);
+    if (i > 0) {
+      const sx = gutter + colW * i;
+      ctx.strokeStyle = 'rgba(168,131,60,0.22)';
+      ctx.beginPath(); ctx.moveTo(sx, statsY + 2); ctx.lineTo(sx, statsY + 36); ctx.stroke();
+    }
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `400 ${phone ? 8 : 9}px ${MONO}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '1px';
+    ctx.fillStyle = 'rgba(180,170,150,0.66)';
+    ctx.fillText(stat.name, cx, statsY + 7);
+    ctx.font = `400 ${phone ? 15 : 17}px ${MONO}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '0.2px';
+    ctx.fillStyle = i === 2 && (B.shards || 0) > 0 ? '#c6a45c' : '#e5ddcb';
+    ctx.fillText(stat.value, cx, statsY + 27);
+  });
+  ctx.font = `400 ${phone ? 8 : 9}px ${SANS}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '0.2px';
+  ctx.fillStyle = 'rgba(151,143,129,0.64)';
+  let record = goalLine;
+  while (ctx.measureText(record).width > w - 36 && record.length > 10) record = record.slice(0, -2);
+  if (record !== goalLine) record = record.replace(/[\s,.;:-]+$/, '') + '…';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(record, w / 2, statsY + 49);
+  ctx.restore();
+
+  const stamp = IAP.owns(B, 'title_dawnbreaker') ? 'DAWNBREAKER' : houseTitle(B);
+  ctx.save();
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.font = `400 ${phone ? 8 : 9}px ${MONO}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '0.45px';
+  ctx.fillStyle = 'rgba(180,172,158,0.48)';
+  ctx.fillText(`v${GAME_VERSION}  ·  18+${stamp ? '  ·  ' + stamp : ''}`, 14, h - 12);
+  ctx.restore();
 }
 
+function drawMenuGlyphNode(ctx, rect, icon, active, primary = false) {
+  const cx = rect.x + rect.w / 2;
+  const cy = rect.y + rect.h / 2;
+  const r = Math.min(rect.w, rect.h) * (active ? 0.46 : 0.41);
+  ctx.save();
+  if (active) {
+    const glow = ctx.createRadialGradient(cx, cy, r * 0.4, cx, cy, r * 2.15);
+    glow.addColorStop(0, primary ? 'rgba(142,28,38,0.28)' : 'rgba(168,131,60,0.2)');
+    glow.addColorStop(1, 'rgba(20,10,10,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(cx, cy, r * 2.15, 0, TAU); ctx.fill();
+  }
+  ctx.fillStyle = active ? 'rgba(18,14,13,0.96)' : 'rgba(6,7,12,0.83)';
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.fill();
+  ctx.strokeStyle = active
+    ? (primary ? 'rgba(206,109,90,0.96)' : 'rgba(201,169,104,0.9)')
+    : 'rgba(186,174,150,0.42)';
+  ctx.lineWidth = active ? 1.7 : 1;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU); ctx.stroke();
+  if (active) {
+    ctx.strokeStyle = primary ? 'rgba(151,36,46,0.75)' : 'rgba(168,131,60,0.62)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(cx, cy, r + 4, -Math.PI * 0.78, -Math.PI * 0.22); ctx.stroke();
+    ctx.fillStyle = primary ? '#dc8271' : '#d1b36f';
+  } else ctx.fillStyle = 'rgba(205,196,178,0.78)';
+  drawGameIcon(ctx, icon, cx, cy, Math.min(primary && active ? 25 : 22, rect.w * 0.52), ctx.fillStyle);
+  ctx.restore();
+}
 function drawConsent(game, ctx, w, h) {
   const cardW = Math.min(540, w - 28);
   const cardH = Math.min(360, h - 96);

@@ -555,7 +555,7 @@ function ripple(ctx, x, y, time) {
 
 function chip(ctx, w, h, title, sub) {
   ctx.save();
-  ctx.font = '500 13px "Segoe UI", Roboto, sans-serif';
+  ctx.font = '500 13px "Special Elite", "Courier New", monospace';
   const tw = Math.max(ctx.measureText(title).width, ctx.measureText(sub).width);
   const bw = tw + 22;
   const bh = 36;
@@ -591,7 +591,7 @@ function chip(ctx, w, h, title, sub) {
   ctx.textBaseline = 'middle';
   ctx.fillStyle = '#f0d078';
   ctx.fillText(title, left + bw / 2, top + 12);
-  ctx.font = '400 10px "Segoe UI", Roboto, sans-serif';
+  ctx.font = '400 10px "Special Elite", "Courier New", monospace';
   ctx.fillStyle = 'rgba(232, 224, 204, 0.85)';
   ctx.fillText(sub, left + bw / 2, top + 26);
   ctx.restore();
@@ -624,7 +624,7 @@ function edgeArrow(ctx, view, sp, label, time, gs = 1) {
     ctx.fill();
     ctx.rotate(-ang);
   }
-  ctx.font = `500 ${Math.round(11 * clamp(gs, 0.9, 1.15))}px "Segoe UI", Roboto, sans-serif`;
+  ctx.font = `500 ${Math.round(11 * clamp(gs, 0.9, 1.15))}px "Special Elite", "Courier New", monospace`;
   ctx.fillStyle = '#f0d078';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';

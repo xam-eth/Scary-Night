@@ -13,10 +13,11 @@ import { PLAYER, UPGRADES, SHARDS } from '../core/config.js';
 import { unlocked, projectDawn, LANES } from './economy.js';
 import { drawGuideArrow, guideScale, guideSize } from './coach.js';
 import { weaponById } from './weapons.js';
+import { drawGameIcon } from '../ui/icons.js';
 
-const SERIF = 'Georgia, "Palatino Linotype", "Times New Roman", serif';
-const SANS = '"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
-const MONO = 'Consolas, "SF Mono", Menlo, monospace';
+const SERIF = '"IM Fell English SC", Georgia, serif';
+const SANS = '"Special Elite", "Courier New", monospace';
+const MONO = '"Special Elite", ui-monospace, monospace';
 
 function setLetter(ctx, px) {
   if ('letterSpacing' in ctx) ctx.letterSpacing = px + 'px';
@@ -943,16 +944,11 @@ export function drawTouchControls(game, ctx, w, h) {
     ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(hx, hy, hr, 0, TAU); ctx.stroke();
     ctx.setLineDash([]);
-    ctx.font = `500 10px ${SANS}`;
-    if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
-    ctx.fillStyle = 'rgba(200,195,180,0.4)';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('MOVE', hx, hy);
+    drawGameIcon(ctx, 'move', hx, hy, hr < 48 ? 20 : 24, 'rgba(211,205,190,0.64)');
     ctx.restore();
   }
 
-  const drawBtn = (b, label, hint, opts = {}) => {
+  const drawBtn = (b, icon, hint, opts = {}) => {
     if (!b || b.hidden) return;
     ctx.save();
     ctx.translate(b.x, b.y);
@@ -976,24 +972,23 @@ export function drawTouchControls(game, ctx, w, h) {
       ctx.fillStyle = 'rgba(0,0,0,0.45)';
       ctx.fill();
     }
-    ctx.font = `500 ${r < 28 ? 9 : 11}px ${SANS}`;
-    if ('letterSpacing' in ctx) ctx.letterSpacing = '1px';
-    ctx.fillStyle = cd > 0.02 ? 'rgba(180,174,160,0.55)' : 'rgba(232,226,210,0.92)';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(label, 0, hint && w > 720 ? -2 : 0);
-    if (hint && w > 720 && h > 500) {
+    const iconColor = cd > 0.02 ? 'rgba(180,174,160,0.72)' : 'rgba(240,233,218,0.96)';
+    const desktopHint = hint && w > 720 && h > 500;
+    drawGameIcon(ctx, icon, 0, desktopHint ? -3 : 0, Math.min(opts.big ? 27 : 22, r * 1.02), iconColor);
+    if (desktopHint) {
       ctx.font = `400 8px ${MONO}`;
       if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
-      ctx.fillStyle = 'rgba(190,182,168,0.55)';
-      ctx.fillText(hint, 0, 10);
+      ctx.fillStyle = 'rgba(210,200,180,0.72)';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(hint, 0, r * 0.56);
     }
     ctx.restore();
   };
   const dashCd = p && PLAYER.dashCooldown ? clamp(p.dashCd / PLAYER.dashCooldown, 0, 1) : 0;
   const atkCd = p && PLAYER.attackCooldown ? clamp(p.attackCd / PLAYER.attackCooldown, 0, 1) : 0;
   const tool = weaponById(p && p.weapon);
-  drawBtn(input.buttons.attack, tool.label, 'F', { big: true, cd: atkCd });
+  drawBtn(input.buttons.attack, tool.id, 'F', { big: true, cd: atkCd });
   const chip = weaponChipBox(input, w, h);
   game._weaponChip = chip;
   // #56 P5 — the kit she carries: the chip wears the metal (cold silver, warm
@@ -1009,12 +1004,16 @@ export function drawTouchControls(game, ctx, w, h) {
   ctx.rect(chip.x, chip.y, chip.w, chip.h);
   ctx.fill();
   ctx.stroke();
-  ctx.fillStyle = '#f0e6d4';
-  ctx.font = `500 9px ${SANS}`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '0.4px';
-  ctx.fillText(tool.label, chip.x + chip.w / 2, chip.y + chip.h / 2 - (kit ? 4 : 0));
+  const weaponInk = !kit ? 'rgba(240,230,210,0.96)'
+    : (kit.blessed || kit.ward) ? 'rgba(255,225,155,0.98)' : 'rgba(222,233,255,0.98)';
+  drawGameIcon(ctx, tool.id, chip.x + chip.w / 2, chip.y + chip.h / 2 - (kit ? 3 : 0), kit ? 18 : 21, weaponInk);
+  if (w > 720 && h > 500) {
+    ctx.fillStyle = 'rgba(214,206,190,0.64)';
+    ctx.font = `400 7px ${MONO}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Q', chip.x + chip.w - 6, chip.y + 6);
+  }
   if (kit) {
     const held = [kit.silver, kit.blessed, kit.ward];
     const pw = 6, gap = 4;
@@ -1026,9 +1025,16 @@ export function drawTouchControls(game, ctx, w, h) {
     }
   }
   ctx.restore();
-  drawBtn(input.buttons.dash, 'DASH', 'SHIFT', { cd: dashCd });
-  drawBtn(input.buttons.interact, 'USE', 'E');
-  drawBtn(input.buttons.repair, 'FIX', 'R');
-  drawBtn(input.buttons.barricade, 'BOARD', 'B');
+  const useAction = (game.interactTarget && game.interactTarget.actions || [])
+    .find((action) => action.act !== 'repair' && action.act !== 'barricade');
+  const useIcon = !useAction ? 'interact'
+    : useAction.act === 'open' ? (game.interactTarget.ent.open ? 'doorClosed' : 'doorOpen')
+      : useAction.act === 'drink' || useAction.act === 'larder' ? 'blood'
+        : useAction.act === 'stakes' ? 'barricade'
+          : useAction.act === 'ward' ? 'lamp' : 'interact';
+  drawBtn(input.buttons.dash, 'dash', 'SHIFT', { cd: dashCd });
+  drawBtn(input.buttons.interact, useIcon, 'E');
+  drawBtn(input.buttons.repair, 'repair', 'R');
+  drawBtn(input.buttons.barricade, 'barricade', 'B');
   ctx.restore();
 }

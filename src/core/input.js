@@ -214,9 +214,13 @@ export class Input {
     if (this.stick.active) {
       const dx = this.stick.x - this.stick.ox, dy = this.stick.y - this.stick.oy;
       const m = Math.hypot(dx, dy);
-      const dead = 8;
+      // Small hardware/touch jitter is ignored; the softer response curve
+      // keeps a short thumb drag useful instead of reserving most travel for
+      // the outer edge of the virtual stick.
+      const dead = Math.min(5, this.stick.r * 0.1);
       if (m > dead) {
-        const mag = clamp((m - dead) / (this.stick.r - dead), 0, 1);
+        const raw = clamp((m - dead) / Math.max(1, this.stick.r - dead), 0, 1);
+        const mag = Math.pow(raw, 0.88);
         this.stick.dx = dx / m; this.stick.dy = dy / m; this.stick.mag = mag;
         mx = this.stick.dx * mag; my = this.stick.dy * mag;
       } else { mx = 0; my = 0; this.stick.dx = 0; this.stick.dy = 0; this.stick.mag = 0; }

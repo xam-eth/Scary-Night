@@ -8,14 +8,11 @@
  *
  * A night never waits on a file. The player hunter is not an enemy.
  *
- * The swarm wears 3D bodies. The vendored zombie ships flee_02 /
- * cast_a_spell / depressed / defeat_03; the werewolf upload was an FBX inside
- * a zip, converted here to werewolf-3d-model.glb (front_kick / angry / fall /
- * box_02). Owner decision (2026-09-29): those are the right animations under
- * Tripo's names, so each file carries a MAP from behaviour to the file's own
- * clip — the swarm walks, strikes and dies in play. Nothing in the vendored
- * bytes is altered; the map is a table, and FORBIDDEN_STANDINS keeps anyone
- * from aliasing a clip that is not the behaviour.
+ * Enemy roles each resolve to a locally vendored, rigged GLB. Five distinct
+ * CC0 Quaternius monsters are sourced from the owner-supplied Ultimate
+ * Monsters bundle; the existing Werewolf remains its own rig. Each role maps
+ * behaviour to the original clip name (including namespaced Quaternius clips).
+ * Source GLB bytes are kept unchanged; only this runtime map selects actions.
  */
 
 import * as THREE from '../vendor/three/three.module.min.js';
@@ -26,78 +23,91 @@ import { Valen3D } from './valen3d.js';
 export const ENEMY_GLB_CAP = 8;
 const HURT_FLASH_COLOR = new THREE.Color(0xffe0d8);
 
-/** Optional idle, plus the clips a besieger must ship before the swarm wears it. */
+/** Required actions per role; idle is optional, and the local Werewolf has no hurt clip. */
 export const ENEMY_CLIP_CONTRACT = Object.freeze({
-  crawler: ['walk', 'attack', 'die'],
-  zombie: ['walk', 'attack', 'die'],
-  hunter: ['walk', 'attack', 'die'],
-  ghoul: ['walk', 'attack', 'die'],
+  crawler: ['walk', 'attack', 'die', 'hurt'],
+  zombie: ['walk', 'attack', 'die', 'hurt'],
+  hunter: ['walk', 'attack', 'die', 'hurt'],
+  ghoul: ['walk', 'attack', 'die', 'hurt'],
   werewolf: ['run', 'attack', 'die'],
-  stalker: ['walk', 'attack', 'die'],
+  // The late-game Stalker is the feral rig: its charge clip is the locomotion.
+  stalker: ['run', 'attack', 'die', 'hurt'],
 });
 
 /**
- * Vendored files only. `map` names the clip that plays for a behaviour when
- * the file does not ship that clip's name. Two bodies cover the roster: the
- * vendored zombie (shambler, crawler, ghoul, hunter, stalker — different
- * heights, one rig) and the converted werewolf (werewolf and its alpha).
- * A file is fetched and parsed once and then cloned per type, so five types
- * sharing the zombie body cost one mesh and one texture, not five.
+ * Vendored files only. Each enemy role gets a distinct silhouette where the
+ * source pack supports it; `map` points gameplay states at the source file's
+ * named animation rather than rewriting or relabelling the GLB.
  */
-const ZOMBIE_BODY = './zombie+3d+model.glb';
+const MONSTERS = './assets/monsters/ultimate/';
 const WOLF_BODY = './werewolf-3d-model.glb';
 
-// Owner mapping (2026-09-29): the clips are correct, they are just named the
-// way Tripo names them. These are the besieger's real animations — walk,
-// attack, die — reached through the file's own names. Re-exporting would
-// change nothing but the labels.
-const ZOMBIE_MAP = Object.freeze({
-  walk: 'flee_02',        // the shamble
-  attack: 'cast_a_spell', // the swipe
-  die: 'defeat_03',
-  idle: 'depressed',
+const BIPED_MAP = Object.freeze({
+  walk: 'CharacterArmature|Walk',
+  run: 'CharacterArmature|Run',
+  attack: 'CharacterArmature|Punch',
+  die: 'CharacterArmature|Death',
+  hurt: 'CharacterArmature|HitReact',
+  idle: 'CharacterArmature|Idle',
 });
-
+const CRAWLER_MAP = Object.freeze({
+  walk: 'CharacterArmature|Walk',
+  attack: 'CharacterArmature|Bite_Front',
+  die: 'CharacterArmature|Death',
+  hurt: 'CharacterArmature|HitRecieve',
+  idle: 'CharacterArmature|Idle',
+});
+const FLYER_MAP = Object.freeze({
+  walk: 'CharacterArmature|Fast_Flying',
+  run: 'CharacterArmature|Fast_Flying',
+  attack: 'CharacterArmature|Headbutt',
+  die: 'CharacterArmature|Death',
+  hurt: 'CharacterArmature|HitReact',
+  idle: 'CharacterArmature|Flying_Idle',
+});
+const YETI_MAP = Object.freeze({
+  run: 'CharacterArmature|Run',
+  attack: 'CharacterArmature|Punch',
+  die: 'CharacterArmature|Death',
+  hurt: 'CharacterArmature|HitReact',
+  idle: 'CharacterArmature|Idle',
+});
 const WOLF_MAP = Object.freeze({
-  run: 'angry_02.001',          // the charge
-  attack: 'front_kick_02.001',  // the strike
+  run: 'angry_02.001',
+  attack: 'front_kick_02.001',
   die: 'fall.001',
   idle: 'box_02.001',
 });
 
 export const ENEMY_MODELS = Object.freeze({
-  zombie: Object.freeze({ url: ZOMBIE_BODY, map: ZOMBIE_MAP }),
-  crawler: Object.freeze({ url: ZOMBIE_BODY, map: ZOMBIE_MAP }),
-  ghoul: Object.freeze({ url: ZOMBIE_BODY, map: ZOMBIE_MAP }),
-  hunter: Object.freeze({ url: ZOMBIE_BODY, map: ZOMBIE_MAP }),
-  stalker: Object.freeze({ url: ZOMBIE_BODY, map: ZOMBIE_MAP }),
+  zombie: Object.freeze({ url: `${MONSTERS}demon.glb`, map: BIPED_MAP }),
+  crawler: Object.freeze({ url: `${MONSTERS}green-spiky-blob.glb`, map: CRAWLER_MAP }),
+  hunter: Object.freeze({ url: `${MONSTERS}blue-demon.glb`, map: BIPED_MAP }),
+  ghoul: Object.freeze({ url: `${MONSTERS}ghost-skull.glb`, map: FLYER_MAP }),
   werewolf: Object.freeze({ url: WOLF_BODY, map: WOLF_MAP }),
+  stalker: Object.freeze({ url: `${MONSTERS}yeti.glb`, map: YETI_MAP }),
 });
 
-/**
- * Motions that must never be aliased onto a behaviour. Empty today: both
- * vendored files ship the right animations under Tripo's names, and the maps
- * above are the owner's. The guard stays for the next file someone vendors —
- * a clip that is not the behaviour (a death used as a walk) can never be
- * quietly aliased by a future edit.
- */
+/** No action aliases are used as stand-ins: every role has its own source clip. */
 export const FORBIDDEN_STANDINS = Object.freeze({
   zombie: Object.freeze([]),
+  crawler: Object.freeze([]),
+  hunter: Object.freeze([]),
+  ghoul: Object.freeze([]),
   werewolf: Object.freeze([]),
+  stalker: Object.freeze([]),
 });
 
 /**
- * Runtime grade only — the vendored bytes are never re-shaded or re-exported.
- * The zombie file's albedo is a light gray: under Valen's exposure it clips
- * white. The werewolf's fur is dark enough to disappear in a black corridor,
- * so it is lifted. One number per body, applied while that body is rendered.
+ * Portrait-preview exposure only — the shared world still lights each rig
+ * through the mansion. Source GLB bytes and their authored materials stay intact.
  */
 export const ENEMY_EXPOSURE = Object.freeze({
   zombie: 0.55,
   crawler: 0.55,
   ghoul: 0.55,
   hunter: 0.55,
-  stalker: 0.55,
+  stalker: 1.3,
   werewolf: 1.3,
 });
 
@@ -148,7 +158,7 @@ export const ENEMY_HEIGHT = Object.freeze({
   hunter: 78,
   ghoul: 68,
   werewolf: 90,
-  stalker: 82,
+  stalker: 90,
 });
 
 export function requiredClips(key) {
@@ -237,11 +247,13 @@ export class SlotBook {
   }
 }
 
-function clipForState(key, enemy) {
+export function enemyClipForState(key, enemy) {
   if (enemy.dead || enemy.state === 'dying') return 'die';
+  const map = ENEMY_MODELS[key]?.map || {};
+  if (map.hurt && ((enemy.hurtFlash || 0) > 0 || (enemy.staggerT || 0) > 0)) return 'hurt';
   if (enemy.state === 'strike' || enemy.state === 'windup' || enemy.state === 'charge') return 'attack';
   const moving = Math.hypot(enemy.vx || 0, enemy.vy || 0) > 12;
-  if (key === 'werewolf' && moving) return 'run';
+  if ((key === 'werewolf' || key === 'stalker') && moving) return 'run';
   if (moving) return 'walk';
   return 'idle';
 }
@@ -302,9 +314,8 @@ class EnemyStage {
   }
 
   /**
-   * One file, one fetch, one parse. Five besiegers share the zombie body, so
-   * loading it five times would put five copies of the same mesh and texture
-   * on a phone. Late types attach to the fetch already in flight.
+   * One file, one fetch, one parse. Roles that share a body are attached to
+   * the same in-flight GLTF; distinct monster silhouettes load in parallel.
    */
   _load(key) {
     const spec = ENEMY_MODELS[key];
@@ -439,7 +450,7 @@ class EnemyStage {
       key.position.set(-2.2, 3.4, 4.2);
       scene.add(key);
       const rim = new THREE.DirectionalLight(0x718fd2, 1.85);
-      rim.position.set(2.8, 2.1, -3.5);
+      rim.position.set(2.4, 2.6, -3.6);
       scene.add(rim);
       const camera = new THREE.OrthographicCamera(-0.7, 0.7, 0.78, -0.78, 0.05, 12);
       this._own = { renderer, scene, stage, camera, canvas };
@@ -514,7 +525,8 @@ class EnemyStage {
     host.camera.position.set(center.x, lookY + playDy, playDz);
     host.camera.lookAt(center.x, lookY, 0);
     host.camera.updateProjectionMatrix();
-    // This file's albedo is a light gray. Valen's exposure would clip it white.
+    // Fit this source rig's small preview independently; gameplay uses the
+    // shared mansion lighting, not this temporary portrait exposure.
     host.renderer.toneMappingExposure = ENEMY_EXPOSURE[key] || 0.55;
   }
 
@@ -668,8 +680,17 @@ class EnemyStage {
   }
 
   _pose(slot, enemy) {
-    const want = clipForState(slot.type, enemy);
+    const want = enemyClipForState(slot.type, enemy);
     const action = slot.actions[want] || null;
+    if (slot._hurtEnemyId !== enemy.id) {
+      slot._hurtEnemyId = enemy.id;
+      slot._hurtStaggerMax = 0;
+      slot._hurtStaggerLast = 0;
+    }
+    if (want !== 'hurt') {
+      slot._hurtStaggerMax = 0;
+      slot._hurtStaggerLast = 0;
+    }
     for (const name of Object.keys(slot.actions)) {
       const item = slot.actions[name];
       item.setEffectiveWeight(item === action ? 1 : 0);
@@ -679,7 +700,18 @@ class EnemyStage {
       const dur = action.getClip().duration || 1;
       if (want === 'die') action.time = Math.min(dur, enemy.deathT || 0);
       else if (want === 'attack') action.time = (enemy.stateT || 0) % dur;
-      else action.time = ((enemy._stepT || 0) + enemy.id * 0.17) % dur;
+      else if (want === 'hurt') {
+        const flash = Math.max(0, Math.min(1, enemy.hurtFlash || 0));
+        const stagger = Math.max(0, enemy.staggerT || 0);
+        if (stagger > (slot._hurtStaggerLast || 0) + 0.02 || !(slot._hurtStaggerMax > 0)) {
+          slot._hurtStaggerMax = stagger;
+        }
+        slot._hurtStaggerLast = stagger;
+        const progress = flash > 0
+          ? 1 - flash
+          : stagger > 0 ? 1 - stagger / Math.max(0.001, slot._hurtStaggerMax) : 1;
+        action.time = dur * Math.max(0, Math.min(1, progress));
+      } else action.time = ((enemy._stepT || 0) + enemy.id * 0.17) % dur;
       slot.mixer.update(0);
     }
     slot.model.rotation.order = 'YXZ';

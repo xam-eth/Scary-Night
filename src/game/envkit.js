@@ -392,6 +392,22 @@ const CORNER_ANGLES = [Math.PI / 2, 0, -Math.PI / 2, Math.PI];   // TL, TR, BR, 
 const FLOOR_FOR = (kind) => (kind === 'wood' || kind === 'glass' ? 'floorWood' : 'floorStone');
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const DOOR_LEAF_NODE = 'wall_doorway_door';
+const DOOR_OPEN_ANGLE = Math.PI / 2;
+const DOOR_SWING_SECONDS = 0.42;
+
+/* The frame GLB's front points outward. Orient its local +Z to the door's
+ * outside normal so the same positive hinge rotation always swings inward. */
+function doorwayYaw(door) {
+  if (door.axis === 'h') return door.facing === 'north' ? Math.PI : 0;
+  return door.facing === 'west' ? -Math.PI / 2 : Math.PI / 2;
+}
+
+function animationSeconds(game) {
+  if (game && Number.isFinite(game.now)) return game.now;
+  return (typeof performance !== 'undefined' && typeof performance.now === 'function')
+    ? performance.now() / 1000 : Date.now() / 1000;
+}
 class EnvKitRuntime {
   constructor() {
     this.ready = false;
@@ -577,32 +593,57 @@ class EnvKitRuntime {
     const horiz = door.axis === 'h';
     const len = horiz ? door.w : door.h;
     const s = KIT_SCALE;
-    const stretch = len / (4 * s);          // the opening, not the grid
+    const stretch = len / (4 * s);          // one four-unit doorway module
     const group = new THREE.Group();
     group.position.set(door.x, 0, door.y);
-    group.rotation.y = horiz ? 0 : Math.PI / 2;
-    const view = { group, frame: null, pivot: null, gate: null, broken: null, crate: null, len };
+    group.rotation.y = doorwayYaw(door);
+    const view = {
+      group, frame: null, pivot: null, leaf: null, broken: null, crate: null, len,
+      angle: 0, fromAngle: 0, targetAngle: 0, motionStart: 0, motionInitialized: false,
+    };
 
+    // The correct wooden door is already a separate node in doorway.glb.
+    // Keep the stone surround, hide its baked-in static leaf, then mount a
+    // fresh copy on a real hinge. `door_gate.glb` is a barred portcullis, not
+    // the oak door used by this house.
     const frame = this.piece('doorway');
     if (frame) {
+      const embeddedLeaf = frame.getObjectByName(DOOR_LEAF_NODE);
+      if (embeddedLeaf) embeddedLeaf.visible = false;
       const rise = this._rise('doorway', PIECE_METRES.doorway);
       frame.scale.set(s * stretch, rise, s);
       frame.position.y = -this.pieces.doorway.min.y * rise;
       group.add(frame);
       view.frame = frame;
     }
-    const gate = this.piece('gate');
-    if (gate) {
+
+    const sourceLeaf = this.pieces.doorway
+      && this.pieces.doorway.scene.getObjectByName(DOOR_LEAF_NODE);
+    if (sourceLeaf) {
+      const rise = this._rise('doorway', PIECE_METRES.doorway);
       const pivot = new THREE.Group();
-      pivot.position.set(-len / 2, 0, 0);
-      const rise = this._rise('gate', PIECE_METRES.gate);
-      gate.scale.set(s * stretch, rise, s);
-      gate.position.set(len / 2, -this.pieces.gate.min.y * rise, 0);
-      pivot.add(gate);
+      // KayKit's leaf is half the width of its four-unit doorway module; its
+      // left edge is the hinge, at -len/4, and its centre rests at the opening.
+      pivot.position.set(-len / 4, 0, 0);
+      const fit = new THREE.Group();
+      fit.position.x = len / 4;
+      fit.scale.set(s * stretch, rise, s);
+      const leaf = sourceLeaf.clone(true);
+      leaf.name = DOOR_LEAF_NODE;
+      leaf.traverse((node) => {
+        if (!node.isMesh) return;
+        node.castShadow = true;
+        node.receiveShadow = false;
+        node.frustumCulled = false;
+      });
+      fit.add(leaf);
+      pivot.add(fit);
       group.add(pivot);
       view.pivot = pivot;
-      view.gate = gate;
+      view.leaf = leaf;
+      view.leafFit = fit;
     }
+
     const broken = this.piece('broken');
     if (broken) {
       const rise = this._rise('broken', PIECE_METRES.broken);
@@ -1736,10 +1777,35 @@ class EnvKitRuntime {
         // a door under siege sits crooked in its frame
         v.frame.rotation.z = hurt * 0.035 + (e.buckling || 0) * 0.02;
       }
-      if (v.gate && v.pivot) {
-        v.gate.visible = !e.broken;
-        v.pivot.rotation.y = e.open ? -1.25 : 0;
+      if (v.pivot && v.leaf) {
+        const now = animationSeconds(game);
+        const target = e.open && !e.broken ? DOOR_OPEN_ANGLE : 0;
+        let motionChanged = false;
+        if (!v.motionInitialized) {
+          // A door first seen mid-run should match the sim immediately; only
+          // later player/enemy state changes start a visible swing.
+          v.angle = v.fromAngle = v.targetAngle = target;
+          v.motionStart = now;
+          v.motionInitialized = true;
+        } else if (Math.abs(target - v.targetAngle) > 1e-6) {
+          v.fromAngle = v.angle;
+          v.targetAngle = target;
+          v.motionStart = now;
+          motionChanged = true;
+        }
+        const before = v.angle;
+        const progress = clamp((now - v.motionStart) / DOOR_SWING_SECONDS, 0, 1);
+        const eased = progress * progress * (3 - 2 * progress);
+        v.angle = v.fromAngle + (v.targetAngle - v.fromAngle) * eased;
+        if (progress >= 1) v.angle = v.targetAngle;
+        v.pivot.rotation.y = v.angle;
         v.pivot.rotation.z = hurt * 0.05;
+        v.leaf.visible = !e.broken;
+        // The renderer normally keeps its shadow map static for mobile cost.
+        // Refresh at the start and end of a swing, never on every animation frame.
+        if (motionChanged || progress >= 1 && Math.abs(before - v.angle) > 1e-6) {
+          if (this.renderer && this.renderer.shadowMap) this.renderer.shadowMap.needsUpdate = true;
+        }
       }
       if (v.broken) v.broken.visible = !!e.broken;
       if (v.crate) {

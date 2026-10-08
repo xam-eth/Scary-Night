@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { VALEN_CLIPS, VALEN_MODEL_URL, valenClipForState } from '../src/game/valen3d.js';
 import {
   ENEMY_GLB_CAP, ENEMY_MODELS, ENEMY_CLIP_CONTRACT, FORBIDDEN_STANDINS,
-  SlotBook, behaviorReady, requiredClips, selectGlbSlots, standinViolation,
+  SlotBook, behaviorReady, enemyClipForState, requiredClips, selectGlbSlots, standinViolation,
 } from '../src/game/enemy3d.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -186,18 +186,73 @@ if (zombie) {
   const names = (json.animations || []).map((animation) => animation.name).sort();
   ok('zombie clips are exactly the uploaded set',
     names.length === ZOMBIE_CLIPS.length && ZOMBIE_CLIPS.every((name) => names.includes(name)), names.join(', '));
-  const verdict = behaviorReady('zombie', names);
-  // Owner mapping: flee/cast/defeat/depressed ARE the walk, attack, die and
-  // idle of this file, named the way Tripo names them.
-  ok('zombie is behavior-ready on the owner clip map',
-    verdict.ready === true && verdict.missing.length === 0, verdict.missing.join(', '));
+  ok('legacy zombie remains auditable but is no longer assigned to a live role',
+    !Object.values(ENEMY_MODELS).some((spec) => spec.url === `./${ZOMBIE_NAME}`), names.join(', '));
 }
-ok('registry maps the whole roster onto the vendored bodies',
-  ['zombie', 'crawler', 'ghoul', 'hunter', 'stalker'].every((key) => ENEMY_MODELS[key].url === `./${ZOMBIE_NAME}`)
-    && ENEMY_MODELS.zombie.map.die === 'defeat_03'
-    && ENEMY_MODELS.zombie.map.walk === 'flee_02' && ENEMY_MODELS.zombie.map.attack === 'cast_a_spell');
-ok('every behaviour in the contract is named in the map', standinViolation('zombie').length === 0
-  && FORBIDDEN_STANDINS.zombie.length === 0 && (ENEMY_MODELS.zombie.map.idle || '') === 'depressed');
+const ULTIMATE_MONSTERS = [
+  {
+    key: 'zombie', path: 'assets/monsters/ultimate/demon.glb', url: './assets/monsters/ultimate/demon.glb',
+    source: 'Demon-LnfIziKv4o.glb', sha256: '7da854e1d43428b89b1afca0feca3f323b869b1d8ed7df74d17354260b607262',
+    clips: { walk: 'CharacterArmature|Walk', run: 'CharacterArmature|Run', attack: 'CharacterArmature|Punch', die: 'CharacterArmature|Death', hurt: 'CharacterArmature|HitReact', idle: 'CharacterArmature|Idle' },
+  },
+  {
+    key: 'crawler', path: 'assets/monsters/ultimate/green-spiky-blob.glb', url: './assets/monsters/ultimate/green-spiky-blob.glb',
+    source: 'Green Spiky Blob.glb', sha256: 'ad5e8b1cdf8c0d328b4b44537d3da8fa98119a9a99fb6163e2f325dbb8bbecc1',
+    clips: { walk: 'CharacterArmature|Walk', attack: 'CharacterArmature|Bite_Front', die: 'CharacterArmature|Death', hurt: 'CharacterArmature|HitRecieve', idle: 'CharacterArmature|Idle' },
+  },
+  {
+    key: 'hunter', path: 'assets/monsters/ultimate/blue-demon.glb', url: './assets/monsters/ultimate/blue-demon.glb',
+    source: 'Blue Demon.glb', sha256: '6a8e743deba6f43f0f9b1e702016b04ddba1d3bf73b7101d2c86d64ae526f87c',
+    clips: { walk: 'CharacterArmature|Walk', run: 'CharacterArmature|Run', attack: 'CharacterArmature|Punch', die: 'CharacterArmature|Death', hurt: 'CharacterArmature|HitReact', idle: 'CharacterArmature|Idle' },
+  },
+  {
+    key: 'ghoul', path: 'assets/monsters/ultimate/ghost-skull.glb', url: './assets/monsters/ultimate/ghost-skull.glb',
+    source: 'Ghost Skull.glb', sha256: 'd1e2268fe9621583ff879d6e6e3ace80b0a6a2373ec0139a8139c88fe6e4d942',
+    clips: { walk: 'CharacterArmature|Fast_Flying', run: 'CharacterArmature|Fast_Flying', attack: 'CharacterArmature|Headbutt', die: 'CharacterArmature|Death', hurt: 'CharacterArmature|HitReact', idle: 'CharacterArmature|Flying_Idle' },
+  },
+  {
+    key: 'stalker', path: 'assets/monsters/ultimate/yeti.glb', url: './assets/monsters/ultimate/yeti.glb',
+    source: 'Yeti-ceRHrn8HHE.glb', sha256: '789fcdd3d32a1bf6ceaa0e30f9ac5d8d2c52d15fa0181d4d1d980a1b2a2ac869',
+    clips: { run: 'CharacterArmature|Run', attack: 'CharacterArmature|Punch', die: 'CharacterArmature|Death', hurt: 'CharacterArmature|HitReact', idle: 'CharacterArmature|Idle' },
+  },
+];
+let monsterBytes = 0;
+for (const model of ULTIMATE_MONSTERS) {
+  const file = path.join(ROOT, model.path);
+  const bytes = fs.existsSync(file) ? fs.readFileSync(file) : null;
+  const glb = bytes ? readGlb(file) : null;
+  const digest = bytes ? createHash('sha256').update(bytes).digest('hex') : '';
+  const names = glb ? (glb.json.animations || []).map((animation) => animation.name) : [];
+  monsterBytes += bytes?.length || 0;
+  ok(`${model.key} uses a valid rigged GLB copied from ${model.source}`,
+    !!glb && (glb.json.meshes || []).length > 0 && (glb.json.skins || []).length > 0 && bytes.length < 1024 * 1024,
+    glb ? `${bytes.length} bytes, ${glb.json.skins[0].joints.length} joints` : 'missing or unreadable');
+  ok(`${model.key} source GLB is unchanged`, digest === model.sha256, digest);
+  const verdict = behaviorReady(model.key, names);
+  ok(`${model.key} has mapped idle/hurt/locomotion/attack/death clips`,
+    verdict.ready && Object.entries(model.clips).every(([behavior, name]) => ENEMY_MODELS[model.key].map[behavior] === name && names.includes(name)),
+    verdict.missing.join(', '));
+}
+ok('five distinct CC0 monster rigs are wired to the five non-werewolf roles',
+  ULTIMATE_MONSTERS.every((model) => ENEMY_MODELS[model.key].url === model.url)
+    && new Set(ULTIMATE_MONSTERS.map((model) => ENEMY_MODELS[model.key].url)).size === 5
+    && monsterBytes < 3 * 1024 * 1024,
+  `${ULTIMATE_MONSTERS.length} separate rigs, ${monsterBytes} total bytes`);
+ok('monster assets include their CC0 provenance note',
+  fs.existsSync(path.join(ROOT, 'assets/monsters/ultimate/CREDITS.txt'))
+    && /CC0 1\.0/i.test(fs.readFileSync(path.join(ROOT, 'assets/monsters/ultimate/CREDITS.txt'), 'utf8')));
+ok('the late-game Stalker uses its Yeti rig, not the old zombie or wolf rig',
+  ENEMY_MODELS.stalker.url === './assets/monsters/ultimate/yeti.glb'
+    && ENEMY_MODELS.stalker.map.die === 'CharacterArmature|Death'
+    && ENEMY_MODELS.stalker.map.run === 'CharacterArmature|Run'
+    && ENEMY_MODELS.stalker.map.attack === 'CharacterArmature|Punch');
+ok('the local werewolf retains its own run/strike/death rig',
+  ENEMY_MODELS.werewolf.url === './werewolf-3d-model.glb'
+    && ENEMY_MODELS.werewolf.map.die === 'fall.001'
+    && ENEMY_MODELS.werewolf.map.run === 'angry_02.001'
+    && ENEMY_MODELS.werewolf.map.attack === 'front_kick_02.001');
+ok('every behaviour avoids forbidden stand-ins', Object.keys(ENEMY_MODELS).every((key) => standinViolation(key).length === 0
+  && (FORBIDDEN_STANDINS[key] || []).length === 0));
 
 /** The werewolf upload is an FBX inside a zip. Converted once, vendored, byte-exact. */
 const WOLF_NAME = 'werewolf-3d-model.glb';
@@ -232,11 +287,17 @@ ok('the converted werewolf is wired on the owner clip map',
     && ENEMY_MODELS.werewolf.map.attack === 'front_kick_02.001'
     && ENEMY_MODELS.werewolf.map.idle === 'box_02.001');
 const wolfZip = path.join(ROOT, 'werewolf+3d+model.zip');
-ok('clip contract matches the roster',
-  requiredClips('zombie').join(',') === 'walk,attack,die'
+ok('clip contract matches the roster, including pack hit reactions',
+  requiredClips('zombie').join(',') === 'walk,attack,die,hurt'
     && requiredClips('werewolf').join(',') === 'run,attack,die'
+    && Object.keys(ENEMY_MODELS).filter((key) => key !== 'werewolf').every((key) => requiredClips(key).includes('hurt'))
     && ENEMY_CLIP_CONTRACT.crawler.includes('walk')
     && ENEMY_CLIP_CONTRACT.stalker.includes('attack'));
+ok('damage and stagger choose the mapped hit reaction, while death retains priority',
+  enemyClipForState('zombie', { state: 'strike', hurtFlash: 0.45 }) === 'hurt'
+    && enemyClipForState('crawler', { state: 'hunt', staggerT: 0.3 }) === 'hurt'
+    && enemyClipForState('zombie', { state: 'dying', hurtFlash: 1 }) === 'die'
+    && enemyClipForState('werewolf', { state: 'hunt', hurtFlash: 1 }) === 'idle');
 
 const swarm = Array.from({ length: 24 }, (_, i) => ({ id: i + 1, key: 'zombie', dead: false, x: i * 40, y: 0 }));
 const nearest = selectGlbSlots(swarm, { x: 0, y: 0 }, ENEMY_GLB_CAP, () => true);
