@@ -38,7 +38,7 @@ import { EnvKit, MOBILE_BUDGET, QUALITY_TIERS } from './envkit.js';
 import { World3D } from './world3d.js';
 import { Enemy3D } from './enemy3d.js';
 import { IAP } from '../shop/iap.js';
-import { drawHUD, urgentGuidance, pauseButtonBox, weaponChipBox } from './hud.js';
+import { drawHUD, urgentGuidance, pauseButtonBox } from './hud.js';
 import { WEAPONS, weaponById, nextWeapon, swingBearing, swingDist, kitDamage } from './weapons.js';
 import { nextBeat, ackBeat, beatById, endingReady, narrationLines, beatSeen } from './narrative.js';
 import { updateCoach } from './coach.js';
@@ -2703,15 +2703,6 @@ export class Game {
       this.cycleWeapon();
     }
     if (!input.keys.weapon) this._weaponHeld = false;
-    if (this.screen === 'playing' && !this.uiPanel && input.uiTap && this._weaponChip) {
-      const chip = this._weaponChip;
-      const tap = input.uiTap;
-      if (tap.x >= chip.x && tap.x <= chip.x + chip.w && tap.y >= chip.y && tap.y <= chip.y + chip.h) {
-        input.uiTap = null;
-        this.cycleWeapon();
-        return;
-      }
-    }
     if (this.screen === 'playing' && !this.uiPanel && input.uiTap) {
       const box = pauseButtonBox(this.renderer.w, this.renderer.h);
       const tap = input.uiTap;
@@ -2721,7 +2712,7 @@ export class Game {
         this.togglePause(true);
         return;
       }
-      const nav = new Set(['bag', 'mission', 'profile', 'settings']);
+      const nav = new Set(['bag', 'mission', 'weapon']);
       const hit = [...this.ui].reverse().find((b) => nav.has(b.label) && b.onClick && !b.disabled
         && tap.x > b.x && tap.x < b.x + b.w && tap.y > b.y && tap.y < b.y + b.h);
       if (hit) {

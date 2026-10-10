@@ -10,7 +10,7 @@
 import { clamp, lerp, damp, fmtClock, TAU } from '../core/util.js';
 import { PAL } from '../core/render.js';
 import { PLAYER, UPGRADES, SHARDS } from '../core/config.js';
-import { unlocked, projectDawn, LANES } from './economy.js';
+import { unlocked, projectDawn } from './economy.js';
 import { drawGuideArrow, guideScale, guideSize } from './coach.js';
 import { weaponById } from './weapons.js';
 import { drawGameIcon } from '../ui/icons.js';
@@ -31,14 +31,14 @@ export function hudEmphasis(game) {
   const panic = game.phase && (game.phase.id === 'panic' || game.phase.id === 'silence');
   const hungry = !!(p && (p.lowBlood || game.hungerFailing));
   const floor = 0.28;
-  let clock = 0.72, blood = 0.5, door = 0.4, goals = 0.66, actions = 0.8, badge = 0.4;
+  let clock = 0.72, blood = 0.5, door = 0.4, goals = 0.66, actions = 0.8;
   if (!hungry && !doors && !panic) { clock = 1; goals = 0.92; blood = 0.52; }
   if (doors) { door = 1; blood = 0.88; goals = 0.44; clock = 0.7; }
   if (knock) { door = Math.max(door, 0.86); clock = Math.max(clock, 0.9); }
-  if (hungry) { blood = 1; clock = 0.9; goals = 0.4; badge = 0.36; }
-  if (panic) { clock = 1; blood = 1; goals = 0.4; actions = 1; door = doors ? 1 : 0.46; badge = 0.34; }
+  if (hungry) { blood = 1; clock = 0.9; goals = 0.4; }
+  if (panic) { clock = 1; blood = 1; goals = 0.4; actions = 1; door = doors ? 1 : 0.46; }
   const a = (v) => Math.max(floor, v);
-  return { clock: a(clock), blood: a(blood), door: a(door), goals: a(goals), actions: a(actions), badge: a(badge) };
+  return { clock: a(clock), blood: a(blood), door: a(door), goals: a(goals), actions: a(actions) };
 }
 
 function withPriority(ctx, em, ax, ay, draw) {
@@ -53,31 +53,24 @@ function withPriority(ctx, em, ax, ay, draw) {
 
 /** Top-left, clear of the thumb cluster. The stage already sits inside the safe area. */
 export function pauseButtonBox(w, h) {
-  const size = 48;
+  const size = UI_TOKENS.size.minHitTarget;
   const inset = 8;
-  return { x: inset, y: Math.max(inset, h < 500 ? 6 : inset), w: size, h: size };
+  return { x: inset, y: inset, w: size, h: size };
 }
 
 function drawPauseButton(game, ctx, w, h) {
-  const b = pauseButtonBox(w, h);
-  game.ui.push({ x: b.x, y: b.y, w: b.w, h: b.h, label: 'PAUSE', onClick: () => game.togglePause(true) });
-  ctx.save();
-  ctx.fillStyle = 'rgba(6,7,12,0.78)';
-  ctx.strokeStyle = 'rgba(212,186,120,0.85)';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.rect(b.x, b.y, b.w, b.h);
-  ctx.fill();
-  ctx.stroke();
-  ctx.fillStyle = '#f0e6d4';
-  const barW = 5;
-  const barH = 18;
-  const gap = 6;
-  const cx = b.x + b.w / 2;
-  const cy = b.y + b.h / 2;
-  ctx.fillRect(cx - gap - barW, cy - barH / 2, barW, barH);
-  ctx.fillRect(cx + gap, cy - barH / 2, barW, barH);
-  ctx.restore();
+  const hit = pauseButtonBox(w, h);
+  const size = h < 500 ? UI_TOKENS.size.utilityShort : UI_TOKENS.size.utilityStandard;
+  const x = hit.x + (hit.w - size) / 2;
+  const y = hit.y + (hit.h - size) / 2;
+  const idx = game.ui.length;
+  const box = { ...hit, label: 'PAUSE', idx, onClick: () => game.togglePause(true) };
+  game.ui.push(box);
+  drawIconButton(ctx, x, y, size, 'pause', {
+    state: iconButtonState(game, box),
+    shape: 'rounded',
+    iconSize: h < 500 ? 16 : 18,
+  });
 }
 
 function drawTopScrim(ctx, w, h) {
@@ -101,7 +94,6 @@ export function drawHUD(game, ctx, w, h) {
   drawFieldAccess(game, ctx, w, h);
   // Stock counts stay legible even when contextual HUD elements de-emphasize.
   drawResourceStrip(game, ctx, w, h, 0.9);
-  drawBuildBadge(game, ctx, w, h, em.badge);
   withPriority(ctx, em.clock, w / 2, phone ? 58 : h * 0.07, () => drawClock(game, ctx, w, h, pulse, em.clock));
   withPriority(ctx, em.door, w - 48, phone ? 108 : 96, () => drawDoorStatus(game, ctx, w, h, em.door));
   drawBearings(game, ctx, w, h);
@@ -111,27 +103,6 @@ export function drawHUD(game, ctx, w, h) {
 }
 
 /* ---------------- top left: tonight's goals (the night's purpose) ---------------- */
-
-function drawBuildBadge(game, ctx, w, h, em) {
-  if (!unlocked(game.save, 'builds')) return;
-  const builds = (game.save && game.save.builds) || {};
-  let best = null;
-  let n = 0;
-  for (const lane of LANES) {
-    const owned = lane.ranks.filter((r) => builds[r.id]).length;
-    if (owned > n) { n = owned; best = lane; }
-  }
-  if (!best) return;
-  ctx.save();
-  ctx.globalAlpha = em;
-  ctx.textAlign = 'right';
-  ctx.textBaseline = 'middle';
-  ctx.font = `500 10px ${SANS}`;
-  setLetter(ctx, 1.2);
-  ctx.fillStyle = 'rgba(206,186,140,0.8)';
-  ctx.fillText(best.name.replace('THE ', ''), w - 14, phoneHud(w, h).short ? 28 : 34);
-  ctx.restore();
-}
 
 function phoneHud(w, h) {
   return { phone: w < 840 || h < 500, short: h < 500 };
@@ -418,24 +389,40 @@ function drawFieldAccess(game, ctx, w, h) {
   const short = h < 500;
   const size = short ? UI_TOKENS.size.utilityShort : UI_TOKENS.size.utilityStandard;
   const gap = short ? UI_TOKENS.spacing.utilityShort : UI_TOKENS.spacing.utilityStandard;
+  const weapon = weaponById(game.player && game.player.weapon);
   const items = [
-    ['bag', 'bag'], ['mission', 'missions'], ['profile', 'profile'], ['settings', 'settings'],
+    { icon: 'bag', label: 'bag', onClick: () => game.openPanel('bag') },
+    { icon: 'mission', label: 'mission', onClick: () => game.openPanel('missions') },
+    { icon: weapon.id, label: 'weapon', onClick: () => game.cycleWeapon() },
   ];
-  // The visible tiles stay compact, but 44px hit areas line up edge-to-edge.
+  // Pack, missions and the equipped weapon are the only mid-run shortcuts.
   const total = items.length * size + (items.length - 1) * gap;
   const x0 = w - 10 - total;
   const y = short ? 7 : 9;
-  items.forEach(([icon, panel], i) => {
+  items.forEach((item, i) => {
     const x = x0 + i * (size + gap);
     const idx = game.ui.length;
     const hit = iconHitArea(x, y, size);
-    const box = { ...hit, label: icon, onClick: () => game.openPanel(panel), idx };
+    const box = { ...hit, label: item.label, onClick: item.onClick, idx };
     game.ui.push(box);
-    drawIconButton(ctx, x, y, size, icon, {
+    drawIconButton(ctx, x, y, size, item.icon, {
       state: iconButtonState(game, box),
       shape: 'rounded',
       iconSize: short ? 17 : 19,
     });
+    if (item.label === 'weapon' && game.player && game.player.kit) {
+      const kit = game.player.kit;
+      const held = [kit.silver, kit.blessed, kit.ward];
+      const pipW = 3, pipGap = 2;
+      let px = x + size / 2 - (held.length * pipW + (held.length - 1) * pipGap) / 2;
+      ctx.save();
+      for (const has of held) {
+        ctx.fillStyle = has ? '#f1dbab' : 'rgba(150,140,120,0.35)';
+        ctx.fillRect(px, y + size - 4, pipW, 2);
+        px += pipW + pipGap;
+      }
+      ctx.restore();
+    }
   });
 }
 
@@ -451,10 +438,12 @@ function drawResourceStrip(game, ctx, w, h, em = 1) {
   ];
   const short = h < 500;
   const phone = w < 840 || short;
-  const x = 14;
-  const y = short ? 88 : phone ? 190 : 58;
   const step = short ? 38 : 42;
   const width = values.length * step + 8;
+  // In landscape, keep stock under the utility rail instead of stacking it
+  // over the objective/coach prompts at the upper-left.
+  const x = short && w >= 500 ? w - 14 - width : 14;
+  const y = short ? 58 : phone ? 190 : 58;
   const flash = game._purseFlashAt != null && game.time - game._purseFlashAt < 0.7;
   ctx.save();
   ctx.globalAlpha = em;
@@ -952,21 +941,6 @@ function drawBearings(game, ctx, w, h) {
  * random; Hades puts a cooldown on the button itself, not in a manual.
  */
 
-export function weaponChipBox(input, w, h) {
-  const size = 44;
-  const dash = input && input.buttons && input.buttons.dash;
-  const stick = input && input.stick;
-  if (!dash || !dash.y) return { x: w - 8 - size, y: h - 78, w: size, h: size };
-  const stickRight = stick ? (stick.homeX || w * 0.16) + (stick.r || 54) + 16 : 80;
-  let x = dash.x - dash.r - 10 - size;
-  let y = dash.y - size / 2;
-  if (x < stickRight) {
-    x = Math.max(8, dash.x - size / 2);
-    y = dash.y - dash.r - 8 - size;
-  }
-  return { x, y: Math.max(8, y), w: size, h: size };
-}
-
 export function drawTouchControls(game, ctx, w, h) {
   const input = game.input;
   if (!input || !input.gameplay) return;
@@ -1080,35 +1054,6 @@ export function drawTouchControls(game, ctx, w, h) {
   const atkCd = p && PLAYER.attackCooldown ? clamp(p.attackCd / PLAYER.attackCooldown, 0, 1) : 0;
   const tool = weaponById(p && p.weapon);
   drawBtn(input.buttons.attack, tool.id, null, { big: true, cd: atkCd });
-  const chip = weaponChipBox(input, w, h);
-  game._weaponChip = chip;
-  // #56 P5 — the kit she carries: the chip wears the metal (cold silver, warm
-  // gold) and three pips fill as Marthe tempers it. The ladder is readable at
-  // a glance without a word of tutorial.
-  const kit = (p && p.kit) || null;
-  ctx.save();
-  ctx.fillStyle = 'rgba(8,9,14,0.72)';
-  ctx.strokeStyle = !kit ? 'rgba(212,186,120,0.8)'
-    : (kit.blessed || kit.ward) ? 'rgba(226,196,128,0.95)' : 'rgba(206,222,255,0.95)';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.rect(chip.x, chip.y, chip.w, chip.h);
-  ctx.fill();
-  ctx.stroke();
-  const weaponInk = !kit ? 'rgba(240,230,210,0.96)'
-    : (kit.blessed || kit.ward) ? 'rgba(255,225,155,0.98)' : 'rgba(222,233,255,0.98)';
-  drawGameIcon(ctx, tool.id, chip.x + chip.w / 2, chip.y + chip.h / 2 - (kit ? 3 : 0), kit ? 18 : 21, weaponInk);
-  if (kit) {
-    const held = [kit.silver, kit.blessed, kit.ward];
-    const pw = 6, gap = 4;
-    let px = chip.x + chip.w / 2 - (held.length * pw + (held.length - 1) * gap) / 2;
-    for (const has of held) {
-      ctx.fillStyle = has ? 'rgba(238,228,196,0.95)' : 'rgba(150,140,120,0.26)';
-      ctx.fillRect(px, chip.y + chip.h - 10, pw, 3);
-      px += pw + gap;
-    }
-  }
-  ctx.restore();
   const useAction = (game.interactTarget && game.interactTarget.actions || [])
     .find((action) => action.act !== 'repair' && action.act !== 'barricade');
   const useIcon = !useAction ? 'interact'

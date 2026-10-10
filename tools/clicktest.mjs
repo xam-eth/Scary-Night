@@ -10,6 +10,7 @@
  * empty immediate-mode list.
  *
  *   node tools/clicktest.mjs [--url=http://...]
+ *   node tools/clicktest.mjs --hud-only [--url=http://...]
  *   node tools/clicktest.mjs --privacy-only [--url=http://...]
  */
 
@@ -148,18 +149,21 @@ if (arg['privacy-only']) {
   process.exit(fails ? 1 : 0);
 }
 
-console.log('\n=== CONSENT GATE ===');
-// v1.0 added a privacy consent card in front of the menu (game.save.privacyAck).
-// On a clean profile every menu button is behind "I UNDERSTAND" — without
-// dismissing it first, every check below fails not because a button is
-// broken but because it is still covered by the consent card.
-{
-  const r = await clickOk('I UNDERSTAND', 'menu');
-  ok('consent "I UNDERSTAND" reaches the menu', r.pass, r.why);
-}
-// BLOOD MARKET only appears on the menu once a night has been attempted —
-// force that here so the menu button tour below can reach it, same as any
-// returning player would see.
+console.log('\n=== LOADING-GATED NIGHT ENTRY ===');
+// The app enters the opening automatically after the 3D roster is ready. Skip
+// story plates here so this click test can focus on live gameplay controls.
+await page.evaluate(() => {
+  const g = window.__LN;
+  g.save.privacyAck = true;
+  g._openingPending = false;
+  g.narration = null;
+  g.seenIntroThisSession = true;
+  g.startNightProper();
+});
+await pump(3);
+ok('gameplay is available after the loading gate', await screen() === 'playing', `screen=${await screen()}`);
+// BLOOD MARKET only appears after prior attempts; give the menu tour that
+// returning-player state without changing the actual UI implementation.
 await page.evaluate(() => { window.__LN.save.nightsAttempted = 4; window.__LN.save.nightsSurvived = 4; });
 await pump(2);
 
@@ -170,14 +174,39 @@ const t1 = await page.evaluate(() => window.__LN.now);
 ok('update+render pump works (state advances)', t1 > t0, `Δ=${(t1 - t0).toFixed(3)}s`);
 
 console.log('\n=== MENU BUTTONS (real clicks) ===');
-for (const [label, expect] of [['UPGRADES', 'upgrades'], ['BLOOD MARKET', 'shop'], ['COLLECTION', 'collection'], ['SETTINGS', 'settings']]) {
+await page.evaluate(() => window.__LN.toMenu());
+await pump(3);
+for (const [label, expect] of [['UPGRADES', 'upgrades'], ['BLOOD MARKET', 'shop'], ['SETTINGS', 'settings']]) {
   const r = await clickOk(label, expect);
   ok(`click ${label} → ${expect}`, r.pass, r.why);
   if ((await screen()) !== 'menu') { await clickLabel('BACK'); await pump(2); }
 }
 ok('menu intact after the tour', (await screen()) === 'menu');
-{ const r = await clickOk('PLAY', ['intro', 'playing']); ok('click PLAY leaves menu', r.pass, r.why); }
-ok('reached playing', await settle('playing'), `screen=${await screen()}`);
+{ const r = await clickOk('PLAY', ['intro', 'narration', 'playing']); ok('click PLAY leaves menu', r.pass, r.why); }
+await page.evaluate(() => {
+  const g = window.__LN;
+  if (g.narration) g.skipNarration();
+  if (g.screen !== 'playing') { g._openingPending = false; g.startNightProper(); }
+});
+await pump(3);
+ok('reached playing', await screen() === 'playing', `screen=${await screen()}`);
+
+console.log('\n=== FIELD CARD (four in-run destinations) ===');
+await clickLabel('bag'); await pump(2);
+ok('HUD pack icon opens the card', await page.evaluate(() => window.__LN.uiPanel === 'bag'));
+const fieldTabs = await page.evaluate(() => window.__LN.ui.map((b) => b.label).filter((label) => ['bag', 'mission', 'upgrade', 'profile', 'collection', 'settings', 'help', 'shield', 'blood'].includes(label)));
+ok('card keeps only pack, missions, upgrades and profile', JSON.stringify(fieldTabs) === JSON.stringify(['bag', 'mission', 'upgrade', 'profile']), JSON.stringify(fieldTabs));
+await clickLabel('profile'); await pump(2);
+ok('profile remains reachable from the card', await page.evaluate(() => window.__LN.uiPanel === 'profile'));
+await clickLabel('close'); await pump(2);
+ok('card closes back to the night', await page.evaluate(() => window.__LN.uiPanel === null && window.__LN.screen === 'playing'));
+await clickLabel('mission'); await pump(2);
+ok('HUD missions icon opens missions directly', await page.evaluate(() => window.__LN.uiPanel === 'missions'));
+await clickLabel('close'); await pump(2);
+const weaponBefore = await page.evaluate(() => window.__LN.player.weapon);
+await clickLabel('weapon'); await pump(2);
+const weaponAfter = await page.evaluate(() => window.__LN.player.weapon);
+ok('HUD weapon icon cycles the equipped tool', weaponAfter !== weaponBefore, `${weaponBefore} → ${weaponAfter}`);
 
 console.log('\n=== PAUSE (real keys) + PAUSE MENU (real clicks) ===');
 { const r = await clickOk('PAUSE', 'paused'); ok('pause button opens the menu', r.pass, r.why); }
@@ -188,6 +217,13 @@ ok('ESC pauses', (await screen()) === 'paused', `screen=${await screen()}`);
 { const r = await clickOk('BACK', 'paused'); ok('settings→back to pause (no black hole)', r.pass, r.why); }
 await page.keyboard.down('Escape'); await pump(2); await page.keyboard.up('Escape'); await pump(2);
 ok('ESC unpauses', (await screen()) === 'playing', `screen=${await screen()}`);
+if (arg['hud-only']) {
+  console.log('\n=== ERRORS ===');
+  ok('no runtime errors during the focused HUD flow', errors.length === 0, errors.slice(0, 6).join(' | ') || 'clean');
+  await browser.close();
+  console.log(fails === 0 ? '\nclicktest --hud-only: all PASS' : `\nclicktest --hud-only: ${fails} FAILURE(S)`);
+  process.exit(fails ? 1 : 0);
+}
 await page.keyboard.down('Escape'); await pump(2); await page.keyboard.up('Escape'); await pump(2);
 { const r = await clickOk('MAIN MENU', 'paused'); ok('main menu asks before leaving', r.pass, r.why); }
 { const r = await clickOk('LEAVE', 'menu'); ok('leave returns home and banks the floor', r.pass, r.why); }

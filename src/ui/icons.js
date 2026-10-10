@@ -8,7 +8,7 @@ const GAME_ICONS = new Set([
   'blood', 'repair', 'barricade', 'lamp', 'play', 'restart', 'upgrade', 'book',
   'shield', 'settings', 'back', 'exit', 'confirm', 'next', 'bag', 'mission',
   'profile', 'arrow', 'knife', 'bandage', 'plank', 'shard', 'relic', 'run',
-  'close', 'more', 'plus', 'shop', 'help',
+  'close', 'more', 'plus', 'shop', 'help', 'pause',
 ]);
 
 export function buttonIconForLabel(label) {
@@ -208,6 +208,12 @@ export function drawGameIcon(ctx, name, x, y, size = 24, color = '#eee6d6') {
     case 'run':
       ctx.beginPath(); ctx.arc(3, -8, 2.2, 0, Math.PI * 2); ctx.fill();
       ctx.beginPath(); ctx.moveTo(2, -5); ctx.lineTo(-1, 0); ctx.lineTo(5, 2); ctx.lineTo(9, 7); ctx.moveTo(-1, 0); ctx.lineTo(-7, 5); ctx.moveTo(2, -4); ctx.lineTo(8, -2); ctx.moveTo(-6, 9); ctx.lineTo(0, 9); ctx.moveTo(7, 9); ctx.lineTo(12, 9); ctx.stroke();
+      break;
+    case 'pause':
+      ctx.beginPath();
+      ctx.roundRect(-6, -8, 4, 16, 1.5);
+      ctx.roundRect(2, -8, 4, 16, 1.5);
+      ctx.fill();
       break;
     case 'close':
       ctx.beginPath(); ctx.moveTo(-7, -7); ctx.lineTo(7, 7); ctx.moveTo(7, -7); ctx.lineTo(-7, 7); ctx.stroke();

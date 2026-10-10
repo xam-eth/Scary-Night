@@ -75,7 +75,7 @@ if (mf) {
   ok((mf.short_name || '').length <= 12, `short_name fits the launcher (${(mf.short_name || '').length}/12 chars)`);
   ok(!!mf.start_url && !!mf.scope, `start_url and scope are set (${mf.start_url})`);
   ok(['standalone', 'fullscreen', 'minimal-ui', 'browser'].includes(mf.display), `display is a mode Bubblewrap accepts (${mf.display})`);
-  ok(mf.orientation === 'portrait', 'orientation is portrait (the game is 9:16)');
+  ok(mf.orientation === 'landscape', 'orientation is landscape (the game is designed for landscape play)');
   ok(/^#[0-9a-f]{6}$/i.test(mf.theme_color || ''), `theme_color is a hex colour (${mf.theme_color})`);
   ok(/^#[0-9a-f]{6}$/i.test(mf.background_color || ''), `background_color is a hex colour (${mf.background_color})`);
 
