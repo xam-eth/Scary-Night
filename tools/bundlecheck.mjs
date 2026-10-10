@@ -1,4 +1,4 @@
-/* LAST NIGHT — the Play bundle, checked without a JDK or an SDK.
+/* DUSKHOLD — the Play bundle, checked without a JDK or an SDK.
  *
  * Everything Play and Bubblewrap will judge that can be judged from the repo:
  * the web manifest and its icons, the service worker, the asset links, the
@@ -49,7 +49,7 @@ function json(p) {
   try { return JSON.parse(fs.readFileSync(P(p), 'utf8')); } catch (e) { return null; }
 }
 
-console.log('LAST NIGHT — Play bundle check\n');
+console.log('DUSKHOLD — Play bundle check\n');
 
 /* ------------------------------------------------------------------ config */
 console.log('-- config --');
@@ -135,9 +135,10 @@ if (al && al[0]) {
   const sha = t.sha256_certificates || [];
   const hex = sha.filter((s) => /^[0-9A-F]{64}$/i.test(s));
   ok(sha.length > 0, 'at least one fingerprint is listed');
-  warn(hex.length === sha.length && sha.length > 0,
-    `every fingerprint is a real 64-char SHA-256 (${sha.length} of them)`,
-    'bubblewrap fingerprint writes it; Play Console -> App signing has the one that matters');
+  const hasPlaceholder = sha.some((s) => /replace|placeholder|todo/i.test(String(s)));
+  ok(sha.length > 0 && hex.length === sha.length && !hasPlaceholder,
+    `every fingerprint is a real 64-char SHA-256, not a placeholder (${hex.length}/${sha.length} valid)`,
+    'generate the upload key, then use Bubblewrap fingerprint or the Play App Signing SHA-256');
 }
 
 /* -------------------------------------------------------------- the billing */
@@ -222,7 +223,7 @@ ok(secretHit.length === 0, 'no server key, private key or keystore password in a
 const gi = read('.gitignore') || '';
 ok(/\*\.jks|\*\.keystore|\*\.p12/.test(gi), '.gitignore excludes keystores');
 ok(/signing\.local\.json/.test(gi), '.gitignore excludes the signing password file');
-for (const f of ['android/lastnight-upload.jks', 'android/signing.local.json']) {
+for (const f of ['android/duskhold-upload.jks', 'android/signing.local.json']) {
   if (fs.existsSync(P(f))) ok(false, `${f} must never be committed`, 'it exists — make sure git is ignoring it');
 }
 

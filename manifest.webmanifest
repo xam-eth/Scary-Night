@@ -1,8 +1,8 @@
 {
   "id": "/index.html",
-  "name": "LAST NIGHT",
-  "short_name": "LAST NIGHT",
-  "description": "Survive until dawn. A 3/4 vampire survival horror game about tension, doors and the sound of knocking.",
+  "name": "DUSKHOLD",
+  "short_name": "DUSKHOLD",
+  "description": "Fortify the manor, hold through the night, and survive until dawn. A gothic survival game about doors, dread, and the siege outside.",
   "lang": "en",
   "dir": "ltr",
   "start_url": "/index.html",

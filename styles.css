@@ -2,6 +2,22 @@
  * The game is a canvas; the page exists only to frame it and get out of the way.
  */
 
+@font-face {
+  font-family: "IM Fell English SC";
+  src: url("./assets/fonts/im-fell-english-sc-latin-400-normal.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Special Elite";
+  src: url("./assets/fonts/special-elite-latin-400-normal.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
 :root {
   --ink: #05060b;
   --ash: #cfc6b0;
@@ -18,7 +34,7 @@ html, body {
   overflow: hidden;
   background: #04050a;
   color: var(--ash);
-  font-family: Georgia, "Palatino Linotype", "Times New Roman", serif;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior: none;
   touch-action: none;
@@ -34,17 +50,30 @@ html, body {
   width: min(100vw, calc((100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) * 9 / 16));
   height: min(calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)), calc(100vw * 16 / 9));
   transform: translate(-50%, -50%);
+  overflow: hidden;
   background: #04050a;
 }
 
+canvas.world3d,
 canvas#game {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
   height: 100%;
+}
+
+canvas.world3d {
+  z-index: 0;
+  pointer-events: none;
+}
+
+canvas#game {
+  z-index: 1;
   touch-action: none;
   image-rendering: auto;
   cursor: crosshair;
-  background: #04050a;
+  background: transparent;
 }
 
 @media (pointer: coarse) {
@@ -61,7 +90,7 @@ canvas#game {
   min-height: 44px;
   display: grid;
   place-items: center;
-  font: 11px/1 "Segoe UI", Roboto, sans-serif;
+  font: 600 11px/1 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   text-decoration: none;

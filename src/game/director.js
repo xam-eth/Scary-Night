@@ -353,10 +353,11 @@ export class Director {
   /* ================= THE SIEGE (#60) =================
    * The crowd that makes the house look like a house under attack.
    *
-   * Two populations, on purpose. The besiegers are the fight — full AI, the
-   * existing ceiling, eight skinned bodies at a time. The crowd is the
-   * SCALE: reduced-AI bodies that walk in from the dark, mass at a few walls
-   * and lean on them until the wood gives.
+   * Two populations, on purpose. The besiegers are the fight — full AI and
+   * the existing combatant ceiling. The crowd is the SCALE: reduced-AI bodies
+   * that walk in from the dark, mass at a few walls and lean until the wood
+   * gives. In the 3D renderer it remains simulation-only; combatants use the
+   * full 14-rig budget, and no generic proxy figures are drawn.
    *
    * They do not go to all sixteen entrances evenly — three bodies at sixteen
    * doors is a spreadsheet, not a siege. A few FRONTS carry the mass (that is

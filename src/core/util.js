@@ -34,23 +34,49 @@ export function approachAngle(a, b, step) {
  * Project the heading the same way the camera does and the nose, the claw
  * and the stick agree.
  */
-export function visualAngle(angle, tilt = 1) {
+/* The world camera is a true orthographic isometric view: 45° azimuth and
+ * the classic 35.264° elevation. The two constants below are the world-plane
+ * basis vectors projected onto the screen (camera zoom is applied separately).
+ * Keeping them here gives Canvas, input, combat and Three.js one shared camera. */
+export const ISO_CAMERA = Object.freeze({
+  azimuth: Math.PI / 4,
+  elevation: Math.atan(1 / Math.sqrt(2)),
+  tilt: 1 / Math.sqrt(3),
+  horizontal: 1 / Math.sqrt(2),
+  vertical: 1 / Math.sqrt(6),
+});
+
+/** Project a floor-space heading into the upright, screen-facing billboard. */
+export function visualAngle(angle, camera = 1) {
+  if (camera && typeof camera === 'object' && camera.isometric) {
+    const { horizontal: h, vertical: v } = ISO_CAMERA;
+    const x = Math.cos(angle), y = Math.sin(angle);
+    return Math.atan2(v * (x + y), h * (x - y));
+  }
+  const tilt = camera && typeof camera === 'object' ? camera.tilt : camera;
   if (!tilt || Math.abs(tilt - 1) < 0.001) return angle;
   return Math.atan2(Math.sin(angle) * tilt, Math.cos(angle));
 }
 
 /**
- * Screen-space stick/key vector → world direction.
- * Pushing the stick up-right must walk up-right on screen, not along the
- * squashed floor diagonal. `mag` stays the stick deflection (0–1) so analog
- * walk speed is unchanged; only the heading is corrected.
+ * Screen-space stick/key vector → world direction. Pass the renderer to use
+ * the isometric inverse; a numeric `tilt` remains supported for older callers.
  */
-export function screenDirToWorld(sx, sy, tilt = 1) {
+export function screenDirToWorld(sx, sy, camera = 1) {
   const mag = Math.hypot(sx, sy);
   if (mag < 1e-6) return { x: 0, y: 0, mag: 0, angle: 0 };
-  const t = tilt > 0.05 ? tilt : 1;
-  const wx = sx;
-  const wy = sy / t;
+  let wx, wy;
+  if (camera && typeof camera === 'object' && camera.isometric) {
+    const { horizontal: h, vertical: v } = ISO_CAMERA;
+    const u = sx / h, w = sy / v;
+    wx = (u + w) * 0.5;
+    wy = (w - u) * 0.5;
+  } else {
+    const tilt = camera && typeof camera === 'object' ? camera.tilt : camera;
+    const t = tilt > 0.05 ? tilt : 1;
+    wx = sx;
+    wy = sy / t;
+  }
   const wlen = Math.hypot(wx, wy) || 1;
   return { x: wx / wlen, y: wy / wlen, mag: Math.min(1, mag), angle: Math.atan2(wy, wx) };
 }

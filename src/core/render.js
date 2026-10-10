@@ -7,7 +7,7 @@
  * pudar" — dim and washed, never a solid black void. Candles still glow warmer.
  */
 
-import { clamp, lerp, damp, TAU, rand, randInt, hash2 } from './util.js';
+import { clamp, lerp, damp, TAU, rand, randInt, hash2, ISO_CAMERA } from './util.js';
 
 export const PAL = {
   ink: '#05060b',
@@ -38,18 +38,18 @@ export const PAL = {
 export class Renderer {
   constructor(canvas) {
     this.canvas = canvas;
-    this.ctx = canvas.getContext('2d', { alpha: false });
+    this.ctx = canvas.getContext('2d', { alpha: true });
     this.light = document.createElement('canvas');
     this.lightCtx = this.light.getContext('2d');
     this.lightScale = 0.5;
     this.w = 1280; this.h = 720;
     this.dpr = 1;
-    // v1.1 — 3/4 oblique camera. The ground plane is drawn foreshortened
-    // (world Y scaled by this factor); upright actors are counter-scaled
-    // around their foot anchor by renderer.upright(), which turns flat
-    // top-down staging into a Diablo-style angled read without touching
-    // gameplay math (aim, movement and collision stay pure top-down).
-    this.baseTilt = 0.42;  // lower = more oblique. 0.66 read as top-down; 0.58 still too steep.
+    // True orthographic isometric camera shared with the Three.js room pass.
+    // World x/z both project diagonally; bodies are billboarded upright at
+    // their projected floor anchor so the rooms have depth without flattening
+    // the characters or changing collision-space coordinates.
+    this.isometric = true;
+    this.baseTilt = ISO_CAMERA.tilt;
     this.tilt = this.baseTilt;
     this.view = { left: 0, top: 0, w: 1280, h: 720, cx: 640, cy: 360 };
     this.cam = { x: 0, y: 0, tx: 0, ty: 0, zoom: 1, viewW: 1280, viewH: 720, shake: 0, sx: 0, sy: 0, rot: 0 };
@@ -60,7 +60,7 @@ export class Renderer {
     this._fogBlobs = [];
     for (let i = 0; i < 14; i++) {
       this._fogBlobs.push({
-        x: rand(0, 3200), y: rand(0, 2400), r: rand(220, 520),
+        x: rand(-1500, 2580), y: rand(-700, 1800), r: rand(220, 520),
         vx: rand(-8, 8), vy: rand(-4, 4), a: rand(0.015, 0.05), p: rand(0, TAU),
       });
     }
@@ -89,28 +89,23 @@ export class Renderer {
     this.canvas.style.height = this.h + 'px';
     this.light.width = Math.max(2, Math.floor(this.w * this.lightScale));
     this.light.height = Math.max(2, Math.floor(this.h * this.lightScale));
-    // Portrait fills the canvas. The clock and the thumbs float over the
-    // world — a reserved band read as a broken frame. Wide screens keep the
-    // tuned 3/4. Cover, don't zoom out: she stays near her old size, and the
-    // extra height is house, not void.
+    // A consistent 35.264° elevation is important: both the 2D gameplay
+    // plane and the real 3D room meshes use the same orthographic projection.
+    // Portrait is framed a little wider for touch play; landscape lets the
+    // architecture breathe without making the hunter feel tiny.
     const tall = this.h > this.w * 1.2 && this.h >= 620;
-    this.tilt = tall ? 0.56 : this.baseTilt;
+    this.tilt = this.baseTilt;
     this.view = { left: 0, top: 0, w: this.w, h: this.h, cx: this.w / 2, cy: this.h / 2 };
-    if (tall) {
-      /* How much of the house is in the frame. This used to be 1120 world px
-       * of floor, which on a 390px phone is a 6.9m slot: she filled a fifth
-       * of the width of it and the room read as a corridor she could not step
-       * around. 1400 is 8.6m — she is a fifth smaller on the screen, the
-       * furniture she has to walk between is in the shot, and the house is
-       * still close enough to read a face in it. */
-      const wide = this.view.w / 460;
-      const cover = this.h / (1400 * this.tilt);
-      this.cam.zoom = clamp(Math.max(wide, cover), 0.85, 1.18);
-    } else {
-      this.cam.zoom = clamp(this.view.w / 1010, 0.72, 1.9);
-    }
-    this.cam.viewW = this.view.w / this.cam.zoom;
-    this.cam.viewH = this.view.h / (this.cam.zoom * this.tilt);
+    this.cam.zoom = tall
+      ? clamp(this.w / 720, 0.48, 0.68)
+      : clamp(Math.min(this.w / 1100, this.h / 620), 0.72, 1.35);
+    // The inverse of an isometric viewport is a diamond. These are its
+    // conservative world-space half-extents, used for camera/bounds culling.
+    const a = this.cam.zoom * ISO_CAMERA.horizontal;
+    const b = this.cam.zoom * ISO_CAMERA.vertical;
+    const worldSpan = this.view.w / (2 * a) + this.view.h / (2 * b);
+    this.cam.viewW = worldSpan;
+    this.cam.viewH = worldSpan;
   }
 
   /* ---------------- camera ---------------- */
@@ -158,20 +153,28 @@ export class Renderer {
   screenToWorld(sx, sy) {
     const c = this.cam;
     const v = this.view;
-    return {
-      x: c.x + (sx - v.cx) / c.zoom,
-      y: c.y + (sy - v.cy) / (c.zoom * this.tilt),
-    };
+    const { horizontal: h, vertical: k } = ISO_CAMERA;
+    const u = (sx - v.cx) / (c.zoom * h);
+    const q = (sy - v.cy) / (c.zoom * k);
+    return { x: c.x + (u + q) * 0.5, y: c.y + (q - u) * 0.5 };
   }
 
   /** Inverse of the world camera (shake ignored — HUD cues must not jitter). */
   worldToScreen(x, y) {
     const c = this.cam;
     const v = this.view;
+    const { horizontal: h, vertical: k } = ISO_CAMERA;
+    const dx = x - c.x, dy = y - c.y;
     return {
-      x: v.cx + (x - c.x) * c.zoom,
-      y: v.cy + (y - c.y) * c.zoom * this.tilt,
+      x: v.cx + c.zoom * h * (dx - dy),
+      y: v.cy + c.zoom * k * (dx + dy),
     };
+  }
+
+  /** Project a floor-space vector into unzoomed isometric screen space. */
+  projectDelta(dx, dy) {
+    const { horizontal: h, vertical: k } = ISO_CAMERA;
+    return { x: h * (dx - dy), y: k * (dx + dy) };
   }
 
   /* ---------------- world drawing ---------------- */
@@ -188,21 +191,30 @@ export class Renderer {
     }
     const sh = this._shake === false ? 0 : 1;
     ctx.translate(v.cx + c.sx * sh, v.cy + c.sy * sh);
-    ctx.scale(c.zoom, c.zoom * this.tilt);
+    ctx.transform(
+      c.zoom * ISO_CAMERA.horizontal,
+      c.zoom * ISO_CAMERA.vertical,
+      -c.zoom * ISO_CAMERA.horizontal,
+      c.zoom * ISO_CAMERA.vertical,
+      0, 0,
+    );
     ctx.translate(-c.x, -c.y);
   }
 
   /**
-   * Counter-scale the oblique squash around an actor's foot anchor, so that
-   * body keeps standing tall while the floor beneath it stays foreshortened.
-   * Call between ctx.save()/restore() right before drawing the actor at
-   * world position (x, y=feet).
+   * Switch a world draw into an upright screen-facing billboard while keeping
+   * its feet pinned to the isometric floor point. `x,y` remain world coords,
+   * so existing entity draw code needs no coordinate rewrite.
    */
   upright(ctx, x, y) {
-    if (this.tilt === 1) return;
-    ctx.translate(x, y);
-    ctx.scale(1, 1 / this.tilt);
-    ctx.translate(-x, -y);
+    const p = this.worldToScreen(x, y);
+    const sh = this._shake === false ? 0 : 1;
+    const dpr = this.dpr, scale = this.cam.zoom;
+    ctx.setTransform(
+      dpr * scale, 0, 0, dpr * scale,
+      dpr * (p.x + this.cam.sx * sh - x * scale),
+      dpr * (p.y + this.cam.sy * sh - y * scale),
+    );
   }
 
   isVisible(x, y, pad = 80) {
@@ -255,16 +267,22 @@ export class Renderer {
   lightBegin(ambient) {
     const lc = this.lightCtx;
     // Faded dusk, not a black multiply. Callers should pass mansion.ambientFor.
-    const a = ambient ?? [164, 170, 184];
+    const ambientRgb = ambient ?? [164, 170, 184];
     lc.setTransform(1, 0, 0, 1, 0, 0);
     lc.globalCompositeOperation = 'source-over';
-    lc.fillStyle = `rgb(${a[0]},${a[1]},${a[2]})`;
+    lc.fillStyle = `rgb(${ambientRgb[0]},${ambientRgb[1]},${ambientRgb[2]})`;
     lc.fillRect(0, 0, this.light.width, this.light.height);
     const c = this.cam;
     const v = this.view;
-    const s = this.lightScale * c.zoom;
+    const sx = this.lightScale * c.zoom * ISO_CAMERA.horizontal;
+    const sy = this.lightScale * c.zoom * ISO_CAMERA.vertical;
+    const sh = this._shake === false ? 0 : 1;
     lc.globalCompositeOperation = 'lighter';
-    lc.setTransform(s, 0, 0, s * this.tilt, v.cx * this.lightScale - c.x * s, v.cy * this.lightScale - c.y * s * this.tilt);
+    lc.setTransform(
+      sx, sy, -sx, sy,
+      this.lightScale * (v.cx + c.sx * sh) - sx * c.x + sx * c.y,
+      this.lightScale * (v.cy + c.sy * sh) - sy * (c.x + c.y),
+    );
     this._lights = [];
   }
 
@@ -388,10 +406,13 @@ export class Renderer {
     const ctx = this.ctx;
     ctx.save();
     ctx.globalCompositeOperation = 'screen';
+    const halfX = this.cam.viewW / 2, halfY = this.cam.viewH / 2;
     for (const b of this._fogBlobs) {
       b.x += b.vx * dt; b.y += b.vy * dt; b.p += dt * 0.4;
-      if (b.x < -600) b.x = 3200; if (b.x > 3400) b.x = -400;
-      if (b.y < -600) b.y = 2500; if (b.y > 2700) b.y = -400;
+      if (b.x < this.cam.x - halfX - b.r) b.x = this.cam.x + halfX + b.r;
+      if (b.x > this.cam.x + halfX + b.r) b.x = this.cam.x - halfX - b.r;
+      if (b.y < this.cam.y - halfY - b.r) b.y = this.cam.y + halfY + b.r;
+      if (b.y > this.cam.y + halfY + b.r) b.y = this.cam.y - halfY - b.r;
       if (!this.isVisible(b.x, b.y, b.r)) continue;
       const r = b.r * (1 + Math.sin(b.p) * 0.08);
       const g = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, r);
@@ -501,6 +522,12 @@ export class Renderer {
     const ctx = this.ctx;
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+    if (color == null) {
+      // The canvas is the screen-space HUD layer in full-3D gameplay.
+      ctx.clearRect(0, 0, this.w, this.h);
+      return;
+    }
     ctx.fillStyle = color;
     ctx.fillRect(0, 0, this.w, this.h);
   }
@@ -625,17 +652,21 @@ export class Particles {
 /* ================= floor decals (blood, footprints, cracks) ================= */
 
 export class Decals {
-  constructor(max = 260) {
+  constructor(max = 260, bounds = null) {
     this.list = [];
     this.max = max;
+    this.originX = bounds ? Math.floor(bounds.x) : 0;
+    this.originY = bounds ? Math.floor(bounds.y) : 0;
     this.canvas = document.createElement('canvas');
-    this.canvas.width = 2560; this.canvas.height = 2304;
+    this.canvas.width = bounds ? Math.ceil(bounds.w) : 2560;
+    this.canvas.height = bounds ? Math.ceil(bounds.h) : 2304;
     this.ctx = this.canvas.getContext('2d');
     this.dirty = false;
   }
   splat(x, y, size, color = 'rgba(120,14,24,0.5)', n = 5) {
     const c = this.ctx;
     c.save();
+    c.translate(-this.originX, -this.originY);
     for (let i = 0; i < n; i++) {
       const a = rand(0, TAU), d = rand(0, size);
       const r = rand(size * 0.18, size * 0.5);
@@ -650,6 +681,7 @@ export class Decals {
   print(x, y, angle, color = 'rgba(90,10,18,0.28)', size = 6) {
     const c = this.ctx;
     c.save();
+    c.translate(-this.originX, -this.originY);
     c.translate(x, y); c.rotate(angle);
     c.fillStyle = color;
     c.beginPath();
@@ -659,9 +691,11 @@ export class Decals {
     c.beginPath(); c.ellipse(-size * 0.6, -size * 0.7, size * 0.28, size * 0.2, 0, 0, TAU); c.fill();
     c.beginPath(); c.ellipse(-size * 0.6, size * 0.7, size * 0.28, size * 0.2, 0, 0, TAU); c.fill();
     c.restore();
+    this.dirty = true;
   }
   draw(ctx) {
     if (!this.dirty) return;
-    ctx.drawImage(this.canvas, 0, 0);
+    ctx.drawImage(this.canvas, this.originX, this.originY);
+    this.dirty = false;
   }
 }

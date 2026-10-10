@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { VALEN_CLIPS, VALEN_MODEL_URL, valenClipForState } from '../src/game/valen3d.js';
 import {
   ENEMY_GLB_CAP, ENEMY_MODELS, ENEMY_CLIP_CONTRACT, FORBIDDEN_STANDINS,
-  SlotBook, behaviorReady, requiredClips, selectGlbSlots, standinViolation,
+  SlotBook, behaviorReady, enemyClipForState, requiredClips, selectGlbSlots, standinViolation,
 } from '../src/game/enemy3d.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -186,18 +186,73 @@ if (zombie) {
   const names = (json.animations || []).map((animation) => animation.name).sort();
   ok('zombie clips are exactly the uploaded set',
     names.length === ZOMBIE_CLIPS.length && ZOMBIE_CLIPS.every((name) => names.includes(name)), names.join(', '));
-  const verdict = behaviorReady('zombie', names);
-  // Owner mapping: flee/cast/defeat/depressed ARE the walk, attack, die and
-  // idle of this file, named the way Tripo names them.
-  ok('zombie is behavior-ready on the owner clip map',
-    verdict.ready === true && verdict.missing.length === 0, verdict.missing.join(', '));
+  ok('legacy zombie remains auditable but is no longer assigned to a live role',
+    !Object.values(ENEMY_MODELS).some((spec) => spec.url === `./${ZOMBIE_NAME}`), names.join(', '));
 }
-ok('registry maps the whole roster onto the vendored bodies',
-  ['zombie', 'crawler', 'ghoul', 'hunter', 'stalker'].every((key) => ENEMY_MODELS[key].url === `./${ZOMBIE_NAME}`)
-    && ENEMY_MODELS.zombie.map.die === 'defeat_03'
-    && ENEMY_MODELS.zombie.map.walk === 'flee_02' && ENEMY_MODELS.zombie.map.attack === 'cast_a_spell');
-ok('every behaviour in the contract is named in the map', standinViolation('zombie').length === 0
-  && FORBIDDEN_STANDINS.zombie.length === 0 && (ENEMY_MODELS.zombie.map.idle || '') === 'depressed');
+const ULTIMATE_MONSTERS = [
+  {
+    key: 'zombie', path: 'assets/monsters/ultimate/demon.glb', url: './assets/monsters/ultimate/demon.glb',
+    source: 'Demon-LnfIziKv4o.glb', sha256: '7da854e1d43428b89b1afca0feca3f323b869b1d8ed7df74d17354260b607262',
+    clips: { walk: 'CharacterArmature|Walk', run: 'CharacterArmature|Run', attack: 'CharacterArmature|Punch', die: 'CharacterArmature|Death', hurt: 'CharacterArmature|HitReact', idle: 'CharacterArmature|Idle' },
+  },
+  {
+    key: 'crawler', path: 'assets/monsters/ultimate/green-spiky-blob.glb', url: './assets/monsters/ultimate/green-spiky-blob.glb',
+    source: 'Green Spiky Blob.glb', sha256: 'ad5e8b1cdf8c0d328b4b44537d3da8fa98119a9a99fb6163e2f325dbb8bbecc1',
+    clips: { walk: 'CharacterArmature|Walk', attack: 'CharacterArmature|Bite_Front', die: 'CharacterArmature|Death', hurt: 'CharacterArmature|HitRecieve', idle: 'CharacterArmature|Idle' },
+  },
+  {
+    key: 'hunter', path: 'assets/monsters/ultimate/blue-demon.glb', url: './assets/monsters/ultimate/blue-demon.glb',
+    source: 'Blue Demon.glb', sha256: '6a8e743deba6f43f0f9b1e702016b04ddba1d3bf73b7101d2c86d64ae526f87c',
+    clips: { walk: 'CharacterArmature|Walk', run: 'CharacterArmature|Run', attack: 'CharacterArmature|Punch', die: 'CharacterArmature|Death', hurt: 'CharacterArmature|HitReact', idle: 'CharacterArmature|Idle' },
+  },
+  {
+    key: 'ghoul', path: 'assets/monsters/ultimate/ghost-skull.glb', url: './assets/monsters/ultimate/ghost-skull.glb',
+    source: 'Ghost Skull.glb', sha256: 'd1e2268fe9621583ff879d6e6e3ace80b0a6a2373ec0139a8139c88fe6e4d942',
+    clips: { walk: 'CharacterArmature|Fast_Flying', run: 'CharacterArmature|Fast_Flying', attack: 'CharacterArmature|Headbutt', die: 'CharacterArmature|Death', hurt: 'CharacterArmature|HitReact', idle: 'CharacterArmature|Flying_Idle' },
+  },
+  {
+    key: 'stalker', path: 'assets/monsters/ultimate/yeti.glb', url: './assets/monsters/ultimate/yeti.glb',
+    source: 'Yeti-ceRHrn8HHE.glb', sha256: '789fcdd3d32a1bf6ceaa0e30f9ac5d8d2c52d15fa0181d4d1d980a1b2a2ac869',
+    clips: { run: 'CharacterArmature|Run', attack: 'CharacterArmature|Punch', die: 'CharacterArmature|Death', hurt: 'CharacterArmature|HitReact', idle: 'CharacterArmature|Idle' },
+  },
+];
+let monsterBytes = 0;
+for (const model of ULTIMATE_MONSTERS) {
+  const file = path.join(ROOT, model.path);
+  const bytes = fs.existsSync(file) ? fs.readFileSync(file) : null;
+  const glb = bytes ? readGlb(file) : null;
+  const digest = bytes ? createHash('sha256').update(bytes).digest('hex') : '';
+  const names = glb ? (glb.json.animations || []).map((animation) => animation.name) : [];
+  monsterBytes += bytes?.length || 0;
+  ok(`${model.key} uses a valid rigged GLB copied from ${model.source}`,
+    !!glb && (glb.json.meshes || []).length > 0 && (glb.json.skins || []).length > 0 && bytes.length < 1024 * 1024,
+    glb ? `${bytes.length} bytes, ${glb.json.skins[0].joints.length} joints` : 'missing or unreadable');
+  ok(`${model.key} source GLB is unchanged`, digest === model.sha256, digest);
+  const verdict = behaviorReady(model.key, names);
+  ok(`${model.key} has mapped idle/hurt/locomotion/attack/death clips`,
+    verdict.ready && Object.entries(model.clips).every(([behavior, name]) => ENEMY_MODELS[model.key].map[behavior] === name && names.includes(name)),
+    verdict.missing.join(', '));
+}
+ok('five distinct CC0 monster rigs are wired to the five non-werewolf roles',
+  ULTIMATE_MONSTERS.every((model) => ENEMY_MODELS[model.key].url === model.url)
+    && new Set(ULTIMATE_MONSTERS.map((model) => ENEMY_MODELS[model.key].url)).size === 5
+    && monsterBytes < 3 * 1024 * 1024,
+  `${ULTIMATE_MONSTERS.length} separate rigs, ${monsterBytes} total bytes`);
+ok('monster assets include their CC0 provenance note',
+  fs.existsSync(path.join(ROOT, 'assets/monsters/ultimate/CREDITS.txt'))
+    && /CC0 1\.0/i.test(fs.readFileSync(path.join(ROOT, 'assets/monsters/ultimate/CREDITS.txt'), 'utf8')));
+ok('the late-game Stalker uses its Yeti rig, not the old zombie or wolf rig',
+  ENEMY_MODELS.stalker.url === './assets/monsters/ultimate/yeti.glb'
+    && ENEMY_MODELS.stalker.map.die === 'CharacterArmature|Death'
+    && ENEMY_MODELS.stalker.map.run === 'CharacterArmature|Run'
+    && ENEMY_MODELS.stalker.map.attack === 'CharacterArmature|Punch');
+ok('the local werewolf retains its own run/strike/death rig',
+  ENEMY_MODELS.werewolf.url === './werewolf-3d-model.glb'
+    && ENEMY_MODELS.werewolf.map.die === 'fall.001'
+    && ENEMY_MODELS.werewolf.map.run === 'angry_02.001'
+    && ENEMY_MODELS.werewolf.map.attack === 'front_kick_02.001');
+ok('every behaviour avoids forbidden stand-ins', Object.keys(ENEMY_MODELS).every((key) => standinViolation(key).length === 0
+  && (FORBIDDEN_STANDINS[key] || []).length === 0));
 
 /** The werewolf upload is an FBX inside a zip. Converted once, vendored, byte-exact. */
 const WOLF_NAME = 'werewolf-3d-model.glb';
@@ -232,28 +287,48 @@ ok('the converted werewolf is wired on the owner clip map',
     && ENEMY_MODELS.werewolf.map.attack === 'front_kick_02.001'
     && ENEMY_MODELS.werewolf.map.idle === 'box_02.001');
 const wolfZip = path.join(ROOT, 'werewolf+3d+model.zip');
-ok('clip contract matches the roster',
-  requiredClips('zombie').join(',') === 'walk,attack,die'
+ok('clip contract matches the roster, including pack hit reactions',
+  requiredClips('zombie').join(',') === 'walk,attack,die,hurt'
     && requiredClips('werewolf').join(',') === 'run,attack,die'
+    && Object.keys(ENEMY_MODELS).filter((key) => key !== 'werewolf').every((key) => requiredClips(key).includes('hurt'))
     && ENEMY_CLIP_CONTRACT.crawler.includes('walk')
     && ENEMY_CLIP_CONTRACT.stalker.includes('attack'));
+ok('damage and stagger choose the mapped hit reaction, while death retains priority',
+  enemyClipForState('zombie', { state: 'strike', hurtFlash: 0.45 }) === 'hurt'
+    && enemyClipForState('crawler', { state: 'hunt', staggerT: 0.3 }) === 'hurt'
+    && enemyClipForState('zombie', { state: 'dying', hurtFlash: 1 }) === 'die'
+    && enemyClipForState('werewolf', { state: 'hunt', hurtFlash: 1 }) === 'idle');
 
-const swarm = Array.from({ length: 24 }, (_, i) => ({ id: i + 1, key: 'zombie', dead: false, x: i * 40, y: 0 }));
+const swarm = Array.from({ length: ENEMY_GLB_CAP + 16 }, (_, i) => ({ id: i + 1, key: 'zombie', dead: false, x: i * 40, y: 0 }));
 const nearest = selectGlbSlots(swarm, { x: 0, y: 0 }, ENEMY_GLB_CAP, () => true);
-ok('nearest cap keeps eight skinned slots', nearest.length === ENEMY_GLB_CAP && nearest[0].id === 1 && nearest[7].id === 8,
-  nearest.map((e) => e.id).join(','));
-ok('a model that is not ready stays on the 2D path', selectGlbSlots(swarm, { x: 0, y: 0 }, ENEMY_GLB_CAP, () => false).length === 0);
-const dead = selectGlbSlots([{ id: 1, key: 'zombie', dead: true, x: 0, y: 0 }], { x: 0, y: 0 }, ENEMY_GLB_CAP, () => true);
-ok('a corpse does not take a skinned slot', dead.length === 0);
+ok(`nearest cap keeps ${ENEMY_GLB_CAP} skinned slots`, nearest.length === ENEMY_GLB_CAP
+  && nearest[0].id === 1 && nearest.at(-1).id === ENEMY_GLB_CAP, nearest.map((e) => e.id).join(','));
+ok('an unready model stays unassigned instead of receiving a placeholder',
+  selectGlbSlots(swarm, { x: 0, y: 0 }, ENEMY_GLB_CAP, () => false).length === 0);
+const combatants = Array.from({ length: 14 }, (_, i) => ({ id: 100 + i, key: 'zombie', x: 500 + i * 20, y: 0 }));
+const crowd = Array.from({ length: 24 }, (_, i) => ({ id: 1000 + i, key: 'zombie', _crowd: true, x: i * 12, y: 0 }));
+const siege = selectGlbSlots([...crowd, ...combatants], { x: 0, y: 0 }, ENEMY_GLB_CAP, () => true);
+ok('all 14 combatants receive GLBs; siege crowd does not consume combat slots',
+  siege.length === 14 && siege.every((e) => !e._crowd));
+ok('reduced-AI siege bodies are not sent to the rig pool',
+  selectGlbSlots(crowd, { x: 0, y: 0 }, ENEMY_GLB_CAP, () => true).length === 0);
+const dyingEnemy = { id: 1, key: 'zombie', dead: true, deathT: 0.25, x: 0, y: 0 };
+const deathSlot = selectGlbSlots([dyingEnemy], { x: 0, y: 0 }, ENEMY_GLB_CAP, () => true);
+ok('a recent death can keep a spare skinned slot for its animation', deathSlot.length === 1 && deathSlot[0] === dyingEnemy);
+const expiredDeath = selectGlbSlots([{ ...dyingEnemy, id: 2, deathT: 1.5 }], { x: 0, y: 0 }, ENEMY_GLB_CAP, () => true);
+ok('an expired death clip releases its skinned slot', expiredDeath.length === 0);
+const dyingWhenFull = [...swarm.slice(0, ENEMY_GLB_CAP), { ...dyingEnemy, id: 99 }];
+const fullPriority = selectGlbSlots(dyingWhenFull, { x: 0, y: 0 }, ENEMY_GLB_CAP, () => true);
+ok('living actors keep priority over death clips at the mobile rig cap', fullPriority.length === ENEMY_GLB_CAP && fullPriority.every((e) => !e.dead));
 
 const book = new SlotBook(ENEMY_GLB_CAP);
 book.sync(nearest);
 ok('pool builds one instance per live slot', book.made === ENEMY_GLB_CAP && book.live.length === ENEMY_GLB_CAP);
 book.sync([]);
-const again = Array.from({ length: 8 }, (_, i) => ({ id: 100 + i, key: 'zombie', dead: false, x: i, y: 0 }));
+const again = Array.from({ length: ENEMY_GLB_CAP }, (_, i) => ({ id: 100 + i, key: 'zombie', dead: false, x: i, y: 0 }));
 const reused = book.sync(again);
-ok('death returns the instance; the next spawn does not allocate', reused.made === ENEMY_GLB_CAP && reused.live === 8 && reused.free === 0);
-const crush = book.sync(Array.from({ length: 20 }, (_, i) => ({ id: 200 + i, key: 'zombie', dead: false, x: i * 10, y: 9 })));
+ok('death returns the instance; the next spawn does not allocate', reused.made === ENEMY_GLB_CAP && reused.live === ENEMY_GLB_CAP && reused.free === 0);
+const crush = book.sync(Array.from({ length: ENEMY_GLB_CAP + 12 }, (_, i) => ({ id: 200 + i, key: 'zombie', dead: false, x: i * 10, y: 9 })));
 ok('a full swarm cannot grow the pool past the cap', crush.live === ENEMY_GLB_CAP && crush.made === ENEMY_GLB_CAP && crush.starved === 12);
 
 const enemyCode = fs.readFileSync(path.join(ROOT, 'src/game/enemy3d.js'), 'utf8');
@@ -308,15 +383,18 @@ for (const name of KIT_FILES) {
 }
 ok('the whole vendored kit is present and unchanged', KIT_FILES.length === 21 && kitMeshes >= 21);
 
-const credits = path.join(ROOT, 'assets', 'env-kit', 'CREDITS.md');
+const credits = path.join(ROOT, 'assets', 'env-kit', 'CREDITS.txt');
 ok('the kit ships its licence note', fs.existsSync(credits) && /CC0/i.test(fs.readFileSync(credits, 'utf8')));
 
 const envCode = fs.readFileSync(path.join(ROOT, 'src/game/envkit.js'), 'utf8');
 ok('the env reads the vendored kit and nothing else',
   envCode.includes("./assets/env-kit/") && envCode.includes('KIT_SCALE')
     && envCode.includes('Valen3D.scene') && !/\.fbx|\.zip/i.test(envCode));
-ok('a missing piece never blocks a night',
-  /this\.failed = true/.test(envCode) && /never blocks on an asset/.test(envCode));
+const worldCode = fs.readFileSync(path.join(ROOT, 'src/game/world3d.js'), 'utf8');
+const gameplayCode = fs.readFileSync(path.join(ROOT, 'src/game/game.js'), 'utf8');
+ok('a missing WebGL piece reports a 3D error instead of painting a Canvas fallback',
+  /this\.failed = true/.test(envCode) && /EnvKit\.failed/.test(worldCode)
+    && /3D MANSION COULD NOT BE BUILT/.test(gameplayCode) && !/renderWorld\(/.test(gameplayCode));
 
 const mansionCode = fs.readFileSync(path.join(ROOT, 'src/game/mansion.js'), 'utf8');
 ok('a door with a mesh does not also paint its twin', mansionCode.includes('e.env3d'));
@@ -329,9 +407,11 @@ const gameCode = fs.readFileSync(path.join(ROOT, 'src', 'game', 'game.js'), 'utf
 const weaponsCode = fs.readFileSync(path.join(ROOT, 'src', 'game', 'weapons.js'), 'utf8');
 const coachCode = fs.readFileSync(path.join(ROOT, 'src', 'game', 'coach.js'), 'utf8');
 
-ok('floor, walls and props are instanced, never one object each',
+const uniqueDecorMeshes = (envCode.match(/new THREE\.Mesh\(/g) || []).length;
+ok('architecture and repeated props are instanced; only the unique animated clock uses separate meshes',
   /_instanced\(/.test(envCode) && /buildRoom\(/.test(envCode) && /buildProps\(/.test(envCode)
-    && !/new THREE\.Mesh\(/.test(envCode));
+    && /new THREE\.InstancedMesh\(/.test(envCode) && /buildDetailProps\(/.test(envCode)
+    && /grandfather-clock-3d/.test(envCode) && uniqueDecorMeshes === 7);
 
 // every piece named in the issue has to be placed by something
 const propsCode = envCode.slice(envCode.indexOf('buildProps(mansion)'), envCode.indexOf('Point every mesh at the door state'));
@@ -353,8 +433,9 @@ ok('the grand staircase is kit stairs, not paint',
     && /stairs: \[\]/.test(envCode));
 ok('furniture stands on the middle of the rect it is drawn from, not its corner',
   /f\.x \+ \(f\.w \|\| 0\) \/ 2/.test(envCode) && /f\.y \+ \(f\.h \|\| 0\) \/ 2/.test(envCode));
-ok('a prop with a mesh does not also paint its twin',
-  /f\.env3d/.test(mansionCode) && /p\.env3d/.test(mansionCode) && /f\.env3d/.test(gameCode));
+ok('every mapped/custom furniture and prop suppresses its retired Canvas twin',
+  /f\.env3d/.test(mansionCode) && /p\.env3d/.test(mansionCode)
+    && /f\.env3d = true/.test(envCode) && /p\.env3d = true/.test(envCode));
 ok('the reach is measured as the room is drawn, not on the floor',
   /swingDist\(/.test(gameCode) && /swingDist\(/.test(coachCode) && /tilt/.test(weaponsCode));
 ok('a swing dead to the right keeps its aim', /swingAngle \?\? player\.angle/.test(gameCode));

@@ -1,4 +1,4 @@
-/* LAST NIGHT — the service worker, off the page and into a sandbox.
+/* DUSKHOLD — the service worker, off the page and into a sandbox.
  *
  * sw.js is the one file in the Play bundle that sits between the player and
  * money: it is handed every request the game makes, including /api/order and
@@ -43,7 +43,7 @@ async function fakeFetch(url) {
   net.calls.push(url);
   if (net.handler) return net.handler(url);
   // Serve the real files, so the assertions are about the game and not a stub.
-  const rel = decodeURIComponent(new URL(url, 'https://lastnight.example').pathname).replace(/^\//, '');
+  const rel = decodeURIComponent(new URL(url, 'https://duskhold.example').pathname).replace(/^\//, '');
   const file = path.join(ROOT, rel);
   if (rel && fs.existsSync(file) && fs.statSync(file).isFile()) {
     return new Response(fs.readFileSync(file, 'utf8'), { status: 200, headers: { 'Content-Type': 'text/html' } });
@@ -69,13 +69,13 @@ const sandbox = {
   },
   fetch: (req) => fakeFetch(typeof req === 'string' ? req : req.url),
   navigator: { language: 'en-US' },
-  location: { origin: 'https://lastnight.example', protocol: 'https:' },
+  location: { origin: 'https://duskhold.example', protocol: 'https:' },
   setTimeout, clearTimeout,
   self: {
     addEventListener: (type, fn) => { handlers[type] = fn; },
     skipWaiting: async () => {},
     clients: { claim: async () => {} },
-    location: { origin: 'https://lastnight.example' },
+    location: { origin: 'https://duskhold.example' },
   },
 };
 sandbox.self.location = sandbox.location;
@@ -96,12 +96,13 @@ const req = (url, opts = {}) => ({
   clone() { return req(url, opts); },
 });
 
-console.log('LAST NIGHT — service worker\n');
+console.log('DUSKHOLD — service worker\n');
 
 /* ---------- install ---------- */
 await fire('install', null);
 const cacheNames = [...stores.keys()];
 ok(cacheNames.length === 1, `install opens one cache (${cacheNames[0] || 'none'})`);
+ok(cacheNames[0] === 'duskhold-v5', 'the new brand uses the duskhold-v5 cache version');
 const shell = stores.get(cacheNames[0]);
 ok(shell && shell.size >= 8, `the shell is precached (${shell ? shell.size : 0} entries)`);
 ok(!!(shell && shell.get('./offline.html')), 'offline.html is in it');
@@ -114,12 +115,12 @@ ok(!stores.has('lastnight-old'), 'activate drops a cache from an older version')
 /* ---------- what must never be touched ---------- */
 net.calls.length = 0;
 let responded = false;
-const postEvent = { request: req('https://lastnight.example/api/order', { method: 'POST' }), respondWith: () => { responded = true; } };
+const postEvent = { request: req('https://duskhold.example/api/order', { method: 'POST' }), respondWith: () => { responded = true; } };
 handlers.fetch(postEvent);
 ok(!responded, 'a POST is not answered at all (no payment call is ever cached)');
 
 responded = false;
-handlers.fetch({ request: req('https://lastnight.example/api/privacy/delete'), respondWith: () => { responded = true; } });
+handlers.fetch({ request: req('https://duskhold.example/api/privacy/delete'), respondWith: () => { responded = true; } });
 ok(!responded, 'GET /api/privacy/delete is not answered either');
 
 responded = false;
@@ -127,7 +128,7 @@ handlers.fetch({ request: req('https://midtrans.example/snap'), respondWith: () 
 ok(!responded, 'a cross-origin request is left to the browser');
 
 /* ---------- assets: cache first, refresh behind ---------- */
-const glb = 'https://lastnight.example/hunter_run_walk_claw_sword_shot.glb';
+const glb = 'https://duskhold.example/hunter_run_walk_claw_sword_shot.glb';
 net.handler = async () => new Response('glb-bytes', { status: 200 });
 let res = await fire('fetch', req(glb));
 ok(!!res, 'a same-origin asset is answered');
@@ -145,19 +146,19 @@ ok(!!shell.get(glb), 'while the network copy refreshes in the background');
 
 /* ---------- navigation, with the network gone ---------- */
 net.handler = async () => { throw new Error('offline'); };
-res = await fire('fetch', req('https://lastnight.example/index.html', { mode: 'navigate' }));
+res = await fire('fetch', req('https://duskhold.example/index.html', { mode: 'navigate' }));
 const offlineHtml = res ? await res.text() : '';
 ok(!!res, 'a navigation offline is still answered');
-ok(/<canvas id="game"|Last Night/.test(offlineHtml),
+ok(/<canvas id="game"|DUSKHOLD/.test(offlineHtml),
   'and what comes back is the game itself — the house plays with no network');
 
 // Now with nothing behind it: a first-ever launch, offline. That is the one
 // case the offline page exists for.
 shell.delete('./index.html');
-res = await fire('fetch', req('https://lastnight.example/index.html', { mode: 'navigate' }));
+res = await fire('fetch', req('https://duskhold.example/index.html', { mode: 'navigate' }));
 const fallback = res ? await res.text() : '';
 ok(!!res, 'a first launch offline is answered too');
-ok(/Last Night/.test(fallback) && !/<canvas id="game"/.test(fallback),
+ok(/DUSKHOLD/.test(fallback) && !/<canvas id="game"/.test(fallback),
   'with the offline page, because there is no game on the phone yet');
 
 net.handler = null;

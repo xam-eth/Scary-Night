@@ -5,7 +5,7 @@
     ],
     "target": {
       "namespace": "android_app",
-      "package_name": "com.xameth.lastnight",
+      "package_name": "com.zyvrolabs.duskhold",
       "sha256_certificates": [
         "REPLACE_WITH_THE_SHA256_FROM_bubblewrap_fingerprint_OR_PLAY_CONSOLE"
       ]

@@ -1,4 +1,4 @@
-/* LAST NIGHT — the Play bundle driver.
+/* DUSKHOLD — the Play bundle driver.
  *
  *   node tools/bundle.mjs check      everything that can be checked without
  *                                    a JDK (manifest, icons, service worker,
@@ -32,7 +32,7 @@ const fail = (msg) => { console.error(`\n  FAIL  ${msg}`); process.exit(1); };
 const pathIn = (p) => path.join(ROOT, p.replace(/^\.?\//, ''));
 
 function cfg() {
-  if (!fs.existsSync(CFG_PATH)) fail(`no ${path.relative(ROOT, CFG_PATH)} — copy the template and set your host`);
+  if (!fs.existsSync(CFG_PATH)) fail(`no ${path.relative(ROOT, CFG_PATH)} — copy the template and configure the HTTPS origin`);
   return JSON.parse(fs.readFileSync(CFG_PATH, 'utf8'));
 }
 
@@ -195,7 +195,7 @@ function makeKey() {
   if (fs.existsSync(keyPath)) { log(`  keystore already exists: ${path.relative(ROOT, keyPath)}`); return keyPath; }
   const secret = path.join(ANDROID, 'signing.local.json');
   const pass = Array.from({ length: 24 }, () => 'abcdefghjkmnpqrstuvwxyzACDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 54)]).join('');
-  const dname = `CN=LAST NIGHT, OU=Game, O=${new URL(c.host).host}, L=., S=., C=ID`;
+  const dname = `CN=DUSKHOLD, OU=Game, O=${new URL(c.host).host}, L=., S=., C=ID`;
   execFileSync(kt, [
     '-genkeypair', '-v', '-keystore', keyPath, '-alias', c.signingKey.alias,
     '-keyalg', 'RSA', '-keysize', '2048', '-validity', '10000',
@@ -285,7 +285,7 @@ else if (CMD === 'check') {
   process.exit(r.status ?? 0);
 } else {
   log([
-    'LAST NIGHT — Play bundle',
+    'DUSKHOLD — Play bundle',
     '',
     '  node tools/bundle.mjs check      validate everything that needs no JDK',
     '  node tools/bundle.mjs prepare    write the web manifest, asset links and twa-manifest',

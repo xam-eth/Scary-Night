@@ -1,8 +1,8 @@
 {
-  "packageId": "com.xameth.lastnight",
-  "host": "your.host",
-  "name": "LAST NIGHT",
-  "launcherName": "LAST NIGHT",
+  "packageId": "com.zyvrolabs.duskhold",
+  "host": "duskhold.zyvrolabs.com",
+  "name": "DUSKHOLD",
+  "launcherName": "DUSKHOLD",
   "display": "standalone",
   "orientation": "portrait",
   "themeColor": "#05060b",
@@ -14,18 +14,18 @@
   "backgroundColor": "#05060b",
   "enableNotifications": false,
   "startUrl": "/index.html",
-  "iconUrl": "https://your.host/assets/brand/icon-512.png",
-  "maskableIconUrl": "https://your.host/assets/brand/icon-maskable-512.png",
+  "iconUrl": "https://duskhold.zyvrolabs.com/assets/brand/icon-512.png",
+  "maskableIconUrl": "https://duskhold.zyvrolabs.com/assets/brand/icon-maskable-512.png",
   "splashScreenFadeOutDuration": 300,
   "signingKey": {
-    "path": "./android/lastnight-upload.jks",
-    "alias": "lastnight"
+    "path": "./android/duskhold-upload.jks",
+    "alias": "duskhold"
   },
   "appVersionCode": 1,
   "appVersion": "1.0.0",
   "shortcuts": [],
   "generatorApp": "Bubblewrap",
-  "webManifestUrl": "https://your.host/manifest.webmanifest",
+  "webManifestUrl": "https://duskhold.zyvrolabs.com/manifest.webmanifest",
   "fallbackType": "customtabs",
   "features": {
     "playBilling": {
@@ -38,7 +38,7 @@
   "enableSiteSettingsShortcut": false,
   "isChromeOSOnly": false,
   "isMetaQuest": false,
-  "fullScopeUrl": "https://your.host/",
+  "fullScopeUrl": "https://duskhold.zyvrolabs.com/",
   "minSdkVersion": 23,
   "orientationLock": false,
   "fingerprints": [],

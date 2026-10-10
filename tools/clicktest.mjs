@@ -10,6 +10,7 @@
  * empty immediate-mode list.
  *
  *   node tools/clicktest.mjs [--url=http://...]
+ *   node tools/clicktest.mjs --privacy-only [--url=http://...]
  */
 
 import fs from 'node:fs';
@@ -69,7 +70,17 @@ try {
   await browser.close();
   process.exit(1);
 }
-await sleep(1500);
+await sleep(500);
+await page.waitForFunction(() => {
+  const diag = window.__LN_API && window.__LN_API.enemy3d && window.__LN_API.enemy3d();
+  const types = diag && diag.types;
+  return !!(types && (Object.values(types).every((type) => type.behaviorReady)
+    || Object.values(types).some((type) => type.failed)));
+}, { timeout: 60000, polling: 100 });
+const modelLoad = await page.evaluate(() => window.__LN_API.enemy3d());
+if (Object.values(modelLoad.types || {}).some((type) => type.failed || !type.behaviorReady)) {
+  throw new Error(`cannot run live click test: enemy roster not behavior-ready (${Object.entries(modelLoad.types || {}).filter(([, type]) => !type.behaviorReady).map(([key]) => key).join(', ')})`);
+}
 
 /* ---------- deterministic pump ---------- */
 // letFrame = one real rAF tick if the browser grants one; pump = guaranteed
@@ -112,6 +123,31 @@ const clickOk = async (label, want) => {
   return { pass, why: `screen=${got}` };
 };
 
+// Fast focused regression gate for the nested Privacy route; the full suite
+// also covers it, but takes several minutes because it plays multiple screens.
+if (arg['privacy-only']) {
+  console.log('=== SETTINGS → PRIVACY (focused route) ===');
+  const hasConsent = await page.evaluate(() => window.__LN.ui.some((button) => button.label === 'I UNDERSTAND'));
+  if (hasConsent) {
+    const consent = await clickOk('I UNDERSTAND', 'menu');
+    ok('consent reaches the menu', consent.pass, consent.why);
+  }
+  if (await screen() !== 'menu') {
+    await page.evaluate(() => window.__LN.toMenu());
+    await pump(2);
+  }
+  const settings = await clickOk('SETTINGS', 'settings');
+  ok('menu → settings', settings.pass, settings.why);
+  const backTarget = await page.evaluate(() => window.__LN.settingsReturn || 'menu');
+  const privacy = await clickOk('PRIVACY & DELETE', 'privacy');
+  ok('settings → privacy', privacy.pass, privacy.why);
+  const back = await clickOk('BACK', backTarget);
+  ok(`privacy → ${backTarget}`, back.pass, back.why);
+  ok('no browser runtime errors', errors.length === 0, errors.join(' | '));
+  await browser.close();
+  process.exit(fails ? 1 : 0);
+}
+
 console.log('\n=== CONSENT GATE ===');
 // v1.0 added a privacy consent card in front of the menu (game.save.privacyAck).
 // On a clean profile every menu button is behind "I UNDERSTAND" — without
@@ -134,7 +170,7 @@ const t1 = await page.evaluate(() => window.__LN.now);
 ok('update+render pump works (state advances)', t1 > t0, `Δ=${(t1 - t0).toFixed(3)}s`);
 
 console.log('\n=== MENU BUTTONS (real clicks) ===');
-for (const [label, expect] of [['UPGRADES', 'upgrades'], ['BLOOD MARKET', 'shop'], ['COLLECTION', 'collection'], ['SETTINGS', 'settings'], ['PRIVACY', 'privacy']]) {
+for (const [label, expect] of [['UPGRADES', 'upgrades'], ['BLOOD MARKET', 'shop'], ['COLLECTION', 'collection'], ['SETTINGS', 'settings']]) {
   const r = await clickOk(label, expect);
   ok(`click ${label} → ${expect}`, r.pass, r.why);
   if ((await screen()) !== 'menu') { await clickLabel('BACK'); await pump(2); }
@@ -183,6 +219,14 @@ console.log('\n=== SETTINGS SCREEN (toggles + sliders by click) ===');
 await settle(['death', 'intro', 'playing', 'menu'], 400);
 if ((await screen()) !== 'menu') { await page.evaluate(() => window.__LN.toMenu()); await pump(2); }
 await clickOk('SETTINGS', 'settings');
+{
+  const backTarget = await page.evaluate(() => window.__LN.settingsReturn || 'menu');
+  const privacy = await clickOk('PRIVACY & DELETE', 'privacy');
+  ok('settings→privacy reaches the privacy screen', privacy.pass, privacy.why);
+  const back = await clickOk('BACK', backTarget);
+  ok('privacy→back returns to its parent screen', back.pass, back.why);
+  if ((await screen()) !== 'settings') await clickOk('SETTINGS', 'settings');
+}
 {
   const r = await page.evaluate(() => {
     const g = window.__LN;

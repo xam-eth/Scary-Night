@@ -1,4 +1,4 @@
-/* LAST NIGHT — the service worker.
+/* DUSKHOLD — the service worker.
  *
  * Two jobs, in this order:
  *
@@ -6,10 +6,10 @@
  *     Bubblewrap will not call the site a PWA — without a fetch handler.
  *
  *  2. Make a second night load like a second night. Everything the game is
- *     (the vendored three.js, the three character GLBs, the photographed
- *     rooms, the kit) is static and same-origin, so after one full play the
- *     whole house is already on the phone. A TWA that has to fetch the
- *     hunter GLB before it can draw her is a TWA that shows a black screen.
+  *     (the vendored three.js, player and enemy GLBs, the rooms and kit) is
+  *     static and same-origin, so the first load caches the whole house and
+  *     its monster rigs. A TWA that has to fetch a body before it can draw is
+  *     a TWA that shows a black screen.
  *
  * What it must never do: cache a payment call. The web rail talks to
  * /api/order, /api/verify and /api/privacy/delete. Those are POSTs with
@@ -21,7 +21,7 @@
  * (see docs/PLAY-BUNDLE.md) — the old cache is dropped on activate.
  */
 
-const VERSION = 'lastnight-v1';
+const VERSION = 'duskhold-v5';
 const CACHE = VERSION;
 
 /* The shell: what has to be there for the first paint on a cold start.
@@ -30,12 +30,16 @@ const CACHE = VERSION;
 const SHELL = [
   './index.html',
   './styles.css',
+  './assets/fonts/im-fell-english-sc-latin-400-normal.woff2',
+  './assets/fonts/special-elite-latin-400-normal.woff2',
   './offline.html',
   './manifest.webmanifest',
   './assets/brand/icon-192.png',
   './assets/brand/icon-512.png',
   './assets/brand/icon-maskable-512.png',
   './assets/brand/loading-9x16.jpg',
+  './assets/brand/menu-9x16-clean.jpg',
+  './assets/brand/wordmark-duskhold-lockup.png',
 ];
 
 self.addEventListener('install', (event) => {

@@ -80,7 +80,7 @@ export const PLAYER = {
   radius: 13,
   walkSpeed: 122,
   runSpeed: 196,
-  accel: 16,           // how fast velocity chases the target (higher = snappier)
+  accel: 22,           // tighter stop/start so touch steering follows the thumb
   dashSpeed: 330,
   dashTime: 0.19,
   dashCooldown: 1.15,
@@ -285,9 +285,9 @@ export const CLIMAX = {
  * THE SIEGE (#60) — the crowd at the walls, and how hard it leans.
  *
  * The curve is the owner's escalation: an almost empty first minute is what
- * makes the flood land. These bodies are cheap — one drawImage each, no rig,
- * no pathfinder, no skinned slot. The besiegers inside keep the ceiling they
- * always had; the crowd is the scale you can see from the window.
+ * makes the flood land. These are cheap simulation actors — no full AI,
+ * pathfinding or line of sight. The 3D stage gives only a small near-camera
+ * sample real shared GLB rigs; the rest remain simulation-only, never proxies.
  * ========================================================================== */
 export const SIEGE = {
   cap: 54,                      // most bodies the night ever puts outside

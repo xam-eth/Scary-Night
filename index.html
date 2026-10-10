@@ -6,12 +6,28 @@
 <meta name="theme-color" content="#05060b" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
-<meta name="description" content="LAST NIGHT — survive until dawn. A 3/4 vampire survival horror game about tension, doors and the sound of knocking." />
-<title>LAST NIGHT — Survive until dawn.</title>
+<meta name="description" content="DUSKHOLD — fortify the manor, hold through the night, and survive until dawn. A gothic survival game about doors, dread, and the siege outside." />
+<title>DUSKHOLD — Hold until dawn.</title>
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="DUSKHOLD" />
+<meta property="og:title" content="DUSKHOLD — Hold until dawn." />
+<meta property="og:description" content="Fortify the manor. Hold through the night. Survive until dawn." />
+<meta property="og:image" content="https://duskhold.zyvrolabs.com/assets/brand/social-1200x630.jpg" />
+<meta property="og:url" content="https://duskhold.zyvrolabs.com/" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="DUSKHOLD — Hold until dawn." />
+<meta name="twitter:description" content="Fortify the manor. Hold through the night. Survive until dawn." />
+<meta name="twitter:image" content="https://duskhold.zyvrolabs.com/assets/brand/social-1200x630.jpg" />
+<link rel="preload" href="./assets/fonts/im-fell-english-sc-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="preload" href="./assets/fonts/special-elite-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="stylesheet" href="./styles.css" />
 <!-- The player IS this GLB — fetched as the original bytes, straight into GLTFLoader. -->
 <link rel="preload" as="fetch" crossorigin="anonymous" href="./hunter_run_walk_claw_sword_shot.glb" />
-<link rel="preload" as="fetch" crossorigin="anonymous" href="./zombie+3d+model.glb" />
+<link rel="preload" as="fetch" crossorigin="anonymous" href="./assets/monsters/ultimate/demon.glb" />
+<link rel="preload" as="fetch" crossorigin="anonymous" href="./assets/monsters/ultimate/green-spiky-blob.glb" />
+<link rel="preload" as="fetch" crossorigin="anonymous" href="./assets/monsters/ultimate/blue-demon.glb" />
+<link rel="preload" as="fetch" crossorigin="anonymous" href="./assets/monsters/ultimate/ghost-skull.glb" />
+<link rel="preload" as="fetch" crossorigin="anonymous" href="./assets/monsters/ultimate/yeti.glb" />
 <link rel="icon" href="./assets/brand/mark.svg" type="image/svg+xml" />
 <link rel="manifest" href="./manifest.webmanifest" />
 <!-- Play Billing in a Trusted Web Activity needs the Digital Goods API, and
@@ -25,12 +41,12 @@
 </head>
 <body>
   <div id="stage">
-    <canvas id="game" width="1280" height="720" aria-label="Last Night game canvas"></canvas>
+    <canvas id="game" width="1280" height="720" aria-label="DUSKHOLD game. Controls: move with WASD or arrow keys, attack with F, dash with Shift, interact with E, repair with R, barricade with B, change weapon with Q, and pause with Escape."></canvas>
   </div>
 
   <div id="veil">
     <div class="veil-frame">
-      <img class="veil-photo" src="./assets/brand/loading-9x16.jpg" width="768" height="1365" alt="LAST NIGHT" />
+      <img class="veil-photo" src="./assets/brand/loading-9x16.jpg" width="1080" height="1920" alt="DUSKHOLD loading artwork" />
       <div class="veil-bar"><span></span></div>
     </div>
   </div>
@@ -44,8 +60,8 @@
   </button>
 
   <noscript>
-    <div style="color:#c8bfa8;font-family:Georgia,serif;padding:2rem;text-align:center">
-      LAST NIGHT needs JavaScript.
+    <div style="color:#c8bfa8;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;padding:2rem;text-align:center">
+      DUSKHOLD needs JavaScript.
       <a href="./privacy.html">Privacy policy</a> · <a href="./delete.html">Delete my data</a>
     </div>
   </noscript>

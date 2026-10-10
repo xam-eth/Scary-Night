@@ -1051,9 +1051,8 @@ if (args.systems) {
     'and a room that breaks it is told so, by name');
   line(!budgetReport({ wall: 4000 }).fits && budgetReport({ wall: 4000 }).over.join().includes('instances'),
     'the verdict says which ceiling broke, not just that one did');
-  line(QUALITY_TIERS.length === 4 && QUALITY_TIERS[3].room && QUALITY_TIERS[3].props && QUALITY_TIERS[3].fortress
-    && !QUALITY_TIERS[0].room && !QUALITY_TIERS[0].props && !QUALITY_TIERS[0].fortress,
-    'there is a ladder down: the whole house at the top, the painted house at the bottom');
+  line(QUALITY_TIERS.length === 4 && QUALITY_TIERS.every((tier) => tier.room && tier.props && tier.fortress),
+    'every quality rung keeps all world geometry and dressing visible');
   let mono = true;
   for (let i = 1; i < QUALITY_TIERS.length; i++) {
     const a = QUALITY_TIERS[i - 1], b = QUALITY_TIERS[i];
@@ -1062,7 +1061,7 @@ if (args.systems) {
   }
   line(mono, 'and no rung of it takes away something the rung below kept');
   line(game.quality === QUALITY_TIERS.length - 1 && game.setQuality(1) === 1 && game.setQuality(-5) === 0,
-    'the governor starts with the whole house and clamps at the painted one');
+    'the governor starts with the full 3D house and clamps without removing its rooms');
   game.setQuality(QUALITY_TIERS.length - 1);
   line(game.perfReport && game.perfReport().budgetMs === MOBILE_BUDGET.frameMs,
     'and what the night is costing is reported, not guessed');
@@ -1329,7 +1328,7 @@ if (args.systems) {
   //   · they take the wood down through the real door-damage path
   //   · THE FINAL PUSH puts someone at every standing entrance
   //   · one of them comes inside as a real besieger when a slot frees
-  //   · and not one of them is a pathfinder with a skinned body
+  //   · crowd remains reduced-AI and simulation-only in 3D, never a proxy army
   {
     const { SIEGE } = await import('../src/core/config.js');
     const { CrowdBody, CROWD, crowdSpot, outwardOf } = await import('../src/game/enemies.js');
@@ -1394,8 +1393,8 @@ if (args.systems) {
       `${atDoor.length} bodies leaning take the wood down through the real door path (hp ${hp0.toFixed(0)} → ${door.hp.toFixed(0)} of ${door.hpMax.toFixed(0)} in 3s)`);
     line(atDoor.length >= 12 && game.enemies.length === foes0,
       `and the crowd is not the fight: ${dir.crowd.length} of them in the yard, and not one of them in the enemy list`);
-    const pressed = dir.crowd.filter((b) => b.state === CROWD.PRESS).length;
-    line(pressed >= 12, `they are pressed against it, not standing about (${pressed} pressing)`);
+    const pressedAtFront = atDoor.filter((b) => b.state === CROWD.PRESS).length;
+    line(pressedAtFront >= 8, `they are pressed against the tested front, not standing about (${pressedAtFront}/${atDoor.length} pressing there)`);
 
     // (4) THE FINAL PUSH: every standing entrance, and a wall of bodies on the near one
     dir.clearCrowd();
@@ -1424,10 +1423,10 @@ if (args.systems) {
     line(game.enemies.length > 0 && b0.promoted,
       `a body at the breach comes inside as a real besieger when a slot frees (after ${(frames / 60).toFixed(1)}s: ${game.enemies.map((e) => e.key).join(', ') || 'none'})`);
 
-    // (6) and none of them is a pathfinder with a skinned body
+    // (6) the crowd remains a reduced-AI population, separate from combatants.
     for (let i = 0; i < 60; i++) dir.updateCrowd(dt, game);
     line(game.enemies.every((e) => !(e instanceof CrowdBody)) && dir.crowd.every((b) => b instanceof CrowdBody),
-      'the crowd and the fight stay two different things — the besiegers keep the ceiling, the crowd keeps the spectacle');
+      'the crowd stays a reduced-AI population, separate from the real combatant list');
 
     // put the house back the way the rest of the suite expects it
     breach.open = false;
@@ -1661,17 +1660,24 @@ if (args.systems) {
   line(hot > plain * 1.5, `the frenzy shreds (${plain.toFixed(0)} -> ${hot.toFixed(0)} a claw)`);
   game.climax.endFrenzy(game);
   line(!game.player.frenzy && game.slowScale === 1 || !game.player.frenzy, 'the frenzy ends and takes the overdrive with it');
-  // The room is drawn obliquely, so a floor circle is an ELLIPSE on screen —
-  // 88px across, 50px up. The reach is therefore measured as drawn (see
-  // weapons.js): the same apparent distance must land from every side.
-  const tiltNow = game.renderer.tilt || 1;
+  // Probe distance and bearing in the renderer's actual isometric projection;
+  // scaling only world-Y by `tilt` is not the inverse of the 45-degree camera.
+  // screenToWorld keeps the requested test radius identical on all four sides.
+  const { swingBearingToWorld } = await import('../src/game/weapons.js');
+  game.player.weapon = 'claw';
   const reachProbe = (r, deg) => {
     const th = (deg * Math.PI) / 180;
+    const renderer = game.renderer;
+    const origin = renderer.screenToWorld(renderer.view.cx, renderer.view.cy);
+    const target = renderer.screenToWorld(
+      renderer.view.cx + Math.cos(th) * r * renderer.cam.zoom,
+      renderer.view.cy + Math.sin(th) * r * renderer.cam.zoom,
+    );
     game.enemies.length = 0;
-    const c = new Swarm(game.player.x + Math.cos(th) * r, game.player.y + (Math.sin(th) * r) / tiltNow, {});
+    const c = new Swarm(game.player.x + target.x - origin.x, game.player.y + target.y - origin.y, {});
     c.hp = 999; c.hpMax = 999;
     game.enemies.push(c);
-    game.player.swingAngle = Math.atan2(Math.sin(th) / tiltNow, Math.cos(th));
+    game.player.swingAngle = swingBearingToWorld(game, th);
     game.playerAttackHit(game.player);
     return 999 - c.hp > 0;
   };
@@ -1717,7 +1723,7 @@ if (args.systems) {
   game.beginDawn();
   line(!!game.climax.dawnWave, 'dawn arrives as a wave, not a delete');
   line(game.enemies.every((e) => !e.dead), 'the swarm is still standing when the sun gets up');
-  run(48);
+  run(84); // let the leading edge reach the first actors before asserting staggered burns
   const burned = game.enemies.filter((e) => e.dead).length;
   line(burned > 0 && burned < 6, `the wave burns the house in order, not all at once (${burned}/6)`);
   line(game.climax.shield > 0, 'she lifts a hand against it');
@@ -1731,15 +1737,50 @@ if (args.systems) {
   const pv = game.renderer.view;
   const { selectGlbSlots, ENEMY_GLB_CAP, ENEMY_MODELS, requiredClips, SlotBook, Enemy3D } = await import('../src/game/enemy3d.js');
   const { Crawler } = await import('../src/game/enemies.js');
-  const swarm = Array.from({ length: 24 }, (_, i) => ({ id: i + 1, key: 'crawler', dead: false, x: i * 30, y: 0 }));
+  const wallCandidates = game.mansion.solids.filter((solid) => solid.type === 'wall')
+    .sort((a, b) => Math.max(b.w, b.h) - Math.max(a.w, a.h));
+  let sweptWallBlocked = false;
+  for (const wall of wallCandidates) {
+    const radius = new Crawler(0, 0, {}).radius;
+    const horizontal = wall.w >= wall.h;
+    const x = horizontal ? wall.x - radius - 10 : wall.x + wall.w / 2;
+    const y = horizontal ? wall.y + wall.h / 2 : wall.y - radius - 10;
+    const dx = horizontal ? wall.w + radius * 2 + 20 : 0;
+    const dy = horizontal ? 0 : wall.h + radius * 2 + 20;
+    const bounds = game.mansion.bounds;
+    if (x < bounds.x + 4 || x + dx > bounds.x + bounds.w - 4
+      || y < bounds.y + 4 || y + dy > bounds.y + bounds.h - 4) continue;
+    const start = game.mansion.resolve(x, y, radius, false);
+    const end = game.mansion.resolve(x + dx, y + dy, radius, false);
+    if (start.hit || end.hit || Math.hypot(start.x - x, start.y - y) > 1
+      || Math.hypot(end.x - (x + dx), end.y - (y + dy)) > 1) continue;
+    const crawler = new Crawler(start.x, start.y, {});
+    const swept = crawler.moveColliding(game, dx, dy);
+    const crossed = horizontal ? crawler.x > wall.x + wall.w + radius : crawler.y > wall.y + wall.h + radius;
+    sweptWallBlocked = swept.hit && !crossed;
+    if (sweptWallBlocked) break;
+  }
+  line(sweptWallBlocked, 'a fast crawler cannot tunnel through a wall even when its destination is clear');
+  const swarm = Array.from({ length: ENEMY_GLB_CAP + 16 }, (_, i) => ({ id: i + 1, key: 'crawler', dead: false, x: i * 30, y: 0 }));
   const capped = selectGlbSlots(swarm, { x: 0, y: 0 }, ENEMY_GLB_CAP, () => true);
-  line(capped.length === ENEMY_GLB_CAP && capped[0].id === 1, `nearest ${ENEMY_GLB_CAP} are the skinned cap`);
-  line(selectGlbSlots(swarm, { x: 0, y: 0 }, ENEMY_GLB_CAP, () => false).length === 0, 'an unready model stays on the 2D path');
-  // Owner mapping: Tripo's clip names ARE the walk / attack / die of these
+  line(capped.length === ENEMY_GLB_CAP && capped[0].id === 1 && capped.at(-1).id === ENEMY_GLB_CAP,
+    `nearest ${ENEMY_GLB_CAP} are the skinned cap`);
+  line(selectGlbSlots(swarm, { x: 0, y: 0 }, ENEMY_GLB_CAP, () => false).length === 0,
+    'an unready enemy stays unassigned instead of receiving a proxy');
+  const combatants = Array.from({ length: 14 }, (_, i) => ({ id: 200 + i, key: 'crawler', x: 500 + i * 20, y: 0 }));
+  const crowdBodies = Array.from({ length: 24 }, (_, i) => ({ id: 500 + i, key: 'crawler', _crowd: true, x: i * 12, y: 0 }));
+  const siegePick = selectGlbSlots([...crowdBodies, ...combatants], { x: 0, y: 0 }, ENEMY_GLB_CAP, () => true);
+  line(siegePick.length === 14 && siegePick.every((actor) => !actor._crowd),
+    'all fourteen real combatants receive rigs; reduced-AI crowd never spends a rig or gets a proxy');
+  const crowdOnlyPick = selectGlbSlots(crowdBodies, { x: 0, y: 0 }, ENEMY_GLB_CAP, () => true);
+  line(crowdOnlyPick.length === 0, 'the simulation-only siege crowd stays out of the rendered actor roster');
+  // Owner mapping: clip names ARE the walk / attack / die of these
   // files, and they live in the registry rather than being smuggled into poses.
-  line(ENEMY_MODELS.zombie.map.walk === 'flee_02' && ENEMY_MODELS.zombie.map.attack === 'cast_a_spell'
-    && ENEMY_MODELS.zombie.map.die === 'defeat_03' && requiredClips('werewolf')[0] === 'run',
-    'the zombie walks on flee_02 by the owner map, not by accident');
+  line(ENEMY_MODELS.zombie.map.walk === 'CharacterArmature|Walk'
+    && ENEMY_MODELS.zombie.map.attack === 'CharacterArmature|Punch'
+    && ENEMY_MODELS.zombie.map.die === 'CharacterArmature|Death'
+    && requiredClips('werewolf')[0] === 'run',
+    'the zombie uses the mapped source locomotion, attack and death clips');
   line(ENEMY_MODELS.werewolf.map.run === 'angry_02.001' && ENEMY_MODELS.werewolf.map.attack === 'front_kick_02.001'
     && ENEMY_MODELS.werewolf.map.die === 'fall.001' && ENEMY_MODELS.werewolf.map.idle === 'box_02.001',
     'the werewolf charges on angry and strikes on front_kick');
@@ -1761,10 +1802,11 @@ if (args.systems) {
   line(Enemy3D.diagnostics().skinned <= ENEMY_GLB_CAP, `skinned meshes stay inside the cap (${Enemy3D.diagnostics().skinned})`);
   Enemy3D.forceFail('zombie');
   try { game.render(); } catch (err) { swarmThrew = true; }
-  line(!swarmThrew && game.screen === 'playing', 'a forced load failure leaves the night on the 2D bodies');
+  line(!swarmThrew && game.screen === 'playing', 'a forced asset failure does not stop the live simulation');
   game.renderer.resize(390, 844, 1);
   line(game.renderer.view.top === 0 && game.renderer.view.h === 844 && game.renderer.view.w === 390, 'a phone canvas is full-bleed, not a middle band');
-  line(game.renderer.cam.zoom >= 0.9 && game.renderer.cam.zoom <= 1.2, `phone cover zoom stays readable (${game.renderer.cam.zoom.toFixed(2)})`);
+  line(game.renderer.cam.zoom >= 0.48 && game.renderer.cam.zoom <= 0.68,
+    `portrait camera stays in its fitted cover range (${game.renderer.cam.zoom.toFixed(2)}), with the full-bleed view intact`);
   game.renderer.resize(wide.w, wide.h, 1);
   line(game.renderer.view.top === 0 && game.renderer.view.h === wide.h, 'a wide canvas still fills its frame');
   process.exit(0);

@@ -2,20 +2,21 @@
  *
  * Valen already owns the WebGL canvas, the camera, and the light rig. Enemy
  * bodies are attached to that same scene, so a lamp and a dark corner grade
- * them the way they grade her. Only the nearest ENEMY_GLB_CAP skinned meshes
- * are live. The rest are a cached billboard of that type, or the existing 2D
- * silhouette when the file is missing, still loading, or not allowed to fight.
+ * them the way they grade her. The 14-slot budget matches the director's
+ * maximum living combatants. The reduced-AI siege crowd stays simulation-only
+ * and is not drawn as generic figures. Unassigned actors are intentionally
+ * hidden rather than replaced with proxies. Cached canvas previews remain for
+ * portrait/non-gameplay tools.
  *
- * A night never waits on a file. The player hunter is not an enemy.
+ * The menu gates entry until the local six-role roster is behavior-ready, so
+ * the night itself never simulates an active enemy without its authored model.
+ * The player hunter is not an enemy.
  *
- * The swarm wears 3D bodies. The vendored zombie ships flee_02 /
- * cast_a_spell / depressed / defeat_03; the werewolf upload was an FBX inside
- * a zip, converted here to werewolf-3d-model.glb (front_kick / angry / fall /
- * box_02). Owner decision (2026-09-29): those are the right animations under
- * Tripo's names, so each file carries a MAP from behaviour to the file's own
- * clip — the swarm walks, strikes and dies in play. Nothing in the vendored
- * bytes is altered; the map is a table, and FORBIDDEN_STANDINS keeps anyone
- * from aliasing a clip that is not the behaviour.
+ * Enemy roles each resolve to a locally vendored, rigged GLB. Five distinct
+ * CC0 Quaternius monsters are sourced from the owner-supplied Ultimate
+ * Monsters bundle; the existing Werewolf remains its own rig. Each role maps
+ * behaviour to the original clip name (including namespaced Quaternius clips).
+ * Source GLB bytes are kept unchanged; only this runtime map selects actions.
  */
 
 import * as THREE from '../vendor/three/three.module.min.js';
@@ -23,80 +24,94 @@ import { GLTFLoader } from '../vendor/three/GLTFLoader.js';
 import { dist } from '../core/util.js';
 import { Valen3D } from './valen3d.js';
 
-export const ENEMY_GLB_CAP = 8;
+export const ENEMY_GLB_CAP = 14;
+const HURT_FLASH_COLOR = new THREE.Color(0xffe0d8);
 
-/** Optional idle, plus the clips a besieger must ship before the swarm wears it. */
+/** Required actions per role; idle is optional, and the local Werewolf has no hurt clip. */
 export const ENEMY_CLIP_CONTRACT = Object.freeze({
-  crawler: ['walk', 'attack', 'die'],
-  zombie: ['walk', 'attack', 'die'],
-  hunter: ['walk', 'attack', 'die'],
-  ghoul: ['walk', 'attack', 'die'],
+  crawler: ['walk', 'attack', 'die', 'hurt'],
+  zombie: ['walk', 'attack', 'die', 'hurt'],
+  hunter: ['walk', 'attack', 'die', 'hurt'],
+  ghoul: ['walk', 'attack', 'die', 'hurt'],
   werewolf: ['run', 'attack', 'die'],
-  stalker: ['walk', 'attack', 'die'],
+  // The late-game Stalker is the feral rig: its charge clip is the locomotion.
+  stalker: ['run', 'attack', 'die', 'hurt'],
 });
 
 /**
- * Vendored files only. `map` names the clip that plays for a behaviour when
- * the file does not ship that clip's name. Two bodies cover the roster: the
- * vendored zombie (shambler, crawler, ghoul, hunter, stalker — different
- * heights, one rig) and the converted werewolf (werewolf and its alpha).
- * A file is fetched and parsed once and then cloned per type, so five types
- * sharing the zombie body cost one mesh and one texture, not five.
+ * Vendored files only. Each enemy role gets a distinct silhouette where the
+ * source pack supports it; `map` points gameplay states at the source file's
+ * named animation rather than rewriting or relabelling the GLB.
  */
-const ZOMBIE_BODY = './zombie+3d+model.glb';
+const MONSTERS = './assets/monsters/ultimate/';
 const WOLF_BODY = './werewolf-3d-model.glb';
 
-// Owner mapping (2026-09-29): the clips are correct, they are just named the
-// way Tripo names them. These are the besieger's real animations — walk,
-// attack, die — reached through the file's own names. Re-exporting would
-// change nothing but the labels.
-const ZOMBIE_MAP = Object.freeze({
-  walk: 'flee_02',        // the shamble
-  attack: 'cast_a_spell', // the swipe
-  die: 'defeat_03',
-  idle: 'depressed',
+const BIPED_MAP = Object.freeze({
+  walk: 'CharacterArmature|Walk',
+  run: 'CharacterArmature|Run',
+  attack: 'CharacterArmature|Punch',
+  die: 'CharacterArmature|Death',
+  hurt: 'CharacterArmature|HitReact',
+  idle: 'CharacterArmature|Idle',
 });
-
+const CRAWLER_MAP = Object.freeze({
+  walk: 'CharacterArmature|Walk',
+  attack: 'CharacterArmature|Bite_Front',
+  die: 'CharacterArmature|Death',
+  hurt: 'CharacterArmature|HitRecieve',
+  idle: 'CharacterArmature|Idle',
+});
+const FLYER_MAP = Object.freeze({
+  walk: 'CharacterArmature|Fast_Flying',
+  run: 'CharacterArmature|Fast_Flying',
+  attack: 'CharacterArmature|Headbutt',
+  die: 'CharacterArmature|Death',
+  hurt: 'CharacterArmature|HitReact',
+  idle: 'CharacterArmature|Flying_Idle',
+});
+const YETI_MAP = Object.freeze({
+  run: 'CharacterArmature|Run',
+  attack: 'CharacterArmature|Punch',
+  die: 'CharacterArmature|Death',
+  hurt: 'CharacterArmature|HitReact',
+  idle: 'CharacterArmature|Idle',
+});
 const WOLF_MAP = Object.freeze({
-  run: 'angry_02.001',          // the charge
-  attack: 'front_kick_02.001',  // the strike
+  run: 'angry_02.001',
+  attack: 'front_kick_02.001',
   die: 'fall.001',
   idle: 'box_02.001',
 });
 
 export const ENEMY_MODELS = Object.freeze({
-  zombie: Object.freeze({ url: ZOMBIE_BODY, map: ZOMBIE_MAP }),
-  crawler: Object.freeze({ url: ZOMBIE_BODY, map: ZOMBIE_MAP }),
-  ghoul: Object.freeze({ url: ZOMBIE_BODY, map: ZOMBIE_MAP }),
-  hunter: Object.freeze({ url: ZOMBIE_BODY, map: ZOMBIE_MAP }),
-  stalker: Object.freeze({ url: ZOMBIE_BODY, map: ZOMBIE_MAP }),
+  zombie: Object.freeze({ url: `${MONSTERS}demon.glb`, map: BIPED_MAP }),
+  crawler: Object.freeze({ url: `${MONSTERS}green-spiky-blob.glb`, map: CRAWLER_MAP }),
+  hunter: Object.freeze({ url: `${MONSTERS}blue-demon.glb`, map: BIPED_MAP }),
+  ghoul: Object.freeze({ url: `${MONSTERS}ghost-skull.glb`, map: FLYER_MAP }),
   werewolf: Object.freeze({ url: WOLF_BODY, map: WOLF_MAP }),
+  stalker: Object.freeze({ url: `${MONSTERS}yeti.glb`, map: YETI_MAP }),
 });
 
-/**
- * Motions that must never be aliased onto a behaviour. Empty today: both
- * vendored files ship the right animations under Tripo's names, and the maps
- * above are the owner's. The guard stays for the next file someone vendors —
- * a clip that is not the behaviour (a death used as a walk) can never be
- * quietly aliased by a future edit.
- */
+/** No action aliases are used as stand-ins: every role has its own source clip. */
 export const FORBIDDEN_STANDINS = Object.freeze({
   zombie: Object.freeze([]),
+  crawler: Object.freeze([]),
+  hunter: Object.freeze([]),
+  ghoul: Object.freeze([]),
   werewolf: Object.freeze([]),
+  stalker: Object.freeze([]),
 });
 
 /**
- * Runtime grade only — the vendored bytes are never re-shaded or re-exported.
- * The zombie file's albedo is a light gray: under Valen's exposure it clips
- * white. The werewolf's fur is dark enough to disappear in a black corridor,
- * so it is lifted. One number per body, applied while that body is rendered.
+ * Portrait-preview exposure only — the shared world still lights each rig
+ * through the mansion. Source GLB bytes and their authored materials stay intact.
  */
 export const ENEMY_EXPOSURE = Object.freeze({
   zombie: 0.55,
   crawler: 0.55,
   ghoul: 0.55,
   hunter: 0.55,
-  stalker: 0.55,
+  stalker: 1.3,
   werewolf: 1.3,
 });
 
@@ -147,7 +162,7 @@ export const ENEMY_HEIGHT = Object.freeze({
   hunter: 78,
   ghoul: 68,
   werewolf: 90,
-  stalker: 82,
+  stalker: 90,
 });
 
 export function requiredClips(key) {
@@ -179,13 +194,22 @@ export function behaviorReady(key, clipNames, map = null) {
 /** Nearest-first. Dead bodies and types that cannot fight are not skinned. */
 export function selectGlbSlots(enemies, player, cap, isReady) {
   if (!player || cap <= 0) return [];
-  const eligible = [];
+  const living = [];
+  const dying = [];
   for (const e of enemies) {
-    if (!e || e.dead || !isReady(e.key)) continue;
-    eligible.push(e);
+    // Siege bodies are reduced-AI pressure, not individual combatants; keep
+    // them out of the skin budget instead of dressing them as proxy enemies.
+    if (!e || e._crowd || !isReady(e.key)) continue;
+    if (e.dead || e.state === 'dying') {
+      // Keep a short death clip in the skinned-model budget when there is a
+      // spare slot; living threats retain priority under the rig cap.
+      if ((e.deathT || 0) < 1.45) dying.push(e);
+    } else living.push(e);
   }
-  eligible.sort((a, b) => dist(a.x, a.y, player.x, player.y) - dist(b.x, b.y, player.x, player.y));
-  return eligible.slice(0, cap);
+  const nearest = (a, b) => dist(a.x, a.y, player.x, player.y) - dist(b.x, b.y, player.x, player.y);
+  living.sort(nearest);
+  dying.sort(nearest);
+  return [...living, ...dying].slice(0, cap);
 }
 
 /**
@@ -229,17 +253,32 @@ export class SlotBook {
   }
 }
 
-function clipForState(key, enemy) {
+export function enemyClipForState(key, enemy) {
   if (enemy.dead || enemy.state === 'dying') return 'die';
+  const map = ENEMY_MODELS[key]?.map || {};
+  if (map.hurt && ((enemy.hurtFlash || 0) > 0 || (enemy.staggerT || 0) > 0)) return 'hurt';
   if (enemy.state === 'strike' || enemy.state === 'windup' || enemy.state === 'charge') return 'attack';
   const moving = Math.hypot(enemy.vx || 0, enemy.vy || 0) > 12;
-  if (key === 'werewolf' && moving) return 'run';
+  if ((key === 'werewolf' || key === 'stalker') && moving) return 'run';
   if (moving) return 'walk';
   return 'idle';
 }
 
 function cloneRig(root) {
   const clone = root.clone(true);
+  // Skeleton instances share vertex buffers, but variant tint/material changes
+  // must remain per enemy. Clone each source material once for this rig.
+  const materials = new Map();
+  clone.traverse((object) => {
+    if (!object.isMesh || !object.material) return;
+    const cloneMaterial = (material) => {
+      if (!material) return material;
+      let copy = materials.get(material);
+      if (!copy) { copy = material.clone(); materials.set(material, copy); }
+      return copy;
+    };
+    object.material = Array.isArray(object.material) ? object.material.map(cloneMaterial) : cloneMaterial(object.material);
+  });
   const sourceMeshes = [];
   root.traverse((object) => { if (object.isSkinnedMesh) sourceMeshes.push(object); });
   const clonedMeshes = [];
@@ -280,10 +319,25 @@ class EnemyStage {
     for (const key of Object.keys(ENEMY_MODELS)) this._load(key);
   }
 
+  readiness() {
+    const keys = Object.keys(ENEMY_MODELS);
+    if (!this._started) return { ready: true, loaded: keys.length, total: keys.length, failed: [] };
+    const loaded = keys.filter((key) => {
+      const rec = this.types[key];
+      return !!(rec && rec.behaviorReady && !rec.failed);
+    }).length;
+    const failed = keys.filter((key) => {
+      const rec = this.types[key];
+      return !!(rec && (rec.failed || rec.loaded && !rec.behaviorReady));
+    });
+    return { ready: loaded === keys.length, loaded, total: keys.length, failed };
+  }
+
+  gameplayReady() { return this.readiness().ready; }
+
   /**
-   * One file, one fetch, one parse. Five besiegers share the zombie body, so
-   * loading it five times would put five copies of the same mesh and texture
-   * on a phone. Late types attach to the fetch already in flight.
+   * One file, one fetch, one parse. Roles that share a body are attached to
+   * the same in-flight GLTF; distinct monster silhouettes load in parallel.
    */
   _load(key) {
     const spec = ENEMY_MODELS[key];
@@ -418,7 +472,7 @@ class EnemyStage {
       key.position.set(-2.2, 3.4, 4.2);
       scene.add(key);
       const rim = new THREE.DirectionalLight(0x718fd2, 1.85);
-      rim.position.set(2.8, 2.1, -3.5);
+      rim.position.set(2.4, 2.6, -3.6);
       scene.add(rim);
       const camera = new THREE.OrthographicCamera(-0.7, 0.7, 0.78, -0.78, 0.05, 12);
       this._own = { renderer, scene, stage, camera, canvas };
@@ -493,7 +547,8 @@ class EnemyStage {
     host.camera.position.set(center.x, lookY + playDy, playDz);
     host.camera.lookAt(center.x, lookY, 0);
     host.camera.updateProjectionMatrix();
-    // This file's albedo is a light gray. Valen's exposure would clip it white.
+    // Fit this source rig's small preview independently; gameplay uses the
+    // shared mansion lighting, not this temporary portrait exposure.
     host.renderer.toneMappingExposure = ENEMY_EXPOSURE[key] || 0.55;
   }
 
@@ -550,15 +605,27 @@ class EnemyStage {
     });
   }
 
-  _takeModel(key) {
+  _takeModel(key, options = {}) {
     const rec = this.types[key];
     if (!rec || !rec.behaviorReady || !rec.template || rec.failed) return null;
     let slot = this.free.find((item) => item.type === key);
     if (slot) this.free.splice(this.free.indexOf(slot), 1);
-    if (slot) return slot;
-    if (this.slots.length + this.free.length >= this.cap) return null;
-    const host = this._host();
+    const host = options.host || this._host();
     if (!host) return null;
+    if (slot) {
+      if (host.stage && slot.model.parent !== host.stage) host.stage.add(slot.model);
+      return slot;
+    }
+
+    // The cap is a live-instance budget, not a lifetime model-type limit. A
+    // freed slot for another skeleton can be rebuilt from its loaded template;
+    // no role should remain unavailable merely because a different GLB was
+    // selected earlier in the run.
+    if (this.free.length) {
+      slot = this.free.shift();
+      if (slot.model && slot.model.parent) slot.model.parent.remove(slot.model);
+    } else if (this.slots.length + this.free.length >= this.cap) return null;
+
     const model = cloneRig(rec.template);
     host.stage.add(model);
     const mixer = new THREE.AnimationMixer(model);
@@ -575,21 +642,25 @@ class EnemyStage {
       action.setEffectiveWeight(0);
       actions[need] = action;
     }
-    const frame = document.createElement('canvas');
-    frame.width = host.canvas.width;
-    frame.height = host.canvas.height;
+    let frame = null;
+    if (!options.full3D) {
+      frame = slot ? slot.frame : document.createElement('canvas');
+      if (!slot) { frame.width = host.canvas.width; frame.height = host.canvas.height; }
+    }
     return { type: key, model, mixer, actions, enemyId: 0, frame };
   }
 
-  assign(enemies, player) {
-    for (const key of Object.keys(this.types)) {
+  assign(enemies, player, options = {}) {
+    // Gameplay uses the live skinned model in the shared WebGL scene. Do not
+    // spend frame time baking billboards unless a non-3D caller requested it.
+    if (!options.full3D) for (const key of Object.keys(this.types)) {
       const rec = this.types[key];
       if (rec && rec.loaded && !rec.failed && !rec.preview) this._bakePreview(key);
     }
     const ready = (key) => !!(this.types[key] && this.types[key].behaviorReady && !this.types[key].failed);
     const picked = selectGlbSlots(enemies, player, this.cap, ready);
     this.book.sync(picked);
-    if (!this._host()) {
+    if (!options.host && !this._host()) {
       for (const enemy of enemies) enemy._glb = null;
       return picked;
     }
@@ -608,27 +679,40 @@ class EnemyStage {
       if (!enemy) continue;
       let slot = this.slots.find((item) => item.enemyId === rec.id);
       if (!slot) {
-        slot = this._takeModel(rec.type);
+        slot = this._takeModel(rec.type, options);
         if (!slot) continue;
         slot.enemyId = rec.id;
         this.slots.push(slot);
       }
       enemy._glb = slot;
       this._pose(slot, enemy);
-      this._renderSlot(slot, enemy);
-      const bill = this.billboards[enemy.key] || (this.billboards[enemy.key] = document.createElement('canvas'));
-      if (bill.width !== slot.frame.width) {
-        bill.width = slot.frame.width;
-        bill.height = slot.frame.height;
+      if (options.full3D) {
+        this._placeWorld(slot, enemy, options);
+      } else {
+        this._renderSlot(slot, enemy);
+        const bill = this.billboards[enemy.key] || (this.billboards[enemy.key] = document.createElement('canvas'));
+        if (bill.width !== slot.frame.width) {
+          bill.width = slot.frame.width;
+          bill.height = slot.frame.height;
+        }
+        bill.getContext('2d').drawImage(slot.frame, 0, 0);
       }
-      bill.getContext('2d').drawImage(slot.frame, 0, 0);
     }
     return picked;
   }
 
   _pose(slot, enemy) {
-    const want = clipForState(slot.type, enemy);
+    const want = enemyClipForState(slot.type, enemy);
     const action = slot.actions[want] || null;
+    if (slot._hurtEnemyId !== enemy.id) {
+      slot._hurtEnemyId = enemy.id;
+      slot._hurtStaggerMax = 0;
+      slot._hurtStaggerLast = 0;
+    }
+    if (want !== 'hurt') {
+      slot._hurtStaggerMax = 0;
+      slot._hurtStaggerLast = 0;
+    }
     for (const name of Object.keys(slot.actions)) {
       const item = slot.actions[name];
       item.setEffectiveWeight(item === action ? 1 : 0);
@@ -638,13 +722,77 @@ class EnemyStage {
       const dur = action.getClip().duration || 1;
       if (want === 'die') action.time = Math.min(dur, enemy.deathT || 0);
       else if (want === 'attack') action.time = (enemy.stateT || 0) % dur;
-      else action.time = ((enemy._stepT || 0) + enemy.id * 0.17) % dur;
+      else if (want === 'hurt') {
+        const flash = Math.max(0, Math.min(1, enemy.hurtFlash || 0));
+        const stagger = Math.max(0, enemy.staggerT || 0);
+        if (stagger > (slot._hurtStaggerLast || 0) + 0.02 || !(slot._hurtStaggerMax > 0)) {
+          slot._hurtStaggerMax = stagger;
+        }
+        slot._hurtStaggerLast = stagger;
+        const progress = flash > 0
+          ? 1 - flash
+          : stagger > 0 ? 1 - stagger / Math.max(0.001, slot._hurtStaggerMax) : 1;
+        action.time = dur * Math.max(0, Math.min(1, progress));
+      } else action.time = ((enemy._stepT || 0) + (Number.isFinite(enemy.id) ? enemy.id % 997 : 0) * 0.17) % dur;
       slot.mixer.update(0);
     }
     slot.model.rotation.order = 'YXZ';
     slot.model.rotation.x = 0;
     slot.model.rotation.y = Math.PI / 2 - (enemy.angle || 0);
     slot.model.position.set(0, 0, 0);
+    slot.model.updateMatrixWorld(true);
+  }
+
+  /** Keep the skinned GLB in the shared mansion scene instead of baking it to a sprite. */
+  _placeWorld(slot, enemy, options = {}) {
+    slot.model.scale.set(1, 1, 1);
+    slot.model.position.set(0, 0, 0);
+    slot.model.updateMatrixWorld(true);
+    const box = this._box || (this._box = new THREE.Box3());
+    const size = this._size || (this._size = new THREE.Vector3());
+    box.setFromObject(slot.model);
+    box.getSize(size);
+    const projected = (ENEMY_HEIGHT[enemy.key] || 74) * (enemy.sizeMul || 1);
+    const verticalProjection = options.verticalProjection || Math.sqrt(2 / 3);
+    const targetWorldHeight = projected / verticalProjection;
+    const scale = targetWorldHeight / Math.max(0.001, size.y);
+    slot.model.scale.setScalar(scale);
+    slot.model.position.set(enemy.x, -box.min.y * scale, enemy.y);
+    const variant = enemy.variant || '';
+    if (!slot._baseMaterials) {
+      slot._baseMaterials = new Map();
+      slot.model.traverse((object) => {
+        const materials = Array.isArray(object.material) ? object.material : [object.material];
+        for (const material of materials) {
+          if (!material || slot._baseMaterials.has(material)) continue;
+          slot._baseMaterials.set(material, {
+            color: material.color && material.color.clone(),
+            emissive: material.emissive && material.emissive.clone(),
+            emissiveIntensity: material.emissiveIntensity || 0,
+          });
+        }
+      });
+    }
+    if (slot._visualVariant !== variant) {
+      slot._variantTint = enemy.tint ? new THREE.Color(enemy.tint) : null;
+      slot._visualVariant = variant;
+    }
+    const tint = slot._variantTint;
+    const hurt = Math.max(0, Math.min(1, enemy.hurtFlash || 0));
+    for (const [material, base] of slot._baseMaterials) {
+      if (base.color) {
+        material.color.copy(base.color);
+        if (tint) material.color.lerp(tint, variant === 'master' ? 0.38 : 0.24);
+      }
+      if (base.emissive) {
+        material.emissive.copy(base.emissive);
+        if (tint) material.emissive.lerp(tint, variant === 'master' ? 0.28 : 0.12);
+        if (hurt > 0) material.emissive.lerp(HURT_FLASH_COLOR, hurt * 0.72);
+        material.emissiveIntensity = base.emissiveIntensity + hurt * 1.8;
+      }
+    }
+    slot.model.visible = enemy.alpha == null || enemy.alpha > 0.02;
+    slot.model.userData.full3D = true;
     slot.model.updateMatrixWorld(true);
   }
 

@@ -3,74 +3,149 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>LAST NIGHT — brand kit</title>
+<meta name="theme-color" content="#05060b" />
+<meta name="description" content="DUSKHOLD brand board: wordmark, key art, and palette." />
+<title>DUSKHOLD — brand board</title>
 <style>
   :root {
-    --ink: #05060b; --bone: #e6e1d2; --ash: #cfc6b0;
-    --blood: #7d1220; --gold: #a8833c; --candle: #ffb257; --moon: #8fb6e8;
+    color-scheme: dark;
+    --ink: #05060b; --deep: #0c0e14; --blood: #7d1220; --moon: #8fb6e8;
+    --gold: #a8833c; --ash: #cfc6b0; --bone: #e6e1d2; --candle: #ffb257;
   }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--ink); color: var(--ash); font-family: Georgia, "Palatino Linotype", serif; }
-  header, section { padding: 36px 6vw; }
-  h1 { font-weight: 400; letter-spacing: 0.18em; font-size: clamp(32px, 6vw, 64px); color: var(--bone); margin: 12px 0 0; }
-  h2 { font-weight: 400; letter-spacing: 0.16em; font-size: 13px; color: var(--gold); }
-  p { max-width: 62ch; line-height: 1.55; }
-  .mark { width: 72px; height: 72px; }
-  .rule { width: 140px; height: 1px; background: var(--gold); margin: 14px 0; }
-  .tag { letter-spacing: 0.32em; font: 11px/1 "Segoe UI", Roboto, sans-serif; color: var(--gold); }
-  .phones { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; }
-  .phone {
-    width: min(280px, 70vw);
-    aspect-ratio: 9 / 16;
-    background: #000 center/cover no-repeat;
-    border: 1px solid rgba(168,131,60,0.45);
-    position: relative;
-    overflow: hidden;
+  body { margin: 0; background: var(--ink); color: var(--ash); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header, main { width: min(1120px, calc(100% - 40px)); margin: 0 auto; }
+  header { padding: clamp(38px, 8vw, 90px) 0 52px; }
+  .masthead { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 32px; align-items: center; }
+  .brand-copy { max-width: 600px; }
+  .eyebrow, h2, .asset-label { color: var(--gold); letter-spacing: .18em; text-transform: uppercase; font-size: 11px; font-weight: 600; }
+  .eyebrow { margin: 0 0 12px; }
+  h1 { margin: 0; color: var(--bone); font: 400 clamp(32px, 6vw, 64px)/1.05 Georgia, "Palatino Linotype", serif; letter-spacing: .11em; }
+  .tagline { margin: 14px 0 22px; color: var(--gold); letter-spacing: .32em; font: 500 12px/1.4 system-ui, sans-serif; }
+  .brand-copy p { margin: 0; max-width: 58ch; color: rgba(207,198,176,.82); }
+  .crest { display: block; width: clamp(74px, 11vw, 112px); height: auto; border: 1px solid rgba(168,131,60,.42); background: var(--deep); }
+  .lockup { display: block; width: min(100%, 380px); height: auto; margin-top: 28px; }
+  section { border-top: 1px solid rgba(168,131,60,.25); padding: 34px 0 42px; }
+  h2 { margin: 0 0 18px; }
+  .section-intro { max-width: 70ch; margin: -6px 0 24px; color: rgba(207,198,176,.72); font-size: 14px; }
+  .logo-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .logo-card { min-height: 142px; display: grid; place-items: center; padding: 28px; overflow: hidden; background: var(--deep); border: 1px solid rgba(168,131,60,.3); }
+  .logo-card.checker { background-color: #10121a; background-image: linear-gradient(45deg,#171923 25%,transparent 25%),linear-gradient(-45deg,#171923 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#171923 75%),linear-gradient(-45deg,transparent 75%,#171923 75%); background-size: 24px 24px; background-position: 0 0,0 12px,12px -12px,-12px 0; }
+  .logo-card img { display: block; width: min(100%, 520px); height: auto; }
+  .logo-card .gold { width: min(100%, 520px); }
+  .asset-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+  figure { margin: 0; }
+  .asset { overflow: hidden; border: 1px solid rgba(168,131,60,.3); background: #030409; }
+  .asset img { display: block; width: 100%; height: auto; }
+  .asset.portrait img { aspect-ratio: 9/16; object-fit: cover; }
+  .asset.wide img { aspect-ratio: 16/9; object-fit: cover; }
+  .asset.feature img { aspect-ratio: 1024/500; object-fit: cover; }
+  .asset.social img { aspect-ratio: 1200/630; object-fit: cover; }
+  figcaption { padding: 10px 12px 12px; font-size: 12px; line-height: 1.4; color: rgba(207,198,176,.78); }
+  figcaption strong { display: block; margin-bottom: 3px; color: var(--bone); font-weight: 550; }
+  .palette { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 10px; }
+  .swatch { overflow: hidden; border: 1px solid rgba(168,131,60,.25); background: var(--deep); }
+  .swatch i { display: block; height: 52px; background: var(--swatch); }
+  .swatch b, .swatch code { display: block; padding: 0 9px; font: 11px/1.35 system-ui, sans-serif; }
+  .swatch b { padding-top: 8px; color: var(--bone); font-weight: 550; }
+  .swatch code { padding-bottom: 9px; color: rgba(207,198,176,.7); }
+  .principles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .principles article { padding: 18px; border: 1px solid rgba(168,131,60,.25); background: rgba(12,14,20,.7); }
+  .principles h3 { margin: 0 0 8px; color: var(--bone); font: 400 17px Georgia, serif; }
+  .principles p { margin: 0; color: rgba(207,198,176,.72); font-size: 13px; }
+  footer { padding: 24px 0 46px; color: rgba(207,198,176,.48); font-size: 12px; }
+  @media (max-width: 760px) {
+    header, main { width: min(100% - 28px, 600px); }
+    .masthead { grid-template-columns: 1fr auto; gap: 18px; }
+    .crest { width: 70px; }
+    .asset-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .palette { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .principles { grid-template-columns: 1fr; }
   }
-  .phone img.plate { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .phone figcaption {
-    position: absolute; left: 0; right: 0; bottom: 0;
-    padding: 28px 12px 16px;
-    background: linear-gradient(transparent, rgba(5,6,11,0.88));
-    text-align: center; color: var(--bone); letter-spacing: 0.14em; font-size: 13px;
+  @media (max-width: 430px) {
+    .logo-row { grid-template-columns: 1fr; }
+    .logo-card { min-height: 112px; padding: 20px; }
+    .asset-grid { gap: 10px; }
   }
-  .swatches { display: flex; flex-wrap: wrap; gap: 12px; }
-  .swatch { width: 120px; background: #0c0e14; border: 1px solid rgba(168,131,60,0.35); }
-  .swatch i { display: block; height: 56px; }
-  .swatch b, .swatch span { display: block; padding: 8px 10px 0; font: 12px/1.3 "Segoe UI", Roboto, sans-serif; }
-  .swatch span { padding-bottom: 10px; color: rgba(207,198,176,0.7); }
 </style>
 </head>
 <body>
   <header>
-    <img class="mark" src="../assets/brand/mark.svg" alt="" />
-    <h1>LAST NIGHT</h1>
-    <div class="rule"></div>
-    <div class="tag">SURVIVE UNTIL DAWN</div>
-    <p>Mobile first. The loading plate and the menu plate already carry the door mark and the wordmark. Do not paint a second title on top of them.</p>
+    <div class="masthead">
+      <div class="brand-copy">
+        <p class="eyebrow">Brand board · 2026</p>
+        <h1>DUSKHOLD</h1>
+        <p class="tagline">HOLD UNTIL DAWN</p>
+        <p>A manor fortified against the night. One lantern keeps watch while indistinct shapes gather beyond the walls; the last strip of dusk sits low on the horizon.</p>
+        <img class="lockup" src="../assets/brand/wordmark-duskhold-lockup.png" alt="DUSKHOLD — Hold until dawn wordmark lockup" />
+      </div>
+      <img class="crest" src="../assets/brand/mark.svg" alt="DUSKHOLD lantern-and-door emblem" />
+    </div>
   </header>
-  <section>
-    <h2>PLATES · 768 × 1365</h2>
-    <div class="phones">
-      <figure class="phone">
-        <img class="plate" src="../assets/brand/loading-9x16.jpg" alt="Loading plate with the LAST NIGHT wordmark and door mark" />
-      </figure>
-      <figure class="phone">
-        <img class="plate" src="../assets/brand/menu-9x16.jpg" alt="Menu plate with the LAST NIGHT wordmark and door mark" />
-      </figure>
-    </div>
-  </section>
-  <section>
-    <h2>COLOUR</h2>
-    <div class="swatches">
-      <div class="swatch"><i style="background:#05060b"></i><b>Ink</b><span>#05060b</span></div>
-      <div class="swatch"><i style="background:#e6e1d2"></i><b>Bone</b><span>#e6e1d2</span></div>
-      <div class="swatch"><i style="background:#cfc6b0"></i><b>Ash</b><span>#cfc6b0</span></div>
-      <div class="swatch"><i style="background:#7d1220"></i><b>Blood</b><span>#7d1220</span></div>
-      <div class="swatch"><i style="background:#a8833c"></i><b>Gold</b><span>#a8833c</span></div>
-      <div class="swatch"><i style="background:#ffb257"></i><b>Candle</b><span>#ffb257</span></div>
-      <div class="swatch"><i style="background:#8fb6e8"></i><b>Moon</b><span>#8fb6e8</span></div>
-    </div>
-  </section>
+
+  <main>
+    <section aria-labelledby="wordmarks">
+      <h2 id="wordmarks">Wordmarks</h2>
+      <p class="section-intro">Carved, high-contrast serif lettering with one restrained crescent detail in the O. The outlined SVGs do not rely on a font installed on the viewer’s device.</p>
+      <div class="logo-row">
+        <figure>
+          <div class="logo-card checker"><img src="../assets/brand/wordmark-duskhold.png" alt="Parchment DUSKHOLD wordmark" /></div>
+          <figcaption><strong>Primary · parchment</strong>Transparent PNG and outlined SVG.</figcaption>
+        </figure>
+        <figure>
+          <div class="logo-card checker"><img class="gold" src="../assets/brand/wordmark-duskhold-gold.png" alt="Aged-gold DUSKHOLD wordmark" /></div>
+          <figcaption><strong>Alternate · aged gold</strong>Use on dark surfaces with sufficient contrast.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section aria-labelledby="plates">
+      <h2 id="plates">Key art · portrait</h2>
+      <p class="section-intro">The clean plates are UI-ready. Branded counterparts place the lockup in the quiet top zone; all four files are 1080 × 1920.</p>
+      <div class="asset-grid">
+        <figure><div class="asset portrait"><img src="../assets/brand/menu-9x16-clean.jpg" alt="Clean portrait key art: a lantern-lit manor at dusk" /></div><figcaption><strong>Menu · clean</strong>1080 × 1920</figcaption></figure>
+        <figure><div class="asset portrait"><img src="../assets/brand/menu-9x16.jpg" alt="Branded portrait key art with DUSKHOLD lockup" /></div><figcaption><strong>Menu · branded</strong>1080 × 1920</figcaption></figure>
+        <figure><div class="asset portrait"><img src="../assets/brand/loading-9x16-clean.jpg" alt="Clean, darker portrait loading plate" /></div><figcaption><strong>Loading · clean</strong>1080 × 1920</figcaption></figure>
+        <figure><div class="asset portrait"><img src="../assets/brand/loading-9x16.jpg" alt="Branded portrait loading plate with DUSKHOLD lockup" /></div><figcaption><strong>Loading · branded</strong>1080 × 1920</figcaption></figure>
+      </div>
+    </section>
+
+    <section aria-labelledby="wide-art">
+      <h2 id="wide-art">Key art · wide plates</h2>
+      <p class="section-intro">One original master scene, recomposed for the website hero, social card, and store feature graphic.</p>
+      <div class="asset-grid">
+        <figure><div class="asset wide"><img src="../assets/brand/hero-16x9-clean.jpg" alt="Clean wide website hero plate showing the manor and distant siege" /></div><figcaption><strong>Website hero · clean</strong>1920 × 1080</figcaption></figure>
+        <figure><div class="asset wide"><img src="../assets/brand/hero-16x9.jpg" alt="Branded wide hero plate with DUSKHOLD lockup" /></div><figcaption><strong>Website hero · branded</strong>1920 × 1080</figcaption></figure>
+        <figure><div class="asset social"><img src="../assets/brand/social-1200x630-clean.jpg" alt="Clean landscape social-card art" /></div><figcaption><strong>Social card · clean</strong>1200 × 630</figcaption></figure>
+        <figure><div class="asset social"><img src="../assets/brand/social-1200x630.jpg" alt="Branded social card with DUSKHOLD lockup" /></div><figcaption><strong>Social card · branded</strong>1200 × 630</figcaption></figure>
+        <figure><div class="asset feature"><img src="../assets/brand/play-feature-1024x500-clean.png" alt="Clean store feature artwork" /></div><figcaption><strong>Play feature · clean</strong>1024 × 500</figcaption></figure>
+        <figure><div class="asset feature"><img src="../assets/brand/play-feature-1024x500.png" alt="Branded Google Play feature graphic with DUSKHOLD lockup" /></div><figcaption><strong>Play feature · branded</strong>1024 × 500</figcaption></figure>
+      </div>
+    </section>
+
+    <section aria-labelledby="palette">
+      <h2 id="palette">Palette</h2>
+      <div class="palette">
+        <div class="swatch"><i style="--swatch:#05060b"></i><b>Night</b><code>#05060b</code></div>
+        <div class="swatch"><i style="--swatch:#0c0e14"></i><b>Deep</b><code>#0c0e14</code></div>
+        <div class="swatch"><i style="--swatch:#7d1220"></i><b>Blood</b><code>#7d1220</code></div>
+        <div class="swatch"><i style="--swatch:#8fb6e8"></i><b>Moon</b><code>#8fb6e8</code></div>
+        <div class="swatch"><i style="--swatch:#a8833c"></i><b>Aged gold</b><code>#a8833c</code></div>
+        <div class="swatch"><i style="--swatch:#cfc6b0"></i><b>Ash</b><code>#cfc6b0</code></div>
+        <div class="swatch"><i style="--swatch:#e6e1d2"></i><b>Bone</b><code>#e6e1d2</code></div>
+        <div class="swatch"><i style="--swatch:#ffb257"></i><b>Lantern</b><code>#ffb257</code></div>
+      </div>
+    </section>
+
+    <section aria-labelledby="principles-heading">
+      <h2 id="principles-heading">Design principles</h2>
+      <div class="principles">
+        <article><h3>Hold, not hunt</h3><p>The manor is the hero; the siege remains a scale of darkness, not a portrait or a readable opponent.</p></article>
+        <article><h3>Atmosphere over gore</h3><p>Cold blue dusk, one warm lantern, boarded openings, and a narrow horizon line carry the dread.</p></article>
+        <article><h3>Phone first</h3><p>The title lockup stays in the calm upper area, while the art and emblem remain legible at small sizes.</p></article>
+      </div>
+    </section>
+    <footer>Jamadianur · publishing as Zyvro Labs · DUSKHOLD brand assets</footer>
+  </main>
 </body>
 </html>

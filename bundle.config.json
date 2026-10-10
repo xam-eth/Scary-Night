@@ -1,16 +1,16 @@
 {
   "_readme": [
-    "One source of truth for the Play bundle. Edit the host before you build:",
-    "host + basePath are where the game is served; packageId is PERMANENT on Play",
-    "once the first AAB is uploaded — choose it now, not after."
+    "One source of truth for the Play bundle.",
+    "The packageId is permanent on Play; the owner confirmed no build has been uploaded yet.",
+    "Do not generate or replace the signing key until the owner has reviewed the bundle plan."
   ],
-  "host": "https://your.host",
+  "host": "https://duskhold.zyvrolabs.com",
   "basePath": "/",
-  "packageId": "com.xameth.lastnight",
-  "appName": "LAST NIGHT",
-  "launcherName": "LAST NIGHT",
-  "shortName": "LAST NIGHT",
-  "description": "Survive until dawn. A 3/4 vampire survival horror game about tension, doors and the sound of knocking.",
+  "packageId": "com.zyvrolabs.duskhold",
+  "appName": "DUSKHOLD",
+  "launcherName": "DUSKHOLD",
+  "shortName": "DUSKHOLD",
+  "description": "Fortify the manor, hold through the night, and survive until dawn. A gothic survival game about doors, dread, and the siege outside.",
   "versionName": "1.0.0",
   "versionCode": 1,
   "minSdkVersion": 23,
@@ -21,7 +21,7 @@
   "navigationColor": "#05060b",
   "splashScreenFadeOutDuration": 300,
   "signingKey": {
-    "path": "./android/lastnight-upload.jks",
-    "alias": "lastnight"
+    "path": "./android/duskhold-upload.jks",
+    "alias": "duskhold"
   }
 }

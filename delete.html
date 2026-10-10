@@ -2,45 +2,97 @@
 <html lang="id">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Delete my data — LAST NIGHT</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#05060b" />
+<meta name="description" content="Minta penghapusan data pembayaran web DUSKHOLD." />
+<title>Hapus Data / Delete Data — DUSKHOLD</title>
 <style>
-  :root { color-scheme: dark; }
-  body { margin: 0; background: #07080d; color: #e6dcc4; font: 16px/1.55 Georgia, "Times New Roman", serif; }
-  main { max-width: 40rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
-  h1 { font-weight: 400; letter-spacing: .12em; font-size: 1.5rem; }
-  a { color: #e0c070; }
-  p, li, label { color: #cfc6b0; }
-  input, button { font: inherit; }
-  input { width: 100%; padding: .6rem .7rem; background: #12141c; color: #e6dcc4; border: 1px solid #3a3428; }
-  button { margin-top: 1rem; padding: .7rem 1rem; background: #6a1020; color: #f0e6c8; border: 0; cursor: pointer; letter-spacing: .08em; }
-  .note { color: #a8a090; }
-  #out { min-height: 1.4em; }
+  :root { color-scheme: dark; --ink:#05060b; --deep:#0c0e14; --bone:#e6e1d2; --ash:#cfc6b0; --gold:#a8833c; --red:#7d1220; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ink); color: var(--bone); font: 16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 48rem; margin: 0 auto; padding: clamp(24px, 6vw, 60px) 20px 56px; }
+  header { padding-bottom: 20px; border-bottom: 1px solid rgba(168,131,60,.38); }
+  .eyebrow { margin: 0 0 8px; color: var(--gold); font-size: 11px; font-weight: 650; letter-spacing: .2em; text-transform: uppercase; }
+  h1 { margin: 0; font: 400 clamp(25px, 5vw, 36px)/1.2 Georgia, "Palatino Linotype", serif; letter-spacing: .05em; }
+  .updated { margin: 12px 0 0; color: rgba(207,198,176,.72); font-size: 13px; }
+  .lang { padding: 20px 0; border-bottom: 1px solid rgba(168,131,60,.2); }
+  .lang-label { margin: 0 0 12px; color: var(--gold); font-size: 11px; font-weight: 650; letter-spacing: .18em; text-transform: uppercase; }
+  p, li, label { color: rgba(207,198,176,.9); }
+  p { margin: 9px 0; }
+  ol { padding-left: 1.3rem; }
+  li { padding: 3px 0; }
+  h2 { margin: 22px 0 8px; color: var(--bone); font: 500 18px/1.35 Georgia, "Palatino Linotype", serif; }
+  a { color: #e0c070; text-underline-offset: 3px; }
+  code { padding: .08em .3em; background: rgba(255,255,255,.06); color: var(--bone); font: .92em ui-monospace, SFMono-Regular, Consolas, monospace; }
+  .contact { padding: 13px 15px; border: 1px solid rgba(168,131,60,.32); background: var(--deep); }
+  .pending { margin: 12px 0; padding: 12px 14px; border-left: 3px solid var(--red); background: rgba(125,18,32,.12); color: var(--bone); }
+  form { margin: 20px 0 8px; padding: 18px; border: 1px solid rgba(168,131,60,.36); background: var(--deep); }
+  label { display: block; margin-bottom: 9px; font-weight: 600; }
+  .hint { margin: 0 0 12px; color: rgba(207,198,176,.68); font-size: 13px; }
+  input, button { width: 100%; font: inherit; }
+  input { padding: 12px 13px; border: 1px solid rgba(168,131,60,.55); border-radius: 2px; background: #07080d; color: var(--bone); }
+  input:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+  button { margin-top: 12px; padding: 13px 16px; border: 1px solid #7d1220; border-radius: 2px; background: #5a111d; color: var(--bone); font-weight: 650; letter-spacing: .06em; cursor: pointer; }
+  button:hover { background: #7d1220; }
+  #out { min-height: 1.5em; margin: 12px 0 0; color: var(--bone); }
+  footer { padding-top: 22px; font-size: 14px; }
+  @media (max-width: 480px) { body { font-size: 15px; } main { padding-inline: 16px; } form { padding: 14px; } }
 </style>
 </head>
 <body>
 <main>
-  <h1>HAPUS DATA SAYA</h1>
-  <p>LAST NIGHT tidak membuat akun. Progres ada di perangkat. Id pembayaran, jika pernah dibuat, terlihat di layar Privacy di dalam game (bentuknya <code>LN-……</code>).</p>
-  <p class="en note">This game does not create an account. Local progress is deleted by clearing the app’s storage, or with Delete my data inside the game. This page deletes the web payment ledger for the on-device id, without reinstalling.</p>
-  <ol>
-    <li>Di Android: Setelan → Aplikasi → LAST NIGHT → Hapus data. Itu menghapus simpanan lokal.</li>
-    <li>Untuk catatan pembayaran web, masukkan id perangkat di bawah. Penghapusan bersifat permanen, bukan pembekuan.</li>
-  </ol>
+  <header>
+    <p class="eyebrow">DUSKHOLD · PRIVACY</p>
+    <h1>Hapus Data Saya / Delete My Data</h1>
+    <p class="updated"><strong>Terakhir diperbarui / Last updated:</strong> tanggal merge PR akan diisi sebelum publikasi / the PR merge date will be added before publication.</p>
+  </header>
+
+  <article class="lang" lang="id">
+    <p class="lang-label">Bahasa Indonesia</p>
+    <p>Pengembang: <strong>Jamadianur (publishing as Zyvro Labs), Rantau, Kalimantan Selatan, Indonesia.</strong> Kontak privasi: <a href="mailto:jamadianur@zyvrolabs.com">jamadianur@zyvrolabs.com</a>.</p>
+    <p>DUSKHOLD tidak membuat akun. Halaman ini meminta penghapusan catatan transaksi web yang terkait dengan ID perangkat; halaman ini tidak menghapus progres lokal di perangkat.</p>
+    <ol>
+      <li>Di dalam game: buka <strong>Settings → Privacy → DELETE MY DATA</strong> untuk menghapus progres lokal dan meminta penghapusan catatan server bagi ID tersebut.</li>
+      <li>Tanpa membuka game: masukkan ID perangkat yang digunakan saat pembayaran web, lalu kirim permintaan di bawah.</li>
+      <li>Untuk menghapus progres lokal di Android tanpa game, buka Setelan → Aplikasi → DUSKHOLD → Hapus penyimpanan. Langkah ini tidak menghapus catatan transaksi web.</li>
+    </ol>
+    <h2>Format ID dan bantuan</h2>
+    <p>ID biasa berbentuk <code>LN-</code> diikuti 8 huruf atau angka (A–Z, 0–9), misalnya <code>LN-AB12CD34</code>. Dalam mode penyimpanan privat, aplikasi dapat memakai ID fallback <code>LN-WEB</code>.</p>
+    <p class="contact">Jika perangkat atau ID hilang, email <a href="mailto:jamadianur@zyvrolabs.com">jamadianur@zyvrolabs.com</a> dengan subjek “DUSKHOLD — permintaan penghapusan data”. Berikan informasi yang cukup untuk menemukan transaksi; jangan kirim kata sandi, kunci server, atau data kartu lengkap.</p>
+  </article>
+
   <form id="f">
-    <label for="pid">Id perangkat (LN-…)</label>
-    <input id="pid" name="playerId" autocomplete="off" maxlength="64" required pattern="LN-[A-Za-z0-9-]{4,40}" />
-    <button type="submit">HAPUS CATATAN PEMBAYARAN</button>
+    <label for="pid">ID perangkat / Device ID</label>
+    <p class="hint">Masukkan ID untuk pembayaran web / Enter the ID used for web payment.</p>
+    <input id="pid" name="playerId" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="64" required pattern="LN-[A-Za-z0-9-]{3,40}" placeholder="LN-AB12CD34" aria-describedby="id-hint" />
+    <span id="id-hint" class="hint">Contoh normal: LN- diikuti 8 huruf/angka; fallback: LN-WEB. / Normal: LN- plus 8 alphanumeric characters; fallback: LN-WEB.</span>
+    <button type="submit">MINTA HAPUS CATATAN WEB / DELETE WEB RECORDS</button>
+    <p id="out" role="status" aria-live="polite"></p>
   </form>
-  <p id="out"></p>
-  <p><a href="./privacy.html">Kebijakan privasi</a> · <a href="./index.html">Game</a></p>
+
+  <article class="lang" lang="en">
+    <p class="lang-label">English</p>
+    <p>Developer: <strong>Jamadianur (publishing as Zyvro Labs), Rantau, South Kalimantan, Indonesia.</strong> Privacy contact: <a href="mailto:jamadianur@zyvrolabs.com">jamadianur@zyvrolabs.com</a>.</p>
+    <p>DUSKHOLD does not create accounts. This page requests deletion of web transaction records linked to a device ID; it does not erase local progress on the device.</p>
+    <ol>
+      <li>In the game: go to <strong>Settings → Privacy → DELETE MY DATA</strong> to clear local progress and request deletion of the server records for that ID.</li>
+      <li>Without opening the game: enter the device ID used for the web payment and submit the request below.</li>
+      <li>To clear local progress on Android without the game, open Settings → Apps → DUSKHOLD → Clear storage. This does not delete web transaction records.</li>
+    </ol>
+    <h2>ID format and help</h2>
+    <p>A normal ID is <code>LN-</code> followed by 8 letters or digits (A–Z, 0–9), for example <code>LN-AB12CD34</code>. In private-storage mode, the app may use the fallback ID <code>LN-WEB</code>.</p>
+    <p class="contact">If you lost the device or ID, email <a href="mailto:jamadianur@zyvrolabs.com">jamadianur@zyvrolabs.com</a> with the subject “DUSKHOLD — data deletion request”. Include enough information to identify the transaction; do not send passwords, server keys, or full card details.</p>
+  </article>
+
+  <p class="pending"><strong>Waktu pemrosesan / Processing time:</strong> pemilik belum mengonfirmasi batas waktu / the owner has not confirmed a deadline. Tidak ada durasi yang dijanjikan / no duration is promised. Konfirmasi ini wajib sebelum halaman diterbitkan / owner confirmation is required before publication.</p>
+  <footer><a href="./privacy.html">Kebijakan privasi / Privacy policy</a> · <a href="./index.html">Kembali ke DUSKHOLD / Back to DUSKHOLD</a></footer>
 </main>
 <script>
   document.getElementById('f').addEventListener('submit', async (ev) => {
     ev.preventDefault();
     const playerId = document.getElementById('pid').value.trim();
     const out = document.getElementById('out');
-    out.textContent = '…';
+    out.textContent = 'Mengirim permintaan… / Sending request…';
     try {
       const res = await fetch('/api/privacy/delete', {
         method: 'POST',
@@ -49,12 +101,13 @@
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        out.textContent = 'Server pembayaran tidak terjangkau dari halaman ini, atau id ditolak. Hapus data aplikasi di Android tetap menghapus salinan lokal.';
+        out.textContent = 'Server tidak dapat memproses ID ini. Coba lagi nanti atau email dukungan. / The server could not process this ID. Try again later or contact support.';
         return;
       }
-      out.textContent = 'Selesai. Catatan yang dihapus: ' + (data.deleted | 0) + '. Salinan di perangkat harus dihapus dari dalam game atau dari setelan Android.';
+      const deleted = Number(data.deleted) || 0;
+      out.textContent = `Server mengonfirmasi penghapusan ${deleted} catatan. Salinan lokal harus dihapus di dalam game atau Setelan Android. / Server confirmed deletion of ${deleted} record(s). Clear the local copy in-game or in Android Settings.`;
     } catch (e) {
-      out.textContent = 'Tidak terhubung ke server. Hapus data aplikasi di Android untuk salinan lokal.';
+      out.textContent = 'Tidak dapat terhubung ke server. Coba lagi nanti atau email dukungan. / Could not reach the server. Try again later or contact support.';
     }
   });
 </script>

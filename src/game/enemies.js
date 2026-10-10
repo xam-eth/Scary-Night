@@ -26,6 +26,7 @@ export const ESTATE = {
 };
 
 let UID = 1;
+let CROWD_UID = 1_000_000;
 
 export class Enemy {
   constructor(typeKey, x, y, opts = {}) {
@@ -130,6 +131,14 @@ export class Enemy {
 
   /* ---------------- movement ---------------- */
 
+  moveColliding(game, dx, dy) {
+    const resolve = game.mansion.moveCircle
+      ? game.mansion.moveCircle(this.x, this.y, dx, dy, this.radius, false)
+      : game.mansion.resolve(this.x + dx, this.y + dy, this.radius, false);
+    this.x = resolve.x; this.y = resolve.y;
+    return resolve;
+  }
+
   steer(dt, tx, ty, speed, game, opts = {}) {
     const a = Math.atan2(ty - this.y, tx - this.x);
     const accel = opts.accel ?? 7;
@@ -154,9 +163,7 @@ export class Enemy {
     this.vy = damp(this.vy, tvy, accel, dt);
 
     const px = this.x, py = this.y;
-    const nx = this.x + this.vx * dt, ny = this.y + this.vy * dt;
-    const res = game.mansion.resolve(nx, ny, this.radius, false);
-    this.x = res.x; this.y = res.y;
+    this.moveColliding(game, this.vx * dt, this.vy * dt);
     if (opts.avoid !== false) this.separate(game);
 
     // stuck detection
@@ -181,16 +188,14 @@ export class Enemy {
       if (d2 < rr * rr && d2 > 0.01) {
         const d = Math.sqrt(d2);
         const push = (rr - d) / d * 0.5;
-        this.x += (this.x - o.x) * push;
-        this.y += (this.y - o.y) * push;
+        this.moveColliding(game, (this.x - o.x) * push, (this.y - o.y) * push);
       }
     }
     // stay out of the player's personal space floor when just walking
     if (this.state !== ESTATE.STRIKE && this.state !== ESTATE.HUNT) {
       const d = dist(this.x, this.y, game.player.x, game.player.y);
       if (d < 34 && d > 0.01) {
-        this.x += (this.x - game.player.x) / d * (34 - d);
-        this.y += (this.y - game.player.y) / d * (34 - d);
+        this.moveColliding(game, (this.x - game.player.x) / d * (34 - d), (this.y - game.player.y) / d * (34 - d));
       }
     }
   }
@@ -268,7 +273,7 @@ export class Enemy {
     if (this.dead) {
       this.deathT += dt;
       this.vx = damp(this.vx, 0, 6, dt); this.vy = damp(this.vy, 0, 6, dt);
-      this.x += this.vx * dt; this.y += this.vy * dt;
+      this.moveColliding(game, this.vx * dt, this.vy * dt);
       if (this.deathT > 1.5) this.removeMe = true;
       return;
     }
@@ -276,7 +281,7 @@ export class Enemy {
     if (this.staggerT > 0) {
       this.staggerT -= dt;
       this.vx = damp(this.vx, 0, 10, dt); this.vy = damp(this.vy, 0, 10, dt);
-      this.x += this.vx * dt; this.y += this.vy * dt;
+      this.moveColliding(game, this.vx * dt, this.vy * dt);
       return;
     }
 
@@ -440,8 +445,7 @@ export class Enemy {
     const accel = opts.accel ?? 6.5;
     this.vx = damp(this.vx, Math.cos(desired) * speed, accel, dt);
     this.vy = damp(this.vy, Math.sin(desired) * speed, accel, dt);
-    const res = game.mansion.resolve(this.x + this.vx * dt, this.y + this.vy * dt, this.radius, false);
-    this.x = res.x; this.y = res.y;
+    this.moveColliding(game, this.vx * dt, this.vy * dt);
     this.separate(game);
     const moved = dist(px, py, this.x, this.y);
     if (moved < speed * dt * 0.35) this.stuckT += dt; else this.stuckT = Math.max(0, this.stuckT - dt * 2);
@@ -548,8 +552,9 @@ export class Crawler extends Enemy {
           this.wobble += dt * 7;
           this.moveOutside(dt, game, target.x, target.y, 1 + game.danger * 0.12);
           // jagged read: a little lateral twitch on top of the pathing
-          this.x += Math.cos(this.angle + Math.PI / 2) * Math.sin(this.wobble) * 12 * dt;
-          this.y += Math.sin(this.angle + Math.PI / 2) * Math.sin(this.wobble) * 12 * dt;
+          this.moveColliding(game,
+            Math.cos(this.angle + Math.PI / 2) * Math.sin(this.wobble) * 12 * dt,
+            Math.sin(this.angle + Math.PI / 2) * Math.sin(this.wobble) * 12 * dt);
           if (dist(this.x, this.y, e.outside.x, e.outside.y) < 46 && !e.broken && !(e.kind === 'door' && e.open)) { this.state = ESTATE.BREACH; }
           else if (dist(this.x, this.y, e.inside.x, e.inside.y) < 40 && (e.broken || e.open)) { this.state = ESTATE.CLIMB; this.climbT = 0; }
         } else this.advance(dt, game);
@@ -593,8 +598,9 @@ export class Crawler extends Enemy {
         } else if (this.leapT > 0) {
           this.leapT -= dt;
           this.vx = Math.cos(this.leapDir) * 230; this.vy = Math.sin(this.leapDir) * 230;
-          this.x += this.vx * dt; this.y += this.vy * dt;
+          const movement = this.moveColliding(game, this.vx * dt, this.vy * dt);
           this.angle = this.leapDir;
+          if (movement.hit) this.leapT = 0;
           if (dist(this.x, this.y, p.x, p.y) < 26) { game.enemyHitPlayer(this, this.type.contactDamage * 0.8, 'claw'); this.leapT = 0; }
         } else {
           this.wobble += dt * 9;
@@ -602,8 +608,7 @@ export class Crawler extends Enemy {
           const hs = (this.type.huntSpeed ?? this.type.speed) * this.speedMul;
           this.vx = damp(this.vx, Math.cos(ang) * hs, 7, dt);
           this.vy = damp(this.vy, Math.sin(ang) * hs, 7, dt);
-          const res = game.mansion.resolve(this.x + this.vx * dt, this.y + this.vy * dt, this.radius, false);
-          this.x = res.x; this.y = res.y;
+          this.moveColliding(game, this.vx * dt, this.vy * dt);
           this.separate(game);
           this.angle = approachAngle(this.angle, ang, dt * 9);
         }
@@ -645,7 +650,7 @@ export class Crawler extends Enemy {
     ctx.translate(this.x, this.y);
     ctx.globalAlpha = this.alpha;
     paintContactShadow(ctx, this, game, 13, 5.5);
-    ctx.rotate(visualAngle(this.angle, game.renderer.tilt));
+    ctx.rotate(visualAngle(this.angle, game.renderer));
     if (dying) { ctx.rotate(k * 1.2); ctx.translate(k * 4, 0); ctx.scale(1, 1 - k * 0.5); }
 
     const lurch = Math.sin(t * 12 + this.id) * 0.5 + 0.5;
@@ -747,7 +752,7 @@ export class Zombie extends Crawler {
     ctx.translate(this.x, this.y);
     ctx.globalAlpha = this.alpha;
     paintContactShadow(ctx, this, game, 12, 5);
-    ctx.rotate(visualAngle(this.angle, game.renderer.tilt));
+    ctx.rotate(visualAngle(this.angle, game.renderer));
     if (dying) { ctx.rotate(k * 0.8); ctx.scale(1, 1 - k * 0.4); }
     const step = Math.sin(t * 3.2 + this.id) * 3;
     ctx.strokeStyle = '#1a1c16';
@@ -878,7 +883,7 @@ export class Hunter extends Enemy {
     ctx.translate(this.x, this.y);
     ctx.globalAlpha = this.alpha;
     paintContactShadow(ctx, this, game, 14, 6);
-    ctx.rotate(visualAngle(this.angle, game.renderer.tilt) + (dying ? k * 1.35 : 0));
+    ctx.rotate(visualAngle(this.angle, game.renderer) + (dying ? k * 1.35 : 0));
     if (dying) { ctx.scale(1, 1 - k * 0.6); ctx.translate(k * 6, 0); }
 
     const walk = Math.sin(t * 7 + this.id) * (Math.hypot(this.vx, this.vy) > 20 ? 4 : 1.2);
@@ -1065,7 +1070,7 @@ export class Werewolf extends Enemy {
       case ESTATE.WINDUP: {
         this.windup -= dt;
         this.vx = damp(this.vx, 0, 8, dt); this.vy = damp(this.vy, 0, 8, dt);
-        this.x += this.vx * dt; this.y += this.vy * dt;
+        this.moveColliding(game, this.vx * dt, this.vy * dt);
         this.angle = approachAngle(this.angle, Math.atan2(p.y - this.y, p.x - this.x), dt * 5);
         if (this.windup <= 0) {
           this.charging = 0.75;
@@ -1079,15 +1084,14 @@ export class Werewolf extends Enemy {
         this.charging -= dt;
         this.vx = Math.cos(this.chargeDir) * this.type.chargeSpeed;
         this.vy = Math.sin(this.chargeDir) * this.type.chargeSpeed;
-        const res = game.mansion.resolve(this.x + this.vx * dt, this.y + this.vy * dt, this.radius, false);
+        const res = this.moveColliding(game, this.vx * dt, this.vy * dt);
         // if the charge hits geometry, stun it briefly
-        if (Math.abs(res.x - (this.x + this.vx * dt)) > 0.5 || Math.abs(res.y - (this.y + this.vy * dt)) > 0.5) {
+        if (res.hit) {
           this.charging = 0;
           this.staggerT = 0.7;
           game.renderer.shake(0.4);
           game.audio.play('impact', { x: this.x, y: this.y, cam: game.renderer.cam, vol: 0.6 });
         }
-        this.x = res.x; this.y = res.y;
         for (const o of game.enemies) {
           if (o !== this && !o.dead && dist(this.x, this.y, o.x, o.y) < this.radius + o.radius) {
             o.hurt(6, game, this.x, this.y);
@@ -1147,7 +1151,7 @@ export class Werewolf extends Enemy {
     ctx.translate(this.x, this.y);
     ctx.globalAlpha = this.alpha;
     paintContactShadow(ctx, this, game, 22 * (this.sizeMul || 1), 9);
-    ctx.rotate(visualAngle(this.angle, game.renderer.tilt) + (dying ? k * 1.2 : 0));
+    ctx.rotate(visualAngle(this.angle, game.renderer) + (dying ? k * 1.2 : 0));
     // a Master is not an alpha with more health — it is bigger than the door
     const big = this.sizeMul || 1;
     if (big !== 1) ctx.scale(big, big);
@@ -1326,7 +1330,8 @@ export class Stalker extends Enemy {
       const a = rand(0, TAU);
       const r = rand(230, 430);
       const nx = p.x + Math.cos(a) * r, ny = p.y + Math.sin(a) * r;
-      if (game.mansion.solidAt(nx, ny)) continue;
+      const fit = game.mansion.resolve(nx, ny, this.radius, false);
+      if (fit.hit || Math.hypot(fit.x - nx, fit.y - ny) > 1) continue;
       if (game.mansion.hasLOS(p.x, p.y, nx, ny)) {
         const toIt = Math.atan2(ny - p.y, nx - p.x);
         if (Math.abs(angDiff(toIt, p.angle)) < 1.1 && dist(nx, ny, p.x, p.y) < 460) continue;   // would land in view
@@ -1348,7 +1353,7 @@ export class Stalker extends Enemy {
     if (watched) {
       // the freeze: dead stop, no tremble — the stillness IS the tell
       this.vx = damp(this.vx, 0, 16, dt); this.vy = damp(this.vy, 0, 16, dt);
-      this.x += this.vx * dt; this.y += this.vy * dt;
+      this.moveColliding(game, this.vx * dt, this.vy * dt);
       this.angle = Math.atan2(p.y - this.y, p.x - this.x);
       return;
     }
@@ -1562,7 +1567,7 @@ export class Bolt {
     ctx.stroke();
     ctx.globalAlpha = 1;
     ctx.translate(this.x, this.y);
-    ctx.rotate(visualAngle(this.angle, game && game.renderer ? game.renderer.tilt : 1));
+    ctx.rotate(visualAngle(this.angle, game && game.renderer ? game.renderer : 1));
     ctx.fillStyle = '#2b2016';
     ctx.fillRect(-7, -1.2, 14, 2.4);
     ctx.fillStyle = '#c8c8d4';
@@ -1581,17 +1586,14 @@ export class Bolt {
  * an army at the walls. So the house gets an army — and the army is NOT
  * forty more enemies.
  *
- * A crowd body has no hunt AI, no pathfinding, no line of sight and no
- * skinned GLB slot. It knows three things: which wall it is going to, where
- * in the doorway it stands, and how hard it is leaning. It is drawn from the
- * same baked silhouette the roster already bakes for its proof frames — one
- * drawImage, no rig, no mixer. The eight nearest real besiegers keep their
- * skinned bodies and the combatant ceiling is exactly what it was.
+ * A crowd body has no hunt AI, no pathfinding and no line of sight. It knows
+ * which wall it is going to, where in the doorway it stands, and how hard it
+ * is leaning. These bodies stay simulation-only in the 3D renderer: they are
+ * not assigned combatant GLBs and are never replaced by generic proxy models.
  *
- * What the crowd does is real, though: it leans on doors and windows through
- * the same `damageEntrance` path a besieger uses, and when a combat slot
- * frees, one of the bodies leaning on the breach comes inside as a real
- * enemy. The spectacle is the pressure, not a backdrop.
+ * The pressure is still real: it leans on doors and windows through the same
+ * `damageEntrance` path a besieger uses, and when a combat slot frees, one of
+ * the bodies leaning on the breach comes inside as a real enemy.
  * ========================================================================== */
 
 export const CROWD = { MARCH: 'march', PRESS: 'press', LEAVE: 'leave' };
@@ -1634,9 +1636,12 @@ export function crowdSpot(e, index, ring) {
 
 export class CrowdBody {
   constructor(key, x, y, entrance) {
+    this.id = CROWD_UID++;
+    this._crowd = true;
     this.key = key;
     this.type = ENEMY_TYPES[key] || ENEMY_TYPES.crawler;
     this.x = x; this.y = y;
+    this.vx = 0; this.vy = 0;
     this.entrance = entrance || null;
     this.state = CROWD.MARCH;
     this.index = 0;                        // place in the rank: 0 is at the wood
@@ -1666,6 +1671,14 @@ export class CrowdBody {
 
   dismiss() { this.state = CROWD.LEAVE; }
 
+  moveColliding(game, dx, dy) {
+    const result = game.mansion.moveCircle
+      ? game.mansion.moveCircle(this.x, this.y, dx, dy, this.radius, false)
+      : game.mansion.resolve(this.x + dx, this.y + dy, this.radius, false);
+    this.x = result.x; this.y = result.y;
+    return result;
+  }
+
   update(dt, game) {
     this.t += dt;
     const e = this.entrance;
@@ -1675,8 +1688,9 @@ export class CrowdBody {
       const away = { x: this.x - (e ? e.x : game.player.x), y: this.y - (e ? e.y : game.player.y) };
       const d = Math.hypot(away.x, away.y) || 1;
       const sp = 90 * this.gait;
-      this.x += (away.x / d) * sp * dt;
-      this.y += (away.y / d) * sp * dt;
+      this.vx = (away.x / d) * sp; this.vy = (away.y / d) * sp;
+      this.angle = Math.atan2(this.vy, this.vx);
+      this.moveColliding(game, this.vx * dt, this.vy * dt);
       this.alpha = damp(this.alpha, 0, 1 / Math.max(0.2, SIEGE.fade), dt);
       if (this.alpha < 0.04) this.gone = true;
       return;
@@ -1689,11 +1703,13 @@ export class CrowdBody {
     const speed = lerp(SIEGE.speed[0], SIEGE.speed[1], game.danger) * this.gait;
     if (d > 6) {
       const step = Math.min(d, speed * dt);
-      this.x += (dx / d) * step;
-      this.y += (dy / d) * step;
+      const actualSpeed = dt > 0 ? step / dt : speed;
+      this.vx = (dx / d) * actualSpeed; this.vy = (dy / d) * actualSpeed;
+      this.moveColliding(game, this.vx * dt, this.vy * dt);
       this.angle = Math.atan2(dy, dx);
       this.state = CROWD.MARCH;
     } else {
+      this.vx = 0; this.vy = 0;
       this.state = CROWD.PRESS;
       // face the wall it is leaning on
       this.angle = Math.atan2(e.y - this.y, e.x - this.x);

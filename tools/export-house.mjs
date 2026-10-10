@@ -3,12 +3,10 @@
  *
  *   node tools/export-house.mjs [out.json]      # default assets/house.json
  *
- * Every room in LAST NIGHT is assembled at runtime from assets/env-kit/*.glb
- * — floor slabs cut to the nav grid, wall panels off the wall solids,
- * corners, windows, doors, and furniture measured in metres against the
- * woman. None of it is a picture. That is what makes this export possible:
- * a house that was photographs could not be handed to Godot, and a house
- * that is placements can.
+ * All eleven rooms in LAST NIGHT are assembled at runtime from assets/env-kit/*.glb
+ * — floor slabs inside rooms and passages, wall panels off shared wall runs,
+ * corners, windows, doors, and room-relative furniture. The camera projection,
+ * room graph and exterior points are exported alongside those placements.
  *
  * The build needs a browser (THREE + GLTFLoader), so this opens the game
  * headlessly, lets the kit finish, and reads the placements the room was
@@ -16,7 +14,8 @@
  *
  * The format, for whoever imports it:
  *
- *   meta.units        world px. Valen is 72px and 1.70m, so 1m = 42.35px.
+ *   meta.units        world px. Valen is 72px and 1.70m; 1m = 51.872px at
+ *                     the current shared isometric camera scale.
  *   meta.kitScale     33 — the kit's GLBs are authored in metres and scaled
  *                     by this to become px. Divide the scale by it to work
  *                     in metres; the rotation is already in radians.
@@ -126,12 +125,19 @@ const house = await page.evaluate(() => {
     meta: {
       game: 'LAST NIGHT',
       generated: new Date().toISOString(),
-      units: 'world px — Valen is 72px tall and 1.70m, so 1m = 42.35px',
+      units: `world px — Valen is ${kit.VALEN_HEIGHT}px tall; 1m = ${round(kit.pxPerMetre(g.renderer.tilt))}px at this camera`,
       axes: 'x east, y up, z south — the same axes Godot uses',
+      camera: {
+        projection: 'orthographic-isometric',
+        azimuthRad: Math.PI / 4,
+        elevationRad: Math.asin(g.renderer.tilt),
+        horizontal: Math.SQRT1_2,
+        vertical: 1 / Math.sqrt(6),
+      },
       kitScale: kit.KIT_SCALE,
       kitDir: kit.KIT_DIR,
       valen: { px: kit.VALEN_HEIGHT, metres: kit.VALEN_METRES },
-      pxPerMetre: round(kit.PX_PER_METRE),
+      pxPerMetre: round(kit.pxPerMetre(g.renderer.tilt)),
       pieces,
     },
     rooms: m.roomList.map((r) => ({
@@ -140,10 +146,29 @@ const house = await page.evaluate(() => {
       floor: r.floor, dark: r.dark,
     })),
     entrances: (m.entrances || []).map((e) => ({
-      id: e.id, kind: e.kind, axis: e.axis,
+      id: e.id, name: e.name, kind: e.kind, axis: e.axis, room: e.room,
+      exterior: !!e.exterior,
       x: round(e.x), y: round(e.y), w: round(e.w), h: round(e.h),
       inside: e.inside ? { x: round(e.inside.x), y: round(e.inside.y) } : null,
       outside: e.outside ? { x: round(e.outside.x), y: round(e.outside.y) } : null,
+    })),
+    portals: (m.portals || []).map((p) => ({
+      id: p.id, kind: p.kind, room: p.room, to: p.to || null, axis: p.axis,
+      x: round(p.x), y: round(p.y), width: round(p.width),
+    })),
+    passages: (m.passages || []).map((p) => ({
+      id: p.id, from: p.a, to: p.b, x: round(p.x), y: round(p.y), r: round(p.r),
+    })),
+    furniture: (m.furniture || []).map((f) => ({
+      type: f.type, room: f.room || null, x: round(f.x), y: round(f.y),
+      w: round(f.w), h: round(f.h), rot: round(f.rot || 0), solid: f.solid !== false,
+    })),
+    lights: (m.lights || []).map((l) => ({
+      id: l.id || null, type: l.type, room: l.room || null,
+      x: round(l.x), y: round(l.y), r: round(l.r), i: round(l.i),
+    })),
+    spawns: (m.spawns || []).map((s) => ({
+      x: round(s.x), y: round(s.y), entrance: s.entrance || null, weight: round(s.weight),
     })),
     solids: (m.solids || []).filter((s) => s.type === 'wall')
       .map((s) => ({ x: s.x, y: s.y, w: s.w, h: s.h })),
@@ -158,8 +183,8 @@ fs.writeFileSync(OUT, JSON.stringify(house));
 const byPiece = {};
 for (const p of house.placements) byPiece[p.piece] = (byPiece[p.piece] || 0) + 1;
 console.log(`wrote ${path.relative(ROOT, OUT)}`);
-console.log(`  ${house.rooms.length} rooms, ${house.entrances.length} entrances, `
-  + `${house.solids.length} wall solids, ${house.placements.length} instances `
-  + `of ${Object.keys(byPiece).length} pieces`);
+console.log(`  ${house.rooms.length} rooms, ${house.portals.length} portals, `
+  + `${house.entrances.length} exterior entrances, ${house.solids.length} wall segments, `
+  + `${house.placements.length} placements across ${Object.keys(byPiece).length} distinct kit-piece types`);
 console.log('  ' + Object.entries(byPiece).sort((a, b) => b[1] - a[1])
   .map(([k, v]) => `${k} ${v}`).join('  '));
