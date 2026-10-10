@@ -12,7 +12,8 @@ const KEYMAP = {
   KeyS: 'down', ArrowDown: 'down',
   KeyA: 'left', ArrowLeft: 'left',
   KeyD: 'right', ArrowRight: 'right',
-  ShiftLeft: 'dash', ShiftRight: 'dash',
+  ShiftLeft: 'run', ShiftRight: 'run',
+  ControlLeft: 'dash', ControlRight: 'dash', KeyX: 'dash',
   KeyE: 'interact', Space: 'interact',
   KeyR: 'repair', KeyB: 'barricade',
   KeyF: 'attack', KeyQ: 'weapon',
@@ -31,6 +32,7 @@ export class Input {
     this.stick = { active: false, id: -1, ox: 0, oy: 0, x: 0, y: 0, r: 54, dx: 0, dy: 0, mag: 0, pointer: false, homeX: 96, homeY: 0 };
     this.buttons = {
       attack: { x: 0, y: 0, r: 32, down: false, pulse: 0, hidden: false },
+      run: { x: 0, y: 0, r: 22, down: false, pulse: 0, hidden: false },
       dash: { x: 0, y: 0, r: 24, down: false, pulse: 0, hidden: false },
       interact: { x: 0, y: 0, r: 24, down: false, pulse: 0, hidden: false, hot: false },
       repair: { x: 0, y: 0, r: 20, down: false, pulse: 0, hidden: true },
@@ -59,7 +61,7 @@ export class Input {
   }
 
   _hitButton(p) {
-    for (const k of ['attack', 'dash', 'interact', 'repair', 'barricade']) {
+    for (const k of ['attack', 'run', 'dash', 'interact', 'repair', 'barricade']) {
       if (this.buttons[k].hidden) continue;
       const b = this.buttons[k];
       if (Math.hypot(p.x - b.x, p.y - b.y) < b.r * 1.35) return k;
@@ -163,6 +165,7 @@ export class Input {
       for (const t of e.changedTouches) {
         const p = area(t);
         this.uiTap = { x: p.x, y: p.y };
+        if (!this.gameplay) continue;
         const b = this._hitButton(p);
         if (b) { this.buttons[b].down = true; this.buttons[b].pulse = 1; this.buttons[b].id = t.identifier; continue; }
         if (!this.stick.active && p.x < c.clientWidth * 0.5 && p.y > c.clientHeight * 0.18) {
@@ -177,7 +180,7 @@ export class Input {
       for (const t of e.changedTouches) {
         const p = area(t);
         if (this.stick.active && t.identifier === this.stick.id) { this.stick.x = p.x; this.stick.y = p.y; }
-        for (const k of ['attack', 'dash', 'interact', 'repair', 'barricade']) {
+        for (const k of ['attack', 'run', 'dash', 'interact', 'repair', 'barricade']) {
           const b = this.buttons[k];
           if (b.id === t.identifier) {
             const inside = Math.hypot(p.x - b.x, p.y - b.y) < b.r * 1.35;
@@ -193,7 +196,7 @@ export class Input {
           this.stick.active = false; this.stick.pointer = false;
           this.stick.dx = 0; this.stick.dy = 0; this.stick.mag = 0;
         }
-        for (const k of ['attack', 'dash', 'interact', 'repair', 'barricade']) {
+        for (const k of ['attack', 'run', 'dash', 'interact', 'repair', 'barricade']) {
           const b = this.buttons[k];
           if (b.id === t.identifier) { b.down = false; b.id = -1; }
         }
@@ -237,6 +240,7 @@ export class Input {
     // click, or right-click — never the finger that is steering.
     this.attackDown = !!k.attack || this.buttons.attack.down || !!this.mouse.right || (this.mouse.down && !this.stick.active);
     this.attackPressed = (!!k.attack && !this.prevKeys.attack) || this.buttons.attack.pulse > 0.82 || this.mouse.clicked || !!this.mouse.rightClick;
+    this.runDown = !!k.run || this.buttons.run.down;
     this.dashDown = !!k.dash || this.buttons.dash.down;
     this.dashPressed = (!!k.dash && !this.prevKeys.dash) || this.buttons.dash.pulse > 0.82;
     this.interactDown = !!k.interact || this.buttons.interact.down;
@@ -274,15 +278,20 @@ export class Input {
       b.repair.x = b.dash.x;
       b.repair.y = b.interact.y;
       b.barricade.r = sr;
+      b.run.r = sr;
       const boardX = b.dash.x - sr - sr - gap;
       const stickR = short ? 42 : 54;
       const stickRight = pad + stickR * 2 + 16;
       if (boardX - sr > stickRight) {
         b.barricade.x = boardX;
         b.barricade.y = bottom - sr;
+        b.run.x = boardX;
+        b.run.y = b.repair.y + 8;
       } else {
         b.barricade.x = b.dash.x;
         b.barricade.y = b.repair.y - sr - sr - gap;
+        b.run.x = b.dash.x;
+        b.run.y = b.barricade.y - sr - sr - gap;
       }
       this.stick.r = stickR;
       this.stick.homeX = pad + stickR + 6;
@@ -297,12 +306,14 @@ export class Input {
       b.interact.x = right - 68 * s; b.interact.y = bottom - 118 * s; b.interact.r = 25 * s;
       b.repair.x = right - 156 * s; b.repair.y = bottom - 108 * s; b.repair.r = 22 * s;
       b.barricade.x = right - 156 * s; b.barricade.y = bottom - 48 * s; b.barricade.r = 22 * s;
+      b.run.x = right - 204 * s; b.run.y = bottom - 26 * s; b.run.r = 22 * s;
       this.stick.r = 52 * s;
       this.stick.homeX = pad + 72 * s;
       this.stick.homeY = bottom - 64 * s;
     }
     this.clusterLeft = Math.min(
       b.attack.x - b.attack.r,
+      b.run.x - b.run.r,
       b.dash.x - b.dash.r,
       b.interact.x - b.interact.r,
       b.repair.x - b.repair.r,

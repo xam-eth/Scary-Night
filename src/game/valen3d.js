@@ -461,7 +461,7 @@ class ValenRuntime {
 
     const attacking = state === 'attack';
     const locomotion = attacking ? 0 : smoothstep(4, 24, speed);
-    const runBlend = smoothstep(140, 180, speed);  // v1.2: match state threshold (160) + walk/run speeds (122/196)
+    const runBlend = state === 'run' ? 1 : smoothstep(140, 180, speed);
     const walkWeight = locomotion * (1 - runBlend);
     const runWeight = locomotion * runBlend;
     const phase = wrap01(stepPhase / (Math.PI * 2));

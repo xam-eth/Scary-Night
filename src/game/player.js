@@ -172,7 +172,9 @@ export class Player {
     const intent = screenDirToWorld(input.move.x, input.move.y, game.renderer);
     let mx = intent.x * intent.mag, my = intent.y * intent.mag;
     const mag = intent.mag;
-    const wantRun = input.dashDown && mag > 0.3;
+    // Running is a sustained movement mode, independent of the short dash.
+    // Shift / the boot button changes both speed and the authored run clip.
+    const wantRun = input.runDown && mag > 0.3;
 
     // blood-instability: the weaker you are, the more you drift
     if (this.lowBlood) {
@@ -258,7 +260,7 @@ export class Player {
     if (sp > 20 && this.stepTimer <= 0) {
       const hz = this.locomotionHz();
       this.stepTimer = hz > 0 ? 0.5 / hz : 0.46;
-      game.onPlayerStep(sp > 160 || this.dashT > 0);
+      game.onPlayerStep(wantRun || this.dashT > 0);
     }
 
     // ---------- attack ----------
@@ -293,7 +295,7 @@ export class Player {
     // ---------- anim state ----------
     if (this.attackT <= 0 && this.state !== PSTATE.DRINK) {
       if (sp < 14) this.state = this.lowBlood && game.danger > 0.6 ? PSTATE.PANIC : PSTATE.IDLE;
-      else if (sp > 160) this.state = PSTATE.RUN;  // v1.1: clearer threshold (walk=122, run=196, midpoint=159)
+      else if (wantRun || sp > 160) this.state = PSTATE.RUN;
       else this.state = PSTATE.WALK;
       if (this.hurtT > 0.2) this.state = PSTATE.HURT;
     }
@@ -320,6 +322,12 @@ export class Player {
   }
 
   startAttack(game) {
+    const tool0 = weaponById(this.weapon);
+    if (tool0.ammo && !game.consumeAmmo(tool0.ammo)) {
+      this.attackCd = Math.max(this.attackCd, 0.48);
+      game.showMessage(tool0.ammo === 'arrows' ? 'THE QUIVER IS EMPTY — COMPLETE AN ERRAND.' : 'NO THROWING KNIVES LEFT.', { tone: 'cold', life: 2.4, key: 'ammo-empty' });
+      return false;
+    }
     this.attackT = PLAYER.attackWindup + PLAYER.attackActive;
     const frz = this.frenzy ? this.frenzy.rate : 1;
     this.attackCd = PLAYER.attackCooldown / ((this.attackSpeedMul || 1) * frz);
@@ -333,7 +341,6 @@ export class Player {
     // reads as the attack simply not working. Only bends toward a target that is
     // already inside the cone, so aiming still matters.
     let bestA = null, bestScore = -1;
-    const tool0 = weaponById(this.weapon);
     // Distance and bearing as they are DRAWN: the reach is a circle on screen,
     // not an ellipse on the floor, so aim assist and the hit agree (weapons.js).
     const face = visualAngle(this.angle, game.renderer);

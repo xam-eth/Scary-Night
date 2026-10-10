@@ -21,6 +21,7 @@ import { Enemy3D } from '../game/enemy3d.js';
 import { IAP, CATALOG } from '../shop/iap.js';
 import { Ads } from '../shop/ads.js';
 import { buttonIconForLabel, drawGameIcon } from './icons.js';
+import { weaponById } from '../game/weapons.js';
 
 const SERIF = '"IM Fell English SC", Georgia, serif';
 const SANS = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
@@ -2773,5 +2774,506 @@ export function drawRefuge(game, ctx, w, h) {
     buttonVisual(ctx, r.b, { active: r.hover || (game.usingKeyboard && game.uiIndex === i), label: it.label, small: true, accent: it.accent });
     by += bhRef + 8;
   });
+  ctx.restore();
+}
+
+/* =======================================================================
+ * THE FIELD CARD — icon-first inventory, missions and player menus.
+ * It is rendered over the live WebGL night; the simulation pauses while the
+ * card is open, but the manor remains in view behind the glass.
+ * ===================================================================== */
+
+const FIELD_TABS = [
+  { id: 'bag', icon: 'bag', title: 'FIELD PACK', sub: 'STOCK THAT IS REALLY IN YOUR HANDS' },
+  { id: 'missions', icon: 'mission', title: 'TONIGHT’S ERRANDS', sub: 'SUPPLIES ARRIVE WHEN AN ERRAND IS COMPLETE' },
+  { id: 'upgrades', icon: 'upgrade', title: 'TEMPER THE HUNTER', sub: 'SPEND ONLY THE SHARDS YOU HAVE EARNED' },
+  { id: 'profile', icon: 'profile', title: 'SURVIVOR RECORD', sub: 'THE HOUSE KEEPS WHAT YOU DID' },
+  { id: 'collection', icon: 'book', title: 'HOUSE RECORD', sub: 'FACES AND FRAGMENTS THE NIGHT HAS SHOWN YOU' },
+  { id: 'shop', icon: 'blood', title: 'BLOOD MARKET', sub: 'OPTIONAL RELIEF AND IDENTITY — NEVER POWER' },
+  { id: 'settings', icon: 'settings', title: 'SETTINGS', sub: 'TUNE THE NIGHT WITHOUT LEAVING IT' },
+  { id: 'help', icon: 'help', title: 'FIELD GUIDE', sub: 'MOVEMENT, TOOLS AND THE HOUSE' },
+  { id: 'privacy', icon: 'shield', title: 'PRIVACY', sub: 'LOCAL SAVE · NO ACCOUNT · WIPE WHENEVER YOU CHOOSE' },
+];
+
+function fieldIconButton(game, ctx, x, y, size, icon, onClick, opts = {}) {
+  const disabled = !!opts.disabled;
+  const idx = game.ui.length;
+  const box = { x, y, w: size, h: size, onClick: disabled ? null : onClick, disabled, label: icon, idx };
+  game.ui.push(box);
+  const active = !!opts.active || (game.usingKeyboard && game.uiIndex === idx);
+  const cx = x + size / 2, cy = y + size / 2;
+  ctx.save();
+  ctx.globalAlpha = disabled ? 0.42 : 1;
+  ctx.fillStyle = active ? 'rgba(55,39,22,0.96)' : 'rgba(11,13,18,0.92)';
+  ctx.strokeStyle = active ? 'rgba(213,178,103,0.95)' : 'rgba(169,157,132,0.48)';
+  ctx.lineWidth = active ? 1.6 : 1;
+  if (opts.round !== false) {
+    ctx.beginPath(); ctx.arc(cx, cy, size * 0.47, 0, TAU); ctx.fill(); ctx.stroke();
+  } else {
+    ctx.fillRect(x, y, size, size); ctx.strokeRect(x + 0.5, y + 0.5, size - 1, size - 1);
+  }
+  const ink = disabled ? 'rgba(172,163,146,0.7)' : active ? '#f2d99c' : '#d5cbb6';
+  drawGameIcon(ctx, icon, cx, cy, Math.min(23, size * 0.54), ink);
+  ctx.restore();
+  return box;
+}
+
+function fieldFit(ctx, text, x, y, maxW, px, family = SANS, color = '#e5ddcb', weight = 400) {
+  let size = px;
+  ctx.font = `${weight} ${size}px ${family}`;
+  while (ctx.measureText(String(text)).width > maxW && size > 8) {
+    size -= 0.5;
+    ctx.font = `${weight} ${size}px ${family}`;
+  }
+  ctx.fillStyle = color;
+  ctx.fillText(String(text), x, y);
+}
+
+function fieldBar(ctx, x, y, w, p, tint = '#b79354') {
+  ctx.fillStyle = 'rgba(0,0,0,0.52)';
+  ctx.fillRect(x, y, w, 3);
+  ctx.fillStyle = 'rgba(174,164,145,0.18)';
+  ctx.fillRect(x, y, w, 2);
+  ctx.fillStyle = tint;
+  ctx.fillRect(x, y, w * clamp(p || 0, 0, 1), 2);
+}
+
+function drawFieldBag(game, ctx, x, y, w, h, short) {
+  const bag = game.inventory ? game.inventory() : ((game.save && game.save.inventory) || {});
+  const p = game.player;
+  const items = [
+    { icon: 'blood', name: 'BLOOD', amount: `${Math.ceil(p.blood)} / ${Math.ceil(p.bloodMax)}`, note: 'VITALITY', tint: '#ce5960' },
+    { icon: 'shard', name: 'SHARDS', amount: game.save.shards || 0, note: 'UPGRADE CURRENCY', tint: '#d3b66f' },
+    { icon: 'plank', name: 'PLANKS', amount: p.planks | 0, note: 'BUILD MATERIAL', tint: '#c29a63' },
+    { icon: 'arrow', name: 'ARROWS', amount: bag.arrows | 0, note: 'MISSION CACHE', tint: '#b8c5d0', action: { icon: 'shot', weapon: 'shot', count: bag.arrows | 0 } },
+    { icon: 'knife', name: 'KNIVES', amount: bag.knives | 0, note: 'MISSION CACHE', tint: '#b8c5d0', action: { icon: 'knife', weapon: 'knife', count: bag.knives | 0 } },
+    { icon: 'bandage', name: 'BANDAGES', amount: bag.bandages | 0, note: 'MISSION CACHE', tint: '#d2b68b', action: { icon: 'plus', use: true, count: bag.bandages | 0 } },
+    { icon: 'relic', name: 'RELICS', amount: game.save.relics || 0, note: 'RECORDED FINDS', tint: '#a4b6c8' },
+  ];
+  const cols = w > 720 ? 3 : 2;
+  const gap = short ? 6 : 10;
+  const rows = Math.ceil(items.length / cols);
+  const cw = (w - gap * (cols - 1)) / cols;
+  const ch = Math.max(48, Math.min(180, (h - gap * (rows - 1)) / rows));
+  items.forEach((item, i) => {
+    const col = i % cols, row = Math.floor(i / cols);
+    const cx = x + col * (cw + gap), cy = y + row * (ch + gap);
+    ctx.save();
+    ctx.fillStyle = 'rgba(16,19,26,0.84)';
+    ctx.fillRect(cx, cy, cw, ch);
+    ctx.strokeStyle = 'rgba(174,151,105,0.27)';
+    ctx.strokeRect(cx + 0.5, cy + 0.5, cw - 1, ch - 1);
+    drawGameIcon(ctx, item.icon, cx + 19, cy + Math.min(24, ch * 0.37), short ? 17 : 20, item.tint);
+    ctx.textBaseline = 'middle';
+    fieldFit(ctx, item.name, cx + 34, cy + Math.min(18, ch * 0.28), Math.max(52, cw - 44), short ? 9 : 10.5, SANS, 'rgba(204,197,181,0.76)', 600);
+    ctx.textAlign = 'right';
+    fieldFit(ctx, item.amount, cx + cw - (item.action ? 36 : 10), cy + Math.min(37, ch * 0.58), cw - 48, short ? 15 : 19, MONO, '#f0e7d6', 400);
+    ctx.textAlign = 'left';
+    if (ch > 62) fieldFit(ctx, item.note, cx + 12, cy + ch - 11, cw - 24, short ? 7.5 : 8.5, SANS, 'rgba(159,153,140,0.65)', 500);
+    if (item.action) {
+      const actionX = cx + cw - 33;
+      const actionY = cy + ch / 2 - 15;
+      const disabled = item.action.count < 1 || (item.action.use && p.blood >= p.bloodMax - 0.1);
+      fieldIconButton(game, ctx, actionX, actionY, 30, item.action.icon,
+        () => item.action.use ? game.useBandage() : game.setWeapon(item.action.weapon), {
+          disabled,
+          active: !item.action.use && p.weapon === item.action.weapon,
+        });
+    }
+    ctx.restore();
+  });
+  if (h > 80) {
+    ctx.save();
+    ctx.textAlign = 'right'; ctx.textBaseline = 'alphabetic';
+    fieldFit(ctx, `EQUIPPED · ${weaponById(p.weapon).label}`, x + w, y + h - 2, w, short ? 8 : 9, MONO, 'rgba(193,181,153,0.72)', 400);
+    ctx.restore();
+  }
+}
+
+function drawFieldRewards(ctx, reward, x, y, maxW, short) {
+  const rows = [
+    ['shards', 'shard'], ['planks', 'plank'], ['arrows', 'arrow'],
+    ['knives', 'knife'], ['bandages', 'bandage'], ['blood', 'blood'],
+  ].filter(([key]) => (reward && reward[key]) > 0);
+  const step = short ? 30 : 38;
+  const visible = rows.slice(0, Math.max(1, Math.floor(maxW / step)));
+  let dx = x;
+  for (const [key, icon] of visible) {
+    drawGameIcon(ctx, icon, dx + 7, y, short ? 13 : 15, key === 'shards' ? '#d2b166' : key === 'blood' ? '#cc616b' : '#bac3c4');
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.font = `400 ${short ? 8 : 9}px ${MONO}`;
+    ctx.fillStyle = 'rgba(220,212,195,0.85)';
+    ctx.fillText(String(reward[key]), dx + 16, y + 0.5);
+    dx += step;
+  }
+}
+
+function drawFieldMissions(game, ctx, x, y, w, h, short) {
+  const list = game.objectives && game.objectives.list || [];
+  const complete = list.filter((slot) => slot.state === 'done').length;
+  ctx.save();
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.font = `500 ${short ? 9 : 10}px ${SANS}`;
+  ctx.fillStyle = 'rgba(201,178,122,0.88)';
+  ctx.fillText(`NIGHT ${String((game.save.nightsSurvived || 0) + 1).padStart(2, '0')}  ·  ${complete} / ${list.length} COMPLETE`, x, y + 7);
+  if (!list.length) {
+    ctx.font = `400 ${short ? 12 : 14}px ${SANS}`;
+    ctx.fillStyle = '#ded5c4';
+    ctx.fillText('The next errand is being written by the house.', x + 4, y + 50);
+    ctx.restore();
+    return;
+  }
+  const top = y + 20;
+  const gap = short ? 5 : 8;
+  const rowH = Math.max(35, Math.min(78, (h - 24 - gap * (list.length - 1)) / list.length));
+  list.forEach((slot, i) => {
+    const ry = top + i * (rowH + gap);
+    const rw = slot.goal.reward || {};
+    ctx.fillStyle = slot.state === 'done' ? 'rgba(37,31,24,0.82)' : 'rgba(15,18,25,0.82)';
+    ctx.fillRect(x, ry, w, rowH);
+    ctx.strokeStyle = slot.state === 'done' ? 'rgba(202,166,91,0.46)' : 'rgba(149,151,155,0.2)';
+    ctx.strokeRect(x + 0.5, ry + 0.5, w - 1, rowH - 1);
+    drawGameIcon(ctx, slot.goal.hunt ? 'profile' : 'mission', x + 19, ry + rowH * 0.43, short ? 17 : 21, slot.state === 'done' ? '#c7a85f' : '#c6c1b5');
+    const rewardW = Math.min(short ? 152 : 205, w * 0.32);
+    const textX = x + 39;
+    const textW = w - rewardW - 48;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    fieldFit(ctx, slot.goal.label, textX, ry + rowH * 0.36, textW, short ? 9.5 : 12, SANS, slot.state === 'done' ? '#e2ca91' : '#e2daca', 600);
+    if (rowH > 47) fieldFit(ctx, slot.goal.hint || '', textX, ry + rowH * 0.65, textW, short ? 8 : 9.5, SANS, 'rgba(178,172,158,0.76)', 400);
+    ctx.textAlign = 'right';
+    ctx.font = `500 ${short ? 8 : 9}px ${MONO}`;
+    ctx.fillStyle = slot.state === 'done' ? '#ddc27d' : 'rgba(181,174,158,0.78)';
+    ctx.fillText(slot.state === 'done' ? 'DONE' : `${Math.round((slot.p || 0) * 100)}%`, x + w - 8, ry + 13);
+    drawFieldRewards(ctx, rw, x + w - rewardW + 7, ry + rowH * 0.62, rewardW - 12, short);
+    fieldBar(ctx, textX, ry + rowH - 7, textW, slot.state === 'done' ? 1 : slot.p || 0, slot.state === 'done' ? '#c5a45a' : '#9b424d');
+  });
+  ctx.restore();
+}
+
+function drawFieldUpgrades(game, ctx, x, y, w, h, short) {
+  const save = game.save;
+  const open = unlocked(save, 'builds');
+  const gap = short ? 7 : 10;
+  const rowH = Math.max(48, (h - 24 - gap * (LANES.length - 1)) / LANES.length);
+  ctx.save();
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.font = `500 ${short ? 9 : 10}px ${SANS}`;
+  ctx.fillStyle = 'rgba(211,180,112,0.92)';
+  ctx.fillText(`◆ ${save.shards || 0} SHARDS`, x, y + 7);
+  LANES.forEach((lane, i) => {
+    const ry = y + 21 + i * (rowH + gap);
+    const next = nextRank(save, lane.id);
+    const owned = lane.ranks.filter((rank) => save.builds && save.builds[rank.id]).length;
+    const capped = rankCount(save) >= LANE_CAP && !!next;
+    const cost = next ? rankCost(save, next) : 0;
+    const afford = open && !!next && !capped && save.shards >= cost;
+    const icon = lane.id === 'glutton' ? 'claw' : lane.id === 'warden' ? 'plank' : 'run';
+    ctx.fillStyle = 'rgba(16,18,25,0.84)';
+    ctx.fillRect(x, ry, w, rowH);
+    ctx.strokeStyle = 'rgba(168,148,102,0.28)';
+    ctx.strokeRect(x + 0.5, ry + 0.5, w - 1, rowH - 1);
+    drawGameIcon(ctx, icon, x + 22, ry + rowH * 0.46, short ? 18 : 23, '#c6ad78');
+    ctx.textAlign = 'left';
+    fieldFit(ctx, lane.name, x + 43, ry + rowH * 0.35, w - 126, short ? 10 : 13, SANS, '#e2d7c2', 600);
+    const detail = !open ? 'OPENS AFTER TWO DAWNS' : next ? `${next.name}  ·  ${owned}/${lane.ranks.length} RANKS` : `MASTERED  ·  ${owned}/${lane.ranks.length}`;
+    fieldFit(ctx, detail, x + 43, ry + rowH * 0.69, w - 128, short ? 8 : 9.5, SANS, 'rgba(175,169,155,0.76)', 400);
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.font = `400 ${short ? 9 : 10}px ${MONO}`;
+    ctx.fillStyle = afford ? '#d5b56c' : 'rgba(170,161,145,0.65)';
+    ctx.fillText(next ? `◆ ${cost}` : '—', x + w - 49, ry + rowH / 2);
+    fieldIconButton(game, ctx, x + w - 39, ry + rowH / 2 - 15, 30, 'plus', () => game.buyUpgrade(lane.id), { disabled: !afford });
+  });
+  ctx.restore();
+}
+
+function drawFieldProfile(game, ctx, x, y, w, h, short) {
+  const save = game.save;
+  const title = houseTitle(save) || (save.ending === 'monster' ? 'THE HOUSE’S HEART' : 'UNNAMED SURVIVOR');
+  const stats = [
+    { icon: 'profile', label: 'DAWNS', value: save.nightsSurvived || 0 },
+    { icon: 'claw', label: 'KILLS', value: save.bestDefeated || 0 },
+    { icon: 'mission', label: 'NIGHTS ENTERED', value: save.nightsAttempted || 0 },
+    { icon: 'shard', label: 'SHARDS', value: save.shards || 0 },
+    { icon: 'relic', label: 'RELICS', value: save.relics || 0 },
+    { icon: 'shot', label: 'BEST HOLD', value: fmtClock(save.bestTime || 0) },
+  ];
+  ctx.save();
+  ctx.fillStyle = 'rgba(18,20,27,0.88)';
+  ctx.fillRect(x, y, w, short ? 45 : 62);
+  ctx.strokeStyle = 'rgba(183,153,99,0.35)';
+  ctx.strokeRect(x + 0.5, y + 0.5, w - 1, (short ? 45 : 62) - 1);
+  drawGameIcon(ctx, 'profile', x + 26, y + (short ? 22 : 31), short ? 24 : 34, '#d0b777');
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  fieldFit(ctx, title, x + 54, y + (short ? 20 : 27), w - 74, short ? 14 : 19, SANS, '#eee4d2', 600);
+  fieldFit(ctx, `NIGHT ${(save.nightsSurvived || 0) + 1}  ·  DUSKHOLD FIELD RECORD`, x + 54, y + (short ? 36 : 47), w - 74, short ? 8 : 9, MONO, 'rgba(188,178,158,0.72)', 400);
+  const top = y + (short ? 54 : 78);
+  const gap = 8;
+  const cols = w > 720 ? 3 : 2;
+  const rows = Math.ceil(stats.length / cols);
+  const cellW = (w - gap * (cols - 1)) / cols;
+  const cellH = Math.min(86, (h - (top - y) - gap * (rows - 1)) / rows);
+  stats.forEach((stat, i) => {
+    const cx = x + (i % cols) * (cellW + gap);
+    const cy = top + Math.floor(i / cols) * (cellH + gap);
+    ctx.fillStyle = 'rgba(13,16,22,0.86)'; ctx.fillRect(cx, cy, cellW, cellH);
+    ctx.strokeStyle = 'rgba(153,149,138,0.22)'; ctx.strokeRect(cx + 0.5, cy + 0.5, cellW - 1, cellH - 1);
+    drawGameIcon(ctx, stat.icon, cx + 20, cy + cellH / 2, short ? 17 : 20, '#c5ad78');
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    fieldFit(ctx, stat.label, cx + 37, cy + cellH * 0.34, cellW - 48, short ? 8 : 9, SANS, 'rgba(176,168,151,0.72)', 600);
+    fieldFit(ctx, stat.value, cx + 37, cy + cellH * 0.69, cellW - 48, short ? 14 : 18, MONO, '#e8deca', 400);
+  });
+  ctx.restore();
+}
+
+function drawFieldCollection(game, ctx, x, y, w, h, short) {
+  const seen = game.save.seen || {};
+  const known = CODEX.filter((entry) => seen[entry.id]);
+  const gap = short ? 6 : 9;
+  const cols = w > 720 ? 4 : 2;
+  const rows = Math.ceil(CODEX.length / cols);
+  const cellW = (w - gap * (cols - 1)) / cols;
+  const cellH = Math.min(76, (h - gap * (rows - 1) - 22) / rows);
+  ctx.save();
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.font = `500 ${short ? 8 : 9}px ${SANS}`;
+  ctx.fillStyle = 'rgba(200,171,111,0.85)';
+  ctx.fillText(`${known.length} / ${CODEX.length} REMEMBERED`, x, y + 6);
+  CODEX.forEach((entry, i) => {
+    const cx = x + (i % cols) * (cellW + gap);
+    const cy = y + 18 + Math.floor(i / cols) * (cellH + gap);
+    const unlockedEntry = !!seen[entry.id];
+    ctx.fillStyle = unlockedEntry ? 'rgba(22,22,27,0.86)' : 'rgba(11,13,18,0.7)';
+    ctx.fillRect(cx, cy, cellW, cellH);
+    ctx.strokeStyle = unlockedEntry ? 'rgba(182,151,96,0.34)' : 'rgba(132,133,137,0.18)';
+    ctx.strokeRect(cx + 0.5, cy + 0.5, cellW - 1, cellH - 1);
+    drawGameIcon(ctx, unlockedEntry ? (entry.id === 'dawn' ? 'lamp' : 'mission') : 'shield', cx + 18, cy + cellH / 2, short ? 15 : 18, unlockedEntry ? '#c9ad70' : 'rgba(146,144,137,0.55)');
+    ctx.textAlign = 'left';
+    fieldFit(ctx, unlockedEntry ? entry.name : 'UNSEEN', cx + 35, cy + cellH * 0.42, cellW - 44, short ? 8.5 : 10, SANS, unlockedEntry ? '#dfd4bf' : 'rgba(156,152,144,0.62)', 600);
+    if (cellH > 52) fieldFit(ctx, unlockedEntry ? 'RECORDED' : 'THE NIGHT HIDES IT', cx + 35, cy + cellH * 0.7, cellW - 44, short ? 7 : 8, SANS, 'rgba(158,151,138,0.66)', 400);
+  });
+  ctx.restore();
+  const fragments = fragmentsKnown(game.save);
+  if (fragments.length && h > 170) {
+    ctx.save(); ctx.textAlign = 'right'; ctx.textBaseline = 'alphabetic';
+    fieldFit(ctx, `${fragments.length} HOUSE FRAGMENTS KEPT`, x + w, y + h - 2, w, short ? 8 : 9, MONO, 'rgba(177,169,153,0.68)', 400);
+    ctx.restore();
+  }
+}
+
+function drawFieldMarket(game, ctx, x, y, w, h, short) {
+  const shown = CATALOG.filter((sku) => sku.kind !== 'remove_ads' || unlocked(game.save, 'ads'));
+  const cols = 2;
+  const gap = short ? 6 : 9;
+  const rows = Math.ceil(shown.length / cols);
+  const cellW = (w - gap) / cols;
+  const cellH = Math.max(36, (h - (short ? 22 : 28) - gap * (rows - 1)) / rows);
+  ctx.save();
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.font = `400 ${short ? 7.5 : 9}px ${SANS}`;
+  ctx.fillStyle = 'rgba(180,172,156,0.65)';
+  ctx.fillText('Shards buy only what the night has already offered. Money never buys power.', x, y + 7);
+  shown.forEach((sku, i) => {
+    const cx = x + (i % cols) * (cellW + gap);
+    const cy = y + (short ? 18 : 23) + Math.floor(i / cols) * (cellH + gap);
+    const ownId = Array.isArray(sku.gives.owned) ? sku.gives.owned[0] : sku.gives.owned;
+    const owned = ownId && IAP.owns(game.save, ownId);
+    const offered = IAP.offered(game.save, sku);
+    const available = offered && !(owned && sku.play !== 'consumable');
+    const canBuy = available
+      && (sku.gives.revives ? ((game.save.iap && game.save.iap.revives) || 0) < 2 : true)
+      && (game.save.shards || 0) >= sku.shardPrice;
+    ctx.fillStyle = 'rgba(16,18,25,0.85)'; ctx.fillRect(cx, cy, cellW, cellH);
+    ctx.strokeStyle = owned ? 'rgba(187,158,96,0.4)' : 'rgba(148,146,142,0.2)';
+    ctx.strokeRect(cx + 0.5, cy + 0.5, cellW - 1, cellH - 1);
+    drawGameIcon(ctx, sku.kind === 'consumable' ? 'blood' : sku.kind === 'title' ? 'relic' : 'shield', cx + 17, cy + cellH / 2, short ? 14 : 17, owned ? '#d3b16c' : '#aaa9a1');
+    ctx.textAlign = 'left';
+    fieldFit(ctx, sku.name, cx + 33, cy + cellH * 0.36, cellW - (short ? 88 : 98), short ? 7.5 : 10, SANS, '#e3d9c6', 600);
+    const status = owned ? 'OWNED' : !offered ? 'NOT YET OFFERED' : `◆ ${sku.shardPrice}`;
+    fieldFit(ctx, status, cx + 33, cy + cellH * 0.69, cellW - (short ? 88 : 98), short ? 6.8 : 8.5, MONO, offered ? 'rgba(190,170,125,0.77)' : 'rgba(155,151,141,0.55)', 400);
+    const actionY = cy + cellH / 2 - 15;
+    fieldIconButton(game, ctx, cx + cellW - 69, actionY, 30, 'shop', () => game.purchaseSku(sku.id), { disabled: !available || IAP.busy === sku.id });
+    fieldIconButton(game, ctx, cx + cellW - 35, actionY, 30, 'shard', () => game.buySkuWithShards(sku.id), { disabled: !canBuy });
+  });
+  ctx.restore();
+}
+
+function drawFieldSettings(game, ctx, x, y, w, h, short) {
+  const settings = game.save.settings;
+  const rows = [
+    { label: 'MASTER VOLUME', key: 'master', type: 'range' },
+    { label: 'MUSIC', key: 'music', type: 'range' },
+    { label: 'SOUND EFFECTS', key: 'sfx', type: 'range' },
+    { label: 'CAMERA SHAKE', key: 'shake', type: 'toggle' },
+    { label: 'FLASH EFFECTS', key: 'flashes', type: 'toggle' },
+    { label: 'CAPTIONS', key: 'captions', type: 'toggle' },
+    { label: 'DIFFICULTY', key: 'difficulty', type: 'difficulty' },
+  ];
+  const gap = short ? 4 : 7;
+  const rowH = Math.max(24, (h - gap * (rows.length - 1)) / rows.length);
+  rows.forEach((row, i) => {
+    const ry = y + i * (rowH + gap);
+    ctx.fillStyle = 'rgba(15,18,24,0.82)'; ctx.fillRect(x, ry, w, rowH);
+    ctx.strokeStyle = 'rgba(150,145,133,0.2)'; ctx.strokeRect(x + 0.5, ry + 0.5, w - 1, rowH - 1);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    fieldFit(ctx, row.label, x + 12, ry + rowH / 2, w * 0.33, short ? 8.5 : 10, SANS, 'rgba(202,195,178,0.82)', 600);
+    if (row.type === 'range') {
+      const value = clamp(Number(settings[row.key]) || 0, 0, 1);
+      const trackX = x + w * 0.42, trackW = w * 0.39, trackY = ry + rowH / 2;
+      ctx.fillStyle = 'rgba(124,119,109,0.3)'; ctx.fillRect(trackX, trackY - 2, trackW, 4);
+      ctx.fillStyle = '#ac8547'; ctx.fillRect(trackX, trackY - 2, trackW * value, 4);
+      ctx.fillStyle = '#e0d2b4'; ctx.fillRect(trackX + trackW * value - 2, trackY - 5, 4, 10);
+      ctx.textAlign = 'right'; ctx.font = `400 ${short ? 8 : 9}px ${MONO}`; ctx.fillStyle = '#ddd3c1';
+      ctx.fillText(`${Math.round(value * 100)}%`, x + w - 82, trackY);
+      const rect = { x: trackX - 4, y: trackY - 12, w: trackW + 8, h: 24 };
+      const idx = game.ui.length;
+      game.ui.push({ ...rect, slider: { key: row.key, min: 0, max: 1, x: trackX, w: trackW }, idx });
+      const input = game.input;
+      if (input.mouse.down && input.mouse.x > rect.x && input.mouse.x < rect.x + rect.w && input.mouse.y > rect.y && input.mouse.y < rect.y + rect.h) {
+        settings[row.key] = clamp((input.mouse.x - trackX) / trackW, 0, 1); game.applySettings();
+      }
+      if (game.touchAim && game.touchAim.slider && game.touchAim.slider.key === row.key) {
+        settings[row.key] = clamp((game.touchAim.x - trackX) / trackW, 0, 1); game.applySettings();
+      }
+    } else if (row.type === 'toggle') {
+      const on = !!settings[row.key];
+      ctx.textAlign = 'right'; ctx.font = `400 ${short ? 8 : 9}px ${MONO}`; ctx.fillStyle = on ? '#d4bb7a' : 'rgba(165,158,145,0.65)';
+      ctx.fillText(on ? 'ON' : 'OFF', x + w - 82, ry + rowH / 2);
+      fieldIconButton(game, ctx, x + w - 40, ry + rowH / 2 - 14, 28, on ? 'confirm' : 'close', () => { settings[row.key] = on ? 0 : 1; game.applySettings(); });
+    } else {
+      const keys = Object.keys(DIFFICULTY);
+      const current = keys.indexOf(settings.difficulty);
+      const next = keys[(current + 1 + keys.length) % keys.length];
+      const name = (DIFFICULTY[settings.difficulty] || DIFFICULTY.standard).label;
+      ctx.textAlign = 'right'; ctx.font = `400 ${short ? 8 : 9}px ${MONO}`; ctx.fillStyle = '#d7c69c';
+      ctx.fillText(name, x + w - 82, ry + rowH / 2);
+      fieldIconButton(game, ctx, x + w - 40, ry + rowH / 2 - 14, 28, 'next', () => { settings.difficulty = next; game.applySettings(); });
+    }
+  });
+}
+
+function drawFieldHelp(game, ctx, x, y, w, h, short) {
+  const groups = [
+    { icon: 'move', title: 'MOVE', body: 'WASD / arrows · left stick' },
+    { icon: 'run', title: 'RUN', body: 'Hold SHIFT · hold the boot icon' },
+    { icon: 'dash', title: 'DASH', body: 'X / CTRL · dash icon' },
+    { icon: 'claw', title: 'ATTACK', body: 'F · right-click · claw icon' },
+    { icon: 'interact', title: 'USE', body: 'E / SPACE · doors, food, stakes' },
+    { icon: 'repair', title: 'REPAIR', body: 'R · hold at a damaged entrance' },
+    { icon: 'barricade', title: 'BARRICADE', body: 'B · spend planks at a doorway' },
+    { icon: 'shot', title: 'WEAPON', body: 'Q cycles claw, sword, arrows, knives' },
+  ];
+  const cols = w > 720 ? 4 : 2;
+  const gap = short ? 6 : 10;
+  const rows = Math.ceil(groups.length / cols);
+  const cellW = (w - gap * (cols - 1)) / cols;
+  const cellH = (h - gap * (rows - 1)) / rows;
+  groups.forEach((item, i) => {
+    const cx = x + (i % cols) * (cellW + gap);
+    const cy = y + Math.floor(i / cols) * (cellH + gap);
+    ctx.fillStyle = 'rgba(15,18,25,0.83)'; ctx.fillRect(cx, cy, cellW, cellH);
+    ctx.strokeStyle = 'rgba(155,150,136,0.22)'; ctx.strokeRect(cx + 0.5, cy + 0.5, cellW - 1, cellH - 1);
+    drawGameIcon(ctx, item.icon, cx + 20, cy + Math.min(cellH * 0.42, 26), short ? 17 : 20, '#c9af75');
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    fieldFit(ctx, item.title, cx + 38, cy + cellH * 0.32, cellW - 46, short ? 8.5 : 10, SANS, '#e0d5c0', 600);
+    fieldFit(ctx, item.body, cx + 11, cy + cellH * 0.73, cellW - 20, short ? 7.2 : 9, SANS, 'rgba(182,175,161,0.77)', 400);
+  });
+}
+
+function drawFieldPrivacy(game, ctx, x, y, w, h, short) {
+  const ack = !!game.save.privacyAck;
+  const lines = [
+    '18+ horror. No account. No location, contacts or photos.',
+    'Progress stays on this device until you delete it.',
+    'Purchases are optional; the game never sells power or mission supplies.',
+    'The full policy and data deletion page are available from this card.',
+  ];
+  ctx.save();
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.font = `400 ${short ? 9 : 12}px ${SANS}`;
+  ctx.fillStyle = 'rgba(217,208,189,0.86)';
+  const gap = short ? 25 : 34;
+  lines.forEach((line, i) => fieldFit(ctx, line, x + 12, y + 24 + i * gap, w - 24, short ? 9 : 12, SANS, 'rgba(217,208,189,0.86)', 400));
+  ctx.font = `500 ${short ? 8 : 10}px ${MONO}`;
+  ctx.fillStyle = ack ? '#d4bf86' : 'rgba(195,165,108,0.9)';
+  ctx.fillText(ack ? 'NOTICE ACKNOWLEDGED' : 'NOTICE NOT YET ACKNOWLEDGED · REQUIRED BEFORE A PURCHASE', x + 12, y + gap * lines.length + 30);
+  ctx.restore();
+
+  const size = short ? 38 : 44;
+  const by = y + h - size - 14;
+  const gapX = short ? 14 : 20;
+  const start = x + w / 2 - (size * 3 + gapX * 2) / 2;
+  fieldIconButton(game, ctx, start, by, size, 'shield', () => {
+    try { window.open('./privacy.html', '_blank', 'noopener'); } catch (e) { /* blocked */ }
+  }, { active: false });
+  fieldIconButton(game, ctx, start + size + gapX, by, size, 'confirm', () => {
+    if (ack) return;
+    game.acceptPrivacy();
+  }, { disabled: ack, active: !ack });
+  fieldIconButton(game, ctx, start + (size + gapX) * 2, by, size, game.privacyDeleteArmed ? 'confirm' : 'close', () => {
+    if (!game.privacyDeleteArmed) {
+      game.privacyDeleteArmed = true;
+      game.showMessage('TAP DELETE AGAIN TO WIPE THIS DEVICE.', { tone: 'cold', life: 3 });
+    } else game.wipeLocalData();
+  }, { active: !!game.privacyDeleteArmed });
+}
+
+export function drawFieldCard(game, ctx, w, h) {
+  const tab = FIELD_TABS.find((entry) => entry.id === game.uiPanel) || FIELD_TABS[0];
+  const short = h < 500;
+  const cardW = Math.min(960, w - 20);
+  const cardH = Math.min(700, h - 20);
+  const x = (w - cardW) / 2;
+  const y = (h - cardH) / 2;
+  game._fieldCardBounds = { x, y, w: cardW, h: cardH };
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(2,3,7,0.68)';
+  ctx.fillRect(0, 0, w, h);
+  const bg = ctx.createLinearGradient(x, y, x + cardW, y + cardH);
+  bg.addColorStop(0, 'rgba(14,17,23,0.98)');
+  bg.addColorStop(0.55, 'rgba(8,11,17,0.97)');
+  bg.addColorStop(1, 'rgba(13,13,19,0.98)');
+  ctx.fillStyle = bg; ctx.fillRect(x, y, cardW, cardH);
+  ctx.strokeStyle = 'rgba(186,154,94,0.66)'; ctx.lineWidth = 1.2;
+  ctx.strokeRect(x + 0.5, y + 0.5, cardW - 1, cardH - 1);
+  ctx.fillStyle = 'rgba(164,117,57,0.72)'; ctx.fillRect(x + 1, y + 1, 3, cardH - 2);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  fieldFit(ctx, tab.title, x + 18, y + (short ? 20 : 24), cardW - 80, short ? 13 : 17, SANS, '#eee3d0', 600);
+  fieldFit(ctx, tab.sub, x + 18, y + (short ? 37 : 45), cardW - 82, short ? 7.5 : 8.5, MONO, 'rgba(183,171,148,0.67)', 400);
+  fieldIconButton(game, ctx, x + cardW - 38, y + 8, 30, 'close', () => game.closePanel(), { round: false });
+
+  const tabY = y + (short ? 49 : 58);
+  const inner = cardW - 24;
+  const n = FIELD_TABS.length;
+  const gap = short ? 4 : 7;
+  const tabSize = Math.min(short ? 40 : 42, Math.floor((inner - gap * (n - 1)) / n));
+  const tabTotal = tabSize * n + gap * (n - 1);
+  let tx = x + (cardW - tabTotal) / 2;
+  FIELD_TABS.forEach((entry) => {
+    fieldIconButton(game, ctx, tx, tabY, tabSize, entry.icon, () => game.openPanel(entry.id), { active: entry.id === tab.id, round: false });
+    tx += tabSize + gap;
+  });
+  ctx.strokeStyle = 'rgba(165,146,109,0.24)';
+  ctx.beginPath(); ctx.moveTo(x + 14, tabY + tabSize + 8); ctx.lineTo(x + cardW - 14, tabY + tabSize + 8); ctx.stroke();
+
+  const bodyX = x + 16;
+  const bodyY = tabY + tabSize + 20;
+  const bodyW = cardW - 32;
+  const bodyH = Math.max(24, y + cardH - 14 - bodyY);
+  ctx.save();
+  ctx.beginPath(); ctx.rect(bodyX, bodyY, bodyW, bodyH); ctx.clip();
+  switch (tab.id) {
+    case 'bag': drawFieldBag(game, ctx, bodyX, bodyY, bodyW, bodyH, short); break;
+    case 'missions': drawFieldMissions(game, ctx, bodyX, bodyY, bodyW, bodyH, short); break;
+    case 'upgrades': drawFieldUpgrades(game, ctx, bodyX, bodyY, bodyW, bodyH, short); break;
+    case 'profile': drawFieldProfile(game, ctx, bodyX, bodyY, bodyW, bodyH, short); break;
+    case 'collection': drawFieldCollection(game, ctx, bodyX, bodyY, bodyW, bodyH, short); break;
+    case 'shop': drawFieldMarket(game, ctx, bodyX, bodyY, bodyW, bodyH, short); break;
+    case 'settings': drawFieldSettings(game, ctx, bodyX, bodyY, bodyW, bodyH, short); break;
+    case 'help': drawFieldHelp(game, ctx, bodyX, bodyY, bodyW, bodyH, short); break;
+    case 'privacy': drawFieldPrivacy(game, ctx, bodyX, bodyY, bodyW, bodyH, short); break;
+    default: break;
+  }
+  ctx.restore();
   ctx.restore();
 }

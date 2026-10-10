@@ -4,7 +4,7 @@
   "name": "DUSKHOLD",
   "launcherName": "DUSKHOLD",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "landscape",
   "themeColor": "#05060b",
   "themeColorDark": "#05060b",
   "navigationColor": "#05060b",

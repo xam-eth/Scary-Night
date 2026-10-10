@@ -1568,12 +1568,22 @@ export class Bolt {
     ctx.globalAlpha = 1;
     ctx.translate(this.x, this.y);
     ctx.rotate(visualAngle(this.angle, game && game.renderer ? game.renderer : 1));
-    ctx.fillStyle = '#2b2016';
-    ctx.fillRect(-7, -1.2, 14, 2.4);
-    ctx.fillStyle = '#c8c8d4';
-    ctx.beginPath(); ctx.moveTo(7, -2.4); ctx.lineTo(12, 0); ctx.lineTo(7, 2.4); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#4a4a52';
-    ctx.fillRect(-7, -3.4, 3, 6.8);
+    if (this.kind === 'knife') {
+      ctx.fillStyle = '#8f9aa4';
+      ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(-2, -2.2); ctx.lineTo(-7, 0); ctx.lineTo(-2, 2.2); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#342b25';
+      ctx.fillRect(-10, -1.8, 6, 3.6);
+      ctx.strokeStyle = 'rgba(226,232,236,0.8)';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath(); ctx.moveTo(7, 0); ctx.lineTo(-2, -1); ctx.stroke();
+    } else {
+      ctx.fillStyle = '#2b2016';
+      ctx.fillRect(-7, -1.2, 14, 2.4);
+      ctx.fillStyle = '#c8c8d4';
+      ctx.beginPath(); ctx.moveTo(7, -2.4); ctx.lineTo(12, 0); ctx.lineTo(7, 2.4); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#4a4a52';
+      ctx.fillRect(-7, -3.4, 3, 6.8);
+    }
     ctx.restore();
   }
 }

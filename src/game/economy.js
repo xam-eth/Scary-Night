@@ -239,7 +239,11 @@ export function laneStats(save) {
 /** Old flat upgrades become the nearest lane rank. Capped at the commitment pool. */
 export function migrateSave(save) {
   if (!save) return save;
-  save.relics = save.relics || 0;
+  save.relics = Math.max(0, Math.round(Number(save.relics) || 0));
+  save.inventory = save.inventory && typeof save.inventory === 'object' && !Array.isArray(save.inventory) ? save.inventory : {};
+  for (const key of ['arrows', 'knives', 'bandages']) {
+    save.inventory[key] = Math.max(0, Math.floor(Number(save.inventory[key]) || 0));
+  }
   save.builds = save.builds || {};
   save.revealed = save.revealed || {};
   save.milestones = save.milestones || {};
@@ -265,7 +269,7 @@ export function migrateSave(save) {
   save.fortressLevel = fortressLevel(save);
   save.coachFed = !!save.coachFed;
   save.coachKnock = !!save.coachKnock;
-  if (save.weapon !== 'claw' && save.weapon !== 'sword' && save.weapon !== 'shot') save.weapon = 'claw';
+  if (save.weapon !== 'claw' && save.weapon !== 'sword' && save.weapon !== 'shot' && save.weapon !== 'knife') save.weapon = 'claw';
   if (!save._migratedLanes && save.upgrades) {
     const map = { blood: 'g_blood', speed: 's_move', repair: 'w_rep', damage: 'g_dmg', recovery: 'g_rec' };
     let n = rankCount(save);

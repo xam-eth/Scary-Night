@@ -348,7 +348,7 @@ export function drawCoachWorld(game, ctx) {
 
 export function drawCoach(game, ctx, w, h) {
   const c = game.coach;
-  if (!c || c.step === 'done' || game.screen !== 'playing') return;
+  if (!c || c.step === 'done' || game.screen !== 'playing' || game.uiPanel) return;
   const input = game.input;
   if (!input) return;
   const cue = cueFor(game);
@@ -565,9 +565,9 @@ function chip(ctx, w, h, title, sub) {
   let top;
   let left;
   if (short) {
-    // A centered chip on a short phone lands on the dining table. Park it
-    // under the goals, on the wall, where the thumb is not.
-    top = 76;
+    // Keep the lesson below the compact resource rail on landscape phones,
+    // while leaving a little air above the thumb cluster.
+    top = Math.max(76, Math.min(h * 0.32, h - 220));
     left = 12;
   } else if (tall) {
     const clockY = 40;

@@ -169,40 +169,51 @@ function frame(now) {
 }
 requestAnimationFrame(frame);
 
-/* ---------- loading veil → the animated GLB character ----------
- * The uploaded GLB is the player, so the boot veil waits for the exact bytes
- * of the model to hand themselves to GLTFLoader — no preprocessing, no bake
- * step, nothing to finish first. The bar tracks the real network progress of
- * the original file. A timeout cap keeps the game reachable if the asset is
- * slow or unreachable: Valen can always finish in the background and replace
- * the fallback silhouette the moment it is ready.
+/* ---------- loading veil → gameplay, not a dashboard ----------
+ * Begin only when the authored player body has settled (or explicitly failed)
+ * and every gameplay enemy role has its validated local GLB/clip roster. The
+ * run starts without treating privacy acknowledgement as consent; paid
+ * purchases still pass through Game.purchaseSku's existing privacy gate.
  */
 const veil = document.getElementById('veil');
 const veilBar = veil ? veil.querySelector('.veil-bar span') : null;
 const veilSub = veil ? veil.querySelector('.veil-sub') : null;
-const VEIL_CAP_MS = 20000;
 let veilCleared = false;
+let autoStarted = false;
 function clearVeil() {
   if (!veil || veilCleared) return;
   veilCleared = true;
   veil.classList.add('gone');
   setTimeout(() => veil.remove(), 900);
 }
-if (veil) {
-  const started = performance.now();
-  if (veilBar) { veilBar.style.animation = 'none'; veilBar.style.width = '4%'; }
-  const tick = () => {
-    if (veilCleared) return;
-    if (Valen3D.ready || Valen3D.failed || performance.now() - started > VEIL_CAP_MS) { clearVeil(); return; }
-    const p = Valen3D.progress;
-    if (veilBar) veilBar.style.width = `${(4 + p * 96).toFixed(1)}%`;
-    if (veilSub && p > 0) veilSub.textContent = `waking the body — ${(p * 100 | 0)}%`;
-    requestAnimationFrame(tick);
-  };
-  Valen3D.init();
-  Enemy3D.init();
-  requestAnimationFrame(tick);
-} else {
-  Valen3D.init();
-  Enemy3D.init();
+
+Valen3D.init();
+Enemy3D.init();
+
+function bootTick() {
+  if (autoStarted) return;
+  const roster = Enemy3D.readiness();
+  const bodySettled = Valen3D.ready || Valen3D.failed;
+  if (bodySettled && roster.ready) {
+    clearVeil();
+    // beginNight is also guarded, so a stale/incomplete roster cannot slip
+    // through via the boot path or a programmatic call.
+    game.beginNight();
+    autoStarted = game.screen !== 'menu';
+    if (autoStarted) return;
+  }
+  if (veilBar) {
+    const playerProgress = clampBootProgress(Valen3D.progress || 0);
+    const rosterProgress = roster.total ? roster.loaded / roster.total : 0;
+    const shown = Math.min(playerProgress, rosterProgress);
+    veilBar.style.width = `${(4 + shown * 96).toFixed(1)}%`;
+  }
+  if (veilSub) {
+    const playerStatus = Valen3D.failed ? 'body fallback ready' : Valen3D.ready ? 'body ready' : `body ${Math.round((Valen3D.progress || 0) * 100)}%`;
+    const enemyStatus = roster.failed.length ? 'gameplay roster unavailable' : `3D roles ${roster.loaded}/${roster.total}`;
+    veilSub.textContent = `${playerStatus} · ${enemyStatus}`;
+  }
+  requestAnimationFrame(bootTick);
 }
+function clampBootProgress(value) { return Math.max(0, Math.min(1, Number(value) || 0)); }
+requestAnimationFrame(bootTick);

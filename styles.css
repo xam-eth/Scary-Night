@@ -40,16 +40,15 @@ html, body {
   touch-action: none;
 }
 
-/* One vertical 9:16 frame. Wide screens letterbox. The plate is never stretched. */
+/* Landscape-first full-bleed stage. The UI reflows for narrow viewports; the
+   world is never trapped in a portrait card or stretched into a fake ratio. */
 #stage {
   position: fixed;
-  left: 50%;
-  top: 50%;
-  width: min(100vw, calc(100vh * 9 / 16));
-  height: min(100vh, calc(100vw * 16 / 9));
-  width: min(100vw, calc((100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) * 9 / 16));
-  height: min(calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)), calc(100vw * 16 / 9));
-  transform: translate(-50%, -50%);
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  width: 100dvw;
+  height: 100dvh;
   overflow: hidden;
   background: #04050a;
 }
@@ -139,10 +138,10 @@ canvas#game {
 
 .veil-frame {
   position: relative;
-  width: min(100vw, calc(100vh * 9 / 16));
-  height: min(100vh, calc(100vw * 16 / 9));
-  width: min(100vw, calc((100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) * 9 / 16));
-  height: min(calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)), calc(100vw * 16 / 9));
+  width: 100vw;
+  height: 100vh;
+  width: 100dvw;
+  height: 100dvh;
   overflow: hidden;
   background: #05060b;
 }

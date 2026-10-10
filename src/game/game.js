@@ -185,6 +185,7 @@ export class Game {
     this.knocks = [];
     this.timeouts = [];
     this.ui = [];
+    this.uiPanel = null;
     this.uiIndex = 0;
     this.uiHoverIdx = -1;
     this.usingKeyboard = false;
@@ -263,7 +264,14 @@ export class Game {
   acceptPrivacy() {
     this.save.privacyAck = true;
     writeSave(this.save);
-    this.setScreen('menu');
+    this.privacyDeleteArmed = false;
+    if (this.screen === 'playing' && this.uiPanel) {
+      this.closePanel();
+      this.showMessage('NOTICE ACKNOWLEDGED. THE NIGHT CONTINUES.', { tone: 'cold', life: 2.8 });
+      return;
+    }
+    const back = this.settingsReturn && this.settingsReturn !== 'privacy' ? this.settingsReturn : 'menu';
+    this.setScreen(back);
   }
   async wipeLocalData() {
     let id = null;
@@ -289,7 +297,8 @@ export class Game {
   purchaseSku(id) {
     if (IAP.busy) return;
     if (!this.save.privacyAck) {
-      this.setScreen('privacy');
+      if (this.screen === 'playing') this.openPanel('privacy');
+      else this.setScreen('privacy', this.screen);
       this.showMessage('READ THE NOTICE BEFORE THE MARKET TAKES ANYTHING.', { tone: 'cold', life: 4 });
       return;
     }
@@ -367,9 +376,29 @@ export class Game {
 
   /* ================= scene control ================= */
 
+  openPanel(id = 'bag') {
+    if (this.screen !== 'playing') return false;
+    this.uiPanel = id;
+    if (this.input) this.input.gameplay = false;
+    this.ui = [];
+    this.uiIndex = 0;
+    this.usingKeyboard = false;
+    this.privacyDeleteArmed = false;
+    return true;
+  }
+
+  closePanel() {
+    this.uiPanel = null;
+    if (this.input) this.input.gameplay = this.screen === 'playing' || this.screen === 'dying';
+    this.ui = [];
+    this.uiIndex = 0;
+    this.privacyDeleteArmed = false;
+  }
+
   setScreen(s, from) {
     if (from) this.settingsReturn = from;
     const prev = this.screen;
+    if (s !== 'playing') this.uiPanel = null;
     this.screen = s;
     this.uiIndex = 0;
     this.ui = [];
@@ -399,7 +428,7 @@ export class Game {
   togglePause(on) {
     this.pauseConfirm = false;
     if (this.screen === 'playing' && on !== false) {
-      this.paused = true; this.screen = 'paused'; this.ui = []; this.uiIndex = 0;
+      this.paused = true; this.uiPanel = null; this.screen = 'paused'; this.ui = []; this.uiIndex = 0;
     } else if (this.screen === 'paused') {
       this.paused = false; this.screen = 'playing';
     }
@@ -407,6 +436,7 @@ export class Game {
 
   toMenu() {
     this.pauseConfirm = false;
+    this.uiPanel = null;
     this.narration = null;
     this._openingPending = false;
     this.settlePurse('leave');
@@ -581,6 +611,7 @@ export class Game {
   }
 
   beginNight() {
+    this.uiPanel = null;
     // An active combatant must always have its authored full-3D role model.
     // The menu disables this action until the local roster is ready; keep the
     // state transition guarded as well for keyboard, retry and programmatic calls.
@@ -648,7 +679,7 @@ export class Game {
 
     // Stick only exists while you are in the night. Menu clicks must never
     // start a drag-to-move, or PLAY/settings sliders fight the joystick.
-    this.input.gameplay = this.screen === 'playing' || this.screen === 'dying';
+    this.input.gameplay = (this.screen === 'playing' && !this.uiPanel) || this.screen === 'dying';
     const b = this.input.buttons;
     if (!this.input.gameplay) {
       b.attack.hidden = b.dash.hidden = b.interact.hidden = true;
@@ -672,7 +703,7 @@ export class Game {
       case 'settings': case 'upgrades': case 'collection': case 'help': case 'shop': case 'privacy': break;
       case 'intro': this.updateIntro(dt); break;
       case 'narration': this.updateNarration(dt); break;
-      case 'playing': this.updatePlaying(this.dt); break;
+      case 'playing': if (!this.uiPanel) this.updatePlaying(this.dt); break;
       case 'paused': break;
       case 'dying': this.updateDying(dt); break;
       case 'death': this.deathScreenT += dt; break;
@@ -1730,6 +1761,13 @@ export class Game {
         color: 'rgba(255, 206, 130, 0.95)', angle: ang, spread: 0.4, speedMin: 50, speedMax: 180, lifeMin: 0.05, lifeMax: 0.16, sizeMin: 1.4, sizeMax: 3.4, glow: true,
       });
       this.renderer.addFlash(0.06, '#e6c078');
+    } else if (tool.fx === 'knife') {
+      const ox = player.x + Math.cos(ang) * (tool.offset || 22);
+      const oy = player.y + Math.sin(ang) * (tool.offset || 22);
+      this.particles.burst('spark', ox, oy, 4, {
+        color: 'rgba(204,226,238,0.95)', angle: ang, spread: 0.16,
+        speedMin: 46, speedMax: 120, lifeMin: 0.08, lifeMax: 0.2, sizeMin: 1, sizeMax: 2.6, glow: true,
+      });
     }
   }
 
@@ -1995,6 +2033,7 @@ export class Game {
       owner.y + Math.sin(angle) * off,
       angle, speed, damage, owner,
     );
+    b.kind = spec && spec.ammo === 'knives' ? 'knife' : 'bolt';
     // the kit travels with the bolt: a blessed bolt is not the same wood
     if (owner === this.player) b.kit = this.player.kit || null;
     this.bolts.push(b);
@@ -2006,6 +2045,51 @@ export class Game {
 
   addPickup(x, y, kind, amount) {
     this.pickups.push(new Pickup(x, y, kind, amount));
+  }
+
+  inventory() {
+    if (!this.save.inventory || typeof this.save.inventory !== 'object') this.save.inventory = { arrows: 0, knives: 0, bandages: 0 };
+    return this.save.inventory;
+  }
+
+  consumeAmmo(kind) {
+    if (!['arrows', 'knives'].includes(kind)) return false;
+    const bag = this.inventory();
+    if ((bag[kind] || 0) < 1) return false;
+    bag[kind] -= 1;
+    writeSave(this.save);
+    return true;
+  }
+
+  /** Supply is credited to the persistent field pack only when an errand is completed. */
+  grantMissionResources(reward = {}) {
+    const bag = this.inventory();
+    const gains = [];
+    for (const [key, label] of [['arrows', 'ARROWS'], ['knives', 'KNIVES'], ['bandages', 'BANDAGES']]) {
+      const amount = Math.max(0, Math.floor(Number(reward[key]) || 0));
+      if (!amount) continue;
+      bag[key] = Math.max(0, Math.floor(Number(bag[key]) || 0)) + amount;
+      gains.push(`+${amount} ${label}`);
+    }
+    if (!gains.length) return false;
+    writeSave(this.save);
+    this.showMessage('ERRAND CACHE · ' + gains.join(' · '), { tone: 'gold', life: 3.6, key: 'mission-cache' });
+    return true;
+  }
+
+  useBandage() {
+    const bag = this.inventory();
+    if ((bag.bandages || 0) < 1) return false;
+    if (!this.player || this.player.blood >= this.player.bloodMax - 0.1) {
+      this.showMessage('THE WOUND IS ALREADY CLOSED.', { tone: 'cold', life: 2.2 });
+      return false;
+    }
+    bag.bandages -= 1;
+    const healed = this.player.heal(18, this);
+    writeSave(this.save);
+    this.audio.play('bloodPickup', { vol: 0.55 });
+    this.showMessage(`FIELD DRESSING · +${Math.round(healed)} BLOOD`, { tone: 'gold', life: 2.8 });
+    return true;
   }
 
   addBloodShards(n) {
@@ -2391,12 +2475,13 @@ export class Game {
 
     // ---- HUD ----
     if (this.screen === 'playing' || this.screen === 'dying') {
-      if (this.screen === 'playing') drawHUD(this, ctx, w, h);
+      if (this.screen === 'playing' && !this.uiPanel) drawHUD(this, ctx, w, h);
       this.drawMessages(ctx, w, h);
       if (worldReady) this.drawCombatTextOverlay(ctx);
     }
     // ---- the peaks: the four frames the night is for ----
     if (this.screen === 'playing' || this.screen === 'dawn') UI.drawPeakOverlay(this, ctx, w, h);
+    if (this.screen === 'playing' && this.uiPanel) UI.drawFieldCard(this, ctx, w, h);
 
     // ---- screens ----
     switch (this.screen) {
@@ -2415,7 +2500,7 @@ export class Game {
       case 'victory': UI.drawVictory(this, ctx, w, h); break;
       case 'refuge': UI.drawRefuge(this, ctx, w, h); break;
     }
-    if (this.screen === 'playing') UI.drawTutorial(this, ctx, w, h);
+    if (this.screen === 'playing' && !this.uiPanel) UI.drawTutorial(this, ctx, w, h);
     UI.drawFocusCaption(this, ctx, w, h);
     if (TUNING.showDebug) this.drawDebug(ctx, w, h);
 
@@ -2605,19 +2690,20 @@ export class Game {
     // ESC during play had been unreachable since the base checkout.)
     if (input.keys.pause && !this._pauseHeld) {
       this._pauseHeld = true;
-      if (this.screen === 'playing') this.togglePause(true);
+      if (this.screen === 'playing' && this.uiPanel) this.closePanel();
+      else if (this.screen === 'playing') this.togglePause(true);
       else if (this.screen === 'paused') this.togglePause(false);
       // leaving the refuge goes back where you came from — it is a room in the
       // dawn, not a place you get stuck in
       else if (this.screen === 'refuge') this.setScreen(this.refugeFrom || 'victory');
     }
     if (!input.keys.pause) this._pauseHeld = false;
-    if (input.keys.weapon && !this._weaponHeld && this.screen === 'playing') {
+    if (input.keys.weapon && !this._weaponHeld && this.screen === 'playing' && !this.uiPanel) {
       this._weaponHeld = true;
       this.cycleWeapon();
     }
     if (!input.keys.weapon) this._weaponHeld = false;
-    if (this.screen === 'playing' && input.uiTap && this._weaponChip) {
+    if (this.screen === 'playing' && !this.uiPanel && input.uiTap && this._weaponChip) {
       const chip = this._weaponChip;
       const tap = input.uiTap;
       if (tap.x >= chip.x && tap.x <= chip.x + chip.w && tap.y >= chip.y && tap.y <= chip.y + chip.h) {
@@ -2626,7 +2712,7 @@ export class Game {
         return;
       }
     }
-    if (this.screen === 'playing' && input.uiTap) {
+    if (this.screen === 'playing' && !this.uiPanel && input.uiTap) {
       const box = pauseButtonBox(this.renderer.w, this.renderer.h);
       const tap = input.uiTap;
       if (tap.x >= box.x && tap.x <= box.x + box.w && tap.y >= box.y && tap.y <= box.y + box.h) {
@@ -2635,12 +2721,22 @@ export class Game {
         this.togglePause(true);
         return;
       }
+      const nav = new Set(['bag', 'mission', 'profile', 'settings']);
+      const hit = [...this.ui].reverse().find((b) => nav.has(b.label) && b.onClick && !b.disabled
+        && tap.x > b.x && tap.x < b.x + b.w && tap.y > b.y && tap.y < b.y + b.h);
+      if (hit) {
+        input.uiTap = null;
+        this.audio.play('uiConfirm', { vol: 0.4 });
+        hit.onClick();
+        return;
+      }
     }
     if (this.screen === 'intro') {
       if (input.uiTap) { this._introTap = true; input.uiTap = null; }
       return;
     }
-    const inMenu = this.screen !== 'playing' && this.screen !== 'dying' && this.screen !== 'dawn';
+    const inMenu = (this.screen !== 'playing' && this.screen !== 'dying' && this.screen !== 'dawn')
+      || (this.screen === 'playing' && !!this.uiPanel);
     if (!inMenu) { this.uiIndex = 0; input.uiTap = null; return; }  // taps spent during play must not pop a menu button later
     // keyboard navigation
     if (input.keys.up && !this._navUp) { this.uiIndex = Math.max(0, this.uiIndex - 1); this.usingKeyboard = true; this.audio.play('uiHover', { vol: 0.3 }); }

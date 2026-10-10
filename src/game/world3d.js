@@ -71,6 +71,8 @@ class World3DRuntime {
     this.scene = null;
     this.root = null;
     this.ground = null;
+    this.exteriorRoot = null;
+    this.exteriorMeshes = [];
     this.playerProxy = null;
     this.proxies = new Map();
     this.variantRings = new Map();
@@ -87,6 +89,7 @@ class World3DRuntime {
     this.pickupGeometry = null;
     this.plankGeometry = null;
     this.boltGeometry = null;
+    this.knifeGeometry = null;
     this.playerSwing = null;
     this.playerFlash = null;
     this.duelLights = null;
@@ -226,7 +229,7 @@ class World3DRuntime {
     if (Valen3D.ground) Valen3D.ground.visible = false;
     if (!this.ground) {
       const b = game.mansion.bounds;
-      const extra = 1100;
+      const extra = 2250;
       const geometry = new THREE.PlaneGeometry(b.w + extra * 2, b.h + extra * 2);
       const material = new THREE.MeshStandardMaterial({ color: 0x11141c, roughness: 1, metalness: 0 });
       this.ground = new THREE.Mesh(geometry, material);
@@ -238,6 +241,7 @@ class World3DRuntime {
       scene.add(this.ground);
       scene.background = new THREE.Color(0x05070d);
     }
+    this._ensureExterior(game, scene);
     if (!this.started) {
       const hemi = Valen3D.hemi;
       const key = Valen3D.key;
@@ -265,6 +269,107 @@ class World3DRuntime {
       this.started = true;
     }
     return true;
+  }
+
+  _ensureExterior(game, scene) {
+    if (this.exteriorRoot) return;
+    const field = game.mansion && game.mansion.exterior;
+    if (!field) return;
+    const root = new THREE.Group();
+    root.name = 'duskhold-3d-forest-and-rocks';
+    root.userData.environmentOnly = true;
+    scene.add(root);
+    this.exteriorRoot = root;
+
+    const matrix = new THREE.Object3D();
+    const addInstances = (name, geometry, material, rows, transform, tint) => {
+      if (!rows || !rows.length) return null;
+      const mesh = new THREE.InstancedMesh(geometry, material, rows.length);
+      mesh.name = name;
+      mesh.frustumCulled = false;
+      mesh.castShadow = false;
+      mesh.receiveShadow = true;
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        transform(matrix, row, i);
+        matrix.updateMatrix();
+        mesh.setMatrixAt(i, matrix.matrix);
+        if (tint) mesh.setColorAt(i, tint(row, i));
+      }
+      mesh.instanceMatrix.needsUpdate = true;
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+      root.add(mesh);
+      this.exteriorMeshes.push(mesh);
+      return mesh;
+    };
+
+    const trunkGeometry = new THREE.CylinderGeometry(0.58, 1, 1, 6, 1);
+    const crownGeometry = new THREE.ConeGeometry(1, 1, 6, 1);
+    const rockGeometry = new THREE.DodecahedronGeometry(1, 0);
+    const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x574638, roughness: 1, metalness: 0, flatShading: true });
+    const crownMaterial = new THREE.MeshStandardMaterial({ color: 0x314139, roughness: 1, metalness: 0, flatShading: true });
+    const rockMaterial = new THREE.MeshStandardMaterial({ color: 0x66666a, roughness: 1, metalness: 0, flatShading: true });
+    const grassMaterial = new THREE.MeshStandardMaterial({ color: 0x59634d, roughness: 1, metalness: 0, flatShading: true, side: THREE.DoubleSide });
+
+    const trees = field.trees || [];
+    addInstances('forest-tree-trunks-3d', trunkGeometry, trunkMaterial, trees,
+      (d, tree) => {
+        const trunkHeight = tree.height * 0.38;
+        d.position.set(tree.x, trunkHeight * 0.5, tree.y);
+        d.rotation.set(0, tree.phase, 0);
+        d.scale.set(tree.trunk, trunkHeight, tree.trunk);
+      },
+      (tree) => new THREE.Color(0x765b3c).multiplyScalar(0.7 + tree.shade * 0.52));
+
+    const crownLayers = [
+      { height: 0.62, y: 0.31, radius: 1.02 },
+      { height: 0.6, y: 0.59, radius: 0.79 },
+      { height: 0.48, y: 0.84, radius: 0.57 },
+    ];
+    crownLayers.forEach((layer, layerIndex) => {
+      addInstances(`forest-conifer-crown-${layerIndex + 1}-3d`, crownGeometry, crownMaterial, trees,
+        (d, tree) => {
+          const trunkHeight = tree.height * 0.38;
+          const crownHeight = tree.height - trunkHeight;
+          const coneHeight = crownHeight * layer.height;
+          d.position.set(tree.x, trunkHeight + crownHeight * layer.y, tree.y);
+          d.rotation.set(0, tree.phase + layerIndex * 0.32, 0);
+          d.scale.set(tree.crown * layer.radius, coneHeight, tree.crown * layer.radius);
+        },
+        (tree) => {
+          const color = new THREE.Color().setHSL(0.31 + tree.shade * 0.025, 0.24 + tree.shade * 0.08, 0.12 + tree.shade * 0.075);
+          return color.multiplyScalar(layerIndex === 0 ? 0.84 : 1);
+        });
+    });
+
+    const rocks = field.rocks || [];
+    addInstances('forest-boulders-3d', rockGeometry, rockMaterial, rocks,
+      (d, rock) => {
+        d.position.set(rock.x, rock.height * 0.72, rock.y);
+        d.rotation.set(rock.turn * 0.12, rock.turn, rock.turn * 0.07);
+        d.scale.set(rock.radius * 1.2, rock.height, rock.radius * 0.88);
+      },
+      (rock) => new THREE.Color(0x74747b).multiplyScalar(0.66 + rock.shade * 0.48));
+
+    // Three crossed low-poly blades per tuft. This is actual standing mesh
+    // geometry, not a canvas stamp or an alpha billboard.
+    const grassVertices = [];
+    for (const angle of [0, Math.PI / 3, Math.PI * 2 / 3]) {
+      const ux = Math.cos(angle) * 0.19;
+      const uz = Math.sin(angle) * 0.19;
+      grassVertices.push(-ux, 0, -uz, ux, 0, uz, 0, 1, 0);
+    }
+    const grassGeometry = new THREE.BufferGeometry();
+    grassGeometry.setAttribute('position', new THREE.Float32BufferAttribute(grassVertices, 3));
+    grassGeometry.computeVertexNormals();
+    const brush = field.brush || [];
+    addInstances('forest-grass-tufts-3d', grassGeometry, grassMaterial, brush,
+      (d, tuft) => {
+        d.position.set(tuft.x, 0.4, tuft.y);
+        d.rotation.set(0, tuft.turn, 0);
+        d.scale.set(36 * tuft.scale, 33 * tuft.scale, 36 * tuft.scale);
+      },
+      (tuft) => new THREE.Color(0x75825f).multiplyScalar(0.58 + tuft.shade * 0.5));
   }
 
   _sampleLight(game, x, z) {
@@ -643,6 +748,7 @@ class World3DRuntime {
 
   _syncBolts(game) {
     if (!this.boltGeometry) this.boltGeometry = new THREE.CylinderGeometry(1.2, 1.2, 26, 6, 1);
+    if (!this.knifeGeometry) this.knifeGeometry = new THREE.ConeGeometry(1.8, 20, 5, 1);
     const active = new Set();
     const up = new THREE.Vector3(0, 1, 0);
     for (const bolt of game.bolts || []) {
@@ -651,13 +757,26 @@ class World3DRuntime {
       active.add(id);
       let mesh = this.bolts.get(id);
       if (!mesh) {
-        mesh = new THREE.Mesh(this.boltGeometry, new THREE.MeshStandardMaterial({
-          color: bolt.kit && bolt.kit.blessed ? 0xffedb0 : 0xa88a5d,
-          emissive: bolt.kit && bolt.kit.blessed ? 0xd29a38 : 0x19130d,
-          emissiveIntensity: bolt.kit && bolt.kit.blessed ? 0.8 : 0.08,
-          roughness: 0.55,
-        }));
-        mesh.name = 'crossbow-bolt-3d';
+        if (bolt.kind === 'knife') {
+          mesh = new THREE.Group();
+          const blade = new THREE.Mesh(this.knifeGeometry, new THREE.MeshStandardMaterial({
+            color: 0xb6c3cd, metalness: 0.72, roughness: 0.24, emissive: 0x111820, emissiveIntensity: 0.12,
+          }));
+          const handle = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.65, 8, 5), new THREE.MeshStandardMaterial({
+            color: 0x423329, roughness: 0.88, metalness: 0.02,
+          }));
+          handle.position.y = -12;
+          mesh.add(blade, handle);
+          mesh.name = 'throwing-knife-3d';
+        } else {
+          mesh = new THREE.Mesh(this.boltGeometry, new THREE.MeshStandardMaterial({
+            color: bolt.kit && bolt.kit.blessed ? 0xffedb0 : 0xa88a5d,
+            emissive: bolt.kit && bolt.kit.blessed ? 0xd29a38 : 0x19130d,
+            emissiveIntensity: bolt.kit && bolt.kit.blessed ? 0.8 : 0.08,
+            roughness: 0.55,
+          }));
+          mesh.name = 'crossbow-bolt-3d';
+        }
         this.bolts.set(id, mesh);
         this.root.add(mesh);
       }
@@ -669,9 +788,12 @@ class World3DRuntime {
       if (!trail) {
         const geometry = new THREE.BufferGeometry();
         geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(7 * 3), 3).setUsage(THREE.DynamicDrawUsage));
-        const material = new THREE.LineBasicMaterial({ color: bolt.kit && bolt.kit.blessed ? 0xffe2a2 : 0x9b9aa9, transparent: true, opacity: 0.42, depthWrite: false, toneMapped: false });
+        const material = new THREE.LineBasicMaterial({
+          color: bolt.kind === 'knife' ? 0xc4d4e0 : bolt.kit && bolt.kit.blessed ? 0xffe2a2 : 0x9b9aa9,
+          transparent: true, opacity: 0.42, depthWrite: false, toneMapped: false,
+        });
         const line = new THREE.Line(geometry, material);
-        line.name = 'crossbow-bolt-trail-3d';
+        line.name = bolt.kind === 'knife' ? 'throwing-knife-trail-3d' : 'crossbow-bolt-trail-3d';
         line.frustumCulled = false;
         this.boltTrails.set(id, line);
         this.root.add(line);

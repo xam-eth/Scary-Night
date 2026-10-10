@@ -49,11 +49,29 @@ export const WEAPONS = Object.freeze({
     hitSound: 'boltImpact',
     hitWeight: 0.85,
     fx: 'muzzle',
-    label: 'SHOT',
+    ammo: 'arrows',
+    label: 'CROSSBOW',
+  }),
+  knife: Object.freeze({
+    id: 'knife',
+    clip: 'claw',
+    kind: 'ranged',
+    range: 360,
+    arc: 0.42,
+    damage: PLAYER.attackDamage * 0.82,
+    boltSpeed: 680,
+    offset: 25,
+    fireAt: 0.4,
+    sound: 'steel',
+    hitSound: 'boltImpact',
+    hitWeight: 0.7,
+    fx: 'knife',
+    ammo: 'knives',
+    label: 'THROWING KNIFE',
   }),
 });
 
-export const WEAPON_ORDER = Object.freeze(['claw', 'sword', 'shot']);
+export const WEAPON_ORDER = Object.freeze(['claw', 'sword', 'shot', 'knife']);
 
 /* ---------------------------------------------------------------------------
  * Where a swing lands, measured through the same isometric projection used by

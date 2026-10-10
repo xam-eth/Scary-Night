@@ -145,6 +145,7 @@ export const defaultSave = () => ({
   shards: 0,
   totalShards: 0,
   relics: 0,                // hard currency. Play drip or money-bought goods. Never power.
+  inventory: { arrows: 0, knives: 0, bandages: 0 }, // earned from completed missions
   nightsSurvived: 0,
   nightsAttempted: 0,
   killsBy: {},               // what she has put down, by kind — the refuge wall hangs these

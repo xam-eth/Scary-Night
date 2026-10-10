@@ -97,6 +97,9 @@ export function drawHUD(game, ctx, w, h) {
   drawTopScrim(ctx, w, h);
   drawPauseButton(game, ctx, w, h);
   drawTopBar(game, ctx, w, h, em, pulse);
+  drawFieldAccess(game, ctx, w, h);
+  // Stock counts stay legible even when contextual HUD elements de-emphasize.
+  drawResourceStrip(game, ctx, w, h, 0.9);
   drawBuildBadge(game, ctx, w, h, em.badge);
   withPriority(ctx, em.clock, w / 2, phone ? 58 : h * 0.07, () => drawClock(game, ctx, w, h, pulse, em.clock));
   withPriority(ctx, em.door, w - 48, phone ? 108 : 96, () => drawDoorStatus(game, ctx, w, h, em.door));
@@ -377,7 +380,6 @@ function drawTopBar(game, ctx, w, h, em, pulse) {
   const purse = unlocked(game.save, 'risk') && game.livePurse ? game.livePurse() : ((game.save && game.save.shards) || 0);
   if (game._purseSeen != null && purse !== game._purseSeen) game._purseFlashAt = game.time;
   game._purseSeen = purse;
-  const flash = game._purseFlashAt != null && game.time - game._purseFlashAt < 0.7;
   ctx.save();
   ctx.textBaseline = 'middle';
   ctx.font = `500 ${short ? 11 : 13}px ${SANS}`;
@@ -402,22 +404,75 @@ function drawTopBar(game, ctx, w, h, em, pulse) {
   if (low) ctx.shadowColor = 'rgba(160,20,30,0.8)', ctx.shadowBlur = 8;
   ctx.fillText(leftText, leftX, y);
   ctx.shadowBlur = 0;
-  ctx.globalAlpha = flash ? 1 : em.badge;
-  ctx.textAlign = 'right';
-  const right = `◆ ${purse}    PLANKS  ${p.planks | 0}`;
-  const rightWidth = ctx.measureText(right).width;
-  const rightX = w - 12;
-  ctx.fillStyle = 'rgba(5,7,11,0.62)';
-  ctx.fillRect(rightX - rightWidth - 8, y - 11, rightWidth + 16, 22);
-  ctx.strokeStyle = 'rgba(200,177,125,0.24)';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(rightX - rightWidth - 7.5, y - 10.5, rightWidth + 15, 21);
-  ctx.fillStyle = flash ? '#f0d48a' : 'rgba(214,186,120,0.92)';
-  ctx.fillText(right, rightX, y);
+  ctx.globalAlpha = em.blood;
   if (pulse && low) {
     ctx.globalAlpha = 0.35;
     ctx.fillRect(10, y + 8, 72, 2);
   }
+  ctx.restore();
+}
+
+/** Icon-only entry points keep the live world one tap away from the field card. */
+function drawFieldAccess(game, ctx, w, h) {
+  const short = h < 500;
+  const size = short ? 30 : 34;
+  const gap = short ? 4 : 6;
+  const items = [
+    ['bag', 'bag'], ['mission', 'missions'], ['profile', 'profile'], ['settings', 'settings'],
+  ];
+  const total = items.length * size + (items.length - 1) * gap;
+  const x0 = w - 10 - total;
+  const y = short ? 7 : 9;
+  items.forEach(([icon, panel], i) => {
+    const x = x0 + i * (size + gap);
+    const idx = game.ui.length;
+    const box = { x, y, w: size, h: size, label: icon, onClick: () => game.openPanel(panel), idx };
+    game.ui.push(box);
+    const active = game.usingKeyboard && game.uiIndex === idx;
+    ctx.save();
+    ctx.fillStyle = active ? 'rgba(56,42,26,0.92)' : 'rgba(7,9,14,0.76)';
+    ctx.strokeStyle = active ? 'rgba(220,185,112,0.9)' : 'rgba(192,174,135,0.48)';
+    ctx.lineWidth = active ? 1.5 : 1;
+    ctx.fillRect(x, y, size, size);
+    ctx.strokeRect(x + 0.5, y + 0.5, size - 1, size - 1);
+    drawGameIcon(ctx, icon, x + size / 2, y + size / 2, short ? 17 : 19, active ? '#f1dbab' : '#ddd3c0');
+    ctx.restore();
+  });
+}
+
+/** Small earned-stock readout. Icons and counts, not another labeled toolbar. */
+function drawResourceStrip(game, ctx, w, h, em = 1) {
+  const bag = game.inventory ? game.inventory() : ((game.save && game.save.inventory) || {});
+  const values = [
+    ['shard', (game.save && game.save.shards) || 0, '#d4b46e'],
+    ['plank', game.player.planks | 0, '#c69e68'],
+    ['arrow', bag.arrows | 0, '#c2ccd2'],
+    ['knife', bag.knives | 0, '#c2ccd2'],
+    ['bandage', bag.bandages | 0, '#d2bd9c'],
+  ];
+  const short = h < 500;
+  const phone = w < 840 || short;
+  const x = 14;
+  const y = short ? 88 : phone ? 190 : 58;
+  const step = short ? 38 : 42;
+  const width = values.length * step + 8;
+  const flash = game._purseFlashAt != null && game.time - game._purseFlashAt < 0.7;
+  ctx.save();
+  ctx.globalAlpha = em;
+  ctx.fillStyle = 'rgba(5,7,11,0.68)';
+  ctx.fillRect(x - 6, y - 11, width, 23);
+  ctx.strokeStyle = flash ? 'rgba(226,194,116,0.72)' : 'rgba(190,170,127,0.3)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x - 5.5, y - 10.5, width - 1, 22);
+  values.forEach(([icon, count, tint], i) => {
+    const sx = x + i * step;
+    drawGameIcon(ctx, icon, sx + 9, y, short ? 13 : 15, flash && icon === 'shard' ? '#f1d487' : tint);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.font = `500 ${short ? 9 : 10}px ${MONO}`;
+    ctx.fillStyle = flash && icon === 'shard' ? '#f1d487' : 'rgba(228,220,204,0.9)';
+    const text = count > 999 ? '999+' : String(count);
+    ctx.fillText(text, sx + 18, y + 0.5);
+  });
   ctx.restore();
 }
 
@@ -598,8 +653,10 @@ function drawActions(game, ctx, w, h, em = 1) {
   ctx.textBaseline = 'middle';
   ctx.font = `500 11px ${SANS}`;
   setLetter(ctx, 2);
-  ctx.fillStyle = p.planks > 0 ? 'rgba(205,180,140,0.9)' : 'rgba(130,120,110,0.55)';
-  ctx.fillText(`PLANKS  ${p.planks}`, px, py - 14);
+  drawGameIcon(ctx, 'plank', px - 30, py - 14, 16, p.planks > 0 ? '#d0b181' : 'rgba(150,140,125,0.58)');
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.font = `400 10px ${MONO}`;
+  ctx.fillStyle = p.planks > 0 ? 'rgba(220,203,173,0.9)' : 'rgba(140,132,120,0.62)';
+  ctx.fillText(String(p.planks | 0), px, py - 14);
   for (let i = 0; i < Math.min(p.planks, 6); i++) {
     ctx.fillStyle = 'rgba(120,86,48,0.9)';
     ctx.fillRect(px - 6 - i * 9, py, 6, 14);
@@ -991,22 +1048,15 @@ export function drawTouchControls(game, ctx, w, h) {
       ctx.fill();
     }
     const iconColor = cd > 0.02 ? 'rgba(180,174,160,0.72)' : 'rgba(240,233,218,0.96)';
-    const desktopHint = hint && w > 720 && h > 500;
-    drawGameIcon(ctx, icon, 0, desktopHint ? -3 : 0, Math.min(opts.big ? 27 : 22, r * 1.02), iconColor);
-    if (desktopHint) {
-      ctx.font = `400 8px ${MONO}`;
-      if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
-      ctx.fillStyle = 'rgba(210,200,180,0.72)';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(hint, 0, r * 0.56);
-    }
+    // Controls stay icon-only; keyboard hints live in the help card, not on
+    // top of the action buttons where they compete with the night.
+    drawGameIcon(ctx, icon, 0, 0, Math.min(opts.big ? 27 : 22, r * 1.02), iconColor);
     ctx.restore();
   };
   const dashCd = p && PLAYER.dashCooldown ? clamp(p.dashCd / PLAYER.dashCooldown, 0, 1) : 0;
   const atkCd = p && PLAYER.attackCooldown ? clamp(p.attackCd / PLAYER.attackCooldown, 0, 1) : 0;
   const tool = weaponById(p && p.weapon);
-  drawBtn(input.buttons.attack, tool.id, 'F', { big: true, cd: atkCd });
+  drawBtn(input.buttons.attack, tool.id, null, { big: true, cd: atkCd });
   const chip = weaponChipBox(input, w, h);
   game._weaponChip = chip;
   // #56 P5 — the kit she carries: the chip wears the metal (cold silver, warm
@@ -1025,13 +1075,6 @@ export function drawTouchControls(game, ctx, w, h) {
   const weaponInk = !kit ? 'rgba(240,230,210,0.96)'
     : (kit.blessed || kit.ward) ? 'rgba(255,225,155,0.98)' : 'rgba(222,233,255,0.98)';
   drawGameIcon(ctx, tool.id, chip.x + chip.w / 2, chip.y + chip.h / 2 - (kit ? 3 : 0), kit ? 18 : 21, weaponInk);
-  if (w > 720 && h > 500) {
-    ctx.fillStyle = 'rgba(214,206,190,0.64)';
-    ctx.font = `400 7px ${MONO}`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('Q', chip.x + chip.w - 6, chip.y + 6);
-  }
   if (kit) {
     const held = [kit.silver, kit.blessed, kit.ward];
     const pw = 6, gap = 4;
@@ -1050,9 +1093,10 @@ export function drawTouchControls(game, ctx, w, h) {
       : useAction.act === 'drink' || useAction.act === 'larder' ? 'blood'
         : useAction.act === 'stakes' ? 'barricade'
           : useAction.act === 'ward' ? 'lamp' : 'interact';
-  drawBtn(input.buttons.dash, 'dash', 'SHIFT', { cd: dashCd });
-  drawBtn(input.buttons.interact, useIcon, 'E');
-  drawBtn(input.buttons.repair, 'repair', 'R');
-  drawBtn(input.buttons.barricade, 'barricade', 'B');
+  drawBtn(input.buttons.run, 'run');
+  drawBtn(input.buttons.dash, 'dash', null, { cd: dashCd });
+  drawBtn(input.buttons.interact, useIcon);
+  drawBtn(input.buttons.repair, 'repair');
+  drawBtn(input.buttons.barricade, 'barricade');
   ctx.restore();
 }

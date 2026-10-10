@@ -6,7 +6,9 @@
 const GAME_ICONS = new Set([
   'claw', 'sword', 'shot', 'move', 'dash', 'interact', 'doorOpen', 'doorClosed',
   'blood', 'repair', 'barricade', 'lamp', 'play', 'restart', 'upgrade', 'book',
-  'shield', 'settings', 'back', 'exit', 'confirm', 'next',
+  'shield', 'settings', 'back', 'exit', 'confirm', 'next', 'bag', 'mission',
+  'profile', 'arrow', 'knife', 'bandage', 'plank', 'shard', 'relic', 'run',
+  'close', 'more', 'plus', 'shop', 'help',
 ]);
 
 export function buttonIconForLabel(label) {
@@ -162,6 +164,68 @@ export function drawGameIcon(ctx, name, x, y, size = 24, color = '#eee6d6') {
       break;
     case 'next':
       ctx.beginPath(); ctx.moveTo(-7, -8); ctx.lineTo(4, 0); ctx.lineTo(-7, 8); ctx.moveTo(7, -8); ctx.lineTo(7, 8); ctx.stroke();
+      break;
+    case 'bag':
+      ctx.beginPath(); ctx.roundRect(-9, -5, 18, 15, 2.5); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-5, -5); ctx.lineTo(-5, -8); ctx.quadraticCurveTo(-5, -12, 0, -12); ctx.quadraticCurveTo(5, -12, 5, -8); ctx.lineTo(5, -5); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-3, 1); ctx.lineTo(3, 1); ctx.stroke();
+      break;
+    case 'mission':
+      ctx.beginPath(); ctx.roundRect(-8, -10, 16, 20, 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-4, -4); ctx.lineTo(-2, -2); ctx.lineTo(1, -6); ctx.moveTo(3, -4); ctx.lineTo(5, -4); ctx.moveTo(-4, 3); ctx.lineTo(5, 3); ctx.moveTo(-4, 7); ctx.lineTo(5, 7); ctx.stroke();
+      break;
+    case 'profile':
+      ctx.beginPath(); ctx.arc(0, -4.5, 4, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-9, 10); ctx.quadraticCurveTo(-8, 2, 0, 2); ctx.quadraticCurveTo(8, 2, 9, 10); ctx.stroke();
+      break;
+    case 'arrow':
+      ctx.beginPath(); ctx.moveTo(-10, 9); ctx.lineTo(7, -8); ctx.moveTo(2, -8); ctx.lineTo(7, -8); ctx.lineTo(7, -3); ctx.moveTo(-6, 5); ctx.lineTo(-3, 8); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-2, 1); ctx.lineTo(1, 4); ctx.moveTo(1, -2); ctx.lineTo(4, 1); ctx.stroke();
+      break;
+    case 'knife':
+      ctx.beginPath(); ctx.moveTo(-9, 8); ctx.lineTo(5, -8); ctx.lineTo(10, -11); ctx.lineTo(8, -5); ctx.lineTo(-5, 9); ctx.closePath(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-9, 8); ctx.lineTo(-4, 12); ctx.lineTo(0, 8); ctx.moveTo(-6, 7); ctx.lineTo(-3, 10); ctx.stroke();
+      break;
+    case 'bandage':
+      ctx.save(); ctx.rotate(-Math.PI / 4);
+      ctx.beginPath(); ctx.roundRect(-10, -5, 20, 10, 3); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-2.5, -2.5); ctx.lineTo(2.5, -2.5); ctx.moveTo(-2.5, 2.5); ctx.lineTo(2.5, 2.5); ctx.stroke();
+      ctx.restore();
+      break;
+    case 'plank':
+      ctx.beginPath(); ctx.roundRect(-11, -7, 22, 6, 1); ctx.roundRect(-9, 2, 20, 6, 1); ctx.stroke();
+      ctx.beginPath(); ctx.arc(-7, -4, 0.8, 0, Math.PI * 2); ctx.arc(8, 5, 0.8, 0, Math.PI * 2); ctx.fill();
+      break;
+    case 'shard':
+      ctx.beginPath(); ctx.moveTo(0, -11); ctx.lineTo(8, -3); ctx.lineTo(5, 9); ctx.lineTo(-2, 11); ctx.lineTo(-9, 2); ctx.closePath(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, -11); ctx.lineTo(-2, 11); ctx.moveTo(0, -11); ctx.lineTo(3, 0); ctx.lineTo(8, -3); ctx.stroke();
+      break;
+    case 'relic':
+      ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, -3); ctx.lineTo(2, 0); ctx.lineTo(-1, 2); ctx.lineTo(1, 4); ctx.stroke();
+      break;
+    case 'run':
+      ctx.beginPath(); ctx.arc(3, -8, 2.2, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(2, -5); ctx.lineTo(-1, 0); ctx.lineTo(5, 2); ctx.lineTo(9, 7); ctx.moveTo(-1, 0); ctx.lineTo(-7, 5); ctx.moveTo(2, -4); ctx.lineTo(8, -2); ctx.moveTo(-6, 9); ctx.lineTo(0, 9); ctx.moveTo(7, 9); ctx.lineTo(12, 9); ctx.stroke();
+      break;
+    case 'close':
+      ctx.beginPath(); ctx.moveTo(-7, -7); ctx.lineTo(7, 7); ctx.moveTo(7, -7); ctx.lineTo(-7, 7); ctx.stroke();
+      break;
+    case 'more':
+      for (const px of [-7, 0, 7]) { ctx.beginPath(); ctx.arc(px, 0, 1.7, 0, Math.PI * 2); ctx.fill(); }
+      break;
+    case 'plus':
+      ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(0, 8); ctx.moveTo(-8, 0); ctx.lineTo(8, 0); ctx.stroke();
+      break;
+    case 'shop':
+      ctx.beginPath(); ctx.moveTo(-10, -7); ctx.lineTo(10, -7); ctx.lineTo(8, 9); ctx.lineTo(-8, 9); ctx.closePath(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-7, -2); ctx.quadraticCurveTo(0, 3, 7, -2); ctx.stroke();
+      break;
+    case 'help':
+      ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-2, -3); ctx.quadraticCurveTo(-1, -7, 3, -5); ctx.quadraticCurveTo(7, -3, 2, 0); ctx.lineTo(1, 3); ctx.stroke();
+      ctx.beginPath(); ctx.arc(1, 7, 0.8, 0, Math.PI * 2); ctx.fill();
       break;
     default:
       ctx.restore();

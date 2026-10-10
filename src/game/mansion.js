@@ -20,6 +20,7 @@ import { clamp, rand, randInt, chance, hash2, hashRange, Rng, TAU } from '../cor
 import { PAL } from '../core/render.js';
 import { DOOR } from '../core/config.js';
 import { drawRoomMarks } from './narrative.js';
+import { makeExterior } from './exterior.js';
 
 export const ROOM = {
   DINING: 'dining',
@@ -55,6 +56,11 @@ export class Mansion {
     this.blackout = 0;
     this.build();
     this.dressFurniture();
+    // Outdoor dressing is generated from the same house bounds as the room
+    // kit. Its tree and boulder footprints enter collision/pathfinding before
+    // the grid is baked, so the forest is scenery you can actually walk around.
+    this.exterior = makeExterior(this);
+    this.solids.push(...this.exterior.blockers);
     this.bake();
     this.buildGrid();
     // rasterise walkability only after the collision grid exists
