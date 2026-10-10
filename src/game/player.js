@@ -173,7 +173,7 @@ export class Player {
     let mx = intent.x * intent.mag, my = intent.y * intent.mag;
     const mag = intent.mag;
     // Running is a sustained movement mode, independent of the short dash.
-    // Shift / the boot button changes both speed and the authored run clip.
+    // Shift-hold / the boot toggle changes speed and the authored run clip.
     const wantRun = input.runDown && mag > 0.3;
 
     // blood-instability: the weaker you are, the more you drift

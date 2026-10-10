@@ -21,6 +21,7 @@ import { Enemy3D } from '../game/enemy3d.js';
 import { IAP, CATALOG } from '../shop/iap.js';
 import { Ads } from '../shop/ads.js';
 import { buttonIconForLabel, drawGameIcon } from './icons.js';
+import { drawIconButton, iconButtonState, iconHitArea, UI_TOKENS } from './components.js';
 import { weaponById } from '../game/weapons.js';
 
 const SERIF = '"IM Fell English SC", Georgia, serif';
@@ -2798,23 +2799,15 @@ const FIELD_TABS = [
 function fieldIconButton(game, ctx, x, y, size, icon, onClick, opts = {}) {
   const disabled = !!opts.disabled;
   const idx = game.ui.length;
-  const box = { x, y, w: size, h: size, onClick: disabled ? null : onClick, disabled, label: icon, idx };
+  const hit = iconHitArea(x, y, size);
+  const box = { ...hit, onClick: disabled ? null : onClick, disabled, label: icon, idx };
   game.ui.push(box);
-  const active = !!opts.active || (game.usingKeyboard && game.uiIndex === idx);
-  const cx = x + size / 2, cy = y + size / 2;
-  ctx.save();
-  ctx.globalAlpha = disabled ? 0.42 : 1;
-  ctx.fillStyle = active ? 'rgba(55,39,22,0.96)' : 'rgba(11,13,18,0.92)';
-  ctx.strokeStyle = active ? 'rgba(213,178,103,0.95)' : 'rgba(169,157,132,0.48)';
-  ctx.lineWidth = active ? 1.6 : 1;
-  if (opts.round !== false) {
-    ctx.beginPath(); ctx.arc(cx, cy, size * 0.47, 0, TAU); ctx.fill(); ctx.stroke();
-  } else {
-    ctx.fillRect(x, y, size, size); ctx.strokeRect(x + 0.5, y + 0.5, size - 1, size - 1);
-  }
-  const ink = disabled ? 'rgba(172,163,146,0.7)' : active ? '#f2d99c' : '#d5cbb6';
-  drawGameIcon(ctx, icon, cx, cy, Math.min(23, size * 0.54), ink);
-  ctx.restore();
+  const shape = opts.shape || (opts.round === false ? 'rounded' : 'circle');
+  drawIconButton(ctx, x, y, size, icon, {
+    state: iconButtonState(game, box, !!opts.active, disabled),
+    shape,
+    iconSize: Math.min(23, size * 0.56),
+  });
   return box;
 }
 
@@ -2850,7 +2843,7 @@ function drawFieldBag(game, ctx, x, y, w, h, short) {
     { icon: 'bandage', name: 'BANDAGES', amount: bag.bandages | 0, note: 'MISSION CACHE', tint: '#d2b68b', action: { icon: 'plus', use: true, count: bag.bandages | 0 } },
     { icon: 'relic', name: 'RELICS', amount: game.save.relics || 0, note: 'RECORDED FINDS', tint: '#a4b6c8' },
   ];
-  const cols = w > 720 ? 3 : 2;
+  const cols = w < 520 ? 1 : w > 720 ? 3 : 2;
   const gap = short ? 6 : 10;
   const rows = Math.ceil(items.length / cols);
   const cw = (w - gap * (cols - 1)) / cols;
@@ -2867,11 +2860,11 @@ function drawFieldBag(game, ctx, x, y, w, h, short) {
     ctx.textBaseline = 'middle';
     fieldFit(ctx, item.name, cx + 34, cy + Math.min(18, ch * 0.28), Math.max(52, cw - 44), short ? 9 : 10.5, SANS, 'rgba(204,197,181,0.76)', 600);
     ctx.textAlign = 'right';
-    fieldFit(ctx, item.amount, cx + cw - (item.action ? 36 : 10), cy + Math.min(37, ch * 0.58), cw - 48, short ? 15 : 19, MONO, '#f0e7d6', 400);
+    fieldFit(ctx, item.amount, cx + cw - (item.action ? 54 : 10), cy + Math.min(37, ch * 0.58), cw - (item.action ? 80 : 48), short ? 15 : 19, MONO, '#f0e7d6', 400);
     ctx.textAlign = 'left';
     if (ch > 62) fieldFit(ctx, item.note, cx + 12, cy + ch - 11, cw - 24, short ? 7.5 : 8.5, SANS, 'rgba(159,153,140,0.65)', 500);
     if (item.action) {
-      const actionX = cx + cw - 33;
+      const actionX = cx + cw - 38;
       const actionY = cy + ch / 2 - 15;
       const disabled = item.action.count < 1 || (item.action.use && p.blood >= p.bloodMax - 0.1);
       fieldIconButton(game, ctx, actionX, actionY, 30, item.action.icon,
@@ -3062,16 +3055,15 @@ function drawFieldCollection(game, ctx, x, y, w, h, short) {
 
 function drawFieldMarket(game, ctx, x, y, w, h, short) {
   const shown = CATALOG.filter((sku) => sku.kind !== 'remove_ads' || unlocked(game.save, 'ads'));
-  const cols = 2;
+  const cols = w < 520 ? 1 : 2;
   const gap = short ? 6 : 9;
   const rows = Math.ceil(shown.length / cols);
-  const cellW = (w - gap) / cols;
+  const cellW = (w - gap * (cols - 1)) / cols;
   const cellH = Math.max(36, (h - (short ? 22 : 28) - gap * (rows - 1)) / rows);
   ctx.save();
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-  ctx.font = `400 ${short ? 7.5 : 9}px ${SANS}`;
-  ctx.fillStyle = 'rgba(180,172,156,0.65)';
-  ctx.fillText('Shards buy only what the night has already offered. Money never buys power.', x, y + 7);
+  fieldFit(ctx, 'Shards buy only what the night has already offered. Money never buys power.',
+    x, y + 7, w, short ? 7.5 : 9, SANS, 'rgba(180,172,156,0.65)', 400);
   shown.forEach((sku, i) => {
     const cx = x + (i % cols) * (cellW + gap);
     const cy = y + (short ? 18 : 23) + Math.floor(i / cols) * (cellH + gap);
@@ -3087,12 +3079,12 @@ function drawFieldMarket(game, ctx, x, y, w, h, short) {
     ctx.strokeRect(cx + 0.5, cy + 0.5, cellW - 1, cellH - 1);
     drawGameIcon(ctx, sku.kind === 'consumable' ? 'blood' : sku.kind === 'title' ? 'relic' : 'shield', cx + 17, cy + cellH / 2, short ? 14 : 17, owned ? '#d3b16c' : '#aaa9a1');
     ctx.textAlign = 'left';
-    fieldFit(ctx, sku.name, cx + 33, cy + cellH * 0.36, cellW - (short ? 88 : 98), short ? 7.5 : 10, SANS, '#e3d9c6', 600);
+    fieldFit(ctx, sku.name, cx + 33, cy + cellH * 0.36, cellW - 130, short ? 7.5 : 10, SANS, '#e3d9c6', 600);
     const status = owned ? 'OWNED' : !offered ? 'NOT YET OFFERED' : `◆ ${sku.shardPrice}`;
-    fieldFit(ctx, status, cx + 33, cy + cellH * 0.69, cellW - (short ? 88 : 98), short ? 6.8 : 8.5, MONO, offered ? 'rgba(190,170,125,0.77)' : 'rgba(155,151,141,0.55)', 400);
+    fieldFit(ctx, status, cx + 33, cy + cellH * 0.69, cellW - 130, short ? 6.8 : 8.5, MONO, offered ? 'rgba(190,170,125,0.77)' : 'rgba(155,151,141,0.55)', 400);
     const actionY = cy + cellH / 2 - 15;
-    fieldIconButton(game, ctx, cx + cellW - 69, actionY, 30, 'shop', () => game.purchaseSku(sku.id), { disabled: !available || IAP.busy === sku.id });
-    fieldIconButton(game, ctx, cx + cellW - 35, actionY, 30, 'shard', () => game.buySkuWithShards(sku.id), { disabled: !canBuy });
+    fieldIconButton(game, ctx, cx + cellW - 82, actionY, 30, 'shop', () => game.purchaseSku(sku.id), { disabled: !available || IAP.busy === sku.id });
+    fieldIconButton(game, ctx, cx + cellW - 38, actionY, 30, 'shard', () => game.buySkuWithShards(sku.id), { disabled: !canBuy });
   });
   ctx.restore();
 }
@@ -3154,7 +3146,7 @@ function drawFieldSettings(game, ctx, x, y, w, h, short) {
 function drawFieldHelp(game, ctx, x, y, w, h, short) {
   const groups = [
     { icon: 'move', title: 'MOVE', body: 'WASD / arrows · left stick' },
-    { icon: 'run', title: 'RUN', body: 'Hold SHIFT · hold the boot icon' },
+    { icon: 'run', title: 'RUN', body: 'Tap to run · tap again to walk · SHIFT' },
     { icon: 'dash', title: 'DASH', body: 'X / CTRL · dash icon' },
     { icon: 'claw', title: 'ATTACK', body: 'F · right-click · claw icon' },
     { icon: 'interact', title: 'USE', body: 'E / SPACE · doors, food, stakes' },
@@ -3245,20 +3237,32 @@ export function drawFieldCard(game, ctx, w, h) {
   const tabY = y + (short ? 49 : 58);
   const inner = cardW - 24;
   const n = FIELD_TABS.length;
-  const gap = short ? 4 : 7;
-  const tabSize = Math.min(short ? 40 : 42, Math.floor((inner - gap * (n - 1)) / n));
-  const tabTotal = tabSize * n + gap * (n - 1);
-  let tx = x + (cardW - tabTotal) / 2;
-  FIELD_TABS.forEach((entry) => {
-    fieldIconButton(game, ctx, tx, tabY, tabSize, entry.icon, () => game.openPanel(entry.id), { active: entry.id === tab.id, round: false });
-    tx += tabSize + gap;
+  // On narrow portrait screens the nine destinations become two rows, so
+  // each target remains a real thumb-sized control instead of a tiny rail.
+  const portraitNav = w < 600 && !short;
+  const cols = portraitNav ? 5 : n;
+  const rows = Math.ceil(n / cols);
+  const gap = short ? UI_TOKENS.spacing.fieldShortTab
+    : portraitNav ? UI_TOKENS.spacing.fieldPortraitTab : UI_TOKENS.spacing.fieldTab;
+  const preferredSize = portraitNav ? UI_TOKENS.size.fieldTabPortrait
+    : short ? UI_TOKENS.size.fieldTabShort : UI_TOKENS.size.fieldTabStandard;
+  const tabSize = Math.min(preferredSize, Math.floor((inner - gap * (cols - 1)) / cols));
+  const tabTotalW = tabSize * cols + gap * (cols - 1);
+  const tabTotalH = tabSize * rows + gap * (rows - 1);
+  const tabX = x + (cardW - tabTotalW) / 2;
+  FIELD_TABS.forEach((entry, i) => {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const tx = tabX + col * (tabSize + gap);
+    const ty = tabY + row * (tabSize + gap);
+    fieldIconButton(game, ctx, tx, ty, tabSize, entry.icon, () => game.openPanel(entry.id), { active: entry.id === tab.id, round: false });
   });
   ctx.strokeStyle = 'rgba(165,146,109,0.24)';
-  ctx.beginPath(); ctx.moveTo(x + 14, tabY + tabSize + 8); ctx.lineTo(x + cardW - 14, tabY + tabSize + 8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + 14, tabY + tabTotalH + 8); ctx.lineTo(x + cardW - 14, tabY + tabTotalH + 8); ctx.stroke();
 
-  const bodyX = x + 16;
-  const bodyY = tabY + tabSize + 20;
-  const bodyW = cardW - 32;
+  const bodyX = x + UI_TOKENS.spacing.fieldInset;
+  const bodyY = tabY + tabTotalH + 20;
+  const bodyW = cardW - UI_TOKENS.spacing.fieldInset * 2;
   const bodyH = Math.max(24, y + cardH - 14 - bodyY);
   ctx.save();
   ctx.beginPath(); ctx.rect(bodyX, bodyY, bodyW, bodyH); ctx.clip();

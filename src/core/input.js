@@ -29,10 +29,11 @@ export class Input {
     this.prevKeys = Object.create(null);
     this.mouse = { x: 0, y: 0, wx: 0, wy: 0, down: false, clicked: false, moved: false, right: false, rightClick: false };
     this.move = { x: 0, y: 0 };
+    this.runToggled = false;
     this.stick = { active: false, id: -1, ox: 0, oy: 0, x: 0, y: 0, r: 54, dx: 0, dy: 0, mag: 0, pointer: false, homeX: 96, homeY: 0 };
     this.buttons = {
       attack: { x: 0, y: 0, r: 32, down: false, pulse: 0, hidden: false },
-      run: { x: 0, y: 0, r: 22, down: false, pulse: 0, hidden: false },
+      run: { x: 0, y: 0, r: 22, hitR: 22, down: false, toggled: false, id: -1, pulse: 0, hidden: false },
       dash: { x: 0, y: 0, r: 24, down: false, pulse: 0, hidden: false },
       interact: { x: 0, y: 0, r: 24, down: false, pulse: 0, hidden: false, hot: false },
       repair: { x: 0, y: 0, r: 20, down: false, pulse: 0, hidden: true },
@@ -60,16 +61,28 @@ export class Input {
     return { x: e.clientX - r.left, y: e.clientY - r.top };
   }
 
+  _buttonHitRadius(b) { return b.hitR || b.r * 1.35; }
+
+  _insideButton(b, p) {
+    return Math.hypot(p.x - b.x, p.y - b.y) < this._buttonHitRadius(b);
+  }
+
   _hitButton(p) {
     for (const k of ['attack', 'run', 'dash', 'interact', 'repair', 'barricade']) {
       if (this.buttons[k].hidden) continue;
-      const b = this.buttons[k];
-      if (Math.hypot(p.x - b.x, p.y - b.y) < b.r * 1.35) return k;
+      if (this._insideButton(this.buttons[k], p)) return k;
     }
     return null;
   }
 
-  _releasePointerStick() {
+  toggleRun() {
+    this.runToggled = !this.runToggled;
+    this.buttons.run.toggled = this.runToggled;
+    this.buttons.run.pulse = 1;
+    return this.runToggled;
+  }
+
+  _releasePointerStick(p = null, commit = false) {
     if (this.stick.active && this.stick.pointer) {
       this.stick.active = false;
       this.stick.pointer = false;
@@ -77,7 +90,10 @@ export class Input {
     }
     for (const k of Object.keys(this.buttons)) {
       const b = this.buttons[k];
-      if (b.pointer) { b.down = false; b.pointer = false; }
+      if (b.pointer) {
+        if (commit && k === 'run' && b.down && p && this._insideButton(b, p)) this.toggleRun();
+        b.down = false; b.pointer = false;
+      }
     }
   }
 
@@ -152,7 +168,7 @@ export class Input {
     addEventListener('mouseup', (e) => {
       if (e.button === 0) {
         this.mouse.down = false;
-        this._releasePointerStick();
+        this._releasePointerStick(this._local(e), true);
       }
       if (e.button === 2) this.mouse.right = false;
     });
@@ -183,30 +199,34 @@ export class Input {
         for (const k of ['attack', 'run', 'dash', 'interact', 'repair', 'barricade']) {
           const b = this.buttons[k];
           if (b.id === t.identifier) {
-            const inside = Math.hypot(p.x - b.x, p.y - b.y) < b.r * 1.35;
+            const inside = this._insideButton(b, p);
             if (!inside && b.down) b.down = false;
           }
         }
       }
       e.preventDefault();
     };
-    const onEnd = (e) => {
+    const onEnd = (e, commit = true) => {
       for (const t of e.changedTouches) {
+        const p = area(t);
         if (this.stick.active && t.identifier === this.stick.id) {
           this.stick.active = false; this.stick.pointer = false;
           this.stick.dx = 0; this.stick.dy = 0; this.stick.mag = 0;
         }
         for (const k of ['attack', 'run', 'dash', 'interact', 'repair', 'barricade']) {
           const b = this.buttons[k];
-          if (b.id === t.identifier) { b.down = false; b.id = -1; }
+          if (b.id === t.identifier) {
+            if (k === 'run' && commit && b.down && this._insideButton(b, p)) this.toggleRun();
+            b.down = false; b.id = -1;
+          }
         }
       }
       e.preventDefault();
     };
     c.addEventListener('touchstart', onStart, { passive: false });
     c.addEventListener('touchmove', onMove, { passive: false });
-    c.addEventListener('touchend', onEnd, { passive: false });
-    c.addEventListener('touchcancel', onEnd, { passive: false });
+    c.addEventListener('touchend', (e) => onEnd(e, true), { passive: false });
+    c.addEventListener('touchcancel', (e) => onEnd(e, false), { passive: false });
   }
 
   /** Call once per frame before gameplay reads input. */
@@ -240,7 +260,7 @@ export class Input {
     // click, or right-click — never the finger that is steering.
     this.attackDown = !!k.attack || this.buttons.attack.down || !!this.mouse.right || (this.mouse.down && !this.stick.active);
     this.attackPressed = (!!k.attack && !this.prevKeys.attack) || this.buttons.attack.pulse > 0.82 || this.mouse.clicked || !!this.mouse.rightClick;
-    this.runDown = !!k.run || this.buttons.run.down;
+    this.runDown = !!k.run || this.runToggled;
     this.dashDown = !!k.dash || this.buttons.dash.down;
     this.dashPressed = (!!k.dash && !this.prevKeys.dash) || this.buttons.dash.pulse > 0.82;
     this.interactDown = !!k.interact || this.buttons.interact.down;
@@ -263,6 +283,7 @@ export class Input {
       const gap = 8;
       const ar = short ? 26 : 30;
       const sr = 22;
+      const runR = short ? 16 : 18;
       const right = w - pad;
       const bottom = h - pad;
       b.attack.r = ar;
@@ -278,7 +299,8 @@ export class Input {
       b.repair.x = b.dash.x;
       b.repair.y = b.interact.y;
       b.barricade.r = sr;
-      b.run.r = sr;
+      b.run.r = runR;
+      b.run.hitR = 22;
       const boardX = b.dash.x - sr - sr - gap;
       const stickR = short ? 42 : 54;
       const stickRight = pad + stickR * 2 + 16;
@@ -306,7 +328,7 @@ export class Input {
       b.interact.x = right - 68 * s; b.interact.y = bottom - 118 * s; b.interact.r = 25 * s;
       b.repair.x = right - 156 * s; b.repair.y = bottom - 108 * s; b.repair.r = 22 * s;
       b.barricade.x = right - 156 * s; b.barricade.y = bottom - 48 * s; b.barricade.r = 22 * s;
-      b.run.x = right - 204 * s; b.run.y = bottom - 26 * s; b.run.r = 22 * s;
+      b.run.x = right - 204 * s; b.run.y = bottom - 26 * s; b.run.r = 18 * s; b.run.hitR = 22;
       this.stick.r = 52 * s;
       this.stick.homeX = pad + 72 * s;
       this.stick.homeY = bottom - 64 * s;

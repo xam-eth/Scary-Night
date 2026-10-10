@@ -14,6 +14,7 @@ import { unlocked, projectDawn, LANES } from './economy.js';
 import { drawGuideArrow, guideScale, guideSize } from './coach.js';
 import { weaponById } from './weapons.js';
 import { drawGameIcon } from '../ui/icons.js';
+import { drawIconButton, iconButtonState, iconHitArea, UI_TOKENS } from '../ui/components.js';
 
 const SERIF = '"IM Fell English SC", Georgia, serif';
 const SANS = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
@@ -415,28 +416,26 @@ function drawTopBar(game, ctx, w, h, em, pulse) {
 /** Icon-only entry points keep the live world one tap away from the field card. */
 function drawFieldAccess(game, ctx, w, h) {
   const short = h < 500;
-  const size = short ? 30 : 34;
-  const gap = short ? 4 : 6;
+  const size = short ? UI_TOKENS.size.utilityShort : UI_TOKENS.size.utilityStandard;
+  const gap = short ? UI_TOKENS.spacing.utilityShort : UI_TOKENS.spacing.utilityStandard;
   const items = [
     ['bag', 'bag'], ['mission', 'missions'], ['profile', 'profile'], ['settings', 'settings'],
   ];
+  // The visible tiles stay compact, but 44px hit areas line up edge-to-edge.
   const total = items.length * size + (items.length - 1) * gap;
   const x0 = w - 10 - total;
   const y = short ? 7 : 9;
   items.forEach(([icon, panel], i) => {
     const x = x0 + i * (size + gap);
     const idx = game.ui.length;
-    const box = { x, y, w: size, h: size, label: icon, onClick: () => game.openPanel(panel), idx };
+    const hit = iconHitArea(x, y, size);
+    const box = { ...hit, label: icon, onClick: () => game.openPanel(panel), idx };
     game.ui.push(box);
-    const active = game.usingKeyboard && game.uiIndex === idx;
-    ctx.save();
-    ctx.fillStyle = active ? 'rgba(56,42,26,0.92)' : 'rgba(7,9,14,0.76)';
-    ctx.strokeStyle = active ? 'rgba(220,185,112,0.9)' : 'rgba(192,174,135,0.48)';
-    ctx.lineWidth = active ? 1.5 : 1;
-    ctx.fillRect(x, y, size, size);
-    ctx.strokeRect(x + 0.5, y + 0.5, size - 1, size - 1);
-    drawGameIcon(ctx, icon, x + size / 2, y + size / 2, short ? 17 : 19, active ? '#f1dbab' : '#ddd3c0');
-    ctx.restore();
+    drawIconButton(ctx, x, y, size, icon, {
+      state: iconButtonState(game, box),
+      shape: 'rounded',
+      iconSize: short ? 17 : 19,
+    });
   });
 }
 
@@ -1025,20 +1024,34 @@ export function drawTouchControls(game, ctx, w, h) {
 
   const drawBtn = (b, icon, hint, opts = {}) => {
     if (!b || b.hidden) return;
-    ctx.save();
-    ctx.translate(b.x, b.y);
+    const toggled = !!(opts.toggle && b.toggled);
     const pressed = b.down ? 1 : 0;
     const hot = b.hot ? 1 : 0;
-    const r = b.r * (1 - pressed * 0.06) + (b.pulse || 0) * 3;
+    const r = b.r * (1 - pressed * 0.06) + (b.pulse || 0) * (toggled ? 2 : 3);
     const cd = opts.cd || 0;
+    const runPalette = UI_TOKENS.palette;
+    ctx.save();
+    ctx.translate(b.x, b.y);
     const g = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
-    g.addColorStop(0, `rgba(${opts.big ? '96,22,32' : '28,30,42'},${0.62 + pressed * 0.2 + hot * 0.08})`);
-    g.addColorStop(1, 'rgba(8,9,14,0.4)');
+    const coreFill = opts.runToggle
+      ? toggled ? runPalette.runFillActive : runPalette.runFill
+      : `rgba(${opts.big ? '96,22,32' : '28,30,42'},${0.62 + pressed * 0.2 + hot * 0.08})`;
+    g.addColorStop(0, coreFill);
+    g.addColorStop(1, toggled ? 'rgba(25,18,12,0.82)' : 'rgba(8,9,14,0.4)');
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.fill();
-    ctx.strokeStyle = `rgba(${opts.big ? '210,90,98' : hot ? '210,186,120' : '170,175,200'},${0.4 + pressed * 0.35 + hot * 0.25})`;
-    ctx.lineWidth = hot ? 2.5 : 1.6;
+    const stroke = toggled ? runPalette.runStrokeActive
+      : opts.runToggle ? runPalette.runStroke
+        : opts.big ? 'rgba(210,90,98,0.75)'
+          : hot ? 'rgba(210,186,120,0.85)' : 'rgba(170,175,200,0.58)';
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = toggled ? 2.5 : hot ? 2.5 : 1.6;
+    if (toggled) {
+      ctx.shadowColor = 'rgba(228,183,91,0.58)';
+      ctx.shadowBlur = 8;
+    }
     ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.stroke();
+    ctx.shadowBlur = 0;
     if (cd > 0.02) {
       ctx.beginPath();
       ctx.moveTo(0, 0);
@@ -1047,10 +1060,20 @@ export function drawTouchControls(game, ctx, w, h) {
       ctx.fillStyle = 'rgba(0,0,0,0.45)';
       ctx.fill();
     }
-    const iconColor = cd > 0.02 ? 'rgba(180,174,160,0.72)' : 'rgba(240,233,218,0.96)';
-    // Controls stay icon-only; keyboard hints live in the help card, not on
-    // top of the action buttons where they compete with the night.
-    drawGameIcon(ctx, icon, 0, 0, Math.min(opts.big ? 27 : 22, r * 1.02), iconColor);
+    const iconColor = cd > 0.02 ? 'rgba(180,174,160,0.72)'
+      : toggled ? runPalette.runIconActive
+        : opts.runToggle ? runPalette.runIcon : 'rgba(240,233,218,0.96)';
+    // Action controls stay icon-only. State is conveyed by color, ring and LED.
+    const iconSize = opts.runToggle
+      ? Math.min(UI_TOKENS.size.runIcon, r * 1.25)
+      : Math.min(opts.big ? 27 : 22, r * 1.02);
+    drawGameIcon(ctx, icon, 0, 0, iconSize, iconColor);
+    if (toggled) {
+      ctx.fillStyle = runPalette.runStrokeActive;
+      ctx.strokeStyle = 'rgba(18,15,11,0.95)';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.arc(r * 0.62, r * 0.62, Math.max(2.2, r * 0.12), 0, TAU); ctx.fill(); ctx.stroke();
+    }
     ctx.restore();
   };
   const dashCd = p && PLAYER.dashCooldown ? clamp(p.dashCd / PLAYER.dashCooldown, 0, 1) : 0;
@@ -1093,7 +1116,7 @@ export function drawTouchControls(game, ctx, w, h) {
       : useAction.act === 'drink' || useAction.act === 'larder' ? 'blood'
         : useAction.act === 'stakes' ? 'barricade'
           : useAction.act === 'ward' ? 'lamp' : 'interact';
-  drawBtn(input.buttons.run, 'run');
+  drawBtn(input.buttons.run, 'run', null, { toggle: true, runToggle: true });
   drawBtn(input.buttons.dash, 'dash', null, { cd: dashCd });
   drawBtn(input.buttons.interact, useIcon);
   drawBtn(input.buttons.repair, 'repair');
