@@ -181,6 +181,134 @@ async function runSurvivalMilestone() {
     survivalGame.player.dashCd = 0;
   };
 
+  // Run the real Night 1–3 spawners and record both requested wave weights and
+  // the bodies they actually materialize after spawnSwarm applies its clamp.
+  survivalGame.survival.restart();
+  const scheduleMode = survivalGame.survival;
+  const originalSpawners = {
+    swarm: scheduleMode.spawnSwarm,
+    breaker: scheduleMode.spawnBreaker,
+    individual: scheduleMode.spawnIndividual,
+  };
+  const waveSchedule = [];
+  try {
+    for (let day = 1; day <= 3; day++) {
+      const row = { day, swarms: [], breakers: [], individuals: [] };
+      scheduleMode.day = day;
+      scheduleMode.elapsed = scheduleMode.nightDuration;
+      scheduleMode.waveIndex = 0;
+      scheduleMode.breakerIndex = 0;
+      scheduleMode.individualIndex = 0;
+      scheduleMode.spawnSwarm = (count, index) => {
+        row.swarms.push({ count, index });
+        originalSpawners.swarm.call(scheduleMode, count, index);
+      };
+      scheduleMode.spawnBreaker = (index) => {
+        row.breakers.push(index);
+        originalSpawners.breaker.call(scheduleMode, index);
+      };
+      scheduleMode.spawnIndividual = (index) => {
+        row.individuals.push(index);
+        originalSpawners.individual.call(scheduleMode, index);
+      };
+      scheduleMode.updateWaves();
+      const spawned = survivalGame.enemies;
+      row.spawnedSwarms = spawned.filter((enemy) => enemy._survivalType === 'swarm').length;
+      row.spawnedBreakers = spawned.filter((enemy) => enemy._survivalType === 'breaker').length;
+      row.spawnedIndividuals = spawned.filter((enemy) => enemy._survivalType === 'individual').length;
+      row.swarmHp = spawned.find((enemy) => enemy._survivalType === 'swarm')?.hpMax || 0;
+      waveSchedule.push(row);
+      survivalGame.enemies.length = 0;
+    }
+  } finally {
+    scheduleMode.spawnSwarm = originalSpawners.swarm;
+    scheduleMode.spawnBreaker = originalSpawners.breaker;
+    scheduleMode.spawnIndividual = originalSpawners.individual;
+  }
+  const waveSchedulePass = waveSchedule.length === 3
+    && waveSchedule[0].swarms.map((wave) => wave.count).join(',') === '7,7,8'
+    && waveSchedule[1].swarms.map((wave) => wave.count).join(',') === '8,9,9'
+    && waveSchedule[2].swarms.map((wave) => wave.count).join(',') === '10,10,10'
+    && waveSchedule.map((row) => row.spawnedSwarms).join(',') === '60,60,60'
+    && waveSchedule.map((row) => row.swarmHp).join(',') === '48,54,60'
+    && waveSchedule.map((row) => row.spawnedBreakers).join(',') === '0,1,2'
+    && waveSchedule.every((row) => row.spawnedIndividuals === 2
+      && row.individuals.join(',') === '0,1'
+      && row.spawnedSwarms === row.swarms.length * 20);
+  console.log(`  ${waveSchedulePass ? 'PASS' : 'FAIL'}  Night 1–3 waves: requested ${waveSchedule.map((row) => row.swarms.map((wave) => wave.count).join('/')).join(' → ')}; actual Swarm ${waveSchedule.map((row) => row.spawnedSwarms).join('/')} (20/wave, HP ${waveSchedule.map((row) => row.swarmHp).join('→')}), Breaker ${waveSchedule.map((row) => row.spawnedBreakers).join('/')} (parameter weights clamp to 20 bodies per wave)`);
+
+  // Compare real enemy update paths on either side of the Perapian boundary.
+  survivalGame.survival.restart();
+  const lightMode = survivalGame.survival;
+  const fire = survivalGame.mansion.fireplaceLight;
+  const lightRadius = lightMode.getFireRadius();
+  const litPoint = { x: fire.x, y: fire.y };
+  const unlitPoint = { x: fire.x + lightRadius + 100, y: fire.y };
+  const litProbe = { x: litPoint.x, y: litPoint.y };
+  const unlitProbe = { x: unlitPoint.x, y: unlitPoint.y };
+  lightMode.spawnIndividual(0);
+  const litEnemy = survivalGame.enemies.pop();
+  lightMode.spawnIndividual(0);
+  const unlitEnemy = survivalGame.enemies.pop();
+  const moveSpeeds = { lit: null, unlit: null };
+  for (const [enemy, point, key] of [[litEnemy, litPoint, 'lit'], [unlitEnemy, unlitPoint, 'unlit']]) {
+    enemy.x = point.x; enemy.y = point.y;
+    enemy.entranceId = lightMode.mainGate().id;
+    enemy._survivalMove = (_dt, _game, _tx, _ty, speed) => { moveSpeeds[key] = speed; };
+    enemy.update(step, survivalGame);
+  }
+  const lightDamage = lightMode.enemyDamageTaken(litProbe, 10);
+  const darkDamage = lightMode.enemyDamageTaken(unlitProbe, 10);
+  const lightEffectsPass = lightMode.isLit(litPoint.x, litPoint.y)
+    && !lightMode.isLit(unlitPoint.x, unlitPoint.y)
+    && lightDamage > darkDamage
+    && !lightMode.enemyCanAttack(litProbe) && lightMode.enemyCanAttack(unlitProbe)
+    && moveSpeeds.lit < moveSpeeds.unlit;
+  console.log(`  ${lightEffectsPass ? 'PASS' : 'FAIL'}  Perapian light weakens enemies (damage ${lightDamage.toFixed(1)} vs ${darkDamage.toFixed(1)}, movement ${moveSpeeds.lit ?? 'n/a'} vs ${moveSpeeds.unlit ?? 'n/a'}, attack blocked only while lit)`);
+
+  // Find a collision-clear tile with room to move in all four screen directions,
+  // then exercise the real Survival input/player update rather than a movement stub.
+  survivalGame.survival.restart();
+  const { screenDirToWorld } = await import('../src/core/util.js');
+  const movementMode = survivalGame.survival;
+  const movementPlayer = survivalGame.player;
+  const movementMansion = survivalGame.mansion;
+  const screenDirections = ['right', 'left', 'down', 'up'].map((direction) => {
+    const vector = screenDirToWorld(direction === 'right' ? 1 : direction === 'left' ? -1 : 0,
+      direction === 'down' ? 1 : direction === 'up' ? -1 : 0, survivalGame.renderer);
+    return { direction, x: vector.x, y: vector.y };
+  });
+  let movementStart = null;
+  for (const room of movementMansion.roomList) {
+    for (let y = room.y + 45; y < room.y + room.h - 45 && !movementStart; y += 32) {
+      for (let x = room.x + 45; x < room.x + room.w - 45 && !movementStart; x += 32) {
+        if (movementMansion.resolve(x, y, movementPlayer.radius, true).hit) continue;
+        const clearAllWays = screenDirections.every((vector) => {
+          const end = movementMansion.moveCircle(x, y, vector.x * 110, vector.y * 110, movementPlayer.radius, true);
+          return Math.hypot(end.x - x, end.y - y) > 80;
+        });
+        if (clearAllWays) movementStart = { x, y, room: room.id };
+      }
+    }
+    if (movementStart) break;
+  }
+  const movementDistances = {};
+  if (movementStart) {
+    for (const { direction } of screenDirections) {
+      resetControls();
+      movementMode.elapsed = 0;
+      movementPlayer.x = movementStart.x; movementPlayer.y = movementStart.y;
+      movementPlayer.vx = 0; movementPlayer.vy = 0;
+      movementPlayer.dashT = 0; movementPlayer.attackT = 0;
+      sInput.keys[direction] = true;
+      tick(90);
+      sInput.keys[direction] = false;
+      movementDistances[direction] = Math.hypot(movementPlayer.x - movementStart.x, movementPlayer.y - movementStart.y);
+    }
+  }
+  const survivalMovementPass = !!movementStart && screenDirections.every(({ direction }) => movementDistances[direction] > 30);
+  console.log(`  ${survivalMovementPass ? 'PASS' : 'FAIL'}  Survival Hunter moves in all four screen directions from ${movementStart?.room || 'no clear tile'} (${JSON.stringify(Object.fromEntries(Object.entries(movementDistances).map(([key, value]) => [key, +value.toFixed(1)])))})`);
+
   // The Breaker sees the Hunter at arm's length but retains the wall objective.
   survivalGame.survival.restart();
   const targetDoor = survivalGame.survival.mainGate();
@@ -205,6 +333,25 @@ async function runSurvivalMilestone() {
   survivalGame.survival.restart();
   resetControls();
   const hunter = survivalGame.player;
+  const losWitness = (() => {
+    const mansion = survivalGame.mansion;
+    const distances = [70, 100, 140, 180, 220, 280];
+    for (const room of mansion.roomList) {
+      for (let y = room.y + 35; y < room.y + room.h - 35; y += 32) {
+        for (let x = room.x + 35; x < room.x + room.w - 35; x += 32) {
+          if (mansion.resolve(x, y, 15, true).hit) continue;
+          for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 12) {
+            for (const distance of distances) {
+              const target = { x: x + Math.cos(angle) * distance, y: y + Math.sin(angle) * distance };
+              if (mansion.findRoom(target.x, target.y) !== room.id || mansion.resolve(target.x, target.y, 12).hit) continue;
+              if (mansion.hasLOS(x, y, target.x, target.y)) return { player: { x, y }, target, room: room.id };
+            }
+          }
+        }
+      }
+    }
+    return null;
+  })();
   const targetSpot = { x: hunter.x + 60, y: hunter.y };
   const oldHasLOS = survivalGame.mansion.hasLOS;
   const oldSolidAt = survivalGame.mansion.solidAt;
@@ -226,6 +373,30 @@ async function runSurvivalMilestone() {
   survivalGame.mansion.hasLOS = oldHasLOS;
   survivalGame.mansion.solidAt = oldSolidAt;
   console.log(`  ${hunterAutoShot ? 'PASS' : 'FAIL'}  Hunter auto-shot hits an unobstructed in-range test target (${hitSamples.length} hit(s), ${survivalGame.stats.shotsFired || 0} bolt(s), target=${survivalGame.survival.currentTarget?.id || 'none'}, weapon=${hunter.weapon}; LOS stubbed open)`);
+
+  // Repeat the shot check from a clear in-room witness with the actual LOS and
+  // collision functions enabled, so this is not inferred from the stubbed case.
+  survivalGame.survival.restart();
+  resetControls();
+  let hunterRealLos = false;
+  let realLosHits = [];
+  if (losWitness) {
+    const realHunter = survivalGame.player;
+    realHunter.x = losWitness.player.x; realHunter.y = losWitness.player.y;
+    realHunter.vx = 0; realHunter.vy = 0;
+    const actualTarget = {
+      id: 987656, key: 'zombie', _survivalType: 'individual', dead: false, removeMe: false,
+      x: losWitness.target.x, y: losWitness.target.y, radius: 12, hp: 500, hpMax: 500, state: 'press',
+      update() { },
+      hurt(amount) { this.hp -= amount; realLosHits.push(amount); if (this.hp <= 0) this.dead = true; },
+    };
+    const visibleWithRealLos = survivalGame.mansion.hasLOS(realHunter.x, realHunter.y, actualTarget.x, actualTarget.y);
+    if (visibleWithRealLos) survivalGame.enemies.push(actualTarget);
+    for (let i = 0; i < 240 && !realLosHits.length; i++) tick();
+    hunterRealLos = !!(visibleWithRealLos && realLosHits.length > 0
+      && survivalGame.player.weapon === 'shot' && survivalGame.survival.currentTarget?.id === actualTarget.id);
+  }
+  console.log(`  ${hunterRealLos ? 'PASS' : 'FAIL'}  Hunter auto-shot acquires and hits a real-LOS target with mansion collision enabled (${losWitness?.room || 'no clear room'}; ${realLosHits.length} hit(s))`);
 
   survivalGame.survival.restart();
   resetControls();
@@ -369,7 +540,9 @@ async function runSurvivalMilestone() {
 
   console.log(`  idle Night 3: ${idle.nightThree.peakEnemies} peak enemies / ${idle.nightThree.peakBreakers} Breakers, ${idle.nightThree.kills} kills, ${idle.nightThree.wallDamage} wall damage, gate ${idle.nightThree.gateHp} HP, Hunter ${idle.nightThree.playerHp} HP; ${idle.phase}`);
   console.log(`  builder Night 3: ${builder.nightThree.peakEnemies} peak enemies / ${builder.nightThree.peakBreakers} Breakers, ${builder.nightThree.kills} kills, ${builder.nightThree.wallDamage} wall damage, gate ${builder.nightThree.gateHp} HP, Hunter ${builder.nightThree.playerHp} HP; Perapian Lv${builder.perapianLevel}, survivors ${builder.survivors}, buildings ${builder.buildings.join(',') || 'none'}, gateBuilt=${builder.gateBuilt}; ${builder.phase}`);
-  const pass = breakerTargetsWall && hunterAutoShot && hunterSkill && idle.complete && builder.complete && builder.perapianLevel === 3
+  const pass = waveSchedulePass && lightEffectsPass && survivalMovementPass && breakerTargetsWall
+    && hunterAutoShot && hunterRealLos && hunterSkill
+    && idle.complete && builder.complete && builder.perapianLevel === 3
     && builder.queueLockVerified && builder.sawmillBuilt && builder.gateBuilt && builder.shelterBuilt
     && saveProgressPass && economyPass && builder.upgrades.map((item) => item.level).join(',') === '1,2,3'
     && builder.nightThree.gateHp > idle.nightThree.gateHp;
