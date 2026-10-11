@@ -1,7 +1,16 @@
 # Status Rebuild 3D & Survival Milestone 1
 
-**Pembaruan:** 2026-10-11 (Asia/Makassar)
-**Status keseluruhan: MASIH TERBUKA — bukan klaim siap rilis.** Inti rebuild dunia 3D dan loop Survival Milestone 1 sudah terimplementasi, dan seluruh gate otomatis yang dijalankan ulang di bawah lulus. Acceptance visual/manual, balance lintas perangkat, dan packaging Play masih terbuka. Hasil tiap skrip hanya berlaku untuk cakupan yang benar-benar diuji.
+**Pembaruan:** 2026-10-12 (Asia/Makassar)
+**Status keseluruhan: MASIH TERBUKA — bukan klaim siap rilis.** Inti rebuild dunia 3D dan loop Survival Milestone 1 sudah terimplementasi. Pada 2026-10-12, arah UI/UX dan threat model dikoreksi mengikuti feedback user (lihat bagian berikut), dan seluruh gate otomatis dijalankan ulang. Acceptance visual/manual di perangkat, playtest manusia, dan packaging Play masih terbuka. Hasil tiap skrip hanya berlaku untuk cakupan yang benar-benar diuji.
+
+## Koreksi arah 2026-10-12 (feedback user)
+
+Feedback: *UI/UX referensi tidak diterapkan; di referensi semua label berupa ikon dan feel loop-nya jelas; ruangan terlalu gelap sehingga tidak jelas ini game apa, dan gelap tidak cocok untuk kamera ini.* Keputusan yang dikonfirmasi user:
+
+- **Referensi = gaya "Build by Day, Defend by Night"** (Duck Survival): siang membangun/upgrade base, malam bertahan dari gelombang zombie. UI terang, ikon besar, **label = ikon + angka** (bukan label teks), loop siang → malam → reward harus terasa jelas.
+- **Tidak ada kartu skill roguelike "pilih 1 dari 3"**; fokus pada loop build/defend.
+- **Ruangan harus terang dan terbaca.** Malam ditandai dengan tint dingin, bukan kegelapan.
+- Threat: musuh mencari jalan dan **hanya melambat** di cahaya (tidak membeku); musuh yang mencapai Perapian **mencakar Oil**; kalah bila Hunter mati **atau api padam**. Gelombang ×3 (21/21/24 → 24/27/27 → 30/30/30). FTUE = chip hint kontekstual ringan, sekali tampil.
 
 ## Ringkasan keputusan dan batas scope
 
@@ -27,48 +36,69 @@
 
 Tidak ada konfigurasi lint proyek/root `package.json`. Scan ad hoc `no-unused-vars` terakhir melaporkan 138 nama lokal/parameter/variabel yang perlu audit terpisah; sebagian adalah parameter API/handler dan tidak otomatis merupakan kode mati. **Jangan** menafsirkan hasil ini sebagai full-lint pass. Yang terkonfirmasi dari scan tersebut: unused-import = 0.
 
+## Implementasi koreksi 2026-10-12
+
+**Pencahayaan / readability** (`src/game/world3d.js`, `src/game/lightbake.js`, `src/game/envkit.js`):
+- Rig cahaya khusus Survival (exposure/hemi/key/rim) dan profil bake `SURVIVAL_BAKE`: lantai minimum 0.8 dengan tint dingin di malam hari, 1.0 hangat di siang hari; key cache bake memuat fase. Route legacy tetap memakai rig/bake lama.
+- Halaman rumput (yard), kolam cahaya Perapian (additive), ring radius emas yang lebih terang, ring hijau di bawah Hunter, palet hutan dinaikkan (mahkota pohon sebelumnya nyaris hitam), karpet library `dark` → `crimson` (sebelumnya terbaca sebagai lubang hitam).
+- Kamera siang zoom-out 0.8 dan membingkai target build yang dipilih di atas bottom sheet (`Renderer.setZoomMul`).
+
+**UI icon-first** (`src/ui/survivalIcons.js` baru, `src/ui/survival.js` ditulis ulang):
+- Set ±40 ikon kartun digambar dengan path canvas (tanpa asset baru; byte asset berlisensi tidak disentuh): oil, wood, survivor, api, bulan/matahari, tengkorak, palu, gate, oil pump, sawmill, shelter, Perapian, breaker, pintu/pintu jebol, flare, dll.
+- **Night HUD:** pill bulan (NIGHT n + timer) dengan timeline gelombang (pip swarm/breaker → matahari = fajar); counter Oil/Wood/musuh; badge Perapian (Lv + ring kekuatan api, berkedip merah saat dicakar); HP bar Hunter dan musuh di world; angka damage melayang (kuning = bonus cahaya); banner `NIGHT n`, `WAVE n/3`, `BREAKER!`, `BREACH!`, `PROTECT THE FIRE!`, `FIRE LOW!`; penanda tepi layar untuk pintu yang diserang/jebol dan Perapian yang dicakar.
+- **Siang:** pill matahari `DAY n`; counter + tag cadangan Oil malam ini; bubble di world (Perapian Lv + panah upgrade, gate, slot `+` di ruang terang, bangunan, job dengan ring progres); bottom sheet berisi kartu ikon (output/dawn + biaya, merah bila kurang, oranye bila memakan cadangan); pill builder (palu + progres); tombol besar `NIGHT n`.
+- **Popup fajar:** "NIGHT n SURVIVED!" dengan kill, +Oil, +Wood, survivor, Oil yang dicakar → `COLLECT`.
+- Panel pause/gagal/menang berbasis ikon; kontrol sentuh Survival (joystick, tombol Flare oranye dengan cooldown radial, tombol tembak).
+- **FTUE:** 6 chip hint sekali tampil (move, auto-shot, firelight, guard Perapian, Flare, build), auto-hide, disimpan di `save.survival.hints`. Tidak ada tombol tambahan. Night HUD tetap hanya mendaftarkan `PAUSE` sebagai target tap.
+
+**Threat / gameplay** (`src/game/survival.js`, `src/game/mansion.js`, `src/core/config.js`):
+- **Bug collision pintu diperbaiki:** `Mansion.resolve` memperlakukan x/y pintu sebagai pojok, padahal pintu diauthor dari titik tengah, sehingga setengah kiri/atas pintu tertutup bisa dilewati.
+- Nav refresh lokal saat pintu jebol (`refreshNavAround`, `navVersion`); **flow field BFS** (Perapian, Hunter, jalur tiap pintu) menggantikan steering lurus; status "di dalam rumah" stabil di ambang pintu interior.
+- Cahaya hanya memperlambat (`lightMoveMul` 0.46 → 0.7); freeze "stagger" karena cahaya dihapus. Siege di cahaya = 50% (sebelumnya dibatalkan total).
+- Musuh di Perapian mencakar Oil tiap 1.5 dtk (swarm −1, individual −3, breaker −6). **Oil 0 di malam hari = kalah ("THE FIRE WENT OUT").** Perapian Lv2/Lv3 membakar musuh di dekatnya (14/28 dps).
+- Gelombang 66/78/90 per malam (clamp 20 dihapus, cap 30/gelombang); pacing 4%/30%/56% malam; Breaker 20%/50%; Breaker pindah ke pintu utuh berikutnya lalu ke Perapian; gelombang berotasi pintu per malam; pintu diperbaiki saat fajar.
+- Belanja siang tidak boleh memakai cadangan Oil malam (burn + 8); reward Oil malam 14/16/18.
+
 ## Implementasi Survival M1 yang ada
 
 - **Loop:** tiga malam dengan fase day/night, reward malam, builder queue, save/checkpoint `day`/`phase`, serta keadaan akhir complete/failed.
 - **Ekonomi/building:** Oil dan Wood; Extractor, Sawmill, Shelter, gate, serta upgrade Perapian sampai Lv3. Queue hanya mengerjakan satu job pada satu waktu. Produksi bangunan dan reward malam mengubah resource/survivor.
-- **Perapian/cahaya:** radius dasar bertingkat di tuning (Lv1 980, Lv2 1760, Lv3 2500 world px). Di cahaya Perapian, musuh melambat (`lightMoveMul = 0.46`), lebih mudah dilukai (`lightDamageTakenMul = 1.75`), dan damage tertentu ke pintu berkurang.
-- **Defense:** parameter gelombang yang diminta per hari adalah 7/7/8, 8/9/9, 10/10/10. Namun `spawnSwarm` menerapkan minimum 20 body per gelombang, sehingga hasil aktual tetap 60 Swarm per malam; eskalasi aktual lain yang terukur ialah HP Swarm 48→54→60 dan Breaker 0/1/2 (ditambah dua Individual per malam). Belum diputuskan apakah minimum 20 ini memang desain atau parameter wave seharusnya memengaruhi jumlah body. Hunter punya auto-shot dan skill Flare dengan radius/damage/stagger/cooldown.
-- **HUD:** route Survival menampilkan Night/time, Oil/Wood, level Perapian, pause, dan kontrol sentuh. Coach/narrative legacy disembunyikan. Tes FTUE di bawah membuktikan layar permainan aktif dan HUD pada 0/15/30 detik; tes itu **tidak** membuktikan readability manual, teks tutorial terpandu, atau pemahaman pemain baru.
+- **Perapian/cahaya:** radius dasar bertingkat di tuning (Lv1 980, Lv2 1760, Lv3 2500 world px). Di cahaya Perapian, musuh melambat (`lightMoveMul = 0.7`), lebih mudah dilukai (`lightDamageTakenMul = 1.75`), tidak bisa menyerang Hunter, dan damage ke pintu menjadi 50%.
+- **Defense:** gelombang Swarm 21/21/24, 24/27/27, 30/30/30 (aktual = diminta; 66/78/90 per malam), HP Swarm 48→54→60, Breaker 0/1/2, dua Individual per malam. Hunter punya auto-shot dan skill Flare dengan radius/damage/stagger/cooldown.
+- **HUD:** lihat "UI icon-first" di atas. Coach/narrative legacy disembunyikan.
 
-## QA yang benar-benar dijalankan (2026-10-11)
+## QA yang benar-benar dijalankan (2026-10-12)
 
 | Perintah | Hasil | Batas hasil |
 |---|---|---|
-| `node tools/harness.mjs` | **PASS**, exit 0. Deterministic three-day probe: parameter gelombang 7/7/8 → 8/9/9 → 10/10/10 terverifikasi, tetapi spawner aktual menghasilkan 60 Swarm/malam (20 per wave), HP 48→54→60, Breaker 0/1/2; empat arah input keyboard M1 melewati Player update di dining (right/left/down/up = 131.4/147.2/164.4/143.6 world px dalam 1.5 detik); Perapian membandingkan damage musuh 17.5 vs 10, speed 26.68 vs 58, dan attack diblokir hanya saat lit; Breaker mempertahankan target frontDoor; auto-shot diuji dengan LOS stub dan satu hit pada target sintetis memakai `hasLOS`/collision mansion aktif (ruang dining); Flare menurunkan target 500→442 HP dan cooldown mencegah pemakaian ulang; save/reload kembali ke Day 2/day (1/3 malam, durasi uji 60 detik); Extractor/Sawmill/Shelter selesai dan memberi +18 Oil/+21 Wood serta survivors 3; Perapian naik Lv1→Lv3; Night-3 builder/idle probe selesai. | Pergerakan adalah input keyboard sintetis dari satu tile yang dipilih collision-clear; bukan uji joystick sentuh/manusia. Target combat sintetis dan LOS positif dipilih di ruang kosong; bukan walkthrough menembak melalui obstacle atau combat melawan crowd GLB. Perbandingan damage pintu lit/unlit belum diassert. Builder-vs-idle bukan uji balance pemain nyata. Harness legacy terpisah mencapai dawn pada 300 detik tanpa runtime error. |
-| `node tools/glbtest.mjs` | **PASS**, exit 0. Rig Hunter, enam tipe musuh, mapping animasi, cap 14 rig, 21 asset kit, lisensi/provenance, serta tidak adanya painter Canvas/fallback yang diuji. | Validasi asset/kode statis; bukan inspeksi visual semua kombinasi combat. |
-| `node tools/envqa.mjs --mode=3d-smoke` | **PASS**, exit 0. 11/11 ruang, 26 portal, 251 floor, 99 wall, 32 corner, 9 window; 628 instance aktif termasuk 140 arsitektur, tanpa instance tersembunyi atau perubahan transform saat melewati 6 anchor; sembilan jendela dan tujuh pintu (hinge/swing 90°, collision/LOS/shadow) lulus. Route default masuk Night 1; checkpoint FTUE 0.2/15/30 detik mencatat Swarm 0/20/40, durasi malam 72 detik, HUD aktif, dan radius Perapian bertambah 980→1760 setelah upgrade UI. Browser page errors = 0. | Smoke browser/Chromium dan framebuffer, bukan perangkat Android/iOS nyata atau sweep visual 17 stop. Tes cahaya dan AI di mode Survival belum menjadi assertion terpisah untuk setiap nilai. |
-| `node tools/layoutqa.mjs` | **PASS**, exit 0. Mode QA legacy dibuka eksplisit lewat `?legacy=1`; full-3D gate, decor state, keyboard movement, pintu, pickup/VFX, enemy/haunt scene, desktop boot, browser errors, fit/collision audit lulus. Pemeriksaan melihat 11 ruang/26 portal, proyeksi 0.0000 px, floor raycast 0.0000 world px, 0 pemanggilan Canvas world, dan 0 metode paint Mansion lama. | Ini gate route legacy + layout, bukan walkthrough Survival M1. Audit menemukan satu overlap staircase–stairRail sekitar 150×20 px; reachable room area terukur 77–95%. |
-| `node --check` untuk seluruh `src/**/*.js` non-vendor, `tools/*.mjs`, `sw.js`; `git diff --check` | **PASS**. | Pemeriksaan sintaks/diff saja. |
-| `npm audit --prefix tools` | **PASS**, 0 vulnerability setelah menghapus dependency dev yang tidak digunakan. | Tidak menggantikan audit backend/Play. |
-| `node tools/bundle.mjs check` | **FAIL**, satu assertion: 0/1 Digital Asset Links fingerprint valid (butuh SHA-256 signing key nyata). Ada WARN bahwa Digital Goods origin-trial token belum diisi; Bubblewrap tidak terpasang. | Blocker release Play/IAP yang memerlukan kredensial/konfigurasi release; tidak diubah karena IAP di luar scope. Bukan kegagalan gate gameplay. |
+| `node tools/harness.mjs` | **PASS**, exit 0. Gelombang 21/21/24 → 24/27/27 → 30/30/30, aktual 66/78/90 (tanpa clamp), HP 48→54→60, Breaker 0/1/2. Cahaya: damage 17.5 vs 10, jalan breached 48 vs 86 px/dtk (melambat, bukan freeze). **Baru:** pintu tertutup memblok di 5 titik sepanjang lebarnya; damage pintu lit 10 vs dark 20 (50%); breach → nav refresh → body mencapai Perapian dalam 21.3 dtk, mencakar 3 Oil, Oil habis → `failed (THE FIRE WENT OUT)`; Breaker frontDoor → cellarDoor → perapian. Gerak 4 arah, Breaker tetap ke wall saat Hunter terlihat, auto-shot (LOS stub & LOS nyata), Flare 500→442 + cooldown, save/reload Day 2, ekonomi +20 Oil/+21 Wood/survivor 3 tetap PASS. **Balance:** idle (tanpa input/build) gagal di Night 2 karena api padam; builder aktif (bot stick + Flare lewat Input, Perapian Lv3) menang Night 3. Harness legacy mencapai dawn 300 dtk tanpa runtime error. | Bot deterministik, bukan pemain manusia. Durasi malam uji 60 dtk. Save test sengaja menjaga Oil agar mengisolasi persistence dari balance. |
+| `node tools/survival-balance.mjs --seeds=3 --duration=72` (baru) | Pengukuran, bukan gate. idle 0/3 menang (gagal Night 1 ±68.7 dtk); flare-only 0/2 (lolos Night 1, gagal Night 2); active tanpa build 2/3; builder aktif 3/3. | Bot sempurna/deterministik; seed hanya mengubah jitter spawn. |
+| `node tools/envqa.mjs --mode=3d-smoke` | **PASS**, exit 0, 40 assertion PASS, page errors 0. Rumah 3D (11 ruang, 628 instance, jendela/pintu) seperti sebelumnya. FTUE: Swarm 0/21/38 pada 0.2/15/30 dtk, 14 GLB + 24 silhouette, HUD tap target hanya `PAUSE`, radius 980 → 1760 lewat tombol `UPGRADE` UI baru. **Baru:** luma playfield Night 1 = **74.9/255, 12.8% near-black** (baseline sebelum koreksi 1.4/255, 99.6%). | Chromium headless/software WebGL, bukan perangkat Android/iOS nyata. |
+| `node tools/survivalshots.mjs --tag=after` (+ `--landscape`) (baru) | Bukti before/after di `qa-evidence/survival-rebuild/` (diperkecil 50%). Luma playfield: Night 0/20/40 dtk 1.4/1.4/1.4 → 70.5/72.5/67.7; panel siang 10.7 → 122.1; near-black 99.5% → ≤15.8%. Alur night → popup fajar → sheet Perapian → pilih slot → build → night 2 → gagal tertangkap tanpa page error, portrait dan landscape. | Screenshot headless; bukan review perangkat atau rekaman. |
+| `node tools/layoutqa.mjs` | **PASS**, exit 0 (route legacy + layout; gate full-3D, decor, kontrol, pintu, pickup/VFX, enemy/haunt, desktop boot, browser errors). | Overlap staircase–stairRail ±150×20 px masih tercatat (audit, bukan gate). |
+| `node tools/glbtest.mjs` | **PASS**, exit 0. | Validasi asset/kode statis. |
+| `node --check` seluruh `src/**/*.js` non-vendor, `tools/*.mjs`, `sw.js`; `git diff --check` | **PASS**. | Sintaks/diff saja. |
+| `npm audit --prefix tools` | **PASS**, 0 vulnerability. | — |
+| `node tools/bundle.mjs check` | **FAIL** (tidak berubah): fingerprint SHA-256 Digital Asset Links masih placeholder; WARN token origin-trial Digital Goods. | Butuh kredensial/konfigurasi release; IAP di luar scope. Catatan: `manifest.webmanifest` menyetel `orientation: landscape`, sedangkan QA/UI Survival portrait-first — perlu keputusan produk. |
 
 **Build:** repo tidak memiliki `package.json` root atau script `npm run build`. Dependensi QA dipasang dengan `npm ci --prefix tools`; pemeriksaan bundle di atas bukan build Android/AAB yang sukses. Jangan menyebut paket release selesai.
 
-## Bukti visual FTUE
+## Bukti visual
 
-`node tools/envqa.mjs --mode=3d-smoke` menghasilkan bukti baru pada viewport mobile 390×844, deviceScaleFactor 2:
+- `qa-evidence/survival-ftue-00s.png`, `-15s.png`, `-30s.png`, `survival-ftue-first-30s.json` (envqa; viewport 390×844 @2x; JSON kini memuat luma checkpoint 15 dtk).
+- `qa-evidence/survival-rebuild/` — before (gelap, UI teks) vs after (terang, UI ikon): `before-night-40s.png`, `before-day-panel.png`, `after-night-40s.png`, `after-day-reward.png`, `after-day-panel.png`, `after-day-select.png`, `after-day-build.png`, `after-failed.png`, serta `before-metrics.json`/`after-metrics.json`.
 
-- `qa-evidence/survival-ftue-00s.png`
-- `qa-evidence/survival-ftue-15s.png`
-- `qa-evidence/survival-ftue-30s.png`
-- `qa-evidence/survival-ftue-first-30s.json` — waktu/state, HUD, resource, jumlah Swarm/rig, radius api, serta nama screenshot.
-
-Ini **tiga checkpoint screenshot**, bukan rekaman 30 detik. Review visual atas artefak menunjukkan HUD amber (Night/timer, Oil/Wood, Perapian, pause, serta ikon stick/skill) terbaca, tetapi dunia mansion nyaris tidak terbaca pada ketiga frame Night karena sangat gelap. Tidak tampak petunjuk onboarding berbentuk teks/coach; hanya HUD dan ikon kontrol. Ini temuan dari screenshot headless, bukan review perangkat fisik, dan tidak membuktikan rekaman 30 detik atau onboarding terpandu.
+Ini screenshot checkpoint, bukan rekaman 30 detik, dan bukan review di perangkat fisik.
 
 ## Acceptance yang masih terbuka
 
-1. **FTUE/readability:** screenshot sudah direview dan HUD/ikon kontrol terbaca, tetapi mansion terlalu gelap untuk dibaca dengan nyaman; tidak terlihat petunjuk teks/coach. Perlu review pada perangkat serta keputusan apakah requirement berarti HUD minimal atau onboarding terpandu. Rekaman 30 detik belum dibuat.
-2. **Combat Survival manual:** input keyboard sintetis M1 kini PASS bergerak di empat arah dari tile collision-clear. Walkthrough pemain/joystick sentuh untuk gerak dan Flare, kill/death, serta interaksi Swarm/Breaker masih terbuka. Harness membuktikan auto-shot mengenai target sintetis baik pada LOS stub maupun dengan LOS/collision mansion aktif di ruang kosong; tembakan melalui/terhalang obstacle dan playtest pemain nyata belum dibuktikan.
-3. **Light weakness:** assertion otomatis lit/unlit sekarang **PASS** untuk damage musuh (17.5 vs 10), speed yang dipilih pada jalur update musuh (26.68 vs 58; fungsi gerak di-spy), dan larangan attack saat lit. Pembandingan damage pintu lit/unlit, efek visual di perangkat, dan rasa/balance masih terbuka.
-4. **Balance/progression:** loop deterministik selesai dan outcome Day 3 tercatat, tetapi belum ada playtest balance manusia. Ada keputusan desain yang perlu dikonfirmasi: bobot wave 7/8/10 meningkat pada argumen, namun minimum spawner membuat aktualnya 20 Swarm per wave di semua malam; eskalasi saat ini berasal dari HP Swarm dan jumlah Breaker. Belum ditetapkan apakah itu memang pacing yang dikehendaki atau jumlah Swarm seharusnya benar-benar meningkat. Kurva reward, ekonomi, Perapian, dan gate juga belum dinilai manusia.
-5. **Visual pass:** sweep 17 stop/screenshot per ruang/wing, occlusion/darkness/readability low-health/blackout, seluruh state interaksi, dan review khusus layout overlap staircase–stairRail belum selesai.
-6. **Perangkat/performa:** frame time, GPU/memory, perangkat low-end, landscape/orientation change, DPR, hidden-tab resume, serta WebGL context-loss/restore belum diuji.
-7. **Release bundle:** fingerprint signing SHA-256, Digital Goods origin-trial token, validasi Bubblewrap/AAB, dan uji TWA/Play tetap menunggu konfigurasi release. Tidak mengubah IAP pada pekerjaan ini.
+1. **FTUE/readability:** dunia kini terang dan terbaca di screenshot headless (luma diassert di envqa), UI berbasis ikon, chip hint kontekstual ada. Belum: review di perangkat nyata, uji pemahaman pemain baru, rekaman 30 detik.
+2. **Combat Survival manual:** bot harness/balance menggerakkan stick virtual dan Flare melalui Input; walkthrough manusia dengan joystick sentuh (gerak, Flare, mempertahankan Perapian) belum dilakukan.
+3. **Light weakness:** damage musuh, perlambatan (tanpa freeze), larangan attack saat lit, **dan damage pintu lit 50%** kini diassert. Rasa/feel di perangkat belum dinilai.
+4. **Balance/progression:** target bot terpenuhi (idle kalah karena api padam; builder aktif menang 3/3 pada 72 dtk). Belum ada playtest manusia; Night 3 untuk builder yang baik mungkin terlalu ringan karena hearth burn Lv3 — perlu dinilai pemain nyata.
+5. **Visual pass:** sweep 17 stop per ruang/wing, state low-health/blackout, dan overlap staircase–stairRail belum selesai. Pohon siang tampak agak pucat (palet dinaikkan untuk readability) — kandidat polish.
+6. **Perangkat/performa:** frame time 66–90 musuh per malam di perangkat low-end, DPR, hidden-tab resume, WebGL context-loss/restore, serta keputusan orientasi (manifest landscape vs QA portrait) belum diuji/diputuskan. Layout landscape sudah dirender di screenshot headless.
+7. **Release bundle:** fingerprint signing SHA-256, token origin-trial, validasi Bubblewrap/AAB, uji TWA/Play tetap menunggu konfigurasi release. IAP tidak diubah.
 
 ## Aturan laporan
 

@@ -21,6 +21,7 @@ import { execFileSync, spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import chromium from '@sparticuz/chromium';
 import puppeteer from 'puppeteer-core';
+import { createCanvas, loadImage } from '@napi-rs/canvas';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.join(ROOT, 'tools/shots-browser/qa');
 fs.mkdirSync(OUT, { recursive: true });
@@ -115,6 +116,24 @@ for (let i = 0; i < 60; i++) {
 }
 console.log('diag:', JSON.stringify(await page.evaluate(() => window.__env.diagnostics())));
 
+/** Mean luma (0–255) and near-black share of the playfield in a phone screenshot. */
+async function playfieldLuma(file, cssWidth = 390) {
+  const img = await loadImage(fs.readFileSync(file));
+  const canvas = createCanvas(img.width, img.height);
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+  const scale = img.width / cssWidth;
+  const top = Math.round(120 * scale), bottom = Math.round(img.height - 90 * scale);
+  const data = ctx.getImageData(0, top, img.width, bottom - top).data;
+  let sum = 0, dark = 0, n = 0;
+  for (let i = 0; i < data.length; i += 16) {
+    const l = 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
+    sum += l; n++;
+    if (l < 28) dark++;
+  }
+  return { meanLuma: +(sum / n).toFixed(1), darkPct: +((dark / n) * 100).toFixed(1) };
+}
+
 async function survivalFtueSection() {
   console.log('\n---- DEFAULT SURVIVAL ROUTE · FIRST 30 SECONDS ----');
   const evidenceDir = path.join(ROOT, 'qa-evidence');
@@ -184,7 +203,11 @@ async function survivalFtueSection() {
   check(final.mode === 'survival' && final.screen === 'playing' && final.day === 1 && final.phase === 'night',
     'the default route reaches playable Night 1 directly (no menu, intro or narration)');
   check(final.ui.length === 1 && final.ui[0] === 'PAUSE' && !final.coach && !final.narration,
-    `Night-1 HUD is limited to Oil/Wood plus pause (legacy coach/narration hidden; UI=${final.ui.join(',')})`);
+    `Night-1 icon HUD registers only PAUSE as a tap target (oil/wood/enemy counters, night clock and Perapian badge are read-only; legacy coach/narration hidden; UI=${final.ui.join(',')})`);
+  const readable = await playfieldLuma(path.join(evidenceDir, 'survival-ftue-15s.png'));
+  checkpoints.find((row) => row.seconds === 15).luma = readable;
+  check(readable.meanLuma >= 40 && readable.darkPct <= 45,
+    `Night-1 playfield is bright and readable (mean luma ${readable.meanLuma}/255, ${readable.darkPct}% near-black; pre-rebuild baseline 1.4 / 99.6%)`);
   check(final.elapsed >= 30 && final.duration >= 60 && final.duration <= 90,
     `the first 30 playable seconds stay in the configurable ${final.duration}s night`);
   check(final.swarm > 0 && final.renderMode === 'webgl-3d'

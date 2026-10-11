@@ -400,13 +400,13 @@ export const SURVIVAL_TUNING = Object.freeze({
     3: Object.freeze({ oil: 18, wood: 12, seconds: 6 }),
   }),
   nightRewards: Object.freeze({
-    oil: Object.freeze([12, 14, 16]),
+    oil: Object.freeze([14, 16, 18]),
     wood: Object.freeze([14, 16, 18]),
   }),
   gateCost: Object.freeze({ oil: 4, wood: 16, seconds: 9 }),
   gateHpBonus: 220,
   lightDamageTakenMul: 1.75,
-  lightMoveMul: 0.46,
+  lightMoveMul: 0.7,   // firelight slows; it never freezes
   autoAttackRange: 620,
   skillCooldown: 14,
   skillRadius: 235,

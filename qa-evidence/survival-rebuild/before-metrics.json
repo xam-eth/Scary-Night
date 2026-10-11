@@ -1,0 +1,100 @@
+{
+  "capturedAt": "2026-10-11T22:09:57.591Z",
+  "results": [
+    {
+      "name": "night-00s",
+      "file": "tools/shots-browser/survival/before-night-00s.png",
+      "meanLuma": 1.4,
+      "darkPct": 99.6,
+      "state": {
+        "t": 0.2,
+        "alive": 0,
+        "oil": 37,
+        "hp": 100,
+        "phase": "night",
+        "ui": 1
+      }
+    },
+    {
+      "name": "night-20s",
+      "file": "tools/shots-browser/survival/before-night-20s.png",
+      "meanLuma": 1.4,
+      "darkPct": 99.7,
+      "state": {
+        "t": 20,
+        "alive": 20,
+        "oil": 35,
+        "hp": 100,
+        "phase": "night",
+        "ui": 1
+      }
+    },
+    {
+      "name": "night-40s",
+      "file": "tools/shots-browser/survival/before-night-40s.png",
+      "meanLuma": 1.4,
+      "darkPct": 99.5,
+      "state": {
+        "t": 40,
+        "alive": 41,
+        "oil": 32,
+        "hp": 100,
+        "phase": "night",
+        "ui": 1
+      }
+    },
+    {
+      "name": "day-panel",
+      "file": "tools/shots-browser/survival/before-day-panel.png",
+      "meanLuma": 10.7,
+      "darkPct": 93.9,
+      "state": {
+        "phase": "day",
+        "day": 2,
+        "ui": [
+          "survival:CONSERVATORY",
+          "survival:ORATORY",
+          "survival:EXTRACTOR · 2O/10W",
+          "survival:SAWMILL · 2O/10W",
+          "survival:SHELTER · 4O/14W",
+          "survival:UPGRADE · 12O 8W",
+          "survival:GATE · 4O/16W",
+          "survival:START NIGHT 2"
+        ]
+      }
+    },
+    {
+      "name": "day-select",
+      "file": "tools/shots-browser/survival/before-day-select.png",
+      "meanLuma": 10.7,
+      "darkPct": 93.9,
+      "state": {
+        "clicked": null,
+        "ui": [
+          "survival:CONSERVATORY",
+          "survival:ORATORY",
+          "survival:EXTRACTOR · 2O/10W",
+          "survival:SAWMILL · 2O/10W",
+          "survival:SHELTER · 4O/14W",
+          "survival:UPGRADE · 12O 8W",
+          "survival:GATE · 4O/16W",
+          "survival:START NIGHT 2"
+        ]
+      }
+    },
+    {
+      "name": "failed",
+      "file": "tools/shots-browser/survival/before-failed.png",
+      "meanLuma": 10,
+      "darkPct": 93.2,
+      "state": {
+        "phase": "failed",
+        "ui": [
+          "survival:PLAY AGAIN",
+          "survival:CONTINUE"
+        ]
+      }
+    }
+  ],
+  "pageErrors": []
+}

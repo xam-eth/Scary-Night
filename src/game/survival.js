@@ -13,6 +13,22 @@ import { ROOM } from './mansion.js';
 
 const RESOURCE_CAP = 999;
 const SAVE_EVERY = 2.5;
+// Night pacing: the first rank hits a door within seconds, so Night 1 has
+// action near the Hunter before the halfway mark.
+const WAVE_TIMES = Object.freeze([0.04, 0.3, 0.56]);
+const BREAKER_TIMES = Object.freeze([0.2, 0.5]);
+const INDIVIDUAL_TIMES = Object.freeze([0.42, 0.7]);
+// Night 1–3 swarm sizes (×3 of the first M1 pass, capped per wave).
+const WAVE_COUNTS = Object.freeze([
+  Object.freeze([21, 21, 24]),
+  Object.freeze([24, 27, 27]),
+  Object.freeze([30, 30, 30]),
+]);
+const SWARM_CAP = 30;
+const RESERVE_SLACK = 8;
+// A hotter Perapian scorches whatever claws at it (damage per second by level).
+const HEARTH_BURN = Object.freeze({ 1: 0, 2: 14, 3: 28 });
+const HEARTH_BURN_RADIUS = 250;
 const NIGHT_PHASE = { id: 'survival-night', label: 'NIGHT', danger: 0.24, ambient: [108, 114, 132] };
 const DAY_PHASE = { id: 'survival-day', label: 'DAY', danger: 0.02, ambient: [186, 174, 150] };
 
@@ -44,8 +60,10 @@ function freshProgress(duration = SURVIVAL_TUNING.nightSeconds) {
     individualIndex: 0,
     oilBurned: 0,
     siegeTimers: {},
-    nightStats: { kills: 0, hits: 0, damageToWalls: 0 },
+    nightStats: { kills: 0, hits: 0, damageToWalls: 0, drained: 0 },
     lastRewards: null,
+    rewardAck: 0,
+    hints: {},
     player: null,
     entrances: null,
     enemies: [],
@@ -56,6 +74,115 @@ function clampDuration(value) {
   const n = Number(value);
   return clamp(Number.isFinite(n) ? Math.round(n) : SURVIVAL_TUNING.nightSeconds,
     SURVIVAL_TUNING.minNightSeconds, SURVIVAL_TUNING.maxNightSeconds);
+}
+
+/* ------------------------------------------------------------------ */
+/* shared survival locomotion                                          */
+/* ------------------------------------------------------------------ */
+
+const HEARTH_REACH = 132;
+const FEED_EVERY = 1.5;
+const FEED_OIL = Object.freeze({ swarm: 1, individual: 3, breaker: 6 });
+
+function stepToward(enemy, dt, game, tx, ty, speed, accel) {
+  const a = Math.atan2(ty - enemy.y, tx - enemy.x);
+  enemy.vx = damp(enemy.vx, Math.cos(a) * speed, accel, dt);
+  enemy.vy = damp(enemy.vy, Math.sin(a) * speed, accel, dt);
+  enemy.moveColliding(game, enemy.vx * dt, enemy.vy * dt);
+  enemy.angle = a;
+}
+
+function stepDir(enemy, dt, game, dir, speed, accel) {
+  enemy.vx = damp(enemy.vx, dir.x * speed, accel, dt);
+  enemy.vy = damp(enemy.vy, dir.y * speed, accel, dt);
+  enemy.moveColliding(game, enemy.vx * dt, enemy.vy * dt);
+  enemy.angle = Math.atan2(dir.y, dir.x);
+}
+
+function settle(enemy, dt, k = 8) {
+  enemy.vx = damp(enemy.vx, 0, k, dt);
+  enemy.vy = damp(enemy.vy, 0, k, dt);
+}
+
+/**
+ * Interior doorways sit between room rectangles, so findRoom() reports them
+ * as OUTSIDE. Once a body has been inside a room it stays "inside" — otherwise
+ * it flips back toward its entry door every time it crosses a doorway.
+ */
+function trackInside(enemy, game) {
+  enemy.roomId = game.mansion.findRoom(enemy.x, enemy.y);
+  if (enemy.roomId !== ROOM.OUTSIDE) enemy._inHouse = true;
+  return !!enemy._inHouse;
+}
+
+/** Outside the walls: walk the lane to a door (flow field near the house). */
+function approachDoor(enemy, dt, game, mode, door, point, speed, accel) {
+  const dir = mode.flowDir(`door:${door.id}`, enemy.x, enemy.y);
+  if (dir && dist(enemy.x, enemy.y, point.x, point.y) > 60) stepDir(enemy, dt, game, dir, speed, accel);
+  else stepToward(enemy, dt, game, point.x, point.y, speed, accel);
+}
+
+/**
+ * Inside the walls: follow the flow field to the Perapian (or the Hunter when
+ * he stands in the dark) and claw the fire once in reach. Light only slows.
+ */
+function invade(enemy, dt, game, mode, speed, accel, preferHunter, fallback = null) {
+  const fire = mode.hearth();
+  const p = game.player;
+  const lit = mode.isLit(enemy.x, enemy.y);
+  const pd = dist(enemy.x, enemy.y, p.x, p.y);
+  enemy.feeding = false;
+  if (!lit && pd < enemy.radius + p.radius + 12 && p.state !== 'death' && p.state !== 'dead') {
+    settle(enemy, dt);
+    enemy.state = 'strike';
+    enemy.angle = Math.atan2(p.y - enemy.y, p.x - enemy.x);
+    enemy.attackCd -= dt;
+    if (enemy.attackCd <= 0) {
+      enemy.attackCd = enemy.hitEvery || 1.6;
+      game.enemyHitPlayer(enemy, enemy.hitDamage || 10, enemy.hitKind || 'bite');
+    }
+    return 'press';
+  }
+  if (fire && dist(enemy.x, enemy.y, fire.x, fire.y) <= HEARTH_REACH) {
+    settle(enemy, dt);
+    enemy.feeding = true;
+    enemy.state = 'strike';
+    enemy.angle = Math.atan2(fire.y - enemy.y, fire.x - enemy.x);
+    enemy.feedCd = (enemy.feedCd == null ? FEED_EVERY * 0.5 : enemy.feedCd) - dt;
+    if (enemy.feedCd <= 0) { enemy.feedCd = FEED_EVERY; mode.feedHearth(enemy); }
+    return 'feed';
+  }
+  const hunterInDark = !mode.isLit(p.x, p.y);
+  const chase = (preferHunter && hunterInDark) || (!lit && pd < 170);
+  let dir = mode.flowDir(chase ? 'hunter' : 'hearth', enemy.x, enemy.y);
+  if (!dir && chase) dir = mode.flowDir('hearth', enemy.x, enemy.y);
+  if (dir) stepDir(enemy, dt, game, dir, speed, accel);
+  else if (!enemy._inHouse && fallback) stepToward(enemy, dt, game, fallback.x, fallback.y, speed, accel);
+  else if (chase) stepToward(enemy, dt, game, p.x, p.y, speed, accel);
+  else if (fire) stepToward(enemy, dt, game, fire.x, fire.y, speed, accel);
+  enemy.state = 'march';
+  return 'march';
+}
+
+/** Death/hit-stun handling shared by all three survival enemy types. */
+function commonPreamble(enemy, dt, game) {
+  if (enemy.dead) {
+    enemy.feeding = false;
+    enemy.deathT += dt;
+    settle(enemy, dt, 7);
+    if (enemy.deathT > 1.45) enemy.removeMe = true;
+    return true;
+  }
+  enemy.staggerT = Math.max(0, (enemy.staggerT || 0) - dt);
+  if (enemy.staggerT > 0) {
+    // Flare knock-back / hit flinch: short and never caused by light alone.
+    enemy.feeding = false;
+    enemy.state = 'stagger';
+    settle(enemy, dt, 5.5);
+    enemy.moveColliding(game, enemy.vx * dt, enemy.vy * dt);
+    return true;
+  }
+  return false;
 }
 
 /** A reduced-AI siege zombie that retains CrowdBody's rank/entrance identity. */
@@ -74,6 +201,11 @@ class SurvivalCrowdZombie extends CrowdBody {
     this.attackCd = 0;
     this.alpha = 0.9;
     this.entranceId = entrance ? entrance.id : null;
+    this.hitEvery = 1.6;
+    this.hitDamage = 9 + day * 2;
+    this.hitKind = 'swarm';
+    this.feedCd = null;
+    this.feeding = false;
   }
 
   hurt(amount, game, fromX, fromY) {
@@ -91,6 +223,7 @@ class SurvivalCrowdZombie extends CrowdBody {
   die(game) {
     if (this.dead) return;
     this.dead = true;
+    this.feeding = false;
     this.state = ESTATE.DYING;
     this.deathT = 0;
     if (game && game.onEnemyKilled) game.onEnemyKilled(this);
@@ -99,92 +232,55 @@ class SurvivalCrowdZombie extends CrowdBody {
   update(dt, game) {
     this.t += dt;
     this.hurtFlash = Math.max(0, (this.hurtFlash || 0) - dt * 3.8);
-    if (this.dead) {
-      this.deathT += dt;
-      this.vx = damp(this.vx, 0, 7, dt); this.vy = damp(this.vy, 0, 7, dt);
-      if (this.deathT > 1.45) this.removeMe = true;
-      return;
-    }
-    this.staggerT = Math.max(0, (this.staggerT || 0) - dt);
-    if (this.staggerT > 0) {
-      this.state = 'stagger';
-      this.vx = damp(this.vx, 0, 5.5, dt); this.vy = damp(this.vy, 0, 5.5, dt);
-      this.moveColliding(game, this.vx * dt, this.vy * dt);
-      return;
-    }
+    if (commonPreamble(this, dt, game)) return;
     const mode = game.survival;
     const entrance = mode.entranceById(this.entranceId) || this.entrance;
     this.entrance = entrance;
-    this.roomId = game.mansion.findRoom(this.x, this.y);
+    const inside = trackInside(this, game);
     const lit = mode.isLit(this.x, this.y);
-    const player = game.player;
+    const slow = lit ? mode.tuning.lightMoveMul : 1;
     const broken = !!(entrance && entrance.broken);
+    this.alpha = Math.min(1, this.alpha + dt * 0.8);
 
-    // A breached rank enters through the opening and pressures an unlit lane.
-    // In the Perapian's light it slows, staggers, and cannot land a player hit.
-    if (broken) {
-      if (this.roomId === ROOM.OUTSIDE) {
-        const inside = entrance.inside || { x: entrance.x, y: entrance.y };
-        this._stepToward(dt, game, inside.x, inside.y, lit ? 59 * mode.tuning.lightMoveMul : 59, 4.8);
-        return;
-      }
-      if (lit) {
-        this.state = 'stagger';
-        this.vx = damp(this.vx, 0, 5.5, dt); this.vy = damp(this.vy, 0, 5.5, dt);
-        this.moveColliding(game, this.vx * dt, this.vy * dt);
-        return;
-      }
-      const d = dist(this.x, this.y, player.x, player.y);
-      if (d > this.radius + player.radius + 12) {
-        this._stepToward(dt, game, player.x, player.y, 70 * (1 + (mode.day - 1) * 0.06), 5.2);
-      } else {
-        this.vx = damp(this.vx, 0, 8, dt); this.vy = damp(this.vy, 0, 8, dt);
-        this.state = 'press';
-        this.attackCd -= dt;
-        if (this.attackCd <= 0) {
-          this.attackCd = 1.6;
-          game.enemyHitPlayer(this, 9 + mode.day * 2, 'swarm');
-        }
-      }
+    if (broken || inside) {
+      // The hearth field routes through whichever gap is open.
+      this.press = damp(this.press || 0, 0, 5, dt);
+      invade(this, dt, game, mode, mode.swarmSpeed(true) * slow, 5.2, false, entrance && (entrance.outside || entrance));
       return;
     }
 
-    if (!entrance || entrance.broken) { this.state = CROWD.LEAVE; return; }
+    if (!entrance) { this.state = CROWD.LEAVE; return; }
     const spot = crowdSpot(entrance, this.index, 72);
     const targetX = spot.x + this.jx * 0.25;
     const targetY = spot.y + this.jy * 0.25;
     const d = dist(this.x, this.y, targetX, targetY);
-    const speed = (59 + Math.max(0, mode.day - 1) * 5) * this.gait * (lit ? mode.tuning.lightMoveMul : 1);
+    const speed = mode.swarmSpeed(false) * this.gait * slow;
     if (d > 10) {
       this.state = CROWD.MARCH;
-      this._stepToward(dt, game, targetX, targetY, speed, 4.8);
+      if (d > 120) approachDoor(this, dt, game, mode, entrance, { x: targetX, y: targetY }, speed, 4.8);
+      else stepToward(this, dt, game, targetX, targetY, speed, 4.8);
       this.press = damp(this.press, 0, 5, dt);
     } else {
-      this.vx = damp(this.vx, 0, 7, dt); this.vy = damp(this.vy, 0, 7, dt);
+      settle(this, dt, 7);
       this.state = CROWD.PRESS;
       this.press = damp(this.press, 1, 5, dt);
       this.angle = Math.atan2(entrance.y - this.y, entrance.x - this.x);
     }
-    this.alpha = Math.min(1, this.alpha + dt * 0.8);
   }
 
   _stepToward(dt, game, tx, ty, speed, accel) {
-    const a = Math.atan2(ty - this.y, tx - this.x);
-    this.vx = damp(this.vx, Math.cos(a) * speed, accel, dt);
-    this.vy = damp(this.vy, Math.sin(a) * speed, accel, dt);
-    const moved = this.moveColliding(game, this.vx * dt, this.vy * dt);
-    this.angle = Math.atan2(ty - this.y, tx - this.x);
-    return moved;
+    stepToward(this, dt, game, tx, ty, speed, accel);
+    return true;
   }
 }
 
-/** Individual, durable zombie that switches to the hero only after a breach. */
+/** Individual, durable zombie: hunts the Hunter in the dark, else the fire. */
 class SurvivalIndividualZombie extends Zombie {
   constructor(x, y, entrance, day, index = 0) {
     super(x, y, { entranceId: entrance && entrance.id });
     this._survivalType = 'individual';
     this._crowd = false;
-    this.type = { ...this.type, name: 'ZOMBIE', hp: 118 + day * 14, speed: 58, huntSpeed: 72, contactDamage: 12 + day * 2 };
+    this.type = { ...this.type, name: 'ZOMBIE', hp: 118 + day * 14, speed: 58, huntSpeed: 72, contactDamage: 12 + day * 2, doorDamage: 8 };
     this.hp = this.hpMax = this.type.hp;
     this.radius = 15;
     this.entranceId = entrance && entrance.id;
@@ -192,11 +288,17 @@ class SurvivalIndividualZombie extends Zombie {
     this.attackCd = 1.2;
     this.alpha = 0.95;
     this.survival = true;
+    this.hitEvery = 1.55;
+    this.hitDamage = this.type.contactDamage;
+    this.hitKind = 'bite';
+    this.feedCd = null;
+    this.feeding = false;
   }
 
   die(game) {
     if (this.dead) return;
     this.dead = true;
+    this.feeding = false;
     this.state = ESTATE.DYING;
     this.deathT = 0;
     if (game && game.onEnemyKilled) game.onEnemyKilled(this);
@@ -205,67 +307,47 @@ class SurvivalIndividualZombie extends Zombie {
   update(dt, game) {
     this.stateT += dt;
     this.hurtFlash = Math.max(0, this.hurtFlash - dt * 4);
-    if (this.dead) {
-      this.deathT += dt;
-      this.vx = damp(this.vx, 0, 7, dt); this.vy = damp(this.vy, 0, 7, dt);
-      if (this.deathT > 1.45) this.removeMe = true;
-      return;
-    }
-    this.staggerT = Math.max(0, (this.staggerT || 0) - dt);
-    if (this.staggerT > 0) {
-      this.state = 'stagger';
-      this.vx = damp(this.vx, 0, 5.5, dt); this.vy = damp(this.vy, 0, 5.5, dt);
-      this.moveColliding(game, this.vx * dt, this.vy * dt);
-      return;
-    }
+    if (commonPreamble(this, dt, game)) return;
     const mode = game.survival;
-    const entrance = mode.entranceById(this.entranceId) || mode.chooseTargetEntrance(this.x, this.y);
-    this.entranceId = entrance && entrance.id;
-    this.roomId = game.mansion.findRoom(this.x, this.y);
-    const player = game.player;
+    let entrance = mode.entranceById(this.entranceId);
+    const inside = trackInside(this, game);
     const lit = mode.isLit(this.x, this.y);
+    const slow = lit ? mode.tuning.lightMoveMul : 1;
     this.attackCd -= dt;
-    if (entrance && entrance.broken) {
-      if (this.roomId === ROOM.OUTSIDE) {
-        const inside = entrance.inside || { x: entrance.x, y: entrance.y };
-        this._survivalMove(dt, game, inside.x, inside.y, lit ? this.type.speed * mode.tuning.lightMoveMul : this.type.speed);
-        return;
-      }
-      const d = dist(this.x, this.y, player.x, player.y);
-      if (d > this.radius + player.radius + 10) {
-        this._survivalMove(dt, game, player.x, player.y, lit ? 75 * mode.tuning.lightMoveMul : 75);
-      } else if (!lit && this.attackCd <= 0) {
-        this.attackCd = 1.55;
-        game.enemyHitPlayer(this, this.type.contactDamage, 'bite');
-      }
+    // Outside: the assigned door; if it is intact, batter it (halved in light);
+    // once any door is open, the flow field routes through the nearest gap.
+    const open = mode.nearestBrokenDoor(this.x, this.y);
+    if (open) { entrance = open; this.entranceId = open.id; }
+    if (!entrance) entrance = mode.chooseTargetEntrance(this.x, this.y);
+    if (inside || (entrance && entrance.broken)) {
+      invade(this, dt, game, mode, this.type.huntSpeed * slow, 5.2, true, entrance && (entrance.outside || entrance));
       return;
     }
     if (!entrance) return;
+    this.entranceId = entrance.id;
     const out = entrance.outside || entrance;
     const d = dist(this.x, this.y, out.x, out.y);
     if (d > 54) {
-      this._survivalMove(dt, game, out.x, out.y, lit ? this.type.speed * mode.tuning.lightMoveMul : this.type.speed);
+      approachDoor(this, dt, game, mode, entrance, out, this.type.speed * slow, 5.2);
+      this.state = 'march';
       return;
     }
-    this.state = 'press';
-    this.vx = damp(this.vx, 0, 8, dt); this.vy = damp(this.vy, 0, 8, dt);
-    if (!lit && this.attackCd <= 0) {
+    settle(this, dt);
+    this.state = this.attackCd < 0.4 ? 'strike' : 'press';
+    this.angle = Math.atan2(entrance.y - this.y, entrance.x - this.x);
+    if (this.attackCd <= 0) {
       this.attackCd = 2.1;
       mode.damageEntrance(entrance, this.type.doorDamage || 8, this);
     }
   }
 
   _survivalMove(dt, game, tx, ty, speed) {
-    const a = Math.atan2(ty - this.y, tx - this.x);
-    this.vx = damp(this.vx, Math.cos(a) * speed, 5.2, dt);
-    this.vy = damp(this.vy, Math.sin(a) * speed, 5.2, dt);
-    this.moveColliding(game, this.vx * dt, this.vy * dt);
-    this.angle = Math.atan2(ty - this.y, tx - this.x);
+    stepToward(this, dt, game, tx, ty, speed, 5.2);
     this.state = 'march';
   }
 }
 
-/** Day-2 wall specialist: its objective is an entrance, never the visible hero. */
+/** Day-2 wall specialist: doors first (next intact one after a breach), then the fire. */
 class SurvivalBreaker extends Zombie {
   constructor(x, y, entrance, day, index = 0) {
     super(x, y, { entranceId: entrance && entrance.id });
@@ -283,11 +365,17 @@ class SurvivalBreaker extends Zombie {
     this.alpha = 1;
     this.tint = '#a66b38';
     this.variant = 'survival-breaker';
+    this.hitEvery = 1.9;
+    this.hitDamage = 18 + day * 2;
+    this.hitKind = 'slam';
+    this.feedCd = null;
+    this.feeding = false;
   }
 
   die(game) {
     if (this.dead) return;
     this.dead = true;
+    this.feeding = false;
     this.state = ESTATE.DYING;
     this.deathT = 0;
     if (game && game.onEnemyKilled) game.onEnemyKilled(this);
@@ -296,48 +384,135 @@ class SurvivalBreaker extends Zombie {
   update(dt, game) {
     this.stateT += dt;
     this.hurtFlash = Math.max(0, this.hurtFlash - dt * 4);
-    if (this.dead) {
-      this.deathT += dt;
-      this.vx = damp(this.vx, 0, 7, dt); this.vy = damp(this.vy, 0, 7, dt);
-      if (this.deathT > 1.45) this.removeMe = true;
-      return;
-    }
-    this.staggerT = Math.max(0, (this.staggerT || 0) - dt);
-    if (this.staggerT > 0) {
-      this.state = 'stagger';
-      this.vx = damp(this.vx, 0, 5.5, dt); this.vy = damp(this.vy, 0, 5.5, dt);
-      this.moveColliding(game, this.vx * dt, this.vy * dt);
-      return;
-    }
+    if (commonPreamble(this, dt, game)) return;
     const mode = game.survival;
-    // Deliberately do not inspect player LOS/visibility here. The wall target is
-    // selected once and remains the objective while the hero is in view.
-    const target = mode.entranceById(this.targetEntranceId) || mode.mainGate();
-    this.targetEntranceId = target && target.id;
-    this.entranceId = this.targetEntranceId;
-    this.roomId = game.mansion.findRoom(this.x, this.y);
+    const inside = trackInside(this, game);
     const lit = mode.isLit(this.x, this.y);
-    if (!target) return;
+    const speed = this.type.speed * (lit ? mode.tuning.lightMoveMul : 1);
+    // Deliberately do not inspect player LOS/visibility: the objective is a
+    // structure. A broken target hands over to the next intact door; with no
+    // door left standing it walks in and goes for the Perapian.
+    let target = mode.entranceById(this.targetEntranceId);
+    if (!target || target.broken) {
+      const next = mode.nextIntactDoor(this.x, this.y);
+      if (next) { target = next; this.targetKind = 'wall'; }
+      else { target = null; this.targetKind = 'perapian'; }
+      this.targetEntranceId = target && target.id;
+      this.entranceId = this.targetEntranceId || this.entranceId;
+    }
+    if (inside || !target) {
+      const gap = inside ? null : mode.nearestBrokenDoor(this.x, this.y);
+      this.attackCd -= dt;
+      invade(this, dt, game, mode, speed, 4.2, false, gap && (gap.outside || gap));
+      return;
+    }
     const out = target.outside || target;
     const d = dist(this.x, this.y, out.x, out.y);
-    const speed = lit ? this.type.speed * mode.tuning.lightMoveMul : this.type.speed;
     if (d > 62) {
-      const a = Math.atan2(out.y - this.y, out.x - this.x);
-      this.vx = damp(this.vx, Math.cos(a) * speed, 4.2, dt);
-      this.vy = damp(this.vy, Math.sin(a) * speed, 4.2, dt);
-      this.moveColliding(game, this.vx * dt, this.vy * dt);
-      this.angle = Math.atan2(out.y - this.y, out.x - this.x);
+      approachDoor(this, dt, game, mode, target, out, speed, 4.2);
       this.state = 'march';
       return;
     }
-    this.vx = damp(this.vx, 0, 8, dt); this.vy = damp(this.vy, 0, 8, dt);
-    this.state = 'press';
-    if (lit) return;
+    settle(this, dt);
     this.attackCd -= dt;
+    this.state = this.attackCd < 0.5 ? 'strike' : 'press';
+    this.angle = Math.atan2(target.y - this.y, target.x - this.x);
     if (this.attackCd <= 0 && !target.broken) {
       this.attackCd = Math.max(2.2, 3.4 - mode.day * 0.25);
       mode.damageEntrance(target, this.type.doorDamage, this);
     }
+  }
+}
+
+/**
+ * BFS distance field on the Mansion nav grid. One field per goal (Perapian,
+ * Hunter, each door lane); enemies read a direction in O(1) instead of each
+ * running its own path search, which keeps a 30-body wave cheap on phones.
+ */
+class FlowField {
+  constructor(mansion) {
+    this.m = mansion;
+    this.size = 0;
+    this.dist = null;
+    this.queue = null;
+    this.version = -1;
+    this.goalCell = -1;
+    this.builtAt = -1;
+    this.out = { x: 0, y: 0 };
+  }
+
+  build(x, y, version) {
+    const m = this.m;
+    const size = m.navW * m.navH;
+    if (size !== this.size) {
+      this.size = size;
+      this.dist = new Int32Array(size);
+      this.queue = new Int32Array(size);
+    }
+    this.version = version;
+    const d = this.dist;
+    d.fill(-1);
+    const goal = m.navNearest(x, y, 6);
+    if (!goal) { this.goalCell = -1; return false; }
+    const w = m.navW, h = m.navH, nav = m.nav, q = this.queue;
+    const start = goal.gy * w + goal.gx;
+    this.goalCell = start;
+    let head = 0, tail = 0;
+    q[tail++] = start;
+    d[start] = 0;
+    while (head < tail) {
+      const cur = q[head++];
+      const cx = cur % w, cy = (cur - cx) / w;
+      const nd = d[cur] + 1;
+      if (cx + 1 < w && d[cur + 1] < 0 && nav[cur + 1] === 0) { d[cur + 1] = nd; q[tail++] = cur + 1; }
+      if (cx > 0 && d[cur - 1] < 0 && nav[cur - 1] === 0) { d[cur - 1] = nd; q[tail++] = cur - 1; }
+      if (cy + 1 < h && d[cur + w] < 0 && nav[cur + w] === 0) { d[cur + w] = nd; q[tail++] = cur + w; }
+      if (cy > 0 && d[cur - w] < 0 && nav[cur - w] === 0) { d[cur - w] = nd; q[tail++] = cur - w; }
+    }
+    return true;
+  }
+
+  _best(gx, gy, here) {
+    const m = this.m, w = m.navW, h = m.navH, d = this.dist;
+    let best = -1, bestD = here >= 0 ? here : 1e9;
+    for (let oy = -1; oy <= 1; oy++) {
+      for (let ox = -1; ox <= 1; ox++) {
+        if (!ox && !oy) continue;
+        const nx = gx + ox, ny = gy + oy;
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        const ni = ny * w + nx;
+        const nd = d[ni];
+        if (nd < 0 || nd >= bestD) continue;
+        if (ox && oy && (d[gy * w + nx] < 0 || d[ny * w + gx] < 0)) continue; // no corner cutting
+        best = ni; bestD = nd;
+      }
+    }
+    return best;
+  }
+
+  /** Unit vector toward the goal, or null outside the grid / at the goal. */
+  dirAt(x, y) {
+    const m = this.m;
+    if (this.goalCell < 0 || !this.dist) return null;
+    const gx = Math.floor((x - m.navX0) / m.navCell);
+    const gy = Math.floor((y - m.navY0) / m.navCell);
+    const w = m.navW;
+    if (gx < 0 || gy < 0 || gx >= w || gy >= m.navH) return null;
+    const idx = gy * w + gx;
+    const here = this.dist[idx];
+    if (here === 0) return null;
+    const first = this._best(gx, gy, here);
+    if (first < 0) return null;
+    let aim = first;
+    const fx = first % w, fy = (first - fx) / w;
+    const second = this._best(fx, fy, this.dist[first]);
+    if (second >= 0 && here >= 0) aim = second;
+    const ax = m.navX0 + ((aim % w) + 0.5) * m.navCell;
+    const ay = m.navY0 + (Math.floor(aim / w) + 0.5) * m.navCell;
+    const dx = ax - x, dy = ay - y;
+    const len = Math.hypot(dx, dy) || 1;
+    this.out.x = dx / len; this.out.y = dy / len;
+    return this.out;
   }
 }
 
@@ -373,11 +548,27 @@ export class SurvivalMode {
     this._bakeRadius = -1;
     this._lastGateOpen = null;
     this._savedDurationOverride = options.nightDuration || null;
+    this.uiClock = 0;
+    this.floaters = [];
+    this.bannerQueue = [];
+    this.banner = null;
+    this.hearthFeeders = 0;
+    this.rewardAck = 0;
+    this.dayFocus = null;
+    this._doorPressure = new Map();
+    this._breachAt = Object.create(null);
+    this._fields = new Map();
+    this._movedSinceStart = 0;
+    this._lastPlayerPos = null;
+    this._fireLowWarned = false;
+    this._hearthWarnAt = -99;
     this._restore(game.save.survival || freshProgress(this.nightDuration));
     this._configureMansion();
     this._applyEntranceState();
     this.applyBuildingEffects(false);
+    this.game.mansion.buildNav();
     this.refreshFireplace(true);
+    if (this.phase === 'night' && this.elapsed < 1) this._nightIntro();
   }
 
   _restore(saved) {
@@ -403,8 +594,9 @@ export class SurvivalMode {
     this.individualIndex = Math.max(0, Math.floor(Number(s.individualIndex) || 0));
     this.oilBurned = Math.max(0, Number(s.oilBurned) || 0);
     this.siegeTimers = s.siegeTimers && typeof s.siegeTimers === 'object' ? { ...s.siegeTimers } : {};
-    this.nightStats = { kills: 0, hits: 0, damageToWalls: 0, ...(s.nightStats || {}) };
+    this.nightStats = { kills: 0, hits: 0, damageToWalls: 0, drained: 0, ...(s.nightStats || {}) };
     this.lastRewards = s.lastRewards || null;
+    this.rewardAck = Math.max(0, Math.floor(Number(s.rewardAck) || 0));
 
     const g = this.game;
     const pos = s.player;
@@ -448,9 +640,23 @@ export class SurvivalMode {
     }
   }
 
+  /** The bake is phase-tinted (cool night / warm day); rebake on change. */
+  _syncBakePhase() {
+    const m = this.game.mansion;
+    const want = this.phase === 'day' ? 'day' : 'night';
+    if (m.survivalPhase !== want) {
+      m.survivalPhase = want;
+      this.game.survivalBakeDirty = true;
+    }
+  }
+
   _configureMansion() {
     const m = this.game.mansion;
     m.survivalLighting = true;
+    this._syncBakePhase();
+    for (const prop of m.props || []) {
+      if (prop.type === 'carpet' && prop.color === 'dark') prop.color = 'crimson';
+    }
     for (const light of m.lights) {
       if (light !== m.fireplaceLight) { light.i = 0; light.curI = 0; }
     }
@@ -497,7 +703,8 @@ export class SurvivalMode {
     this.breakerIndex = 0;
     this.individualIndex = 0;
     this.siegeTimers = Object.create(null);
-    this.nightStats = { kills: 0, hits: 0, damageToWalls: 0 };
+    this.nightStats = { kills: 0, hits: 0, damageToWalls: 0, drained: 0 };
+    this._resetNightFx();
     g.time = 0;
     g.timeLeft = this.nightDuration;
     g.phase = NIGHT_PHASE;
@@ -516,14 +723,38 @@ export class SurvivalMode {
       e.attackers = 0; e.flash = 0; e.lastTouched = -99;
     }
     this.applyBuildingEffects(true);
+    g.mansion.buildNav();
+    this._fields.clear();
     this.refreshFireplace(true);
+    if (g.renderer.setZoomMul) g.renderer.setZoomMul(1);
     g.renderer.snapCamera(g.player.x, g.player.y);
+    this._nightIntro();
     this._persist(true);
     return true;
   }
 
+  _resetNightFx() {
+    this.floaters.length = 0;
+    this.bannerQueue.length = 0;
+    this.banner = null;
+    this.hearthFeeders = 0;
+    this._doorPressure.clear();
+    this._breachAt = Object.create(null);
+    this._movedSinceStart = 0;
+    this._lastPlayerPos = null;
+    this._fireLowWarned = false;
+    this._hearthWarnAt = -99;
+  }
+
+  _nightIntro() {
+    this.pushEvent('night', 'moon', `NIGHT ${this.day}`, { sub: 'SURVIVE UNTIL DAWN', life: 2.4 });
+  }
+
   update(dt) {
     const g = this.game;
+    this._syncBakePhase();
+    this.uiClock += dt;
+    this._updateFx(dt);
     this.skillCooldown = Math.max(0, this.skillCooldown - dt);
     this.skillFlash = Math.max(0, this.skillFlash - dt);
     if (this.phase === 'night' && g.screen === 'playing' && !g.uiPanel) this.updateNight(dt);
@@ -563,10 +794,21 @@ export class SurvivalMode {
     g.player.update(dt, g);
     g.player.anim(dt);
 
+    let feeders = 0;
     for (let i = g.enemies.length - 1; i >= 0; i--) {
       const e = g.enemies[i];
       e.update(dt, g);
+      if (e.feeding && !e.dead) feeders++;
       if (e.removeMe) g.enemies.splice(i, 1);
+    }
+    this.hearthFeeders = feeders;
+    this.updateHearthBurn(dt);
+    const p = g.player;
+    if (this._lastPlayerPos) this._movedSinceStart += Math.hypot(p.x - this._lastPlayerPos.x, p.y - this._lastPlayerPos.y);
+    this._lastPlayerPos = { x: p.x, y: p.y };
+    if (!this._fireLowWarned && this.oil > 0 && this.oil < 6) {
+      this._fireLowWarned = true;
+      this.pushEvent('fireLow', 'oil', 'FIRE LOW!');
     }
     for (let i = g.bolts.length - 1; i >= 0; i--) {
       const b = g.bolts[i];
@@ -576,7 +818,9 @@ export class SurvivalMode {
     this.updateCrowdSiege(dt);
     this.updateGateMeter();
     this.followPlayer(dt);
-    if (g.player.blood <= 0 && g.player.state !== 'death') g.killPlayer('Hunter lost');
+    if (this.phase !== 'night') return;
+    if (this.oil <= 0) this.fail('THE FIRE WENT OUT');
+    else if (g.player.blood <= 0 && g.player.state !== 'death') g.killPlayer('Hunter lost');
     else if (g.player.state === 'death' || g.player.state === 'dead') this.fail('Hunter lost');
     else if (this.elapsed >= this.nightDuration) this.completeNight();
   }
@@ -601,22 +845,23 @@ export class SurvivalMode {
 
   updateWaves() {
     const duration = this.nightDuration;
-    const waveTimes = [0.08, 0.38, 0.68];
-    const counts = this.day === 1 ? [7, 7, 8] : this.day === 2 ? [8, 9, 9] : [10, 10, 10];
+    const waveTimes = WAVE_TIMES;
+    const counts = this.waveCounts();
     while (this.waveIndex < waveTimes.length && this.elapsed >= duration * waveTimes[this.waveIndex]) {
       this.spawnSwarm(counts[this.waveIndex], this.waveIndex);
       this.waveIndex++;
+      this.pushEvent('wave', 'swarm', `WAVE ${this.waveIndex}/${waveTimes.length}`);
     }
-    const breakerAt = this.day >= 2 ? duration * 0.28 : Infinity;
+    const breakerAt = this.day >= 2 ? duration * BREAKER_TIMES[0] : Infinity;
     if (this.day >= 2 && this.breakerIndex === 0 && this.elapsed >= breakerAt) {
       this.spawnBreaker(0);
       this.breakerIndex = 1;
     }
-    if (this.day >= 3 && this.breakerIndex === 1 && this.elapsed >= duration * 0.63) {
+    if (this.day >= 3 && this.breakerIndex === 1 && this.elapsed >= duration * BREAKER_TIMES[1]) {
       this.spawnBreaker(1);
       this.breakerIndex = 2;
     }
-    const individualAt = [0.54, 0.82];
+    const individualAt = INDIVIDUAL_TIMES;
     while (this.individualIndex < individualAt.length && this.elapsed >= duration * individualAt[this.individualIndex]) {
       this.spawnIndividual(this.individualIndex);
       this.individualIndex++;
@@ -629,12 +874,12 @@ export class SurvivalMode {
     if (!entrance) return;
     const out = outwardOf(entrance);
     const along = { x: -out.y, y: out.x };
-    const total = Math.max(20, Math.min(30, count));
+    const total = clamp(Math.round(count), 1, SWARM_CAP);
     for (let i = 0; i < total; i++) {
       const row = Math.floor(i / 7);
       const col = i % 7;
       const lateral = (col - 3) * 42 + rand(-8, 8);
-      const depth = 240 + row * 60 + rand(-18, 18);
+      const depth = 150 + row * 56 + rand(-16, 16);
       const x = entrance.outside.x + out.x * depth + along.x * lateral;
       const y = entrance.outside.y + out.y * depth + along.y * lateral;
       const body = new SurvivalCrowdZombie(x, y, entrance, i + wave * total, this.day);
@@ -669,17 +914,32 @@ export class SurvivalMode {
     breaker.targetKind = 'wall';
     breaker.targetEntranceId = entrance.id;
     g.enemies.push(breaker);
+    this.pushEvent('breaker', 'breaker', 'BREAKER!');
   }
 
   chooseTargetEntrance(_x, _y, offset = 0) {
     const doors = this.game.mansion.entrances.filter((e) => e.kind === 'door' && e.exterior);
     if (!doors.length) return this.mainGate();
-    const priority = ['frontDoor', 'diningDoor', 'kitchenDoor', 'palisade', 'cellarDoor', 'chapelDoor', 'postern'];
+    // Night n rotates the opening doors so every night tests a different side.
+    const priority = ['frontDoor', 'chapelDoor', 'cellarDoor', 'diningDoor', 'palisade', 'kitchenDoor', 'postern'];
+    const start = (offset + (this.day - 1) * 2) % priority.length;
     for (let i = 0; i < priority.length; i++) {
-      const candidate = doors.find((e) => e.id === priority[(i + offset) % priority.length]);
-      if (candidate && !candidate.broken) return candidate;
+      const candidate = doors.find((e) => e.id === priority[(start + i) % priority.length]);
+      if (candidate) return candidate;
     }
-    return doors.find((e) => !e.broken) || doors[0];
+    return doors[0];
+  }
+
+  /** Dawn: survivors patch every exterior door (the gate keeps its bonus). */
+  repairDoors() {
+    for (const e of this.game.mansion.entrances) {
+      if (!e.exterior) continue;
+      e.hpMax = Math.max(e.baseHpMax || 100, e.hpMax || 0);
+      e.hp = e.hpMax; e.broken = false; e.open = false; e.flash = 0; e.attackers = 0;
+    }
+    this._breachAt = Object.create(null);
+    this.game.mansion.buildNav();
+    this._fields.clear();
   }
 
   entranceById(id) { return this.game.mansion.entrances.find((e) => e.id === id) || null; }
@@ -696,15 +956,24 @@ export class SurvivalMode {
       row.count++;
       pressed.set(id, row);
     }
+    this._doorPressure.clear();
+    for (const e of g.enemies) {
+      if (e.dead || !e._survivalType || e._survivalType === 'swarm') continue;
+      if (e.state !== 'press' && e.state !== 'strike') continue;
+      if (e._inHouse || e.feeding) continue;
+      const id = e._survivalType === 'breaker' ? e.targetEntranceId : e.entranceId;
+      if (id) this._doorPressure.set(id, (this._doorPressure.get(id) || 0) + 1);
+    }
     for (const [id, row] of pressed) {
       const entrance = this.entranceById(id);
       if (!entrance || entrance.broken) continue;
-      if (this.isLit(row.sample.x, row.sample.y)) continue;
+      this._doorPressure.set(id, (this._doorPressure.get(id) || 0) + row.count);
+      // Firelight weakens a siege (damageEntrance halves it); it never cancels it.
       this.siegeTimers[id] = Math.max(0, (this.siegeTimers[id] || 0) - dt);
       if (this.siegeTimers[id] <= 0) {
-        const amount = Math.min(16, 1.2 + row.count * 1.15);
+        const amount = Math.min(18, 2 + row.count * 1.3);
         this.damageEntrance(entrance, amount, row.sample);
-        this.siegeTimers[id] = 1.85;
+        this.siegeTimers[id] = 1.6;
       }
     }
     for (const key of Object.keys(this.siegeTimers)) {
@@ -727,10 +996,24 @@ export class SurvivalMode {
     this.game.mansion.damageEntrance(entrance, amount * weakened, this.game, source && source.x, source && source.y);
     this.nightStats.damageToWalls += Math.max(0, before - entrance.hp);
     this.gateHp = Math.max(0, this.mainGate() ? this.mainGate().hp : 0);
+    if (entrance.broken) this.onBreach(entrance);
+  }
+
+  onBreach(entrance) {
+    if (this._breachAt[entrance.id] != null) return;
+    this._breachAt[entrance.id] = this.uiClock;
+    this.game.mansion.refreshNavAround(entrance);
+    this.pushEvent('breach', 'doorBroken', 'BREACH!');
   }
 
   enemyDamageTaken(enemy, amount) {
-    return amount * (this.isLit(enemy.x, enemy.y) ? this.tuning.lightDamageTakenMul : 1);
+    const lit = this.isLit(enemy.x, enemy.y);
+    const dealt = amount * (lit ? this.tuning.lightDamageTakenMul : 1);
+    if (dealt > 0.5) {
+      const h = enemy._survivalType === 'breaker' ? 96 : enemy._survivalType === 'individual' ? 78 : 60;
+      this.pushFloater(enemy.x + rand(-10, 10), enemy.y, `${Math.round(dealt)}`, lit ? '#ffd24a' : '#ffffff', { h, size: lit ? 20 : 16 });
+    }
+    return dealt;
   }
 
   enemyCanAttack(enemy) { return !this.isLit(enemy.x, enemy.y); }
@@ -774,6 +1057,7 @@ export class SurvivalMode {
       this.oil = 0;
       return;
     }
+    if (this.hearthFeeders > 0 && Math.random() < dt * 2) this.game.renderer.shake(0.04);
     const burn = Math.min(this.oil, this.tuning.oilBurnPerSecond * dt);
     this.oil = Math.max(0, this.oil - burn);
     this.oilBurned += burn;
@@ -795,6 +1079,7 @@ export class SurvivalMode {
   }
 
   refreshFireplace(force = false) {
+    this._syncBakePhase();
     const light = this.game.mansion.fireplaceLight;
     if (!light) return;
     const radius = this.getFireRadius();
@@ -828,7 +1113,7 @@ export class SurvivalMode {
     const spec = SURVIVAL_BUILDINGS[type];
     if (!spec || !roomId) return false;
     if (!this.buildableRooms().some((room) => room.id === roomId)) return false;
-    if (this.oil < spec.oil || this.wood < spec.wood) return false;
+    if (!this.canAfford(spec)) return false;
     this.oil -= spec.oil; this.wood -= spec.wood;
     this.selectedRoom = roomId;
     this.builderJob = { kind: 'building', type, roomId, remaining: spec.seconds, duration: spec.seconds };
@@ -840,7 +1125,7 @@ export class SurvivalMode {
   startGateBuild() {
     if (this.gateBuilt || this.builderJob || this.phase !== 'day') return false;
     const cost = this.tuning.gateCost;
-    if (this.oil < cost.oil || this.wood < cost.wood) return false;
+    if (!this.canAfford(cost)) return false;
     this.oil -= cost.oil; this.wood -= cost.wood;
     this.builderJob = { kind: 'gate', type: 'gate', remaining: cost.seconds, duration: cost.seconds };
     this.game.audio.play('woodPickup', { vol: 0.45 });
@@ -852,7 +1137,7 @@ export class SurvivalMode {
     if (this.perapianLevel >= 3 || this.builderJob || this.phase !== 'day') return false;
     const target = this.perapianLevel + 1;
     const cost = this.tuning.perapianUpgrade[target];
-    if (!cost || this.oil < cost.oil || this.wood < cost.wood) return false;
+    if (!cost || !this.canAfford(cost)) return false;
     this.oil -= cost.oil; this.wood -= cost.wood;
     this.builderJob = { kind: 'perapian', type: 'perapian', targetLevel: target, remaining: cost.seconds, duration: cost.seconds };
     this.game.audio.play('uiConfirm', { vol: 0.55 });
@@ -872,8 +1157,11 @@ export class SurvivalMode {
       this.buildings[job.roomId] = job.type;
     }
     this.builderJob = null;
+    if (job.kind === 'gate') this.game.mansion.buildNav();
     this.refreshFireplace(true);
     this.game.audio.play('uiConfirm', { vol: 0.62 });
+    const icon = job.kind === 'perapian' ? 'perapian' : job.kind === 'gate' ? 'gate' : (job.type === 'extractor' ? 'extractor' : job.type === 'sawmill' ? 'sawmill' : 'shelter');
+    this.pushEvent('build', icon, job.kind === 'perapian' ? `PERAPIAN Lv${this.perapianLevel}` : 'BUILT!', { life: 1.6 });
     this._persist(true);
   }
 
@@ -898,6 +1186,7 @@ export class SurvivalMode {
     const dayIndex = clamp(this.day - 1, 0, 2);
     let oil = this.tuning.nightRewards.oil[dayIndex];
     let wood = this.tuning.nightRewards.wood[dayIndex];
+    const survivorsBefore = this.survivors;
     for (const type of Object.values(this.buildings)) {
       const spec = SURVIVAL_BUILDINGS[type];
       if (!spec) continue;
@@ -911,7 +1200,12 @@ export class SurvivalMode {
     this.oil = clamp(this.oil + oil, 0, RESOURCE_CAP);
     this.wood = clamp(this.wood + wood, 0, RESOURCE_CAP);
     this.nightsCompleted = Math.min(3, this.nightsCompleted + 1);
-    this.lastRewards = { oil, wood, kills: this.nightStats.kills, walls: this.nightStats.damageToWalls };
+    this.repairDoors();
+    this.lastRewards = {
+      oil, wood, kills: this.nightStats.kills, walls: this.nightStats.damageToWalls,
+      survivors: this.survivors - survivorsBefore, drained: Math.round(this.nightStats.drained || 0),
+    };
+    this._resetNightFx();
     g.enemies.length = 0;
     g.bolts.length = 0;
     g.particles.list.length = 0;
@@ -956,8 +1250,11 @@ export class SurvivalMode {
       survivors: this.tuning.startSurvivors, perapianLevel: 1, buildings: {}, gateBuilt: false,
       gateHp: 0, builderJob: null, selectedRoom: null, nightsCompleted: 0, waveIndex: 0,
       breakerIndex: 0, individualIndex: 0, oilBurned: 0, siegeTimers: Object.create(null),
-      nightStats: { kills: 0, hits: 0, damageToWalls: 0 }, lastRewards: null, skillCooldown: 0,
+      nightStats: { kills: 0, hits: 0, damageToWalls: 0, drained: 0 }, lastRewards: null, skillCooldown: 0,
+      rewardAck: 0, dayFocus: null,
     });
+    this._resetNightFx();
+    this._fields.clear();
     for (const e of g.mansion.entrances) {
       e.hp = e.baseHpMax; e.hpMax = e.baseHpMax; e.broken = false; e.open = false; e.barricade = 0;
     }
@@ -967,8 +1264,10 @@ export class SurvivalMode {
     g.player.blood = g.player.bloodMax; g.player.weapon = 'shot'; g.player.state = 'idle';
     this.nightDuration = duration;
     this.phase = 'night';
+    g.mansion.buildNav();
     this.refreshFireplace(true);
     this.enter();
+    this._nightIntro();
   }
 
   useBuilding(roomId) { return this.buildings[roomId] || null; }
@@ -1005,9 +1304,228 @@ export class SurvivalMode {
   followPlayer(dt) {
     const g = this.game;
     const p = g.player;
+    const r = g.renderer;
+    if (this.phase === 'day') {
+      // Day is a base view: zoom out and frame the selected build target
+      // above the bottom sheet.
+      if (r.setZoomMul) r.setZoomMul(0.8, dt);
+      const focus = this.dayFocusPoint();
+      const a = r.screenToWorld(r.w / 2, r.h / 2);
+      const b = r.screenToWorld(r.w / 2, r.h / 2 + Math.min(150, r.h * 0.17));
+      r.followCamera(focus.x + (b.x - a.x), focus.y + (b.y - a.y), dt, 0, 0, g.mansion.camBounds);
+      return;
+    }
+    if (r.setZoomMul) r.setZoomMul(1, dt);
     const lookX = clamp(p.vx * 0.18, -56, 56);
     const lookY = clamp(p.vy * 0.18, -56, 56);
-    g.renderer.followCamera(p.x, p.y, dt, lookX, lookY, g.mansion.camBounds);
+    r.followCamera(p.x, p.y, dt, lookX, lookY, g.mansion.camBounds);
+  }
+
+  dayFocusPoint() {
+    const key = this.dayFocus || 'perapian';
+    if (key === 'gate') { const gate = this.mainGate(); if (gate) return { x: gate.x, y: gate.y }; }
+    if (key !== 'perapian') {
+      const room = this.game.mansion.room(key);
+      if (room) return { x: room.x + room.w / 2, y: room.y + room.h / 2 };
+    }
+    const fire = this.hearth();
+    return fire ? { x: fire.x, y: fire.y + 120 } : { x: this.game.player.x, y: this.game.player.y };
+  }
+
+  /* ---------------- threat model helpers ---------------- */
+
+  waveCounts() { return WAVE_COUNTS[clamp(this.day, 1, 3) - 1].slice(); }
+
+  swarmSpeed(breached) {
+    const base = 59 + Math.max(0, this.day - 1) * 5;
+    // Inside the walls they rush; outside they shamble in ranks.
+    return breached ? 84 * (1 + (this.day - 1) * 0.06) : base;
+  }
+
+  hearth() { return this.game.mansion.fireplaceLight || null; }
+
+  _field(key) {
+    const m = this.game.mansion;
+    let field = this._fields.get(key);
+    if (!field) { field = new FlowField(m); this._fields.set(key, field); }
+    const version = m.navVersion || 0;
+    if (key === 'hunter') {
+      const p = this.game.player;
+      const cell = `${Math.floor((p.x - m.navX0) / m.navCell)},${Math.floor((p.y - m.navY0) / m.navCell)}`;
+      if (field.version !== version || field.cell !== cell) {
+        if (field.version === version && this.uiClock - field.builtAt < 0.25) return field;
+        field.cell = cell;
+        field.builtAt = this.uiClock;
+        field.build(p.x, p.y, version);
+      }
+      return field;
+    }
+    if (field.version !== version) {
+      if (key === 'hearth') {
+        const fire = this.hearth();
+        if (fire) field.build(fire.x, fire.y + 70, version);
+      } else if (key.startsWith('door:')) {
+        const door = this.entranceById(key.slice(5));
+        const point = door && (door.outside || door);
+        if (point) field.build(point.x, point.y, version);
+      }
+      field.builtAt = this.uiClock;
+    }
+    return field;
+  }
+
+  flowDir(kind, x, y) {
+    const field = this._field(kind);
+    return field ? field.dirAt(x, y) : null;
+  }
+
+  /** An enemy at the Perapian claws fuel out of it. Fire out = night lost. */
+  feedHearth(enemy) {
+    if (this.phase !== 'night') return;
+    const amount = FEED_OIL[enemy._survivalType] || 1;
+    const before = this.oil;
+    this.oil = Math.max(0, this.oil - amount);
+    const lost = before - this.oil;
+    this.nightStats.drained = (this.nightStats.drained || 0) + lost;
+    const fire = this.hearth();
+    if (fire) this.pushFloater(fire.x + rand(-30, 30), fire.y + 40, `-${Math.round(lost)}`, '#ff6b5e', { h: 90, size: 20, icon: 'oil' });
+    if (this.uiClock - this._hearthWarnAt > 7) {
+      this._hearthWarnAt = this.uiClock;
+      this.pushEvent('hearth', 'fire', 'PROTECT THE FIRE!');
+    }
+    const g = this.game;
+    g.audio.play('impact', { vol: 0.32 });
+    g.renderer.shake(0.08);
+    if (fire) g.particles.burst('spark', fire.x, fire.y + 30, 8, {
+      color: 'rgba(255,150,60,0.95)', sizeMin: 1.5, sizeMax: 4, speedMin: 40, speedMax: 150, lifeMin: 0.2, lifeMax: 0.5, glow: true,
+    });
+    if (this.oil <= 0) this.fail('THE FIRE WENT OUT');
+  }
+
+  hearthBurnDps(level = this.perapianLevel) { return HEARTH_BURN[level] || 0; }
+
+  updateHearthBurn(dt) {
+    const dps = this.hearthBurnDps();
+    const fire = this.hearth();
+    if (!dps || !fire || this.oil <= 0) return;
+    const g = this.game;
+    for (const e of g.enemies) {
+      if (!e._survivalType || e.dead || e.removeMe) continue;
+      if (dist(e.x, e.y, fire.x, fire.y) > HEARTH_BURN_RADIUS) { e._burnT = 0; continue; }
+      e._burnT = (e._burnT || 0) + dt;
+      if (e._burnT >= 0.5) {
+        e._burnT -= 0.5;
+        if (typeof e.hurt === 'function') e.hurt(dps * 0.5, g, fire.x, fire.y);
+      }
+    }
+  }
+
+  nearestBrokenDoor(x, y) {
+    let best = null, bestD = Infinity;
+    for (const e of this.game.mansion.entrances) {
+      if (e.kind !== 'door' || !e.exterior || !e.broken) continue;
+      const d = dist(x, y, e.x, e.y);
+      if (d < bestD) { bestD = d; best = e; }
+    }
+    return best;
+  }
+
+  nextIntactDoor(x, y) {
+    let best = null, bestD = Infinity;
+    for (const e of this.game.mansion.entrances) {
+      if (e.kind !== 'door' || !e.exterior || e.broken) continue;
+      const d = dist(x, y, e.x, e.y);
+      if (d < bestD) { bestD = d; best = e; }
+    }
+    return best;
+  }
+
+  doorPressure(id) { return this._doorPressure.get(id) || 0; }
+
+  breachAge(id) { return this._breachAt[id] == null ? Infinity : this.uiClock - this._breachAt[id]; }
+
+  nightSchedule() {
+    const marks = WAVE_TIMES.map((at, i) => ({ at, kind: 'wave', done: this.waveIndex > i }));
+    if (this.day >= 2) marks.push({ at: BREAKER_TIMES[0], kind: 'breaker', done: this.breakerIndex >= 1 });
+    if (this.day >= 3) marks.push({ at: BREAKER_TIMES[1], kind: 'breaker', done: this.breakerIndex >= 2 });
+    return marks;
+  }
+
+  aliveEnemies() {
+    let n = 0;
+    for (const e of this.game.enemies) if (e._survivalType && !e.dead && !e.removeMe) n++;
+    return n;
+  }
+
+  enemiesNear(x, y, r) {
+    let n = 0;
+    for (const e of this.game.enemies) if (e._survivalType && !e.dead && dist(x, y, e.x, e.y) <= r) n++;
+    return n;
+  }
+
+  roomsLitAt(radius) {
+    const fire = this.hearth();
+    if (!fire) return 0;
+    return this.game.mansion.roomList.filter((room) => dist(room.x + room.w / 2, room.y + room.h / 2, fire.x, fire.y) <= radius).length;
+  }
+
+  /** Fuel the day may not spend: tonight's burn plus a few claws of slack. */
+  oilReserveForNight() { return Math.ceil(this.tuning.oilBurnPerSecond * this.nightDuration) + RESERVE_SLACK; }
+
+  /**
+   * Day spending may not dip into tonight's fuel: the Perapian burns
+   * oilReserveForNight() before dawn and an empty hearth loses the run.
+   * Returns false, 'wood', 'oil' (not enough at all) or 'reserve'.
+   */
+  affordReason(cost) {
+    if (!cost) return 'none';
+    if (this.wood < (cost.wood || 0)) return 'wood';
+    if (this.oil < (cost.oil || 0)) return 'oil';
+    if ((cost.oil || 0) > 0 && this.oil - cost.oil < this.oilReserveForNight()) return 'reserve';
+    return null;
+  }
+
+  canAfford(cost) { return this.affordReason(cost) === null; }
+
+  rewardPending() {
+    return this.phase === 'day' && !!this.lastRewards && this.rewardAck !== this.nightsCompleted;
+  }
+
+  ackRewards() {
+    this.rewardAck = this.nightsCompleted;
+    this.game.audio.play('uiConfirm', { vol: 0.6 });
+    this._persist(true);
+    return true;
+  }
+
+  /* ---------------- banners + floating numbers ---------------- */
+
+  pushEvent(kind, icon, text, opts = {}) {
+    const ev = { kind, icon, text, sub: opts.sub || null, life: opts.life || 1.9, age: 0 };
+    const urgent = kind === 'breach' || kind === 'hearth' || kind === 'breaker';
+    if (!this.banner) this.banner = ev;
+    else if (urgent && this.banner.kind !== 'breach' && this.banner.kind !== 'hearth') {
+      this.banner = ev;
+    } else if (this.bannerQueue.length < 4) this.bannerQueue.push(ev);
+  }
+
+  currentBanner() { return this.banner; }
+
+  pushFloater(x, y, text, color, opts = {}) {
+    if (this.floaters.length > 48) this.floaters.shift();
+    this.floaters.push({ x, y, text, color, h: opts.h || 60, size: opts.size || 16, icon: opts.icon || null, t: 0, life: opts.life || 0.9 });
+  }
+
+  _updateFx(dt) {
+    for (let i = this.floaters.length - 1; i >= 0; i--) {
+      const f = this.floaters[i];
+      f.t += dt;
+      if (f.t >= f.life) this.floaters.splice(i, 1);
+    }
+    if (this.banner) {
+      this.banner.age += dt;
+      if (this.banner.age >= this.banner.life) this.banner = this.bannerQueue.shift() || null;
+    }
   }
 
   getNightSnapshot() {
@@ -1019,6 +1537,7 @@ export class SurvivalMode {
       enemies: this.game.enemies.filter((e) => !e.dead).length,
       breakers: this.game.enemies.filter((e) => e._survivalType === 'breaker' && !e.dead).length,
       kills: this.nightStats.kills, gateHp: Math.round(this.gateHp),
+      feeders: this.hearthFeeders, drained: Math.round(this.nightStats.drained || 0),
       gateBroken: !!(this.mainGate() && this.mainGate().broken),
       job: this.builderJob ? { ...this.builderJob } : null,
     };
@@ -1056,6 +1575,7 @@ export class SurvivalMode {
     s.waveIndex = this.waveIndex; s.breakerIndex = this.breakerIndex; s.individualIndex = this.individualIndex;
     s.oilBurned = +this.oilBurned.toFixed(2); s.siegeTimers = { ...this.siegeTimers };
     s.nightStats = { ...this.nightStats }; s.lastRewards = this.lastRewards ? { ...this.lastRewards } : null;
+    s.rewardAck = this.rewardAck;
     s.player = { x: g.player.x, y: g.player.y, angle: g.player.angle, blood: g.player.blood };
     s.entrances = g.mansion.entrances.map((e) => ({ id: e.id, hp: e.hp, hpMax: e.hpMax, broken: e.broken, open: e.open, barricade: e.barricade }));
     s.enemies = this.phase === 'night' ? this._serializeEnemies() : [];

@@ -96,9 +96,15 @@ export class Renderer {
     const tall = this.h > this.w * 1.2 && this.h >= 620;
     this.tilt = this.baseTilt;
     this.view = { left: 0, top: 0, w: this.w, h: this.h, cx: this.w / 2, cy: this.h / 2 };
-    this.cam.zoom = tall
+    this.baseZoom = tall
       ? clamp(this.w / 720, 0.48, 0.68)
       : clamp(Math.min(this.w / 1100, this.h / 620), 0.72, 1.35);
+    this._applyZoom();
+  }
+
+  /** zoom = device framing × an optional mode multiplier (survival day view). */
+  _applyZoom() {
+    this.cam.zoom = (this.baseZoom || 1) * (this.zoomMul || 1);
     // The inverse of an isometric viewport is a diamond. These are its
     // conservative world-space half-extents, used for camera/bounds culling.
     const a = this.cam.zoom * ISO_CAMERA.horizontal;
@@ -106,6 +112,16 @@ export class Renderer {
     const worldSpan = this.view.w / (2 * a) + this.view.h / (2 * b);
     this.cam.viewW = worldSpan;
     this.cam.viewH = worldSpan;
+  }
+
+  /** Ease toward a zoom multiplier (1 = default framing). dt omitted snaps. */
+  setZoomMul(mul, dt) {
+    const target = clamp(Number(mul) || 1, 0.5, 1.5);
+    const current = this.zoomMul || 1;
+    const next = dt == null ? target : damp(current, target, 4.5, dt);
+    if (Math.abs(next - current) < 1e-4 && current === target) return;
+    this.zoomMul = Math.abs(next - target) < 1e-3 ? target : next;
+    this._applyZoom();
   }
 
   /* ---------------- camera ---------------- */

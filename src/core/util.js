@@ -189,8 +189,9 @@ export const defaultSave = () => ({
     oil: 38, wood: 26, survivors: 2, perapianLevel: 1,
     buildings: {}, gateBuilt: false, gateHp: 0, builderJob: null,
     selectedRoom: null, nightsCompleted: 0, waveIndex: 0, breakerIndex: 0,
-    individualIndex: 0, oilBurned: 0, siegeTimers: {}, nightStats: { kills: 0, hits: 0, damageToWalls: 0 },
-    lastRewards: null, player: null, entrances: null, enemies: [],
+    individualIndex: 0, oilBurned: 0, siegeTimers: {}, nightStats: { kills: 0, hits: 0, damageToWalls: 0, drained: 0 },
+    lastRewards: null, rewardAck: 0, player: null, entrances: null, enemies: [],
+    hints: {}, // FTUE chips already shown (move, auto, light, fire, flare, build)
   },
 });
 

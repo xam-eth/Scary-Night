@@ -251,7 +251,7 @@ export function tintPlacements(placements, bake) {
   const s = { level: 0, warm: 0, color: [0, 0, 0] };
   for (const p of placements) {
     bake.sample(p.x, p.z == null ? p.y : p.z, s);
-    out.push(bakedTint(s, [1, 1, 1]));
+    out.push(bakedTint(s, [1, 1, 1], bake));
   }
   return out;
 }
@@ -1862,7 +1862,7 @@ class EnvKitRuntime {
    */
   bakeHouse(mansion, extra = null) {
     if (!this.ready || !mansion) return null;
-    const key = `${this._buildSerial}|${this.fortressLevel}|${(extra || []).length}`;
+    const key = `${this._buildSerial}|${this.fortressLevel}|${(extra || []).length}|${mansion.survivalLighting ? mansion.survivalPhase || 'night' : ''}`;
     if (this.bake && this.bakeKey === key) return this.bake;
     const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
     this.bake = bakeLight(mansion, { extra: extra || [] });

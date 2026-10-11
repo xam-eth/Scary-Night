@@ -37,6 +37,17 @@ const WARM = [1.00, 0.84, 0.62];
 const LIT_FLOOR = 0.30;
 
 /**
+ * Survival is a readable top-down build/defend game, not a horror crawl: the
+ * whole house must stay legible from the fixed isometric camera. Night is
+ * signalled by a cool moonlit tint and the warm Perapian pool, never by
+ * black. Day is a neutral warm daylight. The legacy route keeps LIT_FLOOR.
+ */
+export const SURVIVAL_BAKE = Object.freeze({
+  night: Object.freeze({ floor: 0.8, cold: Object.freeze([0.78, 0.86, 1.04]), warm: Object.freeze([1.1, 0.9, 0.66]) }),
+  day: Object.freeze({ floor: 1.0, cold: Object.freeze([1.02, 0.98, 0.9]), warm: Object.freeze([1.08, 0.95, 0.78]) }),
+});
+
+/**
  * The lightmap's own falloff, taken off render.js `addLight`: a lamp is a
  * radial gradient whose alpha runs 1.0 → 0.55 → 0.20 → 0 across its radius.
  * The bake uses the same curve as the WebGL material light pass so room
@@ -166,8 +177,14 @@ export function bakeLight(mansion, opts = {}) {
     sum += l;
   }
 
+  const profile = mansion && mansion.survivalLighting
+    ? (mansion.survivalPhase === 'day' ? SURVIVAL_BAKE.day : SURVIVAL_BAKE.night)
+    : null;
   const bake = {
     cell, x0, y0, cols, rows, level, warm, color,
+    litFloor: profile ? profile.floor : LIT_FLOOR,
+    cold: profile ? profile.cold : COLD,
+    warmTint: profile ? profile.warm : WARM,
     sources: sources.length,
     peak,
     mean: n ? sum / n : 0,
@@ -204,11 +221,14 @@ export function bakeLight(mansion, opts = {}) {
  * stands in, times how much of it there is. Multiplies the piece's own
  * albedo — a black candle does not become grey because it is in a dark room.
  */
-export function bakedTint(s, out = [1, 1, 1]) {
-  const lit = LIT_FLOOR + (1 - LIT_FLOOR) * clamp(s.level, 0, 1);
+export function bakedTint(s, out = [1, 1, 1], profile = null) {
+  const floor = profile && Number.isFinite(profile.litFloor) ? profile.litFloor : LIT_FLOOR;
+  const cold = (profile && profile.cold) || COLD;
+  const warm = (profile && profile.warmTint) || WARM;
+  const lit = floor + (1 - floor) * clamp(s.level, 0, 1);
   const k = clamp(s.warm, 0, 1);
   // the light it stands in, warm flame to cold moon, never fully black
-  for (let c = 0; c < 3; c++) out[c] = (COLD[c] + (WARM[c] - COLD[c]) * k) * lit;
+  for (let c = 0; c < 3; c++) out[c] = (cold[c] + (warm[c] - cold[c]) * k) * lit;
   return out;
 }
 

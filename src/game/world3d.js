@@ -80,12 +80,9 @@ class World3DRuntime {
     this.survivalSlotRings = new Map();
     this.survivalRadiusRing = null;
     this.survivalGateMesh = null;
-    this.survivalZombieBodyGeometry = null;
-    this.survivalZombieHeadGeometry = null;
-    this.survivalZombieEyeGeometry = null;
-    this.survivalZombieBodyMaterial = null;
-    this.survivalZombieSkinMaterial = null;
-    this.survivalZombieEyeMaterial = null;
+    this.survivalCrowdInstances = null;
+    this.survivalFireDisc = null;
+    this.survivalYard = null;
     this.variantRings = new Map();
     this.foodCues = new Map();
     this.drinkTrails = new Map();
@@ -416,6 +413,21 @@ class World3DRuntime {
     };
   }
 
+  /** Survival light rig: bright, readable, phase-tinted. */
+  _survivalRig(game) {
+    const day = !!(game.survival && game.survival.phase === 'day');
+    if (day) {
+      return {
+        exposure: 1.18, lamp: 1.05, lampColor: 0xfff1da, hemi: 1.25, sky: 0xfff4e0, ground: 0x8c7a5e,
+        key: 1.1, keyColor: 0xffe7c4, rim: 0.45, rimColor: 0xbfd4ff,
+      };
+    }
+    return {
+      exposure: 1.08, lamp: 0.9, lampColor: 0xc9d8ff, hemi: 1.05, sky: 0xaec4ff, ground: 0x56483e,
+      key: 0.8, keyColor: 0xd6e2ff, rim: 0.55, rimColor: 0x8fb0ff,
+    };
+  }
+
   _syncLighting(game) {
     const lamp = Valen3D.lamp;
     if (!lamp) return;
@@ -428,27 +440,49 @@ class World3DRuntime {
     const flicker = clamp(game.lightMul == null ? 1 : game.lightMul, 0.35, 1.2);
     const lightning = clamp(game.lightningFlash || 0, 0, 1.5);
     const survival = game.mode === 'survival';
-    const ambientFactor = survival ? 0.48 : Math.max(0.12, (1 - blackout - duel) * flicker);
+    const ambientFactor = survival ? 1 : Math.max(0.12, (1 - blackout - duel) * flicker);
     const lift = 720;
     lamp.target.position.set(p.x, 0, p.y);
     lamp.target.updateMatrixWorld(true);
     lamp.position.set(p.x + dx * 520, lift, p.y + dy * 520);
-    lamp.intensity = (survival ? 0.34 + light.level * 0.26 : 0.76 + light.level * 1.05) * ambientFactor + lightning * (survival ? 0.7 : 2.1);
-    lamp.color.setRGB(light.color[0] / 255, light.color[1] / 255, light.color[2] / 255);
-    if (Valen3D.hemi) Valen3D.hemi.intensity = (survival ? 0.12 : 0.38) * ambientFactor + lightning * (survival ? 0.5 : 1.25);
-    if (Valen3D.key) Valen3D.key.intensity = survival ? 0.055 : 1.05;
-    if (Valen3D.rim) Valen3D.rim.intensity = (survival ? 0.035 : 0.3) * ambientFactor + lightning * (survival ? 0.28 : 0.65);
+    if (survival) {
+      // Survival is a readable top-down build/defend game: the fixed iso
+      // camera needs the whole room legible. Night = cool moonlight plus the
+      // warm Perapian pool; day = warm sun. Neither phase is ever black.
+      const rig = this._survivalRig(game);
+      lamp.intensity = rig.lamp + light.level * 0.25 + lightning * 0.4;
+      lamp.color.setHex(rig.lampColor);
+      if (Valen3D.hemi) {
+        Valen3D.hemi.intensity = rig.hemi;
+        Valen3D.hemi.color.setHex(rig.sky);
+        Valen3D.hemi.groundColor.setHex(rig.ground);
+      }
+      if (Valen3D.key) { Valen3D.key.intensity = rig.key; Valen3D.key.color.setHex(rig.keyColor); }
+      if (Valen3D.rim) { Valen3D.rim.intensity = rig.rim; Valen3D.rim.color.setHex(rig.rimColor); }
+      this.exposure = rig.exposure;
+    } else {
+      lamp.intensity = (0.76 + light.level * 1.05) * ambientFactor + lightning * 2.1;
+      lamp.color.setRGB(light.color[0] / 255, light.color[1] / 255, light.color[2] / 255);
+      if (Valen3D.hemi) {
+        Valen3D.hemi.intensity = 0.38 * ambientFactor + lightning * 1.25;
+        Valen3D.hemi.color.setHex(0x9aaed4);
+        Valen3D.hemi.groundColor.setHex(0x160b12);
+      }
+      if (Valen3D.key) { Valen3D.key.intensity = 1.05; Valen3D.key.color.setHex(0xffdfc2); }
+      if (Valen3D.rim) { Valen3D.rim.intensity = 0.3 * ambientFactor + lightning * 0.65; Valen3D.rim.color.setHex(0x718fd2); }
+      this.exposure = clamp(1.22 * ambientFactor + lightning * 0.32, 0.42, 1.48);
+    }
     const bloodMoon = clamp(game.bloodMoon || 0, 0, 1);
     if (bloodMoon > 0.05) lamp.color.lerp(new THREE.Color(0x9a3442), bloodMoon * 0.36);
-    this.exposure = clamp(1.22 * ambientFactor + lightning * 0.32, 0.42, 1.48);
 
     if (this.playerPointLight) {
       this.playerPointLight.position.set(p.x, 44, p.y);
-      this.playerPointLight.distance = survival ? Math.min(230, (p.lightR || 150) * 0.72) : Math.max(100, (p.lightR || 150) * 1.35);
+      this.playerPointLight.distance = survival ? 280 : Math.max(100, (p.lightR || 150) * 1.35);
       this.playerPointLight.intensity = survival
-        ? clamp((p.lightI == null ? 0.45 : p.lightI) * ambientFactor * 0.46, 0, 0.28)
+        ? (game.survival && game.survival.phase === 'day' ? 0.35 : 1.05)
         : clamp((p.lightI == null ? 0.45 : p.lightI) * ambientFactor * 1.35, 0, 1.25);
-      this.playerPointLight.color.set(p.kit && p.kit.blessed ? 0xffdda0 : (p.bloodPct < 0.24 ? 0x9aa9e8 : 0x9aa7c7));
+      this.playerPointLight.color.set(survival ? 0xfff0d2
+        : p.kit && p.kit.blessed ? 0xffdda0 : (p.bloodPct < 0.24 ? 0x9aa9e8 : 0x9aa7c7));
     }
 
     const sources = (game.mansion.lights || []).map((source) => {
@@ -469,8 +503,8 @@ class World3DRuntime {
       const source = row.source;
       local.visible = true;
       local.position.set(source.x, 44, source.y);
-      local.distance = Math.max(90, (source.r || 150) * (survival ? 1 : 1.7));
-      local.intensity = clamp((source.curI == null ? source.i || 0 : source.curI) * (survival ? 4.2 : 2.2) * ambientFactor, 0, survival ? 2.8 : 2.4);
+      local.distance = Math.max(90, (source.r || 150) * (survival ? 0.75 : 1.7));
+      local.intensity = clamp((source.curI == null ? source.i || 0 : source.curI) * (survival ? 3.6 : 2.2) * ambientFactor, 0, survival ? 3.2 : 2.4);
       const c = source.color || [255, 206, 144];
       local.color.setRGB(c[0] / 255, c[1] / 255, c[2] / 255);
       if (bloodMoon > 0.3) local.color.lerp(new THREE.Color(0xff574c), bloodMoon * 0.26);
@@ -562,67 +596,113 @@ class World3DRuntime {
       host: { stage: this.root, scene: this.scene, renderer: EnvKit.renderer, camera: EnvKit.camera, canvas: EnvKit.canvas },
     });
     if (game.mode === 'survival') this._syncSurvivalCrowdProxies(enemies);
-    else for (const proxy of this.survivalCrowdProxies.values()) proxy.visible = false;
+    else this._hideSurvivalCrowd();
     // The legacy route remains GLB-only. Survival crowd units beyond the 14
     // authored rigs use a lightweight 3D silhouette so all 20–30 bodies read.
     for (const [id, object] of this.proxies) if (!active.has(id)) object.visible = false;
   }
 
-  _makeSurvivalZombieProxy() {
-    if (!this.survivalZombieBodyGeometry) this.survivalZombieBodyGeometry = new THREE.CylinderGeometry(7.5, 11, 34, 7, 1);
-    if (!this.survivalZombieHeadGeometry) this.survivalZombieHeadGeometry = new THREE.SphereGeometry(8.5, 8, 6);
-    if (!this.survivalZombieEyeGeometry) this.survivalZombieEyeGeometry = new THREE.SphereGeometry(1.35, 6, 5);
-    if (!this.survivalZombieBodyMaterial) this.survivalZombieBodyMaterial = new THREE.MeshStandardMaterial({ color: 0x24271f, roughness: 1, flatShading: true });
-    if (!this.survivalZombieSkinMaterial) this.survivalZombieSkinMaterial = new THREE.MeshStandardMaterial({ color: 0x686c56, roughness: 1, flatShading: true });
-    if (!this.survivalZombieEyeMaterial) this.survivalZombieEyeMaterial = new THREE.MeshBasicMaterial({ color: 0xd18b48, emissive: 0x6d250d, toneMapped: false });
-    const group = new THREE.Group();
-    group.name = 'survival-swarm-zombie-3d-silhouette';
-    const torso = new THREE.Mesh(this.survivalZombieBodyGeometry, this.survivalZombieBodyMaterial);
-    torso.position.y = 24;
-    const head = new THREE.Mesh(this.survivalZombieHeadGeometry, this.survivalZombieSkinMaterial);
-    head.position.set(0, 44, 1);
-    head.scale.set(0.82, 0.9, 0.9);
-    const arms = [];
-    for (const side of [-1, 1]) {
-      const arm = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 3.1, 21, 5), this.survivalZombieBodyMaterial);
-      arm.position.set(side * 10, 29, 3);
-      arm.rotation.z = side * -0.42;
-      group.add(arm);
-      arms.push(arm);
-    }
-    for (const side of [-1, 1]) {
-      const eye = new THREE.Mesh(this.survivalZombieEyeGeometry, this.survivalZombieEyeMaterial);
-      eye.position.set(side * 3, 45, 8.1);
-      group.add(eye);
-    }
-    group.add(torso, head);
-    group.userData.arms = arms;
-    group.traverse((item) => { if (item.isMesh) { item.castShadow = true; item.receiveShadow = false; } });
-    group.visible = false;
-    this.root.add(group);
-    return group;
+  /**
+   * Survival crowd silhouettes are INSTANCED: four draw calls (torso, head,
+   * arms, eyes) carry every swarm body beyond the authored GLB rigs, so a
+   * 30-body wave costs a phone the same as a single body. The Map of light
+   * records keeps the long-standing QA contract (`.visible` per enemy id).
+   */
+  _ensureSurvivalCrowdInstances() {
+    if (this.survivalCrowdInstances) return this.survivalCrowdInstances;
+    const cap = 160;
+    const skin = new THREE.MeshStandardMaterial({ color: 0x8fbf6a, roughness: 0.92, flatShading: true });
+    const cloth = new THREE.MeshStandardMaterial({ color: 0x56664a, roughness: 0.95, flatShading: true });
+    const eyes = new THREE.MeshBasicMaterial({ color: 0xffd04a, toneMapped: false });
+    const make = (geometry, material, count, name) => {
+      const mesh = new THREE.InstancedMesh(geometry, material, count);
+      mesh.name = name;
+      mesh.count = 0;
+      mesh.frustumCulled = false;
+      mesh.castShadow = true;
+      mesh.receiveShadow = false;
+      mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      this.root.add(mesh);
+      return mesh;
+    };
+    const torsoGeo = new THREE.CylinderGeometry(7.5, 11, 34, 7, 1);
+    torsoGeo.translate(0, 24, 0);
+    const headGeo = new THREE.SphereGeometry(8.5, 8, 6);
+    headGeo.scale(0.82, 0.9, 0.9);
+    headGeo.translate(0, 44, 1);
+    const armGeo = new THREE.CylinderGeometry(2.4, 3.1, 21, 5);
+    armGeo.translate(0, -9, 0);
+    const eyeGeo = new THREE.SphereGeometry(1.6, 6, 5);
+    this.survivalCrowdInstances = {
+      cap,
+      torso: make(torsoGeo, cloth, cap, 'survival-swarm-instanced-torso'),
+      head: make(headGeo, skin, cap, 'survival-swarm-instanced-head'),
+      arms: make(armGeo, skin, cap * 2, 'survival-swarm-instanced-arms'),
+      eyes: make(eyeGeo, eyes, cap * 2, 'survival-swarm-instanced-eyes'),
+      base: new THREE.Object3D(),
+      part: new THREE.Object3D(),
+      matrix: new THREE.Matrix4(),
+    };
+    this.survivalCrowdInstances.eyes.castShadow = false;
+    return this.survivalCrowdInstances;
   }
 
   _syncSurvivalCrowdProxies(enemies) {
+    const inst = this._ensureSurvivalCrowdInstances();
+    const { base, part, matrix } = inst;
     const active = new Set();
+    let n = 0;
     for (const enemy of enemies) {
       if (!enemy || !enemy._crowd || !enemy._survivalType || enemy.dead || enemy.removeMe || enemy._glb) continue;
       const id = enemy.id;
       active.add(id);
-      let proxy = this.survivalCrowdProxies.get(id);
-      if (!proxy) {
-        proxy = this._makeSurvivalZombieProxy();
-        this.survivalCrowdProxies.set(id, proxy);
+      let record = this.survivalCrowdProxies.get(id);
+      if (!record) { record = { visible: false, index: -1 }; this.survivalCrowdProxies.set(id, record); }
+      const shown = (enemy.alpha == null || enemy.alpha > 0.02) && n < inst.cap;
+      record.visible = shown;
+      record.index = shown ? n : -1;
+      if (!shown) continue;
+      const scale = (enemy.sizeMul || 1) * (enemy.hurtFlash > 0 ? 1.08 : 1);
+      base.position.set(enemy.x, 0, enemy.y);
+      base.rotation.set(0, Math.PI / 2 - (enemy.angle || 0), 0);
+      base.scale.setScalar(scale);
+      base.updateMatrix();
+      inst.torso.setMatrixAt(n, base.matrix);
+      inst.head.setMatrixAt(n, base.matrix);
+      const swing = Math.sin((enemy.t || 0) * 6 + (id || 0)) * 0.16;
+      for (let side = 0; side < 2; side++) {
+        const sign = side === 0 ? -1 : 1;
+        part.position.set(sign * 10, 38, 3);
+        part.rotation.set(-1.1, 0, sign * -(0.42 + swing));
+        part.scale.setScalar(1);
+        part.updateMatrix();
+        matrix.multiplyMatrices(base.matrix, part.matrix);
+        inst.arms.setMatrixAt(n * 2 + side, matrix);
+        part.position.set(sign * 3, 45, 8.1);
+        part.rotation.set(0, 0, 0);
+        part.updateMatrix();
+        matrix.multiplyMatrices(base.matrix, part.matrix);
+        inst.eyes.setMatrixAt(n * 2 + side, matrix);
       }
-      proxy.visible = enemy.alpha == null || enemy.alpha > 0.02;
-      proxy.position.set(enemy.x, 0, enemy.y);
-      proxy.rotation.y = Math.PI / 2 - (enemy.angle || 0);
-      proxy.scale.setScalar((enemy.sizeMul || 1) * (enemy.hurtFlash > 0 ? 1.04 : 1));
-      const arms = proxy.userData.arms || [];
-      const swing = Math.sin((enemy.t || 0) * 6 + (enemy.id || 0)) * 0.16;
-      for (let i = 0; i < arms.length; i++) arms[i].rotation.z = (i === 0 ? -1 : 1) * (0.42 + swing);
+      n++;
     }
-    for (const [id, proxy] of this.survivalCrowdProxies) if (!active.has(id)) proxy.visible = false;
+    inst.torso.count = n; inst.head.count = n;
+    inst.arms.count = n * 2; inst.eyes.count = n * 2;
+    for (const mesh of [inst.torso, inst.head, inst.arms, inst.eyes]) {
+      mesh.visible = n > 0;
+      mesh.instanceMatrix.needsUpdate = true;
+    }
+    for (const [id, record] of this.survivalCrowdProxies) {
+      if (!active.has(id)) this.survivalCrowdProxies.delete(id);
+      else if (record.index < 0) record.visible = false;
+    }
+  }
+
+  _hideSurvivalCrowd() {
+    for (const record of this.survivalCrowdProxies.values()) record.visible = false;
+    const inst = this.survivalCrowdInstances;
+    if (!inst) return;
+    for (const mesh of [inst.torso, inst.head, inst.arms, inst.eyes]) { mesh.count = 0; mesh.visible = false; }
   }
 
   _makeSurvivalBuilding(type) {
@@ -666,9 +746,9 @@ class World3DRuntime {
   }
 
   _makeSurvivalRadiusRing() {
-    const geometry = new THREE.RingGeometry(0.992, 1, 128);
+    const geometry = new THREE.RingGeometry(0.984, 1, 128);
     const material = new THREE.MeshBasicMaterial({
-      color: 0xe7a74f, transparent: true, opacity: 0.34,
+      color: 0xffc14d, transparent: true, opacity: 0.7,
       side: THREE.DoubleSide, depthWrite: false, toneMapped: false,
     });
     const ring = new THREE.Mesh(geometry, material);
@@ -678,6 +758,103 @@ class World3DRuntime {
     ring.frustumCulled = false;
     this.root.add(ring);
     return ring;
+  }
+
+  /** The warm safe zone: a soft additive pool inside the Perapian radius. */
+  _makeSurvivalFireDisc() {
+    const size = 128;
+    const canvas = typeof document !== 'undefined' ? document.createElement('canvas') : null;
+    let texture = null;
+    if (canvas) {
+      canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+      g.addColorStop(0, 'rgba(255,190,90,1)');
+      g.addColorStop(0.55, 'rgba(255,160,70,0.55)');
+      g.addColorStop(0.9, 'rgba(255,140,60,0.28)');
+      g.addColorStop(1, 'rgba(255,140,60,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, size, size);
+      texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+    }
+    const disc = new THREE.Mesh(
+      new THREE.CircleGeometry(1, 64),
+      new THREE.MeshBasicMaterial({
+        color: 0xffffff, map: texture, transparent: true, opacity: 0.22,
+        blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
+      }),
+    );
+    disc.name = 'survival-perapian-safe-zone-3d';
+    disc.rotation.x = -Math.PI / 2;
+    disc.renderOrder = 2;
+    disc.frustumCulled = false;
+    this.root.add(disc);
+    return disc;
+  }
+
+  /** Yard ground: the house sits on readable terrain instead of a void. */
+  _makeSurvivalYard() {
+    const yard = new THREE.Mesh(
+      new THREE.PlaneGeometry(12000, 12000),
+      new THREE.MeshStandardMaterial({ color: 0x47603f, roughness: 1, metalness: 0 }),
+    );
+    yard.name = 'survival-yard-ground-3d';
+    yard.rotation.x = -Math.PI / 2;
+    yard.position.y = -2;
+    yard.receiveShadow = true;
+    yard.renderOrder = -2;
+    this.root.add(yard);
+    return yard;
+  }
+
+  /** A bright ground ring that keeps the Hunter readable in a crowd. */
+  _makeSurvivalPlayerRing() {
+    const group = new THREE.Group();
+    group.name = 'survival-hunter-ring-3d';
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(25, 34, 40),
+      new THREE.MeshBasicMaterial({ color: 0x5cf08a, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }),
+    );
+    ring.rotation.x = -Math.PI / 2;
+    const fill = new THREE.Mesh(
+      new THREE.CircleGeometry(25, 32),
+      new THREE.MeshBasicMaterial({ color: 0x5cf08a, transparent: true, opacity: 0.18, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }),
+    );
+    fill.rotation.x = -Math.PI / 2;
+    group.add(ring, fill);
+    group.renderOrder = 5;
+    ring.renderOrder = 5; fill.renderOrder = 5;
+    this.root.add(group);
+    return group;
+  }
+
+  /**
+   * The forest was authored for the legacy horror palette (near-black crowns).
+   * Survival is a bright, readable genre view: lift the exterior albedo while
+   * keeping the same instanced meshes; legacy restores the original colors.
+   */
+  _syncExteriorPalette(survival) {
+    for (const mesh of this.exteriorMeshes || []) {
+      const ud = mesh.userData;
+      if (ud.survivalPalette === survival) continue;
+      const mat = mesh.material;
+      if (!mat || !mat.color) { ud.survivalPalette = survival; continue; }
+      if (!mat.userData.baseColor) mat.userData.baseColor = mat.color.clone();
+      if (mesh.instanceColor && !ud.baseInstanceColors) ud.baseInstanceColors = mesh.instanceColor.array.slice();
+      const name = mesh.name || '';
+      const crown = /crown/.test(name), trunk = /trunk/.test(name), rock = /boulder/.test(name), grass = /grass/.test(name);
+      if (survival && (crown || trunk || rock)) mat.color.setRGB(1, 1, 1);
+      else if (survival && grass) mat.color.copy(mat.userData.baseColor).multiplyScalar(2.4);
+      else mat.color.copy(mat.userData.baseColor);
+      if (mesh.instanceColor && ud.baseInstanceColors) {
+        const gain = survival ? (crown ? 2.5 : trunk ? 1.3 : 1) : 1;
+        const src = ud.baseInstanceColors, dst = mesh.instanceColor.array;
+        for (let i = 0; i < dst.length; i++) dst[i] = src[i] * gain;
+        mesh.instanceColor.needsUpdate = true;
+      }
+      ud.survivalPalette = survival;
+    }
   }
 
   _makeSurvivalSlotRing() {
@@ -726,8 +903,19 @@ class World3DRuntime {
     if (fire) {
       this.survivalRadiusRing.position.set(fire.x, 3.4, fire.y);
       this.survivalRadiusRing.scale.set(radius, radius, radius);
-      this.survivalRadiusRing.material.opacity = 0.25 + (0.06 * (0.5 + 0.5 * Math.sin(game.time * 2.1)));
+      this.survivalRadiusRing.material.opacity = 0.62 + (0.16 * (0.5 + 0.5 * Math.sin(game.time * 2.1)));
     }
+    if (!this.survivalFireDisc) this.survivalFireDisc = this._makeSurvivalFireDisc();
+    this.survivalFireDisc.visible = radius > 0;
+    if (fire && radius > 0) {
+      this.survivalFireDisc.position.set(fire.x, 2.6, fire.y);
+      this.survivalFireDisc.scale.set(radius, radius, radius);
+      const flick = 0.5 + 0.5 * Math.sin(game.time * 3.3) * Math.sin(game.time * 1.7);
+      this.survivalFireDisc.material.opacity = (mode.phase === 'day' ? 0.08 : 0.2) + flick * 0.04;
+    }
+    if (!this.survivalYard) this.survivalYard = this._makeSurvivalYard();
+    this.survivalYard.visible = true;
+    this.survivalYard.material.color.setHex(mode.phase === 'day' ? 0x7c9a55 : 0x3f5a46);
 
     const visibleSlots = game.screen === 'playing' && mode.phase === 'day' ? new Set(mode.buildableRooms().map((room) => room.id)) : new Set();
     for (const roomId of visibleSlots) {
@@ -770,6 +958,17 @@ class World3DRuntime {
       else this.survivalGateMesh.rotation.y = 0;
       const scale = gate.w ? Math.max(0.7, Math.min(1.3, gate.w / 160)) : 1;
       this.survivalGateMesh.scale.set(scale, 1, 1);
+    }
+
+    this._syncExteriorPalette(true);
+    if (!this.survivalPlayerRing) this.survivalPlayerRing = this._makeSurvivalPlayerRing();
+    const p = game.player;
+    const showRing = mode.phase === 'night' && game.screen === 'playing' && !!p;
+    this.survivalPlayerRing.visible = showRing;
+    if (showRing) {
+      this.survivalPlayerRing.position.set(p.x, 2.2, p.y);
+      const pulse = 1 + 0.06 * Math.sin(game.time * 5);
+      this.survivalPlayerRing.scale.set(pulse, 1, pulse);
     }
   }
 
@@ -1600,6 +1799,7 @@ class World3DRuntime {
     this._syncLighting(game);
     this._syncActors(game);
     if (game.mode === 'survival') this._syncSurvivalObjects(game);
+    else this._syncExteriorPalette(false);
     this._syncVariants(game);
     if (game.mode === 'survival') {
       for (const ring of this.variantRings.values()) ring.visible = false;

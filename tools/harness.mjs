@@ -225,19 +225,23 @@ async function runSurvivalMilestone() {
     scheduleMode.spawnBreaker = originalSpawners.breaker;
     scheduleMode.spawnIndividual = originalSpawners.individual;
   }
+  // Waves are the ×3 design weights (cap 30/wave) and spawn exactly as
+  // requested — the old 20-body clamp is gone.
   const waveSchedulePass = waveSchedule.length === 3
-    && waveSchedule[0].swarms.map((wave) => wave.count).join(',') === '7,7,8'
-    && waveSchedule[1].swarms.map((wave) => wave.count).join(',') === '8,9,9'
-    && waveSchedule[2].swarms.map((wave) => wave.count).join(',') === '10,10,10'
-    && waveSchedule.map((row) => row.spawnedSwarms).join(',') === '60,60,60'
+    && waveSchedule[0].swarms.map((wave) => wave.count).join(',') === '21,21,24'
+    && waveSchedule[1].swarms.map((wave) => wave.count).join(',') === '24,27,27'
+    && waveSchedule[2].swarms.map((wave) => wave.count).join(',') === '30,30,30'
+    && waveSchedule.map((row) => row.spawnedSwarms).join(',') === '66,78,90'
     && waveSchedule.map((row) => row.swarmHp).join(',') === '48,54,60'
     && waveSchedule.map((row) => row.spawnedBreakers).join(',') === '0,1,2'
     && waveSchedule.every((row) => row.spawnedIndividuals === 2
       && row.individuals.join(',') === '0,1'
-      && row.spawnedSwarms === row.swarms.length * 20);
-  console.log(`  ${waveSchedulePass ? 'PASS' : 'FAIL'}  Night 1–3 waves: requested ${waveSchedule.map((row) => row.swarms.map((wave) => wave.count).join('/')).join(' → ')}; actual Swarm ${waveSchedule.map((row) => row.spawnedSwarms).join('/')} (20/wave, HP ${waveSchedule.map((row) => row.swarmHp).join('→')}), Breaker ${waveSchedule.map((row) => row.spawnedBreakers).join('/')} (parameter weights clamp to 20 bodies per wave)`);
+      && row.spawnedSwarms === row.swarms.reduce((sum, wave) => sum + wave.count, 0));
+  console.log(`  ${waveSchedulePass ? 'PASS' : 'FAIL'}  Night 1–3 waves: requested ${waveSchedule.map((row) => row.swarms.map((wave) => wave.count).join('/')).join(' → ')}; actual Swarm ${waveSchedule.map((row) => row.spawnedSwarms).join('/')} (no clamp, HP ${waveSchedule.map((row) => row.swarmHp).join('→')}), Breaker ${waveSchedule.map((row) => row.spawnedBreakers).join('/')}`);
 
   // Compare real enemy update paths on either side of the Perapian boundary.
+  // Two breached Swarm bodies walk the real flow field for one second: the
+  // lit one is slower (light slows, it never freezes) and takes more damage.
   survivalGame.survival.restart();
   const lightMode = survivalGame.survival;
   const fire = survivalGame.mansion.fireplaceLight;
@@ -246,25 +250,110 @@ async function runSurvivalMilestone() {
   const unlitPoint = { x: fire.x + lightRadius + 100, y: fire.y };
   const litProbe = { x: litPoint.x, y: litPoint.y };
   const unlitProbe = { x: unlitPoint.x, y: unlitPoint.y };
-  lightMode.spawnIndividual(0);
-  const litEnemy = survivalGame.enemies.pop();
-  lightMode.spawnIndividual(0);
-  const unlitEnemy = survivalGame.enemies.pop();
-  const moveSpeeds = { lit: null, unlit: null };
-  for (const [enemy, point, key] of [[litEnemy, litPoint, 'lit'], [unlitEnemy, unlitPoint, 'unlit']]) {
-    enemy.x = point.x; enemy.y = point.y;
-    enemy.entranceId = lightMode.mainGate().id;
-    enemy._survivalMove = (_dt, _game, _tx, _ty, speed) => { moveSpeeds[key] = speed; };
-    enemy.update(step, survivalGame);
-  }
+  const lightDoor = lightMode.mainGate();
+  lightDoor.hp = 0; lightDoor.broken = true; lightDoor.open = true;
+  survivalGame.mansion.refreshNavAround(lightDoor);
+  const hallSpot = survivalGame.mansion.roomCenter(ROOM.HALL);
+  const diningSpot = survivalGame.mansion.roomCenter(ROOM.DINING);
+  const { SurvivalCrowdZombie } = await import('../src/game/survival.js');
+  const walkSpeed = (spot) => {
+    const body = new SurvivalCrowdZombie(spot.x, spot.y, lightDoor, 0, 1);
+    survivalGame.player.x = fire.x + 70; survivalGame.player.y = fire.y + 210;
+    let travelled = 0;
+    let px = body.x, py = body.y;
+    for (let i = 0; i < 60; i++) {
+      body.update(step, survivalGame);
+      travelled += Math.hypot(body.x - px, body.y - py);
+      px = body.x; py = body.y;
+    }
+    return { speed: travelled, lit: lightMode.isLit(spot.x, spot.y), state: body.state };
+  };
+  const litWalk = walkSpeed(hallSpot);
+  const darkWalk = walkSpeed(diningSpot);
   const lightDamage = lightMode.enemyDamageTaken(litProbe, 10);
   const darkDamage = lightMode.enemyDamageTaken(unlitProbe, 10);
   const lightEffectsPass = lightMode.isLit(litPoint.x, litPoint.y)
     && !lightMode.isLit(unlitPoint.x, unlitPoint.y)
     && lightDamage > darkDamage
     && !lightMode.enemyCanAttack(litProbe) && lightMode.enemyCanAttack(unlitProbe)
-    && moveSpeeds.lit < moveSpeeds.unlit;
-  console.log(`  ${lightEffectsPass ? 'PASS' : 'FAIL'}  Perapian light weakens enemies (damage ${lightDamage.toFixed(1)} vs ${darkDamage.toFixed(1)}, movement ${moveSpeeds.lit ?? 'n/a'} vs ${moveSpeeds.unlit ?? 'n/a'}, attack blocked only while lit)`);
+    && litWalk.lit && !darkWalk.lit
+    && litWalk.speed < darkWalk.speed && litWalk.speed > darkWalk.speed * 0.45
+    && litWalk.state !== 'stagger';
+  console.log(`  ${lightEffectsPass ? 'PASS' : 'FAIL'}  Perapian light weakens but never freezes enemies (damage ${lightDamage.toFixed(1)} vs ${darkDamage.toFixed(1)}, breached walk ${litWalk.speed.toFixed(1)} vs ${darkWalk.speed.toFixed(1)} px/s, attack blocked only while lit)`);
+
+  // Closed doors are solid across their whole width (entrances are authored by
+  // their center; the old resolve() treated x/y as a corner).
+  survivalGame.survival.restart();
+  const doorProbe = survivalGame.mansion.entranceById('frontDoor');
+  const doorSamples = [-0.4, -0.2, 0, 0.2, 0.4].map((frac) => {
+    const startX = doorProbe.x + doorProbe.w * frac;
+    const outside = doorProbe.outside || { x: doorProbe.x, y: doorProbe.y + 80 };
+    const fromY = outside.y;
+    const end = survivalGame.mansion.moveCircle(startX, fromY, 0, (doorProbe.y - fromY) * 2.2, 13, false);
+    return { frac, crossed: end.y < doorProbe.y };
+  });
+  const doorSolidPass = doorSamples.every((row) => !row.crossed);
+  console.log(`  ${doorSolidPass ? 'PASS' : 'FAIL'}  a closed door blocks bodies across its full width (${doorSamples.map((row) => `${row.frac}:${row.crossed ? 'through' : 'blocked'}`).join(' ')})`);
+
+  // Siege damage on a door is halved by firelight, never cancelled.
+  survivalGame.survival.restart();
+  const siegeMode = survivalGame.survival;
+  const siegeDoor = siegeMode.entranceById('chapelDoor');
+  const siegeHp = siegeDoor.hp;
+  siegeMode.damageEntrance(siegeDoor, 20, unlitProbe);
+  const darkLoss = siegeHp - siegeDoor.hp;
+  const litBefore = siegeDoor.hp;
+  siegeMode.damageEntrance(siegeDoor, 20, litProbe);
+  const litLoss = litBefore - siegeDoor.hp;
+  const siegeLightPass = darkLoss === 20 && Math.abs(litLoss - 10) < 1e-6;
+  console.log(`  ${siegeLightPass ? 'PASS' : 'FAIL'}  door damage in firelight is 50% of dark damage (${darkLoss} dark vs ${litLoss} lit)`);
+
+  // A breach refreshes the nav grid; a breached body walks to the Perapian,
+  // claws Oil out of it, and an empty hearth loses the night.
+  survivalGame.survival.restart();
+  const feedMode = survivalGame.survival;
+  const feedDoor = feedMode.mainGate();
+  const navBefore = survivalGame.mansion.navVersion;
+  feedMode.damageEntrance(feedDoor, feedDoor.hp + 5, unlitProbe);
+  const navRefreshed = feedDoor.broken && survivalGame.mansion.navVersion > navBefore;
+  const feeder = new SurvivalCrowdZombie(feedDoor.inside.x, feedDoor.inside.y, feedDoor, 0, 1);
+  survivalGame.enemies.length = 0;
+  survivalGame.enemies.push(feeder);
+  survivalGame.player.x = -2000; survivalGame.player.y = -2000;
+  feeder.hp = feeder.hpMax = 1e9;
+  const oilBeforeFeed = feedMode.oil;
+  let reachedAt = null;
+  for (let i = 0; i < 60 * 60 && reachedAt === null; i++) {
+    feeder.update(step, survivalGame);
+    if (feeder.feeding) reachedAt = i / 60;
+  }
+  for (let i = 0; i < 60 * 4; i++) feeder.update(step, survivalGame);
+  const drained = oilBeforeFeed - feedMode.oil;
+  feedMode.oil = 2;
+  for (let i = 0; i < 60 * 4 && feedMode.phase === 'night'; i++) feeder.update(step, survivalGame);
+  const fireOutPass = navRefreshed && reachedAt !== null && drained >= 2
+    && feedMode.phase === 'failed' && /FIRE/.test(feedMode.failureReason || '');
+  console.log(`  ${fireOutPass ? 'PASS' : 'FAIL'}  breach → flow field → Perapian: body reached the hearth in ${reachedAt === null ? 'never' : reachedAt.toFixed(1) + 's'}, clawed ${drained.toFixed(0)} Oil, empty hearth → ${feedMode.phase} (${feedMode.failureReason || '-'})`);
+  survivalGame.enemies.length = 0;
+
+  // Breaker hands over to the next intact door, then (none left) the Perapian.
+  survivalGame.survival.restart();
+  const retargetMode = survivalGame.survival;
+  retargetMode.day = 2;
+  retargetMode.spawnBreaker(0);
+  const retargeter = survivalGame.enemies.find((enemy) => enemy._survivalType === 'breaker');
+  const firstDoor = retargetMode.entranceById(retargeter.targetEntranceId);
+  retargetMode.damageEntrance(firstDoor, firstDoor.hp + 5, unlitProbe);
+  retargeter.update(step, survivalGame);
+  const secondTarget = retargeter.targetEntranceId;
+  for (const door of survivalGame.mansion.entrances) {
+    if (door.kind === 'door' && door.exterior && !door.broken) retargetMode.damageEntrance(door, door.hp + 5, unlitProbe);
+  }
+  retargeter.update(step, survivalGame);
+  const breakerRetargetPass = !!secondTarget && secondTarget !== firstDoor.id
+    && retargeter.targetKind === 'perapian' && !retargeter.targetEntranceId;
+  console.log(`  ${breakerRetargetPass ? 'PASS' : 'FAIL'}  Breaker retargets ${firstDoor.id} → ${secondTarget || 'none'} → ${retargeter.targetKind}`);
+  survivalGame.enemies.length = 0;
 
   // Find a collision-clear tile with room to move in all four screen directions,
   // then exercise the real Survival input/player update rather than a movement stub.
@@ -414,12 +503,17 @@ async function runSurvivalMilestone() {
     && skillTarget.staggerT > 0 && survivalGame.survival.skillCooldown > 0);
   console.log(`  ${hunterSkill ? 'PASS' : 'FAIL'}  Hunter's Flare skill damages/staggers in radius and respects cooldown (${skillHp} → ${skillTarget.hp} HP)`);
 
+  const { botNight, botDay, releaseControls } = await import('./survival-bots.mjs');
+  const { ISO_CAMERA } = await import('../src/core/util.js');
   const runScenario = (builderBot) => {
     // Pair the idle and builder night runs from an identical random stream.
+    // idle = no input at all; builder = engaged defender (real stick + Flare
+    // through Input) who also spends each day on the builder queue.
     reseed(SEED + 77);
     survivalGame.survival.restart();
     resetControls();
     const mode = survivalGame.survival;
+    const botState = { flareHeld: false, flares: 0 };
     const upgrades = [{ level: 1, radius: Math.round(mode.getFireRadius()) }];
     const workResults = [];
     let queueLockVerified = false;
@@ -433,6 +527,8 @@ async function runSurvivalMilestone() {
       if (mode.phase !== 'night' || mode.day !== day) break;
       let guard = 0;
       while (mode.phase === 'night' && guard++ < 60 * mode.nightDuration + 120) {
+        if (builderBot) botNight(survivalGame, botState, { ROOM, ISO_CAMERA });
+        else releaseControls(survivalGame);
         tick();
         if (mode.day === 3 && mode.phase === 'night') {
           const alive = survivalGame.enemies.filter((enemy) => !enemy.dead).length;
@@ -445,10 +541,12 @@ async function runSurvivalMilestone() {
           nightThree.playerHp = Math.round(survivalGame.player.blood);
         }
       }
+      releaseControls(survivalGame);
       if (mode.phase === 'failed') { failure = mode.failureReason; break; }
       if (mode.phase === 'complete') break;
       if (mode.phase !== 'day') break;
       if (day >= 3) break;
+      if (mode.rewardPending()) mode.ackRewards();
 
       if (builderBot) {
         const beforeLevel = mode.perapianLevel;
@@ -488,7 +586,7 @@ async function runSurvivalMilestone() {
       day: mode.day, phase: mode.phase, nightsCompleted: mode.nightsCompleted,
       perapianLevel: mode.perapianLevel, survivors: mode.survivors,
       buildings: Object.values(mode.buildings), workResults, upgrades, queueLockVerified,
-      sawmillBuilt, gateBuilt, shelterBuilt, nightThree,
+      sawmillBuilt, gateBuilt, shelterBuilt, nightThree, flares: botState.flares,
       oil: +mode.oil.toFixed(1), wood: mode.wood,
     };
   };
@@ -501,7 +599,11 @@ async function runSurvivalMilestone() {
   survivalGame.survival.restart();
   resetControls();
   let saveGuard = 0;
-  while (survivalGame.survival.phase === 'night' && saveGuard++ < 60 * survivalGame.survival.nightDuration + 120) tick();
+  // Isolate persistence from balance: keep the hearth fed so Night 1 reaches dawn.
+  while (survivalGame.survival.phase === 'night' && saveGuard++ < 60 * survivalGame.survival.nightDuration + 120) {
+    survivalGame.survival.oil = Math.max(survivalGame.survival.oil, 30);
+    tick();
+  }
   const storedSave = JSON.parse(window.localStorage.getItem('lastnight.save.v1') || 'null');
   const resumedGame = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
   const saveProgressPass = !!(storedSave?.survival?.day === 2 && storedSave.survival.phase === 'day'
@@ -535,18 +637,23 @@ async function runSurvivalMilestone() {
   economyMode.nightStats = { kills: 0, hits: 0, damageToWalls: 0 };
   economyMode.completeNight();
   const economyPass = economyBuilt.length === 3 && economyBuilt.every((row) => row.queued && row.finished)
-    && economyMode.lastRewards.oil === 18 && economyMode.lastRewards.wood === 21 && economyMode.survivors === 3;
+    && economyMode.lastRewards.oil === 20 && economyMode.lastRewards.wood === 21 && economyMode.survivors === 3;
   console.log(`  economy: ${JSON.stringify(economyBuilt)} → +${economyMode.lastRewards.oil} Oil, +${economyMode.lastRewards.wood} Wood, Survivors ${economyMode.survivors} (${economyPass ? 'PASS' : 'FAIL'})`);
 
   console.log(`  idle Night 3: ${idle.nightThree.peakEnemies} peak enemies / ${idle.nightThree.peakBreakers} Breakers, ${idle.nightThree.kills} kills, ${idle.nightThree.wallDamage} wall damage, gate ${idle.nightThree.gateHp} HP, Hunter ${idle.nightThree.playerHp} HP; ${idle.phase}`);
   console.log(`  builder Night 3: ${builder.nightThree.peakEnemies} peak enemies / ${builder.nightThree.peakBreakers} Breakers, ${builder.nightThree.kills} kills, ${builder.nightThree.wallDamage} wall damage, gate ${builder.nightThree.gateHp} HP, Hunter ${builder.nightThree.playerHp} HP; Perapian Lv${builder.perapianLevel}, survivors ${builder.survivors}, buildings ${builder.buildings.join(',') || 'none'}, gateBuilt=${builder.gateBuilt}; ${builder.phase}`);
+  // Balance target (M1 rebuild): doing nothing must not win; an engaged
+  // builder must. idle loses because the Perapian goes out.
+  const idleLoses = !idle.complete && /FIRE/.test(idle.failure || '');
+  console.log(`  ${idleLoses ? 'PASS' : 'FAIL'}  idle (no input, no builds) does not survive: ${idle.phase} on Night ${idle.day} (${idle.failure || 'no failure'})`);
+  console.log(`  ${builder.complete ? 'PASS' : 'FAIL'}  engaged builder survives Night 3 (Flare ×${builder.flares}, Perapian Lv${builder.perapianLevel}, oil ${builder.oil})`);
   const pass = waveSchedulePass && lightEffectsPass && survivalMovementPass && breakerTargetsWall
+    && doorSolidPass && siegeLightPass && fireOutPass && breakerRetargetPass
     && hunterAutoShot && hunterRealLos && hunterSkill
-    && idle.complete && builder.complete && builder.perapianLevel === 3
+    && idleLoses && builder.complete && builder.perapianLevel === 3
     && builder.queueLockVerified && builder.sawmillBuilt && builder.gateBuilt && builder.shelterBuilt
-    && saveProgressPass && economyPass && builder.upgrades.map((item) => item.level).join(',') === '1,2,3'
-    && builder.nightThree.gateHp > idle.nightThree.gateHp;
-  console.log(`  ${pass ? 'PASS' : 'FAIL'}  three-day loop, Perapian Lv1→Lv3, one builder queue, and Night-3 idle-vs-builder outcomes`);
+    && saveProgressPass && economyPass && builder.upgrades.map((item) => item.level).join(',') === '1,2,3';
+  console.log(`  ${pass ? 'PASS' : 'FAIL'}  three-day loop, Perapian Lv1→Lv3, one builder queue, idle loses / engaged builder wins`);
   if (!pass) process.exitCode = 1;
   window.localStorage.removeItem('lastnight.save.v1');
 }

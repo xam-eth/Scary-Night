@@ -251,6 +251,29 @@ export class Mansion {
     }
     this._navQueue = new Int32Array(this.navW * this.navH);
     this._navPrev = new Int32Array(this.navW * this.navH);
+    this.navVersion = (this.navVersion || 0) + 1;
+  }
+
+  /**
+   * Recompute only the cells an entrance can affect. A door that breaks (or is
+   * rebuilt) changes routing; rebuilding the whole grid for that is wasteful.
+   */
+  refreshNavAround(e, pad = 1) {
+    if (!this.nav || !e) return;
+    const c = this.navCell;
+    const r = 13 + c * pad;
+    const gx0 = Math.max(0, Math.floor((e.x - e.w / 2 - r - this.navX0) / c));
+    const gx1 = Math.min(this.navW - 1, Math.floor((e.x + e.w / 2 + r - this.navX0) / c));
+    const gy0 = Math.max(0, Math.floor((e.y - e.h / 2 - r - this.navY0) / c));
+    const gy1 = Math.min(this.navH - 1, Math.floor((e.y + e.h / 2 + r - this.navY0) / c));
+    for (let gy = gy0; gy <= gy1; gy++) {
+      for (let gx = gx0; gx <= gx1; gx++) {
+        const cx = this.navX0 + (gx + 0.5) * c;
+        const cy = this.navY0 + (gy + 0.5) * c;
+        this.nav[gy * this.navW + gx] = this.navBlocked(cx, cy) ? 1 : 0;
+      }
+    }
+    this.navVersion = (this.navVersion || 0) + 1;
   }
 
   /** Can a body of enemy size stand here? */
@@ -728,12 +751,20 @@ export class Mansion {
       }
     }
     for (const s of this.barriers()) {
-      const nx = clamp(x, s.x, s.x + s.w);
-      const ny = clamp(y, s.y, s.y + s.h);
+      // Entrances are authored by their CENTER (see makeDoor/makeWindow and
+      // navBlocked). Treating x/y as a corner left the left/top half of every
+      // closed door walkable.
+      const left = s.x - s.w / 2, top = s.y - s.h / 2;
+      const nx = clamp(x, left, left + s.w);
+      const ny = clamp(y, top, top + s.h);
       const dx = x - nx, dy = y - ny, d = Math.hypot(dx, dy);
       if (d < r) {
-        if (d < 0.0001) { y = s.y - r; }
-        else { const push = (r - d) / d; x += dx * push * 1.2; y += dy * push * 1.2; }
+        if (d < 0.0001) {
+          const l = x - left, rr = left + s.w - x, t = y - top, b = top + s.h - y;
+          const m = Math.min(l, rr, t, b);
+          if (m === l) x = left - r; else if (m === rr) x = left + s.w + r;
+          else if (m === t) y = top - r; else y = top + s.h + r;
+        } else { const push = (r - d) / d; x += dx * push * 1.2; y += dy * push * 1.2; }
         hit = true;
       }
     }

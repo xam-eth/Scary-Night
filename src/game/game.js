@@ -45,7 +45,7 @@ import { updateCoach } from './coach.js';
 import { Climax, PEAK } from './climax.js';
 import * as UI from '../ui/screens.js';
 import { SurvivalMode } from './survival.js';
-import { drawSurvivalScreen } from '../ui/survival.js';
+import { drawSurvivalScreen, updateSurvivalHints } from '../ui/survival.js';
 
 /* ================= pickups ================= */
 
@@ -780,6 +780,7 @@ export class Game {
 
     if (this.screen === 'playing' || this.screen === 'paused') this.survival.update(this.dt);
     else this.player.anim(dt);
+    updateSurvivalHints(this, dt);
     this.renderer.decayFlash(dt);
     this.lightningFlash = Math.max(0, this.lightningFlash - dt * 2.2);
     this.particles.update(dt);

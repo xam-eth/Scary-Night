@@ -8,6 +8,7 @@ import * as Audio from './core/audio.js';
 import { Game } from './game/game.js';
 import { phaseAt } from './core/config.js';
 import { drawTouchControls } from './game/hud.js';
+import { drawSurvivalControls } from './ui/survival.js';
 import { drawCoach } from './game/coach.js';
 import { Valen3D } from './game/valen3d.js';
 import { Enemy3D } from './game/enemy3d.js';
@@ -172,8 +173,12 @@ function frame(now) {
   // Controls are part of the night HUD on every device — an invisible stick
   // is how "the direction feels wrong" starts.
   game.renderer.resetForUI();
-  drawTouchControls(game, game.renderer.ctx, game.renderer.w, game.renderer.h);
-  drawCoach(game, game.renderer.ctx, game.renderer.w, game.renderer.h);
+  if (game.mode === 'survival' && game.survival) {
+    drawSurvivalControls(game, game.renderer.ctx, game.renderer.w, game.renderer.h);
+  } else {
+    drawTouchControls(game, game.renderer.ctx, game.renderer.w, game.renderer.h);
+    drawCoach(game, game.renderer.ctx, game.renderer.w, game.renderer.h);
+  }
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
