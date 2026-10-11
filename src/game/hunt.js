@@ -10,8 +10,7 @@
  * or hopeless, banks zero. That is the whole difference between a score and a
  * hunt, and it is the single highest-leverage line in the game.
  *
- * Governing spec: docs/PURPOSE.md (§2 P2, §5). The fortress and the weapons
- * read progression off this same block later; the story unlocks along it.
+ * The legacy fortress and weapons read progression from this state.
  */
 
 import { NIGHT_DURATION } from '../core/config.js';
@@ -130,8 +129,7 @@ export function fellMaster(save) {
  * bad night still buys the next rung. Marthe forges the moment both are in
  * the room, which is why the reward lands at the hub and not in a shop.
  *
- * docs/PURPOSE.md §5 (goal layer 2) and §2 (materials toward weapons that can
- * actually hurt the Master).
+ * This material ladder belongs to the retained legacy route.
  */
 export const ARMOURY = Object.freeze([
   { id: 'silver', name: 'SILVERED', intel: 6, cost: 30,
@@ -199,7 +197,7 @@ export function forgeArmoury(save) {
  * thing, and the thing it asks for is what the hunt is still missing: the map
  * while the house is unmapped, the pack while its hounds are unmarked, its
  * stalker once it starts sending one, and on the long nights, what the house
- * hoards. docs/PURPOSE.md §2 P5.
+ * hoards. This objective set belongs to the retained legacy route.
  */
 export const HUNT_OBJECTIVES = Object.freeze({
   endit: { id: 'endit', label: 'END IT' },

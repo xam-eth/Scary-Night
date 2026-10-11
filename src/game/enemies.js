@@ -12,7 +12,7 @@
  * real strategy here — the player is not supposed to kill everything.
  */
 
-import { clamp, lerp, damp, TAU, rand, randInt, chance, dist, dist2, approachAngle, angDiff, visualAngle, Rng } from '../core/util.js';
+import { clamp, lerp, damp, TAU, rand, chance, dist, dist2, approachAngle, angDiff, visualAngle } from '../core/util.js';
 import { paintContactShadow, Enemy3D, ENEMY_HEIGHT } from './enemy3d.js';
 import { ENEMY_TYPES, VARIANTS, SIEGE } from '../core/config.js';
 import { kitDamage } from './weapons.js';
@@ -155,6 +155,9 @@ export class Enemy {
       const wd = Math.hypot(this.x - ward.x, this.y - ward.y);
       if (wd < ward.r) speed *= lerp(0.5, 1, clamp(wd / ward.r, 0, 1));
     }
+    if (game.mode === 'survival' && game.survival && game.survival.isLit(this.x, this.y)) {
+      speed *= game.survival.tuning.lightMoveMul;
+    }
     // gentle wall-following: nudge the desired angle if the last frame was blocked
     let ang = a;
     if (this.stuckT > 0.25) ang += Math.sin(game.time * 2.2 + this.id) * 0.9 * clamp(this.stuckT, 0, 1);
@@ -232,9 +235,11 @@ export class Enemy {
 
   hurt(amount, game, fromX, fromY) {
     if (this.dead) return;
-    this.hp -= amount;
+    const dealt = game.mode === 'survival' && game.survival
+      ? game.survival.enemyDamageTaken(this, amount) : amount;
+    this.hp -= dealt;
     this.hurtFlash = 1;
-    game.particles.burst('blood', this.x, this.y - 4, 6 + Math.round(amount / 8), {
+    game.particles.burst('blood', this.x, this.y - 4, 6 + Math.round(dealt / 8), {
       color: '#8a1020', speedMin: 20, speedMax: 110, lifeMin: 0.2, lifeMax: 0.6, sizeMin: 1.5, sizeMax: 3.5, angle: fromX !== undefined ? Math.atan2(this.y - fromY, this.x - fromX) : undefined, spread: 0.9,
     });
     game.decals.splat(this.x, this.y + 2, 8 + amount * 0.2, 'rgba(96,10,20,0.4)', 3);

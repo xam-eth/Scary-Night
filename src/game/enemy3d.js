@@ -192,14 +192,14 @@ export function behaviorReady(key, clipNames, map = null) {
 }
 
 /** Nearest-first. Dead bodies and types that cannot fight are not skinned. */
-export function selectGlbSlots(enemies, player, cap, isReady) {
+export function selectGlbSlots(enemies, player, cap, isReady, includeCrowd = false) {
   if (!player || cap <= 0) return [];
   const living = [];
   const dying = [];
   for (const e of enemies) {
     // Siege bodies are reduced-AI pressure, not individual combatants; keep
     // them out of the skin budget instead of dressing them as proxy enemies.
-    if (!e || e._crowd || !isReady(e.key)) continue;
+    if (!e || (e._crowd && !includeCrowd) || !isReady(e.key)) continue;
     if (e.dead || e.state === 'dying') {
       // Keep a short death clip in the skinned-model budget when there is a
       // spare slot; living threats retain priority under the rig cap.
@@ -334,6 +334,14 @@ class EnemyStage {
   }
 
   gameplayReady() { return this.readiness().ready; }
+
+  gameplayReadyFor(keys = []) {
+    if (!this._started) return true;
+    return keys.every((key) => {
+      const rec = this.types[key];
+      return !!(rec && rec.behaviorReady && !rec.failed);
+    });
+  }
 
   /**
    * One file, one fetch, one parse. Roles that share a body are attached to
@@ -658,7 +666,7 @@ class EnemyStage {
       if (rec && rec.loaded && !rec.failed && !rec.preview) this._bakePreview(key);
     }
     const ready = (key) => !!(this.types[key] && this.types[key].behaviorReady && !this.types[key].failed);
-    const picked = selectGlbSlots(enemies, player, this.cap, ready);
+    const picked = selectGlbSlots(enemies, player, this.cap, ready, !!options.includeCrowd);
     this.book.sync(picked);
     if (!options.host && !this._host()) {
       for (const enemy of enemies) enemy._glb = null;

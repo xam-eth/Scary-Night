@@ -12,20 +12,20 @@ import * as Audio from '../core/audio.js';
 import { Input } from '../core/input.js';
 import { Renderer, Particles, Decals, PAL } from '../core/render.js';
 import {
-  clamp, lerp, damp, rand, randInt, chance, pick, dist, TAU, fmtClock,
-  loadSave, writeSave, defaultSave, Rng, angDiff, visualAngle,
+  clamp, lerp, damp, rand, chance, dist, TAU,
+  loadSave, writeSave, defaultSave, angDiff, visualAngle,
 } from '../core/util.js';
 import {
-  NIGHT_DURATION, DAWN_AT, COUNTDOWN_AT, SILENCE_AT, PANIC_AT, PLAYER, DOOR, RES,
-  phaseAt, DIFFICULTY, TUNING, UPGRADES, upgradeLevel, SHARDS, CODEX, nightHeat, threatMix,
+  NIGHT_DURATION, DAWN_AT, PANIC_AT, PLAYER, DOOR, RES,
+  phaseAt, DIFFICULTY, TUNING, SHARDS, nightHeat, threatMix,
 } from '../core/config.js';
 import { Mansion, ROOM } from './mansion.js';
 import { Player, PSTATE } from './player.js';
-import { Enemy, Crawler, Hunter, Werewolf, Bolt } from './enemies.js';
-import { Director, MOOD } from './director.js';
+import { Bolt } from './enemies.js';
+import { Director } from './director.js';
 import { Objectives } from './objectives.js';
 import {
-  packGain, killShards, purseFloor, projectDawn, hungerMul, revealForNight,
+  packGain, killShards, purseFloor, projectDawn, revealForNight,
   nextRank, rankCost, rankCount, LANE_CAP, LARDER_BLOOD, unlocked, markUnlocks, grantLaneTitle, houseTitle,
 } from './economy.js';
 import { House } from './house.js';
@@ -44,6 +44,8 @@ import { nextBeat, ackBeat, beatById, endingReady, narrationLines, beatSeen } fr
 import { updateCoach } from './coach.js';
 import { Climax, PEAK } from './climax.js';
 import * as UI from '../ui/screens.js';
+import { SurvivalMode } from './survival.js';
+import { drawSurvivalScreen } from '../ui/survival.js';
 
 /* ================= pickups ================= */
 
@@ -128,8 +130,10 @@ class Pickup {
 /* ================= game ================= */
 
 export class Game {
-  constructor(canvas) {
+  constructor(canvas, options = {}) {
     this.canvas = canvas;
+    this.mode = options.mode === 'legacy' ? 'legacy' : 'survival';
+    this.survivalBakeDirty = false;
     this.renderer = new Renderer(canvas);
     this.input = canvas.__input || (canvas.__input = new Input(canvas));
     this.audio = Audio;
@@ -226,6 +230,9 @@ export class Game {
     this.haunts = new Haunts();           // v1.0: whispers, watchers — the psychology layer
     this.player.applyUpgrades(this.save);
     this.applySettings();
+    if (this.mode === 'survival') {
+      this.survival = new SurvivalMode(this, { nightDuration: options.nightDuration });
+    } else this.survival = null;
     this.decals.canvas.getContext('2d');
     window.__LN = this;   // used by the automated playtest harness
   }
@@ -611,6 +618,7 @@ export class Game {
   }
 
   beginNight() {
+    if (this.mode === 'survival' && this.survival) return this.survival.enter();
     this.uiPanel = null;
     // An active combatant must always have its authored full-3D role model.
     // The menu disables this action until the local roster is ready; keep the
@@ -661,6 +669,10 @@ export class Game {
   /* ================= update ================= */
 
   update(rawDt) {
+    if (this.mode === 'survival' && this.survival) {
+      this.updateSurvival(rawDt);
+      return;
+    }
     const dt = Math.min(rawDt, 1 / 20);
     // The climax runs on real time (a peak that lasts seven seconds lasts
     // seven seconds), and it may ask the night to slow down for a beat.
@@ -745,6 +757,39 @@ export class Game {
     }
   }
 
+  updateSurvival(rawDt) {
+    const dt = Math.min(Math.max(0, rawDt), 1 / 20);
+    this.dt = dt * this.timeScale;
+    this.now += dt;
+    this.fpsSmooth = lerp(this.fpsSmooth, 1 / Math.max(dt, 0.0001), 0.05);
+    this.input.gameplay = this.screen === 'playing' && this.survival.phase === 'night' && !this.uiPanel;
+    const b = this.input.buttons;
+    b.attack.hidden = !this.input.gameplay;
+    b.interact.hidden = !this.input.gameplay;
+    b.run.hidden = true;
+    b.dash.hidden = true;
+    b.repair.hidden = true;
+    b.barricade.hidden = true;
+    if (this.input.gameplay) this.input.layout(this.renderer.w, this.renderer.h);
+    this.input.update(dt);
+    // Movement stays active, but night combat is Hunter's automatic shot; the
+    // attack control can still force a shot and the Interact control is Flare.
+    this.input.dashPressed = false;
+    this.input.runDown = false;
+    this.handleUIInput();
+
+    if (this.screen === 'playing' || this.screen === 'paused') this.survival.update(this.dt);
+    else this.player.anim(dt);
+    this.renderer.decayFlash(dt);
+    this.lightningFlash = Math.max(0, this.lightningFlash - dt * 2.2);
+    this.particles.update(dt);
+    for (let i = this.combatTexts.length - 1; i >= 0; i--) {
+      const item = this.combatTexts[i];
+      item.life -= dt; item.y -= dt * 18;
+      if (item.life <= 0) this.combatTexts.splice(i, 1);
+    }
+  }
+
   updateMenu(dt) {
     const keys = this.input && this.input.keys;
     const busy = !!(this.input && ((this.input.mouse && this.input.mouse.down) || (keys && (keys.interact || keys.attack || keys.up || keys.down))));
@@ -781,17 +826,10 @@ export class Game {
   }
 
   finishIntro() {
-    // The story is narrated, not only murmured (docs/STORY.md §2.3). Night one
-    // opens with three authored lines, then the Act I card, then the night.
-    const opening = this._openingPending
-      ? narrationLines(this.save, { surface: 'narration', event: 'open', night: 1 })
-      : [];
+    // The survival-building direction starts in the world: no opening
+    // paragraph or cinematic Act card before the player can move.
     this._openingPending = false;
-    if (opening.length && this.startNarration(opening, { kind: 'open', after: 'play' })) return;
-    if ((this.save.nightsSurvived || 0) === 0) {
-      const act = nextBeat(this.save, { surface: 'actCard', event: 'act', act: 1 });
-      if (act && this.startNarration([act], { kind: 'act', act: 1, after: 'play' })) return;
-    }
+    this.narration = null;
     this.startNightProper();
   }
 
@@ -1243,9 +1281,8 @@ export class Game {
   }
 
   /**
-   * Bank the night into the hunt, on a death and on a dawn alike. This is the
-   * spine's hard rule made code (docs/PURPOSE.md §2 P2): no night yields
-   * nothing, so TRY AGAIN reads as one step closer rather than one more try.
+   * Legacy progression banks every night so TRY AGAIN reads as one step
+   * closer rather than one more try.
    */
   bankHunt(won) {
     const gain = bankNight(this.save, {
@@ -1253,8 +1290,8 @@ export class Game {
       survived: won ? NIGHT_DURATION : this.time,
       kills: this.stats.kills || 0,
       intel: this.nightIntel(won),
-      // tonight's errand (docs/PURPOSE.md §2 P5): the reason the night was
-      // not only a clock. Done pays like a fresh fact; half done pays half.
+      // The legacy errand makes the night more than a clock; partial work
+      // pays partial progression.
       objective: this.objectives ? this.objectives.huntReport() : null,
     });
     this.save.fortressLevel = gain.level;
@@ -1618,6 +1655,10 @@ export class Game {
   }
 
   onPlayerHurt(dmg, fromX, fromY, kind) {
+    if (this.mode === 'survival') {
+      this.survival.onPlayerHurt(dmg, fromX, fromY, kind);
+      return;
+    }
     this.objectives.onHurt();
     const p = this.player;
     this.lastHurtT = this.time;
@@ -1654,6 +1695,7 @@ export class Game {
   enemyHitPlayer(enemy, amount, kind) {
     const p = this.player;
     if (!p.alive) return;
+    if (this.mode === 'survival' && !this.survival.enemyCanAttack(enemy)) return false;
     enemy.lastPlayerHitT = this.time;
     const ok = p.takeDamage(amount, this, enemy.x, enemy.y, kind);
     if (ok) {
@@ -1684,6 +1726,14 @@ export class Game {
 
   playerAttackHit(player) {
     const tool = weaponById(player.weapon);
+    if (this.mode === 'survival') {
+      this.spawnWeaponFx(player, tool);
+      if (tool.kind === 'ranged') {
+        this.spawnBolt(player, player.swingAngle || player.angle || 0, tool);
+        this.stats.shotsFired = (this.stats.shotsFired || 0) + 1;
+      }
+      return;
+    }
     // Coat tint stays on the swing. The weapon is a layer, not a replacement.
     this.spawnCoatClaw(player, IAP.fxLook(this.save));
     this.spawnWeaponFx(player, tool);
@@ -1818,6 +1868,10 @@ export class Game {
   }
 
   onEnemyKilled(enemy) {
+    if (this.mode === 'survival') {
+      this.survival.onEnemyKilled(enemy);
+      return;
+    }
     const p = this.player;
     this.stats.kills++;
     // what you took off its hounds is what hangs on the refuge wall (#56 P3),
@@ -1904,7 +1958,8 @@ export class Game {
     this.particles.burst('dust', e.x, e.y, 18, { color: 'rgba(140,130,115,0.4)', sizeMin: 5, sizeMax: 16, speedMin: 20, speedMax: 70, lifeMin: 0.6, lifeMax: 1.6 });
     this.decals.splat(e.x, e.y, 20, 'rgba(40,30,20,0.35)', 6);
     this.showMessage(`${e.name} GIVES WAY.`, { tone: 'danger' });
-    if (e.kind === 'door') this.offerNarrative({ surface: 'strip', event: 'state', state: 'doorLost', night: (this.save.nightsSurvived || 0) + 1 });
+    if (e.kind === 'door' && this.mode !== 'survival') this.offerNarrative({ surface: 'strip', event: 'state', state: 'doorLost', night: (this.save.nightsSurvived || 0) + 1 });
+    if (this.mode === 'survival' && this.survival) this.survival.gateHp = Math.max(0, this.survival.mainGate() ? this.survival.mainGate().hp : 0);
     this.makeNoise(e.x, e.y, 900);
     this.hbPulse = 1;
   }
@@ -2053,6 +2108,7 @@ export class Game {
   }
 
   consumeAmmo(kind) {
+    if (this.mode === 'survival' && kind === 'arrows') return true;
     if (!['arrows', 'knives'].includes(kind)) return false;
     const bag = this.inventory();
     if ((bag[kind] || 0) < 1) return false;
@@ -2134,6 +2190,11 @@ export class Game {
   /* ---------------- death ---------------- */
 
   killPlayer(reason) {
+    if (this.mode === 'survival' && this.survival) {
+      this.player.die(this);
+      this.survival.fail(reason || 'Hunter lost');
+      return;
+    }
     if (this.player.state === PSTATE.DEAD) return;
     // ---- SECOND BLOOD ---- (IAP entitlement or shard-bought; once per night)
     // It does not make you stronger: it hands back one dawn and drops you in
@@ -2218,9 +2279,8 @@ export class Game {
     // the night keeps its stats (objectives pay out with it, partial credit)
     this.finalizeShards(this.time);
     this.settleNight(this.time);
-    // THE HUNT: the night was not wasted. Whatever she learned tonight is
-    // banked before the screen that tells her she died — so the screen that
-    // follows can say what the death bought (docs/PURPOSE.md §2 P2).
+    // Legacy Hunt progress is banked before the death screen so it can show
+    // what the night bought.
     this.bankHunt(false);
     this.save.bestTime = Math.max(this.save.bestTime, this.time);
     const kills = this.stats.kills;
@@ -2408,6 +2468,27 @@ export class Game {
 
   /* ================= render ================= */
 
+  renderSurvival() {
+    const r = this.renderer;
+    const ctx = r.ctx;
+    const w = r.w, h = r.h;
+    const visible = this.screen === 'playing' || this.screen === 'paused';
+    let worldReady = false;
+    if (visible) {
+      if (Valen3D.beginFrame) Valen3D.beginFrame();
+      try {
+        worldReady = World3D.render(this);
+      } catch (error) {
+        World3D.lastError = String(error && error.message || error);
+        console.error('3D survival world render failed:', error);
+      }
+      if (!worldReady) World3D.setVisible(false);
+    } else World3D.setVisible(false);
+    r.clear(worldReady ? null : PAL.void);
+    r.resetForUI();
+    drawSurvivalScreen(this, ctx, w, h, worldReady);
+  }
+
   render() {
     const r = this.renderer;
     const ctx = r.ctx;
@@ -2418,6 +2499,10 @@ export class Game {
 
     // fresh immediate-mode registration surface (see update() note)
     this.ui.length = 0;
+    if (this.mode === 'survival' && this.survival) {
+      this.renderSurvival();
+      return;
+    }
 
     // The 3D world is a separate WebGL layer. Canvas is transparent over it
     // during a run and only paints HUD/screens; menus remain fully screen-space.
@@ -2683,7 +2768,60 @@ export class Game {
     ctx.restore();
   }
 
+  resumeSurvival() {
+    if (this.screen !== 'paused') return;
+    this.paused = false;
+    this.screen = 'playing';
+    this.uiPanel = this.survival.phase === 'day' ? 'survival-day'
+      : this.survival.phase === 'complete' ? 'survival-complete'
+        : this.survival.phase === 'failed' ? 'survival-failed' : null;
+    this.input.gameplay = this.survival.phase === 'night' && !this.uiPanel;
+  }
+
+  handleSurvivalUIInput() {
+    const input = this.input;
+    if (input.keys.pause && !this._pauseHeld) {
+      this._pauseHeld = true;
+      if (this.screen === 'playing') this.togglePause(true);
+      else if (this.screen === 'paused') this.resumeSurvival();
+    }
+    if (!input.keys.pause) this._pauseHeld = false;
+
+    if (this.screen === 'playing' && input.uiTap) {
+      const box = pauseButtonBox(this.renderer.w, this.renderer.h);
+      const tap = input.uiTap;
+      if (tap.x >= box.x && tap.x <= box.x + box.w && tap.y >= box.y && tap.y <= box.y + box.h) {
+        input.uiTap = null;
+        this.togglePause(true);
+        return;
+      }
+    }
+
+    const uiActive = this.screen === 'paused' || (this.screen === 'playing' && !!this.uiPanel);
+    if (!uiActive) { this.uiIndex = 0; input.uiTap = null; return; }
+    if (input.keys.up && !this._navUp) { this.uiIndex = Math.max(0, this.uiIndex - 1); this.usingKeyboard = true; }
+    if (input.keys.down && !this._navDown) { this.uiIndex = Math.min(99, this.uiIndex + 1); this.usingKeyboard = true; }
+    this._navUp = input.keys.up; this._navDown = input.keys.down;
+    if (input.uiTap) {
+      const tap = input.uiTap;
+      input.uiTap = null;
+      const hit = [...this.ui].reverse().find((item) => !item.disabled
+        && tap.x > item.x && tap.x < item.x + item.w && tap.y > item.y && tap.y < item.y + item.h);
+      if (hit && hit.onClick) { this.audio.play('uiConfirm', { vol: 0.42 }); hit.onClick(); }
+    }
+    if (input.keys.confirm && !this._confirmHeld) {
+      this._confirmHeld = true;
+      const item = this.ui[this.uiIndex];
+      if (item && item.onClick && !item.disabled) item.onClick();
+    }
+    if (!input.keys.confirm) this._confirmHeld = false;
+  }
+
   handleUIInput() {
+    if (this.mode === 'survival') {
+      this.handleSurvivalUIInput();
+      return;
+    }
     const input = this.input;
     // pause toggle FIRST — it exists precisely for the 'playing' screen, so it
     // cannot live behind the menu guard below. (v1.0 FIX, live click test:
@@ -2758,5 +2896,3 @@ export class Game {
     if (!input.keys.confirm) this._confirmHeld = false;
   }
 }
-
-function dtSafe(game) { return game.dt; }

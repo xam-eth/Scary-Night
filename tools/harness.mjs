@@ -136,21 +136,249 @@ Math.random = function () {
 const Audio = await import('../src/core/audio.js');
 const { Game } = await import('../src/game/game.js');
 const { ROOM } = await import('../src/game/mansion.js');
-const { TUNING, NIGHT_DURATION } = await import('../src/core/config.js');
+const { TUNING, NIGHT_DURATION, SURVIVAL_TUNING } = await import('../src/core/config.js');
 
-const canvas = createCanvas(1280, 720);
-canvas.addEventListener = () => { };
-canvas.removeEventListener = () => { };
-canvas.getBoundingClientRect = () => ({ left: 0, top: 0, width: 1280, height: 720 });
-canvas.clientWidth = 1280;
-canvas.clientHeight = 720;
-canvas.style = {};
-const game = new Game(canvas);
+function makeHarnessCanvas() {
+  const canvas = createCanvas(1280, 720);
+  canvas.addEventListener = () => { };
+  canvas.removeEventListener = () => { };
+  canvas.getBoundingClientRect = () => ({ left: 0, top: 0, width: 1280, height: 720 });
+  canvas.clientWidth = 1280;
+  canvas.clientHeight = 720;
+  canvas.style = {};
+  return canvas;
+}
+
+// The pre-existing systems battery intentionally runs in the preserved legacy
+// route. The survival battery below constructs the new default route separately.
+const canvas = makeHarnessCanvas();
+const game = new Game(canvas, { mode: 'legacy' });
 const input = game.input;
 input.touchSeen = false;
 
 await Audio.unlock();
 game.applySettings();
+
+async function runSurvivalMilestone() {
+  console.log('\n=== SURVIVAL MILESTONE 1 — deterministic three-day probe ===');
+  window.localStorage.removeItem('lastnight.save.v1');
+  const survivalGame = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+  const sInput = survivalGame.input;
+  sInput.touchSeen = false;
+  sInput.layout(1280, 720);
+  const step = 1 / 60;
+  const tick = (frames = 1) => { for (let i = 0; i < frames; i++) survivalGame.update(step); };
+  const waitForBuilder = () => {
+    let guard = 0;
+    while (survivalGame.survival.builderJob && guard++ < 1200) tick();
+    return !survivalGame.survival.builderJob;
+  };
+  const resetControls = () => {
+    for (const key of Object.keys(sInput.keys)) sInput.keys[key] = false;
+    sInput.move.x = 0; sInput.move.y = 0;
+    for (const button of Object.values(sInput.buttons)) button.down = false;
+    survivalGame.player.iframes = 0;
+    survivalGame.player.dashCd = 0;
+  };
+
+  // The Breaker sees the Hunter at arm's length but retains the wall objective.
+  survivalGame.survival.restart();
+  const targetDoor = survivalGame.survival.mainGate();
+  survivalGame.survival.day = 2;
+  survivalGame.survival.spawnBreaker(0);
+  const breaker = survivalGame.enemies.find((enemy) => enemy._survivalType === 'breaker');
+  const out = targetDoor.outside || targetDoor;
+  const wallDx = out.x - breaker.x, wallDy = out.y - breaker.y;
+  const len = Math.hypot(wallDx, wallDy) || 1;
+  survivalGame.player.x = breaker.x - wallDy / len * 30;
+  survivalGame.player.y = breaker.y + wallDx / len * 30;
+  const heroHp = survivalGame.player.blood;
+  breaker.update(0.1, survivalGame);
+  const breakerTargetsWall = breaker.targetKind === 'wall'
+    && breaker.targetEntranceId === targetDoor.id
+    && breaker.vx * wallDx + breaker.vy * wallDy > 0
+    && survivalGame.player.blood === heroHp;
+  console.log(`  ${breakerTargetsWall ? 'PASS' : 'FAIL'}  Breaker keeps ${breaker.targetEntranceId} wall target with Hunter visible`);
+
+  // Use an in-range synthetic target with LOS/wall checks stubbed open to
+  // isolate auto-fire and bolt damage from furniture in the headless fixture.
+  survivalGame.survival.restart();
+  resetControls();
+  const hunter = survivalGame.player;
+  const targetSpot = { x: hunter.x + 60, y: hunter.y };
+  const oldHasLOS = survivalGame.mansion.hasLOS;
+  const oldSolidAt = survivalGame.mansion.solidAt;
+  // Isolate target acquisition/bolt damage from this headless fixture's room
+  // furniture; separate browser 3D QA keeps the real collision/LOS pipeline.
+  survivalGame.mansion.hasLOS = () => true;
+  survivalGame.mansion.solidAt = () => null;
+  const hitSamples = [];
+  const autoTarget = targetSpot && {
+    id: 987654, key: 'zombie', _survivalType: 'individual', dead: false, removeMe: false,
+    x: targetSpot.x, y: targetSpot.y, radius: 12, hp: 500, hpMax: 500, state: 'press',
+    update() { },
+    hurt(amount) { this.hp -= amount; hitSamples.push(amount); if (this.hp <= 0) this.dead = true; },
+  };
+  if (autoTarget) survivalGame.enemies.push(autoTarget);
+  for (let i = 0; i < 240 && !hitSamples.length; i++) tick();
+  const hunterAutoShot = !!(autoTarget && survivalGame.player.weapon === 'shot'
+    && (survivalGame.stats.shotsFired || 0) > 0 && hitSamples.length > 0);
+  survivalGame.mansion.hasLOS = oldHasLOS;
+  survivalGame.mansion.solidAt = oldSolidAt;
+  console.log(`  ${hunterAutoShot ? 'PASS' : 'FAIL'}  Hunter auto-shot hits an unobstructed in-range test target (${hitSamples.length} hit(s), ${survivalGame.stats.shotsFired || 0} bolt(s), target=${survivalGame.survival.currentTarget?.id || 'none'}, weapon=${hunter.weapon}; LOS stubbed open)`);
+
+  survivalGame.survival.restart();
+  resetControls();
+  const skillPlayer = survivalGame.player;
+  const skillTarget = {
+    id: 987655, key: 'zombie', _survivalType: 'swarm', dead: false, removeMe: false,
+    x: skillPlayer.x + 160, y: skillPlayer.y, radius: 13, hp: 500, hpMax: 500, state: 'march',
+    update() { }, hurt(amount) { this.hp -= amount; },
+  };
+  survivalGame.enemies.push(skillTarget);
+  const skillHp = skillTarget.hp;
+  const skillUsed = survivalGame.survival.useSkill();
+  const skillReuseBlocked = !survivalGame.survival.useSkill();
+  const hunterSkill = !!(skillUsed && skillReuseBlocked && skillTarget.hp < skillHp
+    && skillTarget.staggerT > 0 && survivalGame.survival.skillCooldown > 0);
+  console.log(`  ${hunterSkill ? 'PASS' : 'FAIL'}  Hunter's Flare skill damages/staggers in radius and respects cooldown (${skillHp} → ${skillTarget.hp} HP)`);
+
+  const runScenario = (builderBot) => {
+    // Pair the idle and builder night runs from an identical random stream.
+    reseed(SEED + 77);
+    survivalGame.survival.restart();
+    resetControls();
+    const mode = survivalGame.survival;
+    const upgrades = [{ level: 1, radius: Math.round(mode.getFireRadius()) }];
+    const workResults = [];
+    let queueLockVerified = false;
+    let sawmillBuilt = false;
+    let gateBuilt = false;
+    let shelterBuilt = false;
+    let failure = null;
+    const nightThree = { peakEnemies: 0, peakBreakers: 0, kills: 0, wallDamage: 0, gateHp: 0, playerHp: 0 };
+
+    for (let day = 1; day <= 3; day++) {
+      if (mode.phase !== 'night' || mode.day !== day) break;
+      let guard = 0;
+      while (mode.phase === 'night' && guard++ < 60 * mode.nightDuration + 120) {
+        tick();
+        if (mode.day === 3 && mode.phase === 'night') {
+          const alive = survivalGame.enemies.filter((enemy) => !enemy.dead).length;
+          const breakers = survivalGame.enemies.filter((enemy) => enemy._survivalType === 'breaker' && !enemy.dead).length;
+          nightThree.peakEnemies = Math.max(nightThree.peakEnemies, alive);
+          nightThree.peakBreakers = Math.max(nightThree.peakBreakers, breakers);
+          nightThree.kills = mode.nightStats.kills;
+          nightThree.wallDamage = Math.round(mode.nightStats.damageToWalls);
+          nightThree.gateHp = Math.round(mode.gateHp);
+          nightThree.playerHp = Math.round(survivalGame.player.blood);
+        }
+      }
+      if (mode.phase === 'failed') { failure = mode.failureReason; break; }
+      if (mode.phase === 'complete') break;
+      if (mode.phase !== 'day') break;
+      if (day >= 3) break;
+
+      if (builderBot) {
+        const beforeLevel = mode.perapianLevel;
+        const beforeRadius = Math.round(mode.getFireRadius());
+        const targetLevel = day + 1;
+        const upgradeQueued = mode.startBuild('perapian');
+        if (upgradeQueued && !queueLockVerified) queueLockVerified = !mode.startBuild('gate');
+        const upgradeFinished = waitForBuilder();
+        const afterRadius = Math.round(mode.getFireRadius());
+        upgrades.push({ level: mode.perapianLevel, beforeRadius, radius: afterRadius });
+        workResults.push({ day: day + 1, upgradeQueued, upgradeFinished, targetLevel, beforeLevel, level: mode.perapianLevel });
+        if (mode.perapianLevel !== targetLevel) { failure = `Perapian level ${targetLevel} not reached`; break; }
+
+        const freeRoom = mode.buildableRooms()[0];
+        if (day === 1 && freeRoom) {
+          const queued = mode.startBuild('sawmill', freeRoom.id);
+          const finished = queued && waitForBuilder();
+          sawmillBuilt = !!(finished && mode.buildings[freeRoom.id] === 'sawmill');
+          workResults.push({ day: 2, building: 'sawmill', room: freeRoom.id, queued, finished });
+          const gateQueued = mode.startBuild('gate');
+          const gateFinished = gateQueued && waitForBuilder();
+          gateBuilt = !!(gateFinished && mode.gateBuilt);
+          workResults.push({ day: 2, building: 'gate', queued: gateQueued, finished: gateFinished, hp: mode.gateHp });
+        } else if (day === 2 && freeRoom) {
+          const queued = mode.startBuild('shelter', freeRoom.id);
+          const finished = queued && waitForBuilder();
+          shelterBuilt = !!(finished && mode.buildings[freeRoom.id] === 'shelter');
+          workResults.push({ day: 3, building: 'shelter', room: freeRoom.id, queued, finished });
+        }
+      }
+      if (!mode.startNight()) { failure = `Night ${day + 1} could not start`; break; }
+    }
+    const complete = mode.phase === 'complete' && mode.nightsCompleted === 3;
+    if (!nightThree.playerHp) nightThree.playerHp = Math.round(survivalGame.player.blood);
+    return {
+      type: builderBot ? 'builder' : 'idle', complete, failure,
+      day: mode.day, phase: mode.phase, nightsCompleted: mode.nightsCompleted,
+      perapianLevel: mode.perapianLevel, survivors: mode.survivors,
+      buildings: Object.values(mode.buildings), workResults, upgrades, queueLockVerified,
+      sawmillBuilt, gateBuilt, shelterBuilt, nightThree,
+      oil: +mode.oil.toFixed(1), wood: mode.wood,
+    };
+  };
+
+  const idle = runScenario(false);
+  const builder = runScenario(true);
+
+  // Save/reload round-trip at the first dawn: day, phase, duration, and
+  // completed-night progress must survive constructing a fresh Game instance.
+  survivalGame.survival.restart();
+  resetControls();
+  let saveGuard = 0;
+  while (survivalGame.survival.phase === 'night' && saveGuard++ < 60 * survivalGame.survival.nightDuration + 120) tick();
+  const storedSave = JSON.parse(window.localStorage.getItem('lastnight.save.v1') || 'null');
+  const resumedGame = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+  const saveProgressPass = !!(storedSave?.survival?.day === 2 && storedSave.survival.phase === 'day'
+    && storedSave.survival.nightsCompleted === 1 && storedSave.survival.nightDuration === 60
+    && resumedGame.survival.day === 2 && resumedGame.survival.phase === 'day'
+    && resumedGame.survival.nightsCompleted === 1 && resumedGame.survival.elapsed === 0);
+  console.log(`  ${saveProgressPass ? 'PASS' : 'FAIL'}  save/reload resumes Day ${resumedGame.survival.day} ${resumedGame.survival.phase} (${resumedGame.survival.nightsCompleted}/3 nights, ${resumedGame.survival.nightDuration}s)`);
+
+  // Isolated economy check: each listed room building completes one queued
+  // job, and its defined production is credited at the next dawn.
+  survivalGame.survival.restart();
+  resetControls();
+  const economyMode = survivalGame.survival;
+  economyMode.phase = 'day';
+  economyMode.perapianLevel = 3;
+  economyMode.oil = 100; economyMode.wood = 100; economyMode.survivors = 2;
+  survivalGame.screen = 'playing'; survivalGame.uiPanel = 'survival-day';
+  economyMode.refreshFireplace(true);
+  const economyRooms = economyMode.buildableRooms();
+  const economyBuilt = [];
+  for (const [i, type] of ['extractor', 'sawmill', 'shelter'].entries()) {
+    const room = economyRooms.find((candidate) => !economyMode.buildings[candidate.id] && !economyBuilt.some((row) => row.room === candidate.id));
+    const queued = !!(room && economyMode.startBuild(type, room.id));
+    const finished = queued && waitForBuilder();
+    economyBuilt.push({ type, room: room && room.id, queued, finished });
+  }
+  economyMode.phase = 'night';
+  economyMode.day = 1;
+  economyMode.elapsed = 0;
+  economyMode.oilBurned = 0;
+  economyMode.nightStats = { kills: 0, hits: 0, damageToWalls: 0 };
+  economyMode.completeNight();
+  const economyPass = economyBuilt.length === 3 && economyBuilt.every((row) => row.queued && row.finished)
+    && economyMode.lastRewards.oil === 18 && economyMode.lastRewards.wood === 21 && economyMode.survivors === 3;
+  console.log(`  economy: ${JSON.stringify(economyBuilt)} → +${economyMode.lastRewards.oil} Oil, +${economyMode.lastRewards.wood} Wood, Survivors ${economyMode.survivors} (${economyPass ? 'PASS' : 'FAIL'})`);
+
+  console.log(`  idle Night 3: ${idle.nightThree.peakEnemies} peak enemies / ${idle.nightThree.peakBreakers} Breakers, ${idle.nightThree.kills} kills, ${idle.nightThree.wallDamage} wall damage, gate ${idle.nightThree.gateHp} HP, Hunter ${idle.nightThree.playerHp} HP; ${idle.phase}`);
+  console.log(`  builder Night 3: ${builder.nightThree.peakEnemies} peak enemies / ${builder.nightThree.peakBreakers} Breakers, ${builder.nightThree.kills} kills, ${builder.nightThree.wallDamage} wall damage, gate ${builder.nightThree.gateHp} HP, Hunter ${builder.nightThree.playerHp} HP; Perapian Lv${builder.perapianLevel}, survivors ${builder.survivors}, buildings ${builder.buildings.join(',') || 'none'}, gateBuilt=${builder.gateBuilt}; ${builder.phase}`);
+  const pass = breakerTargetsWall && hunterAutoShot && hunterSkill && idle.complete && builder.complete && builder.perapianLevel === 3
+    && builder.queueLockVerified && builder.sawmillBuilt && builder.gateBuilt && builder.shelterBuilt
+    && saveProgressPass && economyPass && builder.upgrades.map((item) => item.level).join(',') === '1,2,3'
+    && builder.nightThree.gateHp > idle.nightThree.gateHp;
+  console.log(`  ${pass ? 'PASS' : 'FAIL'}  three-day loop, Perapian Lv1→Lv3, one builder queue, and Night-3 idle-vs-builder outcomes`);
+  if (!pass) process.exitCode = 1;
+  window.localStorage.removeItem('lastnight.save.v1');
+}
+
+await runSurvivalMilestone();
 
 if (SHOTS) fs.mkdirSync(SHOT_DIR, { recursive: true });
 
@@ -361,7 +589,7 @@ game.screen = 'playing';
  * look empty if the frame holds two of them, and the phone frame is a keyhole
  * (353x1120 world units). This mode measures the gap between what the night
  * contains and what the screen shows — the number the hero scenes (the
- * "advertisable moments" of docs/SIGNATURE-SCENES.md) live or die by.
+ * memorable combat/scene moments live or die by.
  *   node tools/harness.mjs --mode=density
  */
 if (MODE === 'density') {

@@ -76,7 +76,9 @@ page.on('pageerror', (e) => {
   console.log('PAGEERROR', message);
 });
 await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
-await page.goto('http://127.0.0.1:8102/', { waitUntil: 'domcontentloaded', timeout: 180000 });
+// The long-standing 3D migration battery targets the preserved legacy route.
+// A dedicated default-route Survival FTUE check runs below in --mode=3d-smoke.
+await page.goto('http://127.0.0.1:8102/?legacy=1', { waitUntil: 'domcontentloaded', timeout: 180000 });
 for (let i = 0; i < 120; i++) {
   const d = await page.evaluate(() => (window.__LN_API ? window.__LN_API.valen() : null));
   if (d && (d.ready || d.failed)) break;
@@ -113,6 +115,116 @@ for (let i = 0; i < 60; i++) {
 }
 console.log('diag:', JSON.stringify(await page.evaluate(() => window.__env.diagnostics())));
 
+async function survivalFtueSection() {
+  console.log('\n---- DEFAULT SURVIVAL ROUTE · FIRST 30 SECONDS ----');
+  const evidenceDir = path.join(ROOT, 'qa-evidence');
+  fs.mkdirSync(evidenceDir, { recursive: true });
+  await page.goto('http://127.0.0.1:8102/', { waitUntil: 'domcontentloaded', timeout: 180000 });
+  await page.waitForFunction(() => {
+    const g = window.__LN;
+    return !!(g && g.mode === 'survival' && g.screen === 'playing'
+      && g.survival && g.survival.phase === 'night');
+  }, { timeout: 90000, polling: 100 });
+  await page.evaluate(async () => {
+    window.__survWorld = (await import('./src/game/world3d.js')).World3D;
+    window.__survEnemy = (await import('./src/game/enemy3d.js')).Enemy3D;
+  });
+  await page.waitForFunction(() => window.__survWorld?.diagnostics?.().ready, { timeout: 60000, polling: 100 });
+  // Start a clean Night 1 after GLB/scene setup, then advance the game clock
+  // in deterministic fixed steps. Software WebGL can render below 1 FPS in
+  // headless CI; wall-clock waits would otherwise never reach 15/30 seconds.
+  await page.evaluate(() => {
+    const g = window.__LN;
+    g.survival.restart();
+    window.__survivalOriginalUpdate = g.update;
+    // Freeze the regular rAF simulation while taking evidence; fixed-step calls
+    // below are the only clock source, so PNG timestamps stay within 30s.
+    g.update = () => {};
+    g.render();
+  });
+  const checkpoints = [];
+  const capture = async (seconds, filename) => {
+    const advance = await page.evaluate((target) => {
+      const g = window.__LN;
+      let steps = 0;
+      while (g.survival.elapsed + 1e-6 < target && g.screen === 'playing'
+        && g.survival.phase === 'night' && steps < 10000) {
+        window.__survivalOriginalUpdate.call(g, 1 / 60);
+        steps++;
+      }
+      g.render();
+      return { elapsed: +g.survival.elapsed.toFixed(2), steps };
+    }, seconds);
+    if (advance.elapsed + 1e-6 < seconds) throw new Error(`Survival simulation did not reach ${seconds}s (stopped at ${advance.elapsed}s)`);
+    const file = path.join(evidenceDir, filename);
+    await page.screenshot({ path: file, type: 'png' });
+    const state = await page.evaluate(() => {
+      const g = window.__LN, world = window.__survWorld, enemy = window.__survEnemy;
+      const riggedCrowd = (enemy?.slots || []).filter((slot) =>
+        g.enemies.some((item) => item.id === slot.enemyId && item._crowd && !item.dead)).length;
+      return {
+        mode: g.mode, screen: g.screen, day: g.survival.day, phase: g.survival.phase,
+        elapsed: +g.survival.elapsed.toFixed(2), duration: g.survival.nightDuration,
+        resources: { oil: Math.floor(g.survival.oil), wood: Math.floor(g.survival.wood) },
+        ui: g.ui.map((item) => item.label), coach: !!g.coach, narration: !!g.narration,
+        swarm: g.enemies.filter((item) => item._survivalType === 'swarm' && !item.dead).length,
+        riggedCrowd, proxyCrowd: [...world.survivalCrowdProxies.values()].filter((item) => item.visible).length,
+        fireRadius: Math.round(g.survival.getFireRadius()),
+        radiusMesh: world.survivalRadiusRing ? Math.round(world.survivalRadiusRing.scale.x) : 0,
+        renderMode: world.diagnostics().mode,
+      };
+    });
+    checkpoints.push({ seconds, file: path.relative(ROOT, file), advance, state });
+    console.log(`  CAPTURE ${seconds}s (sim ${state.elapsed}s, ${advance.steps} fixed steps) — ${file}; swarm=${state.swarm}, rendered crowd=${state.riggedCrowd + state.proxyCrowd}, radius=${state.fireRadius}`);
+  };
+  await capture(0.2, 'survival-ftue-00s.png');
+  await capture(15, 'survival-ftue-15s.png');
+  await capture(30, 'survival-ftue-30s.png');
+  const final = checkpoints[checkpoints.length - 1].state;
+  check(final.mode === 'survival' && final.screen === 'playing' && final.day === 1 && final.phase === 'night',
+    'the default route reaches playable Night 1 directly (no menu, intro or narration)');
+  check(final.ui.length === 1 && final.ui[0] === 'PAUSE' && !final.coach && !final.narration,
+    `Night-1 HUD is limited to Oil/Wood plus pause (legacy coach/narration hidden; UI=${final.ui.join(',')})`);
+  check(final.elapsed >= 30 && final.duration >= 60 && final.duration <= 90,
+    `the first 30 playable seconds stay in the configurable ${final.duration}s night`);
+  check(final.swarm > 0 && final.renderMode === 'webgl-3d'
+    && final.radiusMesh > 0 && final.riggedCrowd + final.proxyCrowd > 0,
+  `the full 3D house, Perapian radius and crowd are visible (${final.riggedCrowd} GLB + ${final.proxyCrowd} silhouette actors)`);
+
+  const radiusTest = await page.evaluate(() => {
+    const g = window.__LN, world = window.__survWorld;
+    g.screen = 'playing';
+    g.uiPanel = 'survival-day';
+    g.survival.phase = 'day';
+    g.survival.elapsed = 0;
+    g.survival.oil = 50; g.survival.wood = 50; g.survival.oilBurned = 0;
+    g.survival.refreshFireplace(true);
+    const litBefore = g.survival.litRooms().length;
+    g.render();
+    const before = world.survivalRadiusRing ? world.survivalRadiusRing.scale.x : 0;
+    const button = g.ui.find((item) => item.label.startsWith('survival:UPGRADE'));
+    const clicked = !!(button && button.onClick && button.onClick());
+    const queued = g.survival.builderJob && g.survival.builderJob.targetLevel;
+    g.survival.updateDay(6);
+    g.render();
+    return {
+      clicked, queued, level: g.survival.perapianLevel,
+      before, after: world.survivalRadiusRing ? world.survivalRadiusRing.scale.x : 0,
+      litBefore, litAfter: g.survival.litRooms().length,
+    };
+  });
+  check(radiusTest.clicked && radiusTest.queued === 2 && radiusTest.level === 2 && radiusTest.after > radiusTest.before,
+    `a Perapian UI upgrade grows the visible 3D radius (${Math.round(radiusTest.before)} → ${Math.round(radiusTest.after)})`);
+  const evidence = {
+    title: 'Survival FTUE — first 30 playable seconds',
+    capturedAt: new Date().toISOString(),
+    viewport: { width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+    checkpoints,
+    radiusUpgrade: { ...radiusTest, before: Math.round(radiusTest.before), after: Math.round(radiusTest.after) },
+  };
+  fs.writeFileSync(path.join(evidenceDir, 'survival-ftue-first-30s.json'), `${JSON.stringify(evidence, null, 2)}\n`);
+}
+
 /* Fast 3D-specific subset: use the active WebGL scene rather than the retired
  * sprite canvases, and skip the long frame-by-frame walk/screenshot sweep. */
 if (MODE === '3d-smoke') {
@@ -123,6 +235,7 @@ if (MODE === '3d-smoke') {
   await staticWorldSection();
   await windowVisibility3DSection();
   await doorAnimationSection();
+  await survivalFtueSection();
   check(pageErrors.length === 0, `no uncaught browser page errors (${pageErrors.length})`);
   await shutdown();
   process.exit(process.exitCode || 0);

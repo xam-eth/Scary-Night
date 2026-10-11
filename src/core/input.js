@@ -280,7 +280,7 @@ export class Input {
       // BOARD steps left only when it will not land on the stick.
       const short = h < 500;
       const pad = 12;
-      const gap = 8;
+      const gap = short ? 10 : 8;
       const ar = short ? 26 : 30;
       const sr = 22;
       const runR = short ? 16 : 18;
@@ -333,6 +333,15 @@ export class Input {
       this.stick.homeX = pad + 72 * s;
       this.stick.homeY = bottom - 64 * s;
     }
+    // Hit areas are explicit and non-overlapping. Phone controls keep at
+    // least 44px touch targets without extending every small action into its
+    // neighbours; desktop/mouse hit areas follow the visible circles.
+    b.attack.hitR = phone ? Math.max(34, b.attack.r) : b.attack.r;
+    for (const key of ['dash', 'interact', 'repair', 'barricade']) {
+      b[key].hitR = phone ? 22 : b[key].r;
+    }
+    b.run.hitR = Math.max(22, b.run.r);
+
     this.clusterLeft = Math.min(
       b.attack.x - b.attack.r,
       b.run.x - b.run.r,

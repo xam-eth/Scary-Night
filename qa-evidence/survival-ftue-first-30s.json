@@ -1,0 +1,115 @@
+{
+  "title": "Survival FTUE — first 30 playable seconds",
+  "capturedAt": "2026-10-11T10:55:37.194Z",
+  "viewport": {
+    "width": 390,
+    "height": 844,
+    "deviceScaleFactor": 2,
+    "isMobile": true,
+    "hasTouch": true
+  },
+  "checkpoints": [
+    {
+      "seconds": 0.2,
+      "file": "qa-evidence/survival-ftue-00s.png",
+      "advance": {
+        "elapsed": 0.2,
+        "steps": 12
+      },
+      "state": {
+        "mode": "survival",
+        "screen": "playing",
+        "day": 1,
+        "phase": "night",
+        "elapsed": 0.2,
+        "duration": 72,
+        "resources": {
+          "oil": 37,
+          "wood": 26
+        },
+        "ui": [
+          "PAUSE"
+        ],
+        "coach": false,
+        "narration": false,
+        "swarm": 0,
+        "riggedCrowd": 0,
+        "proxyCrowd": 0,
+        "fireRadius": 979,
+        "radiusMesh": 979,
+        "renderMode": "webgl-3d"
+      }
+    },
+    {
+      "seconds": 15,
+      "file": "qa-evidence/survival-ftue-15s.png",
+      "advance": {
+        "elapsed": 15,
+        "steps": 888
+      },
+      "state": {
+        "mode": "survival",
+        "screen": "playing",
+        "day": 1,
+        "phase": "night",
+        "elapsed": 15,
+        "duration": 72,
+        "resources": {
+          "oil": 35,
+          "wood": 26
+        },
+        "ui": [
+          "PAUSE"
+        ],
+        "coach": false,
+        "narration": false,
+        "swarm": 20,
+        "riggedCrowd": 14,
+        "proxyCrowd": 6,
+        "fireRadius": 916,
+        "radiusMesh": 916,
+        "renderMode": "webgl-3d"
+      }
+    },
+    {
+      "seconds": 30,
+      "file": "qa-evidence/survival-ftue-30s.png",
+      "advance": {
+        "elapsed": 30,
+        "steps": 900
+      },
+      "state": {
+        "mode": "survival",
+        "screen": "playing",
+        "day": 1,
+        "phase": "night",
+        "elapsed": 30,
+        "duration": 72,
+        "resources": {
+          "oil": 33,
+          "wood": 26
+        },
+        "ui": [
+          "PAUSE"
+        ],
+        "coach": false,
+        "narration": false,
+        "swarm": 40,
+        "riggedCrowd": 14,
+        "proxyCrowd": 26,
+        "fireRadius": 853,
+        "radiusMesh": 853,
+        "renderMode": "webgl-3d"
+      }
+    }
+  ],
+  "radiusUpgrade": {
+    "clicked": true,
+    "queued": 2,
+    "level": 2,
+    "before": 980,
+    "after": 1760,
+    "litBefore": 5,
+    "litAfter": 9
+  }
+}

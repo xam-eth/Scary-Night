@@ -140,7 +140,6 @@ ok('no rebuilt Valen sprite derivatives remain', bakedValen.length === 0, bakedV
 
 const valenRuntimeCode = fs.readFileSync(path.join(ROOT, 'src/game/valen3d.js'), 'utf8');
 const runtimeCode = [
-  'src/core/assets.js',
   'src/game/player.js',
   'src/game/valen3d.js',
   'src/main.js',
@@ -310,8 +309,13 @@ const crowd = Array.from({ length: 24 }, (_, i) => ({ id: 1000 + i, key: 'zombie
 const siege = selectGlbSlots([...crowd, ...combatants], { x: 0, y: 0 }, ENEMY_GLB_CAP, () => true);
 ok('all 14 combatants receive GLBs; siege crowd does not consume combat slots',
   siege.length === 14 && siege.every((e) => !e._crowd));
-ok('reduced-AI siege bodies are not sent to the rig pool',
+ok('reduced-AI siege bodies stay out of legacy combat slots',
   selectGlbSlots(crowd, { x: 0, y: 0 }, ENEMY_GLB_CAP, () => true).length === 0);
+const survivalSiege = selectGlbSlots(crowd, { x: 0, y: 0 }, ENEMY_GLB_CAP, () => true, true);
+ok('survival explicitly assigns the nearest Swarm bodies to the authored zombie GLB cap',
+  survivalSiege.length === ENEMY_GLB_CAP && survivalSiege.every((e) => e._crowd)
+    && survivalSiege[0].id === 1000,
+  `${survivalSiege.length} Swarm rigs, nearest id ${survivalSiege[0]?.id || 'none'}`);
 const dyingEnemy = { id: 1, key: 'zombie', dead: true, deathT: 0.25, x: 0, y: 0 };
 const deathSlot = selectGlbSlots([dyingEnemy], { x: 0, y: 0 }, ENEMY_GLB_CAP, () => true);
 ok('a recent death can keep a spare skinned slot for its animation', deathSlot.length === 1 && deathSlot[0] === dyingEnemy);
@@ -397,7 +401,8 @@ ok('a missing WebGL piece reports a 3D error instead of painting a Canvas fallba
     && /3D MANSION COULD NOT BE BUILT/.test(gameplayCode) && !/renderWorld\(/.test(gameplayCode));
 
 const mansionCode = fs.readFileSync(path.join(ROOT, 'src/game/mansion.js'), 'utf8');
-ok('a door with a mesh does not also paint its twin', mansionCode.includes('e.env3d'));
+ok('a door with a mesh does not also paint its twin',
+  envCode.includes('e.env3d = true') && !mansionCode.includes('drawEntrances('));
 
 
 /* ---------- the modular room ---------- */
@@ -433,9 +438,11 @@ ok('the grand staircase is kit stairs, not paint',
     && /stairs: \[\]/.test(envCode));
 ok('furniture stands on the middle of the rect it is drawn from, not its corner',
   /f\.x \+ \(f\.w \|\| 0\) \/ 2/.test(envCode) && /f\.y \+ \(f\.h \|\| 0\) \/ 2/.test(envCode));
-ok('every mapped/custom furniture and prop suppresses its retired Canvas twin',
-  /f\.env3d/.test(mansionCode) && /p\.env3d/.test(mansionCode)
-    && /f\.env3d = true/.test(envCode) && /p\.env3d = true/.test(envCode));
+const retiredMansionCanvasMethods = ['bake', 'bakeRoom', 'drawFloor', 'drawWallRect', 'drawProps', 'drawFurniture', 'drawEntrances', 'drawLightFixtures', 'submitLights', 'ambientFor'];
+ok('the retired Canvas Mansion render and lightmap methods are absent',
+  retiredMansionCanvasMethods.every((name) => !mansionCode.includes(`${name}(`)));
+ok('WebGL marks mapped furniture and props for the active environment',
+  /f\.env3d\s*=\s*true/.test(envCode) && /p\.env3d\s*=\s*true/.test(envCode));
 ok('the reach is measured as the room is drawn, not on the floor',
   /swingDist\(/.test(gameCode) && /swingDist\(/.test(coachCode) && /tilt/.test(weaponsCode));
 ok('a swing dead to the right keeps its aim', /swingAngle \?\? player\.angle/.test(gameCode));

@@ -8,12 +8,11 @@
  * uses exactly the same visual language as the game itself.
  */
 
-import { clamp, lerp, damp, TAU, rand, chance, fmtClock, hash2, fmtBar } from '../core/util.js';
-import { PAL } from '../core/render.js';
-import { UPGRADES, upgradeLevel, DIFFICULTY, CODEX, NIGHT_DURATION } from '../core/config.js';
+import { clamp, lerp, TAU, fmtClock, hash2 } from '../core/util.js';
+import { DIFFICULTY, CODEX } from '../core/config.js';
 import { unlocked, nextRevealLine, LANES, nextRank, rankCost, rankCount, LANE_CAP, houseTitle } from '../game/economy.js';
 import { fragmentsKnown, endingFrame } from '../game/narrative.js';
-import { intelLine, huntPct, huntProgress, fortressState, huntTells, masterReady, masterDown, armouryNext, FORTRESS_STATES } from '../game/hunt.js';
+import { intelLine, huntPct, huntProgress, fortressState, huntTells, masterReady, masterDown, FORTRESS_STATES } from '../game/hunt.js';
 import { INFORMANT, informantLine, boardEntries } from '../game/informant.js';
 import { drawPlateCover } from './storycards.js';
 import { Valen3D } from '../game/valen3d.js';
@@ -77,7 +76,7 @@ function uiButton(game, { x, y, w, h, label, sub, onClick, disabled, small, alig
   return { b, active, hover, selected };
 }
 
-function buttonVisual(ctx, { x, y, w, h }, { active, disabled, label, sub, small, accent }) {
+function buttonVisual(ctx, { x, y, w, h }, { active, disabled, label, sub, small, accent, showLabel = false }) {
   ctx.save();
   const a = active ? 1 : 0.72;
   const gold = accent === '#a8833c';
@@ -97,25 +96,30 @@ function buttonVisual(ctx, { x, y, w, h }, { active, disabled, label, sub, small
 
   const glyph = buttonIconForLabel(label);
   const ink = disabled ? 'rgba(140,138,132,0.5)' : active ? '#f2ead6' : `rgba(214,206,190,${a})`;
-  if (glyph) {
-    // Icon controls are intentionally icon-only. The action name remains on
-    // the input record for keyboard help and the external focus caption.
+  if (glyph && !showLabel) {
+    // Icon-only gameplay controls stay visually clean; their action names are
+    // kept for keyboard help and focus captions.
     drawGameIcon(ctx, glyph, x + w / 2, y + h / 2, Math.min(small ? 20 : 24, h * 0.54, w * 0.54), ink);
   } else {
-    ctx.textAlign = 'center';
+    ctx.textAlign = glyph ? 'left' : 'center';
     ctx.textBaseline = 'middle';
-    fitType(ctx, label, Math.max(40, w - 18), small ? 15 : 18, SERIF);
+    if (glyph && showLabel) {
+      drawGameIcon(ctx, glyph, x + 24, y + h / 2, Math.min(small ? 18 : 22, h * 0.52), ink);
+    }
+    const textX = glyph && showLabel ? x + 46 : x + w / 2;
+    const textW = glyph && showLabel ? Math.max(40, w - 58) : Math.max(40, w - 18);
+    fitType(ctx, label, textW, small ? 15 : 18, SERIF);
     ctx.fillStyle = ink;
     if (active) {
       ctx.shadowColor = 'rgba(255,200,120,0.35)';
       ctx.shadowBlur = 12;
     }
-    ctx.fillText(label, x + w / 2, y + h / 2 + (sub ? -5 : 0));
+    ctx.fillText(label, textX, y + h / 2 + (sub ? -5 : 0));
     ctx.shadowBlur = 0;
     if (sub) {
-      fitType(ctx, sub, Math.max(40, w - 18), 11, SANS, 400);
+      fitType(ctx, sub, textW, 11, SANS, 400);
       ctx.fillStyle = 'rgba(190,182,168,0.6)';
-      ctx.fillText(sub, x + w / 2, y + h / 2 + 14);
+      ctx.fillText(sub, textX, y + h / 2 + 14);
     }
   }
 
@@ -769,92 +773,12 @@ export function drawPrivacy(game, ctx, w, h) {
 /* ================= intro card ================= */
 
 export function drawIntro(game, ctx, w, h) {
-  const t = game.introT;
-  const a = clamp(t / 0.6, 0, 1) * clamp((game.introLen - t) / 0.8, 0, 1);
+  // A brief, wordless hand-off into play. Keep the world visible; do not put a
+  // paragraph, title card, or cinematic copy between the player and control.
+  const fade = clamp(1 - (game.introT || 0) / Math.max(0.01, game.introLen || 0.55), 0, 1);
   ctx.save();
-  ctx.fillStyle = `rgba(3,4,8,${clamp(1 - t / 0.4, 0, 1) * 0.85})`;
+  ctx.fillStyle = `rgba(3,4,8,${0.22 * fade})`;
   ctx.fillRect(0, 0, w, h);
-  ctx.globalAlpha = a;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  // Mobile-safe: the intro type scales with the shorter axis and the body
-  // copy re-wraps inside the viewport, flowing top-down so narrow screens
-  // can never make two lines collide. A launch card that clips off-screen
-  // reads as a broken game before the game has even started.
-  const sc = clamp(Math.min(w / 900, h / 620), 0.58, 1);
-  const maxW = w * 0.86;
-  const wrap = (text, font) => {
-    ctx.font = font;
-    const words = text.split(' ');
-    const out = []; let cur = '';
-    for (const word of words) {
-      const next = cur ? cur + ' ' + word : word;
-      if (ctx.measureText(next).width > maxW && cur) { out.push(cur); cur = word; }
-      else cur = next;
-    }
-    if (cur) out.push(cur);
-    return out;
-  };
-  const bodyFont = `400 ${15 * sc}px ${SANS}`;
-  const body = [
-    ...wrap('You woke hungry. The servant door is already shaking.', bodyFont),
-    ...wrap('Bar it, or open it and feed. You cannot do both.', bodyFont),
-    ...wrap((game.save.nightsSurvived || 0) > 0
-      ? `Night ${(game.save.nightsSurvived || 0) + 1}. The house kept every dawn. More of them are coming.`
-      : 'The gatehouse is west of the hall. Raise the stakes. Dawn is at 05:00.', bodyFont),
-  ];
-  const draw = (text, { f, style, ls, y, c }) => {
-    ctx.font = `400 ${f}px ${style}`;
-    if ('letterSpacing' in ctx) ctx.letterSpacing = ls + 'px';
-    ctx.fillStyle = c;
-    ctx.fillText(text, w / 2, h * y);
-  };
-  draw('DUSKHOLD', { f: 40 * sc, style: SERIF, ls: 10 * sc, y: 0.24, c: '#efe7d4' });
-  let fy = 0.36;
-  for (const b of body) { draw(b, { f: 15 * sc, style: SANS, ls: 2 * sc, y: fy, c: 'rgba(200,192,176,0.8)' }); fy += 0.042; }
-  fy = Math.max(0.55, fy + 0.03);
-  draw('SURVIVE UNTIL DAWN.', { f: 22 * sc, style: SERIF, ls: 6 * sc, y: fy, c: '#c8a04a' });
-
-  // TONIGHT'S ERRAND — the hunt's short goal layer (docs/PURPOSE.md §2 P5).
-  // Surviving is the clock; this is the reason to go out, and it is dealt
-  // before the first door shakes so the night has a shape from the start.
-  let ny = fy + 0.062;
-  const errand = game.objectives && game.objectives.hunt ? game.objectives.hunt.goal : null;
-  if (errand) {
-    ctx.save();
-    ctx.globalAlpha = a * 0.45;
-    ctx.strokeStyle = 'rgba(200,160,74,0.55)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(w * 0.26, h * (ny - 0.022));
-    ctx.lineTo(w * 0.74, h * (ny - 0.022));
-    ctx.stroke();
-    ctx.restore();
-    // Type is floored, not only scaled: at 0.58 the card's own body type is
-    // 8.7px, and an errand nobody can read is not an errand.
-    draw('TONIGHT', { f: 9.5, style: SANS, ls: 3, y: ny, c: 'rgba(200,160,74,0.8)' });
-    draw(errand.label, { f: Math.max(13, 17 * sc), style: SERIF, ls: 2.5, y: ny + 0.038, c: '#e8dfc8' });
-    draw(errand.hint, { f: Math.max(10, 12 * sc), style: SANS, ls: 1, y: ny + 0.068, c: 'rgba(186,178,160,0.82)' });
-    ny += 0.104;
-  }
-  // THE LADDER — the hunt's middle goal layer (docs/PURPOSE.md §2 P5): not
-  // what tonight asks of her, and not the end of the hunt, but the thing being
-  // built between the two. One line at nightfall, so the pull is never a menu.
-  const rung = armouryNext(game.save);
-  if (rung) {
-    const wait = !rung.hasIntel ? `${rung.need - rung.facts} MORE FACTS`
-      : !rung.hasCost ? `${rung.cost - rung.materials} MORE MATERIALS`
-      : 'READY';
-    draw(`MARTHE IS MAKING · ${rung.name} · ${wait}`, { f: Math.max(9, 10.5 * sc), style: SANS, ls: 2, y: ny + 0.012, c: 'rgba(196,210,238,0.8)' });
-    ny += 0.038;
-  }
-  draw('00:00  →  05:00', { f: 20 * sc, style: MONO, ls: 4 * sc, y: ny + 0.02, c: 'rgba(220,214,198,0.9)' });
-  const hintY = ny + 0.08;
-  ctx.globalAlpha = a * 0.6;
-  ctx.font = `400 12px ${SANS}`;
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
-  ctx.fillStyle = 'rgba(190,182,168,0.9)';
-  ctx.fillText('TAP TO WAKE', w / 2, h * hintY);
   ctx.restore();
 }
 
@@ -888,12 +812,12 @@ export function drawPause(game, ctx, w, h) {
       x: w / 2 - bw / 2, y: y1, w: bw, h: bh, label: 'STAY', small: true, accent: '#6a6a80',
       onClick: () => { game.pauseConfirm = false; },
     });
-    buttonVisual(ctx, stay.b, { active: stay.hover, label: 'STAY', small: true, accent: '#6a6a80' });
+    buttonVisual(ctx, stay.b, { active: stay.hover, label: 'STAY', small: true, accent: '#6a6a80', showLabel: true });
     const leave = uiButton(game, {
       x: w / 2 - bw / 2, y: y1 + bh + 10, w: bw, h: bh, label: 'LEAVE', small: true, accent: '#8a3038',
       onClick: () => game.toMenu(),
     });
-    buttonVisual(ctx, leave.b, { active: leave.hover, label: 'LEAVE', small: true, accent: '#8a3038' });
+    buttonVisual(ctx, leave.b, { active: leave.hover, label: 'LEAVE', small: true, accent: '#8a3038', showLabel: true });
     return;
   }
   const items = [
@@ -909,7 +833,7 @@ export function drawPause(game, ctx, w, h) {
   let by = Math.max(titleY + 36, Math.min(centered, h - stack - 12));
   items.forEach((it, i) => {
     const r = uiButton(game, { x: w / 2 - bw / 2, y: by, w: bw, h: bh, label: it.label, onClick: it.onClick, small: true, accent: '#6a6a80' });
-    buttonVisual(ctx, r.b, { active: r.hover || (game.usingKeyboard && game.uiIndex === i), label: it.label, small: true, accent: '#6a6a80' });
+    buttonVisual(ctx, r.b, { active: r.hover || (game.usingKeyboard && game.uiIndex === i), label: it.label, small: true, accent: '#6a6a80', showLabel: true });
     by += bh + gap;
   });
 }
@@ -1440,10 +1364,9 @@ function wrapText(ctx, text, x, y, maxW, lh) {
 
 /* ================= the narrator's plate =================
  *
- * The story is TOLD, not only murmured on the strip (docs/STORY.md §2.3 / §3 /
- * §10). Two surfaces share this plate: the opening narration (three authored
- * lines, in her voice, with the house answering) and the act-title cards at
- * each turn of §8. Same grade as a dawn-card, different typography: Valen is
+ * Legacy narration is told, not only murmured on the strip. Two surfaces share
+ * this plate: the opening narration (three authored lines, in her voice, with
+ * the house answering) and the act-title cards at each act turn. Same grade as a dawn-card, different typography: Valen is
  * first person and italic, the house is second person and small caps, so the
  * two voices read as two voices even with the sound off.
  *
@@ -1616,7 +1539,7 @@ export function drawHelp(game, ctx, w, h) {
 
 /**
  * The hunt's payoff beat: what the night bought, on a death and on a dawn
- * alike (docs/PURPOSE.md §2 P2). A night that ends in blood still taught you
+ * alike. A night that ends in blood still taught you
  * something about the thing you came to kill, and the screen says so — this is
  * the difference between TRY AGAIN and "I am one step closer to it."
  *
@@ -1861,7 +1784,7 @@ export function drawDeath(game, ctx, w, h) {
     ];
     const atRisk = game.shardsEarned || 0;
     const relief = unlocked(game.save, 'risk') && atRisk > 0 && !game.usedRevive;
-    // Archero-style relief (docs/DESIGN.md §7 · D9): the revive is *tempting
+    // Legacy revive relief: the offer is *tempting
     // but never forcing*. The offer is a snap decision on a short, visible
     // countdown that opens when the buttons fade in and closes after
     // REVIVE_WINDOW seconds. Letting it lapse forfeits nothing but the offer
@@ -2371,8 +2294,8 @@ export function drawPeakOverlay(game, ctx, w, h) {
 
 /* ================= the refuge =================
  *
- * THE HUNTER'S REFUGE — the dawn safehouse, and the one person in it
- * (docs/PURPOSE.md P3, §5). Between nights you come back to a room with
+ * THE HUNTER'S REFUGE — the legacy dawn safehouse and the one person in it.
+ * Between nights you come back to a room with
  * someone in it who has watched every night you survived and who is still in
  * the house when you leave it. This is also the visible-progression screen:
  * the board she keeps fills as the hunt does — the facts you won, pinned; the
@@ -2762,16 +2685,15 @@ export function drawRefuge(game, ctx, w, h) {
 }
 
 /* =======================================================================
- * THE FIELD CARD — the four in-run destinations players use for items,
- * objectives, progression and their record. The simulation pauses while it
- * is open; the live 3D night remains behind the card.
+ * THE FIELD CARD — the three in-run destinations for stock, objectives and
+ * progression. The simulation pauses while it is open; the live 3D night
+ * remains behind the card.
  * ======================================================================= */
 
 const FIELD_TABS = [
   { id: 'bag', icon: 'bag', title: 'PACK' },
   { id: 'missions', icon: 'mission', title: 'MISSIONS' },
   { id: 'upgrades', icon: 'upgrade', title: 'UPGRADES' },
-  { id: 'profile', icon: 'profile', title: 'PROFILE' },
 ];
 const FIELD_PANELS = {
   ...Object.fromEntries(FIELD_TABS.map((entry) => [entry.id, entry])),
@@ -2810,22 +2732,25 @@ function drawFieldBag(game, ctx, x, y, w, h, short) {
   const bag = game.inventory ? game.inventory() : ((game.save && game.save.inventory) || {});
   const p = game.player;
   const items = [
-    { icon: 'blood', name: 'BLOOD', amount: `${Math.ceil(p.blood)} / ${Math.ceil(p.bloodMax)}`, tint: '#ce5960' },
-    { icon: 'shard', name: 'SHARDS', amount: game.save.shards || 0, tint: '#d3b66f' },
-    { icon: 'plank', name: 'PLANKS', amount: p.planks | 0, tint: '#c29a63' },
+    // Health is already persistent in the HUD; the pack is for carried stock.
+    { icon: 'shard', name: 'SHARDS', amount: game.save.shards || 0, tint: '#d3b66f', always: true },
+    { icon: 'plank', name: 'PLANKS', amount: p.planks | 0, tint: '#c29a63', always: true },
     { icon: 'arrow', name: 'ARROWS', amount: bag.arrows | 0, tint: '#b8c5d0', action: { icon: 'shot', weapon: 'shot', count: bag.arrows | 0 } },
     { icon: 'knife', name: 'KNIVES', amount: bag.knives | 0, tint: '#b8c5d0', action: { icon: 'knife', weapon: 'knife', count: bag.knives | 0 } },
     { icon: 'bandage', name: 'BANDAGES', amount: bag.bandages | 0, tint: '#d2b68b', action: { icon: 'plus', use: true, count: bag.bandages | 0 } },
     { icon: 'relic', name: 'RELICS', amount: game.save.relics || 0, tint: '#a4b6c8' },
-  ];
-  const cols = w < 520 ? 1 : w > 720 ? 3 : 2;
+  ].filter((item) => item.always || Number(item.amount) > 0);
+  const cols = w < 520 ? 1 : w > 720 ? Math.min(3, items.length) : Math.min(2, items.length);
   const gap = short ? 6 : 10;
   const rows = Math.ceil(items.length / cols);
   const cw = (w - gap * (cols - 1)) / cols;
-  const ch = Math.max(48, Math.min(180, (h - gap * (rows - 1)) / rows));
+  const preferredH = short ? 58 : (w < 520 ? 72 : 120);
+  const ch = Math.max(48, Math.min(preferredH, (h - gap * (rows - 1)) / rows));
+  const listH = rows * ch + gap * (rows - 1);
+  const listY = y + Math.max(0, (h - listH) / 2);
   items.forEach((item, i) => {
     const col = i % cols, row = Math.floor(i / cols);
-    const cx = x + col * (cw + gap), cy = y + row * (ch + gap);
+    const cx = x + col * (cw + gap), cy = listY + row * (ch + gap);
     ctx.save();
     ctx.fillStyle = 'rgba(16,19,26,0.84)';
     ctx.fillRect(cx, cy, cw, ch);
@@ -2945,42 +2870,6 @@ function drawFieldUpgrades(game, ctx, x, y, w, h, short) {
   ctx.restore();
 }
 
-function drawFieldProfile(game, ctx, x, y, w, h, short) {
-  const save = game.save;
-  const title = houseTitle(save) || (save.ending === 'monster' ? 'THE HOUSE’S HEART' : 'UNNAMED SURVIVOR');
-  const stats = [
-    { icon: 'profile', label: 'DAWNS SURVIVED', value: save.nightsSurvived || 0 },
-    { icon: 'claw', label: 'KILLS', value: save.bestDefeated || 0 },
-    { icon: 'upgrade', label: 'UPGRADES', value: rankCount(save) },
-    { icon: 'shot', label: 'BEST HOLD', value: fmtClock(save.bestTime || 0) },
-  ];
-  const headerH = short ? 44 : 54;
-  ctx.save();
-  ctx.fillStyle = 'rgba(18,20,27,0.88)';
-  ctx.fillRect(x, y, w, headerH);
-  ctx.strokeStyle = 'rgba(183,153,99,0.35)';
-  ctx.strokeRect(x + 0.5, y + 0.5, w - 1, headerH - 1);
-  drawGameIcon(ctx, 'profile', x + 26, y + headerH / 2, short ? 24 : 30, '#d0b777');
-  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-  fieldFit(ctx, title, x + 54, y + headerH / 2, w - 74, short ? 14 : 19, SANS, '#eee4d2', 600);
-  const top = y + headerH + 12;
-  const gap = 8;
-  const cols = 2;
-  const rows = Math.ceil(stats.length / cols);
-  const cellW = (w - gap * (cols - 1)) / cols;
-  const cellH = Math.min(short ? 90 : 112, (h - (top - y) - gap * (rows - 1)) / rows);
-  stats.forEach((stat, i) => {
-    const cx = x + (i % cols) * (cellW + gap);
-    const cy = top + Math.floor(i / cols) * (cellH + gap);
-    ctx.fillStyle = 'rgba(13,16,22,0.86)'; ctx.fillRect(cx, cy, cellW, cellH);
-    ctx.strokeStyle = 'rgba(153,149,138,0.22)'; ctx.strokeRect(cx + 0.5, cy + 0.5, cellW - 1, cellH - 1);
-    drawGameIcon(ctx, stat.icon, cx + 20, cy + cellH / 2, short ? 17 : 20, '#c5ad78');
-    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    fieldFit(ctx, stat.label, cx + 37, cy + cellH * 0.34, cellW - 48, short ? 8 : 9, SANS, 'rgba(176,168,151,0.72)', 600);
-    fieldFit(ctx, stat.value, cx + 37, cy + cellH * 0.69, cellW - 48, short ? 14 : 18, MONO, '#e8deca', 400);
-  });
-  ctx.restore();
-}
 
 function drawFieldPrivacy(game, ctx, x, y, w, h, short) {
   const ack = !!game.save.privacyAck;
@@ -3023,7 +2912,42 @@ export function drawFieldCard(game, ctx, w, h) {
   const tab = FIELD_PANELS[game.uiPanel] || FIELD_TABS[0];
   const short = h < 500;
   const cardW = Math.min(960, w - 20);
-  const cardH = Math.min(700, h - 20);
+  const bodyW = cardW - UI_TOKENS.spacing.fieldInset * 2;
+  const headerH = short ? 42 : 48;
+  const inner = cardW - 24;
+  const n = FIELD_TABS.length;
+  const portraitNav = w < 600 && !short;
+  const cols = portraitNav ? Math.min(5, n) : n;
+  const tabGap = short ? UI_TOKENS.spacing.fieldShortTab
+    : portraitNav ? UI_TOKENS.spacing.fieldPortraitTab : UI_TOKENS.spacing.fieldTab;
+  const preferredSize = portraitNav ? UI_TOKENS.size.fieldTabPortrait
+    : short ? UI_TOKENS.size.fieldTabShort : UI_TOKENS.size.fieldTabStandard;
+  const tabSize = Math.min(preferredSize, Math.floor((inner - tabGap * (cols - 1)) / cols));
+  const tabRows = Math.ceil(n / cols);
+  const tabTotalW = tabSize * cols + tabGap * (cols - 1);
+  const tabTotalH = tabSize * tabRows + tabGap * (tabRows - 1);
+
+  const bag = game.inventory ? game.inventory() : ((game.save && game.save.inventory) || {});
+  const bagItems = 2 + [bag.arrows, bag.knives, bag.bandages, game.save.relics]
+    .filter((amount) => Number(amount) > 0).length;
+  const bagCols = bodyW < 520 ? 1 : bodyW > 720 ? Math.min(3, bagItems) : Math.min(2, bagItems);
+  const bagRows = Math.ceil(bagItems / bagCols);
+  const bagGap = short ? 6 : 10;
+  const bagRowH = short ? 58 : (bodyW < 520 ? 72 : 120);
+  const bagBodyH = bagRows * bagRowH + bagGap * (bagRows - 1);
+  const missionCount = game.objectives && game.objectives.list ? game.objectives.list.length : 0;
+  const missionGap = short ? 5 : 8;
+  const missionsBodyH = missionCount
+    ? 20 + missionCount * (short ? 52 : 72) + missionGap * (missionCount - 1)
+    : (short ? 80 : 100);
+  const upgradeGap = short ? 7 : 10;
+  const upgradesBodyH = 21 + LANES.length * (short ? 52 : 62) + upgradeGap * (LANES.length - 1);
+  const bodyContentH = tab.id === 'bag' ? bagBodyH
+    : tab.id === 'missions' ? missionsBodyH
+      : tab.id === 'upgrades' ? upgradesBodyH
+        : tab.id === 'privacy' ? (short ? 200 : 240) : bagBodyH;
+  const cardH = Math.min(700, h - 20, Math.max(short ? 176 : 200,
+    headerH + tabTotalH + 20 + bodyContentH + 14));
   const x = (w - cardW) / 2;
   const y = (h - cardH) / 2;
   game._fieldCardBounds = { x, y, w: cardW, h: cardH };
@@ -3043,20 +2967,8 @@ export function drawFieldCard(game, ctx, w, h) {
   fieldFit(ctx, tab.title, x + 18, y + (short ? 20 : 24), cardW - 80, short ? 13 : 17, SANS, '#eee3d0', 600);
   fieldIconButton(game, ctx, x + cardW - 38, y + 8, 30, 'close', () => game.closePanel(), { round: false });
 
-  const tabY = y + (short ? 42 : 48);
-  const inner = cardW - 24;
-  const n = FIELD_TABS.length;
-  // Four destinations fit in one icon-only row even on portrait phones.
-  const portraitNav = w < 600 && !short;
-  const cols = portraitNav ? Math.min(5, n) : n;
-  const rows = Math.ceil(n / cols);
-  const gap = short ? UI_TOKENS.spacing.fieldShortTab
-    : portraitNav ? UI_TOKENS.spacing.fieldPortraitTab : UI_TOKENS.spacing.fieldTab;
-  const preferredSize = portraitNav ? UI_TOKENS.size.fieldTabPortrait
-    : short ? UI_TOKENS.size.fieldTabShort : UI_TOKENS.size.fieldTabStandard;
-  const tabSize = Math.min(preferredSize, Math.floor((inner - gap * (cols - 1)) / cols));
-  const tabTotalW = tabSize * cols + gap * (cols - 1);
-  const tabTotalH = tabSize * rows + gap * (rows - 1);
+  const tabY = y + headerH;
+  const gap = tabGap;
   const tabX = x + (cardW - tabTotalW) / 2;
   FIELD_TABS.forEach((entry, i) => {
     const col = i % cols;
@@ -3070,7 +2982,6 @@ export function drawFieldCard(game, ctx, w, h) {
 
   const bodyX = x + UI_TOKENS.spacing.fieldInset;
   const bodyY = tabY + tabTotalH + 20;
-  const bodyW = cardW - UI_TOKENS.spacing.fieldInset * 2;
   const bodyH = Math.max(24, y + cardH - 14 - bodyY);
   ctx.save();
   ctx.beginPath(); ctx.rect(bodyX, bodyY, bodyW, bodyH); ctx.clip();
@@ -3078,7 +2989,6 @@ export function drawFieldCard(game, ctx, w, h) {
     case 'bag': drawFieldBag(game, ctx, bodyX, bodyY, bodyW, bodyH, short); break;
     case 'missions': drawFieldMissions(game, ctx, bodyX, bodyY, bodyW, bodyH, short); break;
     case 'upgrades': drawFieldUpgrades(game, ctx, bodyX, bodyY, bodyW, bodyH, short); break;
-    case 'profile': drawFieldProfile(game, ctx, bodyX, bodyY, bodyW, bodyH, short); break;
     case 'privacy': drawFieldPrivacy(game, ctx, bodyX, bodyY, bodyW, bodyH, short); break;
     default: break;
   }

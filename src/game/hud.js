@@ -7,10 +7,9 @@
  *  - the knock is communicated by sound first, then by a discreet marker
  */
 
-import { clamp, lerp, damp, fmtClock, TAU } from '../core/util.js';
-import { PAL } from '../core/render.js';
-import { PLAYER, UPGRADES, SHARDS } from '../core/config.js';
-import { unlocked, projectDawn } from './economy.js';
+import { clamp, fmtClock, TAU } from '../core/util.js';
+import { PLAYER } from '../core/config.js';
+import { unlocked } from './economy.js';
 import { drawGuideArrow, guideScale, guideSize } from './coach.js';
 import { weaponById } from './weapons.js';
 import { drawGameIcon } from '../ui/icons.js';
@@ -60,7 +59,7 @@ export function pauseButtonBox(w, h) {
 
 function drawPauseButton(game, ctx, w, h) {
   const hit = pauseButtonBox(w, h);
-  const size = h < 500 ? UI_TOKENS.size.utilityShort : UI_TOKENS.size.utilityStandard;
+  const size = h < 500 ? UI_TOKENS.size.pauseShort : UI_TOKENS.size.pauseStandard;
   const x = hit.x + (hit.w - size) / 2;
   const y = hit.y + (hit.h - size) / 2;
   const idx = game.ui.length;
@@ -69,7 +68,7 @@ function drawPauseButton(game, ctx, w, h) {
   drawIconButton(ctx, x, y, size, 'pause', {
     state: iconButtonState(game, box),
     shape: 'rounded',
-    iconSize: h < 500 ? 16 : 18,
+    iconSize: h < 500 ? 12 : 14,
   });
 }
 
@@ -435,7 +434,7 @@ function drawResourceStrip(game, ctx, w, h, em = 1) {
     ['arrow', bag.arrows | 0, '#c2ccd2'],
     ['knife', bag.knives | 0, '#c2ccd2'],
     ['bandage', bag.bandages | 0, '#d2bd9c'],
-  ];
+  ].filter(([icon, count]) => count > 0 || icon === 'shard' || icon === 'plank');
   const short = h < 500;
   const phone = w < 840 || short;
   const step = short ? 38 : 42;
@@ -510,147 +509,6 @@ function drawGuidanceStrip(game, ctx, w, h) {
   ctx.fillRect(w / 2 - tw / 2 - 12, y - boxH / 2, tw + 24, boxH);
   ctx.fillStyle = 'rgba(232,220,200,0.94)';
   shownLines.forEach((ln, i) => ctx.fillText(ln, w / 2, y - (shownLines.length - 1) * 8 + i * 16));
-  ctx.restore();
-}
-
-/* ---------------- bottom left: blood (folded into the top bar) ---------------- */
-
-function drawBlood(game, ctx, w, h, pulse, em = 1) {
-  const p = game.player;
-  // Thumbs own the bottom (Vampire Survivors / Hades mobile). Blood sits just
-  // above the stick well so the hunger readout is never under the finger.
-  const stick = game.input && game.input.stick;
-  const stickTop = stick ? (stick.homeY || h - 120) - (stick.r || 52) : h - 80;
-  const phone = w < 840 || h < 500;
-  const x = 14;
-  const cluster = game.input && game.input.clusterLeft;
-  const room = cluster ? cluster - x - 18 : w - 36;
-  const barW = phone ? Math.min(Math.max(108, room), 200) : Math.min(168, Math.max(120, w * 0.28));
-  const barH = phone ? 10 : 8;
-  const plateH = phone ? 44 : 30;
-  const y = game.input && game.input.gameplay
-    ? Math.max(8, Math.min(h - plateH - 8, stickTop - plateH - 10))
-    : h - plateH - 16;
-  const pct = p.bloodPct;
-  const low = p.lowBlood || game.hungerFailing;
-  const critical = pct < 0.14 || (game.hungerFailing && pct < 0.3);
-
-  ctx.save();
-  ctx.globalAlpha = em;
-  ctx.fillStyle = 'rgba(8,6,8,0.55)';
-  ctx.fillRect(x - 8, y - 22, barW + 16, plateH);
-  ctx.strokeStyle = low ? 'rgba(180,40,48,0.7)' : 'rgba(140,110,70,0.35)';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(x - 7.5, y - 21.5, barW + 15, plateH - 1);
-  ctx.textBaseline = 'middle';
-  ctx.font = `500 ${phone ? 13 : 11}px ${SANS}`;
-  setLetter(ctx, 1);
-  ctx.fillStyle = low ? `rgba(220,${120 - 60 * Math.sin(game.time * 5)},110,0.95)` : 'rgba(190,180,165,0.8)';
-  ctx.textAlign = 'left';
-  ctx.fillText('BLOOD', x, y - 8);
-
-  ctx.font = `400 ${phone ? 13 : 11}px ${MONO}`;
-  ctx.fillStyle = 'rgba(200,160,74,0.9)';
-  ctx.textAlign = 'right';
-  ctx.fillText(Math.round(pct * 100) + '%', x + barW, y - 8);
-
-  const scale = 1 + pulse * 0.06 * (low ? 1.8 : 0.4);
-  ctx.translate(x, y);
-  ctx.scale(scale, scale);
-  ctx.fillStyle = 'rgba(0,0,0,0.62)';
-  ctx.fillRect(-2, -2, barW + 4, barH + 4);
-  ctx.fillStyle = 'rgba(40,16,20,0.85)';
-  ctx.fillRect(0, 0, barW, barH);
-  if (pct > 0) {
-    const gg = ctx.createLinearGradient(0, 0, 0, barH);
-    if (critical) { gg.addColorStop(0, '#ff4a50'); gg.addColorStop(1, '#6e0c14'); }
-    else if (low) { gg.addColorStop(0, '#d03842'); gg.addColorStop(1, '#5a0c14'); }
-    else { gg.addColorStop(0, '#a81e2c'); gg.addColorStop(1, '#4a0a12'); }
-    ctx.fillStyle = gg;
-    const shown = game.bloodShown == null ? pct : game.bloodShown;
-    ctx.fillRect(0, 0, barW * shown, barH);
-    if (game.bloodGulp > 0) {
-      ctx.fillStyle = `rgba(255,150,140,${game.bloodGulp})`;
-      ctx.fillRect(0, 0, barW * shown, barH);
-    }
-    ctx.fillStyle = 'rgba(255,190,190,0.22)';
-    ctx.fillRect(0, 0, barW * pct, 2);
-    if (game.bloodTick > 0) {
-      ctx.fillStyle = `rgba(255,70,70,${game.bloodTick})`;
-      ctx.fillRect(0, 0, barW * pct, barH);
-    }
-    if (game.hungerFailing) {
-      const k = 0.35 + 0.35 * Math.abs(Math.sin(game.time * 5));
-      ctx.strokeStyle = `rgba(220,40,40,${k})`;
-      ctx.lineWidth = 2;
-      ctx.strokeRect(-1, -1, barW + 2, barH + 2);
-    }
-  }
-  const proj = projectDawn(p.blood, game.timeLeft || 0, game.save, p.state === 'run');
-  const mark = clamp(proj.atDawn <= 0 ? 0 : proj.atDawn / Math.max(1, p.bloodMax), 0, 1);
-  ctx.fillStyle = proj.failing
-    ? `rgba(255,214,150,${0.5 + 0.45 * Math.abs(Math.sin(game.time * 5))})`
-    : 'rgba(214,204,180,0.75)';
-  ctx.fillRect(barW * mark - 1, -4, 2, barH + 8);
-  ctx.strokeStyle = 'rgba(200,170,140,0.28)';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(0.5, 0.5, barW - 1, barH - 1);
-  // quarter ticks — you can read "about half" without the number
-  ctx.fillStyle = 'rgba(0,0,0,0.45)';
-  for (let i = 1; i < 4; i++) ctx.fillRect(barW * i / 4, 0, 1, barH);
-  ctx.scale(1 / scale, 1 / scale);
-  ctx.translate(-x, -y);
-
-  if (low) {
-    const a = 0.5 + 0.5 * Math.sin(game.time * (critical ? 8 : 4));
-    ctx.font = `500 10px ${SANS}`;
-    setLetter(ctx, 2);
-    ctx.textAlign = 'left';
-    ctx.fillStyle = `rgba(230,60,60,${a})`;
-    ctx.fillText(critical ? 'THE HUNGER IS TAKING YOU' : (game.hungerFailing ? 'FEED, OR THE DAWN IS LOST' : 'YOU NEED BLOOD'), x, y + 26);
-  }
-  if (game.screen === 'playing' && unlocked(game.save, 'risk')) {
-    const atRisk = game.livePurse ? game.livePurse() : 0;
-    ctx.font = `500 10px ${SANS}`;
-    setLetter(ctx, 1);
-    ctx.textAlign = 'left';
-    const failing = game.hungerFailing || p.lowBlood;
-    ctx.fillStyle = failing ? `rgba(255,196,90,${0.75 + 0.25 * Math.abs(Math.sin(game.time * 5))})` : 'rgba(200,160,74,0.7)';
-    ctx.fillText(`◆ ${atRisk} AT RISK`, x, y - 28);
-  }
-  ctx.restore();
-}
-
-/* ---------------- bottom right: actions ---------------- */
-
-function drawActions(game, ctx, w, h, em = 1) {
-  const p = game.player;
-  const input = game.input;
-  const live = !!(input && input.gameplay);
-  // Planks sit above the right thumb cluster, never on top of CLAW.
-  // The previous build referenced an undeclared `touch` and threw every frame,
-  // which killed the HUD — and the loop — the moment the night started.
-  const clusterTop = live && input.buttons.interact
-    ? input.buttons.interact.y - input.buttons.interact.r - 18
-    : h - 78;
-  const px = w - 18;
-  const py = live ? clusterTop : h - 36;
-  ctx.save();
-  ctx.globalAlpha = em;
-  ctx.textAlign = 'right';
-  ctx.textBaseline = 'middle';
-  ctx.font = `500 11px ${SANS}`;
-  setLetter(ctx, 2);
-  drawGameIcon(ctx, 'plank', px - 30, py - 14, 16, p.planks > 0 ? '#d0b181' : 'rgba(150,140,125,0.58)');
-  ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.font = `400 10px ${MONO}`;
-  ctx.fillStyle = p.planks > 0 ? 'rgba(220,203,173,0.9)' : 'rgba(140,132,120,0.62)';
-  ctx.fillText(String(p.planks | 0), px, py - 14);
-  for (let i = 0; i < Math.min(p.planks, 6); i++) {
-    ctx.fillStyle = 'rgba(120,86,48,0.9)';
-    ctx.fillRect(px - 6 - i * 9, py, 6, 14);
-    ctx.fillStyle = 'rgba(190,150,100,0.18)';
-    ctx.fillRect(px - 6 - i * 9, py, 6, 2);
-  }
   ctx.restore();
 }
 
@@ -1054,16 +912,19 @@ export function drawTouchControls(game, ctx, w, h) {
   const atkCd = p && PLAYER.attackCooldown ? clamp(p.attackCd / PLAYER.attackCooldown, 0, 1) : 0;
   const tool = weaponById(p && p.weapon);
   drawBtn(input.buttons.attack, tool.id, null, { big: true, cd: atkCd });
+  const skillCd = game.mode === 'survival' && game.survival
+    ? clamp(game.survival.skillCooldown / Math.max(0.01, game.survival.skillCooldownMax), 0, 1) : 0;
   const useAction = (game.interactTarget && game.interactTarget.actions || [])
     .find((action) => action.act !== 'repair' && action.act !== 'barricade');
-  const useIcon = !useAction ? 'interact'
-    : useAction.act === 'open' ? (game.interactTarget.ent.open ? 'doorClosed' : 'doorOpen')
+  const useIcon = game.mode === 'survival' ? 'lamp'
+    : !useAction ? 'interact'
+      : useAction.act === 'open' ? (game.interactTarget.ent.open ? 'doorClosed' : 'doorOpen')
       : useAction.act === 'drink' || useAction.act === 'larder' ? 'blood'
         : useAction.act === 'stakes' ? 'barricade'
           : useAction.act === 'ward' ? 'lamp' : 'interact';
   drawBtn(input.buttons.run, 'run', null, { toggle: true, runToggle: true });
   drawBtn(input.buttons.dash, 'dash', null, { cd: dashCd });
-  drawBtn(input.buttons.interact, useIcon);
+  drawBtn(input.buttons.interact, useIcon, null, game.mode === 'survival' ? { cd: skillCd } : {});
   drawBtn(input.buttons.repair, 'repair');
   drawBtn(input.buttons.barricade, 'barricade');
   ctx.restore();

@@ -292,6 +292,6 @@ else if (CMD === 'check') {
     '  node tools/bundle.mjs key        create the upload keystore (once)',
     '  node tools/bundle.mjs build      the whole run, up to the AAB',
     '',
-    '  Config: bundle.config.json (host, packageId, version). See docs/PLAY-BUNDLE.md.',
+    '  Config: bundle.config.json (host, packageId, version). Check tools/bundlecheck.mjs for validation.'
   ].join('\n'));
 }

@@ -1,6 +1,4 @@
 import fs from 'node:fs';
-import zlib from 'node:zlib';
-import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';

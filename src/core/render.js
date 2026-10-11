@@ -7,7 +7,7 @@
  * pudar" — dim and washed, never a solid black void. Candles still glow warmer.
  */
 
-import { clamp, lerp, damp, TAU, rand, randInt, hash2, ISO_CAMERA } from './util.js';
+import { clamp, damp, TAU, rand, ISO_CAMERA } from './util.js';
 
 export const PAL = {
   ink: '#05060b',
@@ -266,7 +266,7 @@ export class Renderer {
   /* ---------------- lighting ---------------- */
   lightBegin(ambient) {
     const lc = this.lightCtx;
-    // Faded dusk, not a black multiply. Callers should pass mansion.ambientFor.
+    // Faded dusk, not a black multiply. The active 3D world owns scene lighting.
     const ambientRgb = ambient ?? [164, 170, 184];
     lc.setTransform(1, 0, 0, 1, 0, 0);
     lc.globalCompositeOperation = 'source-over';

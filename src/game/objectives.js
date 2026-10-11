@@ -161,7 +161,7 @@ export const GOALS = [
   },
 ];
 
-/* ================= tonight's hunt errand (docs/PURPOSE.md §2 P5) ==========
+/* ================= legacy route hunt errand ==============================
  * Surviving to 05:00 is the clock; this is the reason to go out. One errand a
  * night, chosen by the hunt itself (what the board is still missing), and it
  * is dealt as a real goal so the HUD, the banner, the settle and the shard

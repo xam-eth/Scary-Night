@@ -18,7 +18,7 @@
  * looked at.
  *
  * Bump VERSION when the deployed site changes in a way players must see
- * (see docs/PLAY-BUNDLE.md) — the old cache is dropped on activate.
+ * — the old cache is dropped on activate.
  */
 
 const VERSION = 'duskhold-v5';

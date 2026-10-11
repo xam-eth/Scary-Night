@@ -179,7 +179,7 @@ const PROP_SCALE = Object.freeze({ planter: 2.2, basin: 2.2, candleStand: 1.6, c
 const PROP_AXIS = Object.freeze({ min: 0.2, max: 9 });
 
 /**
- * THE FORTRESS — the dressing bins (#59, docs/PURPOSE.md P6).
+ * THE FORTRESS — static dressing for the retained legacy route.
  *
  * Progression has to be SEEN, not metered: this is the Clash-base beat, the
  * one glance that says "I changed the place I defend." So the house itself
@@ -385,8 +385,6 @@ export function planFortress(mansion, level, boxes, metre = PX_PER_METRE) {
  * from the L above rather than guessed.
  */
 const TILE = 4;                       // kit units per floor/wall cell
-const CORNER_REACH = 2.5;             // how far a corner's legs run
-const CORNER_ANGLES = [Math.PI / 2, 0, -Math.PI / 2, Math.PI];   // TL, TR, BR, BL
 
 /** Which floor a room is paved with. 'marble', 'tile' and 'stone' share a slab. */
 const FLOOR_FOR = (kind) => (kind === 'wood' || kind === 'glass' ? 'floorWood' : 'floorStone');

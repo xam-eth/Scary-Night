@@ -11,17 +11,13 @@
  *     amber; the same wall at the end of the hall is cold and nearly black.
  *     Before this, every piece was lit by the one rig that follows Valen, so
  *     the room she was not standing in was lit as if she were.
- *   - it costs nothing per frame. One instance-colour buffer, uploaded when
- *     the house changes, not when the camera does. That is the mobile budget
- *     the brief asks for (docs/BRIEF.md §3, #53 guardrails).
- *   - the fortress lights the house for free. Candles in the jambs are static
- *     too, so their light is in the bake: the house she is building is a
- *     house that is visibly getting lighter (docs/PURPOSE.md P6).
+ *   - it costs nothing per frame. One instance-colour buffer is uploaded
+ *     when the house changes, not when the camera does.
+ *   - static candles contribute to the bake, so visible house upgrades make
+ *     the environment brighter without per-frame CPU work.
  *
- * The numbers are the RENDERER's own (render.js keyLightAt): the same
- * falloff, the same accumulation, the same floor. A mesh and the painted
- * floor under it are lit by one house, because they are computed by one
- * formula. Nothing here invents a light the 2D world does not have.
+ * The numbers use the shared renderer light falloff and accumulation rules;
+ * room surfaces stay consistent across the active WebGL mesh set.
  *
  * Pure on purpose: no THREE, no canvas, no GPU. The harness can bake a whole
  * mansion and measure it in node, which is the only way a lighting change on
@@ -43,8 +39,8 @@ const LIT_FLOOR = 0.30;
 /**
  * The lightmap's own falloff, taken off render.js `addLight`: a lamp is a
  * radial gradient whose alpha runs 1.0 → 0.55 → 0.20 → 0 across its radius.
- * The bake uses the same curve, so a mesh and the painted floor under it are
- * lit by one house and not by two opinions.
+ * The bake uses the same curve as the WebGL material light pass so room
+ * surfaces stay consistent.
  */
 export function lampFalloff(t) {
   if (!(t > 0)) return 1;
@@ -56,7 +52,7 @@ export function lampFalloff(t) {
 
 /**
  * The static sources of the mansion, in the renderer's own units.
- * Rooms contribute the same even wash `submitLights` gives them — the corners
+ * Rooms contribute an even ambient wash — the corners
  * are not a black frame around the candle pools — and every lamp on the
  * mansion's list contributes its falloff. The player's lantern is NOT here:
  * it moves, and a moving light is what the rig at runtime is for.
@@ -64,7 +60,7 @@ export function lampFalloff(t) {
 export function staticSources(mansion) {
   const out = [];
   if (!mansion) return out;
-  for (const room of mansion.roomList || []) {
+  for (const room of mansion.survivalLighting ? [] : (mansion.roomList || [])) {
     const stone = room.floor === 'stone';
     const glass = room.floor === 'glass';
     const reach = Math.hypot(room.w, room.h) * 0.58;

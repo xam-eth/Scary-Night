@@ -4,7 +4,6 @@
  * unlock for audio).
  */
 
-import { Input } from './core/input.js';
 import * as Audio from './core/audio.js';
 import { Game } from './game/game.js';
 import { phaseAt } from './core/config.js';
@@ -18,7 +17,13 @@ import { Ads } from './shop/ads.js';
 import { IAP } from './shop/iap.js';
 
 const canvas = document.getElementById('game');
-const game = new Game(canvas);
+const query = new URLSearchParams(location.search);
+// Survival is the default route. `?legacy=1` / `?mode=legacy` keeps the old
+// narrative hunt available for side-by-side comparison without deleting it.
+const gameMode = query.get('legacy') === '1' || query.get('mode') === 'legacy' ? 'legacy' : 'survival';
+const requestedNight = Number(query.get('night'));
+const nightDuration = Number.isFinite(requestedNight) && requestedNight > 0 ? requestedNight : undefined;
+const game = new Game(canvas, { mode: gameMode, nightDuration });
 const input = game.input;
 World3D.bindStage(canvas.parentElement);
 Ads.init(game);
@@ -110,6 +115,10 @@ window.__LN_API = {
     kills: game.stats.kills, planks: game.player.planks, hud: game.hudSnapshot ? game.hudSnapshot() : null,
     peak: game.climax ? game.climax.active : null,
   }),
+  survival: () => game.survival ? game.survival.getNightSnapshot() : null,
+  survivalBuild: (type, roomId) => game.survival ? game.survival.startBuild(type, roomId) : false,
+  survivalStartNight: () => game.survival ? game.survival.startNight() : false,
+  survivalSkill: () => game.survival ? game.survival.useSkill() : false,
   press: (action, ms = 120) => {
     input.keys[action] = true;
     setTimeout(() => { input.keys[action] = false; }, ms);
@@ -193,8 +202,11 @@ Enemy3D.init();
 function bootTick() {
   if (autoStarted) return;
   const roster = Enemy3D.readiness();
+  const modeReady = game.mode === 'survival'
+    ? Enemy3D.gameplayReadyFor(['zombie'])
+    : roster.ready;
   const bodySettled = Valen3D.ready || Valen3D.failed;
-  if (bodySettled && roster.ready) {
+  if (bodySettled && modeReady) {
     clearVeil();
     // beginNight is also guarded, so a stale/incomplete roster cannot slip
     // through via the boot path or a programmatic call.

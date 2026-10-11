@@ -347,6 +347,7 @@ export function drawCoachWorld(game, ctx) {
 }
 
 export function drawCoach(game, ctx, w, h) {
+  if (game.mode === 'survival') return;
   const c = game.coach;
   if (!c || c.step === 'done' || game.screen !== 'playing' || game.uiPanel) return;
   const input = game.input;
@@ -360,8 +361,9 @@ export function drawCoach(game, ctx, w, h) {
     const hx = s.homeX || w * 0.16;
     const hy = s.homeY || h - 120;
     const hr = s.r || 52;
+    // Teach the first movement beat with the animated gesture only. The new
+    // onboarding direction is visual-first, so this prompt needs no caption.
     drawDrag(ctx, hx, hy, hr, game.time, gs);
-    chip(ctx, w, h, 'DRAG UP', 'TO WALK');
     return;
   }
 

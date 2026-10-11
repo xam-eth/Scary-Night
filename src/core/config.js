@@ -378,3 +378,37 @@ export const TUNING = {
   startAt: 0,        // jump straight into a phase for testing
   forcePhase: null,
 };
+
+/* ---------------- Milestone 1: survival-building route ----------------
+ * Kept separate from the legacy 300-second/night tuning above. `nightSeconds`
+ * may be overridden with ?night=60..90; the old NIGHT_DURATION remains intact.
+ */
+export const SURVIVAL_TUNING = Object.freeze({
+  nightSeconds: 72,
+  minNightSeconds: 60,
+  maxNightSeconds: 90,
+  startOil: 38,
+  startWood: 26,
+  startSurvivors: 2,
+  maxSurvivors: 8,
+  oilBurnPerSecond: 0.14,
+  oilBurnTargetPerNight: 11,
+  oilRadiusShrink: 0.34,
+  perapianRadius: Object.freeze({ 1: 980, 2: 1760, 3: 2500 }),
+  perapianUpgrade: Object.freeze({
+    2: Object.freeze({ oil: 12, wood: 8, seconds: 5 }),
+    3: Object.freeze({ oil: 18, wood: 12, seconds: 6 }),
+  }),
+  nightRewards: Object.freeze({
+    oil: Object.freeze([12, 14, 16]),
+    wood: Object.freeze([14, 16, 18]),
+  }),
+  gateCost: Object.freeze({ oil: 4, wood: 16, seconds: 9 }),
+  gateHpBonus: 220,
+  lightDamageTakenMul: 1.75,
+  lightMoveMul: 0.46,
+  autoAttackRange: 620,
+  skillCooldown: 14,
+  skillRadius: 235,
+  skillDamage: 58,
+});

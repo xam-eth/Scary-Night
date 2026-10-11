@@ -58,7 +58,7 @@ page.on('console', (message) => {
 
 /* ---------- 1. the boot: how late is everything? ---------- */
 await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
-await page.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'domcontentloaded', timeout: 180000 });
+await page.goto(`http://127.0.0.1:${PORT}/?legacy=1`, { waitUntil: 'domcontentloaded', timeout: 180000 });
 const t0 = Date.now();
 for (let i = 0; i < 200; i++) {
   const d = await page.evaluate(() => (window.__LN_API ? window.__LN_API.valen() : null));
@@ -96,6 +96,8 @@ await page.evaluate(async () => {
     };
   };
   const mansion = Object.getPrototypeOf(g.mansion);
+  window.__legacyCanvasMansionMethods = ['bake', 'bakeRoom', 'drawFloor', 'drawWallRect', 'drawProps', 'drawFurniture', 'drawEntrances', 'drawRoomMarks', 'drawLightFixtures', 'submitLights', 'ambientFor']
+    .filter((name) => typeof mansion[name] === 'function');
   for (const name of ['drawFloor', 'drawWallRect', 'drawProps', 'drawFurniture', 'drawEntrances', 'drawRoomMarks', 'drawLightFixtures']) watch(mansion, name);
   for (const name of ['draw', 'drawSwing', 'drawAfterDark']) watch(window.__playerModule.Player.prototype, name);
   for (const Type of Object.values(window.__foes)) if (Type && Type.prototype) watch(Type.prototype, 'draw');
@@ -179,6 +181,7 @@ const world3d = await page.evaluate(async () => {
     quality: game.quality,
     legacyWorldDrawCalls: window.__legacyWorldDrawCalls || 0,
     legacyWorldDrawLog: window.__legacyWorldDrawLog || [],
+    legacyCanvasMansionMethods: window.__legacyCanvasMansionMethods || [],
     overlayAlpha: document.getElementById('game').getContext('2d').getContextAttributes().alpha,
     stageMode: document.getElementById('stage').dataset.renderMode,
   };
@@ -202,12 +205,13 @@ const full3DPass = world3d.world.mode === 'webgl-3d'
   && world3d.overlayAlpha
   && world3d.stageMode === 'webgl-3d'
   && world3d.legacyWorldDrawCalls === 0
+  && world3d.legacyCanvasMansionMethods.length === 0
   && world3d.projectionMaxError < 2 && world3d.raycastMaxError < 1;
 console.log(`\n---- FULL 3D WORLD GATE: ${full3DPass ? 'PASS' : 'FAIL'} ----`);
 console.log(`  renderer=${world3d.world.mode}, orthographic=${world3d.world.fullScene}, rooms=${world3d.world.rooms}, portals=${world3d.world.portals}`);
 console.log(`  room meshes=${JSON.stringify(world3d.world.roomInstances)}, kit props=${JSON.stringify(world3d.world.propCounts)}, custom 3D details=${JSON.stringify(world3d.world.detailPropCounts3D)}, unmapped=${JSON.stringify(world3d.world.unmappedDetailTypes)}`);
 console.log(`  Hunter rigged=${world3d.world.riggedPlayer}, 3D room marks=${world3d.world.roomMarks3D}, decals mapped=${world3d.world.decalsMapped}, quality=${world3d.quality}, active 3D lights=${world3d.world.activeLocalLights3D}`);
-console.log(`  Canvas overlay alpha=${world3d.overlayAlpha}, projection=${world3d.projectionMaxError.toFixed(4)}px, floor raycast=${world3d.raycastMaxError.toFixed(4)} world px, legacy Canvas world draw calls=${world3d.legacyWorldDrawCalls} ${JSON.stringify(world3d.legacyWorldDrawLog)}`);
+console.log(`  Canvas overlay alpha=${world3d.overlayAlpha}, projection=${world3d.projectionMaxError.toFixed(4)}px, floor raycast=${world3d.raycastMaxError.toFixed(4)} world px, legacy Canvas world draw calls=${world3d.legacyWorldDrawCalls} ${JSON.stringify(world3d.legacyWorldDrawLog)}, retired Mansion paint methods=${JSON.stringify(world3d.legacyCanvasMansionMethods)}`);
 if (!full3DPass) process.exitCode = 1;
 
 /* ---------- static 3D room dressing mirrors its existing sim state ---------- */
@@ -256,14 +260,28 @@ console.log(`  basin water hidden=${decorStates && decorStates.basinHidden}, sta
 if (!decorStatesPass) process.exitCode = 1;
 
 /* ---------- gameplay objects and controls stay live in the 3D scene ---------- */
-const beforeMove = await page.evaluate(() => [window.__LN.player.x, window.__LN.player.y]);
-await page.evaluate(() => window.__LN_API.hold('right', true));
-await wait(500);
-await page.evaluate(() => window.__LN_API.hold('right', false));
-const movementDistance = await page.evaluate((start) => Math.hypot(window.__LN.player.x - start[0], window.__LN.player.y - start[1]), beforeMove);
+const movementReport = await page.evaluate(async () => {
+  const g = window.__LN;
+  const hall = g.mansion.roomCenter('hall');
+  const clear = g.mansion.freeSpot(hall.x, hall.y);
+  const start = [clear.x, clear.y];
+  const distances = {};
+  for (const direction of ['right', 'left', 'down', 'up']) {
+    for (const key of ['right', 'left', 'down', 'up']) g.input.keys[key] = false;
+    g.player.x = start[0]; g.player.y = start[1]; g.player.vx = 0; g.player.vy = 0;
+    g.input.keys[direction] = true;
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    g.input.keys[direction] = false;
+    distances[direction] = Math.hypot(g.player.x - start[0], g.player.y - start[1]);
+  }
+  for (const key of ['right', 'left', 'down', 'up']) g.input.keys[key] = false;
+  g.player.x = start[0]; g.player.y = start[1]; g.player.vx = 0; g.player.vy = 0;
+  return { distances, maxDistance: Math.max(...Object.values(distances)) };
+});
+const movementDistance = movementReport.maxDistance;
 const movementPass = movementDistance > 8;
 console.log(`\n---- GAMEPLAY CONTROL: ${movementPass ? 'PASS' : 'FAIL'} ----`);
-console.log(`  keyboard movement=${movementDistance.toFixed(1)} world px`);
+console.log(`  keyboard movement by direction=${JSON.stringify(Object.fromEntries(Object.entries(movementReport.distances).map(([key, value]) => [key, +value.toFixed(1)])))} (max ${movementDistance.toFixed(1)} world px)`);
 if (!movementPass) process.exitCode = 1;
 
 const testDoorId = await page.evaluate(() => {
@@ -286,7 +304,9 @@ if (testDoorId) {
     g.input.interactPressed = true;
     g.updateInteraction(1 / 60);
     g.input.interactPressed = false;
-    World3D.render(g);
+    World3D.render(g); // start the authored inward door swing
+    g.now += 0.6;
+    World3D.render(g); // inspect after its easing interval
   });
 }
 const doorState = await page.evaluate((id) => {
@@ -295,7 +315,7 @@ const doorState = await page.evaluate((id) => {
   const view = window.__env.doors.get(id);
   return { open: !!(door && door.open), env3d: !!(door && door.env3d), angle: view && view.pivot ? view.pivot.rotation.y : null, interactionCue: window.__LN_API.world3d().visibleInteractionCue3D };
 }, testDoorId);
-const doorPass = !!testDoorId && doorState.open && doorState.env3d && doorState.angle < -1 && doorState.interactionCue;
+const doorPass = !!testDoorId && doorState.open && doorState.env3d && doorState.angle > 1 && doorState.interactionCue;
 console.log(`---- DOOR INTERACTION: ${doorPass ? 'PASS' : 'FAIL'} ----`);
 console.log(`  door=${testDoorId}, sim open=${doorState.open}, 3D mesh angle=${doorState.angle}, interaction cue=${doorState.interactionCue}`);
 if (!doorPass) process.exitCode = 1;
@@ -399,7 +419,8 @@ const enemyScene = await page.evaluate(async () => {
   g.player.slashAge = 0.12;
   g.player.swingAngle = g.player.angle;
   g.house.cat = { x: g.player.x + 80, y: g.player.y + 50, tx: g.player.x + 140, t: 0.5 };
-  g.haunts.watchers = [{ x: g.player.x + 160, y: g.player.y + 90, t: 0.5, life: 1.5 }];
+  const watcherAngle = g.player.angle + Math.PI;
+  g.haunts.watchers = [{ x: g.player.x + Math.cos(watcherAngle) * 160, y: g.player.y + Math.sin(watcherAngle) * 160, t: 0.5, life: 1.5 }];
   const door = g.mansion.entrances.find((item) => item.id === 'frontDoor');
   if (door) { door.attackers = 1; g.house.drafts = [{ e: door, t: 0.8 }]; }
   window.__LN_TIME_SCALE = 0;
@@ -415,7 +436,7 @@ const actors = await page.evaluate(() => ({
 }));
 const allEnemyTypes = ['crawler', 'zombie', 'hunter', 'werewolf', 'ghoul', 'stalker'].every((type) => actors.riggedTypes.includes(type));
 const enemyPass = !!enemyScene && actors.world.visibleRiggedEnemies >= 6 && actors.enemySlots >= 6 && allEnemyTypes
-  && actors.world.proxyActors >= 3 && actors.world.visiblePlayerSwing3D && actors.world.visibleHouseCat3D
+  && actors.world.proxyActors === 0 && actors.world.visiblePlayerSwing3D && actors.world.visibleHouseCat3D
   && actors.world.visibleVariants3D > 0 && actors.world.visibleFoodCues3D > 0
   && actors.world.visibleDrinkTrails3D > 0 && actors.world.visibleDirectorShadow3D
   && actors.world.visibleWatchers3D === 1 && actors.world.visibleDoorCues3D > 0 && actors.world.visibleDrafts3D > 0;

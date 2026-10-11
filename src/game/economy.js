@@ -1,7 +1,7 @@
 /* LAST NIGHT — the night's economy, one source of truth.
  *
- * Issues #4–#9, #11–#15, #21–#22. docs/DESIGN.md wins when an issue draft
- * disagrees (the permanent floor is the locked loss rule, not a total wipe).
+ * This module retains the original long-hunt economy for `?legacy=1`.
+ * Survival Milestone 1 uses its separate Oil/Wood/building economy.
  *
  * Forced-feeding math (night 2+, rest, standard difficulty), worst case the
  * player drinks every non-combat source immediately:
@@ -249,7 +249,7 @@ export function migrateSave(save) {
   save.milestones = save.milestones || {};
   save.beats = save.beats || {};
   save.pendingDawn = save.pendingDawn || [];
-  // THE HUNT (docs/PURPOSE.md): an old save joins the hunt at its beginning,
+  // A legacy save without hunt data joins that progression at its beginning,
   // with the nights it already survived counted as intel owed, not thrown away.
   save.hunt = save.hunt || { track: 0, intel: [], materials: 0, nights: 0, lastGain: null };
   save.killsBy = save.killsBy || {};

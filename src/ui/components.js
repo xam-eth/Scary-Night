@@ -27,6 +27,8 @@ export const UI_TOKENS = Object.freeze({
     minHitTarget: 44,
     utilityShort: 30,
     utilityStandard: 34,
+    pauseShort: 24,
+    pauseStandard: 28,
     fieldTabShort: 40,
     fieldTabStandard: 42,
     fieldTabPortrait: 44,
@@ -36,7 +38,9 @@ export const UI_TOKENS = Object.freeze({
     utilityShort: 14,
     utilityStandard: 10,
     fieldInset: 16,
-    fieldShortTab: 4,
+    // Short-landscape tabs paint at 30px but keep 44px hit targets. Leave
+    // fourteen pixels between them so their touch areas never collide.
+    fieldShortTab: 14,
     fieldTab: 7,
     fieldPortraitTab: 4,
   }),

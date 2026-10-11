@@ -10,9 +10,8 @@
  * one long shadow. Deliberately slight — never a superhero.
  */
 
-import { clamp, lerp, damp, dist, TAU, rand, randInt, angDiff, approachAngle, chance, visualAngle, screenDirToWorld } from '../core/util.js';
+import { clamp, lerp, damp, TAU, angDiff, approachAngle, chance, visualAngle, screenDirToWorld } from '../core/util.js';
 import { PLAYER, TUNING } from '../core/config.js';
-import { PAL } from '../core/render.js';
 import { Valen3D } from './valen3d.js';
 import { PX_PER_METRE, VALEN_METRES } from './envkit.js';
 import { IAP } from '../shop/iap.js';
@@ -142,26 +141,33 @@ export class Player {
     }
 
     const input = game.input;
-    const starving = this.blood <= 0;
+    let starving = this.blood <= 0;
 
-    // ---------- hunger ----------
-    if (!TUNING.infiniteBlood) {
-      const running = this.state === PSTATE.RUN;
-      const drain = drainPerSecond(game.save, running) * game.difficulty.bloodDrain * (starving ? 0 : 1);
-      const before = this.blood;
-      this.blood = Math.max(0, this.blood - drain * dt);
-      if (running && before - this.blood > 0.01) game.bloodTick = Math.max(game.bloodTick || 0, 0.28);
-      this.sated = Math.max(0, (this.sated || 0) - dt * 0.85);
-    } else this.blood = this.bloodMax;
+    // Survival mode treats the Hunter's bar as combat health, not the legacy
+    // blood/hunger economy. The hunt drain, feeding and starvation rules stay
+    // intact on the legacy route.
+    if (game.mode === 'survival') {
+      starving = false;
+    } else {
+      // ---------- legacy hunger ----------
+      if (!TUNING.infiniteBlood) {
+        const running = this.state === PSTATE.RUN;
+        const drain = drainPerSecond(game.save, running) * game.difficulty.bloodDrain * (starving ? 0 : 1);
+        const before = this.blood;
+        this.blood = Math.max(0, this.blood - drain * dt);
+        if (running && before - this.blood > 0.01) game.bloodTick = Math.max(game.bloodTick || 0, 0.28);
+        this.sated = Math.max(0, (this.sated || 0) - dt * 0.85);
+      } else this.blood = this.bloodMax;
 
-    if (this.blood <= 0) {
-      // not an instant death: a few seconds of crawling collapse, unless you
-      // find blood. Blood is health, and this is what running dry means.
-      this.starveT += dt;
-      this.state = PSTATE.CRAWL;
-      if (this.starveT > 3.2) { game.killPlayer('the hunger took you'); return; }
-    } else if (this.starveT > 0) {
-      this.starveT = Math.max(0, this.starveT - dt * 3);
+      if (this.blood <= 0) {
+        // not an instant death: a few seconds of crawling collapse, unless you
+        // find blood. Blood is health, and this is what running dry means.
+        this.starveT += dt;
+        this.state = PSTATE.CRAWL;
+        if (this.starveT > 3.2) { game.killPlayer('the hunger took you'); return; }
+      } else if (this.starveT > 0) {
+        this.starveT = Math.max(0, this.starveT - dt * 3);
+      }
     }
 
     // ---------- movement intent ----------
@@ -240,7 +246,10 @@ export class Player {
     // mouse-aim would glue her face to the left thumb instead of the way she
     // walks. Keyboard + mouse keeps classic aim (the cursor is a real aim).
     const stickDrive = input.stick.active || input.touchSeen;
-    if (!stickDrive && input.mouse.moved && !input.touchSeen) {
+    const survivalTarget = game.mode === 'survival' && game.survival ? game.survival.currentTarget : null;
+    if (survivalTarget) {
+      this.angle = Math.atan2(survivalTarget.y - this.y, survivalTarget.x - this.x);
+    } else if (!stickDrive && input.mouse.moved && !input.touchSeen) {
       const w = game.screenToFloor
         ? game.screenToFloor(input.mouse.x, input.mouse.y)
         : game.renderer.screenToWorld(input.mouse.x, input.mouse.y);
@@ -363,7 +372,8 @@ export class Player {
       this.swingAngle = world; this.angle = world;
     }
     this.state = PSTATE.ATTACK;
-    const clawCost = PLAYER.attackCost * (this.bloodPct < 0.15 ? 0 : 1) / ((this.attackSpeedMul || 1) * (this.frenzy ? 1.6 : 1));
+    const clawCost = game.mode === 'survival' ? 0
+      : PLAYER.attackCost * (this.bloodPct < 0.15 ? 0 : 1) / ((this.attackSpeedMul || 1) * (this.frenzy ? 1.6 : 1));
     this.blood = Math.max(0, this.blood - clawCost);
     if (clawCost > 0) game.bloodTick = Math.max(game.bloodTick || 0, 0.45);
     this.bloodSpent += PLAYER.attackCost;

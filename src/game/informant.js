@@ -1,6 +1,6 @@
 /* LAST NIGHT — the informant
  *
- * P3 of the spine (docs/PURPOSE.md): one character who remembers and reacts.
+ * Legacy narrative system: one character who remembers and reacts.
  * Between nights there is a room with someone in it who has watched every
  * night you have survived, and who is still in the house when you leave it.
  * She is why the hunt is not a spreadsheet: you come back for the hunt, and

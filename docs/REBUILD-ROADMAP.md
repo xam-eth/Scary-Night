@@ -1,143 +1,78 @@
-# LAST NIGHT — Roadmap Rebuild 3D Penuh
+# Status Rebuild 3D & Survival Milestone 1
 
-**Status (2026-10-08):** target migrasi dunia permainan ke satu pipeline WebGL 3D untuk seluruh 11 ruangan telah dicapai. Fold/cutaway yang menyembunyikan dinding saat player bergerak sudah dihapus; QA Chromium memastikan 628 instance aktif dan 140 instance arsitektur tetap tampil dengan matriks tak berubah di enam anchor. UI kontrol kini memakai ikon vektor relevan (menu tetap menyertakan label), dan tujuh pintu memakai panel kayu pada `doorway.glb`—bukan grille `door_gate.glb`—dengan swing inward yang diease ke 90° saat buka/tutup. `envqa --mode=3d-smoke` kini juga memverifikasi aset, orientasi hinge, kedua transisi, tabrakan/LOS, dan refresh shadow-map pada awal/akhir swing; smoke test serta harness simulasi lulus. **Hardening/release QA masih terbuka:** sweep 17 stop/screenshot belum diulang, `layoutqa` belum diulang setelah perubahan visual, dan matriks combat/state penuh, performa perangkat nyata, serta WebGL context-loss belum diverifikasi.
+**Pembaruan:** 2026-10-11 (Asia/Makassar)
+**Status keseluruhan: MASIH TERBUKA — bukan klaim siap rilis.** Inti rebuild dunia 3D dan loop Survival Milestone 1 sudah terimplementasi, dan seluruh gate otomatis yang dijalankan ulang di bawah lulus. Acceptance visual/manual, balance lintas perangkat, dan packaging Play masih terbuka. Hasil tiap skrip hanya berlaku untuk cakupan yang benar-benar diuji.
 
-## Arah yang dikunci
+## Ringkasan keputusan dan batas scope
 
-Bangun ulang presentasi dunia agar mansion, seluruh ruang, furnitur, pintu/jendela, Hunter, musuh, dan objek gameplay tampil sebagai **geometri 3D di satu scene dan satu kamera 3D**. Tampilan isometrik harus berasal dari kamera ortografis 3D—bukan transformasi gambar Canvas 2D dan bukan beberapa canvas 3D transparan yang ditempel di atas dunia 2D.
+- Route default adalah **Survival**, langsung ke Night 1. Mode cerita/hunt lama tetap dapat diakses melalui `?legacy=1` atau `?mode=legacy`; jangan hapus tanpa keputusan eksplisit.
+- Dunia tetap mansion 3D dengan satu scene WebGL dan kamera ortografis. Canvas digunakan untuk HUD/UI, bukan untuk menggambar ulang lantai, dinding, furnitur, atau aktor dunia.
+- Survival memiliki save namespace sendiri (`save.survival`). Sistem hunt/narrative lama tetap ada untuk route legacy, bukan acceptance Survival M1.
+- IAP/Play Billing di luar scope dan tidak diubah. Placeholder Digital Asset Links dan origin-trial token tetap menjadi blocker packaging yang memerlukan input release.
+- Dokumen desain Markdown lama telah dikeluarkan dari worktree sesuai permintaan; file ini adalah roadmap rebuild yang dipelihara. Beberapa komentar di `src/shop/`, `server/`, dan bagian IAP di `src/ui/screens.js` masih menyebut dokumen lama karena subsistem itu sengaja tidak disentuh.
 
-Canvas 2D boleh tetap dipakai untuk HUD, menu, caption, dan layar hasil. Canvas 2D **tidak boleh** menggambar lantai, dinding, ruangan, furnitur, karakter, musuh, serangan, atau dunia permainan sebagai fallback pada hasil akhir.
+## Hasil audit repo dan cleanup
 
-Pertahankan sim, aturan bertahan sampai fajar, AI, navigasi, tabrakan, ekonomi, dan kontrol yang ada selama migrasi presentasi, kecuali ada bug yang perlu diperbaiki agar koordinat 3D selaras. Perubahan dokumen desain lama tidak membatalkan permintaan ini: arah sebelumnya yang menerima migrasi 2.5D bertahap digantikan oleh target full 3D ini.
+### Yang sudah dibersihkan
 
-## Audit kondisi repo — fakta saat ini
+- Import mati di source app dan QA yang diperiksa: **0 temuan import tidak terpakai** pada pemindaian ESLint ad hoc terakhir.
+- Dependensi dev yang tidak dipakai oleh skrip repo, `playwright` dan `fbx2gltf`, dihapus dari `tools/package.json` serta lockfile. Skrip QA memakai `puppeteer-core`; konversi asset lama tidak menjadi bagian runtime.
+- `src/core/assets.js` yang tidak memiliki pemanggil di runtime/tools telah dihapus; assertion di `tools/glbtest.mjs` disesuaikan.
+- Jalur render Canvas mansion yang sudah ditinggalkan oleh WebGL dihapus dari `src/game/mansion.js`: bake/floor/wall/furniture/entrance/lightmap painters beserta helper gambar yang hanya dipakai jalur itu. Pemanggilan `this.bake()` dan pembuatan canvas lantai juga dihapus. Data layout, collision, navigation, furniture, dan sumber cahaya yang dipakai scene 3D tetap ada.
+- Painter Canvas `drawRoomMarks` dihapus; data `ROOM_MARKS` tetap digunakan oleh renderer 3D. `tools/layoutqa.mjs` dan `tools/glbtest.mjs` kini mengunci bahwa metode Mansion Canvas tersebut tidak kembali.
+- Suffix kode rusak yang membuat Chromium gagal mem-parse `src/game/game.js` dan `src/ui/screens.js` ditemukan oleh browser QA lalu dibersihkan. Node syntax check dan browser QA setelah perbaikan lulus.
+- Pemeriksaan graph import statis/dinamis: **38/38 modul JavaScript non-vendor di `src/` terjangkau dari `src/main.js`**. Ini bukan audit seluruh export atau seluruh script tools.
 
-- Denah runtime di `src/game/mansion.js` mencakup **11 ruangan**, 26 portal, furnitur, collision, serta nav grid; seluruh ruang kini dimuat ke scene WebGL aktif.
-- `src/game/world3d.js` menjadi adapter render gameplay: koordinat sim `(x, y)` → 3D `(x, tinggi, z=y)`, room-kit dan aktor memakai kamera ortografis yang sama. Lantai, dinding, sudut, jendela, furniture/props, Hunter, musuh, pickup, bolt, decals, partikel, cue rumah/haunt, dan arc serangan memiliki representasi Three.js.
-- `src/game/game.js` memanggil `World3D.render()` sebagai jalur world gameplay; UI/HUD tetap Canvas. Metode `Game.renderWorld()` yang dahulu menggambar world di Canvas sudah dihapus; primitive draw legacy pada actor/mansion modules belum seluruhnya dihapus, namun bukan jalur gameplay. QA memantau floor/props/furniture dan memastikan jumlah pemanggilan aktif **0**. Jalur error WebGL tidak menggambar fallback world 2D.
-- `src/game/envkit.js` menyusun geometri mansion ke scene Three.js aktif dan mempertahankan UI/render lain untuk screen yang berbeda. `src/game/enemy3d.js` menempatkan rig GLB di scene saat `full3D`; jalur render-ke-canvas lama masih tersedia untuk pemakaian non-gameplay.
-- Browser gate terakhir membuktikan 11 ruang, 26 portal, 251 lantai, 99 panel dinding, 32 sudut, 9 jendela; proyeksi kamera cocok sampai galat maksimum **0,0000 px** pada probe QA. Browser dijalankan lewat Chromium Sparticuz + library Linux paket.
-- `assets/env-kit/` memuat 21 GLB; data ekspor runtime yang tersimpan memuat 488 placements dari 16 jenis kit yang terpakai. Ini angka asset/layout, bukan bukti visual per ruang.
+### Batas lint
 
-Kesimpulan: penerimaan inti migrasi full-3D dunia permainan sudah lulus—seluruh denah aktif, objek gameplay berada di pipeline WebGL bersama, dan gameplay tidak memanggil renderer world Canvas 2D. Dinding/props/detail kini mempertahankan transform visual statik saat player bergerak dan seluruh quality tier menjaga world mesh tetap aktif. Ini bukan klaim bahwa seluruh produk siap rilis: combat/state yang belum masuk gate, inspeksi occlusion visual semua ruang, responsivitas, performa perangkat nyata, dan pemulihan WebGL masih merupakan pekerjaan QA lanjutan.
+Tidak ada konfigurasi lint proyek/root `package.json`. Scan ad hoc `no-unused-vars` terakhir melaporkan 138 nama lokal/parameter/variabel yang perlu audit terpisah; sebagian adalah parameter API/handler dan tidak otomatis merupakan kode mati. **Jangan** menafsirkan hasil ini sebagai full-lint pass. Yang terkonfirmasi dari scan tersebut: unused-import = 0.
 
-## Setup browser/QA yang sudah disiapkan
+## Implementasi Survival M1 yang ada
 
-Chromium untuk QA berasal dari paket yang dipatok di `tools/package-lock.json`, bukan asumsi bahwa browser sistem tersedia:
+- **Loop:** tiga malam dengan fase day/night, reward malam, builder queue, save/checkpoint `day`/`phase`, serta keadaan akhir complete/failed.
+- **Ekonomi/building:** Oil dan Wood; Extractor, Sawmill, Shelter, gate, serta upgrade Perapian sampai Lv3. Queue hanya mengerjakan satu job pada satu waktu. Produksi bangunan dan reward malam mengubah resource/survivor.
+- **Perapian/cahaya:** radius dasar bertingkat di tuning (Lv1 980, Lv2 1760, Lv3 2500 world px). Di cahaya Perapian, musuh melambat (`lightMoveMul = 0.46`), lebih mudah dilukai (`lightDamageTakenMul = 1.75`), dan damage tertentu ke pintu berkurang.
+- **Defense:** Swarm bertambah per hari (gelombang harian 7/7/8, 8/9/9, 10/10/10); Breaker muncul mulai Day 2 dan bertambah pada Day 3. Hunter punya auto-shot dan skill Flare dengan radius/damage/stagger/cooldown.
+- **HUD:** route Survival menampilkan Night/time, Oil/Wood, level Perapian, pause, dan kontrol sentuh. Coach/narrative legacy disembunyikan. Tes FTUE di bawah membuktikan layar permainan aktif dan HUD pada 0/15/30 detik; tes itu **tidak** membuktikan readability manual, teks tutorial terpandu, atau pemahaman pemain baru.
 
-```bash
-npm pack @sparticuz/chromium@153.0.0 --pack-destination /tmp
-npm ci --prefix tools
-node tools/layoutqa.mjs
-node tools/export-house.mjs
-```
+## QA yang benar-benar dijalankan (2026-10-11)
 
-Paket `@sparticuz/chromium` membawa `bin/al2023.tar.br`; skrip QA/ekspor mengekstrak library tersebut ke `tools/.cache/al2023-lib` dan menjalankan Chromium lewat `puppeteer-core`. Cache serta `node_modules` diabaikan Git.
+| Perintah | Hasil | Batas hasil |
+|---|---|---|
+| `node tools/harness.mjs` | **PASS**, exit 0. Deterministic three-day probe: Breaker mempertahankan target frontDoor saat Hunter dekat; auto-shot menghasilkan 1 bolt/1 hit; Flare menurunkan target 500→442 HP dan cooldown mencegah pemakaian ulang; save/reload kembali ke Day 2/day (1/3 malam, durasi uji 60 detik); Extractor/Sawmill/Shelter selesai dan memberi +18 Oil/+21 Wood serta survivors 3; Perapian naik Lv1→Lv3; Night-3 builder/idle probe selesai. | Uji auto-shot **men-stub LOS terbuka**; bukan bukti aim/LOS aktual. Builder-vs-idle bukan uji balance pemain nyata. Harness legacy terpisah mencapai dawn pada 300 detik tanpa runtime error. |
+| `node tools/glbtest.mjs` | **PASS**, exit 0. Rig Hunter, enam tipe musuh, mapping animasi, cap 14 rig, 21 asset kit, lisensi/provenance, serta tidak adanya painter Canvas/fallback yang diuji. | Validasi asset/kode statis; bukan inspeksi visual semua kombinasi combat. |
+| `node tools/envqa.mjs --mode=3d-smoke` | **PASS**, exit 0. 11/11 ruang, 26 portal, 251 floor, 99 wall, 32 corner, 9 window; 628 instance aktif termasuk 140 arsitektur, tanpa instance tersembunyi atau perubahan transform saat melewati 6 anchor; sembilan jendela dan tujuh pintu (hinge/swing 90°, collision/LOS/shadow) lulus. Route default masuk Night 1; checkpoint FTUE 0.2/15/30 detik mencatat Swarm 0/20/40, durasi malam 72 detik, HUD aktif, dan radius Perapian bertambah 980→1760 setelah upgrade UI. Browser page errors = 0. | Smoke browser/Chromium dan framebuffer, bukan perangkat Android/iOS nyata atau sweep visual 17 stop. Tes cahaya dan AI di mode Survival belum menjadi assertion terpisah untuk setiap nilai. |
+| `node tools/layoutqa.mjs` | **PASS**, exit 0. Mode QA legacy dibuka eksplisit lewat `?legacy=1`; full-3D gate, decor state, keyboard movement, pintu, pickup/VFX, enemy/haunt scene, desktop boot, browser errors, fit/collision audit lulus. Pemeriksaan melihat 11 ruang/26 portal, proyeksi 0.0000 px, floor raycast 0.0000 world px, 0 pemanggilan Canvas world, dan 0 metode paint Mansion lama. | Ini gate route legacy + layout, bukan walkthrough Survival M1. Audit menemukan satu overlap staircase–stairRail sekitar 150×20 px; reachable room area terukur 77–95%. |
+| `node --check` untuk seluruh `src/**/*.js` non-vendor, `tools/*.mjs`, `sw.js`; `git diff --check` | **PASS**. | Pemeriksaan sintaks/diff saja. |
+| `npm audit --prefix tools` | **PASS**, 0 vulnerability setelah menghapus dependency dev yang tidak digunakan. | Tidak menggantikan audit backend/Play. |
+| `node tools/bundle.mjs check` | **FAIL**, satu assertion: 0/1 Digital Asset Links fingerprint valid (butuh SHA-256 signing key nyata). Ada WARN bahwa Digital Goods origin-trial token belum diisi; Bubblewrap tidak terpasang. | Blocker release Play/IAP yang memerlukan kredensial/konfigurasi release; tidak diubah karena IAP di luar scope. Bukan kegagalan gate gameplay. |
 
-**Hasil QA yang benar-benar dijalankan (2026-10-06):** `node tools/layoutqa.mjs` menggunakan Chromium Sparticuz + `al2023.tar.br` dan berakhir dengan exit 0. Gate mencatat `renderer=webgl-3d`, kamera orthographic, 11 ruangan/26 portal, 251 floor meshes, 99 wall panels, 32 corners, 9 windows, props/detail terpetakan (`unmapped=[]`), dan 0 pemanggilan Canvas world selama gameplay. Gate interaksi browser mencakup gerak keyboard, pintu, pickup/collection, bolt/trail, particles/decals, musuh, swing, watcher/door cues; desktop boot 1280×720 dan browser errors lulus. Stage desktop tetap 405×720 dengan letterboxing, jadi ini bukan bukti polish desktop. Screenshot mobile/desktop/actor/VFX tersedia di `tools/shots/3d-migration-{mobile,desktop,enemies,vfx}.png` (beberapa berasal dari run berbeda).
+**Build:** repo tidak memiliki `package.json` root atau script `npm run build`. Dependensi QA dipasang dengan `npm ci --prefix tools`; pemeriksaan bundle di atas bukan build Android/AAB yang sukses. Jangan menyebut paket release selesai.
 
-Pemeriksaan regresi setelah perbaikan kode terakhir: `node tools/harness.mjs` lulus 18.277 frame/300 detik simulasi dengan outcome `DAWN` dan tanpa runtime errors; `node tools/glbtest.mjs` seluruh pemeriksaan Valen/enemy/kit/modular-room lulus; `node --check` lulus untuk 60 file JavaScript dan `git diff --check` lulus.
+## Bukti visual FTUE
 
-Audit layout terbaru mencatat **70 furnitur kit**: 0 dekat dinding (jarak ≤26 px) dan satu overlap staircase–stairRail sekitar 150×20 px. Keterjangkauan komponen ruang berada sekitar 77–95%. Pemeriksaan fit terpisah tidak menemukan prop melampaui collision box atau celah antara mesh dan box; detail penataan masih tindak lanjut. Belum ada screenshot terpisah untuk semua wing/menu.
+`node tools/envqa.mjs --mode=3d-smoke` menghasilkan bukti baru pada viewport mobile 390×844, deviceScaleFactor 2:
 
-**Perbaikan dan QA `tools/envqa.mjs` (2026-10-07):** probe lama body/room kini mengukur scene/framebuffer WebGL; window diuji dari kedua sisi valid; assertion failure menghasilkan exit non-zero. `node tools/envqa.mjs --fast` sebelumnya lulus semua assertion utama (~11m14s) sebelum keputusan final untuk membuat world statik; angka siege/bake/fit dari run itu tetap berguna, tetapi hasil fold-nya bukan status terbaru. Crowd timing pada software renderer bukan benchmark perangkat nyata.
+- `qa-evidence/survival-ftue-00s.png`
+- `qa-evidence/survival-ftue-15s.png`
+- `qa-evidence/survival-ftue-30s.png`
+- `qa-evidence/survival-ftue-first-30s.json` — waktu/state, HUD, resource, jumlah Swarm/rig, radius api, serta nama screenshot.
 
-**Perbaikan terbaru: geometri statik selama gameplay (2026-10-07):** permintaan agar dinding dan elemen ruang tidak muncul-hilang karena langkah player kini diterapkan dengan menghapus total fold/cutaway yang terpicu gerakan. Matriks wall, floor, prop, dan detail tidak ditulis ulang saat player/kamera berpindah; mesh hanya memakai sakelar pada state gameplay eksplisit (misalnya panel jendela pecah), bukan posisi player. Semua quality tier sekarang menjaga room, props, dan fortress dressing aktif.
+Ini **tiga checkpoint screenshot**, bukan rekaman 30 detik. Screenshot Night sangat gelap; keberadaan HUD dan scene diuji, tetapi keterbacaan/kontras visual masih perlu review manual. Jika “FTUE 30 detik” mensyaratkan petunjuk bertahap/rekaman, acceptance tersebut belum terbukti.
 
-`node tools/envqa.mjs --mode=3d-smoke` setelah perubahan ini lulus exit 0 (~2m50s): keenam tipe musuh ter-render, framebuffer EnvKit terbukti pada 11/11 ruang, 9/9 jendela valid, 628 instance aktif termasuk 140 instance arsitektur, **0 instance aktif tersembunyi**, dan **0 matriks statik berubah** setelah player/kamera dipindah ke enam anchor; seluruh tier menjaga world mesh aktif, tanpa browser page errors. `node tools/harness.mjs` juga lulus 18.277 frame/300 detik simulasi hingga `DAWN`, tanpa runtime errors. **Sweep penuh 17 stop beserta screenshot dan QA perangkat nyata belum dilakukan.**
+## Acceptance yang masih terbuka
 
-**Regresi 2026-10-08:** smoke 3D lulus lagi setelah cap GLB disetel ke 14 (maksimum combatant aktif); crowd reduced-AI tetap di simulasi, tanpa GLB/proxy. `glbtest` dan `harness --systems` seluruh assertion lulus. Probe melee harness kini memakai invers proyeksi isometrik penuh; tes dawn menunggu gelombang mencapai musuh, dan assertion rentang zoom portrait diselaraskan dengan kamera full-bleed yang memang dipakai. Klik Chromium terfokus menguji consent → Settings → Privacy → Back tanpa error. Inspeksi visual sementara pada menu desktop/mobile dan HUD mobile menemukan serta memperbaiki wordmark menu yang sebelumnya tergambar dua kali; gambar inspeksi tidak disimpan. Full clicktest tidak diulang setelah koreksi karena durasinya panjang; run sebelumnya hanya gagal pada ekspektasi lama yang mencari Privacy di menu utama. Smoke bot standar terbaru mencapai `DEATH` pada 282,1 detik simulasi (tanpa runtime error), jadi survival-balance hingga dawn belum dibuktikan oleh run ini.
+1. **FTUE/readability:** review manusia atas tiga screenshot, kontrol sentuh dan kontras pada layar perangkat; pastikan apakah requirement berarti HUD minimal atau onboarding terpandu. Rekaman 30 detik belum dibuat.
+2. **Combat Survival manual:** walkthrough input pemain untuk bergerak, auto-shot dengan LOS/obstacle nyata, Flare, kill/death, dan interaksi Swarm/Breaker; test shot harness memakai LOS stub.
+3. **Light weakness:** kode efek cahaya terimplementasi, namun pembandingan damage/speed musuh yang sama di dalam/luar radius belum dijadikan assertion otomatis khusus.
+4. **Balance/progression:** ancaman meningkat menurut schedule di kode; uji deterministik membuktikan loop selesai dan outcome Day 3, tetapi belum menetapkan bahwa kurva reward, ekonomi, Perapian, gate, dan kesulitan terasa adil pada permainan manusia.
+5. **Visual pass:** sweep 17 stop/screenshot per ruang/wing, occlusion/darkness/readability low-health/blackout, seluruh state interaksi, dan review khusus layout overlap staircase–stairRail belum selesai.
+6. **Perangkat/performa:** frame time, GPU/memory, perangkat low-end, landscape/orientation change, DPR, hidden-tab resume, serta WebGL context-loss/restore belum diuji.
+7. **Release bundle:** fingerprint signing SHA-256, Digital Goods origin-trial token, validasi Bubblewrap/AAB, dan uji TWA/Play tetap menunggu konfigurasi release. Tidak mengubah IAP pada pekerjaan ini.
 
-Ekspor runtime terakhir: **11 ruangan, 26 portal, 16 akses masuk eksterior, 59 segmen dinding, 488 placements, 16 jenis kit yang terpakai**. Angka ekspor adalah data denah/kit saat ini, bukan acceptance test renderer 3D.
+## Aturan laporan
 
-## Roadmap implementasi
-
-### 0. Baseline dan batas migrasi — audit selesai; baseline pra-migrasi terlewat
-
-- [x] Hapus dokumen Markdown lama sesuai permintaan; dokumen ini menjadi roadmap tunggal.
-- [x] Jalankan Chromium dari paket Sparticuz beserta library pack Linux.
-- [x] Jalankan QA layout lama dan regenerasi ekspor denah.
-- [x] Catat kondisi hybrid sebelum memulai perubahan renderer.
-- [ ] Screenshot baseline pra-migrasi untuk menu/wing/combat tidak diambil sebelum implementasi; hal itu tidak bisa direkonstruksi. Bukti state saat ini tersedia di `tools/shots/`.
-
-### 1. Fondasi satu scene 3D — tercapai untuk jalur gameplay, masih ada cleanup
-
-- [x] `World3D` mengirim state sim setiap frame ke scene WebGL mansion dengan kamera ortografis aktif.
-- [x] Adapter koordinat `(x, y)` → `(x, tinggi, z=y)` dipakai oleh geometry, actor, pickup, bolt, decal, dan VFX.
-- [~] Camera-follow/zoom/resize dan proyeksi orthographic selaras (galat probe **0,0000 px**); input memakai adapter proyeksi layar-ke-world, belum raycast ke lantai.
-- [x] Canvas gameplay hanya overlay UI/HUD pada jalur normal; `Game.renderWorld()` dihapus dan gate monkeypatch melaporkan 0 pemanggilan `drawFloor`, `drawProps`, atau `drawFurniture` selama gameplay. Primitive draw legacy pada module mansion/actor masih perlu diaudit sebelum semua kode Canvas world dibersihkan.
-- [~] Actor GLB dan world memakai satu scene/kamera aktif. Renderer/canvas lama masih dipakai pada layar non-gameplay dan jalur fallback actor, jadi lifecycle/resource cleanup global belum selesai.
-
-**Gate yang sudah dibuktikan:** kamera ortografis tunggal untuk objek world gameplay; lima probe proyeksi 3D ↔ renderer 2D cocok sampai 0,0000 px. **Belum diuji:** raycast-to-floor/mouse aim dan context-loss.
-
-### 2. Mansion 3D lengkap — blockout semua 11 ruang tercapai; polish terbuka
-
-- [x] Seluruh denah `Mansion`/`assets/house.json` dibangun sekaligus. Gate mengukur 11 ruang, 26 portal, 251 floor tiles, 99 panel dinding, 32 sudut, dan 9 jendela dalam scene aktif.
-- [x] Lantai, dinding, jendela, pintu, dan furniture/props berupa geometry 3D. Semua tujuh pintu kini mengambil panel kayu terpisah `wall_doorway_door` dari `doorway.glb`, dipasang pada hinge di tepi daun dan mengayun **90° ke arah interior** dengan easing 0,42 detik; Chromium menguji posisi tertutup, sudut tengah, endpoint buka/tutup, semua orientasi, tabrakan/LOS, cast shadow, dan refresh shadow-map pada awal/akhir swing. Variasi semua state jendela/barricade masih belum diuji satu per satu.
-- [x] Props/furniture ditempatkan dari data runtime/kit. Pemeriksaan fit box tidak menemukan overhang/gap, namun audit layout menemukan **0/70** furnitur dalam jarak 26 px dari dinding dan satu overlap staircase–stairRail berukuran sekitar 150×20 px; tata ruang perlu dirapikan.
-- [x] Cutaway berbasis langkah player dihapus. Wall/floor/prop/detail mempertahankan matriks dan skala penuh ketika player/kamera bergerak; QA Chromium membandingkan enam anchor dan mendapati 0 perubahan pada 140 instance arsitektur. Pintu/jendela/pickup tetap mengikuti state gameplay eksplisit; occlusion depth 3D normal tetap berlaku.
-- [x] Ruang samping dan transisi ada di scene aktif dan terhitung dalam gate; screenshot semua wing per room dan navigasi end-to-end tetap belum ada.
-
-**Gate saat ini:** geometri 11 ruang dan seluruh portal terbukti ada dalam scene; screenshot mobile/desktop membuktikan render WebGL. **Belum terbukti:** satu frame yang menampilkan seluruh mansion, atau traversal aktual menembus semua portal.
-
-### 3. Actor, combat, dan interaksi di world yang sama — render dasar tercapai; playtest combat terbuka
-
-- [x] Hunter rigged dan keenam tipe musuh (`crawler`, `zombie`, `hunter`, `werewolf`, `ghoul`, `stalker`) hadir di scene. Roster memakai lima rig monster berbeda dari Ultimate Monsters CC0 plus rig Werewolf lokal; tiap tipe memetakan idle/locomotion/attack/death ke klip sumbernya, dan lima rig pack juga memetakan hurt-react ke `hurtFlash`/`staggerT` tanpa mengubah simulasi. QA Chromium menguji keenam rig skinned di scene bersama; anggaran 14 rig mencakup seluruh batas combatant hidup. Crowd siege reduced-AI tetap di simulasi dan tidak mendapat GLB atau proxy visual. Musuh aktif yang belum siap/terpilih tidak digambar sebagai proxy generik.
-- [x] Actor share kamera/depth scene; musuh gameplay hanya memakai skinned GLB dan tidak jatuh kembali ke proxy geometry atau billboard Canvas.
-- [~] Gerak keyboard, visual arc claw, bolt mesh, pickup, pengumpulan pickup, dan interaksi pintu lulus assertion. Smoke test kini memverifikasi `hurtFlash`/`staggerT` memilih klip hit sumber; damage/hitbox, empat arah aim, sword/crossbow fire, knockback, death, serta sinkronisasi hit gameplay tetap belum diuji end-to-end.
-- [~] State pintu/interaksi dan cue rumah/haunt tampil sebagai mesh 3D; semua jenis jendela/barricade dan seluruh props interaktif belum diverifikasi.
-
-**Gate saat ini:** render actor, gerakan, swing visual, bolt/pickup, dan satu pintu dibuktikan di Chromium. **Belum lulus:** playtest attack → hit → death dengan verifikasi offset hitbox/mesh dan seluruh arah aim.
-
-### 4. Lighting, horror readability, dan VFX 3D — jalur inti ada; tuning belum selesai
-
-- [~] Ambient/key/rim light, point lights berbasis sim, shadow, flicker/exposure, dan event lightning ada di WebGL scene. Fog, semua mode bloodmoon/blackout, serta tuning tiap wing belum lolos matriks QA.
-- [x] Decal texture di floor, pickup, bolt/trail, particles, claw arc/muzzle flash, room marks, watcher, draft, cat, dan door cues mempunyai representasi 3D. QA Chromium memeriksa decal texture 2048×1255, particles aktif, pickup/bolt mesh, dan haunt objects.
-- [~] Aktor/props berbagi depth scene dan cahaya; inspeksi visual occlusion pada setiap kombinasi foreground/background belum lengkap.
-- [ ] Belum ada tuning/evidence terpisah untuk readability saat low-health, bloodmoon, blackout, dan kerumunan maksimum.
-
-**Gate saat ini:** asset VFX utama muncul sebagai objek WebGL dan browser tidak melaporkan error. **Belum lulus:** darkness/readability/occlusion matrix dan verifikasi cutscene.
-
-### 5. Integrasi gameplay, UI, dan performa perangkat — integrasi dasar lulus; cakupan runtime terbuka
-
-- [x] HUD/touch controls tampil di atas WebGL; tombol gameplay memakai ikon vektor untuk gerak, serang/senjata, dash, interaksi kontekstual, perbaikan, dan barricade. Menu memakai ikon semantik dengan label tetap terbaca. Gerak, pintu, pickup diuji; pause, death/restart, dawn, save/load, audio, serta satu run penuh belum diregresikan.
-- [~] Chromium lulus boot pada mobile portrait 390×844 dan desktop viewport 1280×720. Desktop stage tetap 405×720 letterboxed; landscape layout, orientation-change, DPR selain 1, tab hidden, serta WebGL context loss belum diuji.
-- [ ] CPU/GPU frame time, draw calls, triangle/instance count, memory budget, dan waktu siap semua room/actor belum diukur.
-- [ ] Belum ada optimization/performance pass akhir untuk device low-end.
-
-### 6. QA penerimaan full 3D — gate render lulus; release QA masih terbuka
-
-`tools/layoutqa.mjs` menguji scene/runtime dengan Chromium Sparticuz + library pack pada mobile portrait 390×844 dan desktop 1280×720; run terakhir sebelum perubahan static-visibility exit 0. Setelah penghapusan cutaway, gate yang diulang adalah `envqa --mode=3d-smoke` dan harness simulasi; `layoutqa` belum diulang.
-
-Checklist penerimaan render full-3D:
-
-- [x] Gate browser menemukan geometri seluruh 11 ruang/26 portal pada scene WebGL ortografis bersama; props/detail terpetakan, `unmapped=[]`.
-- [x] Gate mencatat 0 pemanggilan Canvas world untuk floor/props/furniture selama gameplay; Canvas UI/HUD tetap diizinkan.
-- [x] Gerak, pintu, pickup/collection, bolt/VFX, particles/decals, musuh, swing, watcher dan door cues lulus probe browser yang ada.
-- [~] Screenshot membuktikan stage WebGL di mobile/desktop; desktop letterboxing, semua wing, variasi cutscene dan seluruh jalur Canvas legacy belum diaudit visual.
-- [x] `envqa --mode=3d-smoke` lulus body, framebuffer 11 room, geometri statik lintas enam anchor, 9 window, quality-tier visibility, tujuh pintu (aset/orientasi/swing, collision/LOS, shadow pass), dan browser errors; seluruh 628 instance aktif terlihat dan 0 matriks berubah karena gerak player/kamera.
-- [~] Sweep 17 stop/screenshot belum diulang setelah mode visual statik diterapkan; crowd timing headless tetap diagnostik, bukan bukti performa perangkat.
-- [ ] Traversal aktual semua room/portal, nav/collision, hitbox, mouse/touch aim, dan semua door/window state belum diuji end-to-end.
-- [ ] Run penuh movement → combat → low-health → pause → death/restart → dawn belum dilakukan.
-- [ ] Performa perangkat target, penggunaan memory/GPU, orientasi landscape, context-loss/restoration, sisa z-fighting, dan matriks darkness/readability belum lulus QA; uji enam anchor browser belum menggantikan inspeksi visual semua room/perangkat.
-- [x] Screenshot QA saat ini disimpan di `tools/shots/3d-migration-*.png`; screenshot audit tambahan berada di direktori yang di-ignore `tools/shots-browser/qa/`.
-
-## Berkas utama dan cleanup tersisa
-
-- `src/main.js` — bootstrap UI dan lifecycle input; HUD tetap overlay Canvas.
-- `src/game/game.js` — jalur aktif mengirim state ke `World3D`; metode `renderWorld()` Canvas lama sudah dihapus. Primitive draw dormant pada module mansion/actor masih perlu audit/cleanup.
-- `src/core/render.js` — proyeksi/camera adapter dan utilitas UI masih dipakai; audit serta hapus jalur gambar world yang tidak lagi aktif pada fase cleanup.
-- `src/ui/icons.js`, `src/game/hud.js`, `src/ui/screens.js` — ikon Canvas semantik bersama untuk kontrol sentuh dan navigasi, dengan ukuran/hitbox/input tetap dipertahankan.
-- `src/game/mansion.js` — sumber denah, physics/collision, props dan nav; data sim dipertahankan.
-- `src/game/envkit.js`, `src/game/world3d.js` — scene geometry, camera/render path, actor objects, VFX, lighting; performance, inspeksi occlusion, resource disposal, dan context-loss masih terbuka.
-- `src/game/valen3d.js`, `src/game/enemy3d.js`, `src/game/player.js`, `src/game/enemies.js`, `src/game/weapons.js` — GLB/animation dan koordinasi gameplay; verifikasi hit/death serta asset lifecycle masih terbuka.
-- `tools/layoutqa.mjs`, `tools/export-house.mjs` — QA scene/layout/viewport dan ekspor data; perlu memperluas traversal, combat, lifecycle, serta per-state screenshots.
-
-## Risiko dan aturan kerja
-
-1. **Jangan berhenti di satu ruangan.** Tahap blockout harus mencakup semua 11 ruangan; polish dapat bertahap, tetapi ruangan lain tidak boleh sekadar Canvas atau placeholder 2D pada hasil akhir.
-2. **Jangan menyamakan isometrik dengan 3D.** Transformasi affine di Canvas tetap render 2D.
-3. **Jangan mengklaim selesai dari jumlah GLB/mesh saja.** Bukti final adalah scene WebGL terpadu, screenshot, dan playtest yang lolos.
-4. **Pertahankan gameplay sim yang ada.** Migrasi pertama berfokus pada presentasi dan adapter koordinat; perubahan mekanik perlu tes regresi terpisah.
-5. **Jaga provenance asset.** Kit KayKit Dungeon Remastered 1.0 oleh Kay Lousberg berlisensi CC0 1.0; atribusi diapresiasi, tidak diwajibkan. Hunter GLB dan model lain tetap milik pemilik asetnya; jangan re-export atau mengubah byte sumber tanpa izin.
-6. **No false-green reporting.** Laporkan per fase: implementasi yang benar-benar masuk, perintah yang benar-benar dijalankan, hasil, dan blocker yang masih ada.
+- Laporkan implementasi dan acceptance terpisah. PASS di atas hanya PASS untuk assertion perintah terkait.
+- Jangan menyebut rebuild/M1 “selesai” atau “siap rilis” sampai acceptance terbuka diverifikasi dan packaging punya bukti sendiri.
+- Pertahankan `?legacy=1` sebagai akses QA/komparasi. Hapus legacy route atau sistem lama hanya dengan keputusan scope eksplisit.
+- Pertahankan pipeline WebGL mansion/lampu serta provenance asset; jangan re-export atau mengubah byte sumber berlisensi tanpa izin.

@@ -75,6 +75,17 @@ class World3DRuntime {
     this.exteriorMeshes = [];
     this.playerProxy = null;
     this.proxies = new Map();
+    this.survivalCrowdProxies = new Map();
+    this.survivalBuildingMeshes = new Map();
+    this.survivalSlotRings = new Map();
+    this.survivalRadiusRing = null;
+    this.survivalGateMesh = null;
+    this.survivalZombieBodyGeometry = null;
+    this.survivalZombieHeadGeometry = null;
+    this.survivalZombieEyeGeometry = null;
+    this.survivalZombieBodyMaterial = null;
+    this.survivalZombieSkinMaterial = null;
+    this.survivalZombieEyeMaterial = null;
     this.variantRings = new Map();
     this.foodCues = new Map();
     this.drinkTrails = new Map();
@@ -416,23 +427,27 @@ class World3DRuntime {
     const duel = clamp(game.duelDark || 0, 0, 1) * 0.62;
     const flicker = clamp(game.lightMul == null ? 1 : game.lightMul, 0.35, 1.2);
     const lightning = clamp(game.lightningFlash || 0, 0, 1.5);
-    const ambientFactor = Math.max(0.12, (1 - blackout - duel) * flicker);
+    const survival = game.mode === 'survival';
+    const ambientFactor = survival ? 0.48 : Math.max(0.12, (1 - blackout - duel) * flicker);
     const lift = 720;
     lamp.target.position.set(p.x, 0, p.y);
     lamp.target.updateMatrixWorld(true);
     lamp.position.set(p.x + dx * 520, lift, p.y + dy * 520);
-    lamp.intensity = (0.76 + light.level * 1.05) * ambientFactor + lightning * 2.1;
+    lamp.intensity = (survival ? 0.34 + light.level * 0.26 : 0.76 + light.level * 1.05) * ambientFactor + lightning * (survival ? 0.7 : 2.1);
     lamp.color.setRGB(light.color[0] / 255, light.color[1] / 255, light.color[2] / 255);
-    if (Valen3D.hemi) Valen3D.hemi.intensity = 0.38 * ambientFactor + lightning * 1.25;
-    if (Valen3D.rim) Valen3D.rim.intensity = 0.3 * ambientFactor + lightning * 0.65;
+    if (Valen3D.hemi) Valen3D.hemi.intensity = (survival ? 0.12 : 0.38) * ambientFactor + lightning * (survival ? 0.5 : 1.25);
+    if (Valen3D.key) Valen3D.key.intensity = survival ? 0.055 : 1.05;
+    if (Valen3D.rim) Valen3D.rim.intensity = (survival ? 0.035 : 0.3) * ambientFactor + lightning * (survival ? 0.28 : 0.65);
     const bloodMoon = clamp(game.bloodMoon || 0, 0, 1);
     if (bloodMoon > 0.05) lamp.color.lerp(new THREE.Color(0x9a3442), bloodMoon * 0.36);
     this.exposure = clamp(1.22 * ambientFactor + lightning * 0.32, 0.42, 1.48);
 
     if (this.playerPointLight) {
       this.playerPointLight.position.set(p.x, 44, p.y);
-      this.playerPointLight.distance = Math.max(100, (p.lightR || 150) * 1.35);
-      this.playerPointLight.intensity = clamp((p.lightI == null ? 0.45 : p.lightI) * ambientFactor * 1.35, 0, 1.25);
+      this.playerPointLight.distance = survival ? Math.min(230, (p.lightR || 150) * 0.72) : Math.max(100, (p.lightR || 150) * 1.35);
+      this.playerPointLight.intensity = survival
+        ? clamp((p.lightI == null ? 0.45 : p.lightI) * ambientFactor * 0.46, 0, 0.28)
+        : clamp((p.lightI == null ? 0.45 : p.lightI) * ambientFactor * 1.35, 0, 1.25);
       this.playerPointLight.color.set(p.kit && p.kit.blessed ? 0xffdda0 : (p.bloodPct < 0.24 ? 0x9aa9e8 : 0x9aa7c7));
     }
 
@@ -454,8 +469,8 @@ class World3DRuntime {
       const source = row.source;
       local.visible = true;
       local.position.set(source.x, 44, source.y);
-      local.distance = Math.max(90, (source.r || 150) * 1.7);
-      local.intensity = clamp((source.curI == null ? source.i || 0 : source.curI) * 2.2 * ambientFactor, 0, 2.4);
+      local.distance = Math.max(90, (source.r || 150) * (survival ? 1 : 1.7));
+      local.intensity = clamp((source.curI == null ? source.i || 0 : source.curI) * (survival ? 4.2 : 2.2) * ambientFactor, 0, survival ? 2.8 : 2.4);
       const c = source.color || [255, 206, 144];
       local.color.setRGB(c[0] / 255, c[1] / 255, c[2] / 255);
       if (bloodMoon > 0.3) local.color.lerp(new THREE.Color(0xff574c), bloodMoon * 0.26);
@@ -539,17 +554,223 @@ class World3DRuntime {
       active.add('player');
     }
 
-    // Only real combatants enter the skinned-GLB stage. The siege crowd still
-    // affects doors and pressure in simulation, but has no rendered proxies.
-    Enemy3D.assign(game.enemies || [], player, {
+    const enemies = game.enemies || [];
+    Enemy3D.assign(enemies, player, {
       full3D: true,
+      includeCrowd: game.mode === 'survival',
       verticalProjection: VERTICAL_PROJECTION,
       host: { stage: this.root, scene: this.scene, renderer: EnvKit.renderer, camera: EnvKit.camera, canvas: EnvKit.canvas },
     });
-    // No generic enemy proxies: a behavior-ready role GLB is the only gameplay
-    // representation. Readiness gating and the 14-live-combatant cap keep an
-    // active enemy from being displaced by decorative siege bodies.
+    if (game.mode === 'survival') this._syncSurvivalCrowdProxies(enemies);
+    else for (const proxy of this.survivalCrowdProxies.values()) proxy.visible = false;
+    // The legacy route remains GLB-only. Survival crowd units beyond the 14
+    // authored rigs use a lightweight 3D silhouette so all 20–30 bodies read.
     for (const [id, object] of this.proxies) if (!active.has(id)) object.visible = false;
+  }
+
+  _makeSurvivalZombieProxy() {
+    if (!this.survivalZombieBodyGeometry) this.survivalZombieBodyGeometry = new THREE.CylinderGeometry(7.5, 11, 34, 7, 1);
+    if (!this.survivalZombieHeadGeometry) this.survivalZombieHeadGeometry = new THREE.SphereGeometry(8.5, 8, 6);
+    if (!this.survivalZombieEyeGeometry) this.survivalZombieEyeGeometry = new THREE.SphereGeometry(1.35, 6, 5);
+    if (!this.survivalZombieBodyMaterial) this.survivalZombieBodyMaterial = new THREE.MeshStandardMaterial({ color: 0x24271f, roughness: 1, flatShading: true });
+    if (!this.survivalZombieSkinMaterial) this.survivalZombieSkinMaterial = new THREE.MeshStandardMaterial({ color: 0x686c56, roughness: 1, flatShading: true });
+    if (!this.survivalZombieEyeMaterial) this.survivalZombieEyeMaterial = new THREE.MeshBasicMaterial({ color: 0xd18b48, emissive: 0x6d250d, toneMapped: false });
+    const group = new THREE.Group();
+    group.name = 'survival-swarm-zombie-3d-silhouette';
+    const torso = new THREE.Mesh(this.survivalZombieBodyGeometry, this.survivalZombieBodyMaterial);
+    torso.position.y = 24;
+    const head = new THREE.Mesh(this.survivalZombieHeadGeometry, this.survivalZombieSkinMaterial);
+    head.position.set(0, 44, 1);
+    head.scale.set(0.82, 0.9, 0.9);
+    const arms = [];
+    for (const side of [-1, 1]) {
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 3.1, 21, 5), this.survivalZombieBodyMaterial);
+      arm.position.set(side * 10, 29, 3);
+      arm.rotation.z = side * -0.42;
+      group.add(arm);
+      arms.push(arm);
+    }
+    for (const side of [-1, 1]) {
+      const eye = new THREE.Mesh(this.survivalZombieEyeGeometry, this.survivalZombieEyeMaterial);
+      eye.position.set(side * 3, 45, 8.1);
+      group.add(eye);
+    }
+    group.add(torso, head);
+    group.userData.arms = arms;
+    group.traverse((item) => { if (item.isMesh) { item.castShadow = true; item.receiveShadow = false; } });
+    group.visible = false;
+    this.root.add(group);
+    return group;
+  }
+
+  _syncSurvivalCrowdProxies(enemies) {
+    const active = new Set();
+    for (const enemy of enemies) {
+      if (!enemy || !enemy._crowd || !enemy._survivalType || enemy.dead || enemy.removeMe || enemy._glb) continue;
+      const id = enemy.id;
+      active.add(id);
+      let proxy = this.survivalCrowdProxies.get(id);
+      if (!proxy) {
+        proxy = this._makeSurvivalZombieProxy();
+        this.survivalCrowdProxies.set(id, proxy);
+      }
+      proxy.visible = enemy.alpha == null || enemy.alpha > 0.02;
+      proxy.position.set(enemy.x, 0, enemy.y);
+      proxy.rotation.y = Math.PI / 2 - (enemy.angle || 0);
+      proxy.scale.setScalar((enemy.sizeMul || 1) * (enemy.hurtFlash > 0 ? 1.04 : 1));
+      const arms = proxy.userData.arms || [];
+      const swing = Math.sin((enemy.t || 0) * 6 + (enemy.id || 0)) * 0.16;
+      for (let i = 0; i < arms.length; i++) arms[i].rotation.z = (i === 0 ? -1 : 1) * (0.42 + swing);
+    }
+    for (const [id, proxy] of this.survivalCrowdProxies) if (!active.has(id)) proxy.visible = false;
+  }
+
+  _makeSurvivalBuilding(type) {
+    const group = new THREE.Group();
+    group.name = `survival-building-3d-${type}`;
+    const wood = new THREE.MeshStandardMaterial({ color: 0x60452a, roughness: 0.96, flatShading: true });
+    const woodLight = new THREE.MeshStandardMaterial({ color: 0x917044, roughness: 0.9, flatShading: true });
+    const iron = new THREE.MeshStandardMaterial({ color: 0x554a3b, metalness: 0.58, roughness: 0.56, flatShading: true });
+    const oil = new THREE.MeshStandardMaterial({ color: 0x583719, roughness: 0.6, metalness: 0.18 });
+    const add = (geometry, material, x, y, z, rx = 0, ry = 0, rz = 0) => {
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(x, y, z);
+      mesh.rotation.set(rx, ry, rz);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      group.add(mesh);
+      return mesh;
+    };
+    if (type === 'extractor') {
+      add(new THREE.CylinderGeometry(18, 20, 32, 10), oil, 0, 18, 0);
+      add(new THREE.CylinderGeometry(15, 15, 3, 10), iron, 0, 35, 0);
+      add(new THREE.CylinderGeometry(3, 3, 38, 7), iron, 20, 30, 0, 0, 0, Math.PI / 2);
+      add(new THREE.BoxGeometry(30, 5, 6), woodLight, 0, 5, 0);
+      add(new THREE.BoxGeometry(8, 24, 8), iron, -21, 12, 0);
+    } else if (type === 'sawmill') {
+      for (let i = 0; i < 3; i++) {
+        add(new THREE.CylinderGeometry(8, 8, 56, 8), i === 1 ? woodLight : wood, -20 + i * 20, 8 + i * 1.5, 0, 0, 0, Math.PI / 2);
+      }
+      add(new THREE.BoxGeometry(65, 5, 9), iron, 0, 23, 0);
+      add(new THREE.TorusGeometry(14, 2, 5, 16), iron, 0, 27, 8, Math.PI / 2, 0, 0);
+      add(new THREE.BoxGeometry(8, 26, 8), woodLight, -25, 13, -10);
+      add(new THREE.BoxGeometry(8, 26, 8), woodLight, 25, 13, -10);
+    } else {
+      add(new THREE.BoxGeometry(70, 4, 54), wood, 0, 3, 0);
+      for (const x of [-27, 27]) for (const z of [-20, 20]) add(new THREE.BoxGeometry(5, 40, 5), woodLight, x, 23, z);
+      add(new THREE.ConeGeometry(46, 28, 4), wood, 0, 52, 0, 0, Math.PI / 4, 0);
+      add(new THREE.BoxGeometry(15, 25, 2), iron, 0, 15, 27);
+    }
+    group.traverse((item) => { if (item.isMesh) item.userData.survivalBuilding = type; });
+    return group;
+  }
+
+  _makeSurvivalRadiusRing() {
+    const geometry = new THREE.RingGeometry(0.992, 1, 128);
+    const material = new THREE.MeshBasicMaterial({
+      color: 0xe7a74f, transparent: true, opacity: 0.34,
+      side: THREE.DoubleSide, depthWrite: false, toneMapped: false,
+    });
+    const ring = new THREE.Mesh(geometry, material);
+    ring.name = 'survival-perapian-radius-3d';
+    ring.rotation.x = -Math.PI / 2;
+    ring.renderOrder = 3;
+    ring.frustumCulled = false;
+    this.root.add(ring);
+    return ring;
+  }
+
+  _makeSurvivalSlotRing() {
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(37, 42, 40),
+      new THREE.MeshBasicMaterial({ color: 0xe6c77e, transparent: true, opacity: 0.72, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }),
+    );
+    ring.name = 'survival-lit-build-slot-3d';
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 3;
+    ring.renderOrder = 4;
+    this.root.add(ring);
+    return ring;
+  }
+
+  _makeSurvivalGate() {
+    const group = new THREE.Group();
+    group.name = 'survival-reinforced-gate-3d';
+    const timber = new THREE.MeshStandardMaterial({ color: 0x64482c, roughness: 0.9, flatShading: true });
+    const iron = new THREE.MeshStandardMaterial({ color: 0x52493a, metalness: 0.62, roughness: 0.55, flatShading: true });
+    // Orientation is corrected at sync time; the default spans a horizontal jamb.
+    for (const side of [-1, 1]) {
+      const post = new THREE.Mesh(new THREE.BoxGeometry(9, 88, 12), timber);
+      post.position.set(side * 81, 44, 0);
+      post.castShadow = true;
+      group.add(post);
+    }
+    for (const y of [22, 47, 72]) {
+      const beam = new THREE.Mesh(new THREE.BoxGeometry(170, 7, 10), y === 47 ? iron : timber);
+      beam.position.y = y;
+      beam.castShadow = true;
+      group.add(beam);
+    }
+    group.visible = false;
+    this.root.add(group);
+    return group;
+  }
+
+  _syncSurvivalObjects(game) {
+    const mode = game.survival;
+    if (!mode) return;
+    const fire = game.mansion.fireplaceLight;
+    if (!this.survivalRadiusRing) this.survivalRadiusRing = this._makeSurvivalRadiusRing();
+    const radius = mode.getFireRadius();
+    this.survivalRadiusRing.visible = radius > 0;
+    if (fire) {
+      this.survivalRadiusRing.position.set(fire.x, 3.4, fire.y);
+      this.survivalRadiusRing.scale.set(radius, radius, radius);
+      this.survivalRadiusRing.material.opacity = 0.25 + (0.06 * (0.5 + 0.5 * Math.sin(game.time * 2.1)));
+    }
+
+    const visibleSlots = game.screen === 'playing' && mode.phase === 'day' ? new Set(mode.buildableRooms().map((room) => room.id)) : new Set();
+    for (const roomId of visibleSlots) {
+      let ring = this.survivalSlotRings.get(roomId);
+      if (!ring) { ring = this._makeSurvivalSlotRing(); this.survivalSlotRings.set(roomId, ring); }
+      const room = game.mansion.roomList.find((item) => item.id === roomId);
+      if (!room) continue;
+      ring.visible = true;
+      ring.position.set(room.x + room.w / 2, 3, room.y + room.h / 2);
+      const selected = mode.selectedRoom === roomId;
+      ring.material.color.setHex(selected ? 0xffdf89 : 0xb99759);
+      ring.material.opacity = selected ? 0.94 : 0.56;
+    }
+    for (const [roomId, ring] of this.survivalSlotRings) if (!visibleSlots.has(roomId)) ring.visible = false;
+
+    const activeBuildings = new Set();
+    for (const [roomId, type] of Object.entries(mode.buildings)) {
+      const room = game.mansion.roomList.find((item) => item.id === roomId);
+      if (!room) continue;
+      activeBuildings.add(roomId);
+      let mesh = this.survivalBuildingMeshes.get(roomId);
+      if (!mesh || mesh.userData.type !== type) {
+        if (mesh) { this.root.remove(mesh); this.survivalBuildingMeshes.delete(roomId); }
+        mesh = this._makeSurvivalBuilding(type);
+        mesh.userData.type = type;
+        this.survivalBuildingMeshes.set(roomId, mesh);
+        this.root.add(mesh);
+      }
+      mesh.visible = true;
+      mesh.position.set(room.x + room.w / 2 + 48, 0, room.y + room.h / 2 + 24);
+    }
+    for (const [roomId, mesh] of this.survivalBuildingMeshes) if (!activeBuildings.has(roomId)) mesh.visible = false;
+
+    if (!this.survivalGateMesh) this.survivalGateMesh = this._makeSurvivalGate();
+    const gate = mode.mainGate();
+    this.survivalGateMesh.visible = !!(mode.gateBuilt && gate);
+    if (gate && this.survivalGateMesh.visible) {
+      this.survivalGateMesh.position.set(gate.x, 0, gate.y);
+      if (gate.axis === 'v') this.survivalGateMesh.rotation.y = Math.PI / 2;
+      else this.survivalGateMesh.rotation.y = 0;
+      const scale = gate.w ? Math.max(0.7, Math.min(1.3, gate.w / 160)) : 1;
+      this.survivalGateMesh.scale.set(scale, 1, 1);
+    }
   }
 
   _syncVariants(game) {
@@ -810,6 +1031,17 @@ class World3DRuntime {
     }
     for (const [id, mesh] of this.bolts) if (!active.has(id)) mesh.visible = false;
     for (const [id, trail] of this.boltTrails) if (!active.has(id)) trail.visible = false;
+  }
+
+  _hideLegacyWorldCues() {
+    for (const group of this.roomMarks) group.visible = false;
+    if (this.houseCat) this.houseCat.visible = false;
+    for (const rig of this.hauntWatchers) rig.group.visible = false;
+    for (const mesh of this.houseDrafts.values()) mesh.group.visible = false;
+    for (const cue of this.doorCues.values()) cue.group.visible = false;
+    if (this.interactionCue) this.interactionCue.visible = false;
+    if (this.directorShadow) this.directorShadow.visible = false;
+    if (this.directorShadowLight) this.directorShadowLight.intensity = 0;
   }
 
   _syncRoomMarks(game) {
@@ -1349,20 +1581,37 @@ class World3DRuntime {
     }
     if (!this._ensureWorld(game)) return false;
     this.setVisible(true);
-    this._syncRoomMarks(game);
-    this._syncHouseAtmosphere(game);
-    this._syncInteractionCue(game);
+    if (game.mode === 'survival') this._hideLegacyWorldCues();
+    else {
+      this._syncRoomMarks(game);
+      this._syncHouseAtmosphere(game);
+      this._syncInteractionCue(game);
+    }
     this.lastRoomCount = game.mansion.roomList.length;
     this.lastEntranceCount = game.mansion.entrances.length;
     this.lastPortalCount = game.mansion.portals.length;
-    EnvKit.sync(game.mansion.entrances, game.mansion, game.save.fortressLevel, game);
+    if (game.mode === 'survival' && game.survivalBakeDirty) {
+      EnvKit.bakeKey = '';
+      game.survivalBakeDirty = false;
+    }
+    const fortressLevel = game.mode === 'survival' ? 0 : game.save.fortressLevel;
+    EnvKit.sync(game.mansion.entrances, game.mansion, fortressLevel, game);
     if (EnvKit.quality !== game.quality) EnvKit.setQuality(game.quality);
     this._syncLighting(game);
     this._syncActors(game);
+    if (game.mode === 'survival') this._syncSurvivalObjects(game);
     this._syncVariants(game);
-    this._syncFoodCues(game);
-    this._syncDrinkTrails(game);
-    this._syncDirectorShadow(game);
+    if (game.mode === 'survival') {
+      for (const ring of this.variantRings.values()) ring.visible = false;
+      for (const cue of this.foodCues.values()) cue.group.visible = false;
+      for (const trail of this.drinkTrails.values()) trail.group.visible = false;
+      if (this.directorShadow) this.directorShadow.group.visible = false;
+      if (this.directorShadowLight) this.directorShadowLight.intensity = 0;
+    } else {
+      this._syncFoodCues(game);
+      this._syncDrinkTrails(game);
+      this._syncDirectorShadow(game);
+    }
     this._syncPlayerSwing(game);
     this._syncPickups(game);
     this._syncBolts(game);
@@ -1404,6 +1653,13 @@ class World3DRuntime {
       riggedPlayer: !!(Valen3D.model && Valen3D.model.visible && Valen3D.model.parent),
       visibleRiggedEnemies: Enemy3D.slots.filter((slot) => slot.model.visible).length,
       proxyActors: [...this.proxies.values()].filter((object) => object.visible).length,
+      visibleSurvivalCrowdProxies: [...this.survivalCrowdProxies.values()].filter((object) => object.visible).length,
+      survivalCrowdProxyPool: this.survivalCrowdProxies.size,
+      survivalRadiusVisible: !!(this.survivalRadiusRing && this.survivalRadiusRing.visible),
+      survivalRadiusPixels: this.survivalRadiusRing ? this.survivalRadiusRing.scale.x : 0,
+      visibleSurvivalBuildSlots: [...this.survivalSlotRings.values()].filter((object) => object.visible).length,
+      visibleSurvivalBuildings: [...this.survivalBuildingMeshes.values()].filter((object) => object.visible).length,
+      survivalGateVisible: !!(this.survivalGateMesh && this.survivalGateMesh.visible),
       visibleVariants3D: [...this.variantRings.values()].filter((object) => object.visible).length,
       visibleFoodCues3D: [...this.foodCues.values()].filter((cue) => cue.group.visible).length,
       visibleDrinkTrails3D: [...this.drinkTrails.values()].filter((trail) => trail.group.visible).length,

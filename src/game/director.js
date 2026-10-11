@@ -12,15 +12,14 @@
  */
 
 import {
-  clamp, lerp, damp, rand, randInt, chance, pick, shuffle, dist, fmtClock, TAU,
+  clamp, lerp, damp, rand, chance, pick, dist,
 } from '../core/util.js';
 import {
-  PHASES, phaseAt, nextPhase, BEATS, DIRECTOR, KNOCKS, NIGHT_DURATION, nightHeat, threatMix,
+  BEATS, DIRECTOR, KNOCKS, NIGHT_DURATION, nightHeat, threatMix,
   SPAWN_WARMUP, PANIC_AT, SILENCE_AT, COUNTDOWN_AT, ENEMY_TYPES, TUNING, SIEGE,
 } from '../core/config.js';
 import { tellFor, revealForNight } from './economy.js';
 import { Crawler, Hunter, Werewolf, Stalker, Ghoul, Zombie, applyVariant, CrowdBody, CROWD } from './enemies.js';
-import { ROOM } from './mansion.js';
 
 export const MOOD = {
   CALM: 'calm', CURIOUS: 'curious', UNEASY: 'uneasy', ALERT: 'alert',
@@ -1120,7 +1119,7 @@ export class Director {
         if (args.type === 'crawler' || args.type === 'mixed') {
           for (let i = 0; i < 1 + Math.min(3, survived); i++) picks.push('zombie');
         }
-        const spawned = this.spawnWave(game, picks, args);
+        this.spawnWave(game, picks, args);
         break;
       }
     }

@@ -171,9 +171,8 @@ export const defaultSave = () => ({
   deeds: {},                // what the player has actually done; the shop waits on these
   beats: {},                // once-only narrative beats the director has delivered
   pendingDawn: [],          // dawn-card ids waiting for the interstitial
-  /* THE HUNT — the spine (docs/PURPOSE.md). One forward-only meter: how close
-   * the Hunter is to being able to kill the Master. Every night moves it, won
-   * or lost, so no run is ever wasted. See src/game/hunt.js. */
+  /* Legacy Hunt progression state, retained for `?legacy=1`. Survival uses
+   * the separate `survival` namespace below. */
   hunt: {
     track: 0,               // 0..100, forward only
     intel: [],              // ids of the facts learned about the Master (deduped for life)
@@ -183,6 +182,16 @@ export const defaultSave = () => ({
     lastGain: null,         // the last night's readout, for the death/dawn screens
   },
   fortressLevel: 0,         // the house's visible state, derived from the track
+  // The new route owns a parallel save namespace; legacy hunt/IAP fields are
+  // retained untouched and remain available through ?legacy=1.
+  survival: {
+    initialized: false, day: 1, phase: 'night', elapsed: 0, nightDuration: 72,
+    oil: 38, wood: 26, survivors: 2, perapianLevel: 1,
+    buildings: {}, gateBuilt: false, gateHp: 0, builderJob: null,
+    selectedRoom: null, nightsCompleted: 0, waveIndex: 0, breakerIndex: 0,
+    individualIndex: 0, oilBurned: 0, siegeTimers: {}, nightStats: { kills: 0, hits: 0, damageToWalls: 0 },
+    lastRewards: null, player: null, entrances: null, enemies: [],
+  },
 });
 
 function deepMerge(base, over) {
