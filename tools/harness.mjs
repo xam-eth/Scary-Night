@@ -540,10 +540,29 @@ async function runSurvivalMilestone() {
     survivalGame.player.y = holdAt.y;
   }
   let holdGuard = 0;
-  while (survivalGame.survival.phase === 'night' && holdGuard++ < 60 * survivalGame.survival.nightDuration + 180) tick();
+  let flared = false;
+  while (survivalGame.survival.phase === 'night' && holdGuard++ < 60 * survivalGame.survival.nightDuration + 180) {
+    const hunter = survivalGame.player;
+    const near = survivalGame.enemies.some((enemy) => !enemy.dead
+      && Math.hypot(enemy.x - hunter.x, enemy.y - hunter.y) < survivalGame.survival.tuning.skillRadius);
+    if (near && survivalGame.survival.skillCooldown <= 0) {
+      sInput.keys.interact = true;
+      flared = true;
+    }
+    tick();
+    sInput.keys.interact = false;
+  }
   const holdKills = survivalGame.survival.lastRewards ? survivalGame.survival.lastRewards.kills : survivalGame.survival.nightStats.kills;
-  const hunterHoldPass = survivalGame.survival.phase === 'day' && survivalGame.player.blood > 0 && holdKills >= 1;
-  console.log(`  ${hunterHoldPass ? 'PASS' : 'FAIL'}  Hunter holds Night 1 at the gate (${holdKills} kills, HP ${Math.round(survivalGame.player.blood)}, ${survivalGame.survival.phase})`);
+  const hunterHoldPass = survivalGame.survival.phase === 'day' && survivalGame.player.blood > 0 && holdKills >= 1 && flared;
+  console.log(`  ${hunterHoldPass ? 'PASS' : 'FAIL'}  Hunter holds Night 1 at the gate (${holdKills} kills, flare=${flared ? 'yes' : 'no'}, HP ${Math.round(survivalGame.player.blood)}, ${survivalGame.survival.phase})`);
+
+  const { dayPanelHeight } = await import('../src/ui/survival.js');
+  const phoneH = 390;
+  const phoneInset = dayPanelHeight(phoneH);
+  sInput.layout(844, phoneH, { bottomInset: phoneInset });
+  const stickClear = sInput.stick.homeY + sInput.stick.r <= phoneH - phoneInset + 1;
+  const landscapeDayPass = phoneInset <= 210 && phoneInset < phoneH * 0.55 && stickClear;
+  console.log(`  ${landscapeDayPass ? 'PASS' : 'FAIL'}  Landscape day panel ${phoneInset}px leaves the stick above it (homeY ${sInput.stick.homeY.toFixed(0)})`);
 
   const runScenario = (builderBot) => {
     // Pair the idle and builder night runs from an identical random stream.
@@ -669,15 +688,44 @@ async function runSurvivalMilestone() {
     && economyMode.lastRewards.oil === 18 && economyMode.lastRewards.wood === 21 && economyMode.survivors === 3;
   console.log(`  economy: ${JSON.stringify(economyBuilt)} → +${economyMode.lastRewards.oil} Oil, +${economyMode.lastRewards.wood} Wood, Survivors ${economyMode.survivors} (${economyPass ? 'PASS' : 'FAIL'})`);
 
+  survivalGame.survival.restart();
+  resetControls();
+  const collectMode = survivalGame.survival;
+  collectMode.phase = 'day';
+  collectMode.perapianLevel = 3;
+  collectMode.oil = 100; collectMode.wood = 100; collectMode.survivors = 2;
+  survivalGame.screen = 'playing'; survivalGame.uiPanel = 'survival-day';
+  collectMode.refreshFireplace(true);
+  const collectRoom = collectMode.buildableRooms()[0];
+  const collectQueued = !!(collectRoom && collectMode.startBuild('extractor', collectRoom.id));
+  const site = collectMode.jobSite();
+  const collectFinished = collectQueued && waitForBuilder();
+  const fillTicks = Math.ceil((collectMode.tuning.produceFillSeconds || 8) * 60) + 8;
+  for (let i = 0; i < fillTicks; i++) tick();
+  const fillReady = collectMode.productionReady(collectRoom && collectRoom.id);
+  const oilBeforeCollect = collectMode.oil;
+  const collected = collectMode.collectProduction(collectRoom && collectRoom.id);
+  collectMode.phase = 'night';
+  collectMode.day = 1;
+  collectMode.elapsed = 0;
+  collectMode.oilBurned = 0;
+  collectMode.nightStats = { kills: 0, hits: 0, damageToWalls: 0 };
+  collectMode.completeNight();
+  const collectPass = collectFinished && fillReady && collected && collected.oil === 6
+    && collectMode.oil === oilBeforeCollect + 6 + 12
+    && collectMode.lastRewards.oil === 12 && collectMode.lastRewards.wood === 14
+    && site && site.kind === 'room' && site.roomId === collectRoom.id;
+  console.log(`  collect: fill=${fillReady} loot=${JSON.stringify(collected)} dawn +${collectMode.lastRewards.oil}O/+${collectMode.lastRewards.wood}W site=${site && site.kind} (${collectPass ? 'PASS' : 'FAIL'})`);
+
   console.log(`  idle Night 3: ${idle.nightThree.peakEnemies} peak enemies / ${idle.nightThree.peakBreakers} Breakers, ${idle.nightThree.kills} kills, ${idle.nightThree.wallDamage} wall damage, gate ${idle.nightThree.gateHp} HP, Hunter ${idle.nightThree.playerHp} HP; ${idle.phase}`);
   console.log(`  builder Night 3: ${builder.nightThree.peakEnemies} peak enemies / ${builder.nightThree.peakBreakers} Breakers, ${builder.nightThree.kills} kills, ${builder.nightThree.wallDamage} wall damage, gate ${builder.nightThree.gateHp} HP, Hunter ${builder.nightThree.playerHp} HP; Perapian Lv${builder.perapianLevel}, survivors ${builder.survivors}, buildings ${builder.buildings.join(',') || 'none'}, gateBuilt=${builder.gateBuilt}; ${builder.phase}`);
   const pass = waveSchedulePass && lightEffectsPass && survivalMovementPass && breakerTargetsWall
     && hunterAutoShot && hunterRealLos && hunterSkill
     && hearthFloorPass && hearthFeedPass && survivorEffectPass && dayWalkPass
-    && doorLightPass && losBlockPass && pauseFreezePass && hunterHoldPass
+    && doorLightPass && losBlockPass && pauseFreezePass && hunterHoldPass && landscapeDayPass
     && idle.complete && builder.complete && builder.perapianLevel === 3
     && builder.queueLockVerified && builder.sawmillBuilt && builder.gateBuilt && builder.shelterBuilt
-    && saveProgressPass && economyPass && builder.upgrades.map((item) => item.level).join(',') === '1,2,3'
+    && saveProgressPass && economyPass && collectPass && builder.upgrades.map((item) => item.level).join(',') === '1,2,3'
     && builder.nightThree.gateHp > idle.nightThree.gateHp;
   console.log(`  ${pass ? 'PASS' : 'FAIL'}  three-day loop, Perapian Lv1→Lv3, one builder queue, and Night-3 idle-vs-builder outcomes`);
   if (!pass) process.exitCode = 1;

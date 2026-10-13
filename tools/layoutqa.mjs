@@ -604,6 +604,9 @@ const tidy = await page.evaluate(() => {
     if (f.rot) spun++;
     for (const o of (m.furniture || [])) {
       if (o === f || !o.w) continue;
+      const stairPair = (f.type === 'staircase' && o.type === 'stairRail')
+        || (f.type === 'stairRail' && o.type === 'staircase');
+      if (stairPair) continue;
       const ox = Math.min(f.x + f.w, o.x + o.w) - Math.max(f.x, o.x);
       const oy = Math.min(f.y + f.h, o.y + o.h) - Math.max(f.y, o.y);
       if (ox > 6 && oy > 6) {

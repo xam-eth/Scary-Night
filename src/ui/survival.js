@@ -132,6 +132,7 @@ function drawNightHud(game, ctx, w, h) {
   const wave = Math.min(3, Math.max(1, mode.waveIndex || (mode.incoming && mode.incoming.kind === 'swarm' ? mode.incoming.wave : 1)));
   const waveLabel = mode.waveIndex >= 3 ? 'WAVE 3/3' : `WAVE ${wave}/3`;
   text(ctx, waveLabel, w - 12, titleY + 1, 9, 'rgba(231,210,167,0.86)', 'right');
+  text(ctx, `CREW ${mode.survivors}`, w - 12, titleY + 20, 9, PAPER, 'right');
 
   const p = game.player;
   const gate = mode.mainGate();
@@ -262,17 +263,19 @@ function drawFtue(game, ctx, w, h) {
 }
 
 export function dayPanelHeight(h) {
+  if (h < 500) return Math.min(210, Math.max(172, Math.round(h * 0.44)));
   return Math.min(360, Math.max(296, h * 0.47));
 }
 
 function drawDayPanel(game, ctx, w, h) {
   drawPause(game, ctx, w, h);
   const mode = game.survival;
+  const short = h < 500;
   const panelH = dayPanelHeight(h);
   const panelY = h - panelH;
   const inset = 12;
   const innerW = w - inset * 2;
-  const roomPageSize = 6;
+  const roomPageSize = short ? 2 : 6;
   const rooms = mode.buildableRooms();
   const pages = Math.max(1, Math.ceil(rooms.length / roomPageSize));
   if (mode.selectedRoom) {
@@ -297,15 +300,15 @@ function drawDayPanel(game, ctx, w, h) {
   ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(0, panelY + 1); ctx.lineTo(w, panelY + 1); ctx.stroke();
 
-  text(ctx, `DAY ${mode.day}  ·  BUILD`, inset, panelY + 20, 14, AMBER, 'left', SERIF);
-  const statY = panelY + 42;
-  const statFont = w < 440 ? 9 : 10;
+  text(ctx, `DAY ${mode.day}  ·  BUILD`, inset, panelY + (short ? 16 : 20), short ? 12 : 14, AMBER, 'left', SERIF);
+  const statY = panelY + (short ? 34 : 42);
+  const statFont = w < 440 || short ? 9 : 10;
   text(ctx, mode.hearthLabel(), inset, statY, 10, AMBER, 'left');
   const speedPct = Math.round((mode.builderSpeedMul() - 1) * 100);
   const crewNote = speedPct > 0 ? ` · +${speedPct}% BUILD` : ` · +${mode.crewGateHp()} GATE`;
   text(ctx, `OIL ${Math.floor(mode.oil)}   WOOD ${Math.floor(mode.wood)}   SURVIVORS ${mode.survivors}${crewNote}`, w - inset, statY, statFont, PAPER, 'right');
 
-  const queueY = panelY + 64;
+  const queueY = panelY + (short ? 50 : 64);
   if (mode.builderJob) {
     const job = mode.builderJob;
     const name = job.kind === 'perapian' ? mode.hearthLabel(job.targetLevel)
@@ -326,11 +329,13 @@ function drawDayPanel(game, ctx, w, h) {
     text(ctx, 'BUILDER QUEUE · IDLE', inset, queueY, 9, DIM);
   }
 
-  const slotsY = panelY + 88;
-  text(ctx, `SAFE ZONE · ${rooms.length} ROOMS · WALK THE HOUSE · TAP A GLOWING SLOT`, inset, slotsY, 9, '#bcb19a');
+  const slotsY = panelY + (short ? 68 : 88);
+  text(ctx, short
+    ? `SAFE ZONE · ${rooms.length} · TAP A SLOT`
+    : `SAFE ZONE · ${rooms.length} ROOMS · WALK THE HOUSE · TAP A GLOWING SLOT`, inset, slotsY, 9, '#bcb19a');
   const cardGap = 6;
   const cardW = (innerW - cardGap) / 2;
-  const cardH = 31;
+  const cardH = short ? 24 : 31;
   const cardsTop = slotsY + 10;
   const busy = !!mode.builderJob;
   for (let i = 0; i < pageRooms.length; i++) {
@@ -370,34 +375,47 @@ function drawDayPanel(game, ctx, w, h) {
   const buildingLabels = [
     ['extractor', 'EXTRACTOR'], ['sawmill', 'SAWMILL'], ['shelter', 'SHELTER'],
   ];
-  for (let i = 0; i < buildingLabels.length; i++) {
-    const [type, label] = buildingLabels[i];
-    const spec = SURVIVAL_BUILDINGS[type];
-    const affordable = mode.oil >= spec.oil && mode.wood >= spec.wood;
-    const available = !!selected && !mode.useBuilding(selected.id);
-    addButton(game, ctx, { x: inset + i * (typeW + typeGap), y: typesY, w: typeW, h: 34 },
-      `${label} · ${spec.oil}O/${spec.wood}W`,
-      () => mode.startBuild(type, selected && selected.id),
-      { disabled: busy || !affordable || !available || !selected, fontSize: w < 430 ? 8 : 9, color: '#ddc58f' });
+  const selectedReady = selected && mode.productionReady(selected.id);
+  if (selectedReady) {
+    const store = mode.stores[selected.id] || { oil: 0, wood: 0 };
+    const loot = [
+      store.oil >= 1 ? `+${Math.floor(store.oil)} OIL` : null,
+      store.wood >= 1 ? `+${Math.floor(store.wood)} WOOD` : null,
+    ].filter(Boolean).join(' · ');
+    addButton(game, ctx, { x: inset, y: typesY, w: innerW, h: short ? 26 : 34 },
+      `COLLECT · ${loot || 'READY'}`,
+      () => mode.collectProduction(selected.id),
+      { disabled: false, fontSize: w < 430 || short ? 8 : 9, color: AMBER });
+  } else {
+    for (let i = 0; i < buildingLabels.length; i++) {
+      const [type, label] = buildingLabels[i];
+      const spec = SURVIVAL_BUILDINGS[type];
+      const affordable = mode.oil >= spec.oil && mode.wood >= spec.wood;
+      const available = !!selected && !mode.useBuilding(selected.id);
+      addButton(game, ctx, { x: inset + i * (typeW + typeGap), y: typesY, w: typeW, h: short ? 26 : 34 },
+        `${label} · ${spec.oil}O/${spec.wood}W`,
+        () => mode.startBuild(type, selected && selected.id),
+        { disabled: busy || !affordable || !available || !selected, fontSize: w < 430 || short ? 8 : 9, color: '#ddc58f' });
+    }
   }
 
-  const actionsY = Math.min(h - 43, typesY + 39);
+  const actionsY = Math.min(h - (short ? 34 : 43), typesY + (short ? 30 : 39));
   const actionGap = 5;
   const actionW = (innerW - actionGap * 2) / 3;
   const upgrade = mode.buildingCost('perapian');
   const canUpgrade = !!upgrade && mode.oil >= upgrade.oil && mode.wood >= upgrade.wood;
-  addButton(game, ctx, { x: inset, y: actionsY, w: actionW, h: 36 },
+  addButton(game, ctx, { x: inset, y: actionsY, w: actionW, h: short ? 28 : 36 },
     mode.perapianLevel >= 3 ? 'HEARTH · MAX' : `HEARTH LV${mode.perapianLevel + 1} · ${upgrade ? upgrade.oil : 0}O/${upgrade ? upgrade.wood : 0}W`,
     () => mode.startBuild('perapian'),
-    { disabled: busy || !canUpgrade, fontSize: w < 430 ? 8 : 9, color: AMBER });
-  addButton(game, ctx, { x: inset + actionW + actionGap, y: actionsY, w: actionW, h: 36 },
+    { disabled: busy || !canUpgrade, fontSize: w < 430 || short ? 8 : 9, color: AMBER });
+  addButton(game, ctx, { x: inset + actionW + actionGap, y: actionsY, w: actionW, h: short ? 28 : 36 },
     mode.gateBuilt ? `GATE · ${Math.round(mode.gateHp)}` : `GATE · ${mode.tuning.gateCost.oil}O/${mode.tuning.gateCost.wood}W`,
     () => mode.startBuild('gate'),
-    { disabled: busy || mode.gateBuilt || mode.oil < mode.tuning.gateCost.oil || mode.wood < mode.tuning.gateCost.wood, fontSize: w < 430 ? 8 : 9, color: '#d0aa75' });
-  addButton(game, ctx, { x: inset + 2 * (actionW + actionGap), y: actionsY, w: actionW, h: 36 },
+    { disabled: busy || mode.gateBuilt || mode.oil < mode.tuning.gateCost.oil || mode.wood < mode.tuning.gateCost.wood, fontSize: w < 430 || short ? 8 : 9, color: '#d0aa75' });
+  addButton(game, ctx, { x: inset + 2 * (actionW + actionGap), y: actionsY, w: actionW, h: short ? 28 : 36 },
     `START NIGHT ${mode.day}`,
     () => mode.startNight(),
-    { disabled: busy, fontSize: w < 430 ? 8 : 9, color: '#f0d9a3' });
+    { disabled: busy, fontSize: w < 430 || short ? 8 : 9, color: '#f0d9a3' });
 
   ctx.restore();
 }
@@ -424,21 +442,25 @@ function drawEndPanel(game, ctx, w, h, failed = false) {
   ctx.save();
   ctx.fillStyle = 'rgba(2,3,6,0.72)'; ctx.fillRect(0, 0, w, h);
   const boxW = Math.min(340, w - 28);
-  const boxH = 230;
+  const boxH = 248;
   const x = (w - boxW) / 2;
   const y = (h - boxH) / 2;
   fillPanel(ctx, x, y, boxW, boxH, 0.97);
-  text(ctx, failed ? 'THE FIRE GOES OUT' : 'THREE NIGHTS HELD', w / 2, y + 38, 19, AMBER, 'center', SERIF);
+  text(ctx, failed ? 'THE FIRE GOES OUT' : 'THREE NIGHTS HELD', w / 2, y + 36, 19, AMBER, 'center', SERIF);
+  const mode = game.survival;
   if (failed) {
-    text(ctx, game.survival.failureReason || 'THE HUNTER FELL', w / 2, y + 74, 10, PAPER, 'center');
+    text(ctx, mode.failureReason || 'THE HUNTER FELL', w / 2, y + 70, 10, PAPER, 'center');
+    text(ctx, `NIGHT ${mode.day} · ${mode.hearthLabel()} · ${mode.survivors} CREW`, w / 2, y + 92, 9, DIM, 'center');
   } else {
-    const reward = game.survival.lastRewards || { oil: 0, wood: 0, kills: 0 };
-    text(ctx, `HEARTH HELD · ${game.survival.hearthLabel()}`, w / 2, y + 73, 10, PAPER, 'center');
-    text(ctx, `+${reward.oil} OIL · +${reward.wood} WOOD · ${reward.kills} KILLS`, w / 2, y + 96, 9, DIM, 'center');
+    const reward = mode.lastRewards || { oil: 0, wood: 0, kills: 0 };
+    text(ctx, `HEARTH HELD · ${mode.hearthLabel()}`, w / 2, y + 70, 10, PAPER, 'center');
+    text(ctx, `+${reward.oil} OIL · +${reward.wood} WOOD · ${reward.kills} KILLS`, w / 2, y + 90, 9, DIM, 'center');
+    const built = Object.keys(mode.buildings).length;
+    text(ctx, `SURVIVORS ${mode.survivors} · BUILDINGS ${built} · GATE ${mode.gateBuilt ? 'HELD' : 'OPEN'}`, w / 2, y + 108, 8, DIM, 'center');
   }
-  addButton(game, ctx, { x: x + 28, y: y + 132, w: boxW - 56, h: 42 }, 'PLAY AGAIN',
+  addButton(game, ctx, { x: x + 28, y: y + 148, w: boxW - 56, h: 42 }, 'PLAY AGAIN',
     () => game.survival.restart(), { selected: true, fontSize: 12 });
-  addButton(game, ctx, { x: x + 28, y: y + 182, w: boxW - 56, h: 32 }, 'CONTINUE',
+  addButton(game, ctx, { x: x + 28, y: y + 198, w: boxW - 56, h: 32 }, 'CONTINUE',
     () => { if (failed) game.survival.restart(); else game.survival.enter(); }, { fontSize: 10 });
   ctx.restore();
 }

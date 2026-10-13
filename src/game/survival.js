@@ -360,6 +360,8 @@ export class SurvivalMode {
     this.survivors = this.tuning.startSurvivors;
     this.perapianLevel = 1;
     this.buildings = {};
+    this.stores = {};
+    this.collected = {};
     this.gateBuilt = false;
     this.gateHp = 0;
     this.builderJob = null;
@@ -409,6 +411,8 @@ export class SurvivalMode {
     this.survivors = clamp(Math.floor(Number(s.survivors) || 0), 0, 99);
     this.perapianLevel = clamp(Math.round(Number(s.perapianLevel) || 1), 1, 3);
     this.buildings = s.buildings && typeof s.buildings === 'object' ? s.buildings : {};
+    this.stores = s.stores && typeof s.stores === 'object' ? { ...s.stores } : {};
+    this.collected = s.collected && typeof s.collected === 'object' ? { ...s.collected } : {};
     this.gateBuilt = !!s.gateBuilt;
     this.gateHp = Math.max(0, Number(s.gateHp) || 0);
     this.builderJob = s.builderJob && typeof s.builderJob === 'object' ? { ...s.builderJob } : null;
@@ -493,7 +497,7 @@ export class SurvivalMode {
       light.f = 1;
       if (light === m.fireplaceLight) continue;
       const moon = light.type === 'moon';
-      light.i = day ? (moon ? 0.42 : 0.16) : (moon ? 0.24 : 0.09);
+      light.i = day ? (moon ? 0.55 : 0.26) : (moon ? 0.24 : 0.09);
       light.curI = light.i;
     }
   }
@@ -659,11 +663,66 @@ export class SurvivalMode {
     g.input.dashPressed = false;
     g.player.update(dt, g);
     g.player.anim(dt);
+    this.updateProduction(dt);
     if (this.builderJob) {
       this.builderJob.remaining = Math.max(0, this.builderJob.remaining - dt);
       if (this.builderJob.remaining <= 0) this.finishBuilderJob();
     }
     this.followPlayer(dt);
+  }
+
+  updateProduction(dt) {
+    const fill = Math.max(1, this.tuning.produceFillSeconds || 8);
+    for (const [roomId, type] of Object.entries(this.buildings)) {
+      if (this.collected[roomId]) continue;
+      const spec = SURVIVAL_BUILDINGS[type];
+      if (!spec || !spec.produces) continue;
+      const store = this.stores[roomId] || (this.stores[roomId] = { oil: 0, wood: 0 });
+      if (spec.produces.oil) store.oil = Math.min(spec.produces.oil, store.oil + spec.produces.oil / fill * dt);
+      if (spec.produces.wood) store.wood = Math.min(spec.produces.wood, store.wood + spec.produces.wood / fill * dt);
+    }
+  }
+
+  productionReady(roomId) {
+    const type = this.buildings[roomId];
+    const spec = type && SURVIVAL_BUILDINGS[type];
+    if (!spec || !spec.produces || this.collected[roomId]) return false;
+    const store = this.stores[roomId];
+    if (!store) return false;
+    const oilNeed = spec.produces.oil || 0;
+    const woodNeed = spec.produces.wood || 0;
+    return store.oil + 0.01 >= oilNeed && store.wood + 0.01 >= woodNeed && (oilNeed > 0 || woodNeed > 0);
+  }
+
+  collectProduction(roomId) {
+    if (this.phase !== 'day' || !this.productionReady(roomId)) return false;
+    const store = this.stores[roomId];
+    const oil = Math.floor(store.oil || 0);
+    const wood = Math.floor(store.wood || 0);
+    this.oil = clamp(this.oil + oil, 0, RESOURCE_CAP);
+    this.wood = clamp(this.wood + wood, 0, RESOURCE_CAP);
+    this.collected[roomId] = true;
+    this.stores[roomId] = { oil: 0, wood: 0 };
+    const room = this.game.mansion.roomList.find((item) => item.id === roomId);
+    if (room) this.game.showCombatText('COLLECT', room.x + room.w / 2, room.y + room.h / 2, '#e8c9a0');
+    this.game.audio.play('woodPickup', { vol: 0.5 });
+    this._persist(true);
+    return { oil, wood };
+  }
+
+  jobSite() {
+    const job = this.builderJob;
+    if (!job) return null;
+    if (job.kind === 'perapian') {
+      const fire = this.game.mansion.fireplaceLight;
+      return fire ? { x: fire.x, y: fire.y, kind: 'hearth' } : null;
+    }
+    if (job.kind === 'gate') {
+      const gate = this.mainGate();
+      return gate ? { x: gate.x, y: gate.y, kind: 'gate' } : null;
+    }
+    const room = this.game.mansion.roomList.find((item) => item.id === job.roomId);
+    return room ? { x: room.x + room.w / 2, y: room.y + room.h / 2, kind: 'room', roomId: room.id } : null;
   }
 
   builderSpeedMul() {
@@ -966,6 +1025,18 @@ export class SurvivalMode {
     if (this.phase !== 'day') return false;
     const floor = this.game.screenToFloor(sx, sy);
     if (!floor) return false;
+    for (const roomId of Object.keys(this.buildings)) {
+      const room = this.game.mansion.roomList.find((item) => item.id === roomId);
+      if (!room) continue;
+      const inside = floor.x >= room.x && floor.x <= room.x + room.w
+        && floor.y >= room.y && floor.y <= room.y + room.h;
+      const near = dist(floor.x, floor.y, room.x + room.w / 2, room.y + room.h / 2) < 110;
+      if (inside || near) {
+        this.selectedRoom = room.id;
+        if (this.productionReady(room.id)) this.collectProduction(room.id);
+        return true;
+      }
+    }
     const rooms = this.buildableRooms();
     const inside = rooms.find((room) => floor.x >= room.x && floor.x <= room.x + room.w
       && floor.y >= room.y && floor.y <= room.y + room.h);
@@ -1146,12 +1217,15 @@ export class SurvivalMode {
     const dayIndex = clamp(this.day - 1, 0, 2);
     let oil = this.tuning.nightRewards.oil[dayIndex];
     let wood = this.tuning.nightRewards.wood[dayIndex];
-    for (const type of Object.values(this.buildings)) {
+    for (const [roomId, type] of Object.entries(this.buildings)) {
       const spec = SURVIVAL_BUILDINGS[type];
       if (!spec) continue;
+      if (this.collected[roomId]) continue;
       oil += spec.produces.oil || 0;
       wood += spec.produces.wood || 0;
     }
+    this.collected = {};
+    this.stores = {};
     const killOil = Math.floor(this.nightStats.kills / 4);
     const killWood = Math.floor(this.nightStats.kills / 3);
     oil += killOil; wood += killWood;
@@ -1205,7 +1279,7 @@ export class SurvivalMode {
     const duration = this.nightDuration;
     Object.assign(this, {
       phase: 'night', day: 1, elapsed: 0, oil: this.tuning.startOil, wood: this.tuning.startWood,
-      survivors: this.tuning.startSurvivors, perapianLevel: 1, buildings: {}, gateBuilt: false,
+      survivors: this.tuning.startSurvivors, perapianLevel: 1, buildings: {}, stores: {}, collected: {}, gateBuilt: false,
       gateHp: 0, builderJob: null, selectedRoom: null, nightsCompleted: 0, waveIndex: 0,
       breakerIndex: 0, individualIndex: 0, oilBurned: 0, siegeTimers: Object.create(null),
       nightStats: { kills: 0, hits: 0, damageToWalls: 0 }, lastRewards: null, skillCooldown: 0,
@@ -1288,6 +1362,9 @@ export class SurvivalMode {
       } : null,
       ftue: this.ftue ? this.ftue.step : 'done',
       job: this.builderJob ? { ...this.builderJob } : null,
+      crew: this.survivors,
+      ready: Object.keys(this.buildings).filter((id) => this.productionReady(id)),
+      site: this.jobSite(),
       target: this.currentTarget && !this.currentTarget.dead ? {
         kind: this.currentTarget._survivalType || 'enemy',
         hp: Math.round(this.currentTarget.hp),
@@ -1321,7 +1398,8 @@ export class SurvivalMode {
     s.nightDuration = this.nightDuration;
     s.oil = Math.round(this.oil * 100) / 100; s.wood = Math.round(this.wood);
     s.survivors = this.survivors; s.perapianLevel = this.perapianLevel;
-    s.buildings = { ...this.buildings }; s.gateBuilt = this.gateBuilt;
+    s.buildings = { ...this.buildings }; s.stores = { ...this.stores }; s.collected = { ...this.collected };
+    s.gateBuilt = this.gateBuilt;
     s.gateHp = Math.round(this.gateHp); s.builderJob = this.builderJob ? { ...this.builderJob } : null;
     s.selectedRoom = this.selectedRoom; s.nightsCompleted = this.nightsCompleted;
     s.waveIndex = this.waveIndex; s.breakerIndex = this.breakerIndex; s.individualIndex = this.individualIndex;

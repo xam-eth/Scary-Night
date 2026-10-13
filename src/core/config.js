@@ -418,4 +418,5 @@ export const SURVIVAL_TUNING = Object.freeze({
   feedRange: 120,
   survivorBuildSpeedPer: 0.1,
   survivorGateHp: 12,
+  produceFillSeconds: 8,
 });

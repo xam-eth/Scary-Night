@@ -80,6 +80,9 @@ class World3DRuntime {
     this.survivalSlotRings = new Map();
     this.survivalRadiusRing = null;
     this.survivalTargetRing = null;
+    this.survivalScaffold = null;
+    this.survivalWorker = null;
+    this.survivalReadyPips = new Map();
     this.survivalGateMesh = null;
     this.survivalZombieBodyGeometry = null;
     this.survivalZombieHeadGeometry = null;
@@ -808,6 +811,84 @@ class World3DRuntime {
       const scale = gate.w ? Math.max(0.7, Math.min(1.3, gate.w / 160)) : 1;
       this.survivalGateMesh.scale.set(scale, 1, 1);
     }
+
+    const site = mode.phase === 'day' ? mode.jobSite() : null;
+    if (!this.survivalScaffold) this.survivalScaffold = this._makeSurvivalScaffold();
+    if (!this.survivalWorker) this.survivalWorker = this._makeSurvivalWorker();
+    this.survivalScaffold.visible = !!site;
+    this.survivalWorker.visible = !!site;
+    if (site) {
+      this.survivalScaffold.position.set(site.x, 0, site.y);
+      const bob = 0.5 + Math.sin((game.now || 0) * 3) * 0.08;
+      this.survivalWorker.position.set(site.x + 22, bob, site.y + 18);
+    }
+
+    const ready = new Set();
+    if (mode.phase === 'day') {
+      for (const roomId of Object.keys(mode.buildings)) {
+        if (mode.productionReady(roomId)) ready.add(roomId);
+      }
+    }
+    for (const roomId of ready) {
+      let pip = this.survivalReadyPips.get(roomId);
+      if (!pip) { pip = this._makeSurvivalReadyPip(); this.survivalReadyPips.set(roomId, pip); }
+      const room = game.mansion.roomList.find((item) => item.id === roomId);
+      if (!room) continue;
+      pip.visible = true;
+      const pulse = 0.72 + 0.28 * Math.abs(Math.sin((game.now || 0) * 4));
+      pip.position.set(room.x + room.w / 2 + 48, 58, room.y + room.h / 2 + 24);
+      pip.material.opacity = pulse;
+    }
+    for (const [roomId, pip] of this.survivalReadyPips) if (!ready.has(roomId)) pip.visible = false;
+  }
+
+  _makeSurvivalScaffold() {
+    const group = new THREE.Group();
+    group.name = 'survival-scaffold-3d';
+    const plank = new THREE.MeshStandardMaterial({ color: 0x8a6a3c, roughness: 0.95, flatShading: true });
+    for (const x of [-22, 22]) {
+      for (const z of [-18, 18]) {
+        const post = new THREE.Mesh(new THREE.BoxGeometry(4, 46, 4), plank);
+        post.position.set(x, 23, z);
+        post.castShadow = true;
+        group.add(post);
+      }
+    }
+    for (const y of [14, 32]) {
+      const beam = new THREE.Mesh(new THREE.BoxGeometry(48, 3, 3), plank);
+      beam.position.set(0, y, 18);
+      group.add(beam);
+    }
+    group.visible = false;
+    this.root.add(group);
+    return group;
+  }
+
+  _makeSurvivalWorker() {
+    const group = new THREE.Group();
+    group.name = 'survival-builder-3d';
+    const coat = new THREE.MeshStandardMaterial({ color: 0x3a332c, roughness: 1, flatShading: true });
+    const skin = new THREE.MeshStandardMaterial({ color: 0xc4a07a, roughness: 1, flatShading: true });
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(6, 8, 22, 6), coat);
+    body.position.y = 14;
+    const head = new THREE.Mesh(new THREE.SphereGeometry(6, 8, 6), skin);
+    head.position.y = 28;
+    group.add(body, head);
+    group.traverse((item) => { if (item.isMesh) { item.castShadow = true; } });
+    group.visible = false;
+    this.root.add(group);
+    return group;
+  }
+
+  _makeSurvivalReadyPip() {
+    const pip = new THREE.Mesh(
+      new THREE.SphereGeometry(7, 10, 8),
+      new THREE.MeshBasicMaterial({ color: 0xf0c56a, transparent: true, opacity: 0.9, toneMapped: false }),
+    );
+    pip.name = 'survival-collect-pip-3d';
+    pip.visible = false;
+    this.root.add(pip);
+    return pip;
   }
 
   _syncVariants(game) {
