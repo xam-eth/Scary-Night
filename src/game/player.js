@@ -13,7 +13,7 @@
 import { clamp, lerp, damp, TAU, angDiff, approachAngle, chance, visualAngle, screenDirToWorld } from '../core/util.js';
 import { PLAYER, TUNING } from '../core/config.js';
 import { Valen3D } from './valen3d.js';
-import { PX_PER_METRE, VALEN_METRES } from './envkit.js';
+import { PX_PER_METRE, VALEN_METRES, HUNTER_SCALE } from './envkit.js';
 import { IAP } from '../shop/iap.js';
 import { drainPerSecond, laneStats } from './economy.js';
 import { weaponById, swingDist, swingBearing, swingBearingToWorld } from './weapons.js';
@@ -178,9 +178,10 @@ export class Player {
     const intent = screenDirToWorld(input.move.x, input.move.y, game.renderer);
     let mx = intent.x * intent.mag, my = intent.y * intent.mag;
     const mag = intent.mag;
-    // Running is a sustained movement mode, independent of the short dash.
-    // Shift-hold / the boot toggle changes speed and the authored run clip.
-    const wantRun = input.runDown && mag > 0.3;
+    // Running is the default locomotion. Walk was a shuffle that read as
+    // standing still next to the enlarged hunter; stick/keys now use the
+    // authored run clip. Shift still forces run if someone holds it.
+    const wantRun = mag > 0.3 || (input.runDown && mag > 0.18);
 
     // blood-instability: the weaker you are, the more you drift
     if (this.lowBlood) {
@@ -304,7 +305,7 @@ export class Player {
     // ---------- anim state ----------
     if (this.attackT <= 0 && this.state !== PSTATE.DRINK) {
       if (sp < 14) this.state = this.lowBlood && game.danger > 0.6 ? PSTATE.PANIC : PSTATE.IDLE;
-      else if (wantRun || sp > 160) this.state = PSTATE.RUN;
+      else if (wantRun || sp > 40) this.state = PSTATE.RUN;
       else this.state = PSTATE.WALK;
       if (this.hurtT > 0.2) this.state = PSTATE.HURT;
     }
@@ -453,7 +454,7 @@ export class Player {
       weapon: this.weapon || 'claw',
       world: {
         x: this.x, y: this.y, full3D: true,
-        heightPx: VALEN_METRES * PX_PER_METRE,
+        heightPx: VALEN_METRES * PX_PER_METRE * HUNTER_SCALE,
         light: game.renderer.keyLightAt(this.x, this.y),
       },
     });

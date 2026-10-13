@@ -45,6 +45,9 @@ export class Input {
     this.anyInput = false;
     this.debug = false;
     this.uiTap = null;
+    this.worldTap = null;
+    this.pan = { active: false, pointer: false, id: -1, lx: 0, ly: 0, dx: 0, dy: 0, moved: 0 };
+    this._press = null;
     this._bind();
   }
 
@@ -73,6 +76,32 @@ export class Input {
       if (this._insideButton(this.buttons[k], p)) return k;
     }
     return null;
+  }
+
+  _beginPan(p, id = -1, pointer = true) {
+    this.pan.active = true;
+    this.pan.pointer = pointer;
+    this.pan.id = id;
+    this.pan.lx = p.x;
+    this.pan.ly = p.y;
+  }
+
+  _movePan(p) {
+    if (!this.pan.active) return;
+    this.pan.dx += p.x - this.pan.lx;
+    this.pan.dy += p.y - this.pan.ly;
+    this.pan.moved += Math.hypot(p.x - this.pan.lx, p.y - this.pan.ly);
+    this.pan.lx = p.x;
+    this.pan.ly = p.y;
+  }
+
+  _endPan(commit = true) {
+    if (commit && this._press && this.pan.moved < 14) this.worldTap = { x: this._press.x, y: this._press.y };
+    this.pan.active = false;
+    this.pan.pointer = false;
+    this.pan.id = -1;
+    this.pan.moved = 0;
+    this._press = null;
   }
 
   toggleRun() {
@@ -117,6 +146,11 @@ export class Input {
       this.mouse.moved = true;
       if (this.stick.active && this.stick.pointer) {
         this.stick.x = p.x; this.stick.y = p.y;
+      } else if (this.pan.active && this.pan.pointer) {
+        this._movePan(p);
+      } else if (this._press && this.mouse.down) {
+        const drag = Math.hypot(p.x - this._press.x, p.y - this._press.y);
+        if (drag > 12) this._beginPan(this._press, -1, true);
       }
     });
     // A fast drag that leaves the canvas used to freeze the stick, so the
@@ -137,7 +171,8 @@ export class Input {
       this.uiTap = { x: p.x, y: p.y };
       if (e.button === 2) {
         this.mouse.right = true;
-        this.mouse.rightClick = true;
+        if (this.gameplay) this._beginPan(p, -1, true);
+        else this.mouse.rightClick = true;
         return;
       }
       const btn = this._hitButton(p);
@@ -164,13 +199,18 @@ export class Input {
       }
       this.mouse.down = true;
       this.mouse.clicked = true;
+      if (this.gameplay) this._press = { x: p.x, y: p.y };
     });
     addEventListener('mouseup', (e) => {
       if (e.button === 0) {
         this.mouse.down = false;
         this._releasePointerStick(this._local(e), true);
+        if (this.pan.active || this._press) this._endPan(true);
       }
-      if (e.button === 2) this.mouse.right = false;
+      if (e.button === 2) {
+        this.mouse.right = false;
+        if (this.pan.active && this.pan.pointer) this._endPan(false);
+      }
     });
     c.addEventListener('contextmenu', (e) => e.preventDefault());
 
@@ -188,6 +228,11 @@ export class Input {
           this.stick.active = true; this.stick.pointer = false; this.stick.id = t.identifier;
           this.stick.ox = p.x; this.stick.oy = p.y;
           this.stick.x = p.x; this.stick.y = p.y;
+          continue;
+        }
+        if (!this.pan.active) {
+          this._press = { x: p.x, y: p.y };
+          this._beginPan(p, t.identifier, false);
         }
       }
       e.preventDefault();
@@ -195,7 +240,8 @@ export class Input {
     const onMove = (e) => {
       for (const t of e.changedTouches) {
         const p = area(t);
-        if (this.stick.active && t.identifier === this.stick.id) { this.stick.x = p.x; this.stick.y = p.y; }
+        if (this.stick.active && t.identifier === this.stick.id) { this.stick.x = p.x; this.stick.y = p.y; continue; }
+        if (this.pan.active && t.identifier === this.pan.id) this._movePan(p);
         for (const k of ['attack', 'run', 'dash', 'interact', 'repair', 'barricade']) {
           const b = this.buttons[k];
           if (b.id === t.identifier) {
@@ -213,6 +259,7 @@ export class Input {
           this.stick.active = false; this.stick.pointer = false;
           this.stick.dx = 0; this.stick.dy = 0; this.stick.mag = 0;
         }
+        if (this.pan.active && t.identifier === this.pan.id) this._endPan(commit);
         for (const k of ['attack', 'run', 'dash', 'interact', 'repair', 'barricade']) {
           const b = this.buttons[k];
           if (b.id === t.identifier) {
@@ -258,7 +305,7 @@ export class Input {
     }
     // Left-zone drags are movement. Claw is F, the CLAW button, a right-half
     // click, or right-click — never the finger that is steering.
-    this.attackDown = !!k.attack || this.buttons.attack.down || !!this.mouse.right || (this.mouse.down && !this.stick.active);
+    this.attackDown = !!k.attack || this.buttons.attack.down || (this.mouse.down && !this.stick.active && !this.pan.active);
     this.attackPressed = (!!k.attack && !this.prevKeys.attack) || this.buttons.attack.pulse > 0.82 || this.mouse.clicked || !!this.mouse.rightClick;
     this.runDown = !!k.run || this.runToggled;
     this.dashDown = !!k.dash || this.buttons.dash.down;

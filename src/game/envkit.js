@@ -55,6 +55,8 @@ export const KIT_SCALE = 33;
  * woman come out of the same number, whichever of them is a mesh.
  */
 export const VALEN_METRES = 1.7;
+/** Play-scale bump so coat and lantern read on the isometric camera. */
+export const HUNTER_SCALE = 1.28;
 
 /** World px per metre, at the tilt the camera is actually set to. */
 export function pxPerMetre(tilt = ISO_CAMERA.tilt) {
@@ -1640,7 +1642,9 @@ class EnvKitRuntime {
       }
     }
     if (state.flameMeshes) {
-      const lit = !(game.blackoutT > 0);
+      const lit = game.mode === 'survival'
+        ? !!(game.survival && game.survival.phase !== 'failed' && game.survival.getFireRadius() > 0)
+        : !(game.blackoutT > 0);
       for (const flame of state.flames) {
         const mesh = state.flameMeshes[flame.kind];
         const p = mesh && mesh.userData.placements[flame.index];

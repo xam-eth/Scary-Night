@@ -52,7 +52,7 @@ export class Renderer {
     this.baseTilt = ISO_CAMERA.tilt;
     this.tilt = this.baseTilt;
     this.view = { left: 0, top: 0, w: 1280, h: 720, cx: 640, cy: 360 };
-    this.cam = { x: 0, y: 0, tx: 0, ty: 0, zoom: 1, viewW: 1280, viewH: 720, shake: 0, sx: 0, sy: 0, rot: 0 };
+    this.cam = { x: 0, y: 0, tx: 0, ty: 0, zoom: 1, viewW: 1280, viewH: 720, shake: 0, sx: 0, sy: 0, rot: 0, panX: 0, panY: 0, panning: false };
     this.grain = this._makeGrain();
     this.flash = 0;
     this.flashColor = '#ffffff';
@@ -98,7 +98,7 @@ export class Renderer {
     this.view = { left: 0, top: 0, w: this.w, h: this.h, cx: this.w / 2, cy: this.h / 2 };
     this.cam.zoom = tall
       ? clamp(this.w / 720, 0.48, 0.68)
-      : clamp(Math.min(this.w / 1100, this.h / 620), 0.72, 1.35);
+      : clamp(Math.min(this.w / 960, this.h / 500), 0.86, 1.42);
     // The inverse of an isometric viewport is a diamond. These are its
     // conservative world-space half-extents, used for camera/bounds culling.
     const a = this.cam.zoom * ISO_CAMERA.horizontal;
@@ -111,6 +111,28 @@ export class Renderer {
   /* ---------------- camera ---------------- */
   snapCamera(x, y) {
     this.cam.x = x; this.cam.y = y;
+    this.cam.panX = 0; this.cam.panY = 0; this.cam.panning = false;
+  }
+
+  screenDeltaToWorld(dsx, dsy) {
+    const { horizontal: h, vertical: k } = ISO_CAMERA;
+    const z = this.cam.zoom || 1;
+    const u = dsx / (z * h);
+    const q = dsy / (z * k);
+    return { x: (u + q) * 0.5, y: (q - u) * 0.5 };
+  }
+
+  applyLookPan(input) {
+    const pan = input && input.pan;
+    if (!pan) { this.cam.panning = false; return; }
+    if (pan.dx || pan.dy) {
+      const delta = this.screenDeltaToWorld(pan.dx, pan.dy);
+      this.cam.panX = clamp(this.cam.panX - delta.x, -1400, 1400);
+      this.cam.panY = clamp(this.cam.panY - delta.y, -1100, 1100);
+    }
+    this.cam.panning = !!pan.active;
+    pan.dx = 0;
+    pan.dy = 0;
   }
 
   /**
@@ -119,7 +141,11 @@ export class Renderer {
    */
   followCamera(tx, ty, dt, lookX = 0, lookY = 0, bounds = null) {
     const c = this.cam;
-    let gx = tx + lookX, gy = ty + lookY;
+    if (!c.panning && Math.hypot(lookX, lookY) > 8) {
+      c.panX = damp(c.panX || 0, 0, 1.7, dt);
+      c.panY = damp(c.panY || 0, 0, 1.7, dt);
+    }
+    let gx = tx + lookX + (c.panX || 0), gy = ty + lookY + (c.panY || 0);
     if (bounds) {
       const hw = c.viewW / 2, hh = c.viewH / 2;
       const minX = bounds.x + Math.min(hw, (bounds.w) / 2);
@@ -128,8 +154,9 @@ export class Renderer {
       const maxY = bounds.y + bounds.h - Math.min(hh, (bounds.h) / 2);
       gx = clamp(gx, minX, maxX); gy = clamp(gy, minY, maxY);
     }
-    c.x = damp(c.x, gx, 6.2, dt);
-    c.y = damp(c.y, gy, 6.2, dt);
+    const rate = c.panning ? 18 : 6.2;
+    c.x = damp(c.x, gx, rate, dt);
+    c.y = damp(c.y, gy, rate, dt);
     // impact shake
     c.shake = Math.max(0, c.shake - dt * (1.6 + c.shake * 2.2));
     const amp = c.shake * c.shake * 22;

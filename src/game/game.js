@@ -773,7 +773,7 @@ export class Game {
     b.repair.hidden = true;
     b.barricade.hidden = true;
     if (this.input.gameplay) {
-      const inset = dayPlay ? dayPanelHeight(this.renderer.h) : 0;
+      const inset = dayPlay ? dayPanelHeight(this.renderer.h, this.renderer.w) : 0;
       this.input.layout(this.renderer.w, this.renderer.h, { bottomInset: inset });
     }
     this.input.update(dt);
@@ -1103,6 +1103,7 @@ export class Game {
     // A peak may own the camera for a beat: the duel pushes in on the alpha so
     // it fills the frame. Nothing else moves the camera off the player.
     const focus = this.climax.focus;
+    this.renderer.applyLookPan(this.input);
     if (focus) this.renderer.followCamera(focus.x, focus.y, dt, lookX, biasY, this.mansion.camBounds);
     else this.renderer.followCamera(p.x, p.y, dt, lookX, lookY + biasY, this.mansion.camBounds);
 
@@ -1819,10 +1820,13 @@ export class Game {
     } else if (tool.fx === 'muzzle') {
       const ox = player.x + Math.cos(ang) * (tool.offset || 22);
       const oy = player.y + Math.sin(ang) * (tool.offset || 22);
-      this.particles.burst('spark', ox, oy, 9, {
-        color: 'rgba(255, 206, 130, 0.95)', angle: ang, spread: 0.4, speedMin: 50, speedMax: 180, lifeMin: 0.05, lifeMax: 0.16, sizeMin: 1.4, sizeMax: 3.4, glow: true,
+      this.particles.burst('spark', ox, oy, 18, {
+        color: 'rgba(255, 214, 140, 0.98)', angle: ang, spread: 0.55, speedMin: 80, speedMax: 280, lifeMin: 0.08, lifeMax: 0.24, sizeMin: 5, sizeMax: 12, glow: true,
       });
-      this.renderer.addFlash(0.06, '#e6c078');
+      this.particles.burst('glow', ox, oy, 4, {
+        color: 'rgba(255, 186, 96, 0.9)', angle: ang, spread: 0.2, speedMin: 8, speedMax: 36, lifeMin: 0.1, lifeMax: 0.22, sizeMin: 10, sizeMax: 18, glow: true,
+      });
+      this.renderer.addFlash(0.09, '#e6c078');
     } else if (tool.fx === 'knife') {
       const ox = player.x + Math.cos(ang) * (tool.offset || 22);
       const oy = player.y + Math.sin(ang) * (tool.offset || 22);
@@ -2823,6 +2827,7 @@ export class Game {
       const tap = input.uiTap;
       if (tap.x >= box.x && tap.x <= box.x + box.w && tap.y >= box.y && tap.y <= box.y + box.h) {
         input.uiTap = null;
+        input._press = null;
         this.togglePause(true);
         return;
       }
@@ -2830,7 +2835,12 @@ export class Game {
 
     const dayWalk = this.screen === 'playing' && this.survival.phase === 'day';
     const uiActive = this.screen === 'paused' || (this.screen === 'playing' && !!this.uiPanel);
-    if (!uiActive) { this.uiIndex = 0; input.uiTap = null; return; }
+    if (!uiActive) {
+      this.uiIndex = 0;
+      input.uiTap = null;
+      if (!dayWalk) input.worldTap = null;
+      return;
+    }
     if (!dayWalk) {
       if (input.keys.up && !this._navUp) { this.uiIndex = Math.max(0, this.uiIndex - 1); this.usingKeyboard = true; }
       if (input.keys.down && !this._navDown) { this.uiIndex = Math.min(99, this.uiIndex + 1); this.usingKeyboard = true; }
@@ -2841,8 +2851,17 @@ export class Game {
       input.uiTap = null;
       const hit = [...this.ui].reverse().find((item) => !item.disabled
         && tap.x > item.x && tap.x < item.x + item.w && tap.y > item.y && tap.y < item.y + item.h);
-      if (hit && hit.onClick) { this.audio.play('uiConfirm', { vol: 0.42 }); hit.onClick(); }
-      else if (dayWalk) this.survival.selectRoomAtScreen(tap.x, tap.y);
+      if (hit && hit.onClick) {
+        this.audio.play('uiConfirm', { vol: 0.42 });
+        hit.onClick();
+        input._press = null;
+        input.worldTap = null;
+      }
+    }
+    if (dayWalk && input.worldTap) {
+      const tap = input.worldTap;
+      input.worldTap = null;
+      this.survival.selectRoomAtScreen(tap.x, tap.y);
     }
     if (!dayWalk && input.keys.confirm && !this._confirmHeld) {
       this._confirmHeld = true;

@@ -75,6 +75,46 @@ function addButton(game, ctx, box, label, onClick, options = {}) {
   return item;
 }
 
+function addIconTile(game, ctx, box, {
+  icon, cost = '', caption = '', onClick, disabled = false, selected = false, color = AMBER,
+}) {
+  const item = {
+    ...box,
+    idx: game.ui.length,
+    label: `survival:${icon}:${cost || caption}`,
+    onClick,
+    disabled: !!disabled,
+  };
+  game.ui.push(item);
+  ctx.save();
+  roundRect(ctx, box.x, box.y, box.w, box.h, 8);
+  ctx.fillStyle = disabled ? 'rgba(28,29,33,0.72)' : selected ? 'rgba(89,65,32,0.92)' : 'rgba(22,24,30,0.92)';
+  ctx.fill();
+  ctx.strokeStyle = disabled ? 'rgba(142,137,126,0.2)' : selected ? 'rgba(238,197,113,0.95)' : 'rgba(191,168,119,0.42)';
+  ctx.lineWidth = selected ? 1.7 : 1;
+  ctx.stroke();
+  const iconSize = Math.min(22, box.h * 0.48);
+  const ink = disabled ? '#77746c' : color;
+  drawGameIcon(ctx, icon, box.x + box.w / 2, box.y + box.h * 0.38, iconSize, ink);
+  const sub = cost || caption;
+  if (sub) text(ctx, sub, box.x + box.w / 2, box.y + box.h * 0.78, 7, disabled ? '#6f6c66' : PAPER, 'center');
+  ctx.restore();
+  return item;
+}
+
+function drawChip(ctx, x, y, w, icon, value, accent) {
+  ctx.save();
+  roundRect(ctx, x, y, w, 20, 6);
+  ctx.fillStyle = 'rgba(8,9,13,0.72)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(196,170,118,0.26)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  drawGameIcon(ctx, icon, x + 11, y + 10, 12, accent);
+  text(ctx, String(value), x + 22, y + 10, 9, PAPER, 'left');
+  ctx.restore();
+}
+
 function drawPause(game, ctx, w, h) {
   const hit = pauseButtonBox(w, h);
   const item = { ...hit, label: 'PAUSE', idx: game.ui.length, onClick: () => game.togglePause(true) };
@@ -85,17 +125,50 @@ function drawPause(game, ctx, w, h) {
   });
 }
 
-function drawResource(ctx, x, y, label, value, icon, width, accent) {
+function drawResourcePill(ctx, x, y, width, icon, value, accent) {
   ctx.save();
-  roundRect(ctx, x, y, width, 32, 8);
+  roundRect(ctx, x, y, width, 26, 8);
   ctx.fillStyle = 'rgba(8,9,13,0.78)';
   ctx.fill();
   ctx.strokeStyle = 'rgba(196,170,118,0.28)';
   ctx.lineWidth = 1;
   ctx.stroke();
-  drawGameIcon(ctx, icon, x + 14, y + 16, 16, accent);
-  text(ctx, `${label} ${value}`, x + 27, y + 16, 10, PAPER, 'left');
+  drawGameIcon(ctx, icon, x + 13, y + 13, 14, accent);
+  text(ctx, String(value), x + 24, y + 13, 11, PAPER, 'left');
   ctx.restore();
+}
+
+function drawTopDock(game, ctx, w, h) {
+  const mode = game.survival;
+  const landscape = w >= h;
+  const dockH = landscape ? 34 : 38;
+  ctx.save();
+  ctx.fillStyle = 'rgba(6,7,11,0.78)';
+  ctx.fillRect(0, 0, w, dockH + 6);
+  ctx.fillStyle = 'rgba(218,181,112,0.3)';
+  ctx.fillRect(0, dockH + 5, w, 1);
+  ctx.restore();
+  drawPause(game, ctx, w, h);
+  const pillW = landscape ? 70 : 62;
+  const gap = 8;
+  const pills = [
+    { icon: 'oil', value: Math.floor(mode.oil), color: '#f0ae53' },
+    { icon: 'plank', value: Math.floor(mode.wood), color: '#c89a5a' },
+    { icon: 'lamp', value: mode.perapianLevel, color: AMBER },
+  ];
+  const total = pills.length * pillW + gap * (pills.length - 1);
+  let x = Math.max(48, (w - total) / 2);
+  for (const pill of pills) {
+    drawResourcePill(ctx, x, 8, pillW, pill.icon, pill.value, pill.color);
+    x += pillW + gap;
+  }
+  if (mode.phase === 'night') {
+    text(ctx, timeLabel(mode.nightDuration - mode.elapsed), w - 12, 16, 11, PAPER, 'right');
+    const wave = Math.min(3, Math.max(1, mode.waveIndex || (mode.incoming && mode.incoming.kind === 'swarm' ? mode.incoming.wave : 1)));
+    text(ctx, `${mode.day}:${mode.waveIndex >= 3 ? 3 : wave}`, w - 12, 30, 9, AMBER, 'right');
+  } else {
+    text(ctx, String(mode.day), w - 14, 22, 14, AMBER, 'right', SERIF);
+  }
 }
 
 function meter(ctx, x, y, w, h, amount, fill, back = 'rgba(234,220,188,0.16)') {
@@ -110,29 +183,11 @@ function meter(ctx, x, y, w, h, amount, fill, back = 'rgba(234,220,188,0.16)') {
 
 function drawNightHud(game, ctx, w, h) {
   const mode = game.survival;
-  const compact = w < 500 || h < 560;
-  drawPause(game, ctx, w, h);
-  const titleY = compact ? 22 : 30;
-  text(ctx, `NIGHT ${mode.day}`, w / 2, titleY, compact ? 14 : 16, AMBER, 'center', SERIF);
-  text(ctx, timeLabel(mode.nightDuration - mode.elapsed), w / 2, titleY + 20, 12, PAPER, 'center');
-
-  const gap = 6;
-  const resourceW = Math.min(88, Math.max(64, (w - 86) / 3));
-  const rowW = resourceW * 3 + gap * 2;
-  const startX = Math.max(12, (w - rowW) / 2);
-  const rowY = compact ? 56 : 68;
-  drawResource(ctx, startX, rowY, 'OIL', Math.floor(mode.oil), 'lamp', resourceW, '#f0ae53');
-  drawResource(ctx, startX + resourceW + gap, rowY, 'WOOD', Math.floor(mode.wood), 'plank', resourceW, '#c89a5a');
-  drawResource(ctx, startX + (resourceW + gap) * 2, rowY, 'HEARTH', mode.perapianLevel, 'lamp', resourceW, AMBER);
-
-  const barW = Math.min(210, w * 0.5);
+  const landscape = w >= h;
+  const barY = landscape ? 46 : 50;
+  const barW = Math.min(220, w * 0.42);
   const barX = (w - barW) / 2;
-  const barY = rowY + 36;
-  meter(ctx, barX, barY, barW, 4, mode.elapsed / Math.max(1, mode.nightDuration), 'rgba(225,176,90,0.9)');
-  const wave = Math.min(3, Math.max(1, mode.waveIndex || (mode.incoming && mode.incoming.kind === 'swarm' ? mode.incoming.wave : 1)));
-  const waveLabel = mode.waveIndex >= 3 ? 'WAVE 3/3' : `WAVE ${wave}/3`;
-  text(ctx, waveLabel, w - 12, titleY + 1, 9, 'rgba(231,210,167,0.86)', 'right');
-  text(ctx, `CREW ${mode.survivors}`, w - 12, titleY + 20, 9, PAPER, 'right');
+  meter(ctx, barX, barY, barW, 3, mode.elapsed / Math.max(1, mode.nightDuration), 'rgba(225,176,90,0.9)');
 
   const p = game.player;
   const gate = mode.mainGate();
@@ -140,13 +195,15 @@ function drawNightHud(game, ctx, w, h) {
   const gatePct = gate && gate.hpMax > 0 ? gate.hp / gate.hpMax : 0;
   const hpFill = hpPct < 0.28 ? 'rgba(214,74,74,0.95)' : hpPct < 0.55 ? 'rgba(232,168,74,0.95)' : 'rgba(214,196,140,0.92)';
   const gateFill = gate && gate.broken ? 'rgba(160,40,48,0.9)' : 'rgba(168,196,214,0.9)';
-  const statY = barY + 12;
-  const half = (rowW - gap) / 2;
-  text(ctx, 'HP', startX, statY + 6, 8, DIM, 'left');
-  meter(ctx, startX + 18, statY, half - 18, 7, hpPct, hpFill);
-  const gateX = startX + half + gap;
-  text(ctx, 'GATE', gateX, statY + 6, 8, DIM, 'left');
-  meter(ctx, gateX + 30, statY, half - 30, 7, gatePct, gateFill);
+  const statY = barY + 8;
+  const gap = 10;
+  const half = (barW - gap) / 2;
+  drawGameIcon(ctx, 'blood', barX + 7, statY + 4, 10, hpFill);
+  meter(ctx, barX + 16, statY, half - 16, 6, hpPct, hpFill);
+  drawGameIcon(ctx, 'gate', barX + half + gap + 7, statY + 4, 10, gateFill);
+  meter(ctx, barX + half + gap + 16, statY, half - 16, 6, gatePct, gateFill);
+  drawGameIcon(ctx, 'crew', w - 28, statY + 4, 11, PAPER);
+  text(ctx, String(mode.survivors), w - 14, statY + 4, 9, PAPER, 'right');
 
   if (mode.incoming) {
     const eta = Math.max(0, Math.ceil(mode.incoming.in));
@@ -239,7 +296,7 @@ function drawFtue(game, ctx, w, h) {
     const hy = (s && s.homeY) || h - 120;
     const hr = (s && s.r) || 52;
     drawDrag(ctx, hx, hy, hr, game.now || mode.elapsed, gs);
-    drawLessonChip(ctx, w, h, 'MOVE', 'DRAG TO WALK');
+    drawLessonChip(ctx, w, h, 'MOVE', 'DRAG TO RUN');
     return;
   }
   if (lesson.step === 'light') {
@@ -262,160 +319,112 @@ function drawFtue(game, ctx, w, h) {
   }
 }
 
-export function dayPanelHeight(h) {
-  if (h < 500) return Math.min(210, Math.max(172, Math.round(h * 0.44)));
-  return Math.min(360, Math.max(296, h * 0.47));
+export function dayPanelHeight(h, w = 0) {
+  const landscape = (w > 0 && w >= h) || h < 520;
+  if (landscape) return Math.min(72, Math.max(58, Math.round(h * 0.16)));
+  return Math.min(92, Math.max(70, Math.round(h * 0.14)));
 }
 
 function drawDayPanel(game, ctx, w, h) {
-  drawPause(game, ctx, w, h);
   const mode = game.survival;
-  const short = h < 500;
-  const panelH = dayPanelHeight(h);
+  const landscape = w >= h || h < 520;
+  const panelH = dayPanelHeight(h, w);
   const panelY = h - panelH;
-  const inset = 12;
+  const inset = landscape ? 12 : 8;
   const innerW = w - inset * 2;
-  const roomPageSize = short ? 2 : 6;
   const rooms = mode.buildableRooms();
-  const pages = Math.max(1, Math.ceil(rooms.length / roomPageSize));
-  if (mode.selectedRoom) {
-    const selectedIdx = rooms.findIndex((room) => room.id === mode.selectedRoom);
-    if (selectedIdx >= 0) mode.roomPage = Math.floor(selectedIdx / roomPageSize);
-  }
-  mode.roomPage = clamp(mode.roomPage || 0, 0, pages - 1);
-  const pageRooms = rooms.slice(mode.roomPage * roomPageSize, (mode.roomPage + 1) * roomPageSize);
   let selected = rooms.find((room) => room.id === mode.selectedRoom) || null;
   if (!selected) {
-    selected = pageRooms[0] || rooms[0] || null;
+    selected = rooms[0] || null;
     if (selected) mode.selectedRoom = selected.id;
   }
 
   ctx.save();
-  const gradient = ctx.createLinearGradient(0, panelY, 0, h);
-  gradient.addColorStop(0, 'rgba(9,10,14,0.90)');
-  gradient.addColorStop(1, 'rgba(6,7,10,0.98)');
-  ctx.fillStyle = gradient;
+  ctx.fillStyle = 'rgba(7,8,12,0.78)';
   ctx.fillRect(0, panelY, w, panelH);
-  ctx.strokeStyle = 'rgba(218,181,112,0.44)';
-  ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(0, panelY + 1); ctx.lineTo(w, panelY + 1); ctx.stroke();
+  ctx.fillStyle = 'rgba(218,181,112,0.35)';
+  ctx.fillRect(0, panelY, w, 1);
 
-  text(ctx, `DAY ${mode.day}  ·  BUILD`, inset, panelY + (short ? 16 : 20), short ? 12 : 14, AMBER, 'left', SERIF);
-  const statY = panelY + (short ? 34 : 42);
-  const statFont = w < 440 || short ? 9 : 10;
-  text(ctx, mode.hearthLabel(), inset, statY, 10, AMBER, 'left');
-  const speedPct = Math.round((mode.builderSpeedMul() - 1) * 100);
-  const crewNote = speedPct > 0 ? ` · +${speedPct}% BUILD` : ` · +${mode.crewGateHp()} GATE`;
-  text(ctx, `OIL ${Math.floor(mode.oil)}   WOOD ${Math.floor(mode.wood)}   SURVIVORS ${mode.survivors}${crewNote}`, w - inset, statY, statFont, PAPER, 'right');
-
-  const queueY = panelY + (short ? 50 : 64);
   if (mode.builderJob) {
     const job = mode.builderJob;
-    const name = job.kind === 'perapian' ? mode.hearthLabel(job.targetLevel)
-      : job.kind === 'gate' ? 'REINFORCED GATE'
-        : (SURVIVAL_BUILDINGS[job.type]?.label || job.type.toUpperCase());
-    text(ctx, `BUILDER · ${name} · ${job.remaining.toFixed(1)}s`, inset, queueY, 9, '#e3d3ac');
-    const barX = Math.min(w - 82, inset + 210);
-    const barW = Math.max(36, w - inset - barX);
-    roundRect(ctx, barX, queueY - 3, barW, 5, 2);
-    ctx.fillStyle = 'rgba(205,192,160,0.18)'; ctx.fill();
     const amount = 1 - clamp(job.remaining / Math.max(0.01, job.duration), 0, 1);
-    roundRect(ctx, barX, queueY - 3, barW * amount, 5, 2);
-    ctx.fillStyle = 'rgba(230,185,99,0.9)'; ctx.fill();
-  } else if (mode.lastRewards) {
-    const reward = mode.lastRewards;
-    text(ctx, `LAST NIGHT · +${Math.round(reward.oil)} OIL · +${Math.round(reward.wood)} WOOD · ${reward.kills} KILLS`, inset, queueY, 9, '#e3d3ac');
-  } else {
-    text(ctx, 'BUILDER QUEUE · IDLE', inset, queueY, 9, DIM);
+    roundRect(ctx, inset, panelY + 5, innerW, 3, 1);
+    ctx.fillStyle = 'rgba(205,192,160,0.18)'; ctx.fill();
+    roundRect(ctx, inset, panelY + 5, innerW * amount, 3, 1);
+    ctx.fillStyle = 'rgba(230,185,99,0.95)'; ctx.fill();
   }
 
-  const slotsY = panelY + (short ? 68 : 88);
-  text(ctx, short
-    ? `SAFE ZONE · ${rooms.length} · TAP A SLOT`
-    : `SAFE ZONE · ${rooms.length} ROOMS · WALK THE HOUSE · TAP A GLOWING SLOT`, inset, slotsY, 9, '#bcb19a');
-  const cardGap = 6;
-  const cardW = (innerW - cardGap) / 2;
-  const cardH = short ? 24 : 31;
-  const cardsTop = slotsY + 10;
   const busy = !!mode.builderJob;
-  for (let i = 0; i < pageRooms.length; i++) {
-    const room = pageRooms[i];
-    const col = i % 2;
-    const row = Math.floor(i / 2);
-    const x = inset + col * (cardW + cardGap);
-    const y = cardsTop + row * (cardH + 4);
-    const built = mode.useBuilding(room.id);
-    const label = built ? `${room.name} · ${mode.buildingName(built)}` : room.name;
-    addButton(game, ctx, { x, y, w: cardW, h: cardH }, label,
-      () => { mode.selectedRoom = room.id; mode.roomPage = Math.floor(i / roomPageSize); },
-      { selected: !!selected && selected.id === room.id, disabled: false, fontSize: w < 430 ? 8 : 9, color: built ? '#d4bb86' : PAPER });
-  }
-  if (!pageRooms.length) {
-    ctx.save();
-    roundRect(ctx, inset, cardsTop, innerW, cardH, 7);
-    ctx.fillStyle = 'rgba(18,20,24,0.76)'; ctx.fill();
-    text(ctx, 'NO SAFE ROOM · UPGRADE THE HEARTH TO LIGHT MORE', w / 2, cardsTop + cardH / 2, 8, DIM, 'center');
-    ctx.restore();
-  }
-
-  if (pages > 1) {
-    const pgY = slotsY - 9;
-    addButton(game, ctx, { x: w - 56, y: pgY, w: 18, h: 18 }, '‹',
-      () => { mode.roomPage = (mode.roomPage + pages - 1) % pages; mode.selectedRoom = null; },
-      { disabled: false, fontSize: 14, color: AMBER });
-    addButton(game, ctx, { x: w - 34, y: pgY, w: 18, h: 18 }, '›',
-      () => { mode.roomPage = (mode.roomPage + 1) % pages; mode.selectedRoom = null; },
-      { disabled: false, fontSize: 14, color: AMBER });
-  }
-
-  const rows = Math.max(1, Math.ceil(pageRooms.length / 2));
-  const typesY = cardsTop + rows * (cardH + 4) + 5;
-  const typeGap = 5;
-  const typeW = (innerW - typeGap * 2) / 3;
-  const buildingLabels = [
-    ['extractor', 'EXTRACTOR'], ['sawmill', 'SAWMILL'], ['shelter', 'SHELTER'],
-  ];
   const selectedReady = selected && mode.productionReady(selected.id);
-  if (selectedReady) {
-    const store = mode.stores[selected.id] || { oil: 0, wood: 0 };
-    const loot = [
-      store.oil >= 1 ? `+${Math.floor(store.oil)} OIL` : null,
-      store.wood >= 1 ? `+${Math.floor(store.wood)} WOOD` : null,
-    ].filter(Boolean).join(' · ');
-    addButton(game, ctx, { x: inset, y: typesY, w: innerW, h: short ? 26 : 34 },
-      `COLLECT · ${loot || 'READY'}`,
-      () => mode.collectProduction(selected.id),
-      { disabled: false, fontSize: w < 430 || short ? 8 : 9, color: AMBER });
-  } else {
-    for (let i = 0; i < buildingLabels.length; i++) {
-      const [type, label] = buildingLabels[i];
-      const spec = SURVIVAL_BUILDINGS[type];
-      const affordable = mode.oil >= spec.oil && mode.wood >= spec.wood;
-      const available = !!selected && !mode.useBuilding(selected.id);
-      addButton(game, ctx, { x: inset + i * (typeW + typeGap), y: typesY, w: typeW, h: short ? 26 : 34 },
-        `${label} · ${spec.oil}O/${spec.wood}W`,
-        () => mode.startBuild(type, selected && selected.id),
-        { disabled: busy || !affordable || !available || !selected, fontSize: w < 430 || short ? 8 : 9, color: '#ddc58f' });
-    }
-  }
-
-  const actionsY = Math.min(h - (short ? 34 : 43), typesY + (short ? 30 : 39));
-  const actionGap = 5;
-  const actionW = (innerW - actionGap * 2) / 3;
+  const store = selected && mode.stores[selected.id] || { oil: 0, wood: 0 };
   const upgrade = mode.buildingCost('perapian');
   const canUpgrade = !!upgrade && mode.oil >= upgrade.oil && mode.wood >= upgrade.wood;
-  addButton(game, ctx, { x: inset, y: actionsY, w: actionW, h: short ? 28 : 36 },
-    mode.perapianLevel >= 3 ? 'HEARTH · MAX' : `HEARTH LV${mode.perapianLevel + 1} · ${upgrade ? upgrade.oil : 0}O/${upgrade ? upgrade.wood : 0}W`,
-    () => mode.startBuild('perapian'),
-    { disabled: busy || !canUpgrade, fontSize: w < 430 || short ? 8 : 9, color: AMBER });
-  addButton(game, ctx, { x: inset + actionW + actionGap, y: actionsY, w: actionW, h: short ? 28 : 36 },
-    mode.gateBuilt ? `GATE · ${Math.round(mode.gateHp)}` : `GATE · ${mode.tuning.gateCost.oil}O/${mode.tuning.gateCost.wood}W`,
-    () => mode.startBuild('gate'),
-    { disabled: busy || mode.gateBuilt || mode.oil < mode.tuning.gateCost.oil || mode.wood < mode.tuning.gateCost.wood, fontSize: w < 430 || short ? 8 : 9, color: '#d0aa75' });
-  addButton(game, ctx, { x: inset + 2 * (actionW + actionGap), y: actionsY, w: actionW, h: short ? 28 : 36 },
-    `START NIGHT ${mode.day}`,
-    () => mode.startNight(),
-    { disabled: busy, fontSize: w < 430 || short ? 8 : 9, color: '#f0d9a3' });
+  const gateCost = mode.tuning.gateCost;
+  const canGate = !mode.gateBuilt && mode.oil >= gateCost.oil && mode.wood >= gateCost.wood;
+  const occupied = !!(selected && mode.useBuilding(selected.id));
+  const tiles = [
+    {
+      icon: 'extractor', cost: `${SURVIVAL_BUILDINGS.extractor.oil}`,
+      onClick: () => mode.startBuild('extractor', selected && selected.id),
+      disabled: busy || !selected || occupied
+        || mode.oil < SURVIVAL_BUILDINGS.extractor.oil || mode.wood < SURVIVAL_BUILDINGS.extractor.wood,
+      color: '#ddc58f',
+    },
+    {
+      icon: 'sawmill', cost: `${SURVIVAL_BUILDINGS.sawmill.wood}`,
+      onClick: () => mode.startBuild('sawmill', selected && selected.id),
+      disabled: busy || !selected || occupied
+        || mode.oil < SURVIVAL_BUILDINGS.sawmill.oil || mode.wood < SURVIVAL_BUILDINGS.sawmill.wood,
+      color: '#ddc58f',
+    },
+    {
+      icon: 'shelter', cost: `${SURVIVAL_BUILDINGS.shelter.wood}`,
+      onClick: () => mode.startBuild('shelter', selected && selected.id),
+      disabled: busy || !selected || occupied
+        || mode.oil < SURVIVAL_BUILDINGS.shelter.oil || mode.wood < SURVIVAL_BUILDINGS.shelter.wood,
+      color: '#ddc58f',
+    },
+    {
+      icon: 'upgrade',
+      cost: mode.perapianLevel >= 3 ? '' : `${upgrade ? upgrade.oil : 0}`,
+      onClick: () => mode.startBuild('perapian'),
+      disabled: busy || !canUpgrade,
+      color: AMBER,
+    },
+    {
+      icon: 'gate',
+      cost: mode.gateBuilt ? '' : `${gateCost.oil}`,
+      onClick: () => mode.startBuild('gate'),
+      disabled: busy || mode.gateBuilt || !canGate,
+      color: '#d0aa75',
+    },
+    {
+      icon: 'collect',
+      cost: selectedReady ? `+${Math.floor((store.oil || 0) + (store.wood || 0))}` : '',
+      onClick: () => selected && mode.collectProduction(selected.id),
+      disabled: !selectedReady,
+      selected: !!selectedReady,
+      color: AMBER,
+    },
+  ];
+
+  const playW = landscape ? 56 : 52;
+  const tileGap = landscape ? 8 : 4;
+  const tileH = Math.min(52, panelH - 14);
+  const tilesY = panelY + Math.max(8, panelH - tileH - 6);
+  const tilesW = innerW - playW - tileGap;
+  const tileW = (tilesW - tileGap * (tiles.length - 1)) / tiles.length;
+  for (let i = 0; i < tiles.length; i++) {
+    addIconTile(game, ctx, {
+      x: inset + i * (tileW + tileGap), y: tilesY, w: tileW, h: tileH,
+    }, tiles[i]);
+  }
+  addIconTile(game, ctx, {
+    x: inset + tiles.length * (tileW + tileGap), y: tilesY, w: playW, h: tileH,
+  }, {
+    icon: 'play', onClick: () => mode.startNight(),
+    disabled: busy, color: '#f0d9a3',
+  });
 
   ctx.restore();
 }
@@ -478,16 +487,17 @@ export function drawSurvivalScreen(game, ctx, w, h, worldReady = true) {
     drawPausePanel(game, ctx, w, h);
     return;
   }
-  if (game.survival.phase === 'day') {
-    drawDayPanel(game, ctx, w, h);
-    return;
-  }
   if (game.survival.phase === 'complete') {
     drawEndPanel(game, ctx, w, h, false);
     return;
   }
   if (game.survival.phase === 'failed') {
     drawEndPanel(game, ctx, w, h, true);
+    return;
+  }
+  drawTopDock(game, ctx, w, h);
+  if (game.survival.phase === 'day') {
+    drawDayPanel(game, ctx, w, h);
     return;
   }
   drawNightHud(game, ctx, w, h);

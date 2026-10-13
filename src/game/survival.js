@@ -497,7 +497,10 @@ export class SurvivalMode {
       light.f = 1;
       if (light === m.fireplaceLight) continue;
       const moon = light.type === 'moon';
-      light.i = day ? (moon ? 0.55 : 0.26) : (moon ? 0.24 : 0.09);
+      const fire = light.type === 'fire';
+      light.i = day
+        ? (moon ? 0.72 : fire ? 0.62 : 0.48)
+        : (moon ? 0.54 : fire ? 0.58 : 0.40);
       light.curI = light.i;
     }
   }
@@ -1062,9 +1065,9 @@ export class SurvivalMode {
     this.skillCooldown = this.skillCooldownMax;
     this.skillFlash = 0.65;
     g.audio.play('chandelier', { vol: 0.72 });
-    g.particles.burst('spark', p.x, p.y, 26, {
-      color: 'rgba(255,194,98,0.95)', sizeMin: 2, sizeMax: 6, speedMin: 55, speedMax: 240,
-      lifeMin: 0.18, lifeMax: 0.68, glow: true,
+    g.particles.burst('spark', p.x, p.y, 36, {
+      color: 'rgba(255,194,98,0.95)', sizeMin: 5, sizeMax: 14, speedMin: 70, speedMax: 280,
+      lifeMin: 0.22, lifeMax: 0.8, glow: true,
     });
     for (const e of g.enemies) {
       if (e.dead || dist(p.x, p.y, e.x, e.y) > this.tuning.skillRadius) continue;
@@ -1336,6 +1339,7 @@ export class SurvivalMode {
   followPlayer(dt) {
     const g = this.game;
     const p = g.player;
+    g.renderer.applyLookPan(g.input);
     const lookX = clamp(p.vx * 0.18, -56, 56);
     const lookY = clamp(p.vy * 0.18, -56, 56);
     g.renderer.followCamera(p.x, p.y, dt, lookX, lookY, g.mansion.camBounds);
@@ -1365,6 +1369,7 @@ export class SurvivalMode {
       crew: this.survivors,
       ready: Object.keys(this.buildings).filter((id) => this.productionReady(id)),
       site: this.jobSite(),
+      flare: +this.skillFlash.toFixed(2),
       target: this.currentTarget && !this.currentTarget.dead ? {
         kind: this.currentTarget._survivalType || 'enemy',
         hp: Math.round(this.currentTarget.hp),

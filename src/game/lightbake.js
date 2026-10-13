@@ -34,7 +34,7 @@ const COLD = [0.58, 0.68, 0.95];
 const WARM = [1.00, 0.84, 0.62];
 
 /** Nothing in the house is ever fully black: the eye needs the silhouette. */
-const LIT_FLOOR = 0.30;
+const LIT_FLOOR = 0.44;
 
 /**
  * The lightmap's own falloff, taken off render.js `addLight`: a lamp is a
@@ -70,7 +70,7 @@ export function staticSources(mansion) {
     out.push({
       x: room.x + room.w / 2, y: room.y + room.h / 2, r: reach,
       i: survival
-        ? (glass ? 0.18 : stone ? 0.11 : 0.14)
+        ? (glass ? 0.30 : stone ? 0.22 : 0.26)
         : (glass ? 0.26 : stone ? 0.14 : 0.2),
       color: stone ? [148, 156, 174] : glass ? [180, 198, 216] : [178, 186, 202],
       type: 'wash',

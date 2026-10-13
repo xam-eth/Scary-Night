@@ -13,7 +13,7 @@
  */
 
 import { clamp, lerp, damp, TAU, rand, chance, dist, dist2, approachAngle, angDiff, visualAngle } from '../core/util.js';
-import { paintContactShadow, Enemy3D, ENEMY_HEIGHT } from './enemy3d.js';
+import { paintContactShadow, Enemy3D, enemyProjectedHeight } from './enemy3d.js';
 import { ENEMY_TYPES, VARIANTS, SIEGE } from '../core/config.js';
 import { kitDamage } from './weapons.js';
 import { ROOM } from './mansion.js';
@@ -1551,12 +1551,12 @@ export class Bolt {
       }
     }
     this.trail.push({ x: this.x, y: this.y });
-    if (this.trail.length > 6) this.trail.shift();
+    if (this.trail.length > 12) this.trail.shift();
   }
   hit(game, wall) {
     this.dead = true;
     game.audio.play(wall ? 'boltImpact' : 'hitFlesh', { x: this.x, y: this.y, cam: game.renderer.cam, vol: 0.7 });
-    game.particles.burst('spark', this.x, this.y, 6, { color: 'rgba(220,220,240,0.8)', sizeMin: 1, sizeMax: 2.5, speedMin: 20, speedMax: 90, lifeMin: 0.1, lifeMax: 0.3, glow: true });
+    game.particles.burst('spark', this.x, this.y, 14, { color: 'rgba(255,210,140,0.95)', sizeMin: 4, sizeMax: 9, speedMin: 40, speedMax: 160, lifeMin: 0.12, lifeMax: 0.36, glow: true });
     game.decals.splat(this.x, this.y, wall ? 3 : 5, wall ? 'rgba(30,30,40,0.35)' : 'rgba(90,20,24,0.4)', wall ? 2 : 3);
   }
   draw(ctx, game) {
@@ -1748,7 +1748,7 @@ export class CrowdBody {
      * baked canvas is the whole padded frame, and the crop is applied to the
      * destination. Get this wrong and the crowd comes out twice the size and
      * standing beside its own shadow. */
-    const h = (ENEMY_HEIGHT[this.key] || 74) * this.sizeMul;
+    const h = enemyProjectedHeight(this.key, this.sizeMul);
     const w = h * (crop.w / Math.max(1, crop.h));
     const bob = Math.sin(this.t * 7 + this.bob) * (this.state === CROWD.MARCH ? 1.6 : 0.7);
     ctx.save();
@@ -1774,7 +1774,7 @@ export class CrowdBody {
 
   /** No baked silhouette yet (or the GLB never loaded): a body is still a body. */
   _drawFallback(ctx, game) {
-    const h = (ENEMY_HEIGHT[this.key] || 74) * this.sizeMul;
+    const h = enemyProjectedHeight(this.key, this.sizeMul);
     const w = h * 0.42;
     const bob = Math.sin(this.t * 7 + this.bob) * 1.4;
     ctx.save();

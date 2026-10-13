@@ -9,6 +9,7 @@ const GAME_ICONS = new Set([
   'shield', 'settings', 'back', 'exit', 'confirm', 'next', 'bag', 'mission',
   'profile', 'arrow', 'knife', 'bandage', 'plank', 'shard', 'relic', 'run',
   'close', 'more', 'plus', 'shop', 'help', 'pause',
+  'oil', 'extractor', 'sawmill', 'shelter', 'gate', 'collect', 'crew',
 ]);
 
 export function buttonIconForLabel(label) {
@@ -232,6 +233,46 @@ export function drawGameIcon(ctx, name, x, y, size = 24, color = '#eee6d6') {
       ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(-2, -3); ctx.quadraticCurveTo(-1, -7, 3, -5); ctx.quadraticCurveTo(7, -3, 2, 0); ctx.lineTo(1, 3); ctx.stroke();
       ctx.beginPath(); ctx.arc(1, 7, 0.8, 0, Math.PI * 2); ctx.fill();
+      break;
+    case 'oil':
+      ctx.beginPath();
+      ctx.moveTo(0, -11); ctx.quadraticCurveTo(-7, -2, -6, 4);
+      ctx.quadraticCurveTo(-5, 10, 0, 11); ctx.quadraticCurveTo(5, 10, 6, 4);
+      ctx.quadraticCurveTo(7, -2, 0, -11); ctx.closePath(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-2, 3); ctx.quadraticCurveTo(0, 7, 3, 4); ctx.stroke();
+      break;
+    case 'extractor':
+      ctx.beginPath(); ctx.roundRect(-9, 5, 18, 6, 1.4); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-3, 5); ctx.lineTo(-3, -5); ctx.lineTo(8, -9); ctx.lineTo(8, -3); ctx.stroke();
+      ctx.beginPath(); ctx.arc(8, -1, 2.4, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-8, 11); ctx.quadraticCurveTo(-3, 14, 1, 10); ctx.stroke();
+      break;
+    case 'sawmill':
+      ctx.beginPath(); ctx.roundRect(-11, 3, 22, 7, 1.5); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, -4, 7, 0, Math.PI * 2); ctx.stroke();
+      for (let i = 0; i < 6; i++) {
+        const a = i * Math.PI / 3;
+        ctx.beginPath(); ctx.moveTo(Math.cos(a) * 4, -4 + Math.sin(a) * 4); ctx.lineTo(Math.cos(a) * 8.5, -4 + Math.sin(a) * 8.5); ctx.stroke();
+      }
+      break;
+    case 'shelter':
+      ctx.beginPath(); ctx.moveTo(0, -11); ctx.lineTo(10, -1); ctx.lineTo(10, 10); ctx.lineTo(-10, 10); ctx.lineTo(-10, -1); ctx.closePath(); ctx.stroke();
+      ctx.beginPath(); ctx.rect(-3, 3, 6, 7); ctx.stroke();
+      break;
+    case 'gate':
+      ctx.beginPath(); ctx.moveTo(-9, 10); ctx.lineTo(-9, -10); ctx.moveTo(9, 10); ctx.lineTo(9, -10); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-9, -8); ctx.lineTo(9, -8); ctx.moveTo(-9, -1); ctx.lineTo(9, -1); ctx.moveTo(-9, 6); ctx.lineTo(9, 6); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(0, 6); ctx.stroke();
+      break;
+    case 'collect':
+      ctx.beginPath(); ctx.moveTo(-8, 2); ctx.lineTo(-6, 10); ctx.lineTo(6, 10); ctx.lineTo(8, 2); ctx.closePath(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(0, 2); ctx.moveTo(-4, -3); ctx.lineTo(0, 2); ctx.lineTo(4, -3); ctx.stroke();
+      break;
+    case 'crew':
+      ctx.beginPath(); ctx.arc(-4, -5, 3.2, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-10, 10); ctx.quadraticCurveTo(-9, 2, -4, 2); ctx.quadraticCurveTo(1, 2, 2, 10); ctx.stroke();
+      ctx.beginPath(); ctx.arc(6, -3, 2.6, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(2, 10); ctx.quadraticCurveTo(3, 4, 6, 4); ctx.quadraticCurveTo(11, 4, 12, 10); ctx.stroke();
       break;
     default:
       ctx.restore();

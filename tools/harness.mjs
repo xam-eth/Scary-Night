@@ -435,7 +435,8 @@ async function runSurvivalMilestone() {
   const skillUsed = survivalGame.survival.useSkill();
   const skillReuseBlocked = !survivalGame.survival.useSkill();
   const hunterSkill = !!(skillUsed && skillReuseBlocked && skillTarget.hp < skillHp
-    && skillTarget.staggerT > 0 && survivalGame.survival.skillCooldown > 0);
+    && skillTarget.staggerT > 0 && survivalGame.survival.skillCooldown > 0
+    && survivalGame.survival.skillFlash > 0.4);
   console.log(`  ${hunterSkill ? 'PASS' : 'FAIL'}  Hunter's Flare skill damages/staggers in radius and respects cooldown (${skillHp} → ${skillTarget.hp} HP)`);
 
   survivalGame.survival.restart();
@@ -558,10 +559,11 @@ async function runSurvivalMilestone() {
 
   const { dayPanelHeight } = await import('../src/ui/survival.js');
   const phoneH = 390;
-  const phoneInset = dayPanelHeight(phoneH);
-  sInput.layout(844, phoneH, { bottomInset: phoneInset });
+  const phoneW = 844;
+  const phoneInset = dayPanelHeight(phoneH, phoneW);
+  sInput.layout(phoneW, phoneH, { bottomInset: phoneInset });
   const stickClear = sInput.stick.homeY + sInput.stick.r <= phoneH - phoneInset + 1;
-  const landscapeDayPass = phoneInset <= 210 && phoneInset < phoneH * 0.55 && stickClear;
+  const landscapeDayPass = phoneInset <= 120 && phoneInset < phoneH * 0.32 && stickClear;
   console.log(`  ${landscapeDayPass ? 'PASS' : 'FAIL'}  Landscape day panel ${phoneInset}px leaves the stick above it (homeY ${sInput.stick.homeY.toFixed(0)})`);
 
   const runScenario = (builderBot) => {

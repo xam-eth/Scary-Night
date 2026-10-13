@@ -23,6 +23,7 @@ import * as THREE from '../vendor/three/three.module.min.js';
 import { GLTFLoader } from '../vendor/three/GLTFLoader.js';
 import { dist } from '../core/util.js';
 import { Valen3D } from './valen3d.js';
+import { HUNTER_SCALE } from './envkit.js';
 
 export const ENEMY_GLB_CAP = 14;
 const HURT_FLASH_COLOR = new THREE.Color(0xffe0d8);
@@ -165,6 +166,32 @@ export const ENEMY_HEIGHT = Object.freeze({
   stalker: 90,
 });
 
+/**
+ * Same play-scale bump as the hunter. Authored ENEMY_HEIGHT is the silhouette
+ * next to a 72px Valen; after HUNTER_SCALE the woman is ~92px on the iso
+ * camera and a 74px zombie would read as a child. Multiply here, not in the
+ * table, so the roster numbers stay the design sizes.
+ */
+export const ENEMY_SCALE = HUNTER_SCALE;
+
+/** Extra world-Y lift after the feet are planted. The ghoul is a flyer. */
+export const ENEMY_HOVER = Object.freeze({
+  crawler: 0,
+  zombie: 0,
+  hunter: 0,
+  ghoul: 38,
+  werewolf: 0,
+  stalker: 0,
+});
+
+export function enemyProjectedHeight(key, sizeMul = 1) {
+  return (ENEMY_HEIGHT[key] || 74) * ENEMY_SCALE * (sizeMul || 1);
+}
+
+export function enemyWorldHeight(key, sizeMul = 1, verticalProjection = Math.sqrt(2 / 3)) {
+  return enemyProjectedHeight(key, sizeMul) / Math.max(0.001, verticalProjection);
+}
+
 export function requiredClips(key) {
   return ENEMY_CLIP_CONTRACT[key] || ['walk', 'attack', 'die'];
 }
@@ -262,6 +289,17 @@ export function enemyClipForState(key, enemy) {
   if ((key === 'werewolf' || key === 'stalker') && moving) return 'run';
   if (moving) return 'walk';
   return 'idle';
+}
+
+function findHips(root) {
+  let hips = null;
+  root.traverse((object) => {
+    if (hips || !object.name) return;
+    const name = object.name;
+    if (name === 'Hips' || name === 'mixamorig:Hips' || name === 'Hip' || name === 'Pelvis') hips = object;
+    else if (name.endsWith('Hips') || name.endsWith(':Hips')) hips = object;
+  });
+  return hips;
 }
 
 function cloneRig(root) {
@@ -421,7 +459,41 @@ class EnemyStage {
     rec.loaded = true;
     rec.loading = false;
     rec.failed = false;
+    this._measureRest(key);
     this._bakePreview(key);
+  }
+
+  /**
+   * One idle measurement per type. Live AABB scaling made every walk cycle
+   * breathe (arms up = taller box = smaller body) and sank a death clip into
+   * the floor. The hunter already refused that; the roster does too.
+   */
+  _measureRest(key) {
+    const rec = this.types[key];
+    if (!rec || !rec.template || rec.rest) return;
+    const probe = cloneRig(rec.template);
+    probe.position.set(0, 0, 0);
+    probe.rotation.set(0, 0, 0);
+    probe.scale.set(1, 1, 1);
+    const mixer = new THREE.AnimationMixer(probe);
+    const map = (ENEMY_MODELS[key] && ENEMY_MODELS[key].map) || {};
+    const idle = map.idle ? rec.animations.find((clip) => clip.name === map.idle) : null;
+    const travel = rec.animations.find((clip) => clip.name === (map.walk || map.run));
+    const clip = idle || travel;
+    if (clip) {
+      mixer.clipAction(clip).play();
+      mixer.update(0.08);
+    }
+    probe.updateMatrixWorld(true);
+    if (!this._box) {
+      this._box = new THREE.Box3();
+      this._size = new THREE.Vector3();
+    }
+    const box = this._box.setFromObject(probe);
+    const size = box.getSize(this._size);
+    rec.rest = { minY: box.min.y, height: Math.max(0.001, size.y) };
+    mixer.stopAllAction();
+    mixer.uncacheRoot(probe);
   }
 
   forceFail(key) {
@@ -655,7 +727,11 @@ class EnemyStage {
       frame = slot ? slot.frame : document.createElement('canvas');
       if (!slot) { frame.width = host.canvas.width; frame.height = host.canvas.height; }
     }
-    return { type: key, model, mixer, actions, enemyId: 0, frame };
+    const hips = findHips(model);
+    return {
+      type: key, model, mixer, actions, enemyId: 0, frame,
+      hips, restHips: hips ? hips.position.clone() : null,
+    };
   }
 
   assign(enemies, player, options = {}) {
@@ -741,7 +817,13 @@ class EnemyStage {
           ? 1 - flash
           : stagger > 0 ? 1 - stagger / Math.max(0.001, slot._hurtStaggerMax) : 1;
         action.time = dur * Math.max(0, Math.min(1, progress));
-      } else action.time = ((enemy._stepT || 0) + (Number.isFinite(enemy.id) ? enemy.id % 997 : 0) * 0.17) % dur;
+      } else {
+        // `_stepT` is a footstep cooldown (0–0.42), not clip time — using it
+        // froze every walk on a single frame. Lifetime clocks actually run.
+        const clock = (enemy.t || 0) + (enemy.stateT || 0);
+        const offset = (Number.isFinite(enemy.id) ? enemy.id % 997 : 0) * 0.17;
+        action.time = (clock + offset) % dur;
+      }
       slot.mixer.update(0);
     }
     slot.model.rotation.order = 'YXZ';
@@ -753,19 +835,41 @@ class EnemyStage {
 
   /** Keep the skinned GLB in the shared mansion scene instead of baking it to a sprite. */
   _placeWorld(slot, enemy, options = {}) {
-    slot.model.scale.set(1, 1, 1);
-    slot.model.position.set(0, 0, 0);
-    slot.model.updateMatrixWorld(true);
-    const box = this._box || (this._box = new THREE.Box3());
-    const size = this._size || (this._size = new THREE.Vector3());
-    box.setFromObject(slot.model);
-    box.getSize(size);
-    const projected = (ENEMY_HEIGHT[enemy.key] || 74) * (enemy.sizeMul || 1);
+    const rec = this.types[slot.type];
+    if (rec && !rec.rest) this._measureRest(slot.type);
+    const rest = rec && rec.rest;
     const verticalProjection = options.verticalProjection || Math.sqrt(2 / 3);
-    const targetWorldHeight = projected / verticalProjection;
-    const scale = targetWorldHeight / Math.max(0.001, size.y);
+    const targetWorldHeight = enemyWorldHeight(enemy.key, enemy.sizeMul || 1, verticalProjection);
+    let minY;
+    let height;
+    if (rest) {
+      minY = rest.minY;
+      height = rest.height;
+    } else {
+      slot.model.scale.set(1, 1, 1);
+      slot.model.position.set(0, 0, 0);
+      slot.model.updateMatrixWorld(true);
+      const box = this._box || (this._box = new THREE.Box3());
+      const size = this._size || (this._size = new THREE.Vector3());
+      box.setFromObject(slot.model);
+      box.getSize(size);
+      minY = box.min.y;
+      height = Math.max(0.001, size.y);
+      if (rec) rec.rest = { minY, height };
+    }
+    const scale = targetWorldHeight / Math.max(0.001, height);
     slot.model.scale.setScalar(scale);
-    slot.model.position.set(enemy.x, -box.min.y * scale, enemy.y);
+    const yaw = Math.PI / 2 - (enemy.angle || 0);
+    let rootX = 0;
+    let rootZ = 0;
+    if (slot.hips && slot.restHips) {
+      const dx = slot.hips.position.x - slot.restHips.x;
+      const dz = slot.hips.position.z - slot.restHips.z;
+      rootX = Math.cos(yaw) * dx + Math.sin(yaw) * dz;
+      rootZ = -Math.sin(yaw) * dx + Math.cos(yaw) * dz;
+    }
+    const hover = ENEMY_HOVER[enemy.key] || 0;
+    slot.model.position.set(enemy.x - rootX * scale, -minY * scale + hover, enemy.y - rootZ * scale);
     const variant = enemy.variant || '';
     if (!slot._baseMaterials) {
       slot._baseMaterials = new Map();
@@ -963,7 +1067,7 @@ class EnemyStage {
     const shown = opts.grade === false ? frame : this._graded(frame, shade);
     const crop = opts.crop;
     const ang = Math.atan2(shade.keyY, shade.keyX);
-    const h = (ENEMY_HEIGHT[enemy.key] || 74) * (enemy.sizeMul || 1);
+    const h = enemyProjectedHeight(enemy.key, enemy.sizeMul || 1);
     const aspect = crop ? crop.w / Math.max(1, crop.h) : shown.width / Math.max(1, shown.height);
     const w = h * aspect;
     ctx.save();
