@@ -272,9 +272,10 @@ export class Input {
     Object.assign(this.prevKeys, k);
   }
 
-  layout(w, h) {
+  layout(w, h, opts = {}) {
     const phone = w < 840 || h < 500;
     const b = this.buttons;
+    const bottomInset = Math.max(0, Number(opts.bottomInset) || 0);
     if (phone) {
       // Thumb zone, two columns. CLAW stays in the corner the thumb already rests on.
       // BOARD steps left only when it will not land on the stick.
@@ -285,7 +286,7 @@ export class Input {
       const sr = 22;
       const runR = short ? 16 : 18;
       const right = w - pad;
-      const bottom = h - pad;
+      const bottom = h - pad - bottomInset;
       b.attack.r = ar;
       b.attack.x = right - ar;
       b.attack.y = bottom - ar;
@@ -322,7 +323,7 @@ export class Input {
       const pad = Math.max(14, Math.min(26, Math.round(Math.min(w, h) * 0.03)));
       const s = clamp(Math.min(w, h) / 780, 0.78, 1.08);
       const right = w - pad;
-      const bottom = h - pad;
+      const bottom = h - pad - bottomInset;
       b.attack.x = right - 36 * s; b.attack.y = bottom - 44 * s; b.attack.r = 32 * s;
       b.dash.x = right - 108 * s; b.dash.y = bottom - 26 * s; b.dash.r = 26 * s;
       b.interact.x = right - 68 * s; b.interact.y = bottom - 118 * s; b.interact.r = 25 * s;

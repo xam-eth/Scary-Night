@@ -806,12 +806,15 @@ export function drawTouchControls(game, ctx, w, h) {
   const p = game.player;
   ctx.save();
   ctx.globalAlpha = alive ? 1 : 0.28;
-  const shade = ctx.createLinearGradient(0, h * 0.58, 0, h);
-  shade.addColorStop(0, 'rgba(4,5,10,0)');
-  shade.addColorStop(0.42, 'rgba(4,5,10,0.22)');
-  shade.addColorStop(1, 'rgba(4,5,10,0.58)');
-  ctx.fillStyle = shade;
-  ctx.fillRect(0, h * 0.58, w, h * 0.42);
+  const survivalDay = game.mode === 'survival' && game.survival && game.survival.phase === 'day';
+  if (!survivalDay) {
+    const shade = ctx.createLinearGradient(0, h * 0.58, 0, h);
+    shade.addColorStop(0, 'rgba(4,5,10,0)');
+    shade.addColorStop(0.42, 'rgba(4,5,10,0.22)');
+    shade.addColorStop(1, 'rgba(4,5,10,0.58)');
+    ctx.fillStyle = shade;
+    ctx.fillRect(0, h * 0.58, w, h * 0.42);
+  }
   ctx.globalAlpha = alive ? 1 : 0.28;
 
   const s = input.stick;

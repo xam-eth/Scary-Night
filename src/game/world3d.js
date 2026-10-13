@@ -79,6 +79,7 @@ class World3DRuntime {
     this.survivalBuildingMeshes = new Map();
     this.survivalSlotRings = new Map();
     this.survivalRadiusRing = null;
+    this.survivalTargetRing = null;
     this.survivalGateMesh = null;
     this.survivalZombieBodyGeometry = null;
     this.survivalZombieHeadGeometry = null;
@@ -242,7 +243,7 @@ class World3DRuntime {
       const b = game.mansion.bounds;
       const extra = 2250;
       const geometry = new THREE.PlaneGeometry(b.w + extra * 2, b.h + extra * 2);
-      const material = new THREE.MeshStandardMaterial({ color: 0x11141c, roughness: 1, metalness: 0 });
+      const material = new THREE.MeshStandardMaterial({ color: 0x1a1e28, roughness: 1, metalness: 0 });
       this.ground = new THREE.Mesh(geometry, material);
       this.ground.name = 'mansion-ground-3d';
       this.ground.rotation.x = -Math.PI / 2;
@@ -250,7 +251,7 @@ class World3DRuntime {
       this.ground.receiveShadow = true;
       this.ground.frustumCulled = false;
       scene.add(this.ground);
-      scene.background = new THREE.Color(0x05070d);
+      scene.background = new THREE.Color(0x0b0e16);
     }
     this._ensureExterior(game, scene);
     if (!this.started) {
@@ -428,25 +429,30 @@ class World3DRuntime {
     const flicker = clamp(game.lightMul == null ? 1 : game.lightMul, 0.35, 1.2);
     const lightning = clamp(game.lightningFlash || 0, 0, 1.5);
     const survival = game.mode === 'survival';
-    const ambientFactor = survival ? 0.48 : Math.max(0.12, (1 - blackout - duel) * flicker);
+    const day = survival && game.survival && (game.survival.phase === 'day' || game.survival.phase === 'complete');
+    // Survival night stays a night, but floors, doors and the Hunter must read.
+    // The old 0.48 crush left hemi/key/rim near zero and the mansion a black void.
+    const ambientFactor = survival
+      ? (day ? 0.92 : 0.78)
+      : Math.max(0.12, (1 - blackout - duel) * flicker);
     const lift = 720;
     lamp.target.position.set(p.x, 0, p.y);
     lamp.target.updateMatrixWorld(true);
     lamp.position.set(p.x + dx * 520, lift, p.y + dy * 520);
-    lamp.intensity = (survival ? 0.34 + light.level * 0.26 : 0.76 + light.level * 1.05) * ambientFactor + lightning * (survival ? 0.7 : 2.1);
+    lamp.intensity = (survival ? 0.72 + light.level * 0.55 : 0.76 + light.level * 1.05) * ambientFactor + lightning * (survival ? 0.7 : 2.1);
     lamp.color.setRGB(light.color[0] / 255, light.color[1] / 255, light.color[2] / 255);
-    if (Valen3D.hemi) Valen3D.hemi.intensity = (survival ? 0.12 : 0.38) * ambientFactor + lightning * (survival ? 0.5 : 1.25);
-    if (Valen3D.key) Valen3D.key.intensity = survival ? 0.055 : 1.05;
-    if (Valen3D.rim) Valen3D.rim.intensity = (survival ? 0.035 : 0.3) * ambientFactor + lightning * (survival ? 0.28 : 0.65);
+    if (Valen3D.hemi) Valen3D.hemi.intensity = (survival ? (day ? 0.46 : 0.34) : 0.38) * ambientFactor + lightning * (survival ? 0.5 : 1.25);
+    if (Valen3D.key) Valen3D.key.intensity = survival ? (day ? 0.42 : 0.22) : 1.05;
+    if (Valen3D.rim) Valen3D.rim.intensity = (survival ? (day ? 0.28 : 0.26) : 0.3) * ambientFactor + lightning * (survival ? 0.28 : 0.65);
     const bloodMoon = clamp(game.bloodMoon || 0, 0, 1);
     if (bloodMoon > 0.05) lamp.color.lerp(new THREE.Color(0x9a3442), bloodMoon * 0.36);
-    this.exposure = clamp(1.22 * ambientFactor + lightning * 0.32, 0.42, 1.48);
+    this.exposure = clamp((survival ? 1.08 : 1.22) * ambientFactor + lightning * 0.32, 0.55, 1.48);
 
     if (this.playerPointLight) {
       this.playerPointLight.position.set(p.x, 44, p.y);
-      this.playerPointLight.distance = survival ? Math.min(230, (p.lightR || 150) * 0.72) : Math.max(100, (p.lightR || 150) * 1.35);
+      this.playerPointLight.distance = survival ? Math.min(280, (p.lightR || 150) * 1.05) : Math.max(100, (p.lightR || 150) * 1.35);
       this.playerPointLight.intensity = survival
-        ? clamp((p.lightI == null ? 0.45 : p.lightI) * ambientFactor * 0.46, 0, 0.28)
+        ? clamp((p.lightI == null ? 0.55 : p.lightI) * 0.9, 0.22, 0.72)
         : clamp((p.lightI == null ? 0.45 : p.lightI) * ambientFactor * 1.35, 0, 1.25);
       this.playerPointLight.color.set(p.kit && p.kit.blessed ? 0xffdda0 : (p.bloodPct < 0.24 ? 0x9aa9e8 : 0x9aa7c7));
     }
@@ -469,8 +475,8 @@ class World3DRuntime {
       const source = row.source;
       local.visible = true;
       local.position.set(source.x, 44, source.y);
-      local.distance = Math.max(90, (source.r || 150) * (survival ? 1 : 1.7));
-      local.intensity = clamp((source.curI == null ? source.i || 0 : source.curI) * (survival ? 4.2 : 2.2) * ambientFactor, 0, survival ? 2.8 : 2.4);
+      local.distance = Math.max(90, (source.r || 150) * (survival ? 1.15 : 1.7));
+      local.intensity = clamp((source.curI == null ? source.i || 0 : source.curI) * (survival ? 3.4 : 2.2) * ambientFactor, 0, survival ? 3.2 : 2.4);
       const c = source.color || [255, 206, 144];
       local.color.setRGB(c[0] / 255, c[1] / 255, c[2] / 255);
       if (bloodMoon > 0.3) local.color.lerp(new THREE.Color(0xff574c), bloodMoon * 0.26);
@@ -561,7 +567,7 @@ class World3DRuntime {
       verticalProjection: VERTICAL_PROJECTION,
       host: { stage: this.root, scene: this.scene, renderer: EnvKit.renderer, camera: EnvKit.camera, canvas: EnvKit.canvas },
     });
-    if (game.mode === 'survival') this._syncSurvivalCrowdProxies(enemies);
+    if (game.mode === 'survival') this._syncSurvivalCrowdProxies(enemies, game);
     else for (const proxy of this.survivalCrowdProxies.values()) proxy.visible = false;
     // The legacy route remains GLB-only. Survival crowd units beyond the 14
     // authored rigs use a lightweight 3D silhouette so all 20–30 bodies read.
@@ -603,10 +609,19 @@ class World3DRuntime {
     return group;
   }
 
-  _syncSurvivalCrowdProxies(enemies) {
+  _syncSurvivalCrowdProxies(enemies, game) {
     const active = new Set();
+    const player = game && game.player;
+    const cap = !game || game.quality >= 3 ? 28 : game.quality >= 2 ? 16 : 10;
+    const crowd = [];
     for (const enemy of enemies) {
       if (!enemy || !enemy._crowd || !enemy._survivalType || enemy.dead || enemy.removeMe || enemy._glb) continue;
+      crowd.push(enemy);
+    }
+    if (player) {
+      crowd.sort((a, b) => (Math.hypot(a.x - player.x, a.y - player.y) - Math.hypot(b.x - player.x, b.y - player.y)));
+    }
+    for (const enemy of crowd.slice(0, cap)) {
       const id = enemy.id;
       active.add(id);
       let proxy = this.survivalCrowdProxies.get(id);
@@ -666,9 +681,9 @@ class World3DRuntime {
   }
 
   _makeSurvivalRadiusRing() {
-    const geometry = new THREE.RingGeometry(0.992, 1, 128);
+    const geometry = new THREE.RingGeometry(0.982, 1, 128);
     const material = new THREE.MeshBasicMaterial({
-      color: 0xe7a74f, transparent: true, opacity: 0.34,
+      color: 0xf0c56a, transparent: true, opacity: 0.52,
       side: THREE.DoubleSide, depthWrite: false, toneMapped: false,
     });
     const ring = new THREE.Mesh(geometry, material);
@@ -676,6 +691,20 @@ class World3DRuntime {
     ring.rotation.x = -Math.PI / 2;
     ring.renderOrder = 3;
     ring.frustumCulled = false;
+    this.root.add(ring);
+    return ring;
+  }
+
+  _makeSurvivalTargetRing() {
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(16, 21, 28),
+      new THREE.MeshBasicMaterial({ color: 0xe88962, transparent: true, opacity: 0.88, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }),
+    );
+    ring.name = 'survival-lock-target-3d';
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 3.2;
+    ring.renderOrder = 5;
+    ring.visible = false;
     this.root.add(ring);
     return ring;
   }
@@ -726,7 +755,15 @@ class World3DRuntime {
     if (fire) {
       this.survivalRadiusRing.position.set(fire.x, 3.4, fire.y);
       this.survivalRadiusRing.scale.set(radius, radius, radius);
-      this.survivalRadiusRing.material.opacity = 0.25 + (0.06 * (0.5 + 0.5 * Math.sin(game.time * 2.1)));
+      this.survivalRadiusRing.material.opacity = 0.5;
+    }
+
+    if (!this.survivalTargetRing) this.survivalTargetRing = this._makeSurvivalTargetRing();
+    const lock = mode.phase === 'night' && mode.currentTarget && !mode.currentTarget.dead ? mode.currentTarget : null;
+    this.survivalTargetRing.visible = !!lock;
+    if (lock) {
+      this.survivalTargetRing.position.set(lock.x, 3.2, lock.y);
+      this.survivalTargetRing.material.color.setHex(lock._survivalType === 'breaker' ? 0xe07a3a : 0xe4bd73);
     }
 
     const visibleSlots = game.screen === 'playing' && mode.phase === 'day' ? new Set(mode.buildableRooms().map((room) => room.id)) : new Set();

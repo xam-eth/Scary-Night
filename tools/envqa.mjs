@@ -167,6 +167,9 @@ async function survivalFtueSection() {
         elapsed: +g.survival.elapsed.toFixed(2), duration: g.survival.nightDuration,
         resources: { oil: Math.floor(g.survival.oil), wood: Math.floor(g.survival.wood) },
         ui: g.ui.map((item) => item.label), coach: !!g.coach, narration: !!g.narration,
+        hunterHp: Math.round(g.player.blood), gateHp: Math.round(g.survival.gateHp),
+        wave: g.survival.waveIndex, ftue: g.survival.ftue && g.survival.ftue.step,
+        incoming: g.survival.incoming ? { kind: g.survival.incoming.kind, in: +g.survival.incoming.in.toFixed(2) } : null,
         swarm: g.enemies.filter((item) => item._survivalType === 'swarm' && !item.dead).length,
         riggedCrowd, proxyCrowd: [...world.survivalCrowdProxies.values()].filter((item) => item.visible).length,
         fireRadius: Math.round(g.survival.getFireRadius()),
@@ -184,7 +187,12 @@ async function survivalFtueSection() {
   check(final.mode === 'survival' && final.screen === 'playing' && final.day === 1 && final.phase === 'night',
     'the default route reaches playable Night 1 directly (no menu, intro or narration)');
   check(final.ui.length === 1 && final.ui[0] === 'PAUSE' && !final.coach && !final.narration,
-    `Night-1 HUD is limited to Oil/Wood plus pause (legacy coach/narration hidden; UI=${final.ui.join(',')})`);
+    `legacy coach/narration stay hidden; pause remains the only HUD button (UI=${final.ui.join(',')})`);
+  const first = checkpoints[0].state;
+  check(first.ftue === 'move' && final.ftue === 'done',
+    `Night-1 FTUE teaches move then completes by 30s (${first.ftue} → ${final.ftue})`);
+  check(final.hunterHp > 0 && Number.isFinite(final.gateHp),
+    `Night HUD tracks Hunter HP and gate HP (${final.hunterHp} / gate ${final.gateHp})`);
   check(final.elapsed >= 30 && final.duration >= 60 && final.duration <= 90,
     `the first 30 playable seconds stay in the configurable ${final.duration}s night`);
   check(final.swarm > 0 && final.renderMode === 'webgl-3d'
@@ -202,7 +210,7 @@ async function survivalFtueSection() {
     const litBefore = g.survival.litRooms().length;
     g.render();
     const before = world.survivalRadiusRing ? world.survivalRadiusRing.scale.x : 0;
-    const button = g.ui.find((item) => item.label.startsWith('survival:UPGRADE'));
+    const button = g.ui.find((item) => item.label.startsWith('survival:HEARTH') || item.label.startsWith('survival:UPGRADE'));
     const clicked = !!(button && button.onClick && button.onClick());
     const queued = g.survival.builderJob && g.survival.builderJob.targetLevel;
     g.survival.updateDay(6);

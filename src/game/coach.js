@@ -478,7 +478,7 @@ function aimHand(b, w, h, input) {
   return best;
 }
 
-function drawDrag(ctx, hx, hy, hr, time, gs = 1) {
+export function drawDrag(ctx, hx, hy, hr, time, gs = 1) {
   const u = (time % 1.25) / 1.25;
   const slide = u < 0.7 ? u / 0.7 : 1;
   const y = hy + hr * 0.15 - slide * (hr * 0.85);

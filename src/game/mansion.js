@@ -917,15 +917,19 @@ export class Mansion {
     const t = game.time;
     this.blackout = game.blackoutT > 0 ? 1 : 0;
     this.bloodMoon = game.bloodMoon;
+    const survival = !!(this.survivalLighting || (game && game.mode === 'survival'));
     for (const l of this.lights) {
-      // flicker
-      if (l.flick > 0) {
+      // Survival's Hearth is a steady safe-zone lamp. Candle gutter belongs to
+      // the legacy hunt; here a pulsing fire reads as a lighting bug.
+      if (survival) {
+        l.f = 1;
+      } else if (l.flick > 0) {
         const s = Math.sin(t * (5 + l.seed * 0.01) + l.seed) * 0.5 + 0.5;
         const s2 = Math.sin(t * 17.3 + l.seed * 2.1) * 0.5 + 0.5;
         l.f = 1 - l.flick * (0.35 * s + 0.25 * s2) - (chance(0.006 * l.flick) ? 0.4 : 0);
         l.f = clamp(l.f, 0.3, 1.05);
       } else l.f = 1;
-      if (l.type === 'fire') l.f *= 0.85 + 0.3 * (Math.sin(t * 9.3 + l.seed) * 0.5 + 0.5);
+      if (!survival && l.type === 'fire') l.f *= 0.85 + 0.3 * (Math.sin(t * 9.3 + l.seed) * 0.5 + 0.5);
       if (l.type === 'chandelier' && game.blackoutT > 0) l.f *= 0.05;
       if (l.type === 'candle' && game.blackoutT > 0) l.f *= 0.12;
       if ((l.type === 'lamp') && game.blackoutT > 0) l.f *= 0.06;

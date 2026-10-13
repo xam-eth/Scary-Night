@@ -13,8 +13,14 @@ import { ROOM } from './mansion.js';
 
 const RESOURCE_CAP = 999;
 const SAVE_EVERY = 2.5;
-const NIGHT_PHASE = { id: 'survival-night', label: 'NIGHT', danger: 0.24, ambient: [108, 114, 132] };
+const NIGHT_PHASE = { id: 'survival-night', label: 'NIGHT', danger: 0.24, ambient: [132, 138, 154] };
 const DAY_PHASE = { id: 'survival-day', label: 'DAY', danger: 0.02, ambient: [186, 174, 150] };
+const WAVE_TIMES = Object.freeze([0.08, 0.38, 0.68]);
+const INDIVIDUAL_TIMES = Object.freeze([0.54, 0.82]);
+const DOOR_LABELS = Object.freeze({
+  frontDoor: 'FRONT', diningDoor: 'DINING', kitchenDoor: 'KITCHEN', palisade: 'PALISADE',
+  cellarDoor: 'CELLAR', chapelDoor: 'CHAPEL', postern: 'POSTERN',
+});
 
 export const SURVIVAL_BUILDINGS = Object.freeze({
   extractor: Object.freeze({ id: 'extractor', label: 'OIL EXTRACTOR', oil: 2, wood: 10, seconds: 7, produces: { oil: 6 } }),
@@ -369,6 +375,16 @@ export class SurvivalMode {
     this.skillCooldown = 0;
     this.skillCooldownMax = this.tuning.skillCooldown;
     this.skillFlash = 0;
+    this.feedCd = 0;
+    this._gateAlert = false;
+    this.currentTarget = null;
+    this.incoming = null;
+    this.ftue = { step: 'move', t: 0, originX: 0, originY: 0 };
+    this.ftueDone = false;
+    this._telegraphEntrance = null;
+    this._telegraphWave = -1;
+    this._telegraphSounded = false;
+    this._telegraphKey = null;
     this._saveT = 0;
     this._bakeRadius = -1;
     this._lastGateOpen = null;
@@ -405,6 +421,12 @@ export class SurvivalMode {
     this.siegeTimers = s.siegeTimers && typeof s.siegeTimers === 'object' ? { ...s.siegeTimers } : {};
     this.nightStats = { kills: 0, hits: 0, damageToWalls: 0, ...(s.nightStats || {}) };
     this.lastRewards = s.lastRewards || null;
+    this.ftueDone = !!s.ftueDone;
+    this.incoming = null;
+    this._telegraphEntrance = null;
+    this._telegraphWave = -1;
+    this._telegraphSounded = false;
+    this._telegraphKey = null;
 
     const g = this.game;
     const pos = s.player;
@@ -427,6 +449,10 @@ export class SurvivalMode {
     g.phase = this.phase === 'day' ? DAY_PHASE : NIGHT_PHASE;
     g.nightDuration = this.nightDuration;
     g.survival = this;
+
+    this.ftue = this.ftueDone || this.day !== 1
+      ? { step: 'done', t: 0, originX: g.player.x, originY: g.player.y }
+      : { step: 'move', t: 0, originX: g.player.x, originY: g.player.y };
 
     this._restoreEnemies(Array.isArray(s.enemies) ? s.enemies : []);
     this._savedEntrances = Array.isArray(s.entrances) ? s.entrances : null;
@@ -451,13 +477,29 @@ export class SurvivalMode {
   _configureMansion() {
     const m = this.game.mansion;
     m.survivalLighting = true;
-    for (const light of m.lights) {
-      if (light !== m.fireplaceLight) { light.i = 0; light.curI = 0; }
-    }
+    this._applyVisualLights();
     if (m.fireplaceLight) {
       m.fireplaceLight.i = this.oil > 0 ? 0.92 : 0;
       m.fireplaceLight.type = 'fire';
     }
+  }
+
+  /** Moon and lamps are visual fill only — `isLit` still uses the Hearth. */
+  _applyVisualLights() {
+    const m = this.game.mansion;
+    const day = this.phase === 'day' || this.phase === 'complete';
+    for (const light of m.lights) {
+      light.flick = 0;
+      light.f = 1;
+      if (light === m.fireplaceLight) continue;
+      const moon = light.type === 'moon';
+      light.i = day ? (moon ? 0.42 : 0.16) : (moon ? 0.24 : 0.09);
+      light.curI = light.i;
+    }
+  }
+
+  hearthLabel(level = this.perapianLevel) {
+    return `HEARTH LV${level}`;
   }
 
   _applyEntranceState() {
@@ -480,6 +522,7 @@ export class SurvivalMode {
     g.paused = false;
     g.uiPanel = this.phase === 'day' ? 'survival-day' : this.phase === 'complete' ? 'survival-complete' : this.phase === 'failed' ? 'survival-failed' : null;
     g.player.state = 'idle';
+    g.fadeFromBlack = Math.max(g.fadeFromBlack || 0, 0.72);
     g.renderer.snapCamera(g.player.x, g.player.y);
     g.input.gameplay = this.phase === 'night';
     g.mansion.update(0, g);
@@ -496,6 +539,13 @@ export class SurvivalMode {
     this.waveIndex = 0;
     this.breakerIndex = 0;
     this.individualIndex = 0;
+    this.incoming = null;
+    this._gateAlert = false;
+    this.currentTarget = null;
+    this._telegraphEntrance = null;
+    this._telegraphWave = -1;
+    this._telegraphSounded = false;
+    this._telegraphKey = null;
     this.siegeTimers = Object.create(null);
     this.nightStats = { kills: 0, hits: 0, damageToWalls: 0 };
     g.time = 0;
@@ -504,6 +554,7 @@ export class SurvivalMode {
     g.screen = 'playing';
     g.paused = false;
     g.uiPanel = null;
+    g.fadeFromBlack = 0.55;
     g.enemies.length = 0;
     g.bolts.length = 0;
     g.particles.list.length = 0;
@@ -526,6 +577,7 @@ export class SurvivalMode {
     const g = this.game;
     this.skillCooldown = Math.max(0, this.skillCooldown - dt);
     this.skillFlash = Math.max(0, this.skillFlash - dt);
+    this.feedCd = Math.max(0, (this.feedCd || 0) - dt);
     if (this.phase === 'night' && g.screen === 'playing' && !g.uiPanel) this.updateNight(dt);
     else if (this.phase === 'day' && g.screen === 'playing') this.updateDay(dt);
     else {
@@ -547,6 +599,7 @@ export class SurvivalMode {
     g.lightningFlash = Math.max(0, g.lightningFlash - dt * 2.4);
 
     this.updateWaves();
+    this.updateFtue(dt);
     this.updateLightFuel(dt);
     g.mansion.update(dt, g);
     this.refreshFireplace(false);
@@ -559,7 +612,14 @@ export class SurvivalMode {
       // touch/keyboard players prioritize a target by facing toward it.
       g.input.attackDown = true;
     }
-    if (g.input.interactPressed) this.useSkill();
+    if (g.input.buttons && g.input.buttons.interact) {
+      g.input.buttons.interact.hot = this.ftue.step === 'done' && this.nearHearth()
+        && this.oil >= this.tuning.feedOil && this.feedCd <= 0;
+    }
+    if (g.input.interactPressed) {
+      const feeding = this.ftue.step === 'done' && this.tryFeedHearth();
+      if (!feeding) this.useSkill();
+    }
     g.player.update(dt, g);
     g.player.anim(dt);
 
@@ -577,8 +637,11 @@ export class SurvivalMode {
     this.updateGateMeter();
     this.followPlayer(dt);
     if (g.player.blood <= 0 && g.player.state !== 'death') g.killPlayer('Hunter lost');
-    else if (g.player.state === 'death' || g.player.state === 'dead') this.fail('Hunter lost');
-    else if (this.elapsed >= this.nightDuration) this.completeNight();
+    if (g.player.state === 'death' || g.player.state === 'dead') {
+      if ((g.player.deathT || 0) > 1.15) this.fail('Hunter lost');
+      return;
+    }
+    if (this.elapsed >= this.nightDuration) this.completeNight();
   }
 
   updateDay(dt) {
@@ -591,6 +654,10 @@ export class SurvivalMode {
     g.bloodMoon = 0; g.duelDark = 0; g.blackoutT = 0; g.powerOut = false;
     g.mansion.update(dt, g);
     this.refreshFireplace(false);
+    g.input.attackDown = false;
+    g.input.attackPressed = false;
+    g.input.dashPressed = false;
+    g.player.update(dt, g);
     g.player.anim(dt);
     if (this.builderJob) {
       this.builderJob.remaining = Math.max(0, this.builderJob.remaining - dt);
@@ -599,37 +666,155 @@ export class SurvivalMode {
     this.followPlayer(dt);
   }
 
+  builderSpeedMul() {
+    return 1 + this.tuning.survivorBuildSpeedPer * Math.max(0, this.survivors - 2);
+  }
+
+  jobTime(seconds) {
+    return Math.max(0.8, seconds / this.builderSpeedMul());
+  }
+
+  crewGateHp() {
+    return Math.max(0, this.survivors) * this.tuning.survivorGateHp;
+  }
+
+  waveCounts() {
+    return this.day === 1 ? [7, 7, 8] : this.day === 2 ? [8, 9, 9] : [10, 10, 10];
+  }
+
+  doorLabel(id) {
+    return DOOR_LABELS[id] || 'THE WALL';
+  }
+
   updateWaves() {
     const duration = this.nightDuration;
-    const waveTimes = [0.08, 0.38, 0.68];
-    const counts = this.day === 1 ? [7, 7, 8] : this.day === 2 ? [8, 9, 9] : [10, 10, 10];
-    while (this.waveIndex < waveTimes.length && this.elapsed >= duration * waveTimes[this.waveIndex]) {
+    const counts = this.waveCounts();
+    this.updateTelegraph();
+    while (this.waveIndex < WAVE_TIMES.length && this.elapsed >= duration * WAVE_TIMES[this.waveIndex]) {
       this.spawnSwarm(counts[this.waveIndex], this.waveIndex);
       this.waveIndex++;
+      this._telegraphSounded = false;
+      this._telegraphKey = null;
+      this._telegraphEntrance = null;
+      this._telegraphWave = -1;
     }
     const breakerAt = this.day >= 2 ? duration * 0.28 : Infinity;
     if (this.day >= 2 && this.breakerIndex === 0 && this.elapsed >= breakerAt) {
       this.spawnBreaker(0);
       this.breakerIndex = 1;
+      if (this.incoming && this.incoming.kind === 'breaker') this.incoming = null;
     }
     if (this.day >= 3 && this.breakerIndex === 1 && this.elapsed >= duration * 0.63) {
       this.spawnBreaker(1);
       this.breakerIndex = 2;
+      if (this.incoming && this.incoming.kind === 'breaker') this.incoming = null;
     }
-    const individualAt = [0.54, 0.82];
-    while (this.individualIndex < individualAt.length && this.elapsed >= duration * individualAt[this.individualIndex]) {
+    while (this.individualIndex < INDIVIDUAL_TIMES.length && this.elapsed >= duration * INDIVIDUAL_TIMES[this.individualIndex]) {
       this.spawnIndividual(this.individualIndex);
       this.individualIndex++;
     }
   }
 
+  updateTelegraph() {
+    const lead = this.tuning.waveTelegraph || 3;
+    const duration = this.nightDuration;
+    const candidates = [];
+    if (this.waveIndex < WAVE_TIMES.length) {
+      const at = duration * WAVE_TIMES[this.waveIndex];
+      const eta = at - this.elapsed;
+      if (eta > 0 && eta <= lead) {
+        candidates.push({ kind: 'swarm', wave: this.waveIndex + 1, of: 3, in: eta, offset: this.waveIndex, rank: 1 });
+      }
+    }
+    if (this.day >= 2 && this.breakerIndex === 0) {
+      const eta = duration * 0.28 - this.elapsed;
+      if (eta > 0 && eta <= lead) candidates.push({ kind: 'breaker', wave: 0, of: 1, in: eta, offset: 0, rank: 0 });
+    } else if (this.day >= 3 && this.breakerIndex === 1) {
+      const eta = duration * 0.63 - this.elapsed;
+      if (eta > 0 && eta <= lead) candidates.push({ kind: 'breaker', wave: 1, of: 1, in: eta, offset: 1, rank: 0 });
+    }
+    if (!candidates.length) {
+      if (!this.incoming || this.incoming.in <= 0) this.incoming = null;
+      return;
+    }
+    candidates.sort((a, b) => a.rank - b.rank || a.in - b.in);
+    const next = candidates[0];
+    const entrance = next.kind === 'breaker'
+      ? this.mainGate()
+      : (this._telegraphWave === this.waveIndex && this._telegraphEntrance)
+        || this.chooseTargetEntrance(this.game.player.x, this.game.player.y, next.offset);
+    if (next.kind === 'swarm') {
+      this._telegraphEntrance = entrance;
+      this._telegraphWave = this.waveIndex;
+    }
+    const out = entrance && (entrance.outside || entrance);
+    const marker = {
+      kind: next.kind,
+      wave: next.wave,
+      of: next.of,
+      in: next.in,
+      entranceId: entrance && entrance.id,
+      x: out ? out.x : 0,
+      y: out ? out.y : 0,
+      label: next.kind === 'breaker' ? 'BREAKER' : this.doorLabel(entrance && entrance.id),
+    };
+    const key = `${marker.kind}:${marker.wave}`;
+    this.incoming = marker;
+    if (this._telegraphKey !== key && entrance) {
+      this._telegraphKey = key;
+      this.game.audio.play('creak', {
+        x: entrance.x, y: entrance.y, cam: this.game.renderer.cam, vol: next.kind === 'breaker' ? 0.9 : 0.7,
+      });
+    }
+  }
+
+  threatPoint() {
+    if (this.incoming) return { x: this.incoming.x, y: this.incoming.y, label: this.incoming.label, incoming: true };
+    const p = this.game.player;
+    let best = null;
+    let bestD = Infinity;
+    for (const e of this.game.enemies) {
+      if (!e || e.dead || e.removeMe) continue;
+      const d = dist(p.x, p.y, e.x, e.y);
+      if (d < bestD) { bestD = d; best = e; }
+    }
+    if (!best) return null;
+    const label = best._survivalType === 'breaker' ? 'BREAKER' : this.doorLabel(best.entranceId);
+    return { x: best.x, y: best.y, label, incoming: false };
+  }
+
+  updateFtue(dt) {
+    const lesson = this.ftue;
+    if (!lesson || lesson.step === 'done' || this.day !== 1) return;
+    lesson.t += dt;
+    const p = this.game.player;
+    if (lesson.step === 'move') {
+      if (dist(p.x, p.y, lesson.originX, lesson.originY) > 55 || lesson.t > 6) this._advanceFtue('light');
+    } else if (lesson.step === 'light') {
+      if (lesson.t > 5.5) this._advanceFtue('flare');
+    } else if (lesson.step === 'flare') {
+      if (this.skillCooldown > 0 || this.skillFlash > 0 || lesson.t > 7) this._advanceFtue('done');
+    }
+  }
+
+  _advanceFtue(step) {
+    this.ftue.step = step;
+    this.ftue.t = 0;
+    if (step === 'done') {
+      this.ftueDone = true;
+      this._persist(true);
+    }
+  }
+
   spawnSwarm(count, wave) {
     const g = this.game;
-    const entrance = this.chooseTargetEntrance(g.player.x, g.player.y, wave);
+    const entrance = (this._telegraphWave === wave && this._telegraphEntrance)
+      || this.chooseTargetEntrance(g.player.x, g.player.y, wave);
+    this.incoming = null;
     if (!entrance) return;
     const out = outwardOf(entrance);
     const along = { x: -out.y, y: out.x };
-    const total = Math.max(20, Math.min(30, count));
+    const total = clamp(Math.round(count), 1, 30);
     for (let i = 0; i < total; i++) {
       const row = Math.floor(i / 7);
       const col = i % 7;
@@ -716,7 +901,13 @@ export class SurvivalMode {
     const gate = this.mainGate();
     if (!gate) return;
     this.gateHp = Math.max(0, gate.hp);
-    if (gate.broken) this.gateHp = 0;
+    if (gate.broken) {
+      this.gateHp = 0;
+      if (!this._gateAlert) {
+        this._gateAlert = true;
+        this.game.showMessage('GATE DOWN · THEY ARE IN', { tone: 'danger', life: 3.6, key: 'survival-gate' });
+      }
+    }
   }
 
   damageEntrance(entrance, amount, source = null) {
@@ -746,6 +937,51 @@ export class SurvivalMode {
       return aa - bb;
     });
     return candidates[0] || null;
+  }
+
+  nearHearth() {
+    const fire = this.game.mansion.fireplaceLight;
+    if (!fire) return false;
+    return dist(this.game.player.x, this.game.player.y, fire.x, fire.y) <= this.tuning.feedRange;
+  }
+
+  tryFeedHearth() {
+    if (this.phase !== 'night' || this.feedCd > 0 || !this.nearHearth()) return false;
+    const cost = this.tuning.feedOil;
+    if (this.oil < cost) return false;
+    this.oil -= cost;
+    this.oilBurned = Math.max(0, this.oilBurned - this.tuning.feedRestore);
+    this.feedCd = 1.15;
+    this.refreshFireplace(true);
+    const g = this.game;
+    g.audio.play('uiConfirm', { vol: 0.5 });
+    g.particles.burst('spark', g.player.x, g.player.y, 12, {
+      color: 'rgba(255,194,98,0.9)', sizeMin: 1.5, sizeMax: 4, speedMin: 30, speedMax: 110,
+      lifeMin: 0.16, lifeMax: 0.45, glow: true,
+    });
+    return true;
+  }
+
+  selectRoomAtScreen(sx, sy) {
+    if (this.phase !== 'day') return false;
+    const floor = this.game.screenToFloor(sx, sy);
+    if (!floor) return false;
+    const rooms = this.buildableRooms();
+    const inside = rooms.find((room) => floor.x >= room.x && floor.x <= room.x + room.w
+      && floor.y >= room.y && floor.y <= room.y + room.h);
+    if (inside) {
+      this.selectedRoom = inside.id;
+      return true;
+    }
+    let best = null;
+    let bestD = 110;
+    for (const room of rooms) {
+      const d = dist(floor.x, floor.y, room.x + room.w / 2, room.y + room.h / 2);
+      if (d < bestD) { bestD = d; best = room; }
+    }
+    if (!best) return false;
+    this.selectedRoom = best.id;
+    return true;
   }
 
   useSkill() {
@@ -780,33 +1016,39 @@ export class SurvivalMode {
   }
 
   getFireRadius() {
-    if (this.oil <= 0 || this.phase === 'failed') return 0;
+    if (this.phase === 'failed') return 0;
     const base = this.tuning.perapianRadius[this.perapianLevel] || 0;
+    const floor = base * (this.day === 1 ? this.tuning.hearthFloor[1] : this.tuning.hearthFloor.later);
+    if (this.oil <= 0) return floor;
     const target = this.tuning.oilBurnTargetPerNight + (this.perapianLevel - 1) * 2.5;
     const spent = clamp(this.oilBurned / Math.max(1, target), 0, 1);
     const fuelFactor = 1 - spent * this.tuning.oilRadiusShrink;
-    return Math.max(0, base * fuelFactor);
+    return Math.max(floor, base * fuelFactor);
   }
 
   isLit(x, y) {
-    if (this.oil <= 0 || this.phase === 'failed') return false;
+    if (this.phase === 'failed') return false;
     const light = this.game.mansion.fireplaceLight;
-    return !!light && dist(x, y, light.x, light.y) <= this.getFireRadius();
+    const radius = this.getFireRadius();
+    return !!light && radius > 0 && dist(x, y, light.x, light.y) <= radius;
   }
 
   refreshFireplace(force = false) {
     const light = this.game.mansion.fireplaceLight;
     if (!light) return;
     const radius = this.getFireRadius();
-    const intensity = this.oil > 0 ? 0.88 : 0;
+    const intensity = radius > 0 ? (this.oil > 0 ? 0.88 : 0.4) : 0;
     if (Math.abs((light.r || 0) - radius) > 0.5) light.r = Math.max(1, radius);
+    light.flick = 0;
+    light.f = 1;
     light.i = intensity;
-    light.curI = intensity * (light.f == null ? 1 : light.f);
+    light.curI = intensity;
     const crossedBakeStep = Math.abs(radius - this._bakeRadius) >= 105 || (this._bakeRadius > 0) !== (radius > 0);
     if (force || crossedBakeStep) {
       this._bakeRadius = radius;
       this.game.survivalBakeDirty = true;
     }
+    if (force) this._applyVisualLights();
   }
 
   litRooms() {
@@ -831,7 +1073,8 @@ export class SurvivalMode {
     if (this.oil < spec.oil || this.wood < spec.wood) return false;
     this.oil -= spec.oil; this.wood -= spec.wood;
     this.selectedRoom = roomId;
-    this.builderJob = { kind: 'building', type, roomId, remaining: spec.seconds, duration: spec.seconds };
+    const duration = this.jobTime(spec.seconds);
+    this.builderJob = { kind: 'building', type, roomId, remaining: duration, duration };
     g.audio.play('woodPickup', { vol: 0.45 });
     this._persist(true);
     return true;
@@ -842,7 +1085,8 @@ export class SurvivalMode {
     const cost = this.tuning.gateCost;
     if (this.oil < cost.oil || this.wood < cost.wood) return false;
     this.oil -= cost.oil; this.wood -= cost.wood;
-    this.builderJob = { kind: 'gate', type: 'gate', remaining: cost.seconds, duration: cost.seconds };
+    const duration = this.jobTime(cost.seconds);
+    this.builderJob = { kind: 'gate', type: 'gate', remaining: duration, duration };
     this.game.audio.play('woodPickup', { vol: 0.45 });
     this._persist(true);
     return true;
@@ -854,7 +1098,8 @@ export class SurvivalMode {
     const cost = this.tuning.perapianUpgrade[target];
     if (!cost || this.oil < cost.oil || this.wood < cost.wood) return false;
     this.oil -= cost.oil; this.wood -= cost.wood;
-    this.builderJob = { kind: 'perapian', type: 'perapian', targetLevel: target, remaining: cost.seconds, duration: cost.seconds };
+    const duration = this.jobTime(cost.seconds);
+    this.builderJob = { kind: 'perapian', type: 'perapian', targetLevel: target, remaining: duration, duration };
     this.game.audio.play('uiConfirm', { vol: 0.55 });
     this._persist(true);
     return true;
@@ -870,6 +1115,11 @@ export class SurvivalMode {
       this.applyBuildingEffects(true);
     } else if (job.kind === 'building') {
       this.buildings[job.roomId] = job.type;
+      const spec = SURVIVAL_BUILDINGS[job.type];
+      if (spec?.produces?.survivors) {
+        this.survivors = Math.min(this.tuning.maxSurvivors, this.survivors + spec.produces.survivors);
+      }
+      this.applyBuildingEffects(false);
     }
     this.builderJob = null;
     this.refreshFireplace(true);
@@ -881,14 +1131,12 @@ export class SurvivalMode {
     const gate = this.mainGate();
     if (!gate) return;
     const base = gate.baseHpMax || gate.hpMax || 190;
-    if (this.gateBuilt) {
-      gate.hpMax = base + this.tuning.gateHpBonus;
-      if (repairGate || gate.hp <= 0) { gate.hp = gate.hpMax; gate.broken = false; gate.open = false; }
-      else gate.hp = Math.min(gate.hp, gate.hpMax);
-    } else {
-      gate.hpMax = base;
-      if (!Number.isFinite(gate.hp)) gate.hp = base;
-    }
+    const crew = this.crewGateHp();
+    gate.hpMax = base + (this.gateBuilt ? this.tuning.gateHpBonus : 0) + crew;
+    if (this.gateBuilt && (repairGate || gate.hp <= 0)) {
+      gate.hp = gate.hpMax; gate.broken = false; gate.open = false;
+    } else if (!Number.isFinite(gate.hp)) gate.hp = gate.hpMax;
+    else gate.hp = Math.min(gate.hp, gate.hpMax);
     this.gateHp = Math.max(0, gate.hp);
   }
 
@@ -903,7 +1151,6 @@ export class SurvivalMode {
       if (!spec) continue;
       oil += spec.produces.oil || 0;
       wood += spec.produces.wood || 0;
-      if (spec.produces.survivors) this.survivors = Math.min(this.tuning.maxSurvivors, this.survivors + spec.produces.survivors);
     }
     const killOil = Math.floor(this.nightStats.kills / 4);
     const killWood = Math.floor(this.nightStats.kills / 3);
@@ -912,6 +1159,9 @@ export class SurvivalMode {
     this.wood = clamp(this.wood + wood, 0, RESOURCE_CAP);
     this.nightsCompleted = Math.min(3, this.nightsCompleted + 1);
     this.lastRewards = { oil, wood, kills: this.nightStats.kills, walls: this.nightStats.damageToWalls };
+    g.showMessage(`DAWN · +${Math.round(oil)} OIL · +${Math.round(wood)} WOOD · ${this.nightStats.kills} KILLS`, {
+      tone: 'gold', life: 4.4, key: 'survival-dawn',
+    });
     g.enemies.length = 0;
     g.bolts.length = 0;
     g.particles.list.length = 0;
@@ -920,6 +1170,8 @@ export class SurvivalMode {
     g.player.attackCd = 0;
     g.player.blood = g.player.bloodMax;
     this.elapsed = 0;
+    this.incoming = null;
+    this._telegraphKey = null;
     if (this.nightsCompleted >= 3) {
       this.day = 3;
       this.phase = 'complete';
@@ -957,6 +1209,8 @@ export class SurvivalMode {
       gateHp: 0, builderJob: null, selectedRoom: null, nightsCompleted: 0, waveIndex: 0,
       breakerIndex: 0, individualIndex: 0, oilBurned: 0, siegeTimers: Object.create(null),
       nightStats: { kills: 0, hits: 0, damageToWalls: 0 }, lastRewards: null, skillCooldown: 0,
+      incoming: null, ftueDone: false, feedCd: 0, currentTarget: null, _gateAlert: false,
+      _telegraphEntrance: null, _telegraphWave: -1, _telegraphSounded: false, _telegraphKey: null,
     });
     for (const e of g.mansion.entrances) {
       e.hp = e.baseHpMax; e.hpMax = e.baseHpMax; e.broken = false; e.open = false; e.barricade = 0;
@@ -965,6 +1219,7 @@ export class SurvivalMode {
     const fire = g.mansion.fireplaceLight;
     g.player.x = fire.x + 70; g.player.y = fire.y + 210;
     g.player.blood = g.player.bloodMax; g.player.weapon = 'shot'; g.player.state = 'idle';
+    this.ftue = { step: 'move', t: 0, originX: g.player.x, originY: g.player.y };
     this.nightDuration = duration;
     this.phase = 'night';
     this.refreshFireplace(true);
@@ -980,7 +1235,7 @@ export class SurvivalMode {
   }
 
   buildingName(type) {
-    if (type === 'perapian') return `PERAPIAN LV${this.perapianLevel}`;
+    if (type === 'perapian') return this.hearthLabel();
     if (type === 'gate') return 'REINFORCED GATE';
     return SURVIVAL_BUILDINGS[type] ? SURVIVAL_BUILDINGS[type].label : 'EMPTY';
   }
@@ -991,6 +1246,8 @@ export class SurvivalMode {
     this.nightStats.kills++;
     this.game.stats.kills = (this.game.stats.kills || 0) + 1;
     this.game.audio.play('hitFlesh', { vol: 0.42, weight: 0.8 });
+    const label = enemy._survivalType === 'breaker' ? 'BREAKER' : 'KILL';
+    this.game.showCombatText(label, enemy.x, enemy.y - 16, '#f0d9a3');
   }
 
   onPlayerHurt(amount) {
@@ -1011,6 +1268,8 @@ export class SurvivalMode {
   }
 
   getNightSnapshot() {
+    const p = this.game.player;
+    const gate = this.mainGate();
     return {
       phase: this.phase, day: this.day, elapsed: +this.elapsed.toFixed(2),
       duration: this.nightDuration, oil: +this.oil.toFixed(1), wood: this.wood,
@@ -1019,8 +1278,20 @@ export class SurvivalMode {
       enemies: this.game.enemies.filter((e) => !e.dead).length,
       breakers: this.game.enemies.filter((e) => e._survivalType === 'breaker' && !e.dead).length,
       kills: this.nightStats.kills, gateHp: Math.round(this.gateHp),
-      gateBroken: !!(this.mainGate() && this.mainGate().broken),
+      gateHpMax: gate ? Math.round(gate.hpMax) : 0,
+      gateBroken: !!(gate && gate.broken),
+      hunterHp: Math.round(p.blood), hunterHpMax: Math.round(p.bloodMax),
+      wave: Math.min(3, this.waveIndex), waveMax: 3,
+      incoming: this.incoming ? {
+        kind: this.incoming.kind, wave: this.incoming.wave, in: +this.incoming.in.toFixed(2),
+        door: this.incoming.entranceId, label: this.incoming.label,
+      } : null,
+      ftue: this.ftue ? this.ftue.step : 'done',
       job: this.builderJob ? { ...this.builderJob } : null,
+      target: this.currentTarget && !this.currentTarget.dead ? {
+        kind: this.currentTarget._survivalType || 'enemy',
+        hp: Math.round(this.currentTarget.hp),
+      } : null,
     };
   }
 
@@ -1056,6 +1327,7 @@ export class SurvivalMode {
     s.waveIndex = this.waveIndex; s.breakerIndex = this.breakerIndex; s.individualIndex = this.individualIndex;
     s.oilBurned = +this.oilBurned.toFixed(2); s.siegeTimers = { ...this.siegeTimers };
     s.nightStats = { ...this.nightStats }; s.lastRewards = this.lastRewards ? { ...this.lastRewards } : null;
+    s.ftueDone = !!(this.ftueDone || (this.ftue && this.ftue.step === 'done'));
     s.player = { x: g.player.x, y: g.player.y, angle: g.player.angle, blood: g.player.blood };
     s.entrances = g.mansion.entrances.map((e) => ({ id: e.id, hp: e.hp, hpMax: e.hpMax, broken: e.broken, open: e.open, barricade: e.barricade }));
     s.enemies = this.phase === 'night' ? this._serializeEnemies() : [];

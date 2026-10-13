@@ -411,4 +411,11 @@ export const SURVIVAL_TUNING = Object.freeze({
   skillCooldown: 14,
   skillRadius: 235,
   skillDamage: 58,
+  waveTelegraph: 3,
+  hearthFloor: Object.freeze({ 1: 0.42, later: 0.28 }),
+  feedOil: 6,
+  feedRestore: 5,
+  feedRange: 120,
+  survivorBuildSpeedPer: 0.1,
+  survivorGateHp: 12,
 });

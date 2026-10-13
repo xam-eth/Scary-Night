@@ -45,7 +45,7 @@ import { updateCoach } from './coach.js';
 import { Climax, PEAK } from './climax.js';
 import * as UI from '../ui/screens.js';
 import { SurvivalMode } from './survival.js';
-import { drawSurvivalScreen } from '../ui/survival.js';
+import { drawSurvivalScreen, dayPanelHeight } from '../ui/survival.js';
 
 /* ================= pickups ================= */
 
@@ -762,32 +762,44 @@ export class Game {
     this.dt = dt * this.timeScale;
     this.now += dt;
     this.fpsSmooth = lerp(this.fpsSmooth, 1 / Math.max(dt, 0.0001), 0.05);
-    this.input.gameplay = this.screen === 'playing' && this.survival.phase === 'night' && !this.uiPanel;
+    const nightPlay = this.screen === 'playing' && this.survival.phase === 'night' && !this.uiPanel;
+    const dayPlay = this.screen === 'playing' && this.survival.phase === 'day';
+    this.input.gameplay = nightPlay || dayPlay;
     const b = this.input.buttons;
-    b.attack.hidden = !this.input.gameplay;
-    b.interact.hidden = !this.input.gameplay;
+    b.attack.hidden = !nightPlay;
+    b.interact.hidden = !nightPlay;
     b.run.hidden = true;
     b.dash.hidden = true;
     b.repair.hidden = true;
     b.barricade.hidden = true;
-    if (this.input.gameplay) this.input.layout(this.renderer.w, this.renderer.h);
+    if (this.input.gameplay) {
+      const inset = dayPlay ? dayPanelHeight(this.renderer.h) : 0;
+      this.input.layout(this.renderer.w, this.renderer.h, { bottomInset: inset });
+    }
     this.input.update(dt);
     // Movement stays active, but night combat is Hunter's automatic shot; the
     // attack control can still force a shot and the Interact control is Flare.
     this.input.dashPressed = false;
     this.input.runDown = false;
     this.handleUIInput();
+    this.fadeFromBlack = Math.max(0, this.fadeFromBlack - dt * 0.9);
 
-    if (this.screen === 'playing' || this.screen === 'paused') this.survival.update(this.dt);
-    else this.player.anim(dt);
+    if (this.screen === 'playing') {
+      this.survival.update(this.dt);
+      this.particles.update(dt);
+      for (let i = this.combatTexts.length - 1; i >= 0; i--) {
+        const item = this.combatTexts[i];
+        item.life -= dt; item.y -= dt * 18;
+        if (item.life <= 0) this.combatTexts.splice(i, 1);
+      }
+      for (let i = this.messages.length - 1; i >= 0; i--) {
+        const msg = this.messages[i];
+        msg.t += dt;
+        if (msg.t > msg.life) this.messages.splice(i, 1);
+      }
+    } else this.player.anim(dt);
     this.renderer.decayFlash(dt);
     this.lightningFlash = Math.max(0, this.lightningFlash - dt * 2.2);
-    this.particles.update(dt);
-    for (let i = this.combatTexts.length - 1; i >= 0; i--) {
-      const item = this.combatTexts[i];
-      item.life -= dt; item.y -= dt * 18;
-      if (item.life <= 0) this.combatTexts.splice(i, 1);
-    }
   }
 
   updateMenu(dt) {
@@ -2192,7 +2204,6 @@ export class Game {
   killPlayer(reason) {
     if (this.mode === 'survival' && this.survival) {
       this.player.die(this);
-      this.survival.fail(reason || 'Hunter lost');
       return;
     }
     if (this.player.state === PSTATE.DEAD) return;
@@ -2487,6 +2498,25 @@ export class Game {
     r.clear(worldReady ? null : PAL.void);
     r.resetForUI();
     drawSurvivalScreen(this, ctx, w, h, worldReady);
+    if (this.screen === 'playing' || this.screen === 'paused') this.drawMessages(ctx, w, h);
+    if (worldReady && this.screen === 'playing') this.drawCombatTextOverlay(ctx);
+    if (this.fadeFromBlack > 0.001) {
+      ctx.fillStyle = `rgba(0,0,0,${this.fadeFromBlack})`;
+      ctx.fillRect(0, 0, w, h);
+    }
+    if ((this.screen === 'playing' || this.screen === 'paused') && this.survival && this.survival.phase === 'night') {
+      const lb = clamp(1 - (this.player.bloodPct ?? this.player.blood / Math.max(1, this.player.bloodMax)) / 0.3, 0, 1);
+      if (lb > 0) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+        const g = ctx.createRadialGradient(w / 2, h / 2, h * 0.15, w / 2, h / 2, h * 0.8);
+        g.addColorStop(0, 'rgba(0,0,0,0)');
+        g.addColorStop(1, `rgba(110,0,10,${0.22 * lb})`);
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, w, h);
+        ctx.restore();
+      }
+    }
   }
 
   render() {
@@ -2775,7 +2805,8 @@ export class Game {
     this.uiPanel = this.survival.phase === 'day' ? 'survival-day'
       : this.survival.phase === 'complete' ? 'survival-complete'
         : this.survival.phase === 'failed' ? 'survival-failed' : null;
-    this.input.gameplay = this.survival.phase === 'night' && !this.uiPanel;
+    this.input.gameplay = this.survival.phase === 'night' && !this.uiPanel
+      || this.survival.phase === 'day';
   }
 
   handleSurvivalUIInput() {
@@ -2797,10 +2828,13 @@ export class Game {
       }
     }
 
+    const dayWalk = this.screen === 'playing' && this.survival.phase === 'day';
     const uiActive = this.screen === 'paused' || (this.screen === 'playing' && !!this.uiPanel);
     if (!uiActive) { this.uiIndex = 0; input.uiTap = null; return; }
-    if (input.keys.up && !this._navUp) { this.uiIndex = Math.max(0, this.uiIndex - 1); this.usingKeyboard = true; }
-    if (input.keys.down && !this._navDown) { this.uiIndex = Math.min(99, this.uiIndex + 1); this.usingKeyboard = true; }
+    if (!dayWalk) {
+      if (input.keys.up && !this._navUp) { this.uiIndex = Math.max(0, this.uiIndex - 1); this.usingKeyboard = true; }
+      if (input.keys.down && !this._navDown) { this.uiIndex = Math.min(99, this.uiIndex + 1); this.usingKeyboard = true; }
+    }
     this._navUp = input.keys.up; this._navDown = input.keys.down;
     if (input.uiTap) {
       const tap = input.uiTap;
@@ -2808,8 +2842,9 @@ export class Game {
       const hit = [...this.ui].reverse().find((item) => !item.disabled
         && tap.x > item.x && tap.x < item.x + item.w && tap.y > item.y && tap.y < item.y + item.h);
       if (hit && hit.onClick) { this.audio.play('uiConfirm', { vol: 0.42 }); hit.onClick(); }
+      else if (dayWalk) this.survival.selectRoomAtScreen(tap.x, tap.y);
     }
-    if (input.keys.confirm && !this._confirmHeld) {
+    if (!dayWalk && input.keys.confirm && !this._confirmHeld) {
       this._confirmHeld = true;
       const item = this.ui[this.uiIndex];
       if (item && item.onClick && !item.disabled) item.onClick();

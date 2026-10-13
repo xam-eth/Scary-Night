@@ -229,13 +229,37 @@ async function runSurvivalMilestone() {
     && waveSchedule[0].swarms.map((wave) => wave.count).join(',') === '7,7,8'
     && waveSchedule[1].swarms.map((wave) => wave.count).join(',') === '8,9,9'
     && waveSchedule[2].swarms.map((wave) => wave.count).join(',') === '10,10,10'
-    && waveSchedule.map((row) => row.spawnedSwarms).join(',') === '60,60,60'
+    && waveSchedule.map((row) => row.spawnedSwarms).join(',') === '22,26,30'
     && waveSchedule.map((row) => row.swarmHp).join(',') === '48,54,60'
     && waveSchedule.map((row) => row.spawnedBreakers).join(',') === '0,1,2'
     && waveSchedule.every((row) => row.spawnedIndividuals === 2
       && row.individuals.join(',') === '0,1'
-      && row.spawnedSwarms === row.swarms.length * 20);
-  console.log(`  ${waveSchedulePass ? 'PASS' : 'FAIL'}  Night 1–3 waves: requested ${waveSchedule.map((row) => row.swarms.map((wave) => wave.count).join('/')).join(' → ')}; actual Swarm ${waveSchedule.map((row) => row.spawnedSwarms).join('/')} (20/wave, HP ${waveSchedule.map((row) => row.swarmHp).join('→')}), Breaker ${waveSchedule.map((row) => row.spawnedBreakers).join('/')} (parameter weights clamp to 20 bodies per wave)`);
+      && row.spawnedSwarms === row.swarms.reduce((sum, wave) => sum + wave.count, 0));
+  console.log(`  ${waveSchedulePass ? 'PASS' : 'FAIL'}  Night 1–3 waves: requested ${waveSchedule.map((row) => row.swarms.map((wave) => wave.count).join('/')).join(' → ')}; actual Swarm ${waveSchedule.map((row) => row.spawnedSwarms).join('/')} (HP ${waveSchedule.map((row) => row.swarmHp).join('→')}), Breaker ${waveSchedule.map((row) => row.spawnedBreakers).join('/')}`);
+
+  survivalGame.survival.restart();
+  const tel = survivalGame.survival;
+  tel.elapsed = tel.nightDuration * 0.08 - 2;
+  tel.waveIndex = 0;
+  tel.updateWaves();
+  const telegraphArmed = !!(tel.incoming && tel.incoming.kind === 'swarm' && tel.incoming.in > 1.4 && tel.incoming.in <= 3.05 && tel.incoming.entranceId);
+  tel.elapsed = tel.nightDuration * 0.08;
+  tel.updateWaves();
+  const telegraphSpawned = survivalGame.enemies.filter((enemy) => enemy._survivalType === 'swarm').length === 7 && !tel.incoming;
+  console.log(`  ${telegraphArmed && telegraphSpawned ? 'PASS' : 'FAIL'}  Wave telegraph warns ~3s before spawn then still drops 7 Swarm on schedule (eta ${tel.incoming ? tel.incoming.in : 'cleared'})`);
+
+  survivalGame.survival.restart();
+  resetControls();
+  const ftueMode = survivalGame.survival;
+  tick(8);
+  const ftueMove = ftueMode.ftue.step === 'move';
+  tick(6 * 60);
+  const ftueLight = ftueMode.ftue.step === 'light' || ftueMode.ftue.step === 'flare';
+  tick(20 * 60);
+  const ftueDone = ftueMode.ftue.step === 'done' && ftueMode.ftueDone;
+  const snap = ftueMode.getNightSnapshot();
+  const hudSnap = snap.hunterHp > 0 && snap.waveMax === 3 && 'incoming' in snap;
+  console.log(`  ${ftueMove && ftueLight && ftueDone && hudSnap ? 'PASS' : 'FAIL'}  Night-1 FTUE move→light→flare completes without input (${ftueMode.ftue.step}) and snapshot exposes HP/wave/incoming`);
 
   // Compare real enemy update paths on either side of the Perapian boundary.
   survivalGame.survival.restart();
@@ -414,6 +438,113 @@ async function runSurvivalMilestone() {
     && skillTarget.staggerT > 0 && survivalGame.survival.skillCooldown > 0);
   console.log(`  ${hunterSkill ? 'PASS' : 'FAIL'}  Hunter's Flare skill damages/staggers in radius and respects cooldown (${skillHp} → ${skillTarget.hp} HP)`);
 
+  survivalGame.survival.restart();
+  resetControls();
+  const hearthMode = survivalGame.survival;
+  const hearthFire = survivalGame.mansion.fireplaceLight;
+  const fullRadius = hearthMode.getFireRadius();
+  hearthMode.oilBurned = 99;
+  hearthMode.oil = 0;
+  const floorRadius = hearthMode.getFireRadius();
+  const hearthFloorPass = fullRadius > 900 && floorRadius > 400 && floorRadius < fullRadius
+    && hearthMode.isLit(hearthFire.x, hearthFire.y);
+  hearthMode.oil = 20;
+  hearthMode.oilBurned = 8;
+  hearthMode.ftue.step = 'done';
+  survivalGame.player.x = hearthFire.x;
+  survivalGame.player.y = hearthFire.y;
+  const fed = hearthMode.tryFeedHearth();
+  const hearthFeedPass = !!(fed && hearthMode.oil === 14 && Math.abs(hearthMode.oilBurned - 3) < 0.01);
+  console.log(`  ${hearthFloorPass && hearthFeedPass ? 'PASS' : 'FAIL'}  Night-1 Hearth radius floor ${Math.round(floorRadius)} (full ${Math.round(fullRadius)}) and oil feed 20→${hearthMode.oil}`);
+
+  const slowJob = hearthMode.jobTime(10);
+  hearthMode.survivors = 6;
+  const fastJob = hearthMode.jobTime(10);
+  const crewHp = hearthMode.crewGateHp();
+  const survivorEffectPass = Math.abs(slowJob - 10) < 0.01 && fastJob < 7.2 && crewHp === 72;
+  console.log(`  ${survivorEffectPass ? 'PASS' : 'FAIL'}  Survivors speed the builder (${slowJob.toFixed(2)}s → ${fastJob.toFixed(2)}s) and add ${crewHp} gate HP`);
+
+  hearthMode.restart();
+  resetControls();
+  survivalGame.survival.completeNight();
+  survivalGame.screen = 'playing';
+  survivalGame.uiPanel = 'survival-day';
+  const dayStart = { x: survivalGame.player.x, y: survivalGame.player.y };
+  survivalGame.input.keys.up = true;
+  tick(45);
+  survivalGame.input.keys.up = false;
+  const dayWalkPass = survivalGame.survival.phase === 'day'
+    && Math.hypot(survivalGame.player.x - dayStart.x, survivalGame.player.y - dayStart.y) > 12;
+  console.log(`  ${dayWalkPass ? 'PASS' : 'FAIL'}  Day phase walks the mansion (${survivalGame.survival.phase})`);
+
+  survivalGame.survival.restart();
+  resetControls();
+  const doorMode = survivalGame.survival;
+  const doorFire = survivalGame.mansion.fireplaceLight;
+  const door = doorMode.mainGate();
+  const doorHp = door.hp;
+  doorMode.damageEntrance(door, 20, { x: doorFire.x, y: doorFire.y });
+  const litDoorDmg = doorHp - door.hp;
+  door.hp = doorHp; door.broken = false;
+  doorMode.damageEntrance(door, 20, { x: doorFire.x + doorMode.getFireRadius() + 140, y: doorFire.y });
+  const darkDoorDmg = doorHp - door.hp;
+  door.hp = doorHp; door.broken = false;
+  const doorLightPass = litDoorDmg > 0 && darkDoorDmg > litDoorDmg;
+  console.log(`  ${doorLightPass ? 'PASS' : 'FAIL'}  Lit doors take less siege damage (${litDoorDmg.toFixed(1)} vs ${darkDoorDmg.toFixed(1)})`);
+
+  const losP = survivalGame.player;
+  let blockedSpot = null;
+  for (const room of survivalGame.mansion.roomList) {
+    for (let y = room.y + 40; y < room.y + room.h - 40 && !blockedSpot; y += 48) {
+      for (let x = room.x + 40; x < room.x + room.w - 40 && !blockedSpot; x += 48) {
+        const range = Math.hypot(x - losP.x, y - losP.y);
+        if (range < 90 || range > 560) continue;
+        if (!survivalGame.mansion.hasLOS(losP.x, losP.y, x, y)) blockedSpot = { x, y };
+      }
+    }
+  }
+  survivalGame.enemies.length = 0;
+  if (blockedSpot) {
+    survivalGame.enemies.push({
+      dead: false, removeMe: false, hp: 40, x: blockedSpot.x, y: blockedSpot.y, _survivalType: 'swarm',
+    });
+  }
+  const losBlockPass = !!blockedSpot && !doorMode.autoTarget();
+  console.log(`  ${losBlockPass ? 'PASS' : 'FAIL'}  Auto-shot refuses a wall-blocked target`);
+
+  survivalGame.survival.restart();
+  resetControls();
+  survivalGame.screen = 'playing';
+  survivalGame.uiPanel = null;
+  survivalGame.paused = false;
+  tick(30);
+  const liveElapsed = survivalGame.survival.elapsed;
+  survivalGame.screen = 'paused';
+  survivalGame.paused = true;
+  const pausedAt = survivalGame.survival.elapsed;
+  tick(45);
+  const pauseFreezePass = liveElapsed > 0.3 && Math.abs(survivalGame.survival.elapsed - pausedAt) < 1e-6;
+  survivalGame.screen = 'playing';
+  survivalGame.paused = false;
+  console.log(`  ${pauseFreezePass ? 'PASS' : 'FAIL'}  Pause freezes the Survival sim (${pausedAt.toFixed(2)}s holds)`);
+
+  survivalGame.survival.restart();
+  resetControls();
+  survivalGame.screen = 'playing';
+  survivalGame.uiPanel = null;
+  survivalGame.paused = false;
+  const holdGate = survivalGame.survival.mainGate();
+  const holdAt = holdGate && (holdGate.inside || { x: holdGate.x, y: holdGate.y - 70 });
+  if (holdAt) {
+    survivalGame.player.x = holdAt.x;
+    survivalGame.player.y = holdAt.y;
+  }
+  let holdGuard = 0;
+  while (survivalGame.survival.phase === 'night' && holdGuard++ < 60 * survivalGame.survival.nightDuration + 180) tick();
+  const holdKills = survivalGame.survival.lastRewards ? survivalGame.survival.lastRewards.kills : survivalGame.survival.nightStats.kills;
+  const hunterHoldPass = survivalGame.survival.phase === 'day' && survivalGame.player.blood > 0 && holdKills >= 1;
+  console.log(`  ${hunterHoldPass ? 'PASS' : 'FAIL'}  Hunter holds Night 1 at the gate (${holdKills} kills, HP ${Math.round(survivalGame.player.blood)}, ${survivalGame.survival.phase})`);
+
   const runScenario = (builderBot) => {
     // Pair the idle and builder night runs from an identical random stream.
     reseed(SEED + 77);
@@ -542,6 +673,8 @@ async function runSurvivalMilestone() {
   console.log(`  builder Night 3: ${builder.nightThree.peakEnemies} peak enemies / ${builder.nightThree.peakBreakers} Breakers, ${builder.nightThree.kills} kills, ${builder.nightThree.wallDamage} wall damage, gate ${builder.nightThree.gateHp} HP, Hunter ${builder.nightThree.playerHp} HP; Perapian Lv${builder.perapianLevel}, survivors ${builder.survivors}, buildings ${builder.buildings.join(',') || 'none'}, gateBuilt=${builder.gateBuilt}; ${builder.phase}`);
   const pass = waveSchedulePass && lightEffectsPass && survivalMovementPass && breakerTargetsWall
     && hunterAutoShot && hunterRealLos && hunterSkill
+    && hearthFloorPass && hearthFeedPass && survivorEffectPass && dayWalkPass
+    && doorLightPass && losBlockPass && pauseFreezePass && hunterHoldPass
     && idle.complete && builder.complete && builder.perapianLevel === 3
     && builder.queueLockVerified && builder.sawmillBuilt && builder.gateBuilt && builder.shelterBuilt
     && saveProgressPass && economyPass && builder.upgrades.map((item) => item.level).join(',') === '1,2,3'

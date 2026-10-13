@@ -60,13 +60,18 @@ export function lampFalloff(t) {
 export function staticSources(mansion) {
   const out = [];
   if (!mansion) return out;
-  for (const room of mansion.survivalLighting ? [] : (mansion.roomList || [])) {
+  const survival = !!mansion.survivalLighting;
+  for (const room of mansion.roomList || []) {
     const stone = room.floor === 'stone';
     const glass = room.floor === 'glass';
     const reach = Math.hypot(room.w, room.h) * 0.58;
+    // Survival keeps the house a night, not a void: a dim room wash so floors,
+    // doors and furniture keep a silhouette outside the Perapian pool.
     out.push({
       x: room.x + room.w / 2, y: room.y + room.h / 2, r: reach,
-      i: (glass ? 0.26 : stone ? 0.14 : 0.2),
+      i: survival
+        ? (glass ? 0.18 : stone ? 0.11 : 0.14)
+        : (glass ? 0.26 : stone ? 0.14 : 0.2),
       color: stone ? [148, 156, 174] : glass ? [180, 198, 216] : [178, 186, 202],
       type: 'wash',
     });

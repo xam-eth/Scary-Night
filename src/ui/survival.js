@@ -2,9 +2,10 @@
  * Canvas is UI-only; the mansion and every placed object remain in World3D.
  */
 
-import { clamp } from '../core/util.js';
+import { clamp, TAU } from '../core/util.js';
 import { SURVIVAL_BUILDINGS } from '../game/survival.js';
 import { pauseButtonBox } from '../game/hud.js';
+import { drawDrag, guideScale } from '../game/coach.js';
 import { drawGameIcon } from './icons.js';
 import { drawIconButton, iconButtonState, UI_TOKENS } from './components.js';
 
@@ -97,46 +98,194 @@ function drawResource(ctx, x, y, label, value, icon, width, accent) {
   ctx.restore();
 }
 
+function meter(ctx, x, y, w, h, amount, fill, back = 'rgba(234,220,188,0.16)') {
+  roundRect(ctx, x, y, w, h, 2);
+  ctx.fillStyle = back; ctx.fill();
+  const width = w * clamp(amount, 0, 1);
+  if (width > 0.5) {
+    roundRect(ctx, x, y, width, h, 2);
+    ctx.fillStyle = fill; ctx.fill();
+  }
+}
+
 function drawNightHud(game, ctx, w, h) {
   const mode = game.survival;
   const compact = w < 500 || h < 560;
   drawPause(game, ctx, w, h);
-  const titleY = compact ? 25 : 30;
+  const titleY = compact ? 22 : 30;
   text(ctx, `NIGHT ${mode.day}`, w / 2, titleY, compact ? 14 : 16, AMBER, 'center', SERIF);
-  text(ctx, timeLabel(mode.nightDuration - mode.elapsed), w / 2, titleY + 22, 12, PAPER, 'center');
+  text(ctx, timeLabel(mode.nightDuration - mode.elapsed), w / 2, titleY + 20, 12, PAPER, 'center');
 
-  const gap = 7;
-  const resourceW = Math.min(94, Math.max(72, (w - 100) / 2));
-  const rowW = resourceW * 2 + gap;
-  const startX = Math.max(62, (w - rowW) / 2);
-  const rowY = compact ? 62 : 72;
+  const gap = 6;
+  const resourceW = Math.min(88, Math.max(64, (w - 86) / 3));
+  const rowW = resourceW * 3 + gap * 2;
+  const startX = Math.max(12, (w - rowW) / 2);
+  const rowY = compact ? 56 : 68;
   drawResource(ctx, startX, rowY, 'OIL', Math.floor(mode.oil), 'lamp', resourceW, '#f0ae53');
   drawResource(ctx, startX + resourceW + gap, rowY, 'WOOD', Math.floor(mode.wood), 'plank', resourceW, '#c89a5a');
+  drawResource(ctx, startX + (resourceW + gap) * 2, rowY, 'HEARTH', mode.perapianLevel, 'lamp', resourceW, AMBER);
 
   const barW = Math.min(210, w * 0.5);
   const barX = (w - barW) / 2;
-  const barY = rowY + 37;
-  roundRect(ctx, barX, barY, barW, 4, 2);
-  ctx.fillStyle = 'rgba(234,220,188,0.18)'; ctx.fill();
-  const progress = clamp(mode.elapsed / Math.max(1, mode.nightDuration), 0, 1);
-  roundRect(ctx, barX, barY, barW * progress, 4, 2);
-  ctx.fillStyle = 'rgba(225,176,90,0.9)'; ctx.fill();
-  text(ctx, `PERAPIAN LV${mode.perapianLevel}`, w - 12, titleY + 1, 9, 'rgba(231,210,167,0.86)', 'right');
+  const barY = rowY + 36;
+  meter(ctx, barX, barY, barW, 4, mode.elapsed / Math.max(1, mode.nightDuration), 'rgba(225,176,90,0.9)');
+  const wave = Math.min(3, Math.max(1, mode.waveIndex || (mode.incoming && mode.incoming.kind === 'swarm' ? mode.incoming.wave : 1)));
+  const waveLabel = mode.waveIndex >= 3 ? 'WAVE 3/3' : `WAVE ${wave}/3`;
+  text(ctx, waveLabel, w - 12, titleY + 1, 9, 'rgba(231,210,167,0.86)', 'right');
+
+  const p = game.player;
+  const gate = mode.mainGate();
+  const hpPct = p.bloodMax > 0 ? p.blood / p.bloodMax : 0;
+  const gatePct = gate && gate.hpMax > 0 ? gate.hp / gate.hpMax : 0;
+  const hpFill = hpPct < 0.28 ? 'rgba(214,74,74,0.95)' : hpPct < 0.55 ? 'rgba(232,168,74,0.95)' : 'rgba(214,196,140,0.92)';
+  const gateFill = gate && gate.broken ? 'rgba(160,40,48,0.9)' : 'rgba(168,196,214,0.9)';
+  const statY = barY + 12;
+  const half = (rowW - gap) / 2;
+  text(ctx, 'HP', startX, statY + 6, 8, DIM, 'left');
+  meter(ctx, startX + 18, statY, half - 18, 7, hpPct, hpFill);
+  const gateX = startX + half + gap;
+  text(ctx, 'GATE', gateX, statY + 6, 8, DIM, 'left');
+  meter(ctx, gateX + 30, statY, half - 30, 7, gatePct, gateFill);
+
+  if (mode.incoming) {
+    const eta = Math.max(0, Math.ceil(mode.incoming.in));
+    const line = mode.incoming.kind === 'breaker'
+      ? `BREAKER · ${mode.incoming.label} · ${eta}s`
+      : `THEY COME · ${mode.incoming.label} · ${eta}s`;
+    const pulse = 0.72 + 0.28 * Math.abs(Math.sin((game.now || mode.elapsed) * 6));
+    ctx.save();
+    ctx.globalAlpha = pulse;
+    roundRect(ctx, w / 2 - 108, statY + 16, 216, 22, 8);
+    ctx.fillStyle = 'rgba(42,16,14,0.88)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(232,120,86,0.9)'; ctx.lineWidth = 1; ctx.stroke();
+    text(ctx, line, w / 2, statY + 27, 9, '#f0c2a0', 'center');
+    ctx.restore();
+  }
+
+  drawThreatCue(game, ctx, w, h);
+  drawFtue(game, ctx, w, h);
+  const feeding = mode.ftue && mode.ftue.step === 'done' && mode.nearHearth()
+    && mode.oil >= mode.tuning.feedOil && mode.feedCd <= 0;
+  if (feeding) drawLessonChip(ctx, w, h, 'FEED HEARTH', 'KEEP THE LIGHT');
+  const lock = mode.currentTarget && !mode.currentTarget.dead ? mode.currentTarget : null;
+  if (lock) {
+    const kind = lock._survivalType === 'breaker' ? 'BREAKER' : lock._survivalType === 'individual' ? 'ZOMBIE' : 'SWARM';
+    text(ctx, `LOCK · ${kind}`, w / 2, statY + (mode.incoming ? 48 : 22), 8, AMBER, 'center');
+  }
+}
+
+function drawThreatCue(game, ctx, w, h) {
+  const mode = game.survival;
+  const mark = mode.threatPoint && mode.threatPoint();
+  if (!mark || !game.renderer.worldToScreen) return;
+  const view = game.renderer.view || { left: 0, top: 0, w, h };
+  const sp = game.renderer.worldToScreen(mark.x, mark.y);
+  const pad = 36;
+  const on = sp.x > view.left + pad && sp.x < view.left + view.w - pad
+    && sp.y > view.top + 88 && sp.y < view.top + view.h - 120;
+  if (on && !mark.incoming) return;
+  const cx = view.left + view.w / 2;
+  const cy = view.top + view.h / 2;
+  const ang = Math.atan2(sp.y - cy, sp.x - cx);
+  const dx = Math.cos(ang), dy = Math.sin(ang);
+  const hx = view.w / 2 - 40, hy = view.h / 2 - 96;
+  const tx = Math.abs(dx) > 0.001 ? hx / Math.abs(dx) : 1e9;
+  const ty = Math.abs(dy) > 0.001 ? hy / Math.abs(dy) : 1e9;
+  const t = Math.min(tx, ty);
+  const x = on ? sp.x : cx + dx * t;
+  const y = on ? sp.y - 28 : cy + dy * t;
+  const pulse = 0.7 + 0.3 * Math.abs(Math.sin((game.now || mode.elapsed) * 5));
+  ctx.save();
+  ctx.globalAlpha = pulse;
+  ctx.translate(x, y);
+  ctx.rotate(on ? -Math.PI / 2 : ang);
+  ctx.fillStyle = mark.incoming ? '#e88962' : '#e4bd73';
+  ctx.beginPath();
+  ctx.moveTo(14, 0); ctx.lineTo(-8, -7); ctx.lineTo(-8, 7);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+  ctx.save();
+  ctx.globalAlpha = pulse;
+  text(ctx, mark.label, x - dx * 18, y - dy * 18 - 2, 8, mark.incoming ? '#f0c2a0' : AMBER, 'center');
+  ctx.restore();
+}
+
+function drawLessonChip(ctx, w, h, title, sub) {
+  ctx.save();
+  ctx.font = `600 12px ${MONO}`;
+  const tw = Math.max(ctx.measureText(title).width, ctx.measureText(sub).width * 0.92);
+  const bw = Math.min(w - 24, tw + 28);
+  const bh = 38;
+  const x = (w - bw) / 2;
+  const y = Math.min(h - 210, h * 0.62);
+  roundRect(ctx, x, y, bw, bh, 10);
+  ctx.fillStyle = 'rgba(8,7,6,0.9)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(240,208,120,0.9)'; ctx.lineWidth = 1.5; ctx.stroke();
+  text(ctx, title, w / 2, y + 13, 11, AMBER, 'center');
+  text(ctx, sub, w / 2, y + 27, 9, PAPER, 'center');
+  ctx.restore();
+}
+
+function drawFtue(game, ctx, w, h) {
+  const mode = game.survival;
+  const lesson = mode.ftue;
+  if (!lesson || lesson.step === 'done' || mode.day !== 1 || mode.phase !== 'night') return;
+  const input = game.input;
+  const gs = guideScale(w, h);
+  if (lesson.step === 'move') {
+    const s = input && input.stick;
+    const hx = (s && s.homeX) || w * 0.16;
+    const hy = (s && s.homeY) || h - 120;
+    const hr = (s && s.r) || 52;
+    drawDrag(ctx, hx, hy, hr, game.now || mode.elapsed, gs);
+    drawLessonChip(ctx, w, h, 'MOVE', 'DRAG TO WALK');
+    return;
+  }
+  if (lesson.step === 'light') {
+    drawLessonChip(ctx, w, h, 'HEARTH', 'SAFE ZONE — THEY WEAKEN HERE');
+    return;
+  }
+  if (lesson.step === 'flare') {
+    const b = input && input.buttons && input.buttons.interact;
+    if (b && !b.hidden) {
+      const pulse = 0.55 + 0.45 * Math.abs(Math.sin((game.now || mode.elapsed) * 5));
+      ctx.save();
+      ctx.strokeStyle = `rgba(240, 208, 120, ${0.55 + pulse * 0.4})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r + 7 + pulse * 3, 0, TAU);
+      ctx.stroke();
+      ctx.restore();
+    }
+    drawLessonChip(ctx, w, h, 'FLARE', 'PUSH THEM BACK');
+  }
+}
+
+export function dayPanelHeight(h) {
+  return Math.min(360, Math.max(296, h * 0.47));
 }
 
 function drawDayPanel(game, ctx, w, h) {
+  drawPause(game, ctx, w, h);
   const mode = game.survival;
-  const panelH = Math.min(360, Math.max(296, h * 0.47));
+  const panelH = dayPanelHeight(h);
   const panelY = h - panelH;
   const inset = 12;
   const innerW = w - inset * 2;
   const roomPageSize = 6;
   const rooms = mode.buildableRooms();
   const pages = Math.max(1, Math.ceil(rooms.length / roomPageSize));
+  if (mode.selectedRoom) {
+    const selectedIdx = rooms.findIndex((room) => room.id === mode.selectedRoom);
+    if (selectedIdx >= 0) mode.roomPage = Math.floor(selectedIdx / roomPageSize);
+  }
   mode.roomPage = clamp(mode.roomPage || 0, 0, pages - 1);
   const pageRooms = rooms.slice(mode.roomPage * roomPageSize, (mode.roomPage + 1) * roomPageSize);
-  const selected = pageRooms.find((room) => room.id === mode.selectedRoom) || pageRooms[0] || null;
-  if (selected && mode.selectedRoom !== selected.id) mode.selectedRoom = selected.id;
+  let selected = rooms.find((room) => room.id === mode.selectedRoom) || null;
+  if (!selected) {
+    selected = pageRooms[0] || rooms[0] || null;
+    if (selected) mode.selectedRoom = selected.id;
+  }
 
   ctx.save();
   const gradient = ctx.createLinearGradient(0, panelY, 0, h);
@@ -151,12 +300,15 @@ function drawDayPanel(game, ctx, w, h) {
   text(ctx, `DAY ${mode.day}  ·  BUILD`, inset, panelY + 20, 14, AMBER, 'left', SERIF);
   const statY = panelY + 42;
   const statFont = w < 440 ? 9 : 10;
-  text(ctx, `OIL ${Math.floor(mode.oil)}   WOOD ${Math.floor(mode.wood)}   SURVIVORS ${mode.survivors}`, w - inset, statY, statFont, PAPER, 'right');
+  text(ctx, mode.hearthLabel(), inset, statY, 10, AMBER, 'left');
+  const speedPct = Math.round((mode.builderSpeedMul() - 1) * 100);
+  const crewNote = speedPct > 0 ? ` · +${speedPct}% BUILD` : ` · +${mode.crewGateHp()} GATE`;
+  text(ctx, `OIL ${Math.floor(mode.oil)}   WOOD ${Math.floor(mode.wood)}   SURVIVORS ${mode.survivors}${crewNote}`, w - inset, statY, statFont, PAPER, 'right');
 
   const queueY = panelY + 64;
   if (mode.builderJob) {
     const job = mode.builderJob;
-    const name = job.kind === 'perapian' ? `PERAPIAN LV${job.targetLevel}`
+    const name = job.kind === 'perapian' ? mode.hearthLabel(job.targetLevel)
       : job.kind === 'gate' ? 'REINFORCED GATE'
         : (SURVIVAL_BUILDINGS[job.type]?.label || job.type.toUpperCase());
     text(ctx, `BUILDER · ${name} · ${job.remaining.toFixed(1)}s`, inset, queueY, 9, '#e3d3ac');
@@ -167,12 +319,15 @@ function drawDayPanel(game, ctx, w, h) {
     const amount = 1 - clamp(job.remaining / Math.max(0.01, job.duration), 0, 1);
     roundRect(ctx, barX, queueY - 3, barW * amount, 5, 2);
     ctx.fillStyle = 'rgba(230,185,99,0.9)'; ctx.fill();
+  } else if (mode.lastRewards) {
+    const reward = mode.lastRewards;
+    text(ctx, `LAST NIGHT · +${Math.round(reward.oil)} OIL · +${Math.round(reward.wood)} WOOD · ${reward.kills} KILLS`, inset, queueY, 9, '#e3d3ac');
   } else {
     text(ctx, 'BUILDER QUEUE · IDLE', inset, queueY, 9, DIM);
   }
 
   const slotsY = panelY + 88;
-  text(ctx, `LIT ROOMS · ${rooms.length} SLOTS · SELECT THEN BUILD`, inset, slotsY, 9, '#bcb19a');
+  text(ctx, `SAFE ZONE · ${rooms.length} ROOMS · WALK THE HOUSE · TAP A GLOWING SLOT`, inset, slotsY, 9, '#bcb19a');
   const cardGap = 6;
   const cardW = (innerW - cardGap) / 2;
   const cardH = 31;
@@ -194,7 +349,7 @@ function drawDayPanel(game, ctx, w, h) {
     ctx.save();
     roundRect(ctx, inset, cardsTop, innerW, cardH, 7);
     ctx.fillStyle = 'rgba(18,20,24,0.76)'; ctx.fill();
-    text(ctx, 'NO EMPTY LIT ROOM · PERAPIAN UPGRADE OPENS MORE', w / 2, cardsTop + cardH / 2, 8, DIM, 'center');
+    text(ctx, 'NO SAFE ROOM · UPGRADE THE HEARTH TO LIGHT MORE', w / 2, cardsTop + cardH / 2, 8, DIM, 'center');
     ctx.restore();
   }
 
@@ -232,7 +387,7 @@ function drawDayPanel(game, ctx, w, h) {
   const upgrade = mode.buildingCost('perapian');
   const canUpgrade = !!upgrade && mode.oil >= upgrade.oil && mode.wood >= upgrade.wood;
   addButton(game, ctx, { x: inset, y: actionsY, w: actionW, h: 36 },
-    mode.perapianLevel >= 3 ? 'PERAPIAN · MAX' : `UPGRADE · ${upgrade ? upgrade.oil : 0}O ${upgrade ? upgrade.wood : 0}W`,
+    mode.perapianLevel >= 3 ? 'HEARTH · MAX' : `HEARTH LV${mode.perapianLevel + 1} · ${upgrade ? upgrade.oil : 0}O/${upgrade ? upgrade.wood : 0}W`,
     () => mode.startBuild('perapian'),
     { disabled: busy || !canUpgrade, fontSize: w < 430 ? 8 : 9, color: AMBER });
   addButton(game, ctx, { x: inset + actionW + actionGap, y: actionsY, w: actionW, h: 36 },
@@ -278,7 +433,7 @@ function drawEndPanel(game, ctx, w, h, failed = false) {
     text(ctx, game.survival.failureReason || 'THE HUNTER FELL', w / 2, y + 74, 10, PAPER, 'center');
   } else {
     const reward = game.survival.lastRewards || { oil: 0, wood: 0, kills: 0 };
-    text(ctx, `FINAL PERAPIAN · LV${game.survival.perapianLevel}`, w / 2, y + 73, 10, PAPER, 'center');
+    text(ctx, `HEARTH HELD · ${game.survival.hearthLabel()}`, w / 2, y + 73, 10, PAPER, 'center');
     text(ctx, `+${reward.oil} OIL · +${reward.wood} WOOD · ${reward.kills} KILLS`, w / 2, y + 96, 9, DIM, 'center');
   }
   addButton(game, ctx, { x: x + 28, y: y + 132, w: boxW - 56, h: 42 }, 'PLAY AGAIN',
