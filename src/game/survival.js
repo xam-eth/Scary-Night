@@ -1518,7 +1518,7 @@ export class SurvivalMode {
     const p = g.player;
     g.renderer.applyLookPan(g.input);
     const lookX = clamp(p.vx * 0.18, -56, 56);
-    const lookY = clamp(p.vy * 0.18, -56, 56);
+    const lookY = this.phase === 'day' ? 170 : clamp(p.vy * 0.18, -56, 56);
     g.renderer.followCamera(p.x, p.y, dt, lookX, lookY, g.mansion.camBounds);
   }
 

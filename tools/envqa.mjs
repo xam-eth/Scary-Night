@@ -219,6 +219,36 @@ async function survivalFtueSection() {
   check(dawn.phase === 'day' && dawn.day === 2 && dawn.nights === 1,
     `Night 1 clock reaches dawn and flips to Day 2 (${dawn.phase}, day ${dawn.day}, ${dawn.steps} steps)`);
 
+  const hearthShot = await page.evaluate(() => {
+    const g = window.__LN, world = window.__survWorld;
+    const fire = g.mansion.fireplaceLight;
+    if (fire) {
+      g.player.x = fire.x + 55;
+      g.player.y = fire.y + 110;
+      if (g.renderer.snapCamera) g.renderer.snapCamera(g.player.x, g.player.y);
+    }
+    g.survival.oil = 40;
+    g.survival.refreshFireplace(true);
+    g.render();
+    const lit = !!(world.survivalHearthFire && world.survivalHearthFire.userData.flames
+      && world.survivalHearthFire.userData.flames.visible);
+    return { lit, kit: !!(world.survivalHearthFire && world.survivalHearthFire.userData.kit) };
+  });
+  await page.screenshot({ path: path.join(evidenceDir, 'survival-hearth-lit.png'), type: 'png' });
+  const hearthOut = await page.evaluate(() => {
+    const g = window.__LN, world = window.__survWorld;
+    g.survival.oil = 0;
+    g.survival.refreshFireplace(true);
+    g.render();
+    const flames = world.survivalHearthFire && world.survivalHearthFire.userData.flames;
+    const smoke = world.survivalHearthFire && world.survivalHearthFire.userData.smoke;
+    return { flames: !!(flames && flames.visible), smoke: !!(smoke && smoke.visible) };
+  });
+  await page.screenshot({ path: path.join(evidenceDir, 'survival-hearth-out.png'), type: 'png' });
+  check(hearthShot.lit && !hearthOut.flames && hearthOut.smoke,
+    `Hearth fire is a visible pit (kit=${hearthShot.kit}): flames on with oil, smoke when oil is gone`);
+  await page.evaluate(() => { const g = window.__LN; g.survival.oil = 80; g.survival.refreshFireplace(true); });
+
   const built = await page.evaluate(() => {
     const g = window.__LN;
     g.survival.oil = 80; g.survival.wood = 80; g.survival.survivors = 2;

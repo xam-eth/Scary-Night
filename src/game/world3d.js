@@ -6,7 +6,7 @@
  */
 import * as THREE from '../vendor/three/three.module.min.js';
 import { ISO_CAMERA, clamp, visualAngle } from '../core/util.js';
-import { EnvKit, PX_PER_METRE, VALEN_METRES, HUNTER_SCALE } from './envkit.js';
+import { EnvKit, PX_PER_METRE, VALEN_METRES, HUNTER_SCALE, PIECE_METRES } from './envkit.js';
 import { Valen3D } from './valen3d.js';
 import { Enemy3D, enemyWorldHeight } from './enemy3d.js';
 import { ROOM_MARKS } from './narrative.js';
@@ -506,13 +506,18 @@ class World3DRuntime {
 
     const fire = game.mansion.fireplaceLight;
     if (this.hearthLight) {
-      const lit = !!(survival && fire && (fire.curI == null ? fire.i : fire.curI) > 0.02);
+      const oilOn = !!(survival && fire && game.survival && game.survival.oil > 0 && game.survival.phase !== 'failed');
+      const dying = !!(survival && fire && game.survival && game.survival.oil <= 0 && game.survival.phase !== 'failed'
+        && (fire.curI == null ? fire.i : fire.curI) > 0.02);
+      const lit = oilOn || dying;
       this.hearthLight.visible = lit;
-      if (lit) {
-        this.hearthLight.position.set(fire.x, 78, fire.y);
-        this.hearthLight.distance = day ? 560 : 720;
-        this.hearthLight.intensity = (fire.curI == null ? fire.i : fire.curI) * (day ? 4.4 : 7.6);
-        this.hearthLight.color.set(0xff9a52);
+      if (lit && fire) {
+        this.hearthLight.position.set(fire.x, oilOn ? 86 : 28, fire.y);
+        this.hearthLight.distance = oilOn ? (day ? 560 : 720) : 180;
+        this.hearthLight.intensity = oilOn
+          ? (fire.curI == null ? fire.i : fire.curI) * (day ? 4.8 : 8.2)
+          : 0.55;
+        this.hearthLight.color.set(oilOn ? 0xff9a52 : 0x7a3a18);
       } else {
         this.hearthLight.intensity = 0;
       }
@@ -1007,26 +1012,103 @@ class World3DRuntime {
   _makeSurvivalHearthFire() {
     const group = new THREE.Group();
     group.name = 'survival-hearth-fire-3d';
-    const addFlame = (x, h, color, opacity) => {
-      const flame = new THREE.Mesh(
-        new THREE.ConeGeometry(10, h, 6, 1, true),
-        new THREE.MeshBasicMaterial({
-          color, transparent: true, opacity,
-          blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false,
-        }),
-      );
-      flame.position.set(x, h * 0.5, 8);
-      group.add(flame);
+    group.userData.hearthV2 = true;
+    const wood = new THREE.MeshStandardMaterial({ color: 0x3a2416, roughness: 1, flatShading: true });
+    const char = new THREE.MeshStandardMaterial({ color: 0x1a1410, roughness: 1, flatShading: true });
+    const emberMat = new THREE.MeshBasicMaterial({ color: 0xff6a22, transparent: true, opacity: 0.9, toneMapped: false });
+    const pit = new THREE.Group();
+    pit.name = 'hearth-logs-3d';
+    const ash = new THREE.Mesh(new THREE.CylinderGeometry(22, 26, 6, 8), char);
+    ash.position.set(0, 4, 6);
+    pit.add(ash);
+    for (let i = 0; i < 5; i++) {
+      const log = new THREE.Mesh(new THREE.CylinderGeometry(5.5, 6.5, 40, 6), wood);
+      log.position.set((i - 2) * 7, 8, 4 + (i % 2) * 6);
+      log.rotation.z = Math.PI / 2;
+      log.rotation.y = (i - 2) * 0.28;
+      log.castShadow = true;
+      pit.add(log);
+    }
+    group.add(pit);
+
+    const embers = new THREE.Group();
+    embers.name = 'hearth-embers-3d';
+    for (const [x, z, s] of [[-8, 4, 7], [6, 8, 6], [0, 2, 9], [10, 0, 5], [-6, 10, 5]]) {
+      const coal = new THREE.Mesh(new THREE.SphereGeometry(s * 0.45, 6, 5), emberMat.clone());
+      coal.position.set(x, 7, z);
+      embers.add(coal);
+    }
+    group.add(embers);
+
+    const flameMat = (color, opacity) => new THREE.MeshBasicMaterial({
+      color, transparent: true, opacity,
+      blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false,
+    });
+    const flames = new THREE.Group();
+    flames.name = 'hearth-flames-3d';
+    const addCone = (x, h, color, opacity, z = 6) => {
+      const flame = new THREE.Mesh(new THREE.ConeGeometry(14, h, 7, 1, true), flameMat(color, opacity));
+      flame.position.set(x, 10 + h * 0.45, z);
+      flames.add(flame);
       return flame;
     };
-    group.userData = {
-      inner: addFlame(0, 54, 0xfff0c0, 0.9),
-      mid: addFlame(-9, 40, 0xff9a3a, 0.72),
-      outer: addFlame(10, 36, 0xff6a22, 0.6),
-    };
-    group.visible = false;
+    addCone(0, 92, 0xfff4c4, 0.95);
+    addCone(-12, 70, 0xff9a32, 0.8);
+    addCone(14, 64, 0xff6a18, 0.72);
+    addCone(-4, 50, 0xffc078, 0.7, 14);
+    addCone(8, 46, 0xff8028, 0.65, 0);
+    const sheet = new THREE.PlaneGeometry(48, 96);
+    for (const yaw of [0, Math.PI / 2]) {
+      const plane = new THREE.Mesh(sheet, flameMat(0xffb45c, 0.55));
+      plane.position.set(0, 52, 6);
+      plane.rotation.y = yaw;
+      flames.add(plane);
+    }
+    group.add(flames);
+
+    const smoke = new THREE.Group();
+    smoke.name = 'hearth-smoke-3d';
+    const smokeMat = new THREE.MeshBasicMaterial({
+      color: 0x4a4640, transparent: true, opacity: 0.28, depthWrite: false, toneMapped: false,
+    });
+    for (const [x, h] of [[-6, 70], [8, 86], [0, 100]]) {
+      const puff = new THREE.Mesh(new THREE.ConeGeometry(16, h, 6, 1, true), smokeMat.clone());
+      puff.position.set(x, 18 + h * 0.35, 4);
+      smoke.add(puff);
+    }
+    smoke.visible = false;
+    group.add(smoke);
+
+    group.userData = { hearthV2: true, pit, embers, flames, smoke, torches: [] };
     this.root.add(group);
     return group;
+  }
+
+  _attachHearthKit(group) {
+    if (!group || group.userData.kit || !EnvKit.ready) return;
+    const heightFor = (name, metres) => {
+      const src = EnvKit.pieces && EnvKit.pieces[name];
+      if (!src) return 1;
+      const target = (metres || 1) * PX_PER_METRE;
+      return target / Math.max(0.001, src.size.y);
+    };
+    const addPiece = (name, x, y, z, metres, yaw = 0) => {
+      const mesh = EnvKit.piece(name);
+      if (!mesh) return null;
+      const s = heightFor(name, metres);
+      mesh.scale.setScalar(s);
+      mesh.position.set(x, y, z);
+      mesh.rotation.y = yaw;
+      group.add(mesh);
+      return mesh;
+    };
+    const left = addPiece('torch', -32, 0, -10, PIECE_METRES.torch || 1.5, 0.2);
+    const right = addPiece('torch', 32, 0, -10, PIECE_METRES.torch || 1.5, -0.2);
+    addPiece('barrel', -18, 0, 18, 0.42, 0.4);
+    addPiece('barrel', 16, 0, 16, 0.38, -0.6);
+    addPiece('crate', 0, 0, 22, 0.28, 0.15);
+    group.userData.torches = [left, right].filter(Boolean);
+    group.userData.kit = true;
   }
 
   _makeSurvivalSlotRing() {
@@ -1134,11 +1216,11 @@ class World3DRuntime {
     const fire = game.mansion.fireplaceLight;
     if (!this.survivalRadiusRing) this.survivalRadiusRing = this._makeSurvivalRadiusRing();
     const radius = mode.getFireRadius();
-    this.survivalRadiusRing.visible = radius > 0;
+    this.survivalRadiusRing.visible = radius > 0 && mode.oil > 0 && mode.phase === 'night';
     if (fire) {
       this.survivalRadiusRing.position.set(fire.x, 3.4, fire.y);
       this.survivalRadiusRing.scale.set(radius, radius, radius);
-      this.survivalRadiusRing.material.opacity = 0.5;
+      this.survivalRadiusRing.material.opacity = 0.16;
     }
 
     if (!this.survivalTargetRing) this.survivalTargetRing = this._makeSurvivalTargetRing();
@@ -1152,18 +1234,41 @@ class World3DRuntime {
       this.survivalTargetRing.material.opacity = 0.72 + 0.22 * Math.abs(Math.sin((game.now || 0) * 6));
     }
 
+    if (this.survivalHearthFire && !this.survivalHearthFire.userData.hearthV2) {
+      this.root.remove(this.survivalHearthFire);
+      this.survivalHearthFire = null;
+    }
     if (!this.survivalHearthFire) this.survivalHearthFire = this._makeSurvivalHearthFire();
-    const hearthOn = !!(fire && radius > 0 && mode.phase !== 'failed');
-    this.survivalHearthFire.visible = hearthOn;
-    if (hearthOn) {
+    this._attachHearthKit(this.survivalHearthFire);
+    const hearthState = mode.phase === 'failed' || radius <= 0 ? 'out'
+      : mode.oil <= 0 ? 'dying' : 'lit';
+    this.survivalHearthFire.visible = !!fire;
+    if (fire) {
       const now = game.now || mode.elapsed || 0;
       this.survivalHearthFire.position.set(fire.x, 0, fire.y);
-      const lift = 0.94 + 0.06 * Math.sin(now * 2.1);
-      this.survivalHearthFire.scale.set(1, lift, 1);
-      const heat = mode.oil > 0 ? 1 : 0.62;
-      this.survivalHearthFire.userData.inner.material.opacity = 0.88 * heat;
-      this.survivalHearthFire.userData.mid.material.opacity = 0.7 * heat;
-      this.survivalHearthFire.userData.outer.material.opacity = 0.55 * heat;
+      const { flames, embers, smoke, torches } = this.survivalHearthFire.userData;
+      const flicker = 0.92 + 0.08 * Math.sin(now * 9.4);
+      if (flames) {
+        flames.visible = hearthState === 'lit';
+        flames.scale.set(1, hearthState === 'lit' ? flicker : 0.2, 1);
+      }
+      if (embers) {
+        embers.visible = hearthState !== 'out';
+        const glow = hearthState === 'lit' ? 0.95 : 0.32;
+        for (const coal of embers.children) {
+          if (coal.material) coal.material.opacity = glow * (0.7 + 0.3 * Math.abs(Math.sin(now * 6 + coal.position.x)));
+        }
+      }
+      if (smoke) {
+        smoke.visible = hearthState !== 'lit';
+        smoke.position.y = 6 + Math.sin(now * 0.8) * 3;
+        for (const puff of smoke.children) {
+          if (puff.material) puff.material.opacity = hearthState === 'out' ? 0.22 : 0.34;
+        }
+      }
+      for (const torch of torches || []) {
+        if (torch) torch.visible = hearthState !== 'out';
+      }
     }
 
     if (!this.survivalFlare) this.survivalFlare = this._makeSurvivalFlare();
@@ -1229,7 +1334,7 @@ class World3DRuntime {
     const activeBuildings = new Set();
     for (const [roomId, type] of Object.entries(mode.buildings)) {
       const room = mode.plotById(roomId);
-      if (!room) continue;
+      if (!room || room.kind !== 'yard') continue;
       activeBuildings.add(roomId);
       let mesh = this.survivalBuildingMeshes.get(roomId);
       if (!mesh || mesh.userData.type !== type) {

@@ -2683,8 +2683,10 @@ export class Game {
       const phone = w < 840 || h < 500;
       const stick = this.input && this.input.stick;
       const stickTop = stick ? ((stick.homeY || h - 120) - stick.r) : h - 80;
-      // One chip, above the thumbs. Never a stack across the middle of the room.
-      const y = phone ? Math.min(stickTop - 36, h - 176) : h * 0.72;
+      // Survival captions sit under the resource dock so dawn text is not
+      // lost in the palisade trees. Hunt still uses the thumb-safe band.
+      const y = this.mode === 'survival' ? 78
+        : phone ? Math.min(stickTop - 36, h - 176) : h * 0.72;
       const maxW = Math.min(framed ? view.w - 28 : w * 0.72, phone ? 280 : 560);
       const fontPx = phone ? 12 : 14;
       ctx.font = `500 ${fontPx}px "Special Elite", "Courier New", monospace`;
