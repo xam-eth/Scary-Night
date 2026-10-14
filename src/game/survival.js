@@ -9,7 +9,7 @@
 import { clamp, damp, dist, rand, writeSave } from '../core/util.js';
 import { SURVIVAL_TUNING } from '../core/config.js';
 import { CrowdBody, Zombie, crowdSpot, outwardOf, CROWD, ESTATE } from './enemies.js';
-import { ROOM } from './mansion.js';
+import { ROOM, mansionRoomPlan } from './mansion.js';
 
 const RESOURCE_CAP = 999;
 const SAVE_EVERY = 2.5;
@@ -23,10 +23,21 @@ const DOOR_LABELS = Object.freeze({
 });
 
 export const SURVIVAL_BUILDINGS = Object.freeze({
-  extractor: Object.freeze({ id: 'extractor', label: 'OIL EXTRACTOR', oil: 2, wood: 10, seconds: 7, produces: { oil: 6 } }),
-  sawmill: Object.freeze({ id: 'sawmill', label: 'SAWMILL', oil: 2, wood: 10, seconds: 7, produces: { wood: 7 } }),
-  shelter: Object.freeze({ id: 'shelter', label: 'SURVIVOR SHELTER', oil: 4, wood: 14, seconds: 9, produces: { survivors: 1 } }),
+  extractor: Object.freeze({ id: 'extractor', label: 'OIL PRESS', oil: 2, wood: 10, seconds: 7, produces: { oil: 6 } }),
+  sawmill: Object.freeze({ id: 'sawmill', label: 'LUMBER WING', oil: 2, wood: 10, seconds: 7, produces: { wood: 7 } }),
+  shelter: Object.freeze({ id: 'shelter', label: 'CREW DORM', oil: 4, wood: 14, seconds: 9, produces: { survivors: 1 } }),
 });
+
+export const SURVIVAL_START_ROOMS = Object.freeze(['hall', 'library']);
+
+/** Adjacent plots the keep can grow into. A building both unlocks the room and gives it a job. */
+export const SURVIVAL_WINGS = Object.freeze([
+  Object.freeze({ roomId: 'dining', requires: Object.freeze(['hall']), label: 'DINING WING' }),
+  Object.freeze({ roomId: 'study', requires: Object.freeze(['hall']), label: 'STUDY' }),
+  Object.freeze({ roomId: 'oratory', requires: Object.freeze(['library']), label: 'CREW DORM' }),
+  Object.freeze({ roomId: 'kitchen', requires: Object.freeze(['dining']), label: 'KITCHEN' }),
+  Object.freeze({ roomId: 'basement', requires: Object.freeze(['hall']), label: 'CELLAR' }),
+]);
 
 function freshProgress(duration = SURVIVAL_TUNING.nightSeconds) {
   return {
@@ -383,6 +394,7 @@ export class SurvivalMode {
     this.incoming = null;
     this.ftue = { step: 'move', t: 0, originX: 0, originY: 0 };
     this.ftueDone = false;
+    this.buildMenuOpen = false;
     this._telegraphEntrance = null;
     this._telegraphWave = -1;
     this._telegraphSounded = false;
@@ -478,7 +490,30 @@ export class SurvivalMode {
     }
   }
 
+  unlockedRoomIds() {
+    const ids = new Set(SURVIVAL_START_ROOMS);
+    for (const roomId of Object.keys(this.buildings || {})) ids.add(roomId);
+    return ids;
+  }
+
+  plotById(roomId) {
+    const live = this.game.mansion.roomList.find((item) => item.id === roomId);
+    if (live) return live;
+    const plan = mansionRoomPlan(roomId);
+    if (!plan) return null;
+    const wing = SURVIVAL_WINGS.find((item) => item.roomId === roomId);
+    return { ...plan, name: (wing && wing.label) || plan.name };
+  }
+
+  _syncHouse() {
+    const ids = [...this.unlockedRoomIds()];
+    const changed = this.game.mansion.setUnlockedRooms(ids);
+    if (changed) this.game.survivalBakeDirty = true;
+    return changed;
+  }
+
   _configureMansion() {
+    this._syncHouse();
     const m = this.game.mansion;
     m.survivalLighting = true;
     this._applyVisualLights();
@@ -724,7 +759,7 @@ export class SurvivalMode {
       const gate = this.mainGate();
       return gate ? { x: gate.x, y: gate.y, kind: 'gate' } : null;
     }
-    const room = this.game.mansion.roomList.find((item) => item.id === job.roomId);
+    const room = this.plotById(job.roomId);
     return room ? { x: room.x + room.w / 2, y: room.y + room.h / 2, kind: 'room', roomId: room.id } : null;
   }
 
@@ -1132,8 +1167,15 @@ export class SurvivalMode {
   }
 
   buildableRooms() {
-    const occupied = this.buildings;
-    return this.litRooms().filter((room) => room.id !== ROOM.LIBRARY && !occupied[room.id]);
+    const unlocked = this.unlockedRoomIds();
+    const plots = [];
+    for (const wing of SURVIVAL_WINGS) {
+      if (unlocked.has(wing.roomId) || this.buildings[wing.roomId]) continue;
+      if (!wing.requires.every((id) => unlocked.has(id))) continue;
+      const plot = this.plotById(wing.roomId);
+      if (plot) plots.push(plot);
+    }
+    return plots;
   }
 
   startBuild(type, roomId = null) {
@@ -1193,9 +1235,11 @@ export class SurvivalMode {
       if (spec?.produces?.survivors) {
         this.survivors = Math.min(this.tuning.maxSurvivors, this.survivors + spec.produces.survivors);
       }
+      this._syncHouse();
       this.applyBuildingEffects(false);
     }
     this.builderJob = null;
+    this.buildMenuOpen = false;
     this.refreshFireplace(true);
     this.game.audio.play('uiConfirm', { vol: 0.62 });
     this._persist(true);
@@ -1286,9 +1330,12 @@ export class SurvivalMode {
       gateHp: 0, builderJob: null, selectedRoom: null, nightsCompleted: 0, waveIndex: 0,
       breakerIndex: 0, individualIndex: 0, oilBurned: 0, siegeTimers: Object.create(null),
       nightStats: { kills: 0, hits: 0, damageToWalls: 0 }, lastRewards: null, skillCooldown: 0,
-      incoming: null, ftueDone: false, feedCd: 0, currentTarget: null, _gateAlert: false,
+      incoming: null, ftueDone: false, buildMenuOpen: false, feedCd: 0, currentTarget: null, _gateAlert: false,
       _telegraphEntrance: null, _telegraphWave: -1, _telegraphSounded: false, _telegraphKey: null,
     });
+    this.nightDuration = duration;
+    this.phase = 'night';
+    this._syncHouse();
     for (const e of g.mansion.entrances) {
       e.hp = e.baseHpMax; e.hpMax = e.baseHpMax; e.broken = false; e.open = false; e.barricade = 0;
     }
@@ -1297,8 +1344,6 @@ export class SurvivalMode {
     g.player.x = fire.x + 70; g.player.y = fire.y + 210;
     g.player.blood = g.player.bloodMax; g.player.weapon = 'shot'; g.player.state = 'idle';
     this.ftue = { step: 'move', t: 0, originX: g.player.x, originY: g.player.y };
-    this.nightDuration = duration;
-    this.phase = 'night';
     this.refreshFireplace(true);
     this.enter();
   }

@@ -321,110 +321,114 @@ function drawFtue(game, ctx, w, h) {
 
 export function dayPanelHeight(h, w = 0) {
   const landscape = (w > 0 && w >= h) || h < 520;
-  if (landscape) return Math.min(72, Math.max(58, Math.round(h * 0.16)));
-  return Math.min(92, Math.max(70, Math.round(h * 0.14)));
+  return landscape ? 52 : 56;
 }
 
 function drawDayPanel(game, ctx, w, h) {
   const mode = game.survival;
-  const landscape = w >= h || h < 520;
-  const panelH = dayPanelHeight(h, w);
-  const panelY = h - panelH;
-  const inset = landscape ? 12 : 8;
-  const innerW = w - inset * 2;
-  const rooms = mode.buildableRooms();
-  let selected = rooms.find((room) => room.id === mode.selectedRoom) || null;
-  if (!selected) {
-    selected = rooms[0] || null;
-    if (selected) mode.selectedRoom = selected.id;
+  const btn = 44;
+  const gap = 8;
+  const margin = 12;
+  const playX = w - margin - btn * 2 - gap;
+  const buildX = w - margin - btn;
+  const btnY = h - margin - btn;
+  const plots = mode.buildableRooms();
+  let selected = plots.find((room) => room.id === mode.selectedRoom)
+    || (mode.selectedRoom && mode.plotById(mode.selectedRoom))
+    || null;
+  if (!selected && plots[0]) {
+    selected = plots[0];
+    mode.selectedRoom = selected.id;
   }
 
   ctx.save();
-  ctx.fillStyle = 'rgba(7,8,12,0.78)';
-  ctx.fillRect(0, panelY, w, panelH);
-  ctx.fillStyle = 'rgba(218,181,112,0.35)';
-  ctx.fillRect(0, panelY, w, 1);
-
   if (mode.builderJob) {
     const job = mode.builderJob;
     const amount = 1 - clamp(job.remaining / Math.max(0.01, job.duration), 0, 1);
-    roundRect(ctx, inset, panelY + 5, innerW, 3, 1);
+    const barW = Math.min(240, w * 0.42);
+    const barX = (w - barW) / 2;
+    roundRect(ctx, barX, 44, barW, 4, 2);
     ctx.fillStyle = 'rgba(205,192,160,0.18)'; ctx.fill();
-    roundRect(ctx, inset, panelY + 5, innerW * amount, 3, 1);
+    roundRect(ctx, barX, 44, barW * amount, 4, 2);
     ctx.fillStyle = 'rgba(230,185,99,0.95)'; ctx.fill();
+    text(ctx, mode.buildingName(job.type), w / 2, 38, 9, AMBER, 'center');
   }
 
   const busy = !!mode.builderJob;
-  const selectedReady = selected && mode.productionReady(selected.id);
-  const store = selected && mode.stores[selected.id] || { oil: 0, wood: 0 };
-  const upgrade = mode.buildingCost('perapian');
-  const canUpgrade = !!upgrade && mode.oil >= upgrade.oil && mode.wood >= upgrade.wood;
-  const gateCost = mode.tuning.gateCost;
-  const canGate = !mode.gateBuilt && mode.oil >= gateCost.oil && mode.wood >= gateCost.wood;
-  const occupied = !!(selected && mode.useBuilding(selected.id));
-  const tiles = [
-    {
-      icon: 'extractor', cost: `${SURVIVAL_BUILDINGS.extractor.oil}`,
-      onClick: () => mode.startBuild('extractor', selected && selected.id),
-      disabled: busy || !selected || occupied
-        || mode.oil < SURVIVAL_BUILDINGS.extractor.oil || mode.wood < SURVIVAL_BUILDINGS.extractor.wood,
-      color: '#ddc58f',
-    },
-    {
-      icon: 'sawmill', cost: `${SURVIVAL_BUILDINGS.sawmill.wood}`,
-      onClick: () => mode.startBuild('sawmill', selected && selected.id),
-      disabled: busy || !selected || occupied
-        || mode.oil < SURVIVAL_BUILDINGS.sawmill.oil || mode.wood < SURVIVAL_BUILDINGS.sawmill.wood,
-      color: '#ddc58f',
-    },
-    {
-      icon: 'shelter', cost: `${SURVIVAL_BUILDINGS.shelter.wood}`,
-      onClick: () => mode.startBuild('shelter', selected && selected.id),
-      disabled: busy || !selected || occupied
-        || mode.oil < SURVIVAL_BUILDINGS.shelter.oil || mode.wood < SURVIVAL_BUILDINGS.shelter.wood,
-      color: '#ddc58f',
-    },
-    {
-      icon: 'upgrade',
-      cost: mode.perapianLevel >= 3 ? '' : `${upgrade ? upgrade.oil : 0}`,
-      onClick: () => mode.startBuild('perapian'),
-      disabled: busy || !canUpgrade,
-      color: AMBER,
-    },
-    {
-      icon: 'gate',
-      cost: mode.gateBuilt ? '' : `${gateCost.oil}`,
-      onClick: () => mode.startBuild('gate'),
-      disabled: busy || mode.gateBuilt || !canGate,
-      color: '#d0aa75',
-    },
-    {
-      icon: 'collect',
-      cost: selectedReady ? `+${Math.floor((store.oil || 0) + (store.wood || 0))}` : '',
-      onClick: () => selected && mode.collectProduction(selected.id),
-      disabled: !selectedReady,
-      selected: !!selectedReady,
-      color: AMBER,
-    },
-  ];
-
-  const playW = landscape ? 56 : 52;
-  const tileGap = landscape ? 8 : 4;
-  const tileH = Math.min(52, panelH - 14);
-  const tilesY = panelY + Math.max(8, panelH - tileH - 6);
-  const tilesW = innerW - playW - tileGap;
-  const tileW = (tilesW - tileGap * (tiles.length - 1)) / tiles.length;
-  for (let i = 0; i < tiles.length; i++) {
-    addIconTile(game, ctx, {
-      x: inset + i * (tileW + tileGap), y: tilesY, w: tileW, h: tileH,
-    }, tiles[i]);
-  }
-  addIconTile(game, ctx, {
-    x: inset + tiles.length * (tileW + tileGap), y: tilesY, w: playW, h: tileH,
-  }, {
-    icon: 'play', onClick: () => mode.startNight(),
+  addIconTile(game, ctx, { x: playX, y: btnY, w: btn, h: btn }, {
+    icon: 'play', caption: '', onClick: () => mode.startNight(),
     disabled: busy, color: '#f0d9a3',
   });
+  addIconTile(game, ctx, { x: buildX, y: btnY, w: btn, h: btn }, {
+    icon: 'plus', caption: '', onClick: () => { mode.buildMenuOpen = !mode.buildMenuOpen; },
+    selected: !!mode.buildMenuOpen, disabled: busy, color: AMBER,
+  });
+
+  if (mode.buildMenuOpen && !busy) {
+    const upgrade = mode.buildingCost('perapian');
+    const canUpgrade = !!upgrade && mode.oil >= upgrade.oil && mode.wood >= upgrade.wood;
+    const gateCost = mode.tuning.gateCost;
+    const canGate = !mode.gateBuilt && mode.oil >= gateCost.oil && mode.wood >= gateCost.wood;
+    const occupied = !!(selected && mode.useBuilding(selected.id));
+    const readyId = Object.keys(mode.buildings).find((id) => mode.productionReady(id));
+    const tiles = [
+      {
+        icon: 'extractor', cost: `${SURVIVAL_BUILDINGS.extractor.oil}`,
+        onClick: () => mode.startBuild('extractor', selected && selected.id),
+        disabled: !selected || occupied
+          || mode.oil < SURVIVAL_BUILDINGS.extractor.oil || mode.wood < SURVIVAL_BUILDINGS.extractor.wood,
+        color: '#ddc58f',
+      },
+      {
+        icon: 'sawmill', cost: `${SURVIVAL_BUILDINGS.sawmill.wood}`,
+        onClick: () => mode.startBuild('sawmill', selected && selected.id),
+        disabled: !selected || occupied
+          || mode.oil < SURVIVAL_BUILDINGS.sawmill.oil || mode.wood < SURVIVAL_BUILDINGS.sawmill.wood,
+        color: '#ddc58f',
+      },
+      {
+        icon: 'shelter', cost: `${SURVIVAL_BUILDINGS.shelter.wood}`,
+        onClick: () => mode.startBuild('shelter', selected && selected.id),
+        disabled: !selected || occupied
+          || mode.oil < SURVIVAL_BUILDINGS.shelter.oil || mode.wood < SURVIVAL_BUILDINGS.shelter.wood,
+        color: '#ddc58f',
+      },
+      {
+        icon: 'upgrade',
+        cost: mode.perapianLevel >= 3 ? '' : `${upgrade ? upgrade.oil : 0}`,
+        onClick: () => mode.startBuild('perapian'),
+        disabled: !canUpgrade,
+        color: AMBER,
+      },
+      {
+        icon: 'gate',
+        cost: mode.gateBuilt ? '' : `${gateCost.oil}`,
+        onClick: () => mode.startBuild('gate'),
+        disabled: mode.gateBuilt || !canGate,
+        color: '#d0aa75',
+      },
+      {
+        icon: 'collect',
+        cost: readyId ? 'READY' : '',
+        onClick: () => readyId && mode.collectProduction(readyId),
+        disabled: !readyId,
+        selected: !!readyId,
+        color: AMBER,
+      },
+    ];
+    const tile = 40;
+    const sheetW = tiles.length * tile + gap * (tiles.length - 1) + 16;
+    const sheetH = 52;
+    const sheetX = Math.max(margin, w - margin - sheetW);
+    const sheetY = btnY - sheetH - 8;
+    fillPanel(ctx, sheetX, sheetY, sheetW, sheetH, 0.94);
+    for (let i = 0; i < tiles.length; i++) {
+      addIconTile(game, ctx, {
+        x: sheetX + 8 + i * (tile + gap), y: sheetY + 6, w: tile, h: 40,
+      }, tiles[i]);
+    }
+    if (selected) text(ctx, selected.name || selected.id, sheetX + 10, sheetY - 8, 8, DIM, 'left');
+  }
 
   ctx.restore();
 }

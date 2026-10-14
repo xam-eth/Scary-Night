@@ -86,7 +86,7 @@ export const PIECE_METRES = Object.freeze({
   floorWood: 0.12, floorStone: 0.12,
   stairs: 2.7, column: 2.7, pillar: 3.1,
   table: 0.78, chair: 0.9, chest: 1.0, barrel: 0.9, crate: 0.75,
-  stacked: 1.25, shelf: 1.4, candle: 0.55, torch: 1.5,
+  stacked: 1.25, shelf: 1.4, candle: 0.28, torch: 1.5,
 });
 
 /**
@@ -98,7 +98,7 @@ export const PROP_METRES = Object.freeze({
   longTable: 0.78, desk: 0.76, sideTable: 0.74, pottingBench: 0.9, altar: 1.02,
   chair: 0.9, armchair: 0.84, sofa: 0.8, pew: 0.94,
   cabinet: 1.15, barrel: 0.9, crates: 1.0, shelf: 2.05, wineRack: 1.2,
-  staircase: 2.7, planter: 0.9, basin: 0.8, candleStand: 1.0, candelabra: 1.25,
+  staircase: 2.7, planter: 0.9, basin: 0.8, candleStand: 0.42, candelabra: 0.52,
 });
 
 /**
@@ -160,7 +160,7 @@ const PROP_FOR = Object.freeze({
   shelf: 'stacked', wineRack: 'stacked',
 });
 /** Pieces with no footprint of their own get a scale, not a measurement. */
-const PROP_SCALE = Object.freeze({ planter: 2.2, basin: 2.2, candleStand: 1.6, candelabra: 1.9 });
+const PROP_SCALE = Object.freeze({ planter: 2.2, basin: 2.2, candleStand: 0.5, candelabra: 0.7 });
 /**
  * A footprint is filled SIDEWAYS, one axis at a time, and the height is
  * whatever the thing is in metres.
@@ -298,7 +298,7 @@ export function planFortress(mansion, level, boxes, metre = PX_PER_METRE) {
   };
   /** World footprint -> scale, for the piece's own units, at a true height. */
   /* The dressing is the same furniture the house already had: a candle in the
-   * keep is the same 55cm candle as the one in the hall, and a barrel is 90cm
+   * keep is the same 28cm candle as the one in the hall, and a barrel is 90cm
    * wherever it stands. Heights are METRES here, through the same camera the
    * room is drawn from — not a number somebody measured by eye. */
   const fit = (piece, wpx, metres, dpx) => {
@@ -420,6 +420,7 @@ class EnvKitRuntime {
     this.renderer = null;
     this.canvas = null;
     this.doors = new Map();
+    this._layoutSerial = 0;
     this.room = null;          // the mansion the room was built from
     this.roomMeshes = null;
     this.roomCounts = null;
@@ -1758,6 +1759,19 @@ class EnvKitRuntime {
     if (!this.ready || !this.group) return;
     if (mansion) {
       if (game && game.renderer) this._setTilt(game.renderer.tilt);
+      const serial = mansion.layoutSerial || 0;
+      if (serial !== this._layoutSerial) {
+        this._layoutSerial = serial;
+        this.room = null;
+        this.props = null;
+        this._clearDetailProps();
+        this._clearFortress();
+        this.bake = null;
+        this.bakeKey = '';
+        this._buildSerial++;
+        for (const v of this.doors.values()) this.group.remove(v.group);
+        this.doors.clear();
+      }
       this.buildRoom(mansion);
       this.buildProps(mansion);
       this.buildDetailProps(mansion);

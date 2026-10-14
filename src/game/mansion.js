@@ -37,6 +37,25 @@ export const ROOM = {
 
 const WALL_T = 26;
 
+/** Authored floor plan. Survival unlocks a subset; hunt still uses every room. */
+export const MANSION_ROOMS = Object.freeze([
+  Object.freeze({ key: 'dining', id: ROOM.DINING, name: 'DINING ROOM', x: -806, y: 0, w: 780, h: 600, floor: 'wood', dark: 0.72 }),
+  Object.freeze({ key: 'library', id: ROOM.LIBRARY, name: 'LIBRARY', x: 906, y: 0, w: 780, h: 600, floor: 'wood', dark: 0.78 }),
+  Object.freeze({ key: 'hall', id: ROOM.HALL, name: 'MAIN HALL', x: 0, y: 0, w: 880, h: 620, floor: 'marble', dark: 0.62 }),
+  Object.freeze({ key: 'basement', id: ROOM.BASEMENT, name: 'BASEMENT', x: 190, y: 646, w: 500, h: 680, floor: 'stone', dark: 1.35 }),
+  Object.freeze({ key: 'conserv', id: ROOM.CONSERV, name: 'CONSERVATORY', x: 1712, y: 10, w: 554, h: 580, floor: 'glass', dark: 0.42 }),
+  Object.freeze({ key: 'chapel', id: ROOM.CHAPEL, name: 'CHAPEL', x: 716, y: 646, w: 507, h: 694, floor: 'tile', dark: 0.68 }),
+  Object.freeze({ key: 'kitchen', id: ROOM.KITCHEN, name: 'KITCHEN', x: -1186, y: 50, w: 354, h: 500, floor: 'stone', dark: 0.7 }),
+  Object.freeze({ key: 'study', id: ROOM.STUDY, name: 'STUDY', x: 80, y: -346, w: 720, h: 320, floor: 'wood', dark: 0.66 }),
+  Object.freeze({ key: 'gallery', id: ROOM.GALLERY, name: 'GALLERY', x: -686, y: -306, w: 540, h: 280, floor: 'wood', dark: 0.68 }),
+  Object.freeze({ key: 'gatehouse', id: ROOM.GATEHOUSE, name: 'GATEHOUSE', x: -593, y: 626, w: 354, h: 850, floor: 'stone', dark: 0.7 }),
+  Object.freeze({ key: 'oratory', id: ROOM.ORATORY, name: 'ORATORY', x: 1056, y: -306, w: 480, h: 280, floor: 'tile', dark: 0.6 }),
+]);
+
+export function mansionRoomPlan(id) {
+  return MANSION_ROOMS.find((room) => room.id === id || room.key === id) || null;
+}
+
 export class Mansion {
   constructor() {
     this.bounds = { x: -1500, y: -700, w: 4080, h: 2500 };
@@ -52,6 +71,9 @@ export class Mansion {
     this.litSurfaces = [];
     this.bloodMoon = 0;
     this.blackout = 0;
+    this.unlockedRooms = null;
+    this.layoutSerial = 0;
+    this._unlockedKey = '';
     this.build();
     this.dressFurniture();
     // Outdoor dressing is generated from the same house bounds as the room
@@ -64,28 +86,40 @@ export class Mansion {
     this.buildNav();
   }
 
+  /** Survival grows the house by unlocking authored wings. Hunt leaves this null. */
+  setUnlockedRooms(ids) {
+    const list = Array.isArray(ids) && ids.length ? [...new Set(ids)].sort() : null;
+    const key = list ? list.join(',') : '';
+    if (key === this._unlockedKey && this.roomList && this.roomList.length) return false;
+    this._unlockedKey = key;
+    this.unlockedRooms = list ? new Set(list) : null;
+    this.build();
+    this.dressFurniture();
+    this.exterior = makeExterior(this);
+    this.solids.push(...this.exterior.blockers);
+    this.buildGrid();
+    this.buildNav();
+    this.layoutSerial = (this.layoutSerial || 0) + 1;
+    return true;
+  }
+
   /* ================= geometry ================= */
 
   rooms = {};
 
   build() {
-    const plan = [
-      { key: 'dining', id: ROOM.DINING, name: 'DINING ROOM', x: -806, y: 0, w: 780, h: 600, floor: 'wood', dark: 0.72 },
-      { key: 'library', id: ROOM.LIBRARY, name: 'LIBRARY', x: 906, y: 0, w: 780, h: 600, floor: 'wood', dark: 0.78 },
-      { key: 'hall', id: ROOM.HALL, name: 'MAIN HALL', x: 0, y: 0, w: 880, h: 620, floor: 'marble', dark: 0.62 },
-      { key: 'basement', id: ROOM.BASEMENT, name: 'BASEMENT', x: 190, y: 646, w: 500, h: 680, floor: 'stone', dark: 1.35 },
-      { key: 'conserv', id: ROOM.CONSERV, name: 'CONSERVATORY', x: 1712, y: 10, w: 554, h: 580, floor: 'glass', dark: 0.42 },
-      { key: 'chapel', id: ROOM.CHAPEL, name: 'CHAPEL', x: 716, y: 646, w: 507, h: 694, floor: 'tile', dark: 0.68 },
-      { key: 'kitchen', id: ROOM.KITCHEN, name: 'KITCHEN', x: -1186, y: 50, w: 354, h: 500, floor: 'stone', dark: 0.7 },
-      { key: 'study', id: ROOM.STUDY, name: 'STUDY', x: 80, y: -346, w: 720, h: 320, floor: 'wood', dark: 0.66 },
-      { key: 'gallery', id: ROOM.GALLERY, name: 'GALLERY', x: -686, y: -306, w: 540, h: 280, floor: 'wood', dark: 0.68 },
-      { key: 'gatehouse', id: ROOM.GATEHOUSE, name: 'GATEHOUSE', x: -593, y: 626, w: 354, h: 850, floor: 'stone', dark: 0.7 },
-      { key: 'oratory', id: ROOM.ORATORY, name: 'ORATORY', x: 1056, y: -306, w: 480, h: 280, floor: 'tile', dark: 0.6 },
-    ];
+    const allowed = this.unlockedRooms;
+    const plan = MANSION_ROOMS
+      .filter((r) => !allowed || allowed.has(r.id) || allowed.has(r.key))
+      .map((r) => ({ ...r }));
+    if (!plan.length) {
+      plan.push({ ...mansionRoomPlan(ROOM.HALL) }, { ...mansionRoomPlan(ROOM.LIBRARY) });
+    }
     this.rooms = Object.create(null);
     this.roomList = plan.map((r) => {
       const room = { ...r };
       this.rooms[room.key] = room;
+      this.rooms[room.id] = room;
       return room;
     });
     this.solids = [];
@@ -96,7 +130,22 @@ export class Mansion {
     this.spawns = [];
     this.portals = [];
     this.passages = [];
-    this.bounds = { x: -1500, y: -700, w: 4080, h: 2500 };
+    for (const id of ['frontDoor', 'diningDoor', 'cellarDoor', 'chapelDoor', 'kitchenDoor', 'palisade', 'postern']) {
+      this[id] = null;
+    }
+    if (!allowed) {
+      this.bounds = { x: -1500, y: -700, w: 4080, h: 2500 };
+    } else {
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const r of this.roomList) {
+        minX = Math.min(minX, r.x - WALL_T);
+        minY = Math.min(minY, r.y - WALL_T);
+        maxX = Math.max(maxX, r.x + r.w + WALL_T);
+        maxY = Math.max(maxY, r.y + r.h + WALL_T);
+      }
+      const pad = 560;
+      this.bounds = { x: minX - pad, y: minY - pad, w: (maxX - minX) + pad * 2, h: (maxY - minY) + pad * 2 };
+    }
     const cameraPad = 1400;
     this.camBounds = {
       x: this.bounds.x - cameraPad, y: this.bounds.y - cameraPad,
@@ -167,6 +216,8 @@ export class Mansion {
 
     for (const spec of specs) {
       const room = roomByKey(spec.room);
+      if (!room) continue;
+      if (spec.to && !roomByKey(spec.to)) continue;
       const side = spec.side;
       const edge = edgeOf(room, side);
       const a1 = spec.at - spec.width / 2;
@@ -218,9 +269,9 @@ export class Mansion {
     this.threshold = [];
     const libraryOpening = this.portals.find((p) => p.id === 'glassWingPassage');
     this.libraryArch = libraryOpening ? { x: libraryOpening.x, y: libraryOpening.y, w: WALL_T, h: libraryOpening.width } : null;
-    this.kitchenDoor.hp = this.kitchenDoor.hpMax = this.kitchenDoor.baseHpMax = 78;
-    this.palisade.hp = this.palisade.hpMax = this.palisade.baseHpMax = 210;
-    this.postern.hp = this.postern.hpMax = this.postern.baseHpMax = 72;
+    if (this.kitchenDoor) this.kitchenDoor.hp = this.kitchenDoor.hpMax = this.kitchenDoor.baseHpMax = 78;
+    if (this.palisade) this.palisade.hp = this.palisade.hpMax = this.palisade.baseHpMax = 210;
+    if (this.postern) this.postern.hp = this.postern.hpMax = this.postern.baseHpMax = 72;
     this.buildRing();
   }
 
@@ -462,8 +513,11 @@ export class Mansion {
     );
 
     /* ---------- MAIN HALL — broad centre, with a clean cross-wing lane ---------- */
+    if (R.hall) {
+    if (R.basement) {
     F(R.hall, 0.20, 0.22, 210, 190, 'staircase');
     F(R.hall, 0.20, 0.22, 210, 28, 'stairRail', { solid: false });
+    }
     F(R.hall, 0.70, 0.20, 112, 82, 'sofa');
     F(R.hall, 0.83, 0.20, 112, 82, 'sofa');
     F(R.hall, 0.77, 0.72, 132, 66, 'sideTable');
@@ -478,8 +532,10 @@ export class Mansion {
     P(R.hall, 0.95, 0.36, 'portrait', { vertical: true });
     P(R.hall, 0.08, 0.08, 'cobweb');
     P(R.hall, 0.91, 0.92, 'cobweb');
+    }
 
     /* ---------- DINING — the servant-door apron stays empty ---------- */
+    if (R.dining) {
     F(R.dining, 0.53, 0.53, 360, 110, 'longTable');
     for (let i = 0; i < 8; i++) {
       const col = (i % 4) / 5 + 0.30;
@@ -493,8 +549,10 @@ export class Mansion {
     P(R.dining, 0.27, 0.04, 'portrait');
     P(R.dining, 0.76, 0.04, 'portrait');
     P(R.dining, 0.96, 0.07, 'cobweb');
+    }
 
     /* ---------- LIBRARY — perimeter stacks, an open centre aisle ---------- */
+    if (R.library) {
     for (let i = 0; i < 4; i++) F(R.library, 0.16 + i * 0.16, 0.13, 58, 150, 'shelf');
     F(R.library, 0.91, 0.20, 58, 150, 'shelf');
     F(R.library, 0.91, 0.80, 58, 150, 'shelf');
@@ -508,8 +566,10 @@ export class Mansion {
     P(R.library, 0.33, 0.39, 'books');
     P(R.library, 0.50, 0.04, 'portrait');
     P(R.library, 0.96, 0.08, 'cobweb');
+    }
 
     /* ---------- BASEMENT — a dark store room with the basin on its flank ---------- */
+    if (R.basement) {
     for (let i = 0; i < 3; i++) F(R.basement, 0.22 + i * 0.18, 0.16, 82, 82, 'crates');
     F(R.basement, 0.17, 0.48, 190, 58, 'wineRack');
     F(R.basement, 0.17, 0.72, 190, 58, 'wineRack');
@@ -523,8 +583,10 @@ export class Mansion {
     P(R.basement, 0.91, 0.92, 'cobweb');
     P(R.basement, 0.48, 0.43, 'bones');
     P(R.basement, 0.70, 0.57, 'bones');
+    }
 
     /* ---------- CONSERVATORY — glass, overgrowth, a fountain, clear exits ---------- */
+    if (R.conserv) {
     for (let i = 0; i < 4; i++) {
       F(R.conserv, 0.18 + i * 0.20, 0.14, 68, 68, 'planter');
       F(R.conserv, 0.18 + i * 0.20, 0.86, 68, 68, 'planter');
@@ -542,8 +604,10 @@ export class Mansion {
     P(R.conserv, 0.58, 0.05, 'hangingVine');
     P(R.conserv, 0.88, 0.05, 'hangingVine');
     P(R.conserv, 0.96, 0.96, 'cobweb');
+    }
 
     /* ---------- CHAPEL — paired pew banks frame a strong, readable aisle ---------- */
+    if (R.chapel) {
     F(R.chapel, 0.50, 0.18, 190, 62, 'altar');
     for (let i = 0; i < 3; i++) {
       const fy = 0.43 + i * 0.15;
@@ -558,8 +622,10 @@ export class Mansion {
     P(R.chapel, 0.12, 0.22, 'urn');
     P(R.chapel, 0.90, 0.88, 'bones');
     P(R.chapel, 0.96, 0.08, 'cobweb');
+    }
 
     /* ---------- KITCHEN — apron between the two doors, larder within reach ---------- */
+    if (R.kitchen) {
     F(R.kitchen, 0.22, 0.16, 148, 52, 'cabinet');
     F(R.kitchen, 0.72, 0.16, 112, 52, 'cabinet');
     F(R.kitchen, 0.16, 0.83, 66, 66, 'barrel');
@@ -569,8 +635,10 @@ export class Mansion {
     P(R.kitchen, 0.25, 0.30, 'candleStand', { light: true });
     P(R.kitchen, 0.70, 0.80, 'candleStand', { light: true, dim: true });
     P(R.kitchen, 0.92, 0.10, 'cobweb');
+    }
 
     /* ---------- STUDY — the lamp-lit ward is a meaningful detour, not a trap ---------- */
+    if (R.study) {
     F(R.study, 0.48, 0.28, 210, 70, 'desk');
     F(R.study, 0.86, 0.64, 54, 160, 'shelf');
     F(R.study, 0.22, 0.70, 84, 84, 'armchair');
@@ -580,8 +648,10 @@ export class Mansion {
     P(R.study, 0.20, 0.27, 'books');
     P(R.study, 0.78, 0.04, 'portrait');
     this.studyWard = { x: R.study.x + R.study.w * 0.51, y: R.study.y + R.study.h * 0.63, r: 150, until: 0, readyAt: 0 };
+    }
 
     /* ---------- GALLERY — quiet portrait room, approached from dining ---------- */
+    if (R.gallery) {
     F(R.gallery, 0.24, 0.56, 132, 32, 'pew');
     F(R.gallery, 0.76, 0.56, 132, 32, 'pew');
     F(R.gallery, 0.50, 0.78, 64, 40, 'sideTable');
@@ -589,31 +659,38 @@ export class Mansion {
     P(R.gallery, 0.82, 0.06, 'portrait', { big: true });
     P(R.gallery, 0.42, 0.78, 'candleStand', { light: true });
     P(R.gallery, 0.68, 0.78, 'candleStand', { light: true, dim: true });
+    }
 
     /* ---------- GATEHOUSE — two outer approaches, cover kept to the sides ---------- */
+    if (R.gatehouse) {
     F(R.gatehouse, 0.17, 0.27, 72, 72, 'crates');
     F(R.gatehouse, 0.82, 0.30, 72, 54, 'barrel');
     F(R.gatehouse, 0.18, 0.82, 86, 52, 'crates');
     P(R.gatehouse, 0.50, 0.58, 'stakes');
     P(R.gatehouse, 0.16, 0.45, 'candleStand', { light: true });
     P(R.gatehouse, 0.82, 0.76, 'candleStand', { light: true, dim: true });
+    }
 
     /* ---------- ORATORY — the cold, private counterpoint to the chapel ---------- */
+    if (R.oratory) {
     F(R.oratory, 0.50, 0.30, 150, 48, 'altar');
     F(R.oratory, 0.22, 0.74, 94, 42, 'pew', { solid: false });
     F(R.oratory, 0.78, 0.74, 94, 42, 'pew', { solid: false });
     P(R.oratory, 0.22, 0.66, 'candleStand', { light: true, dim: true });
     P(R.oratory, 0.78, 0.66, 'candleStand', { light: true, dim: true });
     P(R.oratory, 0.12, 0.18, 'urn');
+    }
   }
 
   makeLights() {
     const R = this.rooms;
-    const point = (room, fx = 0.5, fy = 0.5) => ({ x: room.x + room.w * fx, y: room.y + room.h * fy });
-    const L = (o) => this.lights.push({ on: true, flicker: 1, seed: rand(0, 100), ...o });
+    const point = (room, fx = 0.5, fy = 0.5) => room ? ({ x: room.x + room.w * fx, y: room.y + room.h * fy }) : null;
+    const L = (o) => { if (!o || o.x == null || o.y == null) return; this.lights.push({ on: true, flicker: 1, seed: rand(0, 100), ...o }); };
 
-    const hall = point(R.hall, 0.50, 0.48);
-    L({ id: 'chandelier', ...hall, r: 350, i: 0.95, color: [255, 186, 120], flick: 0.1, room: ROOM.HALL, type: 'chandelier' });
+    if (R.hall) {
+      const hall = point(R.hall, 0.50, 0.48);
+      L({ id: 'chandelier', ...hall, r: 350, i: 0.95, color: [255, 186, 120], flick: 0.1, room: ROOM.HALL, type: 'chandelier' });
+    }
     for (const p of this.props) {
       if (p.type === 'candelabra' && p.light) L({ x: p.x, y: p.y, r: 175, i: 0.72, color: [255, 175, 110], flick: 0.3, room: p.room, type: 'candle' });
       if (p.type === 'candleStand' && p.light) L({ x: p.x, y: p.y, r: 135, i: p.dim ? 0.34 : 0.6, color: [255, 170, 105], flick: 0.35, room: p.room, type: 'candle' });
@@ -622,38 +699,40 @@ export class Mansion {
 
     const hearth = this.props.find((p) => p.type === 'fireplace');
     const fireplace = hearth || point(R.library, 0.50, 0.10);
-    L({ id: 'fireplace', x: fireplace.x, y: fireplace.y, r: 300, i: 0.95, color: [255, 145, 60], flick: 0.5, room: ROOM.LIBRARY, type: 'fire' });
-    this.fireplaceLight = this.lights[this.lights.length - 1];
+    if (fireplace) {
+      L({ id: 'fireplace', x: fireplace.x, y: fireplace.y, r: 300, i: 0.95, color: [255, 145, 60], flick: 0.5, room: ROOM.LIBRARY, type: 'fire' });
+      this.fireplaceLight = this.lights[this.lights.length - 1];
+    }
 
-    const altar = point(R.chapel, 0.50, 0.18);
-    L({ id: 'altar', ...altar, r: 300, i: 0.8, color: [238, 214, 160], flick: 0.22, room: ROOM.CHAPEL, type: 'relic' });
-    this.altarLight = this.lights[this.lights.length - 1];
-    this.chapelAltar = { ...altar, r: 175 };
-    L({ ...point(R.chapel, 0.50, 0.20), r: 190, i: 0.5, color: [190, 190, 235], flick: 0.15, room: ROOM.CHAPEL, type: 'moon' });
+    if (R.chapel) {
+      const altar = point(R.chapel, 0.50, 0.18);
+      L({ id: 'altar', ...altar, r: 300, i: 0.8, color: [238, 214, 160], flick: 0.22, room: ROOM.CHAPEL, type: 'relic' });
+      this.altarLight = this.lights[this.lights.length - 1];
+      this.chapelAltar = { ...altar, r: 175 };
+      L({ ...point(R.chapel, 0.50, 0.20), r: 190, i: 0.5, color: [190, 190, 235], flick: 0.15, room: ROOM.CHAPEL, type: 'moon' });
+    }
 
-    const glass = R.conserv;
-    L({ ...point(glass, 0.33, 0.34), r: 260, i: 0.55, color: [150, 190, 245], flick: 0, room: ROOM.CONSERV, type: 'moon' });
-    L({ ...point(glass, 0.74, 0.68), r: 230, i: 0.5, color: [150, 190, 245], flick: 0, room: ROOM.CONSERV, type: 'moon' });
+    if (R.conserv) {
+      L({ ...point(R.conserv, 0.33, 0.34), r: 260, i: 0.55, color: [150, 190, 245], flick: 0, room: ROOM.CONSERV, type: 'moon' });
+      L({ ...point(R.conserv, 0.74, 0.68), r: 230, i: 0.5, color: [150, 190, 245], flick: 0, room: ROOM.CONSERV, type: 'moon' });
+    }
 
     for (const e of this.entrances) {
       if (e.kind !== 'window') continue;
       L({ x: e.inside.x, y: e.inside.y, r: 250, i: 0.5, color: [150, 190, 245], flick: 0, room: e.room, type: 'moon' });
       L({ x: e.x, y: e.y, r: 210, i: 0.42, color: [140, 180, 240], flick: 0, room: e.room, type: 'moon' });
     }
-    L({ x: this.frontDoor.inside.x, y: this.frontDoor.inside.y, r: 190, i: 0.35, color: [140, 175, 235], flick: 0, room: ROOM.HALL, type: 'moon' });
+    if (this.frontDoor && this.frontDoor.inside) {
+      L({ x: this.frontDoor.inside.x, y: this.frontDoor.inside.y, r: 190, i: 0.35, color: [140, 175, 235], flick: 0, room: ROOM.HALL, type: 'moon' });
+    }
 
-    const basement = point(R.basement, 0.50, 0.55);
-    const kitchen = point(R.kitchen, 0.50, 0.52);
-    const study = point(R.study, 0.53, 0.62);
-    const gallery = point(R.gallery, 0.50, 0.57);
-    const gatehouse = point(R.gatehouse, 0.50, 0.58);
-    const oratory = point(R.oratory, 0.50, 0.55);
-    L({ id: 'basementLamp', ...basement, r: 210, i: 0.3, color: [255, 160, 90], flick: 0.6, room: ROOM.BASEMENT, type: 'lamp' });
-    L({ id: 'kitchenLamp', ...kitchen, r: 220, i: 0.45, color: [255, 170, 110], flick: 0.2, room: ROOM.KITCHEN, type: 'lamp' });
-    L({ id: 'studyLamp', ...study, r: 200, i: 0.4, color: [210, 190, 150], flick: 0.08, room: ROOM.STUDY, type: 'lamp' });
-    L({ id: 'galleryLamp', ...gallery, r: 220, i: 0.48, color: [255, 176, 110], flick: 0.18, room: ROOM.GALLERY, type: 'candle' });
-    L({ id: 'gatehouseFire', ...gatehouse, r: 220, i: 0.5, color: [255, 150, 80], flick: 0.28, room: ROOM.GATEHOUSE, type: 'fire' });
-    L({ id: 'oratoryMoon', ...oratory, r: 230, i: 0.46, color: [170, 190, 230], flick: 0.05, room: ROOM.ORATORY, type: 'moon' });
+    const placeLamp = (room, fx, fy, spec) => { const p = point(room, fx, fy); if (p) L({ ...p, ...spec }); };
+    placeLamp(R.basement, 0.50, 0.55, { id: 'basementLamp', r: 210, i: 0.3, color: [255, 160, 90], flick: 0.6, room: ROOM.BASEMENT, type: 'lamp' });
+    placeLamp(R.kitchen, 0.50, 0.52, { id: 'kitchenLamp', r: 220, i: 0.45, color: [255, 170, 110], flick: 0.2, room: ROOM.KITCHEN, type: 'lamp' });
+    placeLamp(R.study, 0.53, 0.62, { id: 'studyLamp', r: 200, i: 0.4, color: [210, 190, 150], flick: 0.08, room: ROOM.STUDY, type: 'lamp' });
+    placeLamp(R.gallery, 0.50, 0.57, { id: 'galleryLamp', r: 220, i: 0.48, color: [255, 176, 110], flick: 0.18, room: ROOM.GALLERY, type: 'candle' });
+    placeLamp(R.gatehouse, 0.50, 0.58, { id: 'gatehouseFire', r: 220, i: 0.5, color: [255, 150, 80], flick: 0.28, room: ROOM.GATEHOUSE, type: 'fire' });
+    placeLamp(R.oratory, 0.50, 0.55, { id: 'oratoryMoon', r: 230, i: 0.46, color: [170, 190, 230], flick: 0.05, room: ROOM.ORATORY, type: 'moon' });
   }
 
   makeSpawns() {

@@ -404,7 +404,7 @@ export const SURVIVAL_TUNING = Object.freeze({
     wood: Object.freeze([14, 16, 18]),
   }),
   gateCost: Object.freeze({ oil: 4, wood: 16, seconds: 9 }),
-  gateHpBonus: 220,
+  gateHpBonus: 380,
   lightDamageTakenMul: 1.75,
   lightMoveMul: 0.46,
   autoAttackRange: 620,
