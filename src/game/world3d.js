@@ -655,14 +655,24 @@ class World3DRuntime {
     }
 
     const enemies = game.enemies || [];
-    Enemy3D.assign(enemies, player, {
-      full3D: true,
-      includeCrowd: game.mode === 'survival',
-      verticalProjection: VERTICAL_PROJECTION,
-      host: { stage: this.root, scene: this.scene, renderer: EnvKit.renderer, camera: EnvKit.camera, canvas: EnvKit.canvas },
-    });
-    if (game.mode === 'survival') this._syncSurvivalCrowdProxies(enemies, game);
-    else for (const proxy of this.survivalCrowdProxies.values()) proxy.visible = false;
+    if (game.mode === 'survival') {
+      Enemy3D.assign([], player, {
+        full3D: true,
+        includeCrowd: false,
+        verticalProjection: VERTICAL_PROJECTION,
+        host: { stage: this.root, scene: this.scene, renderer: EnvKit.renderer, camera: EnvKit.camera, canvas: EnvKit.canvas },
+      });
+      for (const enemy of enemies) enemy._glb = null;
+      this._syncSurvivalCrowdProxies(enemies, game);
+    } else {
+      Enemy3D.assign(enemies, player, {
+        full3D: true,
+        includeCrowd: false,
+        verticalProjection: VERTICAL_PROJECTION,
+        host: { stage: this.root, scene: this.scene, renderer: EnvKit.renderer, camera: EnvKit.camera, canvas: EnvKit.canvas },
+      });
+      for (const proxy of this.survivalCrowdProxies.values()) proxy.visible = false;
+    }
     // The legacy route remains GLB-only. Survival crowd units beyond the 14
     // authored rigs use a lightweight 3D silhouette so all 20–30 bodies read.
     for (const [id, object] of this.proxies) if (!active.has(id)) object.visible = false;
@@ -671,16 +681,17 @@ class World3DRuntime {
   _makeSurvivalZombieProxy() {
     if (!this.survivalZombieMats) {
       this.survivalZombieMats = {
-        cloth: new THREE.MeshStandardMaterial({ color: 0x2a2e24, roughness: 1, flatShading: true }),
-        skin: new THREE.MeshStandardMaterial({ color: 0x6e7258, roughness: 1, flatShading: true }),
-        dark: new THREE.MeshStandardMaterial({ color: 0x1c1e18, roughness: 1, flatShading: true }),
-        eye: new THREE.MeshBasicMaterial({ color: 0xe08a3a, toneMapped: false }),
+        cloth: new THREE.MeshStandardMaterial({ color: 0x1a1814, roughness: 1, flatShading: true }),
+        skin: new THREE.MeshStandardMaterial({ color: 0x4a4638, roughness: 1, flatShading: true }),
+        dark: new THREE.MeshStandardMaterial({ color: 0x12110e, roughness: 1, flatShading: true }),
+        bone: new THREE.MeshStandardMaterial({ color: 0x8a806c, roughness: 1, flatShading: true }),
+        eye: new THREE.MeshBasicMaterial({ color: 0xff4a28, toneMapped: false }),
       };
       this.survivalZombieGeo = {
         hip: new THREE.SphereGeometry(6.4, 7, 6),
         torso: new THREE.CylinderGeometry(7.2, 8.4, 24, 7),
         shoulder: new THREE.SphereGeometry(4.1, 6, 5),
-        head: new THREE.SphereGeometry(7.8, 8, 7),
+        head: new THREE.BoxGeometry(12, 14, 13),
         jaw: new THREE.SphereGeometry(4.2, 6, 5),
         eye: new THREE.SphereGeometry(1.15, 6, 5),
         thigh: new THREE.CylinderGeometry(3.3, 3.7, 16, 6),
@@ -703,16 +714,15 @@ class World3DRuntime {
       group.add(item);
       return item;
     };
-    // Authored so the crown sits at 70 world units and the soles on y=0.
-    // Sync scales this to the same zombie height the GLB roster uses.
-    mesh(g.hip, m.cloth, 0, 26, 0).scale.set(1, 0.72, 0.88);
-    mesh(g.torso, m.cloth, 0, 40, 0.5);
-    mesh(g.shoulder, m.cloth, -9.2, 50, 0.6);
-    mesh(g.shoulder, m.cloth, 9.2, 50, 0.6);
-    mesh(g.head, m.skin, 0, 61, 1.8, 0.12, 0, 0);
-    mesh(g.jaw, m.skin, 0, 55.4, 3.6, 0.25, 0, 0).scale.set(1, 0.55, 0.82);
-    mesh(g.eye, m.eye, -2.5, 62.2, 8.2);
-    mesh(g.eye, m.eye, 2.5, 62.2, 8.2);
+    // Gaunt plague body: crown at 78, hunched, long reach. Not a chibi mascot.
+    mesh(g.hip, m.cloth, 0, 28, 0).scale.set(0.9, 0.7, 0.78);
+    mesh(g.torso, m.cloth, 0, 44, 1.4, 0.28, 0, 0).scale.set(0.82, 1.12, 0.72);
+    mesh(g.shoulder, m.cloth, -9.6, 54, 2.2);
+    mesh(g.shoulder, m.cloth, 9.6, 54, 2.2);
+    mesh(g.head, m.bone, 0, 68, 4.2, 0.22, 0, 0).scale.set(0.92, 1.05, 0.88);
+    mesh(g.jaw, m.skin, 0, 61.4, 8.4, 0.42, 0, 0).scale.set(0.9, 0.45, 0.7);
+    mesh(g.eye, m.eye, -2.6, 70.2, 10.4);
+    mesh(g.eye, m.eye, 2.6, 70.2, 10.4);
     const legs = [];
     for (const side of [-1, 1]) {
       const leg = new THREE.Group();
@@ -738,15 +748,15 @@ class World3DRuntime {
       lower.rotation.x = 0.55;
       upper.castShadow = lower.castShadow = true;
       arm.add(upper, lower);
-      arm.position.set(side * 10.2, 50, 1.1);
-      arm.rotation.z = side * -0.16;
-      arm.rotation.x = -0.85;
+      arm.position.set(side * 10.2, 54, 2.4);
+      arm.rotation.z = side * -0.22;
+      arm.rotation.x = -1.05;
       group.add(arm);
       arms.push(arm);
     }
     group.userData.arms = arms;
     group.userData.legs = legs;
-    group.userData.authorHeight = 70;
+    group.userData.authorHeight = 78;
     group.visible = false;
     this.root.add(group);
     return group;
@@ -758,7 +768,7 @@ class World3DRuntime {
     const cap = !game || game.quality >= 3 ? 28 : game.quality >= 2 ? 16 : 10;
     const crowd = [];
     for (const enemy of enemies) {
-      if (!enemy || !enemy._crowd || !enemy._survivalType || enemy.dead || enemy.removeMe || enemy._glb) continue;
+      if (!enemy || !enemy._survivalType || enemy.dead || enemy.removeMe) continue;
       crowd.push(enemy);
     }
     if (player) {
@@ -775,10 +785,12 @@ class World3DRuntime {
       proxy.visible = enemy.alpha == null || enemy.alpha > 0.02;
       proxy.position.set(enemy.x, 0, enemy.y);
       proxy.rotation.y = Math.PI / 2 - (enemy.angle || 0);
-      const author = proxy.userData.authorHeight || 70;
-      const target = enemyWorldHeight(enemy.key || 'zombie', enemy.sizeMul || 1, VERTICAL_PROJECTION);
+      const author = proxy.userData.authorHeight || 78;
+      const kind = enemy._survivalType === 'breaker' ? 'werewolf' : 'zombie';
+      const target = enemyWorldHeight(kind, enemy.sizeMul || 1, VERTICAL_PROJECTION);
+      const bulk = enemy._survivalType === 'breaker' ? 1.22 : enemy._survivalType === 'individual' ? 1.08 : 1;
       const hurt = enemy.hurtFlash > 0 ? 1.04 : 1;
-      proxy.scale.setScalar((target / author) * hurt);
+      proxy.scale.setScalar((target / author) * bulk * hurt);
       const moving = Math.hypot(enemy.vx || 0, enemy.vy || 0) > 8;
       const gait = (enemy.t || 0) * (moving ? 7.2 : 2.2) + (enemy.id || 0);
       const swing = Math.sin(gait) * (moving ? 0.55 : 0.08);
@@ -819,9 +831,7 @@ class World3DRuntime {
       add(new THREE.TorusGeometry(16, 3.2, 6, 14), iron, 26, 62, 0, 0, 0, Math.PI / 2);
       add(new THREE.CylinderGeometry(5, 7, 64, 6), iron, 0, 108, 0);
       add(new THREE.CylinderGeometry(11, 13, 20, 10), oil, -38, 12, 18);
-      add(new THREE.CylinderGeometry(11, 13, 20, 10), oil, -38, 12, -16);
       add(new THREE.CylinderGeometry(11, 13, 20, 10), oil, 38, 12, 14);
-      add(new THREE.BoxGeometry(22, 10, 14), stone, 0, 16, 32);
       add(new THREE.BoxGeometry(10, 14, 6), warm, 0, 42, 26);
     } else if (type === 'sawmill') {
       add(new THREE.BoxGeometry(96, 10, 44), plank, 0, 8, 0);
@@ -829,32 +839,79 @@ class World3DRuntime {
       add(new THREE.BoxGeometry(14, 42, 14), timber, 42, 26, -14);
       add(new THREE.BoxGeometry(98, 8, 12), timber, 0, 50, -14);
       add(new THREE.CylinderGeometry(24, 24, 7, 16), iron, 34, 26, 16, 0, 0, Math.PI / 2);
-      add(new THREE.TorusGeometry(26, 3, 6, 16), iron, 34, 26, 16, 0, 0, Math.PI / 2);
       for (let i = 0; i < 4; i++) add(new THREE.CylinderGeometry(7, 7, 52, 8), plank, -30 + i * 14, 10, 32, 0, 0, Math.PI / 2);
-      add(new THREE.BoxGeometry(46, 18, 16), timber, -18, 16, -4);
     } else if (type === 'watch') {
-      add(new THREE.BoxGeometry(36, 12, 36), stone, 0, 6, 0);
-      add(new THREE.BoxGeometry(28, 110, 28), timber, 0, 67, 0);
-      add(new THREE.BoxGeometry(48, 14, 48), stone, 0, 128, 0);
-      add(new THREE.BoxGeometry(10, 22, 10), iron, -16, 148, -16);
-      add(new THREE.BoxGeometry(10, 22, 10), iron, 16, 148, -16);
-      add(new THREE.BoxGeometry(10, 22, 10), iron, -16, 148, 16);
-      add(new THREE.BoxGeometry(10, 22, 10), iron, 16, 148, 16);
-      add(new THREE.BoxGeometry(12, 18, 6), warm, 0, 92, 15);
-      add(new THREE.SphereGeometry(6.5, 8, 6), warm, 0, 158, 0);
+      add(new THREE.BoxGeometry(40, 14, 40), stone, 0, 7, 0);
+      add(new THREE.BoxGeometry(30, 128, 30), timber, 0, 78, 0);
+      add(new THREE.BoxGeometry(56, 16, 56), stone, 0, 148, 0);
+      add(new THREE.BoxGeometry(12, 24, 12), iron, -18, 170, -18);
+      add(new THREE.BoxGeometry(12, 24, 12), iron, 18, 170, -18);
+      add(new THREE.BoxGeometry(12, 24, 12), iron, -18, 170, 18);
+      add(new THREE.BoxGeometry(12, 24, 12), iron, 18, 170, 18);
+      add(new THREE.SphereGeometry(7, 8, 6), warm, 0, 176, 0);
+    } else if (type === 'armory') {
+      add(new THREE.BoxGeometry(88, 8, 52), stone, 0, 4, 0);
+      add(new THREE.BoxGeometry(70, 22, 18), timber, 0, 18, -12);
+      add(new THREE.BoxGeometry(16, 36, 8), iron, -22, 28, 8, 0, 0.4, 0);
+      add(new THREE.BoxGeometry(16, 36, 8), iron, 8, 28, 10, 0, -0.3, 0);
+      add(new THREE.BoxGeometry(28, 16, 18), plank, 28, 12, 6);
+    } else if (type === 'kitchen') {
+      add(new THREE.BoxGeometry(80, 8, 48), stone, 0, 4, 0);
+      add(new THREE.BoxGeometry(64, 16, 28), timber, 0, 16, 0);
+      add(new THREE.CylinderGeometry(10, 12, 18, 8), oil, -28, 14, 10);
+      add(new THREE.BoxGeometry(10, 14, 6), warm, 18, 22, 8);
     } else {
-      add(new THREE.BoxGeometry(148, 8, 72), stone, 0, 4, 0);
-      add(new THREE.BoxGeometry(136, 36, 58), timber, 0, 26, 0);
-      add(new THREE.BoxGeometry(148, 8, 72), roof, 0, 48, 0);
-      for (let i = -1; i <= 1; i++) {
-        add(new THREE.BoxGeometry(30, 7, 16), plank, i * 40, 10, 10);
-        add(new THREE.BoxGeometry(24, 4, 12), linen, i * 40, 15, 10);
-      }
-      add(new THREE.BoxGeometry(10, 14, 4), warm, 0, 28, 30);
-      add(new THREE.BoxGeometry(12, 26, 12), stone, 52, 38, -16);
+      add(new THREE.BoxGeometry(120, 8, 64), stone, 0, 4, 0);
+      add(new THREE.BoxGeometry(36, 10, 18), plank, -32, 12, 6);
+      add(new THREE.BoxGeometry(36, 10, 18), plank, 8, 12, 8);
+      add(new THREE.BoxGeometry(24, 4, 12), linen, -32, 18, 6);
+      add(new THREE.BoxGeometry(24, 4, 12), linen, 8, 18, 8);
+      add(new THREE.BoxGeometry(10, 14, 4), warm, 0, 22, 22);
     }
     group.traverse((item) => { if (item.isMesh) item.userData.survivalBuilding = type; });
     return group;
+  }
+
+  _dressSurvivalBuilding(group, type) {
+    if (!group || group.userData.kit || !EnvKit.ready) return;
+    const heightFor = (name, metres) => {
+      const src = EnvKit.pieces && EnvKit.pieces[name];
+      if (!src) return 1;
+      return ((metres || 1) * PX_PER_METRE) / Math.max(0.001, src.size.y);
+    };
+    const addPiece = (name, x, y, z, metres, yaw = 0) => {
+      const mesh = EnvKit.piece(name);
+      if (!mesh) return null;
+      mesh.scale.setScalar(heightFor(name, metres));
+      mesh.position.set(x, y, z);
+      mesh.rotation.y = yaw;
+      group.add(mesh);
+      return mesh;
+    };
+    if (type === 'extractor') {
+      addPiece('barrel', -36, 0, 18, 0.9, 0.2);
+      addPiece('barrel', 34, 0, -12, 0.85, -0.4);
+      addPiece('torch', 0, 0, 28, PIECE_METRES.torch || 1.5, 0);
+    } else if (type === 'sawmill') {
+      addPiece('crate', -28, 0, 18, 0.7, 0.2);
+      addPiece('stacked', 22, 0, -8, 1.1, 0.4);
+    } else if (type === 'watch') {
+      addPiece('crate', -22, 0, 18, 0.55, 0.3);
+      addPiece('torch', 18, 0, 16, PIECE_METRES.torch || 1.5, 0.4);
+    } else if (type === 'armory') {
+      addPiece('chest', -18, 0, 8, 0.9, 0.2);
+      addPiece('table', 16, 0, -6, 0.85, 0);
+      addPiece('crate', 28, 0, 14, 0.6, -0.3);
+    } else if (type === 'kitchen') {
+      addPiece('table', 0, 0, 0, 0.9, 0);
+      addPiece('barrel', -30, 0, 12, 0.8, 0.5);
+      addPiece('chair', 22, 0, 10, 0.85, 0.6);
+    } else {
+      addPiece('table', 18, 0, -8, 0.8, 0.2);
+      addPiece('chest', -24, 0, 6, 0.85, -0.2);
+      addPiece('chair', 8, 0, 16, 0.8, 0.4);
+    }
+    group.userData.kit = true;
   }
 
   _makeSurvivalHearthKeep() {
@@ -862,6 +919,7 @@ class World3DRuntime {
     group.name = 'survival-hearth-keep-3d';
     const stone = new THREE.MeshStandardMaterial({ color: 0x6a6458, roughness: 1, flatShading: true });
     const dark = new THREE.MeshStandardMaterial({ color: 0x3f3a32, roughness: 0.95, flatShading: true });
+    const iron = new THREE.MeshStandardMaterial({ color: 0x4a4438, metalness: 0.45, roughness: 0.6, flatShading: true });
     const add = (geometry, material, x, y, z, minLevel = 1) => {
       const mesh = new THREE.Mesh(geometry, material);
       mesh.position.set(x, y, z);
@@ -871,14 +929,20 @@ class World3DRuntime {
       group.add(mesh);
       return mesh;
     };
-    const ember = new THREE.MeshBasicMaterial({ color: 0xffc078, toneMapped: false });
-    add(new THREE.BoxGeometry(70, 18, 48), stone, 0, 9, -8, 1);
-    add(new THREE.BoxGeometry(18, 52, 18), stone, -28, 34, -14, 1);
-    add(new THREE.BoxGeometry(18, 52, 18), stone, 28, 34, -14, 1);
-    add(new THREE.BoxGeometry(28, 22, 16), ember, 0, 22, 8, 1);
-    add(new THREE.BoxGeometry(86, 36, 16), stone, 0, 26, -28, 2);
-    add(new THREE.BoxGeometry(22, 90, 22), dark, 0, 64, -18, 3);
-    add(new THREE.BoxGeometry(32, 10, 32), stone, 0, 112, -18, 3);
+    add(new THREE.BoxGeometry(110, 22, 110), stone, 0, 11, 0, 1);
+    add(new THREE.BoxGeometry(70, 148, 70), stone, 0, 96, 0, 1);
+    add(new THREE.BoxGeometry(16, 148, 16), dark, -34, 96, -34, 1);
+    add(new THREE.BoxGeometry(16, 148, 16), dark, 34, 96, -34, 1);
+    add(new THREE.BoxGeometry(16, 148, 16), dark, -34, 96, 34, 1);
+    add(new THREE.BoxGeometry(16, 148, 16), dark, 34, 96, 34, 1);
+    add(new THREE.BoxGeometry(102, 18, 102), stone, 0, 176, 0, 1);
+    add(new THREE.BoxGeometry(20, 32, 20), iron, -42, 198, -42, 2);
+    add(new THREE.BoxGeometry(20, 32, 20), iron, 42, 198, -42, 2);
+    add(new THREE.BoxGeometry(20, 32, 20), iron, -42, 198, 42, 2);
+    add(new THREE.BoxGeometry(20, 32, 20), iron, 42, 198, 42, 2);
+    add(new THREE.BoxGeometry(54, 80, 54), dark, 0, 228, 0, 3);
+    add(new THREE.BoxGeometry(72, 14, 72), stone, 0, 274, 0, 3);
+    group.userData.deckY = 150;
     group.visible = false;
     this.root.add(group);
     return group;
@@ -910,9 +974,9 @@ class World3DRuntime {
   _syncDaySiegeCamps(game, mode) {
     if (!this.survivalDayCamps) this.survivalDayCamps = new Map();
     const active = new Set();
-    const show = game.screen === 'playing' && mode.phase === 'day';
+    const show = game.screen === 'playing';
     const doors = show ? (game.mansion.entrances || []).filter((e) => e.kind === 'door' && e.exterior && e.outside) : [];
-    for (const door of doors.slice(0, 5)) {
+    for (const door of doors) {
       const id = door.id;
       active.add(id);
       let camp = this.survivalDayCamps.get(id);
@@ -1112,16 +1176,23 @@ class World3DRuntime {
   }
 
   _makeSurvivalSlotRing() {
-    const ring = new THREE.Mesh(
-      new THREE.RingGeometry(78, 88, 40),
-      new THREE.MeshBasicMaterial({ color: 0xe6c77e, transparent: true, opacity: 0.72, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }),
+    const group = new THREE.Group();
+    group.name = 'survival-build-plot-3d';
+    const pad = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 3.2, 1),
+      new THREE.MeshStandardMaterial({ color: 0x4a453c, roughness: 1, transparent: true, opacity: 0.82 }),
     );
-    ring.name = 'survival-lit-build-slot-3d';
-    ring.rotation.x = -Math.PI / 2;
-    ring.position.y = 3;
-    ring.renderOrder = 4;
-    this.root.add(ring);
-    return ring;
+    pad.position.y = 1.6;
+    pad.receiveShadow = true;
+    const rim = new THREE.Mesh(
+      new THREE.BoxGeometry(1.06, 1.4, 1.06),
+      new THREE.MeshBasicMaterial({ color: 0xb9a57a, transparent: true, opacity: 0.38, depthWrite: false, toneMapped: false }),
+    );
+    rim.position.y = 3.2;
+    group.add(pad, rim);
+    group.userData = { pad, rim };
+    this.root.add(group);
+    return group;
   }
 
   _makeSurvivalGate() {
@@ -1245,7 +1316,9 @@ class World3DRuntime {
     this.survivalHearthFire.visible = !!fire;
     if (fire) {
       const now = game.now || mode.elapsed || 0;
-      this.survivalHearthFire.position.set(fire.x, 0, fire.y);
+      const keepLv = Math.max(1, mode.perapianLevel || 1);
+      this.survivalHearthFire.position.set(fire.x, 168 + keepLv * 14, fire.y);
+      this.survivalHearthFire.scale.setScalar(1.7);
       const { flames, embers, smoke, torches } = this.survivalHearthFire.userData;
       const flicker = 0.92 + 0.08 * Math.sin(now * 9.4);
       if (flames) {
@@ -1318,23 +1391,28 @@ class World3DRuntime {
     const visibleSlots = game.screen === 'playing' && mode.phase === 'day' ? new Set(mode.buildableRooms().map((room) => room.id)) : new Set();
     for (const roomId of visibleSlots) {
       let ring = this.survivalSlotRings.get(roomId);
-      if (!ring) { ring = this._makeSurvivalSlotRing(); this.survivalSlotRings.set(roomId, ring); }
+      if (!ring || !ring.userData || !ring.userData.pad) {
+        if (ring) this.root.remove(ring);
+        ring = this._makeSurvivalSlotRing();
+        this.survivalSlotRings.set(roomId, ring);
+      }
       const room = mode.plotById(roomId);
       if (!room) continue;
       ring.visible = true;
-      ring.position.set(room.x + room.w / 2, 3, room.y + room.h / 2);
-      const span = Math.max(70, Math.min(room.w || 160, room.h || 160) * 0.42);
-      ring.scale.setScalar(span / 83);
+      ring.position.set(room.x + room.w / 2, 0, room.y + room.h / 2);
+      ring.scale.set(Math.max(70, room.w * 0.88), 1, Math.max(70, room.h * 0.88));
       const selected = mode.selectedRoom === roomId;
-      ring.material.color.setHex(room.kind === 'yard' ? (selected ? 0x9ec4e6 : 0x6e8aa8) : (selected ? 0xffdf89 : 0xb99759));
-      ring.material.opacity = selected ? 0.94 : 0.56;
+      const yard = room.kind === 'yard';
+      ring.userData.pad.material.color.setHex(selected ? (yard ? 0x6a7a88 : 0x6a5a3c) : 0x454038);
+      ring.userData.rim.material.color.setHex(selected ? (yard ? 0xc9d6e4 : 0xe4d2a0) : 0x8a7d64);
+      ring.userData.rim.material.opacity = selected ? 0.7 : 0.32;
     }
     for (const [roomId, ring] of this.survivalSlotRings) if (!visibleSlots.has(roomId)) ring.visible = false;
 
     const activeBuildings = new Set();
     for (const [roomId, type] of Object.entries(mode.buildings)) {
       const room = mode.plotById(roomId);
-      if (!room || room.kind !== 'yard') continue;
+      if (!room) continue;
       activeBuildings.add(roomId);
       let mesh = this.survivalBuildingMeshes.get(roomId);
       if (!mesh || mesh.userData.type !== type) {
@@ -1344,16 +1422,19 @@ class World3DRuntime {
         this.survivalBuildingMeshes.set(roomId, mesh);
         this.root.add(mesh);
       }
+      this._dressSurvivalBuilding(mesh, type);
       mesh.visible = true;
       mesh.position.set(room.x + room.w / 2, 0, room.y + room.h / 2);
+      mesh.scale.setScalar(room.kind === 'yard' ? 1 : 0.82);
     }
 
     if (!this.survivalHearthKeep) this.survivalHearthKeep = this._makeSurvivalHearthKeep();
     const keepLv = Math.max(1, mode.perapianLevel || 1);
     this.survivalHearthKeep.visible = !!fire;
+    const deckY = 138 + keepLv * 12;
     if (fire) {
       this.survivalHearthKeep.position.set(fire.x, 0, fire.y);
-      this.survivalHearthKeep.scale.setScalar(0.72 + keepLv * 0.28);
+      this.survivalHearthKeep.scale.setScalar(0.92 + keepLv * 0.12);
       for (const child of this.survivalHearthKeep.children) {
         if (child.userData.minLevel) child.visible = keepLv >= child.userData.minLevel;
       }
@@ -1399,6 +1480,8 @@ class World3DRuntime {
       pip.material.opacity = pulse;
     }
     for (const [roomId, pip] of this.survivalReadyPips) if (!ready.has(roomId)) pip.visible = false;
+    if (game.interactTarget && game.interactTarget.ent) this._syncInteractionCue(game);
+    else if (this.interactionCue) this.interactionCue.visible = false;
   }
 
   _makeSurvivalScaffold() {
@@ -1701,7 +1784,7 @@ class World3DRuntime {
         this.root.add(mesh);
       }
       direction.set(Math.cos(bolt.angle || 0), 0, Math.sin(bolt.angle || 0)).normalize();
-      mesh.position.set(bolt.x, 28, bolt.y);
+      mesh.position.set(bolt.x, bolt.height || 42, bolt.y);
       mesh.quaternion.setFromUnitVectors(up, direction);
       mesh.visible = true;
       let trail = this.boltTrails.get(id);
@@ -1715,7 +1798,7 @@ class World3DRuntime {
       const dx = bolt.x - tail.x;
       const dz = bolt.y - tail.y;
       const length = Math.max(28, Math.min(90, Math.hypot(dx, dz)));
-      trail.position.set((bolt.x + tail.x) * 0.5, 28, (bolt.y + tail.y) * 0.5);
+      trail.position.set((bolt.x + tail.x) * 0.5, bolt.height || 42, (bolt.y + tail.y) * 0.5);
       trail.quaternion.setFromUnitVectors(up, direction);
       trail.scale.set(0.7, length, 0.7);
       trail.material.opacity = 0.7;
@@ -2021,7 +2104,7 @@ class World3DRuntime {
       const dir = this._muzzleDir || (this._muzzleDir = new THREE.Vector3());
       const up = this._muzzleUp || (this._muzzleUp = new THREE.Vector3(0, 1, 0));
       dir.set(Math.cos(angle), 0, Math.sin(angle)).normalize();
-      this.playerFlash.position.set(player.x + dir.x * 48, 36, player.y + dir.z * 48);
+      this.playerFlash.position.set(player.x + dir.x * 72, 44, player.y + dir.z * 72);
       this.playerFlash.quaternion.setFromUnitVectors(up, dir);
       this.playerFlash.scale.setScalar(0.85 + fade * 0.4);
       const coreMat = this.playerFlashCore ? this.playerFlashCore.material : this.playerFlash.material;

@@ -919,15 +919,16 @@ export function drawTouchControls(game, ctx, w, h) {
     ? clamp(game.survival.skillCooldown / Math.max(0.01, game.survival.skillCooldownMax), 0, 1) : 0;
   const useAction = (game.interactTarget && game.interactTarget.actions || [])
     .find((action) => action.act !== 'repair' && action.act !== 'barricade');
-  const useIcon = game.mode === 'survival' ? 'lamp'
-    : !useAction ? 'interact'
-      : useAction.act === 'open' ? (game.interactTarget.ent.open ? 'doorClosed' : 'doorOpen')
-      : useAction.act === 'drink' || useAction.act === 'larder' ? 'blood'
-        : useAction.act === 'stakes' ? 'barricade'
-          : useAction.act === 'ward' ? 'lamp' : 'interact';
+  const doorAct = useAction && useAction.act === 'open';
+  const useIcon = doorAct ? (game.interactTarget.ent.open ? 'doorClosed' : 'doorOpen')
+    : game.mode === 'survival' ? 'lamp'
+      : !useAction ? 'interact'
+        : useAction.act === 'drink' || useAction.act === 'larder' ? 'blood'
+          : useAction.act === 'stakes' ? 'barricade'
+            : useAction.act === 'ward' ? 'lamp' : 'interact';
   drawBtn(input.buttons.run, 'run', null, { toggle: true, runToggle: true });
   drawBtn(input.buttons.dash, 'dash', null, { cd: dashCd });
-  drawBtn(input.buttons.interact, useIcon, null, game.mode === 'survival' ? { cd: skillCd } : {});
+  drawBtn(input.buttons.interact, useIcon, null, game.mode === 'survival' && !doorAct ? { cd: skillCd } : {});
   drawBtn(input.buttons.repair, 'repair');
   drawBtn(input.buttons.barricade, 'barricade');
   ctx.restore();

@@ -47,6 +47,7 @@ export class Input {
     this.uiTap = null;
     this.worldTap = null;
     this.pan = { active: false, pointer: false, id: -1, lx: 0, ly: 0, dx: 0, dy: 0, moved: 0 };
+    this.zoomNudge = 0;
     this._press = null;
     this._bind();
   }
@@ -274,6 +275,11 @@ export class Input {
     c.addEventListener('touchmove', onMove, { passive: false });
     c.addEventListener('touchend', (e) => onEnd(e, true), { passive: false });
     c.addEventListener('touchcancel', (e) => onEnd(e, false), { passive: false });
+    c.addEventListener('wheel', (e) => {
+      if (!this.gameplay) return;
+      this.zoomNudge += e.deltaY > 0 ? -1 : 1;
+      e.preventDefault();
+    }, { passive: false });
   }
 
   /** Call once per frame before gameplay reads input. */

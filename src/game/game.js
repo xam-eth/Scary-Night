@@ -772,6 +772,7 @@ export class Game {
     b.dash.hidden = true;
     b.repair.hidden = true;
     b.barricade.hidden = true;
+    // Survival interact/repair visibility is refined per-frame by door range.
     if (this.input.gameplay) {
       const inset = dayPlay ? dayPanelHeight(this.renderer.h, this.renderer.w) : 0;
       this.input.layout(this.renderer.w, this.renderer.h, { bottomInset: inset });
@@ -2093,7 +2094,7 @@ export class Game {
   }
 
   spawnBolt(owner, angle, spec) {
-    const off = (spec && spec.offset) || 22;
+    const off = (spec && spec.offset) != null ? spec.offset : 22;
     const speed = (spec && spec.boltSpeed) || owner.type.boltSpeed;
     const damage = (spec && spec.damage) || owner.type.boltDamage;
     const b = new Bolt(
@@ -2102,6 +2103,7 @@ export class Game {
       angle, speed, damage, owner,
     );
     b.kind = spec && spec.ammo === 'knives' ? 'knife' : 'bolt';
+    b.height = (spec && spec.height) || (owner === this.player ? 44 : 28);
     // the kit travels with the bolt: a blessed bolt is not the same wood
     if (owner === this.player) b.kit = this.player.kit || null;
     this.bolts.push(b);

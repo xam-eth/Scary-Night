@@ -76,6 +76,7 @@ function addButton(game, ctx, box, label, onClick, options = {}) {
 
 function addIconTile(game, ctx, box, {
   icon, cost = '', caption = '', onClick, disabled = false, selected = false, color = AMBER,
+  costOil = null, costWood = null,
 }) {
   const item = {
     ...box,
@@ -83,6 +84,7 @@ function addIconTile(game, ctx, box, {
     label: `survival:${icon}:${cost || caption}`,
     onClick,
     disabled: !!disabled,
+    costOil, costWood,
   };
   game.ui.push(item);
   ctx.save();
@@ -92,11 +94,18 @@ function addIconTile(game, ctx, box, {
   ctx.strokeStyle = disabled ? 'rgba(142,137,126,0.2)' : selected ? 'rgba(238,197,113,0.95)' : 'rgba(191,168,119,0.42)';
   ctx.lineWidth = selected ? 1.7 : 1;
   ctx.stroke();
-  const iconSize = Math.min(22, box.h * 0.48);
+  const iconSize = Math.min(22, box.h * 0.42);
   const ink = disabled ? '#77746c' : color;
-  drawGameIcon(ctx, icon, box.x + box.w / 2, box.y + box.h * 0.38, iconSize, ink);
-  const sub = cost || caption;
-  if (sub) text(ctx, sub, box.x + box.w / 2, box.y + box.h * 0.78, 7, disabled ? '#6f6c66' : PAPER, 'center');
+  drawGameIcon(ctx, icon, box.x + box.w / 2, box.y + box.h * 0.32, iconSize, ink);
+  const oil = Number(item.costOil);
+  const wood = Number(item.costWood);
+  if (Number.isFinite(oil) && Number.isFinite(wood) && (oil > 0 || wood > 0)) {
+    drawChip(ctx, box.x + 4, box.y + box.h - 18, (box.w - 10) / 2, 'oil', oil, '#e0b36a');
+    drawChip(ctx, box.x + box.w / 2 + 1, box.y + box.h - 18, (box.w - 10) / 2, 'plank', wood, '#c8b48a');
+  } else {
+    const sub = cost || caption;
+    if (sub) text(ctx, sub, box.x + box.w / 2, box.y + box.h * 0.78, 7, disabled ? '#6f6c66' : PAPER, 'center');
+  }
   ctx.restore();
   return item;
 }
@@ -221,9 +230,14 @@ function drawNightHud(game, ctx, w, h) {
 
   drawThreatCue(game, ctx, w, h);
   drawFtue(game, ctx, w, h);
-  const feeding = mode.ftue && mode.ftue.step === 'done' && mode.nearHearth()
-    && mode.oil >= mode.tuning.feedOil && mode.feedCd <= 0;
-  if (feeding) drawLessonChip(ctx, w, h, 'FEED HEARTH', 'KEEP THE LIGHT');
+  const door = mode.nearestDoor && mode.nearestDoor();
+  if (door && !door.broken) {
+    drawLessonChip(ctx, w, h, door.open ? 'CLOSE DOOR' : 'OPEN DOOR', 'HOLD THE GATE');
+  } else {
+    const feeding = mode.ftue && mode.ftue.step === 'done' && mode.nearHearth()
+      && mode.oil >= mode.tuning.feedOil && mode.feedCd <= 0;
+    if (feeding) drawLessonChip(ctx, w, h, 'FEED HEARTH', 'KEEP THE LIGHT');
+  }
   const lock = mode.currentTarget && !mode.currentTarget.dead ? mode.currentTarget : null;
   if (lock) {
     const kind = lock._survivalType === 'breaker' ? 'BREAKER' : lock._survivalType === 'individual' ? 'ZOMBIE' : 'SWARM';
@@ -323,6 +337,33 @@ export function dayPanelHeight(h, w = 0) {
   return landscape ? 52 : 56;
 }
 
+function drawPlotPrices(game, ctx, w, h) {
+  const mode = game.survival;
+  if (!mode || !game.renderer || !game.renderer.worldToScreen) return;
+  const rooms = mode.buildableRooms();
+  for (const room of rooms) {
+    const cost = mode.plotCost(room.id);
+    if (!cost) continue;
+    const sp = game.renderer.worldToScreen(room.x + room.w / 2, room.y + room.h / 2);
+    if (sp.x < 40 || sp.x > w - 40 || sp.y < 70 || sp.y > h - 90) continue;
+    const bw = 78;
+    const x = sp.x - bw / 2;
+    const y = sp.y - 18;
+    ctx.save();
+    roundRect(ctx, x, y, bw, 22, 7);
+    ctx.fillStyle = 'rgba(8,9,12,0.78)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(196,170,118,0.4)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    drawGameIcon(ctx, 'oil', x + 12, y + 11, 11, '#e0b36a');
+    text(ctx, String(cost.oil), x + 22, y + 11, 9, PAPER, 'left');
+    drawGameIcon(ctx, 'plank', x + 46, y + 11, 11, '#c8b48a');
+    text(ctx, String(cost.wood), x + 56, y + 11, 9, PAPER, 'left');
+    ctx.restore();
+  }
+}
+
 function drawDayPanel(game, ctx, w, h) {
   const mode = game.survival;
   const btn = 44;
@@ -351,14 +392,15 @@ function drawDayPanel(game, ctx, w, h) {
   });
 
   if (!busy && !mode.buildMenuOpen) {
-    drawLessonChip(ctx, w, h, 'TAP A PLOT', 'RAISE WHAT THE KEEP NEEDS');
+    drawLessonChip(ctx, w, h, 'TAP A PLOT', 'OIL + WOOD TO RAISE IT');
   }
+  drawPlotPrices(game, ctx, w, h);
 
   if (mode.buildMenuOpen && !busy) {
     const choices = mode.buildChoices();
     const tile = 44;
     const sheetW = Math.min(w - 32, Math.max(168, choices.length * (tile + gap) + 24));
-    const sheetH = 86;
+    const sheetH = 102;
     const sheetX = (w - sheetW) / 2;
     const sheetY = btnY - sheetH - 10;
     fillPanel(ctx, sheetX, sheetY, sheetW, sheetH, 0.95);
@@ -373,9 +415,10 @@ function drawDayPanel(game, ctx, w, h) {
       for (let i = 0; i < choices.length; i++) {
         const choice = choices[i];
         addIconTile(game, ctx, {
-          x: rowX + i * (tile + gap), y: sheetY + 32, w: tile, h: 46,
+          x: rowX + i * (tile + gap), y: sheetY + 28, w: tile, h: 62,
         }, {
           icon: choice.icon, cost: choice.cost, color: '#ddc58f',
+          costOil: choice.costOil, costWood: choice.costWood,
           disabled: choice.disabled,
           onClick: () => mode.startBuild(choice.type, mode.selectedRoom),
         });

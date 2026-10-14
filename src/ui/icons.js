@@ -277,6 +277,16 @@ export function drawGameIcon(ctx, name, x, y, size = 24, color = '#eee6d6') {
       ctx.beginPath(); ctx.rect(-2.2, 2, 4.4, 8); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(0, -13); ctx.stroke();
       break;
+    case 'armory':
+      ctx.beginPath(); ctx.moveTo(0, -11); ctx.lineTo(9, -6); ctx.lineTo(9, 4); ctx.quadraticCurveTo(0, 12, -9, 4); ctx.lineTo(-9, -6);
+      ctx.closePath(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(0, 6); ctx.moveTo(-4, 0); ctx.lineTo(4, 0); ctx.stroke();
+      break;
+    case 'kitchen':
+      ctx.beginPath(); ctx.roundRect(-10, 2, 20, 8, 1.5); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-6, 2); ctx.lineTo(-6, -8); ctx.moveTo(6, 2); ctx.lineTo(6, -8); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, -4, 4, Math.PI, 0); ctx.stroke();
+      break;
     case 'crew':
       ctx.beginPath(); ctx.arc(-4, -5, 3.2, 0, Math.PI * 2); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(-10, 10); ctx.quadraticCurveTo(-9, 2, -4, 2); ctx.quadraticCurveTo(1, 2, 2, 10); ctx.stroke();

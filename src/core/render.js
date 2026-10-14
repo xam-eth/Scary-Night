@@ -96,11 +96,15 @@ export class Renderer {
     const tall = this.h > this.w * 1.2 && this.h >= 620;
     this.tilt = this.baseTilt;
     this.view = { left: 0, top: 0, w: this.w, h: this.h, cx: this.w / 2, cy: this.h / 2 };
-    this.cam.zoom = tall
-      ? clamp(this.w / 720, 0.48, 0.68)
-      : clamp(Math.min(this.w / 960, this.h / 500), 0.86, 1.42);
-    // The inverse of an isometric viewport is a diamond. These are its
-    // conservative world-space half-extents, used for camera/bounds culling.
+    this._applyZoom(tall);
+  }
+
+  _applyZoom(tall = this.h > this.w * 1.2 && this.h >= 620) {
+    if (this.cam.userZoom == null) this.cam.userZoom = 1;
+    const base = tall
+      ? clamp(this.w / 820, 0.42, 0.62)
+      : clamp(Math.min(this.w / 1580, this.h / 880), 0.56, 0.82);
+    this.cam.zoom = clamp(base * this.cam.userZoom, 0.4, 1.28);
     const a = this.cam.zoom * ISO_CAMERA.horizontal;
     const b = this.cam.zoom * ISO_CAMERA.vertical;
     const worldSpan = this.view.w / (2 * a) + this.view.h / (2 * b);
@@ -123,12 +127,17 @@ export class Renderer {
   }
 
   applyLookPan(input) {
+    if (input && input.zoomNudge) {
+      this.cam.userZoom = clamp((this.cam.userZoom || 1) * (input.zoomNudge > 0 ? 1.12 : 0.9), 0.55, 1.7);
+      input.zoomNudge = 0;
+      this._applyZoom();
+    }
     const pan = input && input.pan;
     if (!pan) { this.cam.panning = false; return; }
     if (pan.dx || pan.dy) {
-      const delta = this.screenDeltaToWorld(pan.dx, pan.dy);
-      this.cam.panX = clamp(this.cam.panX - delta.x, -1400, 1400);
-      this.cam.panY = clamp(this.cam.panY - delta.y, -1100, 1100);
+      const delta = this.screenDeltaToWorld(pan.dx * 2.4, pan.dy * 2.4);
+      this.cam.panX = clamp(this.cam.panX - delta.x, -2800, 2800);
+      this.cam.panY = clamp(this.cam.panY - delta.y, -2200, 2200);
     }
     this.cam.panning = !!pan.active;
     pan.dx = 0;
@@ -141,10 +150,6 @@ export class Renderer {
    */
   followCamera(tx, ty, dt, lookX = 0, lookY = 0, bounds = null) {
     const c = this.cam;
-    if (!c.panning && Math.hypot(lookX, lookY) > 8) {
-      c.panX = damp(c.panX || 0, 0, 1.7, dt);
-      c.panY = damp(c.panY || 0, 0, 1.7, dt);
-    }
     let gx = tx + lookX + (c.panX || 0), gy = ty + lookY + (c.panY || 0);
     if (bounds) {
       const hw = c.viewW / 2, hh = c.viewH / 2;

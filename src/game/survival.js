@@ -32,21 +32,26 @@ const DOOR_LABELS = Object.freeze({
 });
 
 export const SURVIVAL_BUILDINGS = Object.freeze({
-  extractor: Object.freeze({ id: 'extractor', label: 'OIL STILL', oil: 2, wood: 10, seconds: 7, produces: { oil: 6 } }),
-  sawmill: Object.freeze({ id: 'sawmill', label: 'TIMBER YARD', oil: 2, wood: 10, seconds: 7, produces: { wood: 7 } }),
-  shelter: Object.freeze({ id: 'shelter', label: 'SICK WARD', oil: 4, wood: 14, seconds: 9, produces: { survivors: 1 } }),
-  watch: Object.freeze({ id: 'watch', label: 'WATCH TOWER', oil: 4, wood: 12, seconds: 8 }),
+  extractor: Object.freeze({ id: 'extractor', label: 'OIL STILL', oil: 2, wood: 10, seconds: 7, produces: { oil: 6 }, job: 'fuel' }),
+  sawmill: Object.freeze({ id: 'sawmill', label: 'TIMBER YARD', oil: 2, wood: 10, seconds: 7, produces: { wood: 7 }, job: 'timber' }),
+  shelter: Object.freeze({ id: 'shelter', label: 'SICK WARD', oil: 4, wood: 14, seconds: 9, produces: { survivors: 1 }, job: 'crew' }),
+  watch: Object.freeze({ id: 'watch', label: 'WATCH TOWER', oil: 4, wood: 12, seconds: 8, job: 'tower' }),
+  armory: Object.freeze({ id: 'armory', label: 'ARMORY', oil: 3, wood: 12, seconds: 8, job: 'arms' }),
+  kitchen: Object.freeze({ id: 'kitchen', label: 'KITCHEN', oil: 3, wood: 10, seconds: 8, job: 'mess' }),
 });
 
 export const SURVIVAL_START_ROOMS = Object.freeze(['hall', 'library']);
 
+/** The outdoor beacon the keep is built to guard. South of the hall, in the yard. */
+export const SURVIVAL_HEARTH = Object.freeze({ x: 440, y: 790 });
+
 /** Adjacent plots the keep can grow into. A building both unlocks the room and gives it a job. */
 export const SURVIVAL_WINGS = Object.freeze([
-  Object.freeze({ roomId: 'dining', requires: Object.freeze(['hall']), label: 'SICK WARD', accepts: Object.freeze(['shelter']) }),
-  Object.freeze({ roomId: 'study', requires: Object.freeze(['hall']), label: 'STUDY', accepts: Object.freeze(['shelter']) }),
-  Object.freeze({ roomId: 'oratory', requires: Object.freeze(['library']), label: 'CREW DORM', accepts: Object.freeze(['shelter']) }),
-  Object.freeze({ roomId: 'kitchen', requires: Object.freeze(['dining']), label: 'KITCHEN', accepts: Object.freeze(['shelter']) }),
-  Object.freeze({ roomId: 'basement', requires: Object.freeze(['hall']), label: 'OIL CELLAR', accepts: Object.freeze(['extractor']) }),
+  Object.freeze({ roomId: 'dining', requires: Object.freeze(['hall']), label: 'SICK WARD', accepts: Object.freeze(['shelter']), hearthNeed: 1 }),
+  Object.freeze({ roomId: 'study', requires: Object.freeze(['hall']), label: 'ARMORY', accepts: Object.freeze(['armory']), hearthNeed: 1 }),
+  Object.freeze({ roomId: 'oratory', requires: Object.freeze(['library']), label: 'CREW DORM', accepts: Object.freeze(['shelter']), hearthNeed: 1 }),
+  Object.freeze({ roomId: 'kitchen', requires: Object.freeze(['dining']), label: 'KITCHEN', accepts: Object.freeze(['kitchen']), hearthNeed: 2 }),
+  Object.freeze({ roomId: 'basement', requires: Object.freeze(['hall']), label: 'OIL CELLAR', accepts: Object.freeze(['extractor']), hearthNeed: 2 }),
 ]);
 
 /** Outdoor jobs in front of the keep. One plot, one job. */
@@ -63,7 +68,7 @@ export const SURVIVAL_YARD = Object.freeze([
   }),
   Object.freeze({
     id: 'yard-watch', name: 'WATCH', kind: 'yard',
-    x: 360, y: 880, w: 160, h: 160,
+    x: 180, y: 880, w: 160, h: 160,
     accepts: Object.freeze(['watch']),
   }),
 ]);
@@ -555,14 +560,28 @@ export class SurvivalMode {
     const ids = [...this.unlockedRoomIds()];
     const changed = this.game.mansion.setUnlockedRooms(ids);
     this.game.mansion.fitPlayArea(SURVIVAL_YARD);
+    this._placeOutdoorHearth();
     if (changed) this.game.survivalBakeDirty = true;
     return changed;
+  }
+
+  _placeOutdoorHearth() {
+    const m = this.game.mansion;
+    const fire = m.fireplaceLight;
+    if (!fire) return;
+    fire.x = SURVIVAL_HEARTH.x;
+    fire.y = SURVIVAL_HEARTH.y;
+    fire.room = ROOM.OUTSIDE;
+    fire.type = 'fire';
+    fire.flick = 0;
+    fire.f = 1;
   }
 
   _configureMansion() {
     this._syncHouse();
     const m = this.game.mansion;
     m.survivalLighting = true;
+    this._placeOutdoorHearth();
     this._applyVisualLights();
     if (m.fireplaceLight) {
       m.fireplaceLight.i = this.oil > 0 ? 0.92 : 0;
@@ -615,6 +634,7 @@ export class SurvivalMode {
     g.renderer.snapCamera(g.player.x, g.player.y);
     g.input.gameplay = this.phase === 'night';
     g.mansion.update(0, g);
+    this._placeOutdoorHearth();
     this._persist(true);
     return true;
   }
@@ -657,6 +677,9 @@ export class SurvivalMode {
     }
     this.applyBuildingEffects(true);
     this.refreshFireplace(true);
+    this._siegeSeeded = false;
+    this.seedDoorSiege();
+    this._siegeSeeded = true;
     g.renderer.snapCamera(g.player.x, g.player.y);
     this._persist(true);
     return true;
@@ -689,6 +712,10 @@ export class SurvivalMode {
 
     this.updateWaves();
     this.updateFtue(dt);
+    if (!this._siegeSeeded && this.ftue.step === 'done' && this.elapsed > 1.5) {
+      this.seedDoorSiege();
+      this._siegeSeeded = true;
+    }
     this.updateLightFuel(dt);
     g.mansion.update(dt, g);
     this.refreshFireplace(false);
@@ -701,14 +728,8 @@ export class SurvivalMode {
       // touch/keyboard players prioritize a target by facing toward it.
       g.input.attackDown = true;
     }
-    if (g.input.buttons && g.input.buttons.interact) {
-      g.input.buttons.interact.hot = this.ftue.step === 'done' && this.nearHearth()
-        && this.oil >= this.tuning.feedOil && this.feedCd <= 0;
-    }
-    if (g.input.interactPressed) {
-      const feeding = this.ftue.step === 'done' && this.tryFeedHearth();
-      if (!feeding) this.useSkill();
-    }
+    this.updateSurvivalInteract(dt);
+    this.updateTowers(dt);
     g.player.update(dt, g);
     g.player.anim(dt);
 
@@ -746,6 +767,7 @@ export class SurvivalMode {
     g.input.attackDown = false;
     g.input.attackPressed = false;
     g.input.dashPressed = false;
+    this.updateSurvivalInteract(dt);
     g.player.update(dt, g);
     g.player.anim(dt);
     this.updateProduction(dt);
@@ -950,20 +972,42 @@ export class SurvivalMode {
     }
   }
 
+  siegeDoors() {
+    const doors = this.game.mansion.entrances.filter((e) => e.kind === 'door' && e.exterior && e.outside);
+    return doors.length ? doors : [this.mainGate()].filter(Boolean);
+  }
+
+  seedDoorSiege() {
+    const doors = this.siegeDoors();
+    const perDoor = this.day === 1 ? 1 : 2;
+    let n = 0;
+    for (const entrance of doors) {
+      const out = outwardOf(entrance);
+      const along = { x: -out.y, y: out.x };
+      for (let k = 0; k < perDoor; k++) {
+        const x = entrance.outside.x + out.x * (150 + k * 46) + along.x * (k - 0.4) * 54;
+        const y = entrance.outside.y + out.y * (150 + k * 46) + along.y * (k - 0.4) * 54;
+        const body = new SurvivalCrowdZombie(x, y, entrance, 800 + n, this.day);
+        body.id = 1500000 + this.day * 100 + n;
+        this.game.enemies.push(body);
+        n++;
+      }
+    }
+  }
+
   spawnSwarm(count, wave) {
     const g = this.game;
-    const entrance = (this._telegraphWave === wave && this._telegraphEntrance)
-      || this.chooseTargetEntrance(g.player.x, g.player.y, wave);
+    const doors = this.siegeDoors();
     this.incoming = null;
-    if (!entrance) return;
-    const out = outwardOf(entrance);
-    const along = { x: -out.y, y: out.x };
+    if (!doors.length) return;
     const total = clamp(Math.round(count), 1, 30);
     for (let i = 0; i < total; i++) {
-      const row = Math.floor(i / 7);
-      const col = i % 7;
-      const lateral = (col - 3) * 42 + rand(-8, 8);
-      const depth = 240 + row * 60 + rand(-18, 18);
+      const entrance = doors[i % doors.length];
+      const out = outwardOf(entrance);
+      const along = { x: -out.y, y: out.x };
+      const row = Math.floor(i / Math.max(1, doors.length));
+      const lateral = ((i % 5) - 2) * 38 + rand(-8, 8);
+      const depth = 220 + row * 52 + rand(-16, 16);
       const x = entrance.outside.x + out.x * depth + along.x * lateral;
       const y = entrance.outside.y + out.y * depth + along.y * lateral;
       const body = new SurvivalCrowdZombie(x, y, entrance, i + wave * total, this.day);
@@ -1064,8 +1108,13 @@ export class SurvivalMode {
     this.gateHp = Math.max(0, this.mainGate() ? this.mainGate().hp : 0);
   }
 
+  countJob(job) {
+    return Object.values(this.buildings).filter((type) => type === job).length;
+  }
+
   enemyDamageTaken(enemy, amount) {
-    return amount * (this.isLit(enemy.x, enemy.y) ? this.tuning.lightDamageTakenMul : 1);
+    const arms = 1 + this.countJob('armory') * 0.22;
+    return amount * (this.isLit(enemy.x, enemy.y) ? this.tuning.lightDamageTakenMul : 1) * arms;
   }
 
   enemyCanAttack(enemy) { return !this.isLit(enemy.x, enemy.y); }
@@ -1081,6 +1130,65 @@ export class SurvivalMode {
       return aa - bb;
     });
     return candidates[0] || null;
+  }
+
+  nearestDoor(range = 78) {
+    const p = this.game.player;
+    let best = null;
+    let bestD = range;
+    for (const e of this.game.mansion.entrances) {
+      if (!e || e.kind !== 'door') continue;
+      const d = dist(p.x, p.y, e.x, e.y);
+      if (d < bestD) { bestD = d; best = e; }
+    }
+    return best;
+  }
+
+  updateSurvivalInteract(dt) {
+    const g = this.game;
+    const input = g.input;
+    const door = this.nearestDoor();
+    const actions = [];
+    if (door) {
+      if (!door.broken) actions.push({ key: 'E', label: door.open ? 'CLOSE' : 'OPEN', act: 'open' });
+      if (door.hp < door.hpMax || door.broken) actions.push({ key: 'R', label: 'REPAIR', act: 'repair' });
+    }
+    g.interactTarget = door ? { ent: door, actions, dist: dist(g.player.x, g.player.y, door.x, door.y) } : null;
+    if (input.buttons) {
+      const night = this.phase === 'night';
+      if (input.buttons.interact) {
+        input.buttons.interact.hidden = !(night || door);
+        input.buttons.interact.hot = !!door
+          || (night && this.ftue.step === 'done' && this.nearHearth() && this.oil >= this.tuning.feedOil && this.feedCd <= 0);
+      }
+      if (input.buttons.repair) input.buttons.repair.hidden = !actions.some((a) => a.act === 'repair');
+      if (input.buttons.barricade) input.buttons.barricade.hidden = true;
+    }
+    if (input.interactPressed) {
+      if (door && !door.broken) {
+        g.toggleDoor(door);
+        return;
+      }
+      if (this.phase === 'night') {
+        const feeding = this.ftue.step === 'done' && this.tryFeedHearth();
+        if (!feeding) this.useSkill();
+      }
+    }
+    if (door && input.repairDown) this.repairDoor(dt, door);
+    else this.repairHold = 0;
+  }
+
+  repairDoor(dt, door) {
+    if (!door || this.wood < 1) return;
+    this.repairHold = (this.repairHold || 0) + dt;
+    if (this.repairHold < 0.35) return;
+    this.repairHold = 0;
+    this.wood -= 1;
+    door.hp = Math.min(door.hpMax, (door.hp || 0) + 42);
+    door.broken = door.hp <= 0;
+    if (!door.broken && door.hp > 0) door.open = false;
+    this.game.audio.play('woodPickup', { vol: 0.4 });
+    this.game.showCombatText('REPAIR', door.x, door.y - 28, '#c8bfa8');
   }
 
   nearHearth() {
@@ -1183,7 +1291,8 @@ export class SurvivalMode {
       const cost = this.buildingCost('perapian');
       return [{
         type: 'perapian', icon: 'upgrade',
-        cost: this.perapianLevel >= 3 ? '' : `${cost ? cost.oil : 0}`,
+        cost: this.perapianLevel >= 3 || !cost ? '' : `${cost.oil}·${cost.wood}`,
+        costOil: cost && cost.oil, costWood: cost && cost.wood,
         disabled: this.perapianLevel >= 3 || !cost || this.oil < cost.oil || this.wood < cost.wood,
       }];
     }
@@ -1191,19 +1300,22 @@ export class SurvivalMode {
       const cost = this.tuning.gateCost;
       return [{
         type: 'gate', icon: 'gate',
-        cost: this.gateBuilt ? '' : `${cost.oil}`,
+        cost: this.gateBuilt ? '' : `${cost.oil}·${cost.wood}`,
+        costOil: cost.oil, costWood: cost.wood,
         disabled: this.gateBuilt || this.oil < cost.oil || this.wood < cost.wood,
       }];
     }
     const id = this.selectedRoom;
     if (!id) return [];
-    return ['extractor', 'sawmill', 'shelter', 'watch']
+    return ['extractor', 'sawmill', 'shelter', 'watch', 'armory', 'kitchen']
       .filter((type) => this.canPlace(type, id))
       .map((type) => {
         const spec = SURVIVAL_BUILDINGS[type];
         return {
           type, icon: type,
-          cost: `${type === 'extractor' ? spec.oil : spec.wood}`,
+          cost: `${spec.oil}·${spec.wood}`,
+          costOil: spec.oil,
+          costWood: spec.wood,
           disabled: this.oil < spec.oil || this.wood < spec.wood,
         };
       });
@@ -1235,7 +1347,8 @@ export class SurvivalMode {
       this.oil = 0;
       return;
     }
-    const burn = Math.min(this.oil, this.tuning.oilBurnPerSecond * dt);
+    const mess = Math.max(0.55, 1 - this.countJob('kitchen') * 0.2);
+    const burn = Math.min(this.oil, this.tuning.oilBurnPerSecond * mess * dt);
     this.oil = Math.max(0, this.oil - burn);
     this.oilBurned += burn;
   }
@@ -1259,6 +1372,7 @@ export class SurvivalMode {
   }
 
   refreshFireplace(force = false) {
+    this._placeOutdoorHearth();
     const light = this.game.mansion.fireplaceLight;
     if (!light) return;
     const radius = this.getFireRadius();
@@ -1297,6 +1411,7 @@ export class SurvivalMode {
     for (const wing of SURVIVAL_WINGS) {
       if (unlocked.has(wing.roomId) || this.buildings[wing.roomId]) continue;
       if (!wing.requires.every((id) => unlocked.has(id))) continue;
+      if ((wing.hearthNeed || 1) > this.perapianLevel) continue;
       const plot = this.plotById(wing.roomId);
       if (plot) plots.push(plot);
     }
@@ -1462,7 +1577,7 @@ export class SurvivalMode {
       breakerIndex: 0, individualIndex: 0, oilBurned: 0, siegeTimers: Object.create(null),
       nightStats: { kills: 0, hits: 0, damageToWalls: 0 }, lastRewards: null, skillCooldown: 0,
       incoming: null, ftueDone: false, buildMenuOpen: false, buildTarget: null, feedCd: 0, currentTarget: null, _gateAlert: false,
-      _telegraphEntrance: null, _telegraphWave: -1, _telegraphSounded: false, _telegraphKey: null,
+      _telegraphEntrance: null, _telegraphWave: -1, _telegraphSounded: false, _telegraphKey: null, _siegeSeeded: false,
     });
     this.nightDuration = duration;
     this.phase = 'night';
@@ -1490,7 +1605,6 @@ export class SurvivalMode {
   buildingName(type) {
     if (type === 'perapian') return this.hearthLabel();
     if (type === 'gate') return 'REINFORCED GATE';
-    if (type === 'watch') return 'WATCH TOWER';
     return SURVIVAL_BUILDINGS[type] ? SURVIVAL_BUILDINGS[type].label : 'EMPTY';
   }
 
@@ -1513,12 +1627,51 @@ export class SurvivalMode {
     });
   }
 
+  plotCost(roomId) {
+    const types = ['extractor', 'sawmill', 'shelter', 'watch', 'armory', 'kitchen']
+      .filter((type) => this.canPlace(type, roomId));
+    const spec = types[0] && SURVIVAL_BUILDINGS[types[0]];
+    if (!spec) return null;
+    return { type: types[0], oil: spec.oil, wood: spec.wood, label: spec.label };
+  }
+
+  updateTowers(dt) {
+    if (this.phase !== 'night') return;
+    if (!this.towerCd) this.towerCd = Object.create(null);
+    const range = this.tuning.towerRange || 540;
+    const cooldown = this.tuning.towerCooldown || 1.2;
+    const damage = this.tuning.towerDamage || 26;
+    for (const [roomId, type] of Object.entries(this.buildings)) {
+      if (type !== 'watch') continue;
+      const plot = this.plotById(roomId);
+      if (!plot) continue;
+      const x = plot.x + plot.w / 2;
+      const y = plot.y + plot.h / 2;
+      this.towerCd[roomId] = (this.towerCd[roomId] || 0) - dt;
+      if (this.towerCd[roomId] > 0) continue;
+      let best = null;
+      let bestD = range;
+      for (const e of this.game.enemies) {
+        if (!e || e.dead || e.removeMe) continue;
+        const d = dist(x, y, e.x, e.y);
+        if (d < bestD) { bestD = d; best = e; }
+      }
+      if (!best) continue;
+      this.towerCd[roomId] = cooldown;
+      const ang = Math.atan2(best.y - y, best.x - x);
+      this.game.spawnBolt({ x, y, type: { boltSpeed: 580, boltDamage: damage }, key: 'tower' }, ang, {
+        offset: 12, boltSpeed: 580, damage, ammo: 'arrows', height: 148,
+      });
+      this.game.audio.play('shot', { x, y, cam: this.game.renderer.cam, vol: 0.32 });
+    }
+  }
+
   followPlayer(dt) {
     const g = this.game;
     const p = g.player;
     g.renderer.applyLookPan(g.input);
-    const lookX = clamp(p.vx * 0.18, -56, 56);
-    const lookY = this.phase === 'day' ? 170 : clamp(p.vy * 0.18, -56, 56);
+    const lookX = clamp(p.vx * 0.12, -40, 40);
+    const lookY = this.phase === 'day' ? 86 : clamp(p.vy * 0.12, -36, 36);
     g.renderer.followCamera(p.x, p.y, dt, lookX, lookY, g.mansion.camBounds);
   }
 

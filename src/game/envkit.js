@@ -1643,9 +1643,7 @@ class EnvKitRuntime {
       }
     }
     if (state.flameMeshes) {
-      const lit = game.mode === 'survival'
-        ? !!(game.survival && game.survival.oil > 0 && game.survival.phase !== 'failed' && game.survival.getFireRadius() > 0)
-        : !(game.blackoutT > 0);
+      const lit = game.mode === 'survival' ? false : !(game.blackoutT > 0);
       for (const flame of state.flames) {
         const mesh = state.flameMeshes[flame.kind];
         const p = mesh && mesh.userData.placements[flame.index];
