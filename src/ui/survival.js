@@ -166,7 +166,7 @@ function drawTopDock(game, ctx, w, h) {
     const wave = Math.min(3, Math.max(1, mode.waveIndex || (mode.incoming && mode.incoming.kind === 'swarm' ? mode.incoming.wave : 1)));
     text(ctx, `${mode.day}:${mode.waveIndex >= 3 ? 3 : wave}`, w - 12, 30, 9, AMBER, 'right');
   } else {
-    text(ctx, String(mode.day), w - 14, 22, 14, AMBER, 'right', SERIF);
+    text(ctx, `DAWN ${mode.day}`, w - 14, 22, 11, AMBER, 'right', SERIF);
   }
 }
 
@@ -351,7 +351,7 @@ function drawDayPanel(game, ctx, w, h) {
   });
 
   if (!busy && !mode.buildMenuOpen) {
-    drawLessonChip(ctx, w, h, 'TAP A PLOT', 'THEN CHOOSE WHAT TO BUILD');
+    drawLessonChip(ctx, w, h, 'TAP A PLOT', 'RAISE WHAT THE KEEP NEEDS');
   }
 
   if (mode.buildMenuOpen && !busy) {

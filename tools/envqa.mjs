@@ -199,6 +199,62 @@ async function survivalFtueSection() {
     && final.radiusMesh > 0 && final.riggedCrowd + final.proxyCrowd > 0,
   `the full 3D house, Perapian radius and crowd are visible (${final.riggedCrowd} GLB + ${final.proxyCrowd} silhouette actors)`);
 
+  const dawn = await page.evaluate(() => {
+    const g = window.__LN;
+    g.player.blood = g.player.bloodMax;
+    g.player.iframes = 99;
+    let steps = 0;
+    while (g.survival.phase === 'night' && g.screen === 'playing' && steps < 14000) {
+      if (g.player.blood < g.player.bloodMax * 0.45) g.player.blood = g.player.bloodMax;
+      window.__survivalOriginalUpdate.call(g, 1 / 60);
+      steps++;
+    }
+    g.render();
+    return {
+      phase: g.survival.phase, day: g.survival.day, screen: g.screen, uiPanel: g.uiPanel,
+      elapsed: +g.survival.elapsed.toFixed(2), steps, nights: g.survival.nightsCompleted,
+    };
+  });
+  await page.screenshot({ path: path.join(evidenceDir, 'survival-dawn-day.png'), type: 'png' });
+  check(dawn.phase === 'day' && dawn.day === 2 && dawn.nights === 1,
+    `Night 1 clock reaches dawn and flips to Day 2 (${dawn.phase}, day ${dawn.day}, ${dawn.steps} steps)`);
+
+  const built = await page.evaluate(() => {
+    const g = window.__LN;
+    g.survival.oil = 80; g.survival.wood = 80; g.survival.survivors = 2;
+    g.survival.phase = 'day'; g.uiPanel = 'survival-day'; g.screen = 'playing';
+    const jobs = [
+      ['sawmill', 'yard-lumber'],
+      ['extractor', 'yard-oil'],
+      ['watch', 'yard-watch'],
+      ['shelter', 'dining'],
+    ];
+    const placed = [];
+    for (const [type, id] of jobs) {
+      const queued = g.survival.startBuild(type, id);
+      if (queued) g.survival.updateDay(20);
+      placed.push({ type, id, queued, built: g.survival.buildings[id] === type });
+    }
+    const watch = g.survival.plotById('yard-watch');
+    if (watch) {
+      g.player.x = watch.x + watch.w / 2;
+      g.player.y = watch.y + 40;
+      if (g.renderer.snapCamera) g.renderer.snapCamera(g.player.x, g.player.y);
+    }
+    g.survival.selectRoomAtFloor(-135, 785);
+    g.render();
+    return {
+      phase: g.survival.phase,
+      buildings: { ...g.survival.buildings },
+      menu: g.survival.buildMenuOpen,
+      choices: g.survival.buildChoices().map((row) => row.type),
+      placed,
+    };
+  });
+  await page.screenshot({ path: path.join(evidenceDir, 'survival-day-buildings.png'), type: 'png' });
+  check(built.placed.filter((row) => row.built).length >= 3,
+    `Day build places distinct jobs (${JSON.stringify(built.buildings)})`);
+
   const radiusTest = await page.evaluate(() => {
     const g = window.__LN, world = window.__survWorld;
     g.screen = 'playing';
@@ -206,14 +262,14 @@ async function survivalFtueSection() {
     g.survival.phase = 'day';
     g.survival.elapsed = 0;
     g.survival.oil = 50; g.survival.wood = 50; g.survival.oilBurned = 0;
+    g.survival.builderJob = null;
     g.survival.refreshFireplace(true);
     const litBefore = g.survival.litRooms().length;
     g.render();
     const before = world.survivalRadiusRing ? world.survivalRadiusRing.scale.x : 0;
-    const button = g.ui.find((item) => item.label.startsWith('survival:HEARTH') || item.label.startsWith('survival:UPGRADE'));
-    const clicked = !!(button && button.onClick && button.onClick());
+    const clicked = g.survival.startBuild('perapian');
     const queued = g.survival.builderJob && g.survival.builderJob.targetLevel;
-    g.survival.updateDay(6);
+    g.survival.updateDay(8);
     g.render();
     return {
       clicked, queued, level: g.survival.perapianLevel,
@@ -224,10 +280,12 @@ async function survivalFtueSection() {
   check(radiusTest.clicked && radiusTest.queued === 2 && radiusTest.level === 2 && radiusTest.after > radiusTest.before,
     `a Perapian UI upgrade grows the visible 3D radius (${Math.round(radiusTest.before)} → ${Math.round(radiusTest.after)})`);
   const evidence = {
-    title: 'Survival FTUE — first 30 playable seconds',
+    title: 'Survival FTUE — first 30 playable seconds + dawn',
     capturedAt: new Date().toISOString(),
     viewport: { width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
     checkpoints,
+    dawn,
+    dayBuild: built,
     radiusUpgrade: { ...radiusTest, before: Math.round(radiusTest.before), after: Math.round(radiusTest.after) },
   };
   fs.writeFileSync(path.join(evidenceDir, 'survival-ftue-first-30s.json'), `${JSON.stringify(evidence, null, 2)}\n`);
@@ -235,14 +293,16 @@ async function survivalFtueSection() {
 
 /* Fast 3D-specific subset: use the active WebGL scene rather than the retired
  * sprite canvases, and skip the long frame-by-frame walk/screenshot sweep. */
-if (MODE === '3d-smoke') {
-  await bodySection();
-  await roomMarkOrientationSection();
-  await combatVfxSection();
-  await roomBuildSection();
-  await staticWorldSection();
-  await windowVisibility3DSection();
-  await doorAnimationSection();
+if (MODE === 'survival-frames' || MODE === '3d-smoke') {
+  if (MODE === '3d-smoke') {
+    await bodySection();
+    await roomMarkOrientationSection();
+    await combatVfxSection();
+    await roomBuildSection();
+    await staticWorldSection();
+    await windowVisibility3DSection();
+    await doorAnimationSection();
+  }
   await survivalFtueSection();
   check(pageErrors.length === 0, `no uncaught browser page errors (${pageErrors.length})`);
   await shutdown();

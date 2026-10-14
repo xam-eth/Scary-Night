@@ -1,9 +1,18 @@
-/* LAST NIGHT — Milestone 1 survival-building loop
+/* DUSKHOLD — Milestone 1 survival-building loop
  *
- * This mode is deliberately isolated from the original hunt/night systems.
- * It keeps the existing Mansion, Player, CrowdBody, enemy damage hooks, Hunter
- * shot, GLB rigs, and 3D room/light pipeline, but owns its own day/phase save,
- * resources, builder queue, night waves, and rewards.
+ * STORY (the design the buildings and loop have to serve)
+ * You are the last Hearthkeeper of Duskhold, a plague-gutted asylum keep.
+ * The wardens fled. You stayed: lantern on the hip, repeating shot, one fire.
+ * The dead come at dusk. They fear only that light.
+ *
+ *   Night — hold the gate. Shoot, flare, feed oil. If you fall or the hearth
+ *           dies, the last light goes out.
+ *   Dawn  — the infected fall back and camp beyond the palisade. Grey day.
+ *           Walk the lot. Tap a plot. Raise what the keep actually needs.
+ *   Stake — three nights. Crew you shelter live or die with the fire.
+ *
+ * Buildings are jobs, not cottages: Oil Still (fuel), Timber Yard (palisade),
+ * Sick Ward (crew), Watch (eyes on the road), Hearth Keep, Gate.
  */
 
 import { clamp, damp, dist, rand, writeSave } from '../core/util.js';
@@ -23,9 +32,9 @@ const DOOR_LABELS = Object.freeze({
 });
 
 export const SURVIVAL_BUILDINGS = Object.freeze({
-  extractor: Object.freeze({ id: 'extractor', label: 'OIL PRESS', oil: 2, wood: 10, seconds: 7, produces: { oil: 6 } }),
-  sawmill: Object.freeze({ id: 'sawmill', label: 'LUMBER YARD', oil: 2, wood: 10, seconds: 7, produces: { wood: 7 } }),
-  shelter: Object.freeze({ id: 'shelter', label: 'CREW DORM', oil: 4, wood: 14, seconds: 9, produces: { survivors: 1 } }),
+  extractor: Object.freeze({ id: 'extractor', label: 'OIL STILL', oil: 2, wood: 10, seconds: 7, produces: { oil: 6 } }),
+  sawmill: Object.freeze({ id: 'sawmill', label: 'TIMBER YARD', oil: 2, wood: 10, seconds: 7, produces: { wood: 7 } }),
+  shelter: Object.freeze({ id: 'shelter', label: 'SICK WARD', oil: 4, wood: 14, seconds: 9, produces: { survivors: 1 } }),
   watch: Object.freeze({ id: 'watch', label: 'WATCH TOWER', oil: 4, wood: 12, seconds: 8 }),
 });
 
@@ -33,24 +42,24 @@ export const SURVIVAL_START_ROOMS = Object.freeze(['hall', 'library']);
 
 /** Adjacent plots the keep can grow into. A building both unlocks the room and gives it a job. */
 export const SURVIVAL_WINGS = Object.freeze([
-  Object.freeze({ roomId: 'dining', requires: Object.freeze(['hall']), label: 'DINING WING' }),
-  Object.freeze({ roomId: 'study', requires: Object.freeze(['hall']), label: 'STUDY' }),
-  Object.freeze({ roomId: 'oratory', requires: Object.freeze(['library']), label: 'CREW DORM' }),
-  Object.freeze({ roomId: 'kitchen', requires: Object.freeze(['dining']), label: 'KITCHEN' }),
-  Object.freeze({ roomId: 'basement', requires: Object.freeze(['hall']), label: 'CELLAR' }),
+  Object.freeze({ roomId: 'dining', requires: Object.freeze(['hall']), label: 'SICK WARD', accepts: Object.freeze(['shelter']) }),
+  Object.freeze({ roomId: 'study', requires: Object.freeze(['hall']), label: 'STUDY', accepts: Object.freeze(['shelter']) }),
+  Object.freeze({ roomId: 'oratory', requires: Object.freeze(['library']), label: 'CREW DORM', accepts: Object.freeze(['shelter']) }),
+  Object.freeze({ roomId: 'kitchen', requires: Object.freeze(['dining']), label: 'KITCHEN', accepts: Object.freeze(['shelter']) }),
+  Object.freeze({ roomId: 'basement', requires: Object.freeze(['hall']), label: 'OIL CELLAR', accepts: Object.freeze(['extractor']) }),
 ]);
 
-/** Outdoor Doomsday-style plots in front of the keep. Not rooms. */
+/** Outdoor jobs in front of the keep. One plot, one job. */
 export const SURVIVAL_YARD = Object.freeze([
   Object.freeze({
-    id: 'yard-lumber', name: 'LUMBER YARD', kind: 'yard',
+    id: 'yard-lumber', name: 'TIMBER YARD', kind: 'yard',
     x: -240, y: 700, w: 210, h: 170,
-    accepts: Object.freeze(['extractor', 'sawmill']),
+    accepts: Object.freeze(['sawmill']),
   }),
   Object.freeze({
-    id: 'yard-oil', name: 'OIL PRESS', kind: 'yard',
+    id: 'yard-oil', name: 'OIL STILL', kind: 'yard',
     x: 980, y: 700, w: 210, h: 170,
-    accepts: Object.freeze(['extractor', 'sawmill']),
+    accepts: Object.freeze(['extractor']),
   }),
   Object.freeze({
     id: 'yard-watch', name: 'WATCH', kind: 'yard',
@@ -537,7 +546,9 @@ export class SurvivalMode {
     const plot = this.plotById(roomId);
     if (!plot || this.buildings[plot.id]) return false;
     if (plot.kind === 'yard') return (plot.accepts || []).includes(type);
-    return type === 'extractor' || type === 'sawmill' || type === 'shelter';
+    const wing = SURVIVAL_WINGS.find((item) => item.roomId === plot.id);
+    if (wing && wing.accepts) return wing.accepts.includes(type);
+    return type === 'shelter';
   }
 
   _syncHouse() {
@@ -656,7 +667,7 @@ export class SurvivalMode {
     this.skillCooldown = Math.max(0, this.skillCooldown - dt);
     this.skillFlash = Math.max(0, this.skillFlash - dt);
     this.feedCd = Math.max(0, (this.feedCd || 0) - dt);
-    if (this.phase === 'night' && g.screen === 'playing' && !g.uiPanel) this.updateNight(dt);
+    if (this.phase === 'night' && g.screen === 'playing' && !g.paused) this.updateNight(dt);
     else if (this.phase === 'day' && g.screen === 'playing') this.updateDay(dt);
     else {
       g.mansion.update(dt, g);
@@ -1400,8 +1411,8 @@ export class SurvivalMode {
     this.wood = clamp(this.wood + wood, 0, RESOURCE_CAP);
     this.nightsCompleted = Math.min(3, this.nightsCompleted + 1);
     this.lastRewards = { oil, wood, kills: this.nightStats.kills, walls: this.nightStats.damageToWalls };
-    g.showMessage(`DAWN · +${Math.round(oil)} OIL · +${Math.round(wood)} WOOD · ${this.nightStats.kills} KILLS`, {
-      tone: 'gold', life: 4.4, key: 'survival-dawn',
+    g.showMessage(`DAWN. THE DEAD FALL BACK. +${Math.round(oil)} OIL · +${Math.round(wood)} WOOD`, {
+      tone: 'gold', life: 4.6, key: 'survival-dawn',
     });
     g.enemies.length = 0;
     g.bolts.length = 0;

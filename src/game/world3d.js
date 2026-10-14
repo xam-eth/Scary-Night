@@ -806,25 +806,27 @@ class World3DRuntime {
       group.add(mesh);
       return mesh;
     };
-    const house = (bw, bh, bd, roofH) => {
-      add(new THREE.BoxGeometry(bw + 16, 8, bd + 16), stone, 0, 4, 0);
-      add(new THREE.BoxGeometry(bw, bh, bd), timber, 0, 8 + bh / 2, 0);
-      add(new THREE.ConeGeometry(Math.max(bw, bd) * 0.72, roofH, 4), roof, 0, 8 + bh + roofH / 2, 0, 0, Math.PI / 4, 0);
-      add(new THREE.BoxGeometry(18, 34, 4), plank, 0, 25, bd / 2 + 1);
-    };
+    const linen = new THREE.MeshStandardMaterial({ color: 0x7a3a38, roughness: 1, flatShading: true });
     if (type === 'extractor') {
-      house(110, 58, 86, 42);
-      add(new THREE.CylinderGeometry(22, 26, 40, 10), oil, 48, 28, -8);
-      add(new THREE.CylinderGeometry(6, 8, 110, 6), iron, 48, 88, -8);
-      add(new THREE.BoxGeometry(8, 8, 54), iron, 48, 132, 8);
-      add(new THREE.BoxGeometry(64, 10, 10), iron, 18, 70, -8);
-      add(new THREE.BoxGeometry(14, 18, 6), warm, -22, 40, 44);
+      add(new THREE.BoxGeometry(58, 14, 58), stone, 0, 7, 0);
+      add(new THREE.BoxGeometry(48, 44, 48), stone, 0, 36, 0);
+      add(new THREE.CylinderGeometry(16, 18, 28, 10), oil, 0, 70, 0);
+      add(new THREE.TorusGeometry(16, 3.2, 6, 14), iron, 26, 62, 0, 0, 0, Math.PI / 2);
+      add(new THREE.CylinderGeometry(5, 7, 64, 6), iron, 0, 108, 0);
+      add(new THREE.CylinderGeometry(11, 13, 20, 10), oil, -38, 12, 18);
+      add(new THREE.CylinderGeometry(11, 13, 20, 10), oil, -38, 12, -16);
+      add(new THREE.CylinderGeometry(11, 13, 20, 10), oil, 38, 12, 14);
+      add(new THREE.BoxGeometry(22, 10, 14), stone, 0, 16, 32);
+      add(new THREE.BoxGeometry(10, 14, 6), warm, 0, 42, 26);
     } else if (type === 'sawmill') {
-      house(150, 54, 78, 38);
-      add(new THREE.CylinderGeometry(28, 28, 10, 14), iron, 78, 34, 0, 0, 0, Math.PI / 2);
-      add(new THREE.TorusGeometry(30, 4, 6, 16), iron, 78, 34, 0, 0, 0, Math.PI / 2);
-      for (let i = 0; i < 3; i++) add(new THREE.CylinderGeometry(9, 9, 52, 8), plank, -40 + i * 22, 14, 52, 0, 0, Math.PI / 2);
-      add(new THREE.BoxGeometry(16, 48, 16), stone, -58, 48, -10);
+      add(new THREE.BoxGeometry(96, 10, 44), plank, 0, 8, 0);
+      add(new THREE.BoxGeometry(14, 42, 14), timber, -42, 26, -14);
+      add(new THREE.BoxGeometry(14, 42, 14), timber, 42, 26, -14);
+      add(new THREE.BoxGeometry(98, 8, 12), timber, 0, 50, -14);
+      add(new THREE.CylinderGeometry(24, 24, 7, 16), iron, 34, 26, 16, 0, 0, Math.PI / 2);
+      add(new THREE.TorusGeometry(26, 3, 6, 16), iron, 34, 26, 16, 0, 0, Math.PI / 2);
+      for (let i = 0; i < 4; i++) add(new THREE.CylinderGeometry(7, 7, 52, 8), plank, -30 + i * 14, 10, 32, 0, 0, Math.PI / 2);
+      add(new THREE.BoxGeometry(46, 18, 16), timber, -18, 16, -4);
     } else if (type === 'watch') {
       add(new THREE.BoxGeometry(36, 12, 36), stone, 0, 6, 0);
       add(new THREE.BoxGeometry(28, 110, 28), timber, 0, 67, 0);
@@ -834,11 +836,17 @@ class World3DRuntime {
       add(new THREE.BoxGeometry(10, 22, 10), iron, -16, 148, 16);
       add(new THREE.BoxGeometry(10, 22, 10), iron, 16, 148, 16);
       add(new THREE.BoxGeometry(12, 18, 6), warm, 0, 92, 15);
+      add(new THREE.SphereGeometry(6.5, 8, 6), warm, 0, 158, 0);
     } else {
-      house(128, 62, 96, 48);
-      add(new THREE.BoxGeometry(16, 22, 6), warm, -28, 44, 49);
-      add(new THREE.BoxGeometry(16, 22, 6), warm, 28, 44, 49);
-      add(new THREE.BoxGeometry(14, 36, 14), stone, 44, 80, -18);
+      add(new THREE.BoxGeometry(148, 8, 72), stone, 0, 4, 0);
+      add(new THREE.BoxGeometry(136, 36, 58), timber, 0, 26, 0);
+      add(new THREE.BoxGeometry(148, 8, 72), roof, 0, 48, 0);
+      for (let i = -1; i <= 1; i++) {
+        add(new THREE.BoxGeometry(30, 7, 16), plank, i * 40, 10, 10);
+        add(new THREE.BoxGeometry(24, 4, 12), linen, i * 40, 15, 10);
+      }
+      add(new THREE.BoxGeometry(10, 14, 4), warm, 0, 28, 30);
+      add(new THREE.BoxGeometry(12, 26, 12), stone, 52, 38, -16);
     }
     group.traverse((item) => { if (item.isMesh) item.userData.survivalBuilding = type; });
     return group;
@@ -858,9 +866,11 @@ class World3DRuntime {
       group.add(mesh);
       return mesh;
     };
+    const ember = new THREE.MeshBasicMaterial({ color: 0xffc078, toneMapped: false });
     add(new THREE.BoxGeometry(70, 18, 48), stone, 0, 9, -8, 1);
     add(new THREE.BoxGeometry(18, 52, 18), stone, -28, 34, -14, 1);
     add(new THREE.BoxGeometry(18, 52, 18), stone, 28, 34, -14, 1);
+    add(new THREE.BoxGeometry(28, 22, 16), ember, 0, 22, 8, 1);
     add(new THREE.BoxGeometry(86, 36, 16), stone, 0, 26, -28, 2);
     add(new THREE.BoxGeometry(22, 90, 22), dark, 0, 64, -18, 3);
     add(new THREE.BoxGeometry(32, 10, 32), stone, 0, 112, -18, 3);

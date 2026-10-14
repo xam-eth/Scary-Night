@@ -1,6 +1,6 @@
 {
-  "title": "Survival FTUE — first 30 playable seconds",
-  "capturedAt": "2026-10-11T10:55:37.194Z",
+  "title": "Survival FTUE — first 30 playable seconds + dawn",
+  "capturedAt": "2026-10-14T07:10:30.802Z",
   "viewport": {
     "width": 390,
     "height": 844,
@@ -32,6 +32,11 @@
         ],
         "coach": false,
         "narration": false,
+        "hunterHp": 100,
+        "gateHp": 130,
+        "wave": 0,
+        "ftue": "move",
+        "incoming": null,
         "swarm": 0,
         "riggedCrowd": 0,
         "proxyCrowd": 0,
@@ -63,9 +68,14 @@
         ],
         "coach": false,
         "narration": false,
-        "swarm": 20,
-        "riggedCrowd": 14,
-        "proxyCrowd": 6,
+        "hunterHp": 100,
+        "gateHp": 100,
+        "wave": 1,
+        "ftue": "flare",
+        "incoming": null,
+        "swarm": 7,
+        "riggedCrowd": 7,
+        "proxyCrowd": 0,
         "fireRadius": 916,
         "radiusMesh": 916,
         "renderMode": "webgl-3d"
@@ -94,22 +104,73 @@
         ],
         "coach": false,
         "narration": false,
-        "swarm": 40,
+        "hunterHp": 100,
+        "gateHp": 26,
+        "wave": 2,
+        "ftue": "done",
+        "incoming": null,
+        "swarm": 14,
         "riggedCrowd": 14,
-        "proxyCrowd": 26,
+        "proxyCrowd": 0,
         "fireRadius": 853,
         "radiusMesh": 853,
         "renderMode": "webgl-3d"
       }
     }
   ],
+  "dawn": {
+    "phase": "day",
+    "day": 2,
+    "screen": "playing",
+    "uiPanel": "survival-day",
+    "elapsed": 0,
+    "steps": 2521,
+    "nights": 1
+  },
+  "dayBuild": {
+    "phase": "day",
+    "buildings": {
+      "yard-lumber": "sawmill",
+      "yard-oil": "extractor",
+      "yard-watch": "watch",
+      "dining": "shelter"
+    },
+    "menu": false,
+    "choices": [],
+    "placed": [
+      {
+        "type": "sawmill",
+        "id": "yard-lumber",
+        "queued": true,
+        "built": true
+      },
+      {
+        "type": "extractor",
+        "id": "yard-oil",
+        "queued": true,
+        "built": true
+      },
+      {
+        "type": "watch",
+        "id": "yard-watch",
+        "queued": true,
+        "built": true
+      },
+      {
+        "type": "shelter",
+        "id": "dining",
+        "queued": true,
+        "built": true
+      }
+    ]
+  },
   "radiusUpgrade": {
     "clicked": true,
     "queued": 2,
     "level": 2,
     "before": 980,
     "after": 1760,
-    "litBefore": 5,
-    "litAfter": 9
+    "litBefore": 2,
+    "litAfter": 3
   }
 }

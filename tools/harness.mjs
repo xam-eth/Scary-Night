@@ -726,7 +726,7 @@ async function runSurvivalMilestone() {
   collectMode.oil = 100; collectMode.wood = 100; collectMode.survivors = 2;
   survivalGame.screen = 'playing'; survivalGame.uiPanel = 'survival-day';
   collectMode.refreshFireplace(true);
-  const collectRoom = collectMode.buildableRooms()[0];
+  const collectRoom = collectMode.buildableRooms().find((room) => collectMode.canPlace('extractor', room.id));
   const collectQueued = !!(collectRoom && collectMode.startBuild('extractor', collectRoom.id));
   const site = collectMode.jobSite();
   const collectFinished = collectQueued && waitForBuilder();

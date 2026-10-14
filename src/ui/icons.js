@@ -256,8 +256,11 @@ export function drawGameIcon(ctx, name, x, y, size = 24, color = '#eee6d6') {
       }
       break;
     case 'shelter':
-      ctx.beginPath(); ctx.moveTo(0, -11); ctx.lineTo(10, -1); ctx.lineTo(10, 10); ctx.lineTo(-10, 10); ctx.lineTo(-10, -1); ctx.closePath(); ctx.stroke();
-      ctx.beginPath(); ctx.rect(-3, 3, 6, 7); ctx.stroke();
+      ctx.beginPath(); ctx.roundRect(-11, -2, 22, 12, 1.5); ctx.stroke();
+      for (const px of [-6, 0, 6]) {
+        ctx.beginPath(); ctx.moveTo(px - 3, 2); ctx.lineTo(px - 3, 8); ctx.lineTo(px + 3, 8); ctx.lineTo(px + 3, 2); ctx.stroke();
+      }
+      ctx.beginPath(); ctx.moveTo(-8, -2); ctx.lineTo(-8, -8); ctx.lineTo(0, -11); ctx.lineTo(8, -8); ctx.lineTo(8, -2); ctx.stroke();
       break;
     case 'gate':
       ctx.beginPath(); ctx.moveTo(-9, 10); ctx.lineTo(-9, -10); ctx.moveTo(9, 10); ctx.lineTo(9, -10); ctx.stroke();
