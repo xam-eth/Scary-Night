@@ -21,7 +21,7 @@
  * — the old cache is dropped on activate.
  */
 
-const VERSION = 'duskhold-v5';
+const VERSION = 'duskhold-v6';
 const CACHE = VERSION;
 
 /* The shell: what has to be there for the first paint on a cold start.
@@ -90,6 +90,25 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (!isAsset(url)) return;
+
+  /* Module graph must not stay frozen on a broken boot. Scripts try the
+   * network first; GLBs and images stay cache-first for the second night. */
+  if (/\.(js|mjs)$/i.test(url.pathname)) {
+    event.respondWith((async () => {
+      try {
+        const res = await fetch(req, { cache: 'no-cache' });
+        if (res && res.ok) {
+          const cache = await caches.open(CACHE);
+          cache.put(req, res.clone()).catch(() => {});
+        }
+        return res;
+      } catch (_) {
+        const cache = await caches.open(CACHE);
+        return (await cache.match(req)) || new Response('', { status: 504 });
+      }
+    })());
+    return;
+  }
 
   /* Assets are immutable by name in this project: cache first, refresh in the
    * background so the next boot has it. */

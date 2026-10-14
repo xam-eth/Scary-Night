@@ -377,7 +377,10 @@ class EnemyStage {
     if (!this._started) return true;
     return keys.every((key) => {
       const rec = this.types[key];
-      return !!(rec && rec.behaviorReady && !rec.failed);
+      if (!rec) return false;
+      // A failed zombie still lets Survival boot; crowd proxies cover the body.
+      if (rec.failed) return true;
+      return !!rec.behaviorReady;
     });
   }
 
@@ -460,7 +463,7 @@ class EnemyStage {
     rec.loading = false;
     rec.failed = false;
     try { this._measureRest(key); } catch (_) { /* rest pose is visual-only; never block boot */ }
-    this._bakePreview(key);
+    try { this._bakePreview(key); } catch (_) { /* portraits are optional in full-3D play */ }
   }
 
   /**

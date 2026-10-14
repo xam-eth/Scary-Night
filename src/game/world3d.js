@@ -2127,10 +2127,15 @@ class World3DRuntime {
     const fortressLevel = game.mode === 'survival' ? 0 : game.save.fortressLevel;
     EnvKit.sync(game.mansion.entrances, game.mansion, fortressLevel, game);
     if (EnvKit.quality !== game.quality) EnvKit.setQuality(game.quality);
-    this._syncLighting(game);
-    this._syncActors(game);
-    if (game.mode === 'survival') this._syncSurvivalObjects(game);
-    this._syncVariants(game);
+    try {
+      this._syncLighting(game);
+      this._syncActors(game);
+      if (game.mode === 'survival') this._syncSurvivalObjects(game);
+      this._syncVariants(game);
+    } catch (error) {
+      this.lastError = String(error && error.message || error);
+      console.error('3D world sync failed:', error);
+    }
     if (game.mode === 'survival') {
       for (const ring of this.variantRings.values()) ring.visible = false;
       for (const cue of this.foodCues.values()) cue.group.visible = false;

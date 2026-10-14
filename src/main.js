@@ -198,15 +198,17 @@ function clearVeil() {
 
 Valen3D.init();
 Enemy3D.init();
+const bootStartedAt = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
 
 function bootTick() {
   if (autoStarted) return;
   const roster = Enemy3D.readiness();
   const modeReady = game.mode === 'survival'
     ? Enemy3D.gameplayReadyFor(['zombie'])
-    : roster.ready;
+    : (roster.ready || roster.failed.length > 0);
   const bodySettled = Valen3D.ready || Valen3D.failed;
-  if (bodySettled && modeReady) {
+  const waitedMs = ((typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()) - bootStartedAt;
+  if ((bodySettled && modeReady) || waitedMs > 8000) {
     clearVeil();
     // beginNight is also guarded, so a stale/incomplete roster cannot slip
     // through via the boot path or a programmatic call.
