@@ -920,7 +920,9 @@ export function drawTouchControls(game, ctx, w, h) {
   const useAction = (game.interactTarget && game.interactTarget.actions || [])
     .find((action) => action.act !== 'repair' && action.act !== 'barricade');
   const doorAct = useAction && useAction.act === 'open';
+  const stationAct = useAction && useAction.act === 'station';
   const useIcon = doorAct ? (game.interactTarget.ent.open ? 'doorClosed' : 'doorOpen')
+    : stationAct ? (useAction.icon || 'shelter')
     : game.mode === 'survival' ? 'lamp'
       : !useAction ? 'interact'
         : useAction.act === 'drink' || useAction.act === 'larder' ? 'blood'

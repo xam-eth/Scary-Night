@@ -271,7 +271,8 @@ async function survivalFtueSection() {
       g.player.y = watch.y + 40;
       if (g.renderer.snapCamera) g.renderer.snapCamera(g.player.x, g.player.y);
     }
-    g.survival.selectRoomAtFloor(-135, 785);
+    const lumber = g.survival.plotById('yard-lumber');
+    if (lumber) g.survival.selectRoomAtFloor(lumber.x + lumber.w / 2, lumber.y + lumber.h / 2);
     g.render();
     return {
       phase: g.survival.phase,

@@ -32,18 +32,42 @@ const DOOR_LABELS = Object.freeze({
 });
 
 export const SURVIVAL_BUILDINGS = Object.freeze({
-  extractor: Object.freeze({ id: 'extractor', label: 'OIL STILL', oil: 2, wood: 10, seconds: 7, produces: { oil: 6 }, job: 'fuel' }),
-  sawmill: Object.freeze({ id: 'sawmill', label: 'TIMBER YARD', oil: 2, wood: 10, seconds: 7, produces: { wood: 7 }, job: 'timber' }),
-  shelter: Object.freeze({ id: 'shelter', label: 'SICK WARD', oil: 4, wood: 14, seconds: 9, produces: { survivors: 1 }, job: 'crew' }),
-  watch: Object.freeze({ id: 'watch', label: 'WATCH TOWER', oil: 4, wood: 12, seconds: 8, job: 'tower' }),
-  armory: Object.freeze({ id: 'armory', label: 'ARMORY', oil: 3, wood: 12, seconds: 8, job: 'arms' }),
-  kitchen: Object.freeze({ id: 'kitchen', label: 'KITCHEN', oil: 3, wood: 10, seconds: 8, job: 'mess' }),
+  extractor: Object.freeze({
+    id: 'extractor', label: 'OIL STILL', oil: 2, wood: 10, seconds: 7,
+    produces: { oil: 6 }, job: 'fuel',
+    hint: 'DRAWS OIL EACH DAWN', useLabel: 'DRAW OIL', use: 'collect',
+  }),
+  sawmill: Object.freeze({
+    id: 'sawmill', label: 'TIMBER YARD', oil: 2, wood: 10, seconds: 7,
+    produces: { wood: 7 }, job: 'timber',
+    hint: 'CUTS WOOD EACH DAWN', useLabel: 'TAKE TIMBER', use: 'collect',
+  }),
+  shelter: Object.freeze({
+    id: 'shelter', label: 'SICK WARD', oil: 4, wood: 14, seconds: 9,
+    produces: { survivors: 1 }, job: 'crew',
+    hint: 'WALK IN · BIND WOUNDS', useLabel: 'BIND WOUNDS', use: 'heal', useHeal: 38, useCd: 9,
+  }),
+  watch: Object.freeze({
+    id: 'watch', label: 'WATCH TOWER', oil: 4, wood: 12, seconds: 8, job: 'tower',
+    hint: 'SHOOTS THE ROAD FROM ABOVE', useLabel: 'WATCH', use: 'tower',
+  }),
+  armory: Object.freeze({
+    id: 'armory', label: 'ARMORY', oil: 3, wood: 12, seconds: 8, job: 'arms',
+    hint: 'WALK IN · HONE THE SHOT', useLabel: 'HONE ARMS', use: 'arms', useCd: 14,
+  }),
+  kitchen: Object.freeze({
+    id: 'kitchen', label: 'KITCHEN', oil: 3, wood: 10, seconds: 8, job: 'mess',
+    hint: 'WALK IN · EAT, BURN LESS OIL', useLabel: 'EAT', use: 'meal', useHeal: 22, useCd: 12,
+  }),
 });
 
 export const SURVIVAL_START_ROOMS = Object.freeze(['hall', 'library']);
 
-/** The outdoor beacon the keep is built to guard. South of the hall, in the yard. */
-export const SURVIVAL_HEARTH = Object.freeze({ x: 440, y: 790 });
+/** Courtyard south of the hall. Outdoor jobs live here, not in the forest. */
+export const SURVIVAL_COURTYARD = Object.freeze({ x: 0, y: 640, w: 880, h: 380 });
+
+/** The outdoor beacon the keep is built to guard. */
+export const SURVIVAL_HEARTH = Object.freeze({ x: 310, y: 760 });
 
 /** Adjacent plots the keep can grow into. A building both unlocks the room and gives it a job. */
 export const SURVIVAL_WINGS = Object.freeze([
@@ -54,21 +78,21 @@ export const SURVIVAL_WINGS = Object.freeze([
   Object.freeze({ roomId: 'basement', requires: Object.freeze(['hall']), label: 'OIL CELLAR', accepts: Object.freeze(['extractor']), hearthNeed: 2 }),
 ]);
 
-/** Outdoor jobs in front of the keep. One plot, one job. */
+/** Outdoor jobs in the hall courtyard. One plot, one job. */
 export const SURVIVAL_YARD = Object.freeze([
   Object.freeze({
     id: 'yard-lumber', name: 'TIMBER YARD', kind: 'yard',
-    x: -240, y: 700, w: 210, h: 170,
+    x: 500, y: 655, w: 170, h: 120,
     accepts: Object.freeze(['sawmill']),
   }),
   Object.freeze({
     id: 'yard-oil', name: 'OIL STILL', kind: 'yard',
-    x: 980, y: 700, w: 210, h: 170,
+    x: 700, y: 655, w: 160, h: 120,
     accepts: Object.freeze(['extractor']),
   }),
   Object.freeze({
     id: 'yard-watch', name: 'WATCH', kind: 'yard',
-    x: 180, y: 880, w: 160, h: 160,
+    x: 720, y: 850, w: 140, h: 140,
     accepts: Object.freeze(['watch']),
   }),
 ]);
@@ -426,6 +450,9 @@ export class SurvivalMode {
     this._gateAlert = false;
     this.currentTarget = null;
     this.incoming = null;
+    this.stationCd = Object.create(null);
+    this.armsBuff = 1;
+    this.fedT = 0;
     this.ftue = { step: 'move', t: 0, originX: 0, originY: 0 };
     this.ftueDone = false;
     this.buildMenuOpen = false;
@@ -559,7 +586,7 @@ export class SurvivalMode {
   _syncHouse() {
     const ids = [...this.unlockedRoomIds()];
     const changed = this.game.mansion.setUnlockedRooms(ids);
-    this.game.mansion.fitPlayArea(SURVIVAL_YARD);
+    this.game.mansion.fitPlayArea([SURVIVAL_COURTYARD, ...SURVIVAL_YARD]);
     this._placeOutdoorHearth();
     if (changed) this.game.survivalBakeDirty = true;
     return changed;
@@ -657,6 +684,9 @@ export class SurvivalMode {
     this._telegraphKey = null;
     this.siegeTimers = Object.create(null);
     this.nightStats = { kills: 0, hits: 0, damageToWalls: 0 };
+    this.armsBuff = 1;
+    this.fedT = 0;
+    this.stationCd = Object.create(null);
     g.time = 0;
     g.timeLeft = this.nightDuration;
     g.phase = NIGHT_PHASE;
@@ -690,6 +720,11 @@ export class SurvivalMode {
     this.skillCooldown = Math.max(0, this.skillCooldown - dt);
     this.skillFlash = Math.max(0, this.skillFlash - dt);
     this.feedCd = Math.max(0, (this.feedCd || 0) - dt);
+    this.fedT = Math.max(0, (this.fedT || 0) - dt);
+    if (!this.stationCd) this.stationCd = Object.create(null);
+    for (const key of Object.keys(this.stationCd)) {
+      this.stationCd[key] = Math.max(0, this.stationCd[key] - dt);
+    }
     if (this.phase === 'night' && g.screen === 'playing' && !g.paused) this.updateNight(dt);
     else if (this.phase === 'day' && g.screen === 'playing') this.updateDay(dt);
     else {
@@ -1113,7 +1148,7 @@ export class SurvivalMode {
   }
 
   enemyDamageTaken(enemy, amount) {
-    const arms = 1 + this.countJob('armory') * 0.22;
+    const arms = this.armsBuff > 1 ? this.armsBuff : 1;
     return amount * (this.isLit(enemy.x, enemy.y) ? this.tuning.lightDamageTakenMul : 1) * arms;
   }
 
@@ -1144,21 +1179,90 @@ export class SurvivalMode {
     return best;
   }
 
+  nearestStation() {
+    const p = this.game.player;
+    const roomId = this.game.mansion.findRoom(p.x, p.y);
+    if (roomId && this.buildings[roomId]) {
+      const type = this.buildings[roomId];
+      const spec = SURVIVAL_BUILDINGS[type];
+      if (spec && spec.use && spec.use !== 'tower') {
+        const room = this.plotById(roomId);
+        return {
+          roomId, type, spec,
+          x: room ? room.x + room.w / 2 : p.x,
+          y: room ? room.y + room.h / 2 : p.y,
+        };
+      }
+    }
+    for (const [id, type] of Object.entries(this.buildings)) {
+      const plot = this.plotById(id);
+      if (!plot || plot.kind !== 'yard') continue;
+      const spec = SURVIVAL_BUILDINGS[type];
+      if (!spec || spec.use === 'tower') continue;
+      const cx = plot.x + plot.w / 2, cy = plot.y + plot.h / 2;
+      if (dist(p.x, p.y, cx, cy) < 70) return { roomId: id, type, spec, x: cx, y: cy };
+    }
+    return null;
+  }
+
+  useStation(station) {
+    if (!station || !station.spec) return false;
+    const spec = station.spec;
+    const cd = this.stationCd[station.roomId] || 0;
+    const g = this.game;
+    if (cd > 0) {
+      g.showCombatText('NOT READY', station.x, station.y - 24, '#9a9488');
+      return false;
+    }
+    if (spec.use === 'collect') return this.collectProduction(station.roomId);
+    if (spec.use === 'heal' || spec.use === 'meal') {
+      const p = g.player;
+      const heal = spec.useHeal || 20;
+      const before = p.blood;
+      p.blood = Math.min(p.bloodMax, p.blood + heal);
+      const gained = Math.round(p.blood - before);
+      if (spec.use === 'meal') this.fedT = 36;
+      this.stationCd[station.roomId] = spec.useCd || 10;
+      g.audio.play('drink', { vol: 0.45 });
+      g.showCombatText(gained > 0 ? `+${gained}` : spec.useLabel, p.x, p.y - 28, '#e8c9a0');
+      g.showMessage(spec.use === 'meal' ? 'BROTH. THE FIRE BURNS SLOWER.' : 'THE WARD TAKES THE BLEED.', { tone: 'gold', life: 2.4 });
+      return true;
+    }
+    if (spec.use === 'arms') {
+      this.armsBuff = 1.28;
+      this.stationCd[station.roomId] = spec.useCd || 14;
+      g.audio.play('uiConfirm', { vol: 0.5 });
+      g.showCombatText('HONED', station.x, station.y - 24, '#e4bd73');
+      g.showMessage('ARMS HONED. THE NEXT VOLLEY CUTS DEEPER.', { tone: 'gold', life: 2.6 });
+      return true;
+    }
+    return false;
+  }
+
   updateSurvivalInteract(dt) {
     const g = this.game;
     const input = g.input;
     const door = this.nearestDoor();
+    const station = door ? null : this.nearestStation();
     const actions = [];
     if (door) {
       if (!door.broken) actions.push({ key: 'E', label: door.open ? 'CLOSE' : 'OPEN', act: 'open' });
       if (door.hp < door.hpMax || door.broken) actions.push({ key: 'R', label: 'REPAIR', act: 'repair' });
-    }
-    g.interactTarget = door ? { ent: door, actions, dist: dist(g.player.x, g.player.y, door.x, door.y) } : null;
+      g.interactTarget = { ent: door, actions, dist: dist(g.player.x, g.player.y, door.x, door.y) };
+    } else if (station) {
+      const ready = (this.stationCd[station.roomId] || 0) <= 0;
+      actions.push({ key: 'E', label: station.spec.useLabel, act: 'station', icon: station.type, ready });
+      g.interactTarget = {
+        ent: { x: station.x, y: station.y, name: station.spec.label, w: 80, h: 80, facing: 'south', hp: 1, hpMax: 1, barricade: 0, open: false },
+        actions, dist: dist(g.player.x, g.player.y, station.x, station.y),
+        station,
+      };
+    } else g.interactTarget = null;
     if (input.buttons) {
       const night = this.phase === 'night';
       if (input.buttons.interact) {
-        input.buttons.interact.hidden = !(night || door);
-        input.buttons.interact.hot = !!door
+        input.buttons.interact.hidden = !(night || door || station);
+        input.buttons.interact.hot = !!door || !!station
           || (night && this.ftue.step === 'done' && this.nearHearth() && this.oil >= this.tuning.feedOil && this.feedCd <= 0);
       }
       if (input.buttons.repair) input.buttons.repair.hidden = !actions.some((a) => a.act === 'repair');
@@ -1167,6 +1271,10 @@ export class SurvivalMode {
     if (input.interactPressed) {
       if (door && !door.broken) {
         g.toggleDoor(door);
+        return;
+      }
+      if (station) {
+        this.useStation(station);
         return;
       }
       if (this.phase === 'night') {
@@ -1316,6 +1424,7 @@ export class SurvivalMode {
           cost: `${spec.oil}·${spec.wood}`,
           costOil: spec.oil,
           costWood: spec.wood,
+          hint: spec.hint || '',
           disabled: this.oil < spec.oil || this.wood < spec.wood,
         };
       });
@@ -1347,7 +1456,7 @@ export class SurvivalMode {
       this.oil = 0;
       return;
     }
-    const mess = Math.max(0.55, 1 - this.countJob('kitchen') * 0.2);
+    const mess = this.fedT > 0 ? 0.62 : 1;
     const burn = Math.min(this.oil, this.tuning.oilBurnPerSecond * mess * dt);
     this.oil = Math.max(0, this.oil - burn);
     this.oilBurned += burn;
@@ -1578,6 +1687,7 @@ export class SurvivalMode {
       nightStats: { kills: 0, hits: 0, damageToWalls: 0 }, lastRewards: null, skillCooldown: 0,
       incoming: null, ftueDone: false, buildMenuOpen: false, buildTarget: null, feedCd: 0, currentTarget: null, _gateAlert: false,
       _telegraphEntrance: null, _telegraphWave: -1, _telegraphSounded: false, _telegraphKey: null, _siegeSeeded: false,
+      stationCd: Object.create(null), armsBuff: 1, fedT: 0,
     });
     this.nightDuration = duration;
     this.phase = 'night';

@@ -231,8 +231,11 @@ function drawNightHud(game, ctx, w, h) {
   drawThreatCue(game, ctx, w, h);
   drawFtue(game, ctx, w, h);
   const door = mode.nearestDoor && mode.nearestDoor();
+  const station = !door && mode.nearestStation && mode.nearestStation();
   if (door && !door.broken) {
     drawLessonChip(ctx, w, h, door.open ? 'CLOSE DOOR' : 'OPEN DOOR', 'HOLD THE GATE');
+  } else if (station && station.spec) {
+    drawLessonChip(ctx, w, h, station.spec.useLabel, station.spec.hint || station.spec.label);
   } else {
     const feeding = mode.ftue && mode.ftue.step === 'done' && mode.nearHearth()
       && mode.oil >= mode.tuning.feedOil && mode.feedCd <= 0;
@@ -400,11 +403,13 @@ function drawDayPanel(game, ctx, w, h) {
     const choices = mode.buildChoices();
     const tile = 44;
     const sheetW = Math.min(w - 32, Math.max(168, choices.length * (tile + gap) + 24));
-    const sheetH = 102;
+    const sheetH = 114;
     const sheetX = (w - sheetW) / 2;
     const sheetY = btnY - sheetH - 10;
     fillPanel(ctx, sheetX, sheetY, sheetW, sheetH, 0.95);
     text(ctx, mode.buildMenuTitle(), sheetX + 12, sheetY + 14, 9, AMBER, 'left');
+    const hint = choices[0] && choices[0].hint;
+    if (hint) text(ctx, hint, sheetX + 12, sheetY + 28, 7, DIM, 'left');
     addButton(game, ctx, { x: sheetX + sheetW - 36, y: sheetY + 6, w: 28, h: 18 }, 'X',
       () => mode.closeBuildMenu(), { fontSize: 10, radius: 6, color: DIM });
     if (!choices.length) {

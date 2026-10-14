@@ -132,17 +132,37 @@ export class Mansion {
   }
 
   _buildPalisade() {
+    const hall = this.roomList.find((room) => room.id === ROOM.HALL);
+    const T = 16;
+    const fence = (x, y, w, h) => {
+      if (w < 4 || h < 4) return;
+      this.solids.push({ x, y, w, h, type: 'fence', solid: true });
+    };
+    // Courtyard south of the hall only. House walls already close the rest.
+    // A full bounding-box palisade boxed the forest south of the library.
+    if (hall) {
+      const x0 = hall.x - 6;
+      const x1 = hall.x + hall.w + 6;
+      const y0 = hall.y + hall.h + 6;
+      const y1 = y0 + 390;
+      const door = this.frontDoor;
+      const gapW = 200;
+      const gx = door ? door.x : (x0 + x1) * 0.5;
+      const gap0 = Math.max(x0 + T, gx - gapW / 2);
+      const gap1 = Math.min(x1 - T, gx + gapW / 2);
+      fence(x0, y0, T, y1 - y0);
+      fence(x1 - T, y0, T, y1 - y0);
+      fence(x0, y1 - T, Math.max(0, gap0 - x0), T);
+      fence(gap1, y1 - T, Math.max(0, x1 - gap1), T);
+      this.playFence = { x: x0, y: y0, w: x1 - x0, h: y1 - y0, gap0, gap1, T };
+      return;
+    }
     const b = this.bounds;
-    const T = 18;
     const door = this.frontDoor;
     const gapW = 240;
     const gx = door ? door.x : b.x + b.w / 2;
     const gap0 = Math.max(b.x + T, gx - gapW / 2);
     const gap1 = Math.min(b.x + b.w - T, gx + gapW / 2);
-    const fence = (x, y, w, h) => {
-      if (w < 4 || h < 4) return;
-      this.solids.push({ x, y, w, h, type: 'fence', solid: true });
-    };
     fence(b.x, b.y, b.w, T);
     fence(b.x, b.y, T, b.h);
     fence(b.x + b.w - T, b.y, T, b.h);

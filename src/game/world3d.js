@@ -1244,39 +1244,47 @@ class World3DRuntime {
     group.name = 'keep-palisade-3d';
     const wood = new THREE.MeshStandardMaterial({ color: 0x4a3424, roughness: 0.96, flatShading: true });
     const dark = new THREE.MeshStandardMaterial({ color: 0x2c1c12, roughness: 1, flatShading: true });
-    const H = 78;
-    const step = 54;
-    const addPost = (x, z) => {
-      const post = new THREE.Mesh(new THREE.BoxGeometry(8, H, 8), wood);
+    const H = 92;
+    const step = 22;
+    const stakeGeo = new THREE.BoxGeometry(7, H, 7);
+    const capGeo = new THREE.ConeGeometry(5.2, 16, 4);
+    const addStake = (x, z) => {
+      const post = new THREE.Mesh(stakeGeo, wood);
       post.position.set(x, H / 2, z);
       post.castShadow = true;
-      group.add(post);
+      const cap = new THREE.Mesh(capGeo, dark);
+      cap.position.set(x, H + 6, z);
+      group.add(post, cap);
     };
     const addRail = (x, z, w, d) => {
       if (w < 8 && d < 8) return;
-      const rail = new THREE.Mesh(new THREE.BoxGeometry(Math.max(6, w), 7, Math.max(6, d)), dark);
-      rail.position.set(x, 38, z);
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(Math.max(6, w), 8, Math.max(6, d)), dark);
+      rail.position.set(x, 42, z);
       group.add(rail);
     };
     const b = fence;
     const south = b.y + b.h;
     const east = b.x + b.w;
-    for (let x = b.x; x <= east; x += step) addPost(x, b.y);
-    addRail(b.x + b.w / 2, b.y, b.w, 6);
+    // Courtyard palisade: west, east, south with a gate. Hall walls close the north.
     for (let z = b.y; z <= south; z += step) {
-      addPost(b.x, z);
-      addPost(east, z);
+      addStake(b.x, z);
+      addStake(east, z);
     }
     addRail(b.x, b.y + b.h / 2, 6, b.h);
     addRail(east, b.y + b.h / 2, 6, b.h);
-    for (let x = b.x; x < b.gap0; x += step) addPost(x, south);
-    for (let x = b.gap1; x <= east; x += step) addPost(x, south);
-    addPost(b.gap0, south);
-    addPost(b.gap1, south);
+    for (let x = b.x; x < b.gap0; x += step) addStake(x, south);
+    for (let x = b.gap1; x <= east; x += step) addStake(x, south);
+    addStake(b.gap0, south);
+    addStake(b.gap1, south);
     const leftW = Math.max(0, b.gap0 - b.x);
     const rightW = Math.max(0, east - b.gap1);
     addRail(b.x + leftW / 2, south, leftW, 6);
     addRail(b.gap1 + rightW / 2, south, rightW, 6);
+    const postL = new THREE.Mesh(new THREE.BoxGeometry(14, 110, 14), wood);
+    postL.position.set(b.gap0, 55, south);
+    const postR = new THREE.Mesh(new THREE.BoxGeometry(14, 110, 14), wood);
+    postR.position.set(b.gap1, 55, south);
+    group.add(postL, postR);
     this.root.add(group);
     return group;
   }

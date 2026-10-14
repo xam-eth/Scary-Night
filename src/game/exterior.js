@@ -45,6 +45,8 @@ export function makeExterior(mansion) {
       if (rooms.some((room) => rectDistance(x, y, room) < 142)) continue;
       const plots = mansion.playPlots || [];
       if (plots.some((plot) => rectDistance(x, y, plot) < 90)) continue;
+      const yard = mansion.playFence;
+      if (yard && x >= yard.x - 36 && x <= yard.x + yard.w + 36 && y >= yard.y - 36 && y <= yard.y + yard.h + 36) continue;
       if (overlapsSolid(x, y, solids, 34)) continue;
       const nearDoor = entrances.some((e) => e.exterior && e.outside
         && Math.hypot(x - e.outside.x, y - e.outside.y) < (e.kind === 'door' ? 220 : 118));
