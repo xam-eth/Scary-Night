@@ -88,6 +88,8 @@ class World3DRuntime {
     this.survivalWorker = null;
     this.survivalReadyPips = new Map();
     this.survivalGateMesh = null;
+    this.survivalHearthKeep = null;
+    this.survivalDayCamps = new Map();
     this.survivalZombieBodyGeometry = null;
     this.survivalZombieHeadGeometry = null;
     this.survivalZombieEyeGeometry = null;
@@ -880,6 +882,7 @@ class World3DRuntime {
   }
 
   _syncDaySiegeCamps(game, mode) {
+    if (!this.survivalDayCamps) this.survivalDayCamps = new Map();
     const active = new Set();
     const show = game.screen === 'playing' && mode.phase === 'day';
     const doors = show ? (game.mansion.entrances || []).filter((e) => e.kind === 'door' && e.exterior && e.outside) : [];

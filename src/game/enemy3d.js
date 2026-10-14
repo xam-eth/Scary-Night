@@ -459,7 +459,7 @@ class EnemyStage {
     rec.loaded = true;
     rec.loading = false;
     rec.failed = false;
-    this._measureRest(key);
+    try { this._measureRest(key); } catch (_) { /* rest pose is visual-only; never block boot */ }
     this._bakePreview(key);
   }
 
