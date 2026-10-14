@@ -369,29 +369,36 @@ function drawDayPanel(game, ctx, w, h) {
     const canUpgrade = !!upgrade && mode.oil >= upgrade.oil && mode.wood >= upgrade.wood;
     const gateCost = mode.tuning.gateCost;
     const canGate = !mode.gateBuilt && mode.oil >= gateCost.oil && mode.wood >= gateCost.wood;
-    const occupied = !!(selected && mode.useBuilding(selected.id));
     const readyId = Object.keys(mode.buildings).find((id) => mode.productionReady(id));
+    const can = (type) => !!(selected && mode.canPlace(type, selected.id));
     const tiles = [
       {
         icon: 'extractor', cost: `${SURVIVAL_BUILDINGS.extractor.oil}`,
         onClick: () => mode.startBuild('extractor', selected && selected.id),
-        disabled: !selected || occupied
+        disabled: !can('extractor')
           || mode.oil < SURVIVAL_BUILDINGS.extractor.oil || mode.wood < SURVIVAL_BUILDINGS.extractor.wood,
         color: '#ddc58f',
       },
       {
         icon: 'sawmill', cost: `${SURVIVAL_BUILDINGS.sawmill.wood}`,
         onClick: () => mode.startBuild('sawmill', selected && selected.id),
-        disabled: !selected || occupied
+        disabled: !can('sawmill')
           || mode.oil < SURVIVAL_BUILDINGS.sawmill.oil || mode.wood < SURVIVAL_BUILDINGS.sawmill.wood,
         color: '#ddc58f',
       },
       {
         icon: 'shelter', cost: `${SURVIVAL_BUILDINGS.shelter.wood}`,
         onClick: () => mode.startBuild('shelter', selected && selected.id),
-        disabled: !selected || occupied
+        disabled: !can('shelter')
           || mode.oil < SURVIVAL_BUILDINGS.shelter.oil || mode.wood < SURVIVAL_BUILDINGS.shelter.wood,
         color: '#ddc58f',
+      },
+      {
+        icon: 'watch', cost: `${SURVIVAL_BUILDINGS.watch.wood}`,
+        onClick: () => mode.startBuild('watch', selected && selected.id),
+        disabled: !can('watch')
+          || mode.oil < SURVIVAL_BUILDINGS.watch.oil || mode.wood < SURVIVAL_BUILDINGS.watch.wood,
+        color: '#d0aa75',
       },
       {
         icon: 'upgrade',

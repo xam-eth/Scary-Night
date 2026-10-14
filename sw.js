@@ -21,7 +21,7 @@
  * — the old cache is dropped on activate.
  */
 
-const VERSION = 'duskhold-v7';
+const VERSION = 'duskhold-v8';
 const CACHE = VERSION;
 
 /* The shell: what has to be there for the first paint on a cold start.

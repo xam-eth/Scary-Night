@@ -24,8 +24,9 @@ const DOOR_LABELS = Object.freeze({
 
 export const SURVIVAL_BUILDINGS = Object.freeze({
   extractor: Object.freeze({ id: 'extractor', label: 'OIL PRESS', oil: 2, wood: 10, seconds: 7, produces: { oil: 6 } }),
-  sawmill: Object.freeze({ id: 'sawmill', label: 'LUMBER WING', oil: 2, wood: 10, seconds: 7, produces: { wood: 7 } }),
+  sawmill: Object.freeze({ id: 'sawmill', label: 'LUMBER YARD', oil: 2, wood: 10, seconds: 7, produces: { wood: 7 } }),
   shelter: Object.freeze({ id: 'shelter', label: 'CREW DORM', oil: 4, wood: 14, seconds: 9, produces: { survivors: 1 } }),
+  watch: Object.freeze({ id: 'watch', label: 'WATCH TOWER', oil: 4, wood: 12, seconds: 8 }),
 });
 
 export const SURVIVAL_START_ROOMS = Object.freeze(['hall', 'library']);
@@ -37,6 +38,25 @@ export const SURVIVAL_WINGS = Object.freeze([
   Object.freeze({ roomId: 'oratory', requires: Object.freeze(['library']), label: 'CREW DORM' }),
   Object.freeze({ roomId: 'kitchen', requires: Object.freeze(['dining']), label: 'KITCHEN' }),
   Object.freeze({ roomId: 'basement', requires: Object.freeze(['hall']), label: 'CELLAR' }),
+]);
+
+/** Outdoor Doomsday-style plots in front of the keep. Not rooms. */
+export const SURVIVAL_YARD = Object.freeze([
+  Object.freeze({
+    id: 'yard-lumber', name: 'LUMBER YARD', kind: 'yard',
+    x: -240, y: 700, w: 210, h: 170,
+    accepts: Object.freeze(['extractor', 'sawmill']),
+  }),
+  Object.freeze({
+    id: 'yard-oil', name: 'OIL PRESS', kind: 'yard',
+    x: 980, y: 700, w: 210, h: 170,
+    accepts: Object.freeze(['extractor', 'sawmill']),
+  }),
+  Object.freeze({
+    id: 'yard-watch', name: 'WATCH', kind: 'yard',
+    x: 360, y: 880, w: 160, h: 160,
+    accepts: Object.freeze(['watch']),
+  }),
 ]);
 
 function freshProgress(duration = SURVIVAL_TUNING.nightSeconds) {
@@ -492,17 +512,29 @@ export class SurvivalMode {
 
   unlockedRoomIds() {
     const ids = new Set(SURVIVAL_START_ROOMS);
-    for (const roomId of Object.keys(this.buildings || {})) ids.add(roomId);
+    for (const roomId of Object.keys(this.buildings || {})) {
+      if (mansionRoomPlan(roomId)) ids.add(roomId);
+    }
     return ids;
   }
 
   plotById(roomId) {
+    if (!roomId) return null;
+    const yard = SURVIVAL_YARD.find((item) => item.id === roomId);
+    if (yard) return { ...yard };
     const live = this.game.mansion.roomList.find((item) => item.id === roomId);
-    if (live) return live;
+    if (live) return { ...live, kind: 'wing' };
     const plan = mansionRoomPlan(roomId);
     if (!plan) return null;
     const wing = SURVIVAL_WINGS.find((item) => item.roomId === roomId);
-    return { ...plan, name: (wing && wing.label) || plan.name };
+    return { ...plan, kind: 'wing', name: (wing && wing.label) || plan.name };
+  }
+
+  canPlace(type, roomId) {
+    const plot = this.plotById(roomId);
+    if (!plot || this.buildings[plot.id]) return false;
+    if (plot.kind === 'yard') return (plot.accepts || []).includes(type);
+    return type === 'extractor' || type === 'sawmill' || type === 'shelter';
   }
 
   _syncHouse() {
@@ -741,7 +773,7 @@ export class SurvivalMode {
     this.wood = clamp(this.wood + wood, 0, RESOURCE_CAP);
     this.collected[roomId] = true;
     this.stores[roomId] = { oil: 0, wood: 0 };
-    const room = this.game.mansion.roomList.find((item) => item.id === roomId);
+    const room = this.plotById(roomId);
     if (room) this.game.showCombatText('COLLECT', room.x + room.w / 2, room.y + room.h / 2, '#e8c9a0');
     this.game.audio.play('woodPickup', { vol: 0.5 });
     this._persist(true);
@@ -1064,7 +1096,7 @@ export class SurvivalMode {
     const floor = this.game.screenToFloor(sx, sy);
     if (!floor) return false;
     for (const roomId of Object.keys(this.buildings)) {
-      const room = this.game.mansion.roomList.find((item) => item.id === roomId);
+      const room = this.plotById(roomId);
       if (!room) continue;
       const inside = floor.x >= room.x && floor.x <= room.x + room.w
         && floor.y >= room.y && floor.y <= room.y + room.h;
@@ -1169,13 +1201,23 @@ export class SurvivalMode {
   buildableRooms() {
     const unlocked = this.unlockedRoomIds();
     const plots = [];
+    const pushYard = (acceptsWatch) => {
+      for (const yard of SURVIVAL_YARD) {
+        if (this.buildings[yard.id]) continue;
+        const isWatch = (yard.accepts || []).includes('watch');
+        if (isWatch !== acceptsWatch) continue;
+        plots.push(this.plotById(yard.id));
+      }
+    };
+    pushYard(false);
     for (const wing of SURVIVAL_WINGS) {
       if (unlocked.has(wing.roomId) || this.buildings[wing.roomId]) continue;
       if (!wing.requires.every((id) => unlocked.has(id))) continue;
       const plot = this.plotById(wing.roomId);
       if (plot) plots.push(plot);
     }
-    return plots;
+    pushYard(true);
+    return plots.filter(Boolean);
   }
 
   startBuild(type, roomId = null) {
@@ -1185,7 +1227,7 @@ export class SurvivalMode {
     if (type === 'gate') return this.startGateBuild();
     const spec = SURVIVAL_BUILDINGS[type];
     if (!spec || !roomId) return false;
-    if (!this.buildableRooms().some((room) => room.id === roomId)) return false;
+    if (!this.canPlace(type, roomId)) return false;
     if (this.oil < spec.oil || this.wood < spec.wood) return false;
     this.oil -= spec.oil; this.wood -= spec.wood;
     this.selectedRoom = roomId;
@@ -1250,7 +1292,9 @@ export class SurvivalMode {
     if (!gate) return;
     const base = gate.baseHpMax || gate.hpMax || 190;
     const crew = this.crewGateHp();
-    gate.hpMax = base + (this.gateBuilt ? this.tuning.gateHpBonus : 0) + crew;
+    const watch = Object.values(this.buildings).filter((type) => type === 'watch').length
+      * (this.tuning.watchHpBonus || 0);
+    gate.hpMax = base + (this.gateBuilt ? this.tuning.gateHpBonus : 0) + crew + watch;
     if (this.gateBuilt && (repairGate || gate.hp <= 0)) {
       gate.hp = gate.hpMax; gate.broken = false; gate.open = false;
     } else if (!Number.isFinite(gate.hp)) gate.hp = gate.hpMax;
@@ -1359,6 +1403,7 @@ export class SurvivalMode {
   buildingName(type) {
     if (type === 'perapian') return this.hearthLabel();
     if (type === 'gate') return 'REINFORCED GATE';
+    if (type === 'watch') return 'WATCH TOWER';
     return SURVIVAL_BUILDINGS[type] ? SURVIVAL_BUILDINGS[type].label : 'EMPTY';
   }
 

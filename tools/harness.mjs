@@ -614,21 +614,22 @@ async function runSurvivalMilestone() {
         workResults.push({ day: day + 1, upgradeQueued, upgradeFinished, targetLevel, beforeLevel, level: mode.perapianLevel });
         if (mode.perapianLevel !== targetLevel) { failure = `Perapian level ${targetLevel} not reached`; break; }
 
-        const freeRoom = mode.buildableRooms()[0];
-        if (day === 1 && freeRoom) {
-          const queued = mode.startBuild('sawmill', freeRoom.id);
+        const millPlot = mode.buildableRooms().find((room) => mode.canPlace('sawmill', room.id));
+        const dormPlot = mode.buildableRooms().find((room) => mode.canPlace('shelter', room.id));
+        if (day === 1 && millPlot) {
+          const queued = mode.startBuild('sawmill', millPlot.id);
           const finished = queued && waitForBuilder();
-          sawmillBuilt = !!(finished && mode.buildings[freeRoom.id] === 'sawmill');
-          workResults.push({ day: 2, building: 'sawmill', room: freeRoom.id, queued, finished });
+          sawmillBuilt = !!(finished && mode.buildings[millPlot.id] === 'sawmill');
+          workResults.push({ day: 2, building: 'sawmill', room: millPlot.id, queued, finished });
           const gateQueued = mode.startBuild('gate');
           const gateFinished = gateQueued && waitForBuilder();
           gateBuilt = !!(gateFinished && mode.gateBuilt);
           workResults.push({ day: 2, building: 'gate', queued: gateQueued, finished: gateFinished, hp: mode.gateHp });
-        } else if (day === 2 && freeRoom) {
-          const queued = mode.startBuild('shelter', freeRoom.id);
+        } else if (day === 2 && dormPlot) {
+          const queued = mode.startBuild('shelter', dormPlot.id);
           const finished = queued && waitForBuilder();
-          shelterBuilt = !!(finished && mode.buildings[freeRoom.id] === 'shelter');
-          workResults.push({ day: 3, building: 'shelter', room: freeRoom.id, queued, finished });
+          shelterBuilt = !!(finished && mode.buildings[dormPlot.id] === 'shelter');
+          workResults.push({ day: 3, building: 'shelter', room: dormPlot.id, queued, finished });
         }
       }
       if (!mode.startNight()) { failure = `Night ${day + 1} could not start`; break; }
@@ -675,7 +676,9 @@ async function runSurvivalMilestone() {
   const economyRooms = economyMode.buildableRooms();
   const economyBuilt = [];
   for (const [i, type] of ['extractor', 'sawmill', 'shelter'].entries()) {
-    const room = economyRooms.find((candidate) => !economyMode.buildings[candidate.id] && !economyBuilt.some((row) => row.room === candidate.id));
+    const room = economyRooms.find((candidate) => !economyMode.buildings[candidate.id]
+      && !economyBuilt.some((row) => row.room === candidate.id)
+      && economyMode.canPlace(type, candidate.id));
     const queued = !!(room && economyMode.startBuild(type, room.id));
     const finished = queued && waitForBuilder();
     economyBuilt.push({ type, room: room && room.id, queued, finished });

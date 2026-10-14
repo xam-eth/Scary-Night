@@ -823,6 +823,15 @@ class World3DRuntime {
       add(new THREE.TorusGeometry(30, 4, 6, 16), iron, 78, 34, 0, 0, 0, Math.PI / 2);
       for (let i = 0; i < 3; i++) add(new THREE.CylinderGeometry(9, 9, 52, 8), plank, -40 + i * 22, 14, 52, 0, 0, Math.PI / 2);
       add(new THREE.BoxGeometry(16, 48, 16), stone, -58, 48, -10);
+    } else if (type === 'watch') {
+      add(new THREE.BoxGeometry(36, 12, 36), stone, 0, 6, 0);
+      add(new THREE.BoxGeometry(28, 110, 28), timber, 0, 67, 0);
+      add(new THREE.BoxGeometry(48, 14, 48), stone, 0, 128, 0);
+      add(new THREE.BoxGeometry(10, 22, 10), iron, -16, 148, -16);
+      add(new THREE.BoxGeometry(10, 22, 10), iron, 16, 148, -16);
+      add(new THREE.BoxGeometry(10, 22, 10), iron, -16, 148, 16);
+      add(new THREE.BoxGeometry(10, 22, 10), iron, 16, 148, 16);
+      add(new THREE.BoxGeometry(12, 18, 6), warm, 0, 92, 15);
     } else {
       house(128, 62, 96, 48);
       add(new THREE.BoxGeometry(16, 22, 6), warm, -28, 44, 49);
@@ -1129,19 +1138,21 @@ class World3DRuntime {
     for (const roomId of visibleSlots) {
       let ring = this.survivalSlotRings.get(roomId);
       if (!ring) { ring = this._makeSurvivalSlotRing(); this.survivalSlotRings.set(roomId, ring); }
-      const room = game.mansion.roomList.find((item) => item.id === roomId);
+      const room = mode.plotById(roomId);
       if (!room) continue;
       ring.visible = true;
       ring.position.set(room.x + room.w / 2, 3, room.y + room.h / 2);
+      const span = Math.max(70, Math.min(room.w || 160, room.h || 160) * 0.42);
+      ring.scale.setScalar(span / 83);
       const selected = mode.selectedRoom === roomId;
-      ring.material.color.setHex(selected ? 0xffdf89 : 0xb99759);
+      ring.material.color.setHex(room.kind === 'yard' ? (selected ? 0x9ec4e6 : 0x6e8aa8) : (selected ? 0xffdf89 : 0xb99759));
       ring.material.opacity = selected ? 0.94 : 0.56;
     }
     for (const [roomId, ring] of this.survivalSlotRings) if (!visibleSlots.has(roomId)) ring.visible = false;
 
     const activeBuildings = new Set();
     for (const [roomId, type] of Object.entries(mode.buildings)) {
-      const room = game.mansion.roomList.find((item) => item.id === roomId);
+      const room = mode.plotById(roomId);
       if (!room) continue;
       activeBuildings.add(roomId);
       let mesh = this.survivalBuildingMeshes.get(roomId);
@@ -1199,7 +1210,7 @@ class World3DRuntime {
     for (const roomId of ready) {
       let pip = this.survivalReadyPips.get(roomId);
       if (!pip) { pip = this._makeSurvivalReadyPip(); this.survivalReadyPips.set(roomId, pip); }
-      const room = game.mansion.roomList.find((item) => item.id === roomId);
+      const room = mode.plotById(roomId);
       if (!room) continue;
       pip.visible = true;
       const pulse = 0.72 + 0.28 * Math.abs(Math.sin((game.now || 0) * 4));
