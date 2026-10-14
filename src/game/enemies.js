@@ -1556,7 +1556,21 @@ export class Bolt {
   hit(game, wall) {
     this.dead = true;
     game.audio.play(wall ? 'boltImpact' : 'hitFlesh', { x: this.x, y: this.y, cam: game.renderer.cam, vol: 0.7 });
-    game.particles.burst('spark', this.x, this.y, 14, { color: 'rgba(255,210,140,0.95)', sizeMin: 4, sizeMax: 9, speedMin: 40, speedMax: 160, lifeMin: 0.12, lifeMax: 0.36, glow: true });
+    if (wall) {
+      game.particles.burst('spark', this.x, this.y, 8, {
+        color: 'rgba(255,210,140,0.9)', sizeMin: 2, sizeMax: 5, speedMin: 30, speedMax: 110,
+        lifeMin: 0.08, lifeMax: 0.22, glow: true,
+      });
+    } else {
+      game.particles.burst('spark', this.x, this.y, 22, {
+        color: 'rgba(255,220,150,0.98)', sizeMin: 3, sizeMax: 8, speedMin: 50, speedMax: 220,
+        lifeMin: 0.12, lifeMax: 0.38, glow: true,
+      });
+      game.particles.burst('glow', this.x, this.y, 5, {
+        color: 'rgba(255,186,96,0.85)', sizeMin: 6, sizeMax: 12, speedMin: 8, speedMax: 36,
+        lifeMin: 0.1, lifeMax: 0.22, glow: true,
+      });
+    }
     game.decals.splat(this.x, this.y, wall ? 3 : 5, wall ? 'rgba(30,30,40,0.35)' : 'rgba(90,20,24,0.4)', wall ? 2 : 3);
   }
   draw(ctx, game) {

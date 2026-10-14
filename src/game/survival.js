@@ -415,6 +415,7 @@ export class SurvivalMode {
     this.ftue = { step: 'move', t: 0, originX: 0, originY: 0 };
     this.ftueDone = false;
     this.buildMenuOpen = false;
+    this.buildTarget = null;
     this._telegraphEntrance = null;
     this._telegraphWave = -1;
     this._telegraphSounded = false;
@@ -458,6 +459,8 @@ export class SurvivalMode {
     this.nightStats = { kills: 0, hits: 0, damageToWalls: 0, ...(s.nightStats || {}) };
     this.lastRewards = s.lastRewards || null;
     this.ftueDone = !!s.ftueDone;
+    this.buildMenuOpen = false;
+    this.buildTarget = null;
     this.incoming = null;
     this._telegraphEntrance = null;
     this._telegraphWave = -1;
@@ -540,6 +543,7 @@ export class SurvivalMode {
   _syncHouse() {
     const ids = [...this.unlockedRoomIds()];
     const changed = this.game.mansion.setUnlockedRooms(ids);
+    this.game.mansion.fitPlayArea(SURVIVAL_YARD);
     if (changed) this.game.survivalBakeDirty = true;
     return changed;
   }
@@ -1092,37 +1096,106 @@ export class SurvivalMode {
   }
 
   selectRoomAtScreen(sx, sy) {
-    if (this.phase !== 'day') return false;
     const floor = this.game.screenToFloor(sx, sy);
     if (!floor) return false;
+    return this.selectRoomAtFloor(floor.x, floor.y);
+  }
+
+  /** Tap the plot, hearth, or gate — then the day modal lists what can go there. */
+  selectRoomAtFloor(x, y) {
+    if (this.phase !== 'day' || this.builderJob) return false;
     for (const roomId of Object.keys(this.buildings)) {
       const room = this.plotById(roomId);
       if (!room) continue;
-      const inside = floor.x >= room.x && floor.x <= room.x + room.w
-        && floor.y >= room.y && floor.y <= room.y + room.h;
-      const near = dist(floor.x, floor.y, room.x + room.w / 2, room.y + room.h / 2) < 110;
+      const inside = x >= room.x && x <= room.x + room.w && y >= room.y && y <= room.y + room.h;
+      const near = dist(x, y, room.x + room.w / 2, room.y + room.h / 2) < 110;
       if (inside || near) {
         this.selectedRoom = room.id;
+        this.buildTarget = null;
+        this.buildMenuOpen = false;
         if (this.productionReady(room.id)) this.collectProduction(room.id);
         return true;
       }
     }
-    const rooms = this.buildableRooms();
-    const inside = rooms.find((room) => floor.x >= room.x && floor.x <= room.x + room.w
-      && floor.y >= room.y && floor.y <= room.y + room.h);
-    if (inside) {
-      this.selectedRoom = inside.id;
+    const fire = this.game.mansion.fireplaceLight;
+    if (fire && dist(x, y, fire.x, fire.y) < 90) {
+      this.selectedRoom = null;
+      this.buildTarget = 'hearth';
+      this.buildMenuOpen = true;
       return true;
     }
-    let best = null;
-    let bestD = 110;
-    for (const room of rooms) {
-      const d = dist(floor.x, floor.y, room.x + room.w / 2, room.y + room.h / 2);
-      if (d < bestD) { bestD = d; best = room; }
+    const gate = this.mainGate();
+    if (gate && dist(x, y, gate.x, gate.y) < 90) {
+      this.selectedRoom = null;
+      this.buildTarget = 'gate';
+      this.buildMenuOpen = true;
+      return true;
     }
-    if (!best) return false;
-    this.selectedRoom = best.id;
-    return true;
+    const rooms = this.buildableRooms();
+    const inside = rooms.find((room) => x >= room.x && x <= room.x + room.w
+      && y >= room.y && y <= room.y + room.h);
+    const pick = inside || (() => {
+      let best = null;
+      let bestD = 90;
+      for (const room of rooms) {
+        const d = dist(x, y, room.x + room.w / 2, room.y + room.h / 2);
+        if (d < bestD) { bestD = d; best = room; }
+      }
+      return best;
+    })();
+    if (pick) {
+      this.selectedRoom = pick.id;
+      this.buildTarget = 'plot';
+      this.buildMenuOpen = true;
+      return true;
+    }
+    this.selectedRoom = null;
+    this.buildTarget = null;
+    this.buildMenuOpen = false;
+    return false;
+  }
+
+  closeBuildMenu() {
+    this.buildMenuOpen = false;
+    this.buildTarget = null;
+  }
+
+  buildMenuTitle() {
+    if (this.buildTarget === 'hearth') return this.hearthLabel();
+    if (this.buildTarget === 'gate') return 'FRONT GATE';
+    const plot = this.plotById(this.selectedRoom);
+    return (plot && plot.name) || 'BUILD';
+  }
+
+  buildChoices() {
+    if (this.buildTarget === 'hearth') {
+      const cost = this.buildingCost('perapian');
+      return [{
+        type: 'perapian', icon: 'upgrade',
+        cost: this.perapianLevel >= 3 ? '' : `${cost ? cost.oil : 0}`,
+        disabled: this.perapianLevel >= 3 || !cost || this.oil < cost.oil || this.wood < cost.wood,
+      }];
+    }
+    if (this.buildTarget === 'gate') {
+      const cost = this.tuning.gateCost;
+      return [{
+        type: 'gate', icon: 'gate',
+        cost: this.gateBuilt ? '' : `${cost.oil}`,
+        disabled: this.gateBuilt || this.oil < cost.oil || this.wood < cost.wood,
+      }];
+    }
+    const id = this.selectedRoom;
+    if (!id) return [];
+    return ['extractor', 'sawmill', 'shelter', 'watch']
+      .filter((type) => this.canPlace(type, id))
+      .map((type) => {
+        const spec = SURVIVAL_BUILDINGS[type];
+        return {
+          type, icon: type,
+          cost: `${type === 'extractor' ? spec.oil : spec.wood}`,
+          disabled: this.oil < spec.oil || this.wood < spec.wood,
+        };
+      });
   }
 
   useSkill() {
@@ -1231,6 +1304,7 @@ export class SurvivalMode {
     if (this.oil < spec.oil || this.wood < spec.wood) return false;
     this.oil -= spec.oil; this.wood -= spec.wood;
     this.selectedRoom = roomId;
+    this.closeBuildMenu();
     const duration = this.jobTime(spec.seconds);
     this.builderJob = { kind: 'building', type, roomId, remaining: duration, duration };
     g.audio.play('woodPickup', { vol: 0.45 });
@@ -1243,6 +1317,7 @@ export class SurvivalMode {
     const cost = this.tuning.gateCost;
     if (this.oil < cost.oil || this.wood < cost.wood) return false;
     this.oil -= cost.oil; this.wood -= cost.wood;
+    this.closeBuildMenu();
     const duration = this.jobTime(cost.seconds);
     this.builderJob = { kind: 'gate', type: 'gate', remaining: duration, duration };
     this.game.audio.play('woodPickup', { vol: 0.45 });
@@ -1256,6 +1331,7 @@ export class SurvivalMode {
     const cost = this.tuning.perapianUpgrade[target];
     if (!cost || this.oil < cost.oil || this.wood < cost.wood) return false;
     this.oil -= cost.oil; this.wood -= cost.wood;
+    this.closeBuildMenu();
     const duration = this.jobTime(cost.seconds);
     this.builderJob = { kind: 'perapian', type: 'perapian', targetLevel: target, remaining: duration, duration };
     this.game.audio.play('uiConfirm', { vol: 0.55 });
@@ -1281,7 +1357,7 @@ export class SurvivalMode {
       this.applyBuildingEffects(false);
     }
     this.builderJob = null;
-    this.buildMenuOpen = false;
+    this.closeBuildMenu();
     this.refreshFireplace(true);
     this.game.audio.play('uiConfirm', { vol: 0.62 });
     this._persist(true);
@@ -1374,7 +1450,7 @@ export class SurvivalMode {
       gateHp: 0, builderJob: null, selectedRoom: null, nightsCompleted: 0, waveIndex: 0,
       breakerIndex: 0, individualIndex: 0, oilBurned: 0, siegeTimers: Object.create(null),
       nightStats: { kills: 0, hits: 0, damageToWalls: 0 }, lastRewards: null, skillCooldown: 0,
-      incoming: null, ftueDone: false, buildMenuOpen: false, feedCd: 0, currentTarget: null, _gateAlert: false,
+      incoming: null, ftueDone: false, buildMenuOpen: false, buildTarget: null, feedCd: 0, currentTarget: null, _gateAlert: false,
       _telegraphEntrance: null, _telegraphWave: -1, _telegraphSounded: false, _telegraphKey: null,
     });
     this.nightDuration = duration;

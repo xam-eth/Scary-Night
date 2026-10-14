@@ -1820,13 +1820,10 @@ export class Game {
     } else if (tool.fx === 'muzzle') {
       const ox = player.x + Math.cos(ang) * (tool.offset || 22);
       const oy = player.y + Math.sin(ang) * (tool.offset || 22);
-      this.particles.burst('spark', ox, oy, 18, {
-        color: 'rgba(255, 214, 140, 0.98)', angle: ang, spread: 0.55, speedMin: 80, speedMax: 280, lifeMin: 0.08, lifeMax: 0.24, sizeMin: 5, sizeMax: 12, glow: true,
+      this.particles.burst('spark', ox, oy, 7, {
+        color: 'rgba(255, 214, 140, 0.98)', angle: ang, spread: 0.18,
+        speedMin: 110, speedMax: 240, lifeMin: 0.04, lifeMax: 0.12, sizeMin: 1.6, sizeMax: 3.4, glow: true,
       });
-      this.particles.burst('glow', ox, oy, 4, {
-        color: 'rgba(255, 186, 96, 0.9)', angle: ang, spread: 0.2, speedMin: 8, speedMax: 36, lifeMin: 0.1, lifeMax: 0.22, sizeMin: 10, sizeMax: 18, glow: true,
-      });
-      this.renderer.addFlash(0.09, '#e6c078');
     } else if (tool.fx === 'knife') {
       const ox = player.x + Math.cos(ang) * (tool.offset || 22);
       const oy = player.y + Math.sin(ang) * (tool.offset || 22);

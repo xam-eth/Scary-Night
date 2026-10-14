@@ -86,6 +86,71 @@ export class Mansion {
     this.buildNav();
   }
 
+  /**
+   * Survival keeps the walkable lot tight around unlocked rooms plus yard
+   * plots, then raises a palisade so the world edge is a fence — not an
+   * invisible 560px pad of forest the Hunter can wander through.
+   */
+  fitPlayArea(extraRects = []) {
+    if (!this.unlockedRooms) {
+      this.playFence = null;
+      this.playPlots = [];
+      return false;
+    }
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    const include = (r) => {
+      if (!r || !Number.isFinite(r.x) || !Number.isFinite(r.y)) return;
+      minX = Math.min(minX, r.x);
+      minY = Math.min(minY, r.y);
+      maxX = Math.max(maxX, r.x + (r.w || 0));
+      maxY = Math.max(maxY, r.y + (r.h || 0));
+    };
+    for (const r of this.roomList) {
+      include({ x: r.x - WALL_T, y: r.y - WALL_T, w: r.w + WALL_T * 2, h: r.h + WALL_T * 2 });
+    }
+    for (const r of extraRects) include(r);
+    if (!Number.isFinite(minX)) return false;
+    const pad = 72;
+    this.bounds = {
+      x: minX - pad, y: minY - pad,
+      w: (maxX - minX) + pad * 2, h: (maxY - minY) + pad * 2,
+    };
+    const cameraPad = 900;
+    this.camBounds = {
+      x: this.bounds.x - cameraPad, y: this.bounds.y - cameraPad,
+      w: this.bounds.w + cameraPad * 2, h: this.bounds.h + cameraPad * 2,
+    };
+    this.playPlots = extraRects.filter(Boolean);
+    this.solids = this.solids.filter((s) => s.type !== 'fence' && s.type !== 'exteriorTree' && s.type !== 'exteriorRock');
+    this._buildPalisade();
+    this.exterior = makeExterior(this);
+    this.solids.push(...this.exterior.blockers);
+    this.buildGrid();
+    this.buildNav();
+    this.layoutSerial = (this.layoutSerial || 0) + 1;
+    return true;
+  }
+
+  _buildPalisade() {
+    const b = this.bounds;
+    const T = 18;
+    const door = this.frontDoor;
+    const gapW = 240;
+    const gx = door ? door.x : b.x + b.w / 2;
+    const gap0 = Math.max(b.x + T, gx - gapW / 2);
+    const gap1 = Math.min(b.x + b.w - T, gx + gapW / 2);
+    const fence = (x, y, w, h) => {
+      if (w < 4 || h < 4) return;
+      this.solids.push({ x, y, w, h, type: 'fence', solid: true });
+    };
+    fence(b.x, b.y, b.w, T);
+    fence(b.x, b.y, T, b.h);
+    fence(b.x + b.w - T, b.y, T, b.h);
+    fence(b.x, b.y + b.h - T, Math.max(0, gap0 - b.x), T);
+    fence(gap1, b.y + b.h - T, Math.max(0, b.x + b.w - gap1), T);
+    this.playFence = { x: b.x, y: b.y, w: b.w, h: b.h, gap0, gap1, T };
+  }
+
   /** Survival grows the house by unlocking authored wings. Hunt leaves this null. */
   setUnlockedRooms(ids) {
     const list = Array.isArray(ids) && ids.length ? [...new Set(ids)].sort() : null;
@@ -845,7 +910,17 @@ export class Mansion {
     for (const e of this.entrances) {
       if (e.broken) continue;
       if (e.kind === 'door' && e.open) continue;
-      out.push(e);
+      // Entrances store a centre + size; collision tests axis-aligned top-left
+      // boxes. Using the centre as x/y left a hole in the visual door/window
+      // gap — some walls blocked, the openings did not.
+      out.push({
+        x: e.x - e.w / 2,
+        y: e.y - e.h / 2,
+        w: e.w,
+        h: e.h,
+        type: e.kind,
+        id: e.id,
+      });
     }
     return out;
   }

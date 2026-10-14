@@ -3,7 +3,6 @@
  */
 
 import { clamp, TAU } from '../core/util.js';
-import { SURVIVAL_BUILDINGS } from '../game/survival.js';
 import { pauseButtonBox } from '../game/hud.js';
 import { drawDrag, guideScale } from '../game/coach.js';
 import { drawGameIcon } from './icons.js';
@@ -329,17 +328,8 @@ function drawDayPanel(game, ctx, w, h) {
   const btn = 44;
   const gap = 8;
   const margin = 12;
-  const playX = w - margin - btn * 2 - gap;
-  const buildX = w - margin - btn;
+  const playX = w - margin - btn;
   const btnY = h - margin - btn;
-  const plots = mode.buildableRooms();
-  let selected = plots.find((room) => room.id === mode.selectedRoom)
-    || (mode.selectedRoom && mode.plotById(mode.selectedRoom))
-    || null;
-  if (!selected && plots[0]) {
-    selected = plots[0];
-    mode.selectedRoom = selected.id;
-  }
 
   ctx.save();
   if (mode.builderJob) {
@@ -359,82 +349,38 @@ function drawDayPanel(game, ctx, w, h) {
     icon: 'play', caption: '', onClick: () => mode.startNight(),
     disabled: busy, color: '#f0d9a3',
   });
-  addIconTile(game, ctx, { x: buildX, y: btnY, w: btn, h: btn }, {
-    icon: 'plus', caption: '', onClick: () => { mode.buildMenuOpen = !mode.buildMenuOpen; },
-    selected: !!mode.buildMenuOpen, disabled: busy, color: AMBER,
-  });
+
+  if (!busy && !mode.buildMenuOpen) {
+    drawLessonChip(ctx, w, h, 'TAP A PLOT', 'THEN CHOOSE WHAT TO BUILD');
+  }
 
   if (mode.buildMenuOpen && !busy) {
-    const upgrade = mode.buildingCost('perapian');
-    const canUpgrade = !!upgrade && mode.oil >= upgrade.oil && mode.wood >= upgrade.wood;
-    const gateCost = mode.tuning.gateCost;
-    const canGate = !mode.gateBuilt && mode.oil >= gateCost.oil && mode.wood >= gateCost.wood;
-    const readyId = Object.keys(mode.buildings).find((id) => mode.productionReady(id));
-    const can = (type) => !!(selected && mode.canPlace(type, selected.id));
-    const tiles = [
-      {
-        icon: 'extractor', cost: `${SURVIVAL_BUILDINGS.extractor.oil}`,
-        onClick: () => mode.startBuild('extractor', selected && selected.id),
-        disabled: !can('extractor')
-          || mode.oil < SURVIVAL_BUILDINGS.extractor.oil || mode.wood < SURVIVAL_BUILDINGS.extractor.wood,
-        color: '#ddc58f',
-      },
-      {
-        icon: 'sawmill', cost: `${SURVIVAL_BUILDINGS.sawmill.wood}`,
-        onClick: () => mode.startBuild('sawmill', selected && selected.id),
-        disabled: !can('sawmill')
-          || mode.oil < SURVIVAL_BUILDINGS.sawmill.oil || mode.wood < SURVIVAL_BUILDINGS.sawmill.wood,
-        color: '#ddc58f',
-      },
-      {
-        icon: 'shelter', cost: `${SURVIVAL_BUILDINGS.shelter.wood}`,
-        onClick: () => mode.startBuild('shelter', selected && selected.id),
-        disabled: !can('shelter')
-          || mode.oil < SURVIVAL_BUILDINGS.shelter.oil || mode.wood < SURVIVAL_BUILDINGS.shelter.wood,
-        color: '#ddc58f',
-      },
-      {
-        icon: 'watch', cost: `${SURVIVAL_BUILDINGS.watch.wood}`,
-        onClick: () => mode.startBuild('watch', selected && selected.id),
-        disabled: !can('watch')
-          || mode.oil < SURVIVAL_BUILDINGS.watch.oil || mode.wood < SURVIVAL_BUILDINGS.watch.wood,
-        color: '#d0aa75',
-      },
-      {
-        icon: 'upgrade',
-        cost: mode.perapianLevel >= 3 ? '' : `${upgrade ? upgrade.oil : 0}`,
-        onClick: () => mode.startBuild('perapian'),
-        disabled: !canUpgrade,
-        color: AMBER,
-      },
-      {
-        icon: 'gate',
-        cost: mode.gateBuilt ? '' : `${gateCost.oil}`,
-        onClick: () => mode.startBuild('gate'),
-        disabled: mode.gateBuilt || !canGate,
-        color: '#d0aa75',
-      },
-      {
-        icon: 'collect',
-        cost: readyId ? 'READY' : '',
-        onClick: () => readyId && mode.collectProduction(readyId),
-        disabled: !readyId,
-        selected: !!readyId,
-        color: AMBER,
-      },
-    ];
-    const tile = 40;
-    const sheetW = tiles.length * tile + gap * (tiles.length - 1) + 16;
-    const sheetH = 52;
-    const sheetX = Math.max(margin, w - margin - sheetW);
-    const sheetY = btnY - sheetH - 8;
-    fillPanel(ctx, sheetX, sheetY, sheetW, sheetH, 0.94);
-    for (let i = 0; i < tiles.length; i++) {
-      addIconTile(game, ctx, {
-        x: sheetX + 8 + i * (tile + gap), y: sheetY + 6, w: tile, h: 40,
-      }, tiles[i]);
+    const choices = mode.buildChoices();
+    const tile = 44;
+    const sheetW = Math.min(w - 32, Math.max(168, choices.length * (tile + gap) + 24));
+    const sheetH = 86;
+    const sheetX = (w - sheetW) / 2;
+    const sheetY = btnY - sheetH - 10;
+    fillPanel(ctx, sheetX, sheetY, sheetW, sheetH, 0.95);
+    text(ctx, mode.buildMenuTitle(), sheetX + 12, sheetY + 14, 9, AMBER, 'left');
+    addButton(game, ctx, { x: sheetX + sheetW - 36, y: sheetY + 6, w: 28, h: 18 }, 'X',
+      () => mode.closeBuildMenu(), { fontSize: 10, radius: 6, color: DIM });
+    if (!choices.length) {
+      text(ctx, 'NOTHING TO PLACE HERE', w / 2, sheetY + 52, 8, DIM, 'center');
+    } else {
+      const rowW = choices.length * tile + gap * (choices.length - 1);
+      const rowX = sheetX + (sheetW - rowW) / 2;
+      for (let i = 0; i < choices.length; i++) {
+        const choice = choices[i];
+        addIconTile(game, ctx, {
+          x: rowX + i * (tile + gap), y: sheetY + 32, w: tile, h: 46,
+        }, {
+          icon: choice.icon, cost: choice.cost, color: '#ddc58f',
+          disabled: choice.disabled,
+          onClick: () => mode.startBuild(choice.type, mode.selectedRoom),
+        });
+      }
     }
-    if (selected) text(ctx, selected.name || selected.id, sheetX + 10, sheetY - 8, 8, DIM, 'left');
   }
 
   ctx.restore();

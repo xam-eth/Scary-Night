@@ -89,6 +89,8 @@ class World3DRuntime {
     this.survivalReadyPips = new Map();
     this.survivalGateMesh = null;
     this.survivalHearthKeep = null;
+    this.playFenceGroup = null;
+    this.playFenceSerial = -1;
     this.survivalDayCamps = new Map();
     this.survivalZombieBodyGeometry = null;
     this.survivalZombieHeadGeometry = null;
@@ -256,7 +258,7 @@ class World3DRuntime {
       scene.add(this.hearthLight);
     }
     if (!this.muzzleLight) {
-      this.muzzleLight = new THREE.PointLight(0xffc070, 0, 520, 1.35);
+      this.muzzleLight = new THREE.PointLight(0xffc070, 0, 90, 1.8);
       this.muzzleLight.name = 'player-muzzle-light-3d';
       scene.add(this.muzzleLight);
     }
@@ -1053,6 +1055,69 @@ class World3DRuntime {
     return group;
   }
 
+  _syncPlayFence(game) {
+    const fence = game.mansion && game.mansion.playFence;
+    const serial = game.mansion ? game.mansion.layoutSerial : 0;
+    if (!fence || game.mode !== 'survival') {
+      if (this.playFenceGroup) this.playFenceGroup.visible = false;
+      return;
+    }
+    if (this.playFenceGroup && this.playFenceSerial === serial) {
+      this.playFenceGroup.visible = true;
+      return;
+    }
+    if (this.playFenceGroup) {
+      this.root.remove(this.playFenceGroup);
+      this.playFenceGroup.traverse((item) => {
+        if (item.geometry) item.geometry.dispose();
+      });
+    }
+    this.playFenceGroup = this._makePlayFence(fence);
+    this.playFenceSerial = serial;
+  }
+
+  _makePlayFence(fence) {
+    const group = new THREE.Group();
+    group.name = 'keep-palisade-3d';
+    const wood = new THREE.MeshStandardMaterial({ color: 0x4a3424, roughness: 0.96, flatShading: true });
+    const dark = new THREE.MeshStandardMaterial({ color: 0x2c1c12, roughness: 1, flatShading: true });
+    const H = 78;
+    const step = 54;
+    const addPost = (x, z) => {
+      const post = new THREE.Mesh(new THREE.BoxGeometry(8, H, 8), wood);
+      post.position.set(x, H / 2, z);
+      post.castShadow = true;
+      group.add(post);
+    };
+    const addRail = (x, z, w, d) => {
+      if (w < 8 && d < 8) return;
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(Math.max(6, w), 7, Math.max(6, d)), dark);
+      rail.position.set(x, 38, z);
+      group.add(rail);
+    };
+    const b = fence;
+    const south = b.y + b.h;
+    const east = b.x + b.w;
+    for (let x = b.x; x <= east; x += step) addPost(x, b.y);
+    addRail(b.x + b.w / 2, b.y, b.w, 6);
+    for (let z = b.y; z <= south; z += step) {
+      addPost(b.x, z);
+      addPost(east, z);
+    }
+    addRail(b.x, b.y + b.h / 2, 6, b.h);
+    addRail(east, b.y + b.h / 2, 6, b.h);
+    for (let x = b.x; x < b.gap0; x += step) addPost(x, south);
+    for (let x = b.gap1; x <= east; x += step) addPost(x, south);
+    addPost(b.gap0, south);
+    addPost(b.gap1, south);
+    const leftW = Math.max(0, b.gap0 - b.x);
+    const rightW = Math.max(0, east - b.gap1);
+    addRail(b.x + leftW / 2, south, leftW, 6);
+    addRail(b.gap1 + rightW / 2, south, rightW, 6);
+    this.root.add(group);
+    return group;
+  }
+
   _syncSurvivalObjects(game) {
     const mode = game.survival;
     if (!mode) return;
@@ -1132,6 +1197,7 @@ class World3DRuntime {
       this.survivalTelegraph.userData.pillar.material.opacity = 0.38 * pulse;
     }
 
+    this._syncPlayFence(game);
     this._syncDaySiegeCamps(game, mode);
 
     const visibleSlots = game.screen === 'playing' && mode.phase === 'day' ? new Set(mode.buildableRooms().map((room) => room.id)) : new Set();
@@ -1474,9 +1540,9 @@ class World3DRuntime {
       new THREE.MeshBasicMaterial({ color: coreColor, toneMapped: false }),
     );
     const glow = new THREE.Mesh(
-      new THREE.CylinderGeometry(knife ? 12 : 16, knife ? 5.5 : 8, 78, 8, 1),
+      new THREE.CylinderGeometry(knife ? 6 : 8, knife ? 3 : 4.2, 78, 8, 1),
       new THREE.MeshBasicMaterial({
-        color: glowColor, transparent: true, opacity: 0.78,
+        color: glowColor, transparent: true, opacity: 0.55,
         blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
       }),
     );
@@ -1530,14 +1596,14 @@ class World3DRuntime {
         this.root.add(trail);
       }
       const points = bolt.trail || [];
-      const tail = points[0] || { x: bolt.x - direction.x * 160, y: bolt.y - direction.z * 160 };
+      const tail = points[0] || { x: bolt.x - direction.x * 34, y: bolt.y - direction.z * 34 };
       const dx = bolt.x - tail.x;
       const dz = bolt.y - tail.y;
-      const length = Math.max(110, Math.hypot(dx, dz));
+      const length = Math.max(28, Math.min(90, Math.hypot(dx, dz)));
       trail.position.set((bolt.x + tail.x) * 0.5, 28, (bolt.y + tail.y) * 0.5);
       trail.quaternion.setFromUnitVectors(up, direction);
-      trail.scale.set(1.55, length, 1.55);
-      trail.material.opacity = 0.92;
+      trail.scale.set(0.7, length, 0.7);
+      trail.material.opacity = 0.7;
       trail.visible = true;
     }
     for (const [id, mesh] of this.bolts) if (!active.has(id)) mesh.visible = false;
@@ -1803,48 +1869,55 @@ class World3DRuntime {
     }
     const weapon = weaponById(player.weapon);
     if (weapon.kind === 'ranged') {
+      if (this.playerFlash && !this.playerFlash.userData.compact) {
+        this.root.remove(this.playerFlash);
+        this.playerFlash = null;
+        this.playerFlashCore = null;
+        this.playerFlashCone = null;
+      }
       if (!this.playerFlash) {
         const group = new THREE.Group();
         group.name = 'player-muzzle-flash-3d';
+        group.userData.compact = true;
         const core = new THREE.Mesh(
-          new THREE.SphereGeometry(38, 12, 8),
+          new THREE.SphereGeometry(4.2, 8, 6),
           new THREE.MeshBasicMaterial({
             color: 0xfff1c2, transparent: true, opacity: 0,
             blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
           }),
         );
         const cone = new THREE.Mesh(
-          new THREE.ConeGeometry(36, 96, 10, 1, true),
+          new THREE.ConeGeometry(5.5, 22, 8, 1, true),
           new THREE.MeshBasicMaterial({
             color: 0xffb45c, transparent: true, opacity: 0,
             blending: THREE.AdditiveBlending, depthWrite: false,
             side: THREE.DoubleSide, toneMapped: false,
           }),
         );
-        cone.position.y = 44;
+        cone.position.y = 12;
         group.add(core, cone);
         this.playerFlash = group;
         this.playerFlashCore = core;
         this.playerFlashCone = cone;
         this.root.add(group);
       }
-      const fade = age > 0.34 ? 0 : clamp(1 - age / 0.34, 0, 1);
+      const fade = age > 0.12 ? 0 : clamp(1 - age / 0.12, 0, 1);
       const angle = player.swingAngle == null ? player.angle : player.swingAngle;
       const dir = this._muzzleDir || (this._muzzleDir = new THREE.Vector3());
       const up = this._muzzleUp || (this._muzzleUp = new THREE.Vector3(0, 1, 0));
       dir.set(Math.cos(angle), 0, Math.sin(angle)).normalize();
-      this.playerFlash.position.set(player.x + dir.x * 32, 40, player.y + dir.z * 32);
+      this.playerFlash.position.set(player.x + dir.x * 48, 36, player.y + dir.z * 48);
       this.playerFlash.quaternion.setFromUnitVectors(up, dir);
-      this.playerFlash.scale.setScalar(2.05 + fade * 3.4);
+      this.playerFlash.scale.setScalar(0.85 + fade * 0.4);
       const coreMat = this.playerFlashCore ? this.playerFlashCore.material : this.playerFlash.material;
       const coneMat = this.playerFlashCone && this.playerFlashCone.material;
-      if (coreMat) coreMat.opacity = 1 * fade;
-      if (coneMat) coneMat.opacity = 0.88 * fade;
-      this.playerFlash.visible = fade > 0.01;
+      if (coreMat) coreMat.opacity = 0.9 * fade;
+      if (coneMat) coneMat.opacity = 0.65 * fade;
+      this.playerFlash.visible = fade > 0.02;
       if (this.muzzleLight) {
         this.muzzleLight.position.copy(this.playerFlash.position);
-        this.muzzleLight.intensity = 12.5 * fade;
-        this.muzzleLight.visible = fade > 0.02;
+        this.muzzleLight.intensity = 1.8 * fade;
+        this.muzzleLight.visible = fade > 0.04;
       }
       hideMelee();
       return;
@@ -2142,6 +2215,7 @@ class World3DRuntime {
       this._syncLighting(game);
       this._syncActors(game);
       if (game.mode === 'survival') this._syncSurvivalObjects(game);
+    else if (this.playFenceGroup) this.playFenceGroup.visible = false;
       this._syncVariants(game);
     } catch (error) {
       this.lastError = String(error && error.message || error);

@@ -333,6 +333,31 @@ async function runSurvivalMilestone() {
   const survivalMovementPass = !!movementStart && screenDirections.every(({ direction }) => movementDistances[direction] > 30);
   console.log(`  ${survivalMovementPass ? 'PASS' : 'FAIL'}  Survival Hunter moves in all four screen directions from ${movementStart?.room || 'no clear tile'} (${JSON.stringify(Object.fromEntries(Object.entries(movementDistances).map(([key, value]) => [key, +value.toFixed(1)])))})`);
 
+  const closedDoor = movementMansion.frontDoor;
+  const doorAttempt = closedDoor
+    ? movementMansion.moveCircle(closedDoor.x, closedDoor.y - 48, 0, 140, 14, true)
+    : { hit: false, y: 0 };
+  const doorBlocksPass = !!(closedDoor && doorAttempt.hit && doorAttempt.y < closedDoor.y + 8);
+  console.log(`  ${doorBlocksPass ? 'PASS' : 'FAIL'}  Closed front door blocks a southbound walk (${closedDoor ? `y ${doorAttempt.y.toFixed(1)} vs door ${closedDoor.y.toFixed(1)}` : 'no door'})`);
+
+  const fencePass = !!(movementMansion.playFence
+    && movementMansion.solids.some((solid) => solid.type === 'fence'));
+  const fence = movementMansion.playFence;
+  const fenceWalk = fence
+    ? movementMansion.moveCircle(fence.x + 40, fence.y + fence.h / 2, -80, 0, 14, true)
+    : { hit: false, x: 0 };
+  const fenceBlocksPass = fencePass && fenceWalk.hit && fenceWalk.x > fence.x;
+  console.log(`  ${fenceBlocksPass ? 'PASS' : 'FAIL'}  Keep palisade is solid (${fence ? `${Math.round(fence.w)}x${Math.round(fence.h)}` : 'none'})`);
+
+  movementMode.phase = 'day';
+  const tapPlot = movementMode.buildableRooms()[0];
+  const tapped = !!(tapPlot && movementMode.selectRoomAtFloor(tapPlot.x + tapPlot.w / 2, tapPlot.y + tapPlot.h / 2));
+  const tapBuildPass = !!(tapped && movementMode.buildMenuOpen && movementMode.selectedRoom === tapPlot.id
+    && movementMode.buildChoices().some((choice) => !choice.disabled || choice.type));
+  console.log(`  ${tapBuildPass ? 'PASS' : 'FAIL'}  Tap plot opens build modal (${tapPlot ? tapPlot.id : 'none'} → ${movementMode.buildChoices().map((choice) => choice.type).join(',')})`);
+  movementMode.closeBuildMenu();
+  movementMode.phase = 'night';
+
   // The Breaker sees the Hunter at arm's length but retains the wall objective.
   survivalGame.survival.restart();
   const targetDoor = survivalGame.survival.mainGate();

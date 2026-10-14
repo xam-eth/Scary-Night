@@ -230,16 +230,15 @@ export class Player {
     this.vy = damp(this.vy, tvy, accel, dt);
 
     // ---------- position + collision ----------
-    const nx = this.x + this.vx * dt, ny = this.y + this.vy * dt;
-    const res = game.mansion.resolve(nx, ny, this.radius, true);
+    const dx = this.vx * dt, dy = this.vy * dt;
+    const nx = this.x + dx, ny = this.y + dy;
+    const res = game.mansion.moveCircle(this.x, this.y, dx, dy, this.radius, true);
     // threshold feedback
     if (res.hit && game.mansion.threshold.some((s) =>
       nx > s.x - 20 && nx < s.x + s.w + 20 && ny > s.y - 20 && ny < s.y + s.h + 20)) {
       game.mansion.thresholdBlocked = 1;
     }
-    if (res.x === nx && res.y === ny || true) { /* keep */ }
     this.x = res.x; this.y = res.y;
-    // soft separation from furniture (handled in resolve)
     this.clampToBounds(game);
 
     // ---------- facing ----------

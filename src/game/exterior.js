@@ -43,6 +43,8 @@ export function makeExterior(mansion) {
       // A generous clear moat around walls keeps the 3D kit and door swings
       // unobstructed. A separate clearance cone protects every exterior door.
       if (rooms.some((room) => rectDistance(x, y, room) < 142)) continue;
+      const plots = mansion.playPlots || [];
+      if (plots.some((plot) => rectDistance(x, y, plot) < 90)) continue;
       if (overlapsSolid(x, y, solids, 34)) continue;
       const nearDoor = entrances.some((e) => e.exterior && e.outside
         && Math.hypot(x - e.outside.x, y - e.outside.y) < (e.kind === 'door' ? 220 : 118));
