@@ -358,6 +358,33 @@ async function runSurvivalMilestone() {
   movementMode.closeBuildMenu();
   movementMode.phase = 'night';
 
+  // One room, one job: stand in a built Sick Ward and BIND WOUNDS must raise HP.
+  survivalGame.survival.restart();
+  const roomMode = survivalGame.survival;
+  roomMode.phase = 'day';
+  roomMode.oil = 80; roomMode.wood = 80;
+  survivalGame.screen = 'playing'; survivalGame.uiPanel = 'survival-day';
+  const wardQueued = roomMode.startBuild('shelter', 'dining');
+  if (wardQueued) roomMode.updateDay(20);
+  const dining = roomMode.plotById('dining');
+  survivalGame.player.x = dining.x + dining.w / 2;
+  survivalGame.player.y = dining.y + dining.h / 2;
+  survivalGame.player.blood = 40;
+  const wardStation = roomMode.nearestStation();
+  const wardUsed = !!(wardStation && roomMode.useStation(wardStation));
+  const wardHeal = survivalGame.player.blood;
+  const armoryQueued = roomMode.startBuild('armory', 'study');
+  if (armoryQueued) roomMode.updateDay(20);
+  const study = roomMode.plotById('study');
+  survivalGame.player.x = study.x + study.w / 2;
+  survivalGame.player.y = study.y + study.h / 2;
+  const armoryStation = roomMode.nearestStation();
+  const armsUsed = !!(armoryStation && roomMode.useStation(armoryStation));
+  const roomJobPass = !!(wardQueued && roomMode.buildings.dining === 'shelter'
+    && wardStation && wardStation.type === 'shelter' && wardUsed && wardHeal >= 78
+    && armoryQueued && armsUsed && roomMode.armsBuff > 1);
+  console.log(`  ${roomJobPass ? 'PASS' : 'FAIL'}  Walk-in rooms do their job (ward HP ${wardHeal.toFixed(0)} from 40, armsBuff ${roomMode.armsBuff}, station=${wardStation && wardStation.type})`);
+
   // The Breaker sees the Hunter at arm's length but retains the wall objective.
   survivalGame.survival.restart();
   const targetDoor = survivalGame.survival.mainGate();
@@ -755,7 +782,7 @@ async function runSurvivalMilestone() {
     && doorLightPass && losBlockPass && pauseFreezePass && hunterHoldPass && landscapeDayPass
     && idle.complete && builder.complete && builder.perapianLevel === 3
     && builder.queueLockVerified && builder.sawmillBuilt && builder.gateBuilt && builder.shelterBuilt
-    && saveProgressPass && economyPass && collectPass && builder.upgrades.map((item) => item.level).join(',') === '1,2,3'
+    && saveProgressPass && economyPass && collectPass && roomJobPass && builder.upgrades.map((item) => item.level).join(',') === '1,2,3'
     && builder.nightThree.gateHp > idle.nightThree.gateHp;
   console.log(`  ${pass ? 'PASS' : 'FAIL'}  three-day loop, Perapian Lv1→Lv3, one builder queue, and Night-3 idle-vs-builder outcomes`);
   if (!pass) process.exitCode = 1;
