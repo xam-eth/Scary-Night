@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-10-15T01:40:21.274Z",
+  "capturedAt": "2026-10-15T02:36:00.450Z",
   "results": [
     {
       "name": "boot: the night clock waits for the 3D house",
@@ -75,16 +75,16 @@
         "survivors": 2,
         "guards": 2,
         "visibleGuardMeshes": 2,
-        "boltObjects": 1,
-        "shots": 25
+        "boltObjects": 4,
+        "shots": 24
       }
     },
     {
       "name": "pooling: bolt meshes do not grow with every shot",
       "pass": true,
       "detail": {
-        "shots": 25,
-        "boltObjectsInScene": 1
+        "shots": 24,
+        "boltObjectsInScene": 4
       }
     },
     {
@@ -114,11 +114,11 @@
       "detail": {
         "before": {
           "t": 23.08,
-          "alive": 35
+          "alive": 34
         },
         "after": {
           "t": 23.16,
-          "alive": 35,
+          "alive": 34,
           "phase": "night"
         }
       }

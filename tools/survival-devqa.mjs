@@ -33,11 +33,17 @@ const args = Object.fromEntries(process.argv.slice(2).map((a) => {
   return [k, v === undefined ? true : v];
 }));
 const PORT = Number(args.port || 8112);
-const HARD_LIMIT_MS = 6 * 60 * 1000;
-const killTimer = setTimeout(() => { console.log('FAIL  devqa hard time limit reached'); process.exit(2); }, HARD_LIMIT_MS);
+// A full run takes ~6 min on software WebGL (three page loads + ~100 renders).
+const HARD_LIMIT_MS = 12 * 60 * 1000;
+let server = null;
+const killTimer = setTimeout(() => {
+  console.log('FAIL  devqa hard time limit reached');
+  try { if (server) server.kill('SIGTERM'); } catch (_) { /* ignore */ }
+  process.exit(2);
+}, HARD_LIMIT_MS);
 killTimer.unref();
 
-const server = spawn('python3', ['-m', 'http.server', String(PORT), '--bind', '127.0.0.1'], { cwd: ROOT, stdio: 'ignore' });
+server = spawn('python3', ['-m', 'http.server', String(PORT), '--bind', '127.0.0.1'], { cwd: ROOT, stdio: 'ignore' });
 await new Promise((r) => setTimeout(r, 500));
 const LIB_DIR = path.join(ROOT, 'tools', '.cache', 'al2023-lib', 'lib');
 if (!fs.existsSync(path.join(LIB_DIR, 'libnss3.so'))) {
@@ -185,20 +191,25 @@ try {
     ctx.ext === false || (ctx.elapsedDuringLoss === 0 && ctx.resumedAdvance > 0.5 && !ctx.lost), ctx);
 
   // ---------------- guards + pooling ----------------
-  const pool = await page.evaluate(() => {
+  const shots0 = await page.evaluate(() => {
     const g = window.__LN;
     g.survival.restart();
-    const shots0 = g.stats.shotsFired || 0;
-    // Render every 4 sim frames so bolts are created, retired and reused the
-    // way they are in a real session (one render per __step call).
-    for (let k = 0; k < 300; k++) window.__step(4);
+    return g.stats.shotsFired || 0;
+  });
+  // 20 s of night with a render every 0.25 s (one render per __step call;
+  // bolts fly >= 0.3 s), so bolts are created, retired and reused the way they
+  // are in a session. Separate evaluate calls keep each CDP call short on
+  // software WebGL.
+  for (let k = 0; k < 80; k++) await page.evaluate(() => window.__step(15));
+  const pool = await page.evaluate((shots0) => {
+    const g = window.__LN;
     const W = window.__W;
     const meshes = (W.survivalGuardMeshes || []).filter((m) => m.visible).length;
     let boltObjects = 0;
     W.root.traverse((o) => { if (o.name === 'crossbow-bolt-3d' || o.name === 'guard-bolt-3d') boltObjects++; });
     const shots = (g.stats.shotsFired || 0) - shots0 + (g.survival.nightStats.guardShots || 0);
     return { survivors: g.survival.survivors, guards: g.survival.guards.length, visibleGuardMeshes: meshes, boltObjects, shots };
-  });
+  }, shots0);
   check('guards: one 3D guard pawn per survivor at night', pool.guards === pool.survivors && pool.visibleGuardMeshes === pool.guards, pool);
   check('pooling: bolt meshes do not grow with every shot', pool.shots > 20 && pool.boltObjects > 0 && pool.boltObjects < pool.shots / 2, { shots: pool.shots, boltObjectsInScene: pool.boltObjects });
 
