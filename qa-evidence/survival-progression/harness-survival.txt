@@ -1,0 +1,32 @@
+=== SURVIVAL MILESTONE 1 — deterministic three-day probe ===
+  PASS  Night 1–3 waves: requested 21/21/24 → 24/27/27 → 30/30/30; actual Swarm 66/78/90 (no clamp, HP 48→54→60), Breaker 0/1/2
+  PASS  Perapian light weakens but never freezes enemies (damage 15.0 vs 10.0, breached walk 60.1 vs 90.9 px/s, lit claws ×0.5 — weakened, never blocked)
+  PASS  a closed door blocks bodies across its full width (-0.4:blocked -0.2:blocked 0:blocked 0.2:blocked 0.4:blocked)
+  PASS  door damage in firelight is 50% of dark damage (20 dark vs 10 lit)
+  PASS  breach → flow field → Perapian: body reached the hearth in 17.6s, clawed 3 Oil, empty hearth → failed (THE FIRE WENT OUT)
+  PASS  Breaker retargets frontDoor → cellarDoor → perapian
+  PASS  Survival Hunter moves in all four screen directions from dining ({"right":130.1,"left":147.2,"down":164.4,"up":101.1})
+  PASS  Breaker keeps frontDoor wall target with Hunter visible
+  PASS  Hunter auto-shot hits an unobstructed in-range test target (1 hit(s), 1 bolt(s), target=987654, weapon=shot; LOS stubbed open)
+  PASS  Hunter auto-shot acquires and hits a real-LOS target with mansion collision enabled (dining; 1 hit(s))
+  PASS  Hunter's Flare skill damages/staggers in radius and respects cooldown (500 → 442 HP)
+  PASS  wave 3 (30 bodies) reaches its own ranks at the postern: 30 pressing, door 72 → broken within 10s, front rank index 0
+  PASS  ranks close up after the front row dies (nearest body 83 px → 78 px from the chapel door)
+  PASS  Hunter shoots through a closed door's slit (plain LOS blocked=true; body 400 → 244 HP; door 130 → 123, still closed)
+  PASS  survivors guard the clawed door (2 guards, 2 posted at frontDoor, 18 shots, 3 kills with the Hunter's shot disabled)
+  PASS  a guard's bolt passes through the Hunter (blood 100 → 100)
+  PASS  pause freezes Flare cooldown (10 while paused → 9.00 after 1s) and the clock; no pause on the end panel (playing) or the dawn reward (false), pause on the build day (true); dawn radius 980/980
+  PASS  reload keeps an invader inside (_inHouse=true) and rebuilds 2 guards
+  PASS  save/reload resumes Day 2 day (1/3 nights, 60s)
+  economy: [{"type":"extractor","room":"dining","queued":true,"finished":true},{"type":"sawmill","room":"hall","queued":true,"finished":true},{"type":"shelter","room":"basement","queued":true,"finished":true}] → survivors 3 at build, pumped 6.00 Oil overnight (purse -2.40 after burn 8.40), dawn +14 Oil, +21 Wood, Survivors 3 (PASS)
+  PASS  building levels: queued, paid and finished through the one builder; Lv3 is the cap (pump Lv1→2→3, cost Lv2 4/12, Lv3 6/16, queue lock build=false hunter=false upgrade=false, max locked=true)
+  PASS  Lv3 pump pours 14 Oil over one night; nothing is bought at night (pumpPerNight 14, pumped 14.00, night purchase=false)
+  PASS  shelter levels house 1 / 2 / 3 survivors as soon as they stand; each one guards (survivors 2 → 3 → 4 → 5, guards 5)
+  PASS  sawmill planks raise every outer door +10% at Lv1, +20% at Lv2 (doors full by day) (door max HP 130/130/130/130/78/210/72 → 143/143/143/143/86/231/79 → 156/156/156/156/94/252/86)
+  PASS  Hunter Lv2: bolt damage 26 → 32, health 100 → 120, healed when the training ends (cost 14/8, Lv2, bolt 32, HP 120/120)
+  PASS  save/reload keeps building levels + Hunter level; old saves load as Lv1; a mid-night reload keeps 60/120 HP (saved levels {"dining":3,"basement":3,"hall":2}, hunter 2; old save → extractor Lv1, shelter Lv1, sawmill Lv1, Hunter Lv1; mid-night 60/120)
+  idle Night 3: 0 peak enemies / 0 Breakers, 0 kills, 0 wall damage, gate 0 HP, Hunter 100 HP; failed
+  builder Night 3: 84 peak enemies / 2 Breakers, 44 kills, 737 wall damage, gate 0 HP, Hunter 100 HP; Perapian Lv3, survivors 3, buildings sawmill,shelter, gateBuilt=true; complete
+  PASS  idle (no input, no builds) does not survive: failed on Night 2 (THE FIRE WENT OUT)
+  PASS  engaged builder survives Night 3 (Flare ×5, Perapian Lv3, oil 42.8)
+  PASS  three-day loop, Perapian Lv1→Lv3, one builder queue, idle loses / engaged builder wins

@@ -1,6 +1,6 @@
 {
   "title": "Survival FTUE — first 30 playable seconds",
-  "capturedAt": "2026-10-15T01:46:41.024Z",
+  "capturedAt": "2026-10-15T04:32:23.206Z",
   "viewport": {
     "width": 390,
     "height": 844,
@@ -71,8 +71,8 @@
         "renderMode": "webgl-3d"
       },
       "luma": {
-        "meanLuma": 77.4,
-        "darkPct": 10
+        "meanLuma": 77.1,
+        "darkPct": 10.2
       }
     },
     {
@@ -98,9 +98,9 @@
         ],
         "coach": false,
         "narration": false,
-        "swarm": 36,
+        "swarm": 35,
         "riggedCrowd": 14,
-        "proxyCrowd": 22,
+        "proxyCrowd": 21,
         "fireRadius": 853,
         "radiusMesh": 853,
         "renderMode": "webgl-3d"

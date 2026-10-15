@@ -1,0 +1,136 @@
+{
+  "capturedAt": "2026-10-15T04:37:44.945Z",
+  "results": [
+    {
+      "name": "boot: the night clock waits for the 3D house",
+      "pass": true,
+      "detail": {
+        "nightArmedAt": 0,
+        "elapsedWhenWorldShown": 0.08
+      }
+    },
+    {
+      "name": "touch: the stick starts anywhere below the HUD band",
+      "pass": true,
+      "detail": {
+        "leftHalf": 94,
+        "rightHalf": 72,
+        "hudBand": 2
+      }
+    },
+    {
+      "name": "controls: Survival shows one action button (attack hidden)",
+      "pass": true,
+      "detail": {
+        "flare": {
+          "x": 336,
+          "y": 768,
+          "r": 40,
+          "hitR": 44,
+          "hidden": false
+        },
+        "attackHidden": true,
+        "vw": 390,
+        "vh": 844
+      }
+    },
+    {
+      "name": "flare: a tap on the drawn edge fires",
+      "pass": true,
+      "detail": {
+        "tapAtPx": 38,
+        "cooldown": 13.93
+      }
+    },
+    {
+      "name": "pause: 2 s paused leaves the Flare cooldown untouched",
+      "pass": true,
+      "detail": {
+        "cd": 10,
+        "screen": "paused"
+      }
+    },
+    {
+      "name": "hidden: a hidden tab pauses the night",
+      "pass": true,
+      "detail": {
+        "screen": "paused"
+      }
+    },
+    {
+      "name": "context: a lost WebGL context freezes the night, restore resumes it",
+      "pass": true,
+      "detail": {
+        "ext": true,
+        "elapsedDuringLoss": 0,
+        "resumedAdvance": 1,
+        "lost": false,
+        "lastError": null
+      }
+    },
+    {
+      "name": "guards: one 3D guard pawn per survivor at night",
+      "pass": true,
+      "detail": {
+        "survivors": 2,
+        "guards": 2,
+        "visibleGuardMeshes": 2,
+        "boltObjects": 4,
+        "shots": 24
+      }
+    },
+    {
+      "name": "pooling: bolt meshes do not grow with every shot",
+      "pass": true,
+      "detail": {
+        "shots": 24,
+        "boltObjectsInScene": 4
+      }
+    },
+    {
+      "name": "pause: the end panel has no pause hit area",
+      "pass": true,
+      "detail": {
+        "screen": "playing",
+        "phase": "failed"
+      }
+    },
+    {
+      "name": "framing: landscape night zoom matches portrait (short-side framing)",
+      "pass": true,
+      "detail": {
+        "portrait": 0.466,
+        "landscape": 0.466,
+        "flare": [
+          794,
+          330,
+          36
+        ]
+      }
+    },
+    {
+      "name": "reload: a mid-night reload resumes the clock and the enemies",
+      "pass": true,
+      "detail": {
+        "before": {
+          "t": 23.08,
+          "alive": 35
+        },
+        "after": {
+          "t": 23.16,
+          "alive": 35,
+          "phase": "night"
+        }
+      }
+    },
+    {
+      "name": "health: 0 page errors, 0 console errors, 0 failed requests",
+      "pass": true,
+      "detail": {
+        "pageErrors": [],
+        "consoleErrors": [],
+        "failed": []
+      }
+    }
+  ]
+}

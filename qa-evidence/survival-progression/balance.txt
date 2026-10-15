@@ -1,0 +1,93 @@
+idle     seed0 LOSS Lv1 H1 [-] N1:FAIL H1 sp68 pk48 k32 feed13 drain29 oil0 hp100/100 br3 @64.2s THE FIRE WENT OUT (1107ms)
+idle     seed1 LOSS Lv1 H1 [-] N1:FAIL H1 sp68 pk50 k31 feed13 drain29 oil0 hp100/100 br3 @64s THE FIRE WENT OUT (502ms)
+idle     seed2 LOSS Lv1 H1 [-] N1:FAIL H1 sp68 pk49 k33 feed12 drain29 oil0 hp100/100 br3 @64.1s THE FIRE WENT OUT (338ms)
+  [active s20261012] D2 START NIGHT  oil=50 wood=53 surv=2 -> oil=50 wood=53 surv=2
+  [active s20261012] D3 START NIGHT  oil=62 wood=82 surv=2 -> oil=62 wood=82 surv=2
+active   seed0 LOSS Lv1 H1 [-] N1:ok H1 sp68 pk47 k55 feed1 drain0 oil50.9 hp100/100 br0 | N2:ok H1 sp81 pk56 k53 feed3 drain2 oil62.8 hp100/100 br0 | N3:FAIL H1 sp94 pk72 k45 feed20 drain54 oil0 hp100/100 br4 @61.1s THE FIRE WENT OUT (3853ms)
+  [active s20268931] D2 START NIGHT  oil=49 wood=53 surv=2 -> oil=49 wood=53 surv=2
+  [active s20268931] D3 START NIGHT  oil=61 wood=82 surv=2 -> oil=61 wood=82 surv=2
+active   seed1 LOSS Lv1 H1 [-] N1:ok H1 sp68 pk48 k55 feed2 drain1 oil49.9 hp100/100 br0 | N2:ok H1 sp81 pk56 k54 feed4 drain3 oil61.8 hp100/100 br0 | N3:FAIL H1 sp94 pk72 k46 feed17 drain53 oil0 hp78/100 br4 @62.6s THE FIRE WENT OUT (3298ms)
+  [active s20276850] D2 START NIGHT  oil=50 wood=53 surv=2 -> oil=50 wood=53 surv=2
+  [active s20276850] D3 START NIGHT  oil=64 wood=82 surv=2 -> oil=64 wood=82 surv=2
+active   seed2 LOSS Lv1 H1 [-] N1:ok H1 sp68 pk46 k54 feed0 drain0 oil50.9 hp100/100 br0 | N2:ok H1 sp81 pk56 k54 feed2 drain1 oil64.8 hp100/100 br0 | N3:FAIL H1 sp94 pk71 k45 feed19 drain56 oil0 hp78/100 br4 @62.7s THE FIRE WENT OUT (3365ms)
+  [builder s20261012] D2 build perapian  oil=50 wood=53 surv=2 -> oil=38 wood=45 surv=2
+  [builder s20261012] D2 build extractor@hall  oil=38 wood=45 surv=2 -> oil=36 wood=35 surv=2
+  [builder s20261012] D2 build gate  oil=36 wood=35 surv=2 -> oil=32 wood=19 surv=2
+  [builder s20261012] D2 build sawmill@basement  oil=32 wood=19 surv=2 -> oil=30 wood=9 surv=2
+  [builder s20261012] D2 START NIGHT  oil=30 wood=9 surv=2 -> oil=30 wood=9 surv=2
+  [builder s20261012] D3 build perapian  oil=50 wood=45 surv=2 -> oil=32 wood=33 surv=2
+  [builder s20261012] D3 upgrade @hall  oil=32 wood=33 surv=2 -> oil=28 wood=21 surv=2
+  [builder s20261012] D3 build upgrade@hall  oil=32 wood=33 surv=2 -> oil=28 wood=21 surv=2
+  [builder s20261012] D3 build shelter@dining  oil=28 wood=21 surv=2 -> oil=24 wood=7 surv=2
+  [builder s20261012] D3 START NIGHT  oil=24 wood=7 surv=3 -> oil=24 wood=7 surv=3
+builder  seed0 WIN  Lv3 H1 [extractor2,sawmill1,shelter1,gate] N1:ok H1 sp68 pk47 k55 feed1 drain0 oil50.9 hp100/100 br0 | N2:ok H1 sp81 pk56 k52 feed0 drain0 oil50.8 hp100/100 br0 | N3:ok H1 sp94 pk83 k74 feed8 drain0 oil54.8 hp100/100 br0 (4012ms)
+  [builder s20268931] D2 build perapian  oil=49 wood=53 surv=2 -> oil=37 wood=45 surv=2
+  [builder s20268931] D2 build extractor@hall  oil=37 wood=45 surv=2 -> oil=35 wood=35 surv=2
+  [builder s20268931] D2 build gate  oil=35 wood=35 surv=2 -> oil=31 wood=19 surv=2
+  [builder s20268931] D2 build sawmill@basement  oil=31 wood=19 surv=2 -> oil=29 wood=9 surv=2
+  [builder s20268931] D2 START NIGHT  oil=29 wood=9 surv=2 -> oil=29 wood=9 surv=2
+  [builder s20268931] D3 build perapian  oil=49 wood=45 surv=2 -> oil=31 wood=33 surv=2
+  [builder s20268931] D3 upgrade @hall  oil=31 wood=33 surv=2 -> oil=27 wood=21 surv=2
+  [builder s20268931] D3 build upgrade@hall  oil=31 wood=33 surv=2 -> oil=27 wood=21 surv=2
+  [builder s20268931] D3 build shelter@dining  oil=27 wood=21 surv=2 -> oil=23 wood=7 surv=2
+  [builder s20268931] D3 START NIGHT  oil=23 wood=7 surv=3 -> oil=23 wood=7 surv=3
+builder  seed1 WIN  Lv3 H1 [extractor2,sawmill1,shelter1,gate] N1:ok H1 sp68 pk48 k55 feed2 drain1 oil49.9 hp100/100 br0 | N2:ok H1 sp81 pk53 k52 feed0 drain0 oil49.8 hp100/100 br0 | N3:ok H1 sp94 pk81 k71 feed7 drain0 oil52.8 hp100/100 br0 (4392ms)
+  [builder s20276850] D2 build perapian  oil=50 wood=53 surv=2 -> oil=38 wood=45 surv=2
+  [builder s20276850] D2 build extractor@hall  oil=38 wood=45 surv=2 -> oil=36 wood=35 surv=2
+  [builder s20276850] D2 build gate  oil=36 wood=35 surv=2 -> oil=32 wood=19 surv=2
+  [builder s20276850] D2 build sawmill@basement  oil=32 wood=19 surv=2 -> oil=30 wood=9 surv=2
+  [builder s20276850] D2 START NIGHT  oil=30 wood=9 surv=2 -> oil=30 wood=9 surv=2
+  [builder s20276850] D3 build perapian  oil=50 wood=45 surv=2 -> oil=32 wood=33 surv=2
+  [builder s20276850] D3 upgrade @hall  oil=32 wood=33 surv=2 -> oil=28 wood=21 surv=2
+  [builder s20276850] D3 build upgrade@hall  oil=32 wood=33 surv=2 -> oil=28 wood=21 surv=2
+  [builder s20276850] D3 build shelter@dining  oil=28 wood=21 surv=2 -> oil=24 wood=7 surv=2
+  [builder s20276850] D3 START NIGHT  oil=24 wood=7 surv=3 -> oil=24 wood=7 surv=3
+builder  seed2 WIN  Lv3 H1 [extractor2,sawmill1,shelter1,gate] N1:ok H1 sp68 pk46 k54 feed0 drain0 oil50.9 hp100/100 br0 | N2:ok H1 sp81 pk54 k52 feed0 drain0 oil50.8 hp100/100 br0 | N3:ok H1 sp94 pk81 k72 feed8 drain0 oil54.8 hp100/100 br0 (3998ms)
+passive-builder seed0 LOSS Lv1 H1 [-] N1:FAIL H1 sp68 pk48 k32 feed13 drain29 oil0 hp100/100 br3 @64.2s THE FIRE WENT OUT (776ms)
+passive-builder seed1 LOSS Lv1 H1 [-] N1:FAIL H1 sp68 pk50 k31 feed13 drain29 oil0 hp100/100 br3 @64s THE FIRE WENT OUT (767ms)
+passive-builder seed2 LOSS Lv1 H1 [-] N1:FAIL H1 sp68 pk49 k33 feed12 drain29 oil0 hp100/100 br3 @64.1s THE FIRE WENT OUT (771ms)
+  [flare s20261012] D2 START NIGHT  oil=46 wood=51 surv=2 -> oil=46 wood=51 surv=2
+flare    seed0 LOSS Lv1 H1 [-] N1:ok H1 sp68 pk47 k45 feed3 drain2 oil46.9 hp100/100 br0 | N2:FAIL H1 sp80 pk69 k18 feed13 drain40 oil0 hp100/100 br3 @46.7s THE FIRE WENT OUT (1313ms)
+  [flare s20268931] D2 START NIGHT  oil=43 wood=51 surv=2 -> oil=43 wood=51 surv=2
+flare    seed1 LOSS Lv1 H1 [-] N1:ok H1 sp68 pk48 k44 feed5 drain5 oil43.9 hp100/100 br0 | N2:FAIL H1 sp80 pk69 k17 feed13 drain38 oil0 hp100/100 br3 @45.6s THE FIRE WENT OUT (1478ms)
+  [flare s20276850] D2 START NIGHT  oil=21 wood=51 surv=2 -> oil=21 wood=51 surv=2
+flare    seed2 LOSS Lv1 H1 [-] N1:ok H1 sp68 pk47 k44 feed10 drain27 oil21.9 hp100/100 br0 | N2:FAIL H1 sp80 pk67 k15 feed11 drain16 oil0 hp100/100 br3 @42.3s THE FIRE WENT OUT (1738ms)
+  [fire-builder s20261012] D2 build perapian  oil=50 wood=53 surv=2 -> oil=38 wood=45 surv=2
+  [fire-builder s20261012] D2 build perapian  oil=38 wood=45 surv=2 -> oil=20 wood=33 surv=2
+  [fire-builder s20261012] D2 START NIGHT  oil=20 wood=33 surv=2 -> oil=20 wood=33 surv=2
+  [fire-builder s20261012] D3 START NIGHT  oil=34 wood=62 surv=2 -> oil=34 wood=62 surv=2
+fire-builder seed0 WIN  Lv3 H1 [-] N1:ok H1 sp68 pk47 k55 feed1 drain0 oil50.9 hp100/100 br0 | N2:ok H1 sp81 pk62 k53 feed0 drain0 oil34.8 hp100/100 br0 | N3:ok H1 sp94 pk82 k90 feed8 drain0 oil57.8 hp93/100 br0 (3614ms)
+  [fire-builder s20268931] D2 build perapian  oil=49 wood=53 surv=2 -> oil=37 wood=45 surv=2
+  [fire-builder s20268931] D2 build perapian  oil=37 wood=45 surv=2 -> oil=19 wood=33 surv=2
+  [fire-builder s20268931] D2 START NIGHT  oil=19 wood=33 surv=2 -> oil=19 wood=33 surv=2
+  [fire-builder s20268931] D3 START NIGHT  oil=33 wood=62 surv=2 -> oil=33 wood=62 surv=2
+fire-builder seed1 WIN  Lv3 H1 [-] N1:ok H1 sp68 pk48 k55 feed2 drain1 oil49.9 hp100/100 br0 | N2:ok H1 sp81 pk62 k53 feed0 drain0 oil33.8 hp100/100 br0 | N3:ok H1 sp94 pk83 k89 feed8 drain0 oil55.8 hp93/100 br0 (3515ms)
+  [fire-builder s20276850] D2 build perapian  oil=50 wood=53 surv=2 -> oil=38 wood=45 surv=2
+  [fire-builder s20276850] D2 build perapian  oil=38 wood=45 surv=2 -> oil=20 wood=33 surv=2
+  [fire-builder s20276850] D2 START NIGHT  oil=20 wood=33 surv=2 -> oil=20 wood=33 surv=2
+  [fire-builder s20276850] D3 START NIGHT  oil=34 wood=62 surv=2 -> oil=34 wood=62 surv=2
+fire-builder seed2 WIN  Lv3 H1 [-] N1:ok H1 sp68 pk46 k54 feed0 drain0 oil50.9 hp100/100 br0 | N2:ok H1 sp81 pk61 k52 feed0 drain0 oil34.8 hp100/100 br0 | N3:ok H1 sp94 pk84 k90 feed8 drain0 oil57.8 hp93/100 br0 (3773ms)
+  [hunter-builder s20261012] D2 upgrade hunter  oil=50 wood=53 surv=2 -> oil=36 wood=45 surv=2
+  [hunter-builder s20261012] D2 build hunter  oil=50 wood=53 surv=2 -> oil=36 wood=45 surv=2
+  [hunter-builder s20261012] D2 build perapian  oil=36 wood=45 surv=2 -> oil=24 wood=37 surv=2
+  [hunter-builder s20261012] D2 START NIGHT  oil=24 wood=37 surv=2 -> oil=24 wood=37 surv=2
+  [hunter-builder s20261012] D3 upgrade hunter  oil=39 wood=66 surv=2 -> oil=19 wood=54 surv=2
+  [hunter-builder s20261012] D3 build hunter  oil=39 wood=66 surv=2 -> oil=19 wood=54 surv=2
+  [hunter-builder s20261012] D3 START NIGHT  oil=19 wood=54 surv=2 -> oil=19 wood=54 surv=2
+hunter-builder seed0 LOSS Lv2 H3 [-] N1:ok H1 sp68 pk47 k55 feed1 drain0 oil50.9 hp100/100 br0 | N2:ok H2 sp81 pk55 k54 feed0 drain0 oil39.8 hp120/120 br0 | N3:FAIL H3 sp94 pk65 k88 feed9 drain10 oil0 hp133/140 br4 @71.2s THE FIRE WENT OUT (3407ms)
+  [hunter-builder s20268931] D2 upgrade hunter  oil=49 wood=53 surv=2 -> oil=35 wood=45 surv=2
+  [hunter-builder s20268931] D2 build hunter  oil=49 wood=53 surv=2 -> oil=35 wood=45 surv=2
+  [hunter-builder s20268931] D2 build perapian  oil=35 wood=45 surv=2 -> oil=23 wood=37 surv=2
+  [hunter-builder s20268931] D2 START NIGHT  oil=23 wood=37 surv=2 -> oil=23 wood=37 surv=2
+  [hunter-builder s20268931] D3 build perapian  oil=38 wood=66 surv=2 -> oil=20 wood=54 surv=2
+  [hunter-builder s20268931] D3 START NIGHT  oil=20 wood=54 surv=2 -> oil=20 wood=54 surv=2
+hunter-builder seed1 WIN  Lv3 H2 [-] N1:ok H1 sp68 pk48 k55 feed2 drain1 oil49.9 hp100/100 br0 | N2:ok H2 sp81 pk55 k54 feed0 drain0 oil38.8 hp120/120 br0 | N3:ok H2 sp94 pk78 k90 feed8 drain0 oil43.8 hp113/120 br0 (3636ms)
+  [hunter-builder s20276850] D2 upgrade hunter  oil=50 wood=53 surv=2 -> oil=36 wood=45 surv=2
+  [hunter-builder s20276850] D2 build hunter  oil=50 wood=53 surv=2 -> oil=36 wood=45 surv=2
+  [hunter-builder s20276850] D2 build perapian  oil=36 wood=45 surv=2 -> oil=24 wood=37 surv=2
+  [hunter-builder s20276850] D2 START NIGHT  oil=24 wood=37 surv=2 -> oil=24 wood=37 surv=2
+  [hunter-builder s20276850] D3 upgrade hunter  oil=39 wood=66 surv=2 -> oil=19 wood=54 surv=2
+  [hunter-builder s20276850] D3 build hunter  oil=39 wood=66 surv=2 -> oil=19 wood=54 surv=2
+  [hunter-builder s20276850] D3 START NIGHT  oil=19 wood=54 surv=2 -> oil=19 wood=54 surv=2
+hunter-builder seed2 LOSS Lv2 H3 [-] N1:ok H1 sp68 pk46 k54 feed0 drain0 oil50.9 hp100/100 br0 | N2:ok H2 sp81 pk52 k54 feed0 drain0 oil39.8 hp120/120 br0 | N3:FAIL H3 sp94 pk67 k86 feed9 drain10 oil0 hp133/140 br4 @70.9s THE FIRE WENT OUT (3908ms)
+SUMMARY {"idle":{"wins":0,"runs":3},"active":{"wins":0,"runs":3},"builder":{"wins":3,"runs":3},"passive-builder":{"wins":0,"runs":3},"flare":{"wins":0,"runs":3},"fire-builder":{"wins":3,"runs":3},"hunter-builder":{"wins":1,"runs":3}}
