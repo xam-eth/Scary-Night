@@ -1,7 +1,7 @@
 # Status Rebuild 3D & Survival Milestone 1
 
 **Pembaruan:** 2026-10-16 (Asia/Makassar)
-**Status keseluruhan: MASIH TERBUKA — bukan klaim siap rilis.** Inti rebuild dunia 3D dan loop Survival Milestone 1 sudah terimplementasi. Pada 2026-10-12 arah UI/UX dan threat model dikoreksi mengikuti feedback user; pada 2026-10-15 dilakukan pass analisis gap & bug (lihat bagian "Gap & bug pass 2026-10-15"), lalu pass progres Hunter + level bangunan (lihat "Progres Hunter & level bangunan"), lalu pass menara crossbow (lihat "Menara crossbow"), lalu pass guard yang bisa jatuh (lihat "Guard bisa jatuh"; termasuk perbaikan bug gelombang yang muncul di dalam rumah), dan seluruh gate otomatis dijalankan ulang. Setelah itu user memutuskan **game landscape only** dan meminta brainstorming + design system plan sebelum koding lagi (lihat "Arah desain & orientasi" dan `docs/DESIGN-SYSTEM-PLAN.md`; belum ada perubahan kode game untuk arah ini). Revisi 1 desain (konsep api) ditolak user; revisi 2 menawarkan konsep tanpa api dan menunggu keputusan user. Acceptance visual/manual di perangkat, playtest manusia, dan packaging Play masih terbuka. Hasil tiap skrip hanya berlaku untuk cakupan yang benar-benar diuji.
+**Status keseluruhan: MASIH TERBUKA — bukan klaim siap rilis.** Inti rebuild dunia 3D dan loop Survival Milestone 1 sudah terimplementasi. Pada 2026-10-12 arah UI/UX dan threat model dikoreksi mengikuti feedback user; pada 2026-10-15 dilakukan pass analisis gap & bug (lihat bagian "Gap & bug pass 2026-10-15"), lalu pass progres Hunter + level bangunan (lihat "Progres Hunter & level bangunan"), lalu pass menara crossbow (lihat "Menara crossbow"), lalu pass guard yang bisa jatuh (lihat "Guard bisa jatuh"; termasuk perbaikan bug gelombang yang muncul di dalam rumah), dan seluruh gate otomatis dijalankan ulang. Setelah itu user memutuskan **game landscape only** dan meminta brainstorming + design system plan sebelum koding lagi (lihat "Arah desain & orientasi" dan `docs/DESIGN-SYSTEM-PLAN.md`; belum ada perubahan kode game untuk arah ini). Revisi 1 desain (konsep api) ditolak user. Di revisi 2 user memilih konsep **K1 "Benteng Terakhir"**, pola build **jalan ke lingkaran + BUILD**, dan nada **dark stylized**; aturan pengganti masih menunggu konfirmasi. Acceptance visual/manual di perangkat, playtest manusia, dan packaging Play masih terbuka. Hasil tiap skrip hanya berlaku untuk cakupan yang benar-benar diuji.
 
 ## Arah desain & orientasi (2026-10-16)
 
@@ -33,6 +33,21 @@ Game juga harus menjawab dan memvisualisasikan **siapa pemain, apa tujuannya, da
 - konsekuensi aturan bila api dihapus: kalah = jantung hancur, aturan cahaya perlu keputusan ulang, wilayah bangun, resource pengganti Oil;
 - bagian yang tetap: diagnosis, alur build/upgrade, layout landscape, tokens, combat feel, art direction, rencana bertahap;
 - revisi 1 diarsipkan di Lampiran A.
+
+**Keputusan user (2026-10-16):**
+- konsep **K1 "Benteng Terakhir"**: Kapten Duskhold melindungi **Menara Utama** + warga, dan bertahan 3 malam sampai bala bantuan datang;
+- pola build **P1**: jalan ke lingkaran + `BUILD`, ala Duck Survival;
+- nada visual **dark stylized seperti sekarang**.
+
+**Spesifikasi awal K1** ada di §3.4, dengan mockup `docs/concepts/k1-mockup-dark-day.jpg` (AI, bukan aset game):
+- Menara Utama di tengah Main Hall (hub denah);
+- level & status menara;
+- track bala bantuan;
+- pemetaan aturan Oil/cahaya → emas/wilayah panji;
+- lingkaran bertipe per ruangan;
+- alur P1 rinci.
+
+Aturan pengganti dan 8 keputusan lanjutan (§13) masih **usulan** dan perlu dikonfirmasi user sebelum koding.
 
 **Implementasi:** belum ada — tidak ada file kode game yang diubah di langkah ini. **Acceptance:** tidak ada yang diklaim.
 

@@ -8,10 +8,17 @@
 - Game **landscape only**. `manifest.webmanifest` sudah `orientation: landscape`; layout portrait tidak lagi menjadi target desain.
 - **Revisi 1 (konsep api) ditolak.** User tidak mendapat *feel* dari "penjaga api" atau apa pun yang berhubungan dengan api. Diminta cerita lain dan referensi build lain.
   - Ringkasan konsep yang ditolak ada di Lampiran A, supaya tidak diusulkan ulang.
+- **Revisi 2 — dipilih user (2026-10-16):**
+  - konsep **K1 "Benteng Terakhir"**;
+  - pola build **P1: jalan ke lingkaran + `BUILD`** (Duck Survival);
+  - nada visual **dark stylized, seperti sekarang**.
+  - Spesifikasi awal K1 ada di §3.4. Aturan pengganti di §3.4.5 masih **usulan** dan perlu konfirmasi sebelum koding.
 
 **Gambar konsep:** `docs/concepts/` berisi moodboard yang dibuat AI (generate image) untuk brainstorming.
 - Gambar ini **bukan aset game** dan tidak masuk build.
 - Gaya akhirnya tetap harus dibuat dengan pipeline dan provenance aset yang berlaku.
+- `k1`–`k4` dan `overview.jpg` bergaya cozy dan hanya menjadi referensi **cerita & komposisi**.
+- Referensi **nada** adalah `k1-mockup-dark-day.jpg` (dibuat dengan referensi screenshot game sekarang + key art DUSKHOLD) dan key art itu sendiri.
 
 **Hubungan dengan roadmap:**
 - `docs/REBUILD-ROADMAP.md` tetap mencatat status implementasi & QA.
@@ -29,12 +36,12 @@
 2. **Revisi 2 menawarkan 6 konsep tanpa api** (§3).
    - Masing-masing punya **jantung base**: objek pusat yang dilindungi dan terlihat jelas di layar.
    - Empat di antaranya punya gambar konsep.
-3. **Rekomendasi: K1 "Benteng Terakhir".** Kamu kapten Duskhold. Lindungi **Menara Utama** dan warga di dalamnya, lalu tahan 3 malam sampai bala bantuan datang.
+3. **Dipilih user: K1 "Benteng Terakhir"** (§3.4). Kamu kapten Duskhold. Lindungi **Menara Utama** dan warga di dalamnya, lalu tahan 3 malam sampai bala bantuan datang.
    - Paling dekat dengan key art DUSKHOLD (menara, barikade, horde di kabut).
    - Paling dekat dengan referensi user Duck Survival (benteng, tembok, turret, pasukan).
-   - Alternatif kuat: **K2 "Kabur dari Duskhold"** (perbaiki truk lalu kabur), yang tujuannya paling mudah dilihat.
+   - Nada visual: **dark stylized seperti sekarang**, dengan UI tetap terang dan ikon besar.
 4. **Build/upgrade punya satu alur**: Pilih → Pratinjau → Bangun → Rayakan → Hasil terlihat malam ini → Kredit saat fajar.
-   - Referensi baru: di **Duck Survival** pemain **menggerakkan karakternya ke lingkaran yang disorot lalu tap Build**. Ini menjadi rekomendasi interaksi (§7.2) dan sekaligus menggantikan "+" hijau.
+   - **Dipilih user: P1.** Seperti di **Duck Survival**, pemain **menggerakkan karakternya ke lingkaran yang disorot lalu tap Build** (§7.2, §3.4.7). Pola ini sekaligus menggantikan "+" hijau.
 5. **Layout landscape dirancang ulang.**
    - Tanpa seleksi: tidak ada panel di layar siang.
    - Dengan seleksi: strip/tombol kontekstual ≤ 104 px (≤ 28% tinggi) di zona jempol.
@@ -212,6 +219,143 @@ Setiap konsep wajib menjawab tiga hal dengan **gambar**, bukan teks:
 
 Perubahan ini menyentuh aturan inti, save (`save.survival`), harness, bot balance, dan FTUE. Karena itu konsep perlu dipilih sebelum implementasi apa pun.
 
+
+### 3.4 Arah terpilih — K1 "Benteng Terakhir" (spesifikasi awal)
+
+**Dipilih user (2026-10-16):** K1 + pola build P1 + nada dark stylized seperti sekarang.
+- Angka di bawah adalah **titik awal**; semuanya diuji ulang di balance pass.
+- Aturan pengganti (§3.4.5) adalah **usulan** sampai dikonfirmasi user.
+
+![Mockup K1 — siang, dark stylized](concepts/k1-mockup-dark-day.jpg)
+
+Gambar di atas adalah mockup AI, bukan aset game. Referensinya: screenshot game sekarang (`qa-evidence/survival-towers/land-tower-day.png`) untuk gaya render, dan key art DUSKHOLD (`assets/brand/hero-16x9-clean.jpg`) untuk mood.
+
+#### 3.4.1 Tiga jawaban
+
+- **Siapa saya:** Kapten Duskhold, yaitu Hunter yang sekarang (topi lebar, crossbow, mantel gelap). Survivor menjadi **prajurit** bertabard biru.
+- **Apa yang dilindungi:** **Menara Utama** di tengah Main Hall, plus warga yang terlihat di puncaknya.
+- **Tujuan:** tahan 3 malam sampai **bala bantuan** tiba di fajar ke-3.
+- **Logline** (intro/toko): "Duskhold is the last keep. Hold it for three nights."
+
+#### 3.4.2 Penempatan di peta sekarang
+
+Main Hall (0,0 · 880×620) adalah **hub** denah cross-wing (`src/game/mansion.js`). Dining (barat), library (timur), study (utara), dan basement (selatan) terhubung langsung ke hall.
+
+Usulan penempatan:
+- Menara Utama berdiri di **tengah Main Hall**, ±(440, 310).
+- Tapak ±260×260; tinggi ≤ 2× dinding.
+
+Akibatnya:
+- **Jalur musuh terbaca.** Ketujuh pintu luar (servant, front, cellar, chapel, scullery, palisade, postern) bermuara ke hub.
+- **Front door** ada di dinding selatan hall (x = 100), jadi rute ini paling pendek.
+  - Jadikan "gerbang utama": barikade + 1 prajurit awal.
+  - HP pintu dan posisi guard perlu di-balance.
+- **Perapian lama** di library, ±(1296, 36), dihapus atau menjadi dekorasi biasa. Library menjadi ruangan biasa.
+- **Kamera:** menara yang tinggi bisa menutupi study (utara), jadi menara **memudar** saat menutupi Hunter/musuh.
+
+**Alternatif (tidak direkomendasikan sekarang):** halaman luar seperti gambar konsep K1, tetapi ini butuh level baru.
+
+#### 3.4.3 Level & status Menara Utama
+
+| Level | Visual | Efek (usulan) |
+|---|---|---|
+| Lv1 | Menara batu gelap, panji kecil, 3 warga di puncak | Wilayah = hall + 4 ruangan tetangga |
+| Lv2 | Batu lebih rapi, panji besar, lonceng di puncak | Wilayah + ruangan sayap; HP naik |
+| Lv3 | Benteng: crenel penuh, 2 panji, ballista di atap | Seluruh rumah; HP naik; ballista atap ikut menembak (opsional) |
+
+HP per level ditentukan di balance pass. Angka awal untuk diuji: 600 / 900 / 1200.
+
+| Status | Menara | Warga | Audio / HUD |
+|---|---|---|---|
+| Aman | Panji tegak | Melambai | Ambience tenang |
+| Terancam | — | Menunjuk ke arah musuh | Terompet pendek + pointer tepi |
+| Diserang | Bergetar, serpihan batu | Menjerit | Benturan + vignette merah ke arah menara + banner `KEEP UNDER ATTACK!` |
+| Kritis (< 25%) | Retak besar, debu, panji robek | Berpelukan | Detak jantung, bar merah berkedip |
+| Runtuh | Menara runtuh | — | Layar kalah |
+
+#### 3.4.4 Tujuan: bala bantuan
+
+- **Siang:** di atas layar ada track 3 pip + ikon panji pasukan.
+- **Setiap fajar:** panji pasukan maju satu pip (animasi 1 dtk) + `REINFORCEMENTS: 2 NIGHTS`.
+- **Fajar ke-3:** pasukan berkuda masuk lewat front door dan horde kabur, lalu layar menang.
+
+#### 3.4.5 Pemetaan aturan (usulan — perlu konfirmasi sebelum koding)
+
+| Sekarang (`SURVIVAL_TUNING`, `survival.js`) | K1 (usulan) |
+|---|---|
+| Oil awal 38, terbakar 0.14/dtk | **Emas** (koin) awal 38, **tidak terbakar** |
+| Kalah bila Oil = 0 atau Hunter tumbang | Kalah bila **HP Menara Utama = 0** atau Kapten tumbang |
+| Musuh di api menguras Oil | Musuh di menara memukul HP menara |
+| Hadiah malam Oil + Wood 14 / 16 / 18 | Emas + Kayu 14 / 16 / 18 |
+| Oil Extractor: +6 / 10 / 14 selama malam | **Tambang emas**: +6 / 10 / 14 selama malam |
+| Sawmill: kayu saat fajar 7 / 11 / 15; pintu +10 / 20 / 30% | **Bengkel kayu** (angka sama) |
+| Survivor Shelter: +1 / 2 / 3 | **Barak**: +1 / 2 / 3 prajurit |
+| Crossbow Tower: damage 16 / 22 / 30; jangkauan 520 / 580 / 640 | **Menara ballista** (angka sama) |
+| Gate: +220 HP (4 oil / 16 wood) | **Barikade runcing** (sama; model seperti key art) |
+| Upgrade Perapian: radius 980 / 1560 / 2000; biaya 12/8 lalu 18/12 | **Upgrade Menara Utama**: wilayah + HP; biaya sama sebagai awal |
+| Cahaya: musuh menerima damage ×1.5, gerak ×0.8, serangan ×0.5 | **Wilayah panji**: musuh di dalam wilayah menerima damage ×1.5 (moral pasukan). Perlambatan dan pelemahan serangan dihapus; efek pelambat datang dari barikade |
+| Bangun hanya di ruangan terang | Bangun di lingkaran di dalam **wilayah panji** |
+| Tekanan ekonomi dari Oil yang terbakar | **Perbaikan saat fajar**: HP menara pulih sebagian gratis, sisanya dibayar kayu |
+| Chip `TAP + TO BUILD IN LIT ROOMS`; banner `PROTECT THE FIRE!` | Chip `WALK INTO A CIRCLE TO BUILD`; banner `KEEP UNDER ATTACK!` |
+
+**Tidak berubah:**
+- gelombang 66 / 78 / 90;
+- aturan guard (jatuh, ditolong, hilang);
+- aturan menara;
+- Flare;
+- chip FTUE lain;
+- route `?legacy=1`.
+
+**Cakupan kode nanti** (setelah disetujui):
+- `src/game/survival.js`: jantung, target flow field, wilayah, ekonomi;
+- `src/ui/survival.js`: HUD, lingkaran, tombol kontekstual;
+- `src/game/mansion.js`: model + posisi menara, perapian library;
+- `src/core/config.js`: `SURVIVAL_TUNING`;
+- migrasi save `save.survival` (oil → emas);
+- update harness, devqa, bot, balance.
+
+#### 3.4.6 Lingkaran bangun per ruangan
+
+Data model sekarang: setiap ruangan punya **1 slot bangunan + 1 slot menara** (dekat pintu luar ruangan). P1 memetakannya menjadi:
+- **lingkaran bangunan** (ekonomi/pasukan);
+- **lingkaran menara** (hanya di ruangan yang punya pintu luar, dekat pintu tersebut).
+
+Pilihan desain:
+- **(a) Lingkaran bertipe (rekomendasi).**
+  - Setiap lingkaran punya jenis tetap, dan siluetnya tergambar di lantai, sehingga "apa & di mana" terbaca tanpa teks.
+  - Strateginya ada pada lingkaran mana yang diaktifkan dan di-upgrade.
+- **(b) Lingkaran bebas.** Berdiri di lingkaran memunculkan strip 3 pilihan (tambang / bengkel / barak).
+
+Contoh pemetaan Lv1 untuk (a). Wilayah Lv1 berisi setiap jenis minimal satu:
+
+| Ruangan | Lingkaran bangunan | Lingkaran menara |
+|---|---|---|
+| Main Hall | — (Menara Utama) | Front door |
+| Dining | Bengkel kayu | Servant door |
+| Basement | Tambang emas | Cellar door |
+| Library | Barak | — (tidak punya pintu luar) |
+| Study | Tambang emas | — |
+
+Lv2/Lv3 membuka ruangan sayap sesuai balance: kitchen (scullery door), gatehouse (palisade/postern), chapel (chapel door), conservatory, oratory, gallery.
+
+#### 3.4.7 P1 secara rinci
+
+1. **Hunter berjalan di siang hari.**
+   - Siang tanpa timer (sudah begitu); Hunter dikendalikan joystick kiri.
+   - Perlu dicek di kode: siang sekarang dibingkai untuk tap, bukan berjalan.
+2. **Penunjuk arah.** Lingkaran terdekat yang terjangkau menyala, plus panah tipis dari Hunter (maksimal 1 sekaligus).
+3. **Masuk lingkaran.**
+   - Muncul tombol `BUILD` (palu + biaya) di kanan bawah.
+   - Model hantu + efeknya tergambar di dunia (ring jangkauan, bar HP pintu, siluet prajurit, jalur emas).
+4. **Tap `BUILD`.**
+   - Builder (warga berpalu) keluar dari Menara Utama dan berjalan ke lokasi.
+   - Ring progres tampil di lokasi.
+   - Selesai dengan pop + kilau.
+5. **Upgrade.** Berdiri di dekat bangunan yang sudah jadi memunculkan tombol `UPGRADE` (chevron + biaya) + kartu mini 2 stat di atas tombol (≤ 220 × 96 px).
+6. **Lingkaran jauh.** Tap lingkaran yang jauh membuat Hunter berjalan otomatis ke sana: lebih cepat, sekaligus membantu aksesibilitas.
+7. **Mulai malam.** `NIGHT 2` ada di kanan bawah sebagai tombol sekunder.
+8. **Dihapus:** kolom kiri, "+" hijau, dan pill `READY`.
+
 ---
 
 ## 4. Momen pembuka (10 detik pertama, per konsep)
@@ -311,7 +455,7 @@ Hierarki info:
 | Merah | Bahaya / kurang / rusak | Biaya kurang, pintu jebol, musuh | Dekorasi |
 | Lingkaran abu-abu + gembok + ikon jantung `Lv2` | Terkunci di luar wilayah | Slot yang belum terjangkau | — |
 
-### 7.2 Pola interaksi — rekomendasi P1 (Duck Survival) + P5 untuk upgrade
+### 7.2 Pola interaksi — DIPILIH user: P1 (Duck Survival) + P5 untuk upgrade
 
 **Build (P1).** Di siang hari waktu berhenti. Hunter berjalan cepat ke **lingkaran bangun**; lingkaran yang paling dekat menyala.
 - Saat Hunter berdiri di dalam lingkaran, muncul **tombol kontekstual `BUILD`** di zona jempol kanan.
@@ -439,7 +583,7 @@ Hierarki info:
   - Ikon orang di sebelahnya = yang ikut dilindungi.
 - **Banner** ≤ 40 px di bawah bar.
 - **Penanda tepi** maksimal 3, di dalam safe area.
-- Label resource (`oil`, `wood`) di wireframe hanya placeholder; resource akhir mengikuti konsep.
+- Label resource (`oil`, `wood`) di wireframe hanya placeholder. Untuk K1, `oil` menjadi **emas** (usulan §3.4.5).
 
 ### 8.4 Wireframe — siang, Hunter berdiri di lingkaran bangun (P1)
 
@@ -515,11 +659,11 @@ Hierarki info:
 
 | Token | Hex (usulan) | Arti |
 |---|---|---|
-| `heart` | Mengikuti konsep (K1 biru-emas bendera `#3E6BFF`/`#FFD24A`; K2 baja-kuning; K3 teal-merah muda; K4 teal `#3FF0D2`) | Jantung base & wilayahnya |
+| `heart` | K1 (dipilih): biru panji `#3E6BFF` | Menara Utama, wilayah panji, dan pihak kita |
 | `gain` | `#45D06A` | Untung, cukup, konfirmasi |
 | `upgrade` | `#FFD24A` | Naik level (chevron) |
 | `danger` | `#FF4D4D` | Bahaya, kurang, rusak |
-| `people` | `#5AB8FF` | Warga, prajurit |
+| `people` | `#5AB8FF` (keluarga biru yang sama, lebih muda) | Warga, prajurit |
 | `res-1` | `#FFC93C` | Resource utama (emas/persediaan; menggantikan Oil) |
 | `res-2` | `#B07A45` | Kayu |
 | `ring` | `#F2F7FF` garis putus-putus, isi 15% | Lingkaran bangun |
@@ -530,8 +674,8 @@ Hierarki info:
 Aturan:
 - Hijau tidak pernah berarti "slot kosong".
 - Emas hanya untuk naik level.
-- Biru hanya untuk orang.
-- Warna `heart` hanya dipakai untuk jantung base.
+- Biru = pihak kita (menara, wilayah, prajurit, warga); ikon yang membedakan.
+- Merah hanya untuk bahaya.
 
 ### 9.2 Tipografi
 
@@ -660,13 +804,16 @@ Target usulan, arah **"horde power fantasy"**:
 
 ## 11. Dunia — art direction menuju production
 
-### 11.1 Arah gaya: "cozy-horror diorama"
+### 11.1 Arah gaya: dark stylized (dipilih user 2026-10-16)
 
-- Model low-poly seperti mainan, palet terbatas dengan kontras tinggi (pendekatan Thronefall).
-- Malam terang dan bersaturasi (Duck Survival).
-- Gambar konsep di `docs/concepts/` menunjukkan target *feel*, bukan aset final.
-- Aturan lama tetap berlaku: ruangan terang dan terbaca; malam ditunjukkan dengan tint, bukan kegelapan.
-- Nada (lucu vs serius) perlu dipilih user (§13).
+- **Render dunia = gaya game sekarang:** dinding batu gelap setinggi pinggang, lantai marmer/kayu, karpet merah, furnitur kayu, lilin.
+  - Ditingkatkan ke kualitas production: material lebih kaya, prop lebih padat, ada kehidupan.
+- **Mood & identitas = key art DUSKHOLD** (`assets/brand/hero-16x9-clean.jpg`): menara batu gelap dengan satu jendela menyala, barikade kayu runcing, kabut, horde siluet.
+- **Aturan yang sudah ada tetap berlaku:**
+  - UI terang dengan ikon besar;
+  - ruangan terang dan terbaca;
+  - malam ditunjukkan dengan tint, bukan kegelapan.
+- **Referensi nada:** `concepts/k1-mockup-dark-day.jpg` + key art. Gambar konsep cozy (K1–K4) hanya referensi cerita & komposisi.
 
 ### 11.2 Color script per fase
 
@@ -722,9 +869,9 @@ Target usulan, arah **"horde power fantasy"**:
 
 | Fase | Isi | Kode game? | Acceptance (terukur) |
 |---|---|---|---|
-| 0. Keputusan | Konsep (§3), pola build (§7.2), nada visual | Tidak | Keputusan tercatat di dokumen ini |
-| 1. Artefak desain | Mockup landscape untuk konsep terpilih (malam, siang + lingkaran, pratinjau, upgrade, fajar); sheet ikon; storyboard intro; sheet 5 status jantung; aturan pengganti (§3.3) | Tidak | User menyetujui mockup + aturan |
-| 2. Vertical slice | Jantung base + 5 status; lingkaran bangun + alur build end-to-end untuk satu bangunan (tower); layout landscape; juice tembakan; intro | Ya, setelah disetujui | Tes 3 pertanyaan ≥ 4/5; tes lingkaran ≥ 4/5; harness/devqa/layoutqa hijau; strip ≤ 104 px di 844×390 |
+| 0. Keputusan | Konsep, pola build, nada visual | Tidak | **Selesai 2026-10-16:** K1 + P1 + dark stylized |
+| 1. Artefak desain | Konfirmasi aturan §3.4.5 + keputusan §13; mockup K1 siang (sudah: `k1-mockup-dark-day.jpg`) + malam + pratinjau + upgrade + fajar; sketsa Menara Utama 3 level × 5 status; sheet ikon (emas, menara utama, lingkaran, chevron, bulan/matahari/petir, panji bantuan); storyboard intro K1 | Tidak | User menyetujui mockup + aturan |
+| 2. Vertical slice | Menara Utama di Main Hall + HP + 5 status; Hunter berjalan di siang hari + lingkaran menara (P1) end-to-end; layout landscape; juice tembakan; intro K1 | Ya, setelah disetujui | Tes 3 pertanyaan ≥ 4/5; tes lingkaran ≥ 4/5; harness/devqa/layoutqa hijau; tombol kontekstual di zona jempol, tanpa panel di 844×390 |
 | 3. Roll-out | Semua bangunan & upgrade; kredit fajar; level jantung; TTK + balance pass; migrasi save | Ya | Bot + playtest manusia; 0 regresi QA |
 | 4. Produksi | Art pass dunia, audio, performa perangkat | Ya | Target 60 fps / minimum 30 fps di perangkat mid-range; review visual di perangkat |
 
@@ -737,20 +884,25 @@ Status acceptance di roadmap tetap berlaku. Dokumen ini tidak mengklaim apa pun 
 
 ---
 
-## 13. Keputusan yang dibutuhkan
+## 13. Keputusan
 
-1. **Konsep:** K1 Benteng Terakhir (rekomendasi) / K2 Kabur / K3 Ruang Aman / K4 Telur Penjaga / K5 Vampir / K6 Harta / gabungan / lainnya.
-2. **Pola build:**
-   - P1 jalan ke lingkaran + `BUILD`, ala Duck Survival (rekomendasi);
-   - P2 ring menu, ala Kingdom Rush;
-   - P3 bar bawah + tap petak, ala PvZ;
-   - P4 tahan untuk bayar, ala Thronefall.
-3. **Nada visual:** cozy/cute horror (seperti gambar konsep) / dark stylized (seperti sekarang) / campuran.
-4. **Lanjutan (setelah 1–3):**
-   - aturan "cahaya melemahkan musuh" diganti apa (§3.3)?
-   - nama 1–2 kata di strip boleh?
-   - Hunter Lv3: kipas atau bolt meledak?
-   - intro diputar sekali atau setiap run?
+**Sudah diputuskan user:**
+1. Game **landscape only**.
+2. Api bukan pusat cerita (revisi 1 ditolak).
+3. Konsep **K1 "Benteng Terakhir"** (2026-10-16).
+4. Pola build **P1: jalan ke lingkaran + `BUILD`** (2026-10-16).
+5. Nada visual **dark stylized seperti sekarang** (2026-10-16).
+
+**Perlu konfirmasi sebelum koding** (rekomendasi di dalam kurung):
+
+1. **Posisi Menara Utama:** tengah Main Hall (rekomendasi) / halaman luar dengan level baru (§3.4.2).
+2. **Pengganti aturan cahaya:** wilayah panji ×1.5 tanpa perlambatan (rekomendasi) / hapus total / pertahankan ketiga efek sebagai "moral" (§3.4.5).
+3. **Resource Oil diganti:** emas (rekomendasi) / nama lain.
+4. **Pengganti Oil yang terbakar:** perbaikan menara saat fajar, dibayar kayu (rekomendasi) / tanpa pengganti.
+5. **Jenis lingkaran:** lingkaran bertipe (rekomendasi) / lingkaran bebas + strip 3 pilihan (§3.4.6).
+6. **Nama di tombol/strip:** nama 1–2 kata boleh (rekomendasi) / ikon saja.
+7. **Hunter Lv3:** 3 bolt kipas (rekomendasi) / bolt meledak.
+8. **Intro:** sekali di run pertama dan bisa dilewati (rekomendasi) / setiap run.
 
 ---
 
