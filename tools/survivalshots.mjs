@@ -16,7 +16,8 @@
  * software-WebGL browser depends on machine load; captures therefore pin the
  * top tier (override with --quality=N) so two runs are comparable.
  * --no-progression skips the building-level / Hunter captures, --no-towers
- * the crossbow-tower ones; --towers-only captures just the towers. */
+ * the crossbow-tower ones, --no-guards the fallen-guard ones; --towers-only /
+ * --guards-only capture just those. */
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
@@ -132,7 +133,8 @@ const stepFrames = (n) => {
 };
 // --towers-only: just the tower captures (each starts its own run)
 const TOWERS_ONLY = !!args['towers-only'];
-if (!TOWERS_ONLY) {
+const GUARDS_ONLY = !!args['guards-only'];
+if (!TOWERS_ONLY && !GUARDS_ONLY) {
 await shot('night-00s', `(${advanceTo})(0.2)`);
 await shot('night-20s', `(${advanceTo})(20)`);
 await shot('night-40s', `(${advanceTo})(40)`);
@@ -218,7 +220,7 @@ const finishJob = () => {
   let n = 0;
   while (g.survival.builderJob && n++ < 3000) window.__origUpdate.call(g, 1 / 60);
 };
-if (!args['no-progression'] && !TOWERS_ONLY) {
+if (!args['no-progression'] && !TOWERS_ONLY && !GUARDS_ONLY) {
   await shot('prog-reward', `(() => {
     const g = window.__LN;
     const m = g.survival;
@@ -300,7 +302,7 @@ if (!args['no-progression'] && !TOWERS_ONLY) {
 // → TOWER card), its sheet with the red reach ring, then Lv2 firing on a
 // real Night 2 (Hunter parked by the front door so the camera holds the
 // tower, the door slit and the crowd).
-if (!args['no-towers']) {
+if (!args['no-towers'] && !GUARDS_ONLY) {
   await shot('tower-day', `(() => {
     const g = window.__LN;
     const m = g.survival;
@@ -347,6 +349,62 @@ if (!args['no-towers']) {
     g.render();
     const t = m.towers[0];
     return { t: +m.elapsed.toFixed(1), day: m.day, level: m.buildingLevel('hall'), upgraded: !!up, shots: m.nightStats.towerShots || 0, kills: m.nightStats.kills, flying: flying(), aim: t && +t.aim.toFixed(2) };
+  })()`);
+}
+
+// Guards can fall: a real Night 1 until the front door gives way; just
+// inside it one guard down with the Hunter beside it (green ring = his help),
+// one down alone (red ring = time it has left), one hurt (HP bar). Then the
+// lone one's clock runs out (GUARD LOST), and dawn shows the loss.
+if (!args['no-guards'] && !TOWERS_ONLY) {
+  await shot('guard-down', `(() => {
+    const g = window.__LN;
+    const m = g.survival;
+    m.restart();
+    m.survivors = 3;
+    let steps = 0;
+    while (m.elapsed < 8 && m.phase === 'night' && steps++ < 2000) { m.oil = Math.max(m.oil, 40); window.__origUpdate.call(g, 1 / 60); }
+    const door = m.entranceById('frontDoor');
+    door.hp = Math.min(door.hp, 1);
+    steps = 0;
+    while (!door.broken && m.phase === 'night' && steps++ < 1200) { m.oil = Math.max(m.oil, 40); window.__origUpdate.call(g, 1 / 60); }
+    const [a, b, c] = m.guards;
+    const pa = m._doorPost(door, 0), pb = m._doorPost(door, 1);
+    const place = (gd, x, y) => { gd.x = x; gd.y = y; gd.post = { key: 'shot', x, y, doorId: null }; gd.path = null; };
+    place(a, pa.x, pa.y);
+    place(b, pb.x + 150, pb.y - 40);
+    place(c, pb.x + 40, pb.y - 120);
+    m._downGuard(a); a.rescueT = 0.75;
+    m._downGuard(b); b.downT = 9;
+    c.hp = 16;
+    const park = () => { g.player.x = a.x + 34; g.player.y = a.y - 24; g.player.blood = Math.max(g.player.blood, 70); };
+    park();
+    g.renderer.snapCamera(g.player.x, g.player.y);
+    for (let i = 0; i < 10; i++) { m._guardAssignT = 99; park(); window.__origUpdate.call(g, 1 / 60); }
+    g.render();
+    return { t: +m.elapsed.toFixed(1), broken: door.broken, helped: +a.rescueT.toFixed(2), aloneLeft: +(20 - b.downT).toFixed(1), hurt: c.hp, hud: m.standingGuards() + '/' + m.guards.length, banner: m.banner && m.banner.kind, alive: m.aliveEnemies() };
+  })()`);
+  await shot('guard-lost', `(() => {
+    const g = window.__LN;
+    const m = g.survival;
+    const [a, b] = m.guards;
+    // the Hunter finishes helping the first one up, the lone one runs out
+    let steps = 0;
+    while (a.down && steps++ < 120) { m._guardAssignT = 99; g.player.x = a.x + 34; g.player.y = a.y - 24; window.__origUpdate.call(g, 1 / 60); }
+    b.downT = Math.max(b.downT, 19.9);
+    steps = 0;
+    while (m.guards.includes(b) && steps++ < 60) { m._guardAssignT = 99; window.__origUpdate.call(g, 1 / 60); }
+    for (let i = 0; i < 8; i++) window.__origUpdate.call(g, 1 / 60);
+    g.render();
+    return { t: +m.elapsed.toFixed(1), survivors: m.survivors, guards: m.guards.length, lost: m.nightStats.lost || 0, rescued: m.nightStats.rescued || 0, banner: m.banner && m.banner.kind, queue: m.bannerQueue.map((ev) => ev.kind) };
+  })()`);
+  await shot('guard-reward', `(() => {
+    const g = window.__LN;
+    const m = g.survival;
+    g.player.x = m.hearth().x + 70; g.player.y = m.hearth().y + 210;
+    m.completeNight();
+    (${stepFrames})(30);
+    return { phase: m.phase, survivors: m.survivors, lost: m.lastRewards && m.lastRewards.lost, rescued: m.lastRewards && m.lastRewards.rescued, guards: m.guards.map((gd) => gd.hp) };
   })()`);
 }
 

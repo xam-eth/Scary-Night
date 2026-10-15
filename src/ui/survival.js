@@ -445,27 +445,28 @@ function drawNightWorldLayer(game, ctx, w, h) {
   }
 
   // Guards: a bar once hurt; a fallen one gets a first-aid badge (edge
-  // pointer off screen) and the Hunter's help as a filling ring
+  // pointer off screen) ringed by the time it has left (red, draining) or,
+  // while the Hunter stands beside it, his help (green, filling)
   for (const guard of mode.guards || []) {
     if (guard.down) {
       const at = project(game, guard.x, guard.y, 46);
       if (!onScreen(at, w, h, 16)) { drawEdgeMarker(ctx, w, h, at, 'medic', '#ff5a4d'); continue; }
-      const pct = clamp(guard.rescueT / GUARD.rescueTime, 0, 1);
+      const help = clamp(guard.rescueT / GUARD.rescueTime, 0, 1);
+      const left = clamp(1 - guard.downT / GUARD.bleedOut, 0, 1);
       const r = 21;
-      const bob = pct > 0 ? 0 : Math.sin(t * 6 + guard.index) * 3;
+      const urgent = left < 0.3;
+      const bob = help > 0 ? 0 : Math.sin(t * (urgent ? 12 : 6) + guard.index) * 3;
       ctx.save();
       ctx.beginPath();
       ctx.arc(at.x, at.y + bob, r + 4, 0, TAU);
-      ctx.fillStyle = pct > 0 ? 'rgba(20,40,24,0.55)' : `rgba(255,60,50,${0.25 + 0.2 * Math.sin(t * 8)})`;
+      ctx.fillStyle = help > 0 ? 'rgba(20,40,24,0.6)' : `rgba(60,10,12,${0.5 + 0.15 * Math.sin(t * (urgent ? 14 : 8))})`;
       ctx.fill();
-      if (pct > 0) {
-        ctx.beginPath();
-        ctx.arc(at.x, at.y + bob, r + 1, -Math.PI / 2, -Math.PI / 2 + TAU * pct);
-        ctx.lineWidth = 5;
-        ctx.lineCap = 'round';
-        ctx.strokeStyle = '#5ee07a';
-        ctx.stroke();
-      }
+      ctx.beginPath();
+      ctx.arc(at.x, at.y + bob, r + 1, -Math.PI / 2, -Math.PI / 2 + TAU * (help > 0 ? help : left));
+      ctx.lineWidth = 5;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = help > 0 ? '#5ee07a' : urgent && Math.sin(t * 14) > 0 ? '#ffffff' : '#ff4d4d';
+      ctx.stroke();
       ctx.restore();
       drawSurvivalIcon(ctx, 'medic', at.x, at.y + bob, 30);
       continue;
@@ -514,7 +515,7 @@ function drawBanner(game, ctx, w, h) {
   const palette = {
     wave: ['#a35bff', '#5a2bb0'], breaker: ['#ff6a52', '#b3261c'], breach: ['#ff6a52', '#b3261c'],
     fireLow: ['#ffb43a', '#d0600c'], hearth: ['#ff6a52', '#b3261c'], dawn: ['#ffd65a', '#f08c1a'],
-    build: ['#6ee77f', '#259a43'], guardDown: ['#ff6a52', '#b3261c'],
+    build: ['#6ee77f', '#259a43'], guardDown: ['#ff6a52', '#b3261c'], guardLost: ['#9a3a3a', '#4a1414'],
   }[ev.kind] || ['#5a62b8', '#343a7e'];
   const size = 22;
   const textW = measureLabel(ctx, ev.text, size);

@@ -10,7 +10,8 @@
  *   hidden    a hidden tab pauses the night
  *   context   a lost WebGL context freezes the night until it is restored
  *   framing   portrait and landscape phones get the same night zoom
- *   guards    one 3D guard pawn per survivor at night
+ *   guards    one 3D guard pawn per survivor at night; a fallen one lies
+ *             flat on a red ring and stands again once the Hunter helps
  *   pooling   bolt meshes are pooled (the scene does not grow per shot)
  *   reload    a mid-night reload resumes the clock and the enemies
  *   health    0 page errors, 0 console errors, 0 failed requests
@@ -212,6 +213,31 @@ try {
   }, shots0);
   check('guards: one 3D guard pawn per survivor at night', pool.guards === pool.survivors && pool.visibleGuardMeshes === pool.guards, pool);
   check('pooling: bolt meshes do not grow with every shot', pool.shots > 20 && pool.boltObjects > 0 && pool.boltObjects < pool.shots / 2, { shots: pool.shots, boltObjectsInScene: pool.boltObjects });
+
+  // a fallen guard: flat on a red ring; the Hunter beside it gets it up
+  const fallen = await page.evaluate(() => {
+    const g = window.__LN;
+    const m = g.survival;
+    const W = window.__W;
+    const guard = m.guards[0];
+    if (!guard || m.phase !== 'night') return { skipped: true, phase: m.phase, guards: m.guards.length };
+    m._downGuard(guard);
+    g.player.x = guard.x + 300; g.player.y = guard.y;   // not beside it yet
+    window.__step(1);
+    const ud = W.survivalGuardMeshes[0].userData;
+    const down = {
+      visible: W.survivalGuardMeshes[0].visible, figureRotX: +ud.figure.rotation.x.toFixed(3), figureY: ud.figure.position.y,
+      ring: ud.ring.material.color.getHexString(), xray: ud.xray.material.color.getHexString(), hud: m.standingGuards() + '/' + m.guards.length,
+    };
+    g.player.x = guard.x + 30; g.player.y = guard.y;
+    for (let i = 0; i < 110 && guard.down; i++) { g.player.x = guard.x + 30; g.player.y = guard.y; window.__orig.call(g, 1 / 60); }
+    window.__step(1);
+    const up = { down: guard.down, hp: guard.hp, figureRotX: +ud.figure.rotation.x.toFixed(3), ring: ud.ring.material.color.getHexString() };
+    return { down, up };
+  });
+  check('guards: a fallen pawn lies flat on a red ring; helped up it stands on its blue ring',
+    !fallen.skipped && fallen.down.visible && Math.abs(fallen.down.figureRotX + Math.PI / 2) < 0.01 && fallen.down.ring === 'ff4a3d'
+      && fallen.down.xray === 'ff4a3d' && !fallen.up.down && fallen.up.hp === 20 && fallen.up.figureRotX === 0 && fallen.up.ring === '5ab8ff', fallen);
 
   // ---------------- towers: ring by day, swivel + pooled bolts by night ----------------
   const towerDay = await page.evaluate(() => {

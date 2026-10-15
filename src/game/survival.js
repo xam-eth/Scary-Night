@@ -275,6 +275,14 @@ function invade(enemy, dt, game, mode, speed, accel, preferHunter, fallback = nu
     }
     return 'press';
   }
+  // In the dark it also goes for a guard close by, as it would for the Hunter.
+  const prey = lit ? null : mode.guardToHunt(enemy);
+  if (prey) {
+    stepToward(enemy, dt, game, prey.x, prey.y, speed, accel);
+    enemy.state = 'march';
+    return 'march';
+  }
+  if (enemy._prey) enemy._prey = null;
   if (fire && dist(enemy.x, enemy.y, fire.x, fire.y) <= HEARTH_REACH) {
     settle(enemy, dt);
     enemy.feeding = true;
@@ -653,12 +661,15 @@ class FlowField {
  * (the count the HUD shows is people you can see); by night each one walks to
  * the door under the most pressure and shoots through its slit.
  *
- * They can be hurt: a body that gets inside (a breach) claws a guard standing
- * in its way like it claws the Hunter (halved in firelight). A badly hurt
- * guard falls back to the fire; one that drops stays down where it fell and
- * stops shooting. The Hunter helps a fallen guard up by standing beside it;
- * one still down at dawn is lost (one survivor fewer). Losing the house is
- * still only the fire or the Hunter.
+ * They can be hurt, by the same rules as the Hunter: a body that gets inside
+ * (a breach) claws a guard standing in its way (halved in firelight), and in
+ * the dark it also goes for a guard close by — a few per guard, the rest keep
+ * walking to the fire. So a guard holding a lit door is fairly safe and one
+ * holding a dark door is not. A badly hurt guard falls back to the fire; one
+ * that drops stays down where it fell and stops shooting. The Hunter helps a fallen guard up by standing beside it;
+ * one left alone for `bleedOut` seconds is lost (one survivor fewer, for
+ * good). Dawn gets everyone still down back up. Losing the house is still
+ * only the fire or the Hunter.
  */
 export const GUARD = Object.freeze({
   speed: 210,          // px/s walking between posts
@@ -674,6 +685,10 @@ export const GUARD = Object.freeze({
   rescueRange: 70,     // px from a fallen guard the Hunter stands to help him up
   rescueTime: 1.5,     // s he stays there
   rescueHp: 0.5,       // share of HP a guard gets up with
+  bleedOut: 20,        // s a fallen guard holds on alone (the clock stops while helped)
+  iframes: 0.5,        // s after a claw before the next one lands (the Hunter has 0.75)
+  huntRange: 110,      // px: in the dark a body this close goes for a guard (Hunter: 170)
+  maxHunters: 3,       // bodies going for one guard at once
 });
 
 class SurvivalGuard {
@@ -699,6 +714,7 @@ class SurvivalGuard {
     this.downT = 0;
     this.rescueT = 0;              // how long the Hunter has stood beside it
     this.hurtFlash = 0;
+    this.iframes = 0;
   }
 }
 
@@ -847,6 +863,7 @@ export class SurvivalMode {
       if (guard.down) {
         guard.hp = 0;
         guard.rescueT = clamp(Number(row.rescueT) || 0, 0, GUARD.rescueTime);
+        guard.downT = clamp(Number(row.downT) || 0, 0, GUARD.bleedOut - 0.5);
         if (Number.isFinite(row.x) && Number.isFinite(row.y)) { guard.x = row.x; guard.y = row.y; }
       }
     });
@@ -1397,7 +1414,7 @@ export class SurvivalMode {
         const post = this._hearthPost(guard.index);
         guard.x = post.x; guard.y = post.y; guard.post = post;
         guard.path = null; guard.moving = false; guard.target = null; guard.shotT = 0;
-        guard.hp = guard.hpMax; guard.down = false; guard.downT = 0; guard.rescueT = 0; guard.hurtFlash = 0;
+        guard.hp = guard.hpMax; guard.down = false; guard.downT = 0; guard.rescueT = 0; guard.hurtFlash = 0; guard.iframes = 0;
       }
     }
   }
@@ -1416,9 +1433,33 @@ export class SurvivalMode {
     return best;
   }
 
+  /**
+   * A guard a body in the dark goes for: the one it already picked while it
+   * stays close and standing, else the nearest within huntRange that has
+   * fewer than maxHunters on it (counted once a frame in updateGuards).
+   */
+  guardToHunt(enemy) {
+    const prev = enemy._prey;
+    if (prev && !prev.down && this.guards.includes(prev)
+      && dist(enemy.x, enemy.y, prev.x, prev.y) < GUARD.huntRange * 1.4) return prev;
+    enemy._prey = null;
+    let best = null, bestD = GUARD.huntRange;
+    for (const guard of this.guards) {
+      if (guard.down || (guard.hunters || 0) >= GUARD.maxHunters) continue;
+      const d = dist(enemy.x, enemy.y, guard.x, guard.y);
+      if (d < bestD) { best = guard; bestD = d; }
+    }
+    if (best) { enemy._prey = best; best.hunters = (best.hunters || 0) + 1; }
+    return best;
+  }
+
   /** A claw lands on a guard (already scaled for firelight). */
   hurtGuard(guard, amount, from = null) {
     if (!guard || guard.down || this.phase !== 'night' || !(amount > 0)) return false;
+    // like the Hunter, a guard is not shredded by a crowd landing every claw
+    // in the same frame
+    if (guard.iframes > 0) return false;
+    guard.iframes = GUARD.iframes;
     guard.hp = Math.max(0, guard.hp - amount);
     guard.hurtFlash = 1;
     this.nightStats.guardDamage = (this.nightStats.guardDamage || 0) + amount;
@@ -1442,12 +1483,19 @@ export class SurvivalMode {
     this._guardAssignT = 0;
   }
 
-  /** The Hunter stands beside a fallen guard: after a moment it gets up. */
+  /**
+   * The Hunter stands beside a fallen guard: after a moment it gets up. Left
+   * alone, its clock runs out and it is lost (the clock stops while helped).
+   */
   _updateRescue(guard, dt) {
     const p = this.game.player;
     const near = this.phase === 'night' && p.state !== 'death' && p.state !== 'dead'
       && dist(p.x, p.y, guard.x, guard.y) <= GUARD.rescueRange;
     guard.rescueT = near ? guard.rescueT + dt : Math.max(0, guard.rescueT - dt * 2);
+    if (!near) {
+      guard.downT += dt;
+      if (guard.downT >= GUARD.bleedOut) { this._loseGuard(guard); return; }
+    }
     if (guard.rescueT < GUARD.rescueTime) return;
     guard.down = false;
     guard.rescueT = 0;
@@ -1457,6 +1505,20 @@ export class SurvivalMode {
     this.pushFloater(guard.x, guard.y, `+${guard.hp}`, '#5ee07a', { h: 70, size: 18, icon: 'heart', life: 1.2 });
     this.game.audio.play('uiConfirm', { vol: 0.5 });
     this._guardAssignT = 0;
+  }
+
+  /** Nobody came: one survivor fewer, for the rest of the run. */
+  _loseGuard(guard) {
+    const i = this.guards.indexOf(guard);
+    if (i < 0) return;
+    this.guards.splice(i, 1);
+    this.guards.forEach((g, k) => { g.index = k; g.id = 5000000 + k; });
+    this.survivors = Math.max(0, this.survivors - 1);
+    this.nightStats.lost = (this.nightStats.lost || 0) + 1;
+    this.pushEvent('guardLost', 'guard', 'GUARD LOST', { life: 2.2 });
+    this.game.audio.play('playerHurt', { vol: 0.65 });
+    this._guardAssignT = 0;
+    this._persist(true);
   }
 
   /** A loose arc in front of the fire (day camp / spare guards at night). */
@@ -1581,11 +1643,19 @@ export class SurvivalMode {
     this._guardAssignT = (this._guardAssignT || 0) - dt;
     if (this._guardAssignT <= 0) { this._guardAssignT = 0.5; this.assignGuards(); }
     const night = this.phase === 'night';
-    for (const guard of this.guards) {
+    // how many bodies are going for each guard (guardToHunt caps it)
+    for (const guard of this.guards) guard.hunters = 0;
+    if (night) {
+      for (const e of g.enemies) {
+        const prey = e._prey;
+        if (prey && !e.dead && !e.removeMe && !prey.down) prey.hunters = (prey.hunters || 0) + 1;
+      }
+    }
+    for (const guard of [...this.guards]) {
       guard.shotT = Math.max(0, guard.shotT - dt);
       guard.hurtFlash = Math.max(0, (guard.hurtFlash || 0) - dt * 4);
+      guard.iframes = Math.max(0, (guard.iframes || 0) - dt);
       if (guard.down) {
-        guard.downT += dt;
         guard.moving = false;
         this._updateRescue(guard, dt);
         continue;
@@ -2057,9 +2127,9 @@ export class SurvivalMode {
     const dayIndex = clamp(this.day - 1, 0, 2);
     let oil = this.tuning.nightRewards.oil[dayIndex];
     let wood = this.tuning.nightRewards.wood[dayIndex];
-    // a guard still down at dawn is lost: one survivor fewer from today on
-    const lost = this.guards.filter((guard) => guard.down).length;
-    if (lost) this.survivors = Math.max(0, this.survivors - lost);
+    // guards lost during the night are already gone from the roster; anyone
+    // still down gets up at dawn (the snap below heals the garrison)
+    const lost = this.nightStats.lost || 0;
     const survivorsBefore = this.survivors;
     // Dawn pays the sawmills; the pumps already poured their oil in during
     // the night, and shelters house their survivors as soon as they stand.
@@ -2508,7 +2578,7 @@ export class SurvivalMode {
     // hurt / fallen guards survive a mid-night reload (a fallen one where it lies)
     s.guards = this.phase === 'night' ? this.guards.map((guard) => ({
       hp: Math.round(guard.hp * 10) / 10, down: !!guard.down, rescueT: +guard.rescueT.toFixed(2),
-      x: Math.round(guard.x), y: Math.round(guard.y),
+      downT: +guard.downT.toFixed(2), x: Math.round(guard.x), y: Math.round(guard.y),
     })) : [];
     if (force) this._saveT = 0;
     try { window.__LN_SURVIVAL = this.getNightSnapshot(); } catch (_) { /* node harness */ }

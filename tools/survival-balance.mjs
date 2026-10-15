@@ -19,7 +19,9 @@
  * --no-rescue: the defending bots never help a fallen guard up.
  * --no-guard-damage: guards cannot be hurt (the pre-2026-10-15 rule), to
  *   measure what hurtable guards change.
- * Night columns: gd fallen guards, gr helped up, gl lost at dawn.
+ * Night columns: br most outer doors broken at once during the night (until
+ *   2026-10-15 this printed the count after the dawn repair, so every won
+ *   night read br0); gd fallen guards, gr helped up, gl lost.
  * Diagnostics (print and exit): --debug (6 s snapshots of enemy states/doors),
  * --layout (rooms + entrances), --navprobe (hearth flow-field distances per
  * door/room), --cellprobe=x,y (nav cells/solids around a point),
@@ -169,11 +171,11 @@ function runOne(kind, seed) {
       night.towerShots = mode.nightStats.towerShots || 0;
       night.guardsDown = mode.nightStats.guardsDown || 0;
       night.rescued = mode.nightStats.rescued || 0;
-      night.downNow = mode.guards ? mode.guards.filter((gd) => gd.down).length : 0;
+      night.lostSoFar = mode.nightStats.lost || 0;
       night.drained = Math.round(mode.nightStats.drained || 0);
       night.oil = Math.round(mode.oil * 10) / 10;
       night.elapsed = Math.round(mode.elapsed * 10) / 10;
-      night.breaches = game.mansion.entrances.filter((e) => e.exterior && e.kind === 'door' && e.broken).length;
+      if (mode.phase === 'night') night.breaches = Math.max(night.breaches || 0, game.mansion.entrances.filter((e) => e.exterior && e.kind === 'door' && e.broken).length);
       if (args.debug && Math.floor(mode.elapsed / 6) !== state.lastDump) { state.lastDump = Math.floor(mode.elapsed / 6); debugDump(game); }
       if (args.oiltrace && mode.elapsed < 9 && Math.floor(mode.elapsed) !== state.lastOil) {
         state.lastOil = Math.floor(mode.elapsed);
@@ -183,7 +185,7 @@ function runOne(kind, seed) {
     }
     if (night) {
       night.result = mode.phase === 'failed' ? `FAIL:${mode.failureReason}` : 'OK';
-      night.lost = mode.phase === 'failed' ? night.downNow : (mode.lastRewards && mode.lastRewards.lost) || 0;
+      night.lost = mode.phase === 'failed' ? night.lostSoFar || 0 : (mode.lastRewards && mode.lastRewards.lost) || 0;
       night.survivorsAfter = mode.survivors;
       delete night.seen;
       nights.push(night);
