@@ -1,7 +1,40 @@
 # Status Rebuild 3D & Survival Milestone 1
 
 **Pembaruan:** 2026-10-15 (Asia/Makassar)
-**Status keseluruhan: MASIH TERBUKA — bukan klaim siap rilis.** Inti rebuild dunia 3D dan loop Survival Milestone 1 sudah terimplementasi. Pada 2026-10-12 arah UI/UX dan threat model dikoreksi mengikuti feedback user; pada 2026-10-15 dilakukan pass analisis gap & bug (lihat bagian "Gap & bug pass 2026-10-15"), lalu pass progres Hunter + level bangunan (lihat "Progres Hunter & level bangunan"), lalu pass menara crossbow (lihat "Menara crossbow"), lalu pass guard yang bisa jatuh (lihat "Guard bisa jatuh"; termasuk perbaikan bug gelombang yang muncul di dalam rumah), dan seluruh gate otomatis dijalankan ulang. Acceptance visual/manual di perangkat, playtest manusia, dan packaging Play masih terbuka. Hasil tiap skrip hanya berlaku untuk cakupan yang benar-benar diuji.
+**Status keseluruhan: MASIH TERBUKA — bukan klaim siap rilis.** Inti rebuild dunia 3D dan loop Survival Milestone 1 sudah terimplementasi. Pada 2026-10-12 arah UI/UX dan threat model dikoreksi mengikuti feedback user; pada 2026-10-15 dilakukan pass analisis gap & bug (lihat bagian "Gap & bug pass 2026-10-15"), lalu pass progres Hunter + level bangunan (lihat "Progres Hunter & level bangunan"), lalu pass menara crossbow (lihat "Menara crossbow"), lalu pass guard yang bisa jatuh (lihat "Guard bisa jatuh"; termasuk perbaikan bug gelombang yang muncul di dalam rumah), dan seluruh gate otomatis dijalankan ulang. Setelah itu user memutuskan **game landscape only** dan meminta brainstorming + design system plan sebelum koding lagi (lihat "Arah desain & orientasi" dan `docs/DESIGN-SYSTEM-PLAN.md`; belum ada perubahan kode game untuk arah ini). Acceptance visual/manual di perangkat, playtest manusia, dan packaging Play masih terbuka. Hasil tiap skrip hanya berlaku untuk cakupan yang benar-benar diuji.
+
+## Arah desain & orientasi (2026-10-15)
+
+**Keputusan user:** game **landscape only**. `manifest.webmanifest` sudah `orientation: landscape`; layout portrait tidak lagi menjadi target desain. Catatan "keputusan orientasi masih menunggu user" di bagian-bagian di bawah adalah catatan historis pass sebelumnya.
+
+**Feedback user setelah pass guard** (desain dinilai cukup bagus, tetapi):
+- kartu landscape terlalu besar;
+- damage tembakan belum terasa kuat;
+- layout upgrade membingungkan;
+- fungsi build/upgrade belum terasa;
+- penanda "+" hijau tidak dimengerti;
+- UI belum pas;
+- dunia dan visual api belum production.
+
+Game juga harus menjawab dan memvisualisasikan **siapa pemain, apa tujuannya, dan apa yang dilindungi** — "api" saja belum dapat feel-nya.
+
+**Instruksi user:** jangan koding dulu; brainstorming dan design system plan lebih dulu.
+
+**Status:** `docs/DESIGN-SYSTEM-PLAN.md` (DRAFT) berisi:
+- diagnosis berbasis screenshot + kode;
+- pelajaran dari game sejenis;
+- opsi konsep pemain/tujuan/yang dilindungi;
+- storyboard 60 detik pertama;
+- api sebagai jantung (penempatan, lapisan VFX, 5 status, level);
+- alur build/upgrade (tapak bangunan menggantikan "+", pratinjau di dunia, payoff malam, kredit fajar);
+- sistem layout landscape (zona jempol, wireframe, anggaran ukuran);
+- design tokens dan komponen;
+- combat feel (TTK + juice);
+- art direction dunia;
+- rencana bertahap dengan acceptance terukur;
+- daftar keputusan untuk user.
+
+**Implementasi:** belum ada — tidak ada file kode game yang diubah di langkah ini. **Acceptance:** tidak ada yang diklaim.
 
 ## Guard bisa jatuh — risiko di pintu (2026-10-15)
 
@@ -253,7 +286,7 @@ Ini screenshot checkpoint, bukan rekaman, dan bukan review di perangkat fisik.
 3. **Light weakness:** damage musuh ×1.5, perlambatan ×0.8 (tanpa freeze), cakaran lit ×0.5 (tidak lagi diblokir) dan damage pintu lit 50% diassert. Rasa/feel di perangkat belum dinilai.
 4. **Balance/progression:** target bot terpenuhi (idle/flare/active-tanpa-build kalah; upgrade Perapian saja sudah cukup menang 3/3; builder 3/3). **Pass guard:** perbaikan bug spawn (body muncul di basement/gallery) membuat permainan builder *lebih mudah* — Night 3 builder kini 0–1 musuh mencapai api (dulu 7–8) dan `hunter-builder` naik dari 1/3 ke 3/3, sehingga kesimpulan trade-off Hunter Lv3 di bawah sebagian berasal dari bug itu. Guard yang bisa jatuh menambah risiko terutama untuk permainan pasif; bot builder hampir tidak pernah kehilangan guard. Kesulitan untuk pemain yang membangun masih rendah dan kini makin jelas perlu playtest manusia sebelum mengubah biaya/ancaman. Progres kini ada (level bangunan Lv1–3 + jalur Hunter Lv1–3, diassert harness) dan bot `hunter-builder` menunjukkan trade-off nyata (Hunter Lv3 dengan Perapian Lv2 kalah 2/3 karena api padam di detik ±71). Menara (pass menara) menambah strategi menang ketiga: `tower-builder` 3/3 dengan Night 3 paling bersih (puncak 61 musuh, 0 mencapai api) — kuat, tetapi tidak mengubah peta menang/kalah. Masih terbuka: bot builder yang memeluk api tetap tidak kehilangan HP (100/100) dan tidak tercakar di Night 3; cadangan Oil 19 membuat pilihan Day 3 sangat ketat (Perapian Lv3 18 + Hunter Lv2 14 = 32 kurang 1 Oil) — biaya sengaja tidak diubah tanpa playtest manusia; rasa progres (apakah upgrade terasa) belum dinilai di perangkat.
 5. **Visual pass:** sweep 17 stop per ruang/wing, state low-health/blackout, dan overlap staircase–stairRail belum selesai. Pohon siang tampak agak pucat (palet dinaikkan untuk readability) — kandidat polish.
-6. **Perangkat/performa:** hidden-tab pause, context-loss freeze/restore, reload tengah malam, dan framing landscape kini diassert di Chromium headless (devqa). Belum: frame time 66–90 musuh + guard/bolt di perangkat low-end, DPR nyata, keputusan orientasi (manifest masih landscape; UI Survival kini punya layout siang portrait dan landscape, tetapi orientasi utama untuk rilis belum diputuskan user).
+6. **Perangkat/performa:** hidden-tab pause, context-loss freeze/restore, reload tengah malam, dan framing landscape kini diassert di Chromium headless (devqa). Belum: frame time 66–90 musuh + guard/bolt di perangkat low-end, DPR nyata. **Orientasi diputuskan user (2026-10-15): landscape only** — layout siang landscape yang sekarang (kolom kiri) dinilai terlalu besar dan akan didesain ulang mengikuti `docs/DESIGN-SYSTEM-PLAN.md` setelah disetujui; layout portrait tidak lagi menjadi target.
 7. **Release bundle:** fingerprint signing SHA-256, token origin-trial, validasi Bubblewrap/AAB, uji TWA/Play tetap menunggu konfigurasi release. IAP tidak diubah.
 
 ## Aturan laporan
