@@ -83,6 +83,16 @@ export const SURVIVAL_HUNTER = Object.freeze({
   3: Object.freeze({ oil: 20, wood: 12, seconds: 6, damage: 40, hp: 140 }),
 });
 
+/**
+ * A phone held sideways is too short for the day sheet under the world, so
+ * the sheet and the NIGHT row move into a left column (ui/survival.js) and
+ * the day camera frames the build target in the world view beside it.
+ */
+export function daySideColumn(w, h) {
+  if (!(w > h && h < 560)) return null;
+  return { x: 10, width: Math.min(380, Math.round(w * 0.45)) };
+}
+
 function freshProgress(duration = SURVIVAL_TUNING.nightSeconds) {
   return {
     initialized: true,
@@ -1838,9 +1848,15 @@ export class SurvivalMode {
       // above the bottom sheet.
       if (r.setZoomMul) r.setZoomMul(this.frameMul(false), dt);
       const focus = this.dayFocusPoint();
+      // where the target should land on screen: above the bottom sheet, or
+      // (sideways) a little below the middle of the world view so its bubble
+      // sits in the middle
+      const side = daySideColumn(r.w, r.h);
+      const sx = side ? (side.x + side.width + r.w) / 2 : r.w / 2;
+      const sy = side ? (74 + r.h - 34) / 2 + 30 : r.h / 2 - Math.min(150, r.h * 0.17);
       const a = r.screenToWorld(r.w / 2, r.h / 2);
-      const b = r.screenToWorld(r.w / 2, r.h / 2 + Math.min(150, r.h * 0.17));
-      r.followCamera(focus.x + (b.x - a.x), focus.y + (b.y - a.y), dt, 0, 0, g.mansion.camBounds);
+      const b = r.screenToWorld(sx, sy);
+      r.followCamera(focus.x + (a.x - b.x), focus.y + (a.y - b.y), dt, 0, 0, g.mansion.camBounds);
       return;
     }
     if (r.setZoomMul) r.setZoomMul(this.frameMul(true), dt);

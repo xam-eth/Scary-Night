@@ -15,7 +15,7 @@
  */
 
 import { clamp, writeSave } from '../core/util.js';
-import { SURVIVAL_BUILDINGS, BUILDING_MAX_LEVEL, HUNTER_MAX_LEVEL } from '../game/survival.js';
+import { SURVIVAL_BUILDINGS, BUILDING_MAX_LEVEL, HUNTER_MAX_LEVEL, daySideColumn } from '../game/survival.js';
 import { pauseButtonBox } from '../game/hud.js';
 import {
   drawSurvivalIcon, drawLabel, measureLabel, drawPanel, drawCounter, drawBar,
@@ -204,7 +204,7 @@ export function updateSurvivalHints(game, dt) {
   }
 }
 
-function drawHint(game, ctx, w, y) {
+function drawHint(game, ctx, w, y, cx = w / 2, maxW = w - 24) {
   const state = game._survivalHint;
   if (!state) return;
   const spec = HINTS[state.id];
@@ -215,9 +215,9 @@ function drawHint(game, ctx, w, y) {
   if (alpha <= 0) return;
   const size = 14;
   const textW = measureLabel(ctx, spec.text, size);
-  const bw = Math.min(w - 24, textW + 64);
+  const bw = Math.min(maxW, textW + 64);
   const bh = 40;
-  const x = (w - bw) / 2;
+  const x = cx - bw / 2;
   const yy = y + (1 - fadeIn) * -8;
   ctx.save();
   ctx.globalAlpha = alpha;
@@ -567,16 +567,20 @@ function dayTargets(game) {
   return out;
 }
 
-/** Where a bubble sits on screen: over its target, or clamped to the edge as a pointer. */
-function bubbleAnchor(game, target, w, sheetTop) {
+/**
+ * Where a bubble sits on screen: over its target, or clamped to the edge of
+ * the world view (`view` = {x0, x1, y0, y1}) as a pointer.
+ */
+function bubbleAnchor(game, target, view) {
   let at = project(game, target.x, target.y, target.height);
-  const margin = 30;
-  const off = at.x < margin || at.x > w - margin || at.y < 128 || at.y > sheetTop - 30;
+  const inside = (r) => !!r && at.x >= r.x0 && at.x <= r.x1 && at.y >= r.y0 && at.y <= r.y1;
+  // `view.extra`: a second visible strip (sideways: the world above the column)
+  const off = !inside(view) && !inside(view.extra);
   let angle = 0;
   if (off) {
-    const cx = w / 2, cy = (128 + sheetTop) / 2;
+    const cx = (view.x0 + view.x1) / 2, cy = (view.y0 + view.y1) / 2;
     const dx = at.x - cx, dy = at.y - cy;
-    const k = Math.min((w / 2 - margin) / Math.max(1e-3, Math.abs(dx)), ((sheetTop - 30 - 128) / 2) / Math.max(1e-3, Math.abs(dy)));
+    const k = Math.min(((view.x1 - view.x0) / 2) / Math.max(1e-3, Math.abs(dx)), ((view.y1 - view.y0) / 2) / Math.max(1e-3, Math.abs(dy)));
     angle = Math.atan2(dy, dx);
     at = { x: cx + dx * k, y: cy + dy * k };
   }
@@ -589,22 +593,26 @@ function bubbleAnchor(game, target, w, sheetTop) {
  * bubble (he walks, and often stands under the Perapian's) slides clear of
  * everything else. Fixed on-screen bubbles never move.
  */
-function layoutBubbles(game, targets, w, sheetTop) {
-  const anchors = new Map(targets.map((t) => [t, bubbleAnchor(game, t, w, sheetTop)]));
-  const top = 128 + 26, bottom = sheetTop - 30 - 26;
+function layoutBubbles(game, targets, view) {
+  const anchors = new Map(targets.map((t) => [t, bubbleAnchor(game, t, view)]));
   const spacing = 54;
   const edges = { left: [], right: [], top: [], bottom: [] };
   for (const a of anchors.values()) {
     if (!a.off) continue;
-    if (a.x <= 31) edges.left.push(a);
-    else if (a.x >= w - 31) edges.right.push(a);
-    else if (a.y <= 129) edges.top.push(a);
+    if (a.x <= view.x0 + 1) edges.left.push(a);
+    else if (a.x >= view.x1 - 1) edges.right.push(a);
+    else if (a.y <= view.y0 + 1) edges.top.push(a);
     else edges.bottom.push(a);
   }
-  const spread = (list, key, lo, hi) => {
+  // Spread one edge's pointers along `key`. A crowded edge (a short
+  // landscape side) zig-zags: every other pointer steps `inset` px inward on
+  // `cross`, so neighbours only need half the spacing along the edge.
+  const spread = (list, key, lo, hi, cross, inset) => {
     if (list.length < 2) return;
     list.sort((p, q) => p[key] - q[key]);
-    const gap = Math.min(spacing, (hi - lo) / (list.length - 1));
+    const room = (hi - lo) / (list.length - 1);
+    const zig = room < spacing;
+    const gap = zig ? Math.max(room, spacing / 2) : spacing;
     for (const a of list) a[key] = clamp(a[key], lo, hi);
     for (let i = 1; i < list.length; i++) list[i][key] = Math.max(list[i][key], list[i - 1][key] + gap);
     const last = list.length - 1;
@@ -612,11 +620,15 @@ function layoutBubbles(game, targets, w, sheetTop) {
       list[last][key] = hi;
       for (let i = last - 1; i >= 0; i--) list[i][key] = Math.min(list[i][key], list[i + 1][key] - gap);
     }
+    if (zig) for (let i = 1; i < list.length; i += 2) list[i][cross] += inset;
   };
-  spread(edges.left, 'y', top, bottom);
-  spread(edges.right, 'y', top, bottom);
-  spread(edges.top, 'x', 30, w - 30);
-  spread(edges.bottom, 'x', 30, w - 30);
+  // every row keeps 40 px off the corners, so a side column and a top/bottom
+  // row never meet; the right column also starts under the resource pills
+  const corner = 40, inset = 48;
+  spread(edges.left, 'y', view.y0 + corner, view.y1 - corner, 'x', inset);
+  spread(edges.right, 'y', Math.max(view.y0, view.rightY0 || 0) + corner, view.y1 - corner, 'x', -inset);
+  spread(edges.top, 'x', view.x0 + corner, view.x1 - corner, 'y', inset);
+  spread(edges.bottom, 'x', view.x0 + corner, view.x1 - corner, 'y', -inset);
   const hunter = targets.find((t) => t.key === 'hunter');
   const h = hunter && anchors.get(hunter);
   if (h && !h.off) {
@@ -709,9 +721,48 @@ function sheetFrame(w) {
   return { x: Math.round((w - width) / 2), width };
 }
 
-function drawSheet(game, ctx, w, h, top, sheetH, focus) {
+/**
+ * Day screen layout. Tall screens: the sheet docks at the bottom with the
+ * builder/NIGHT row under it and the world above. A phone held sideways is
+ * too short for that (the world shrank to a strip and every bubble became an
+ * edge pointer), so the sheet and the row become a left column and the world
+ * view is the right-hand side.
+ */
+function dayLayout(w, h, sheetH) {
+  const side = daySideColumn(w, h);
+  if (!side) {
+    const frame = sheetFrame(w);
+    const bottomH = 64;
+    const top = h - bottomH - sheetH - 6;
+    return {
+      side: false,
+      sheet: { x: frame.x, width: frame.width, top, height: sheetH },
+      row: { x: frame.x, width: frame.width, y: h - bottomH },
+      view: { x0: 30, x1: w - 30, y0: 128, y1: top - 30 },
+      hint: { cx: w / 2, maxW: w - 24, y: Math.max(h < 560 ? 60 : 136, top - 48) },
+    };
+  }
+  const rowY = h - 62;
+  const height = Math.min(sheetH, rowY - 6 - 58);
+  const top = rowY - 6 - height;
+  const colRight = side.x + side.width;
+  return {
+    side: true,
+    sheet: { x: side.x, width: side.width, top, height },
+    row: { x: side.x, width: side.width, y: rowY },
+    view: {
+      x0: colRight + 34, x1: w - 30, y0: 84, y1: h - 34, rightY0: 128,
+      // the strip of world above the column shows its bubbles too
+      extra: { x0: 30, x1: colRight + 34, y0: 74, y1: top - 30 },
+    },
+    // as in portrait, the chip sits just above the sheet
+    hint: { cx: side.x + side.width / 2, maxW: side.width, y: Math.max(58, top - 48) },
+  };
+}
+
+function drawSheet(game, ctx, frame, focus) {
   const mode = game.survival;
-  const { x, width } = sheetFrame(w);
+  const { x, width, top, height: sheetH } = frame;
   drawPanel(ctx, x, top, width, sheetH, { radius: 20, top: '#3a4190', bottom: '#20244f', lineWidth: 3 });
   const busy = !!mode.builderJob;
   const innerX = x + 12, innerW = width - 24;
@@ -913,16 +964,15 @@ function drawDayScreen(game, ctx, w, h) {
   const targets = dayTargets(game);
   if (!mode.dayFocus || !targets.some((t) => t.key === mode.dayFocus)) mode.dayFocus = 'perapian';
   const focus = targets.find((t) => t.key === mode.dayFocus && !t.job) || targets.find((t) => t.key === mode.dayFocus) || targets[0];
-  // Card rows need room; single-target sheets stay compact. Short (landscape)
-  // screens get a squeezed card row.
-  const short = h < 560;
+  // Card rows need room; single-target sheets stay compact. Short screens
+  // get a squeezed card row unless the sheet sits in the sideways column.
+  const short = h < 560 && !daySideColumn(w, h);
   const sheetH = focus && focus.slot ? (short ? 132 : 196) : focus && focus.job ? 112 : (short ? 140 : 150);
-  const bottomH = 64;
-  const sheetTop = h - bottomH - sheetH - 6;
+  const layout = dayLayout(w, h, sheetH);
   const reward = mode.rewardPending();
 
   if (!reward) {
-    const anchors = layoutBubbles(game, targets, w, sheetTop);
+    const anchors = layoutBubbles(game, targets, layout.view);
     // world bubbles; selected last so it sits on top
     const ordered = targets.filter((t) => t !== focus).concat(focus ? [focus] : []);
     for (const target of ordered) {
@@ -966,13 +1016,13 @@ function drawDayScreen(game, ctx, w, h) {
     drawLabel(ctx, 'TONIGHT', x + bw - 12, y + 17, 11, '#fff1e0', { align: 'right', outline: 2 });
   }
 
-  if (focus) drawSheet(game, ctx, w, h, sheetTop, sheetH, focus);
+  if (focus) drawSheet(game, ctx, layout.sheet, focus);
 
   // bottom row: builder status + START NIGHT
-  const rowY = h - bottomH;
+  const rowY = layout.row.y;
   const job = mode.builderJob;
   const pillW = 118;
-  const frame = sheetFrame(w);
+  const frame = layout.row;
   const px = frame.x;
   drawPanel(ctx, px, rowY + 4, pillW, 48, { radius: 16, top: '#4a51a8', bottom: '#262a66', lineWidth: 2.5 });
   const training = job && job.kind === 'hunter';
@@ -987,8 +1037,9 @@ function drawDayScreen(game, ctx, w, h) {
   drawButton(game, ctx, { x: px + pillW + 8, y: rowY + 4, w: frame.width - pillW - 8, h: 48 }, `NIGHT ${mode.day}`,
     () => mode.startNight(), { id: 'START NIGHT', icon: 'moon', color: 'purple', disabled: !!job });
 
-  // FTUE chip sits just above the sheet, clear of the world bubbles
-  drawHint(game, ctx, w, Math.max(h < 560 ? 60 : 136, sheetTop - 48));
+  // FTUE chip sits just above the sheet (or at the foot of the sideways
+  // world view), clear of the world bubbles
+  drawHint(game, ctx, w, layout.hint.y, layout.hint.cx, layout.hint.maxW);
 }
 
 /* ------------------------------------------------------------------ */

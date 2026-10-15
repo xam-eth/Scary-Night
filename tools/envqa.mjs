@@ -155,6 +155,11 @@ async function survivalFtueSection() {
   await page.evaluate(() => {
     const g = window.__LN;
     g.survival.restart();
+    // Pin the top quality rung: the adaptive ladder steps on wall-clock frame
+    // time, so in software WebGL the shadow resolution (and the measured luma)
+    // otherwise depends on how busy the machine is.
+    g.setQuality(3);
+    g._frameCheck = -Infinity;
     window.__survivalOriginalUpdate = g.update;
     // Freeze the regular rAF simulation while taking evidence; fixed-step calls
     // below are the only clock source, so PNG timestamps stay within 30s.
