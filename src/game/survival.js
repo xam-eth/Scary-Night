@@ -39,10 +39,48 @@ const HEARTH_BURN_RADIUS = 250;
 const NIGHT_PHASE = { id: 'survival-night', label: 'NIGHT', danger: 0.24, ambient: [108, 114, 132] };
 const DAY_PHASE = { id: 'survival-day', label: 'DAY', danger: 0.02, ambient: [186, 174, 150] };
 
+// Lv1 build cost/label. `produces` only mirrors the Lv1 row of
+// SURVIVAL_BUILDING_LEVELS for old readers; the level table drives the economy.
 export const SURVIVAL_BUILDINGS = Object.freeze({
   extractor: Object.freeze({ id: 'extractor', label: 'OIL EXTRACTOR', oil: 2, wood: 10, seconds: 7, produces: { oil: 6 } }),
   sawmill: Object.freeze({ id: 'sawmill', label: 'SAWMILL', oil: 2, wood: 10, seconds: 7, produces: { wood: 7 } }),
   shelter: Object.freeze({ id: 'shelter', label: 'SURVIVOR SHELTER', oil: 4, wood: 14, seconds: 9, produces: { survivors: 1 } }),
+});
+
+/**
+ * Building levels (Lv1 is the build itself). Every level pays off in the
+ * coming night, so an upgrade bought on the last day still counts:
+ *   extractor  pumps its oil into the stock DURING the night (fire fuel + purse)
+ *   sawmill    wood every dawn, and planks: every outer door gets +% max HP
+ *   shelter    houses survivors; a build or level moves one in at once
+ *              (one more door guard tonight)
+ */
+export const BUILDING_MAX_LEVEL = 3;
+export const SURVIVAL_BUILDING_LEVELS = Object.freeze({
+  extractor: Object.freeze({
+    1: Object.freeze({ oil: 2, wood: 10, seconds: 7, pump: 6 }),
+    2: Object.freeze({ oil: 4, wood: 12, seconds: 6, pump: 10 }),
+    3: Object.freeze({ oil: 6, wood: 16, seconds: 7, pump: 14 }),
+  }),
+  sawmill: Object.freeze({
+    1: Object.freeze({ oil: 2, wood: 10, seconds: 7, dawnWood: 7, doorBonus: 0.1 }),
+    2: Object.freeze({ oil: 4, wood: 12, seconds: 6, dawnWood: 11, doorBonus: 0.2 }),
+    3: Object.freeze({ oil: 6, wood: 16, seconds: 7, dawnWood: 15, doorBonus: 0.3 }),
+  }),
+  shelter: Object.freeze({
+    1: Object.freeze({ oil: 4, wood: 14, seconds: 9, houses: 1 }),
+    2: Object.freeze({ oil: 6, wood: 16, seconds: 8, houses: 2 }),
+    3: Object.freeze({ oil: 8, wood: 20, seconds: 9, houses: 3 }),
+  }),
+});
+const DOOR_BONUS_CAP = 0.6;
+
+/** The Hunter's own track, bought by day like a building (no skill cards). */
+export const HUNTER_MAX_LEVEL = 3;
+export const SURVIVAL_HUNTER = Object.freeze({
+  1: Object.freeze({ damage: 26, hp: 100 }),
+  2: Object.freeze({ oil: 14, wood: 8, seconds: 5, damage: 32, hp: 120 }),
+  3: Object.freeze({ oil: 20, wood: 12, seconds: 6, damage: 40, hp: 140 }),
 });
 
 function freshProgress(duration = SURVIVAL_TUNING.nightSeconds) {
@@ -57,6 +95,8 @@ function freshProgress(duration = SURVIVAL_TUNING.nightSeconds) {
     survivors: SURVIVAL_TUNING.startSurvivors,
     perapianLevel: 1,
     buildings: {},
+    buildingLevels: {},
+    hunterLevel: 1,
     gateBuilt: false,
     gateHp: 0,
     builderJob: null,
@@ -67,7 +107,7 @@ function freshProgress(duration = SURVIVAL_TUNING.nightSeconds) {
     individualIndex: 0,
     oilBurned: 0,
     siegeTimers: {},
-    nightStats: { kills: 0, hits: 0, damageToWalls: 0, drained: 0 },
+    nightStats: { kills: 0, hits: 0, damageToWalls: 0, drained: 0, pumped: 0 },
     lastRewards: null,
     rewardAck: 0,
     hints: {},
@@ -608,6 +648,8 @@ export class SurvivalMode {
     this.survivors = this.tuning.startSurvivors;
     this.perapianLevel = 1;
     this.buildings = {};
+    this.buildingLevels = {};
+    this.hunterLevel = 1;
     this.gateBuilt = false;
     this.gateHp = 0;
     this.builderJob = null;
@@ -643,6 +685,7 @@ export class SurvivalMode {
     this._fireLowWarned = false;
     this._hearthWarnAt = -99;
     this._restore(game.save.survival || freshProgress(this.nightDuration));
+    this.applyHunterStats(false);
     this._configureMansion();
     this._applyEntranceState();
     this.applyBuildingEffects(false);
@@ -665,6 +708,13 @@ export class SurvivalMode {
     this.survivors = clamp(Math.floor(Number(s.survivors) || 0), 0, 99);
     this.perapianLevel = clamp(Math.round(Number(s.perapianLevel) || 1), 1, 3);
     this.buildings = s.buildings && typeof s.buildings === 'object' ? s.buildings : {};
+    // saves from before building levels have no table: every building is Lv1
+    const levels = s.buildingLevels && typeof s.buildingLevels === 'object' ? s.buildingLevels : {};
+    this.buildingLevels = {};
+    for (const roomId of Object.keys(this.buildings)) {
+      this.buildingLevels[roomId] = clamp(Math.round(Number(levels[roomId]) || 1), 1, BUILDING_MAX_LEVEL);
+    }
+    this.hunterLevel = clamp(Math.round(Number(s.hunterLevel) || 1), 1, HUNTER_MAX_LEVEL);
     this.gateBuilt = !!s.gateBuilt;
     this.gateHp = Math.max(0, Number(s.gateHp) || 0);
     this.builderJob = s.builderJob && typeof s.builderJob === 'object' ? { ...s.builderJob } : null;
@@ -676,11 +726,14 @@ export class SurvivalMode {
     this.oilBurned = Math.max(0, Number(s.oilBurned) || 0);
     this.nightOilStart = Number.isFinite(Number(s.nightOilStart)) && s.nightOilStart != null ? Number(s.nightOilStart) : null;
     this.siegeTimers = s.siegeTimers && typeof s.siegeTimers === 'object' ? { ...s.siegeTimers } : {};
-    this.nightStats = { kills: 0, hits: 0, damageToWalls: 0, drained: 0, ...(s.nightStats || {}) };
+    this.nightStats = { kills: 0, hits: 0, damageToWalls: 0, drained: 0, pumped: 0, ...(s.nightStats || {}) };
     this.lastRewards = s.lastRewards || null;
     this.rewardAck = Math.max(0, Math.floor(Number(s.rewardAck) || 0));
 
     const g = this.game;
+    // the Hunter's health track first: a saved 130 HP must not be clamped
+    // to a Lv1 bar before the level is known
+    g.player.bloodMax = this.hunterStats().hp;
     const pos = s.player;
     if (pos && Number.isFinite(pos.x) && Number.isFinite(pos.y)) {
       g.player.x = pos.x; g.player.y = pos.y;
@@ -794,7 +847,7 @@ export class SurvivalMode {
     this.breakerIndex = 0;
     this.individualIndex = 0;
     this.siegeTimers = Object.create(null);
-    this.nightStats = { kills: 0, hits: 0, damageToWalls: 0, drained: 0 };
+    this.nightStats = { kills: 0, hits: 0, damageToWalls: 0, drained: 0, pumped: 0 };
     this._resetNightFx();
     g.time = 0;
     g.timeLeft = this.nightDuration;
@@ -874,6 +927,7 @@ export class SurvivalMode {
     g.bloodMoon = 0; g.duelDark = 0; g.blackoutT = 0; g.powerOut = false;
     g.lightningFlash = Math.max(0, g.lightningFlash - dt * 2.4);
 
+    if (g.player.bloodMax !== this.hunterStats().hp) this.applyHunterStats(false);
     this.updateWaves();
     this.updateLightFuel(dt);
     g.mansion.update(dt, g);
@@ -1398,6 +1452,12 @@ export class SurvivalMode {
       this.oil = 0;
       return;
     }
+    // Oil pumps feed the stock all night long (the fire's fuel is the purse).
+    const pump = this.pumpRate() * dt;
+    if (pump > 0) {
+      this.oil = Math.min(RESOURCE_CAP, this.oil + pump);
+      this.nightStats.pumped = (this.nightStats.pumped || 0) + pump;
+    }
     if (this.hearthFeeders > 0 && Math.random() < dt * 2) this.game.renderer.shake(0.04);
     const burn = Math.min(this.oil, this.tuning.oilBurnPerSecond * dt);
     this.oil = Math.max(0, this.oil - burn);
@@ -1451,6 +1511,8 @@ export class SurvivalMode {
     const g = this.game;
     if (type === 'perapian') return this.startPerapianUpgrade();
     if (type === 'gate') return this.startGateBuild();
+    if (type === 'hunter') return this.startHunterUpgrade();
+    if (type === 'upgrade') return this.startUpgrade(roomId);
     const spec = SURVIVAL_BUILDINGS[type];
     if (!spec || !roomId) return false;
     if (!this.buildableRooms().some((room) => room.id === roomId)) return false;
@@ -1486,39 +1548,152 @@ export class SurvivalMode {
     return true;
   }
 
+  /* ---------------- building levels + the Hunter's track ---------------- */
+
+  buildingLevel(roomId) {
+    if (!this.buildings[roomId]) return 0;
+    return clamp(Math.round(Number(this.buildingLevels[roomId]) || 1), 1, BUILDING_MAX_LEVEL);
+  }
+
+  /** Stats of one building type at one level ({} for unknown types). */
+  buildingStats(type, level = 1) {
+    const table = SURVIVAL_BUILDING_LEVELS[type];
+    return (table && table[clamp(Math.round(level) || 1, 1, BUILDING_MAX_LEVEL)]) || {};
+  }
+
+  /** Cost of the next level of the building in a room (null at max / empty). */
+  upgradeCost(roomId) {
+    const type = this.buildings[roomId];
+    const level = this.buildingLevel(roomId);
+    if (!type || level >= BUILDING_MAX_LEVEL) return null;
+    const next = this.buildingStats(type, level + 1);
+    return next.wood != null ? { oil: next.oil || 0, wood: next.wood || 0, seconds: next.seconds || 6 } : null;
+  }
+
+  startUpgrade(roomId) {
+    if (this.phase !== 'day' || this.builderJob) return false;
+    const type = this.buildings[roomId];
+    const cost = this.upgradeCost(roomId);
+    if (!type || !cost || !this.canAfford(cost)) return false;
+    this.oil -= cost.oil; this.wood -= cost.wood;
+    this.selectedRoom = roomId;
+    const targetLevel = this.buildingLevel(roomId) + 1;
+    this.builderJob = { kind: 'upgrade', type, roomId, targetLevel, remaining: cost.seconds, duration: cost.seconds };
+    this.game.audio.play('woodPickup', { vol: 0.45 });
+    this._persist(true);
+    return true;
+  }
+
+  /** Oil every pump moves into the stock over one night. */
+  pumpPerNight() {
+    let total = 0;
+    for (const [roomId, type] of Object.entries(this.buildings)) {
+      if (type === 'extractor') total += this.buildingStats(type, this.buildingLevel(roomId)).pump || 0;
+    }
+    return total;
+  }
+
+  pumpRate() { return this.pumpPerNight() / Math.max(1, this.nightDuration); }
+
+  /** Sawmill planks: +% max HP on every outer door (summed, capped). */
+  doorHpBonus() {
+    let bonus = 0;
+    for (const [roomId, type] of Object.entries(this.buildings)) {
+      if (type === 'sawmill') bonus += this.buildingStats(type, this.buildingLevel(roomId)).doorBonus || 0;
+    }
+    return Math.min(DOOR_BONUS_CAP, Math.round(bonus * 100) / 100);
+  }
+
+  hunterStats(level = this.hunterLevel) {
+    return SURVIVAL_HUNTER[clamp(Math.round(level) || 1, 1, HUNTER_MAX_LEVEL)];
+  }
+
+  hunterDamage() { return this.hunterStats().damage; }
+
+  hunterUpgradeCost() {
+    if (this.hunterLevel >= HUNTER_MAX_LEVEL) return null;
+    const next = this.hunterStats(this.hunterLevel + 1);
+    return { oil: next.oil || 0, wood: next.wood || 0, seconds: next.seconds || 5 };
+  }
+
+  startHunterUpgrade() {
+    if (this.phase !== 'day' || this.builderJob) return false;
+    const cost = this.hunterUpgradeCost();
+    if (!cost || !this.canAfford(cost)) return false;
+    this.oil -= cost.oil; this.wood -= cost.wood;
+    this.builderJob = { kind: 'hunter', type: 'hunter', targetLevel: this.hunterLevel + 1, remaining: cost.seconds, duration: cost.seconds };
+    this.game.audio.play('uiConfirm', { vol: 0.55 });
+    this._persist(true);
+    return true;
+  }
+
+  /** Survival owns the Hunter's health bar (legacy meta upgrades stay legacy). */
+  applyHunterStats(heal = false) {
+    const p = this.game.player;
+    if (!p) return;
+    const hp = this.hunterStats().hp;
+    p.bloodMax = hp;
+    p.blood = heal ? hp : clamp(Number(p.blood) || hp, 1, hp);
+  }
+
   finishBuilderJob() {
     const job = this.builderJob;
     if (!job) return;
+    let text = 'BUILT!';
+    let icon = job.type === 'extractor' ? 'extractor' : job.type === 'sawmill' ? 'sawmill' : 'shelter';
     if (job.kind === 'perapian') {
       this.perapianLevel = clamp(job.targetLevel, 1, 3);
+      icon = 'perapian'; text = `PERAPIAN Lv${this.perapianLevel}`;
     } else if (job.kind === 'gate') {
       this.gateBuilt = true;
       this.applyBuildingEffects(true);
-    } else if (job.kind === 'building') {
+      icon = 'gate';
+    } else if (job.kind === 'hunter') {
+      this.hunterLevel = clamp(job.targetLevel, 1, HUNTER_MAX_LEVEL);
+      this.applyHunterStats(true);
+      icon = 'hunter'; text = `HUNTER Lv${this.hunterLevel}`;
+    } else if (job.kind === 'building' || job.kind === 'upgrade') {
+      const before = job.kind === 'upgrade' ? this.buildingLevel(job.roomId) : 0;
+      const level = job.kind === 'upgrade' ? clamp(job.targetLevel, 1, BUILDING_MAX_LEVEL) : 1;
       this.buildings[job.roomId] = job.type;
+      this.buildingLevels[job.roomId] = level;
+      if (job.type === 'shelter') {
+        // a shelter houses its survivors at once: tonight's door guards
+        const moved = (this.buildingStats('shelter', level).houses || 0) - (before ? this.buildingStats('shelter', before).houses || 0 : 0);
+        this.survivors = Math.min(this.tuning.maxSurvivors, this.survivors + Math.max(0, moved));
+        this._syncGuardRoster(false);
+      }
+      if (job.type === 'sawmill') this.applyBuildingEffects(false);
+      if (job.kind === 'upgrade') text = `Lv${level}!`;
     }
     this.builderJob = null;
     if (job.kind === 'gate') this.game.mansion.buildNav();
     this.refreshFireplace(true);
     this.game.audio.play('uiConfirm', { vol: 0.62 });
-    const icon = job.kind === 'perapian' ? 'perapian' : job.kind === 'gate' ? 'gate' : (job.type === 'extractor' ? 'extractor' : job.type === 'sawmill' ? 'sawmill' : 'shelter');
-    this.pushEvent('build', icon, job.kind === 'perapian' ? `PERAPIAN Lv${this.perapianLevel}` : 'BUILT!', { life: 1.6 });
+    this.pushEvent('build', icon, text, { life: 1.6 });
     this._persist(true);
   }
 
+  /**
+   * Door max HP from what stands in the house: sawmill planks on every outer
+   * door, the reinforced gate on the front door. By day the doors are whole,
+   * so a new bonus is filled at once; a mid-night reload never mends a door.
+   */
   applyBuildingEffects(repairGate = false) {
     const gate = this.mainGate();
-    if (!gate) return;
-    const base = gate.baseHpMax || gate.hpMax || 190;
-    if (this.gateBuilt) {
-      gate.hpMax = base + this.tuning.gateHpBonus;
-      if (repairGate || gate.hp <= 0) { gate.hp = gate.hpMax; gate.broken = false; gate.open = false; }
-      else gate.hp = Math.min(gate.hp, gate.hpMax);
-    } else {
-      gate.hpMax = base;
-      if (!Number.isFinite(gate.hp)) gate.hp = base;
+    const bonus = this.doorHpBonus();
+    const night = this.phase === 'night';
+    for (const e of this.game.mansion.entrances) {
+      if (!e.exterior || e.kind !== 'door') continue;
+      const base = e.baseHpMax || e.hpMax || 100;
+      const extra = e === gate && this.gateBuilt ? this.tuning.gateHpBonus : 0;
+      e.hpMax = Math.round(base * (1 + bonus)) + extra;
+      if (!Number.isFinite(e.hp)) e.hp = e.hpMax;
+      if (e === gate && repairGate) { e.hp = e.hpMax; e.broken = false; e.open = false; }
+      else if (!night && !e.broken) e.hp = e.hpMax;
+      else e.hp = Math.min(e.hp, e.hpMax);
     }
-    this.gateHp = Math.max(0, gate.hp);
+    if (gate) this.gateHp = Math.max(0, gate.hp);
   }
 
   completeNight() {
@@ -1528,13 +1703,12 @@ export class SurvivalMode {
     let oil = this.tuning.nightRewards.oil[dayIndex];
     let wood = this.tuning.nightRewards.wood[dayIndex];
     const survivorsBefore = this.survivors;
-    for (const type of Object.values(this.buildings)) {
-      const spec = SURVIVAL_BUILDINGS[type];
-      if (!spec) continue;
-      oil += spec.produces.oil || 0;
-      wood += spec.produces.wood || 0;
-      if (spec.produces.survivors) this.survivors = Math.min(this.tuning.maxSurvivors, this.survivors + spec.produces.survivors);
+    // Dawn pays the sawmills; the pumps already poured their oil in during
+    // the night, and shelters house their survivors as soon as they stand.
+    for (const [roomId, type] of Object.entries(this.buildings)) {
+      if (type === 'sawmill') wood += this.buildingStats(type, this.buildingLevel(roomId)).dawnWood || 0;
     }
+    const pumped = Math.round(this.nightStats.pumped || 0);
     // kills pay a little (guards shoot too, so this stays a trickle)
     const killOil = Math.floor(this.nightStats.kills / 6);
     const killWood = Math.floor(this.nightStats.kills / 4);
@@ -1550,6 +1724,7 @@ export class SurvivalMode {
     this.lastRewards = {
       oil, wood, kills: this.nightStats.kills, walls: this.nightStats.damageToWalls,
       survivors: this.survivors - survivorsBefore, drained: Math.round(this.nightStats.drained || 0),
+      pumped,
     };
     this._resetNightFx();
     g.enemies.length = 0;
@@ -1558,7 +1733,7 @@ export class SurvivalMode {
     g.player.state = 'idle';
     g.player.attackT = 0;
     g.player.attackCd = 0;
-    g.player.blood = g.player.bloodMax;
+    this.applyHunterStats(true);
     this.elapsed = 0;
     if (this.nightsCompleted >= 3) {
       this.day = 3;
@@ -1594,10 +1769,10 @@ export class SurvivalMode {
     const duration = this.nightDuration;
     Object.assign(this, {
       phase: 'night', day: 1, elapsed: 0, oil: this.tuning.startOil, wood: this.tuning.startWood,
-      survivors: this.tuning.startSurvivors, perapianLevel: 1, buildings: {}, gateBuilt: false,
+      survivors: this.tuning.startSurvivors, perapianLevel: 1, buildings: {}, buildingLevels: {}, hunterLevel: 1, gateBuilt: false,
       gateHp: 0, builderJob: null, selectedRoom: null, nightsCompleted: 0, waveIndex: 0,
       breakerIndex: 0, individualIndex: 0, oilBurned: 0, siegeTimers: Object.create(null),
-      nightStats: { kills: 0, hits: 0, damageToWalls: 0, drained: 0 }, lastRewards: null, skillCooldown: 0,
+      nightStats: { kills: 0, hits: 0, damageToWalls: 0, drained: 0, pumped: 0 }, lastRewards: null, skillCooldown: 0,
       rewardAck: 0, dayFocus: null, nightOilStart: this.tuning.startOil,
     });
     this._resetNightFx();
@@ -1609,7 +1784,8 @@ export class SurvivalMode {
     g.enemies.length = 0; g.bolts.length = 0;
     const fire = g.mansion.fireplaceLight;
     g.player.x = fire.x + 70; g.player.y = fire.y + 210;
-    g.player.blood = g.player.bloodMax; g.player.weapon = 'shot'; g.player.state = 'idle';
+    this.applyHunterStats(true);
+    g.player.weapon = 'shot'; g.player.state = 'idle';
     this.nightDuration = duration;
     this.phase = 'night';
     g.mansion.buildNav();
@@ -1625,12 +1801,14 @@ export class SurvivalMode {
   buildingCost(type) {
     if (type === 'perapian') return this.tuning.perapianUpgrade[this.perapianLevel + 1] || null;
     if (type === 'gate') return this.tuning.gateCost;
+    if (type === 'hunter') return this.hunterUpgradeCost();
     return SURVIVAL_BUILDINGS[type] || null;
   }
 
   buildingName(type) {
     if (type === 'perapian') return `PERAPIAN LV${this.perapianLevel}`;
     if (type === 'gate') return 'REINFORCED GATE';
+    if (type === 'hunter') return `HUNTER LV${this.hunterLevel}`;
     return SURVIVAL_BUILDINGS[type] ? SURVIVAL_BUILDINGS[type].label : 'EMPTY';
   }
 
@@ -1693,6 +1871,7 @@ export class SurvivalMode {
   dayFocusPoint() {
     const key = this.dayFocus || 'perapian';
     if (key === 'gate') { const gate = this.mainGate(); if (gate) return { x: gate.x, y: gate.y }; }
+    if (key === 'hunter') return { x: this.game.player.x, y: this.game.player.y };
     if (key !== 'perapian') {
       const room = this.game.mansion.room(key);
       if (room) return { x: room.x + room.w / 2, y: room.y + room.h / 2 };
@@ -1906,7 +2085,8 @@ export class SurvivalMode {
     return {
       phase: this.phase, day: this.day, elapsed: +this.elapsed.toFixed(2),
       duration: this.nightDuration, oil: +this.oil.toFixed(1), wood: this.wood,
-      survivors: this.survivors, perapianLevel: this.perapianLevel,
+      survivors: this.survivors, perapianLevel: this.perapianLevel, hunterLevel: this.hunterLevel,
+      buildingLevels: { ...this.buildingLevels },
       radius: Math.round(this.getFireRadius()), litRooms: this.litRooms().map((r) => r.id),
       enemies: this.game.enemies.filter((e) => !e.dead).length,
       breakers: this.game.enemies.filter((e) => e._survivalType === 'breaker' && !e.dead).length,
@@ -1944,7 +2124,8 @@ export class SurvivalMode {
     s.nightDuration = this.nightDuration;
     s.oil = Math.round(this.oil * 100) / 100; s.wood = Math.round(this.wood);
     s.survivors = this.survivors; s.perapianLevel = this.perapianLevel;
-    s.buildings = { ...this.buildings }; s.gateBuilt = this.gateBuilt;
+    s.buildings = { ...this.buildings }; s.buildingLevels = { ...this.buildingLevels };
+    s.hunterLevel = this.hunterLevel; s.gateBuilt = this.gateBuilt;
     s.gateHp = Math.round(this.gateHp); s.builderJob = this.builderJob ? { ...this.builderJob } : null;
     s.selectedRoom = this.selectedRoom; s.nightsCompleted = this.nightsCompleted;
     s.waveIndex = this.waveIndex; s.breakerIndex = this.breakerIndex; s.individualIndex = this.individualIndex;

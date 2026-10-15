@@ -9,11 +9,13 @@
  *   - every tappable item is pushed to game.ui with label `survival:<ID>`;
  *   - the night HUD registers only the PAUSE item (combat is the touch stick,
  *     the auto-shot and the Flare button drawn by drawSurvivalControls);
- *   - the Perapian upgrade button keeps the `survival:UPGRADE…` prefix.
+ *   - the Perapian upgrade button keeps the `survival:UPGRADE…` prefix;
+ *     building levels are `survival:UPGRADE <type> LV<n>` and the Hunter's
+ *     track `survival:UPGRADE HUNTER LV<n>` (bubble `survival:select:hunter`).
  */
 
 import { clamp, writeSave } from '../core/util.js';
-import { SURVIVAL_BUILDINGS } from '../game/survival.js';
+import { SURVIVAL_BUILDINGS, BUILDING_MAX_LEVEL, HUNTER_MAX_LEVEL } from '../game/survival.js';
 import { pauseButtonBox } from '../game/hud.js';
 import {
   drawSurvivalIcon, drawLabel, measureLabel, drawPanel, drawCounter, drawBar,
@@ -34,10 +36,26 @@ const BUTTON_COLORS = Object.freeze({
 
 const BUILD_ORDER = ['extractor', 'sawmill', 'shelter'];
 const BUILD_META = Object.freeze({
-  extractor: { icon: 'extractor', name: 'OIL PUMP', out: 'oil', outKey: 'oil' },
-  sawmill: { icon: 'sawmill', name: 'SAWMILL', out: 'wood', outKey: 'wood' },
-  shelter: { icon: 'shelter', name: 'SHELTER', out: 'guard', outKey: 'survivors' },   // +1 survivor = +1 door guard
+  extractor: { icon: 'extractor', name: 'OIL PUMP', out: 'oil' },     // pumped during the night
+  sawmill: { icon: 'sawmill', name: 'SAWMILL', out: 'wood' },        // every dawn + door planks
+  shelter: { icon: 'shelter', name: 'SHELTER', out: 'guard' },       // houses survivors = door guards
 });
+
+/**
+ * What a building does at one level, as icon rows (main row first). The
+ * sheet shows `now → next`; build cards show the main row at Lv1.
+ */
+function buildingRows(mode, type, level) {
+  const st = mode.buildingStats(type, level);
+  if (type === 'extractor') return [{ icon: 'oil', value: `+${st.pump || 0}`, label: 'EVERY NIGHT' }];
+  if (type === 'sawmill') {
+    return [
+      { icon: 'wood', value: `+${st.dawnWood || 0}`, label: 'EVERY DAWN' },
+      { icon: 'planks', value: `+${Math.round((st.doorBonus || 0) * 100)}%`, label: 'DOOR HP' },
+    ];
+  }
+  return [{ icon: 'guard', value: `+${st.houses || 0}`, label: 'GUARDS' }];
+}
 
 /* ------------------------------------------------------------------ */
 /* small helpers                                                       */
@@ -133,6 +151,7 @@ const HINTS = Object.freeze({
   build: { icon: 'hammer', text: 'TAP + TO BUILD IN LIT ROOMS', life: 7 },
   guard: { icon: 'guard', text: 'SURVIVORS GUARD THE DOORS', life: 5 },
   door: { icon: 'door', text: 'GO TO THE DOOR: SHOOT THROUGH IT', life: 6 },
+  level: { icon: 'up', text: 'TAP A GREEN ARROW TO LEVEL UP', life: 6 },
 });
 
 function hintStore(game) {
@@ -164,7 +183,7 @@ export function updateSurvivalHints(game, dt) {
     state.t += dt;
     if (state.id === 'move' && mode._movedSinceStart > 80) state.t = Math.max(state.t, state.life - 0.35);
     if (state.id === 'flare' && mode.skillCooldown > 0) state.t = Math.max(state.t, state.life - 0.35);
-    if (state.id === 'build' && mode.builderJob) state.t = Math.max(state.t, state.life - 0.35);
+    if ((state.id === 'build' || state.id === 'level') && mode.builderJob) state.t = Math.max(state.t, state.life - 0.35);
     if (state.t >= state.life) game._survivalHint = null;
   }
   if (game.screen !== 'playing') return;
@@ -180,6 +199,8 @@ export function updateSurvivalHints(game, dt) {
     if (mode.elapsed > 12 && !mode.currentTarget && mode.besiegedDoors().length > 0) offerSurvivalHint(game, 'door');
   } else if (mode.phase === 'day' && !mode.rewardPending()) {
     offerSurvivalHint(game, 'build');
+    // once something stands (or on the last day), point at the level-up arrows
+    if (hintStore(game).build && !mode.builderJob && (Object.keys(mode.buildings).length || mode.day >= 3)) offerSurvivalHint(game, 'level');
   }
 }
 
@@ -413,9 +434,19 @@ function drawNightWorldLayer(game, ctx, w, h) {
     if (e._survivalType === 'breaker') drawSurvivalIcon(ctx, 'breaker', at.x - bw / 2 - 10, at.y, 18);
   }
 
-  // Hunter HP
+  // Hunter HP, with his level on a gold chip
   const head = project(game, p.x, p.y, 98);
   drawHpBar(ctx, head.x, head.y, 50, 9, clamp(p.blood / Math.max(1, p.bloodMax), 0, 1));
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(head.x - 31, head.y, 8.5, 0, TAU);
+  ctx.fillStyle = '#ffc93a';
+  ctx.fill();
+  ctx.lineWidth = 1.8;
+  ctx.strokeStyle = INK;
+  ctx.stroke();
+  ctx.restore();
+  drawLabel(ctx, `${mode.hunterLevel || 1}`, head.x - 31, head.y + 1, 11, '#3a2400', { outline: 0 });
 
   // Floating combat numbers
   for (const f of mode.floaters) {
@@ -500,6 +531,16 @@ function dayTargets(game) {
       badge: mode.gateBuilt ? 'Lv1' : null, up: !mode.gateBuilt && affordable(mode, mode.tuning.gateCost),
     });
   }
+  // The Hunter is upgraded like a building: a bubble over his head.
+  const p = game.player;
+  if (p) {
+    const hunterJob = mode.builderJob && mode.builderJob.kind === 'hunter' ? mode.builderJob : null;
+    out.push({
+      key: 'hunter', icon: 'hunter', x: p.x, y: p.y, height: 205,   // above his hat
+      badge: `Lv${mode.hunterLevel}`, job: hunterJob,
+      up: !hunterJob && mode.hunterLevel < HUNTER_MAX_LEVEL && affordable(mode, mode.hunterUpgradeCost()),
+    });
+  }
   const jobRoom = mode.builderJob && mode.builderJob.kind === 'building' ? mode.builderJob.roomId : null;
   for (const room of mode.buildableRooms()) {
     if (room.id === jobRoom) continue;
@@ -508,7 +549,15 @@ function dayTargets(game) {
   for (const [roomId, type] of Object.entries(mode.buildings)) {
     const room = game.mansion.room(roomId);
     if (!room) continue;
-    out.push({ key: roomId, room, built: type, icon: BUILD_META[type] ? BUILD_META[type].icon : 'shelter', x: room.x + room.w / 2 + 48, y: room.y + room.h / 2 + 24, height: 110, badge: 'Lv1' });
+    const level = mode.buildingLevel(roomId);
+    const upJob = mode.builderJob && mode.builderJob.kind === 'upgrade' && mode.builderJob.roomId === roomId ? mode.builderJob : null;
+    out.push({
+      key: roomId, room, built: type, level, icon: BUILD_META[type] ? BUILD_META[type].icon : 'shelter',
+      // high enough that the model (and its level pennant) shows under the bubble
+      x: room.x + room.w / 2 + 48, y: room.y + room.h / 2 + 24, height: 185 + (level - 1) * 26,
+      badge: `Lv${level}`, job: upJob,
+      up: !upJob && level < BUILDING_MAX_LEVEL && affordable(mode, mode.upgradeCost(roomId)),
+    });
   }
   const job = mode.builderJob;
   if (job && job.kind === 'building' && job.roomId) {
@@ -518,9 +567,8 @@ function dayTargets(game) {
   return out;
 }
 
-function drawBubble(game, ctx, target, selected, w, h, sheetTop) {
-  const mode = game.survival;
-  const t = clock(game);
+/** Where a bubble sits on screen: over its target, or clamped to the edge as a pointer. */
+function bubbleAnchor(game, target, w, sheetTop) {
   let at = project(game, target.x, target.y, target.height);
   const margin = 30;
   const off = at.x < margin || at.x > w - margin || at.y < 128 || at.y > sheetTop - 30;
@@ -532,6 +580,70 @@ function drawBubble(game, ctx, target, selected, w, h, sheetTop) {
     angle = Math.atan2(dy, dx);
     at = { x: cx + dx * k, y: cy + dy * k };
   }
+  return { x: at.x, y: at.y, off, angle };
+}
+
+/**
+ * Keep bubbles from stacking: edge pointers spread out along their edge
+ * (order kept, squeezed evenly when the edge is crowded), then the Hunter's
+ * bubble (he walks, and often stands under the Perapian's) slides clear of
+ * everything else. Fixed on-screen bubbles never move.
+ */
+function layoutBubbles(game, targets, w, sheetTop) {
+  const anchors = new Map(targets.map((t) => [t, bubbleAnchor(game, t, w, sheetTop)]));
+  const top = 128 + 26, bottom = sheetTop - 30 - 26;
+  const spacing = 54;
+  const edges = { left: [], right: [], top: [], bottom: [] };
+  for (const a of anchors.values()) {
+    if (!a.off) continue;
+    if (a.x <= 31) edges.left.push(a);
+    else if (a.x >= w - 31) edges.right.push(a);
+    else if (a.y <= 129) edges.top.push(a);
+    else edges.bottom.push(a);
+  }
+  const spread = (list, key, lo, hi) => {
+    if (list.length < 2) return;
+    list.sort((p, q) => p[key] - q[key]);
+    const gap = Math.min(spacing, (hi - lo) / (list.length - 1));
+    for (const a of list) a[key] = clamp(a[key], lo, hi);
+    for (let i = 1; i < list.length; i++) list[i][key] = Math.max(list[i][key], list[i - 1][key] + gap);
+    const last = list.length - 1;
+    if (list[last][key] > hi) {
+      list[last][key] = hi;
+      for (let i = last - 1; i >= 0; i--) list[i][key] = Math.min(list[i][key], list[i + 1][key] - gap);
+    }
+  };
+  spread(edges.left, 'y', top, bottom);
+  spread(edges.right, 'y', top, bottom);
+  spread(edges.top, 'x', 30, w - 30);
+  spread(edges.bottom, 'x', 30, w - 30);
+  const hunter = targets.find((t) => t.key === 'hunter');
+  const h = hunter && anchors.get(hunter);
+  if (h && !h.off) {
+    const min = 80;   // circles + the Lv badge + the pointer tail
+    for (let pass = 0; pass < 6; pass++) {
+      let moved = false;
+      for (const [t, a] of anchors) {
+        if (t === hunter) continue;
+        let dx = h.x - a.x, dy = h.y - a.y;
+        const d = Math.hypot(dx, dy);
+        if (d >= min) continue;
+        if (d < 1) { dx = -1; dy = 0; } else { dx /= d; dy /= d; }
+        h.x += dx * (min - d); h.y += dy * (min - d);
+        moved = true;
+      }
+      if (!moved) break;
+    }
+  }
+  return anchors;
+}
+
+function drawBubble(game, ctx, target, selected, anchor) {
+  const mode = game.survival;
+  const t = clock(game);
+  const at = { x: anchor.x, y: anchor.y };
+  const off = anchor.off;
+  const angle = anchor.angle;
   const r = selected ? 27 : target.slot ? 21 : 23;
   const bob = target.slot ? Math.sin(t * 4 + target.x * 0.01) * 3 : 0;
   const y = at.y + bob;
@@ -589,7 +701,7 @@ function drawBubble(game, ctx, target, selected, w, h, sheetTop) {
 function selectTarget(game, key) {
   const mode = game.survival;
   mode.dayFocus = key;
-  if (key !== 'perapian' && key !== 'gate') mode.selectedRoom = key;
+  if (key !== 'perapian' && key !== 'gate' && key !== 'hunter') mode.selectedRoom = key;
 }
 
 function sheetFrame(w) {
@@ -631,6 +743,30 @@ function drawSheet(game, ctx, w, h, top, sheetH, focus) {
     return;
   }
 
+  if (focus.key === 'hunter' && !focus.job) {
+    const level = mode.hunterLevel;
+    const max = level >= HUNTER_MAX_LEVEL;
+    const cost = mode.hunterUpgradeCost();
+    const now = mode.hunterStats(level);
+    const next = mode.hunterStats(Math.min(HUNTER_MAX_LEVEL, level + 1));
+    drawSurvivalIcon(ctx, 'hunter', innerX + 16, titleY, 30);
+    drawLabel(ctx, 'HUNTER', innerX + 38, titleY, 16, '#ffffff', { align: 'left' });
+    drawLabel(ctx, max ? `Lv${level} MAX` : `Lv${level} → Lv${level + 1}`, x + width - 16, titleY, 14, '#ffd24a', { align: 'right' });
+    const rowY = top + 64;
+    drawSurvivalIcon(ctx, 'crossbow', innerX + 16, rowY, 30);
+    drawLabel(ctx, max ? `${now.damage}` : `${now.damage} → ${next.damage}`, innerX + 38, rowY - 7, 15, '#ffffff', { align: 'left' });
+    drawLabel(ctx, 'BOLT DAMAGE', innerX + 38, rowY + 11, 10, '#b9c2ff', { align: 'left', outline: 2 });
+    drawSurvivalIcon(ctx, 'heart', innerX + innerW / 2 + 22, rowY, 28);
+    drawLabel(ctx, max ? `${now.hp}` : `${now.hp} → ${next.hp}`, innerX + innerW / 2 + 42, rowY - 7, 15, '#ffffff', { align: 'left' });
+    drawLabel(ctx, 'HEALTH', innerX + innerW / 2 + 42, rowY + 11, 10, '#b9c2ff', { align: 'left', outline: 2 });
+    const btnY = top + sheetH - 62;
+    if (!max && cost) costRow(ctx, innerX + 4, btnY + 24, cost, mode, 20);
+    drawButton(game, ctx, { x: x + width - 170, y: btnY, w: 158, h: 48 }, max ? 'MAX' : 'UPGRADE',
+      () => mode.startBuild('hunter'),
+      { id: max ? 'UPGRADE MAX' : `UPGRADE HUNTER LV${level + 1}`, icon: max ? 'star' : 'up', color: 'green', disabled: max || busy || !affordable(mode, cost) });
+    return;
+  }
+
   if (focus.key === 'gate') {
     const cost = mode.tuning.gateCost;
     const gate = mode.mainGate();
@@ -657,29 +793,44 @@ function drawSheet(game, ctx, w, h, top, sheetH, focus) {
 
   const room = focus.room;
   if (focus.job) {
-    const meta = BUILD_META[focus.job.type] || BUILD_META.shelter;
-    const pct = 1 - clamp(focus.job.remaining / Math.max(0.01, focus.job.duration), 0, 1);
+    const job = focus.job;
+    const hunter = job.kind === 'hunter';
+    const meta = hunter ? { icon: 'hunter', name: 'HUNTER' } : (BUILD_META[job.type] || BUILD_META.shelter);
+    const pct = 1 - clamp(job.remaining / Math.max(0.01, job.duration), 0, 1);
     drawSurvivalIcon(ctx, meta.icon, innerX + 16, titleY, 30);
     drawLabel(ctx, meta.name, innerX + 38, titleY, 16, '#ffffff', { align: 'left' });
-    drawLabel(ctx, room ? room.name : '', x + width - 16, titleY, 11, '#b9c2ff', { align: 'right', outline: 2 });
+    if (job.targetLevel) drawLabel(ctx, `→ Lv${job.targetLevel}`, x + width - 16, titleY, 14, '#ffd24a', { align: 'right' });
+    else drawLabel(ctx, room ? room.name : '', x + width - 16, titleY, 11, '#b9c2ff', { align: 'right', outline: 2 });
     const rowY = top + 70;
-    drawSurvivalIcon(ctx, 'hammer', innerX + 18, rowY, 28, { rotate: Math.sin(clock(game) * 10) * 0.3 });
+    drawSurvivalIcon(ctx, hunter ? 'up' : 'hammer', innerX + 18, rowY, 28, { rotate: hunter ? 0 : Math.sin(clock(game) * 10) * 0.3 });
     drawBar(ctx, innerX + 40, rowY - 9, innerW - 54, 18, pct, '#45d06a');
-    drawLabel(ctx, `${focus.job.remaining.toFixed(1)}s`, innerX + 40 + (innerW - 54) / 2, rowY + 1, 12, '#ffffff');
+    drawLabel(ctx, `${job.remaining.toFixed(1)}s`, innerX + 40 + (innerW - 54) / 2, rowY + 1, 12, '#ffffff');
     return;
   }
   const built = focus.built || mode.useBuilding(focus.key);
   if (built) {
+    // Built: what it does now → next level, and the level-up button.
     const meta = BUILD_META[built] || BUILD_META.shelter;
-    const spec = SURVIVAL_BUILDINGS[built];
+    const level = mode.buildingLevel(focus.key);
+    const max = level >= BUILDING_MAX_LEVEL;
+    const cost = mode.upgradeCost(focus.key);
     drawSurvivalIcon(ctx, meta.icon, innerX + 16, titleY, 30);
     drawLabel(ctx, meta.name, innerX + 38, titleY, 16, '#ffffff', { align: 'left' });
-    drawLabel(ctx, room ? room.name : '', x + width - 16, titleY, 11, '#b9c2ff', { align: 'right', outline: 2 });
-    const rowY = top + 70;
-    const amount = spec ? (spec.produces[meta.outKey] || 0) : 0;
-    drawSurvivalIcon(ctx, meta.out, innerX + 18, rowY, 28);
-    drawLabel(ctx, `+${amount}`, innerX + 40, rowY - 6, 18, '#7ef08e', { align: 'left' });
-    drawLabel(ctx, 'EVERY DAWN', innerX + 40, rowY + 13, 10, '#b9c2ff', { align: 'left', outline: 2 });
+    drawLabel(ctx, max ? `Lv${level} MAX` : `Lv${level} → Lv${level + 1}`, x + width - 16, titleY, 14, '#ffd24a', { align: 'right' });
+    const nowRows = buildingRows(mode, built, level);
+    const nextRows = max ? nowRows : buildingRows(mode, built, level + 1);
+    const rowY = top + 64;
+    nowRows.forEach((row, i) => {
+      const rx = innerX + (i === 0 ? 0 : innerW / 2 + 6);
+      drawSurvivalIcon(ctx, row.icon, rx + 16, rowY, 28);
+      drawLabel(ctx, max ? row.value : `${row.value} → ${nextRows[i].value}`, rx + 36, rowY - 7, 15, '#ffffff', { align: 'left' });
+      drawLabel(ctx, row.label, rx + 36, rowY + 11, 10, '#b9c2ff', { align: 'left', outline: 2 });
+    });
+    const btnY = top + sheetH - 62;
+    if (!max && cost) costRow(ctx, innerX + 4, btnY + 24, cost, mode, 20);
+    drawButton(game, ctx, { x: x + width - 170, y: btnY, w: 158, h: 48 }, max ? 'MAX' : 'UPGRADE',
+      () => mode.startBuild('upgrade', focus.key),
+      { id: max ? 'UPGRADE MAX' : `UPGRADE ${built} LV${level + 1}`, icon: max ? 'star' : 'up', color: 'green', disabled: max || busy || !affordable(mode, cost) });
     return;
   }
 
@@ -703,10 +854,10 @@ function drawSheet(game, ctx, w, h, top, sheetH, focus) {
     const compact = cardH < 120;
     drawSurvivalIcon(ctx, meta.icon, cx + cardW / 2, cardY + (compact ? 22 : 30), compact ? 30 : 40, { alpha: ok ? 1 : 0.7 });
     if (!compact) drawLabel(ctx, meta.name, cx + cardW / 2, cardY + 60, 11, '#3a2a50', { outline: 0 });
-    const amount = spec.produces[meta.outKey] || 0;
+    const main = buildingRows(mode, type, 1)[0];
     const outY = compact ? cardY + 48 : cardY + 80;
-    drawSurvivalIcon(ctx, meta.out, cx + cardW / 2 - 14, outY, 18);
-    drawLabel(ctx, `+${amount}`, cx + cardW / 2 + 2, outY + 1, 14, '#1f8a3a', { align: 'left', outline: 0 });
+    drawSurvivalIcon(ctx, main.icon, cx + cardW / 2 - 14, outY, 18);
+    drawLabel(ctx, main.value, cx + cardW / 2 + 2, outY + 1, 14, '#1f8a3a', { align: 'left', outline: 0 });
     const costW = measureLabel(ctx, `${spec.oil}`, 12) + measureLabel(ctx, `${spec.wood}`, 12) + 46;
     costRow(ctx, cx + cardW / 2 - costW / 2, cardY + cardH - 16, spec, mode, 15);
   }
@@ -719,7 +870,7 @@ function drawRewardModal(game, ctx, w, h) {
   ctx.fillStyle = 'rgba(12,10,30,0.62)';
   ctx.fillRect(0, 0, w, h);
   ctx.restore();
-  const rowsCount = 3 + (reward.survivors ? 1 : 0) + (reward.drained ? 1 : 0);
+  const rowsCount = 3 + (reward.survivors ? 1 : 0) + (reward.drained ? 1 : 0) + (reward.pumped ? 1 : 0);
   const bw = Math.min(330, w - 32), bh = 92 + Math.ceil(rowsCount / 2) * 52 + 86;
   const x = (w - bw) / 2, y = (h - bh) / 2 + 10;
   const t = clock(game);
@@ -741,6 +892,7 @@ function drawRewardModal(game, ctx, w, h) {
     { icon: 'oil', value: `+${reward.oil || 0}`, color: '#1f8a3a' },
     { icon: 'wood', value: `+${reward.wood || 0}`, color: '#1f8a3a' },
   ];
+  if (reward.pumped) rows.push({ icon: 'extractor', value: `+${reward.pumped}`, color: '#1f8a3a' });   // pumped overnight
   if (reward.survivors) rows.push({ icon: 'survivor', value: `+${reward.survivors}`, color: '#1f8a3a' });
   if (reward.drained) rows.push({ icon: 'fire', value: `-${reward.drained}`, color: '#d23a2a' });
   const cols = 2;
@@ -764,16 +916,17 @@ function drawDayScreen(game, ctx, w, h) {
   // Card rows need room; single-target sheets stay compact. Short (landscape)
   // screens get a squeezed card row.
   const short = h < 560;
-  const sheetH = focus && focus.slot ? (short ? 132 : 196) : focus && (focus.built || focus.job) ? 112 : (short ? 140 : 150);
+  const sheetH = focus && focus.slot ? (short ? 132 : 196) : focus && focus.job ? 112 : (short ? 140 : 150);
   const bottomH = 64;
   const sheetTop = h - bottomH - sheetH - 6;
   const reward = mode.rewardPending();
 
   if (!reward) {
+    const anchors = layoutBubbles(game, targets, w, sheetTop);
     // world bubbles; selected last so it sits on top
     const ordered = targets.filter((t) => t !== focus).concat(focus ? [focus] : []);
     for (const target of ordered) {
-      const box = drawBubble(game, ctx, target, target === focus, w, h, sheetTop);
+      const box = drawBubble(game, ctx, target, target === focus, anchors.get(target));
       const id = target.slot ? `slot:${target.key}` : `select:${target.key}`;
       addHit(game, box, id, () => selectTarget(game, target.key));
     }
@@ -822,7 +975,8 @@ function drawDayScreen(game, ctx, w, h) {
   const frame = sheetFrame(w);
   const px = frame.x;
   drawPanel(ctx, px, rowY + 4, pillW, 48, { radius: 16, top: '#4a51a8', bottom: '#262a66', lineWidth: 2.5 });
-  drawSurvivalIcon(ctx, 'hammer', px + 24, rowY + 28, 28, { alpha: job ? 1 : 0.55, rotate: job ? Math.sin(clock(game) * 10) * 0.3 : 0 });
+  const training = job && job.kind === 'hunter';
+  drawSurvivalIcon(ctx, training ? 'hunter' : 'hammer', px + 24, rowY + 28, 28, { alpha: job ? 1 : 0.55, rotate: job && !training ? Math.sin(clock(game) * 10) * 0.3 : 0 });
   if (job) {
     const pct = 1 - clamp(job.remaining / Math.max(0.01, job.duration), 0, 1);
     drawBar(ctx, px + 44, rowY + 16, pillW - 52, 12, pct, '#45d06a');

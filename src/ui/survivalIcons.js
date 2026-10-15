@@ -184,6 +184,73 @@ const ICONS = {
     ctx.stroke();
     ctx.restore();
   },
+  /** The Hunter: wide-brim hat + leather coat, never confused with the blue survivors. */
+  hunter(ctx) {
+    ctx.beginPath();
+    ctx.moveTo(-0.82, 0.95);
+    ctx.bezierCurveTo(-0.82, 0.22, -0.44, 0.04, 0, 0.04);
+    ctx.bezierCurveTo(0.44, 0.04, 0.82, 0.22, 0.82, 0.95);
+    ctx.closePath();
+    fillStroke(ctx, '#a0602f');
+    // scarf
+    ctx.beginPath();
+    ctx.moveTo(-0.42, 0.1); ctx.lineTo(0.42, 0.1); ctx.lineTo(0.26, 0.36); ctx.lineTo(-0.26, 0.36);
+    ctx.closePath();
+    fillStroke(ctx, '#ff8a2a');
+    circle(ctx, 0, -0.34, 0.34, '#ffd2a6');
+    // hat: brim + crown + band
+    ctx.beginPath();
+    ctx.ellipse(0, -0.56, 0.72, 0.17, 0, 0, Math.PI * 2);
+    fillStroke(ctx, '#4a3427');
+    rr(ctx, -0.38, -0.98, 0.76, 0.46, 0.14);
+    fillStroke(ctx, '#5d4232');
+    ctx.fillStyle = '#ffb347';
+    ctx.fillRect(-0.36, -0.66, 0.72, 0.1);
+    shine(ctx, -0.18, -0.86, 0.12, 0.05, 0.5);
+  },
+  /** Crossbow (bolt damage). */
+  crossbow(ctx) {
+    ctx.save();
+    ctx.rotate(-0.62);
+    rr(ctx, -0.95, -0.16, 1.66, 0.32, 0.12);
+    fillStroke(ctx, '#b4733a');
+    ctx.beginPath();
+    ctx.moveTo(0.42, -0.86);
+    ctx.quadraticCurveTo(0.92, 0, 0.42, 0.86);
+    ctx.save();
+    ctx.lineWidth *= 3.4;
+    ctx.stroke();
+    ctx.lineWidth /= 2;
+    ctx.strokeStyle = '#d6dde8';
+    ctx.stroke();
+    ctx.restore();
+    ctx.save();
+    ctx.lineWidth *= 0.7;
+    ctx.beginPath();
+    ctx.moveTo(0.42, -0.86); ctx.lineTo(-0.2, 0); ctx.lineTo(0.42, 0.86);
+    ctx.stroke();
+    ctx.restore();
+    ctx.beginPath();
+    ctx.moveTo(1.02, 0); ctx.lineTo(0.74, -0.16); ctx.lineTo(0.74, 0.16);
+    ctx.closePath();
+    fillStroke(ctx, '#ffd24a');
+    ctx.restore();
+  },
+  /** Planks nailed across a door (sawmill door bonus). */
+  planks(ctx) {
+    rr(ctx, -0.62, -0.92, 1.24, 1.84, 0.2);
+    fillStroke(ctx, '#8a5a34');
+    for (const [y, a] of [[-0.36, -0.16], [0.36, 0.16]]) {
+      ctx.save();
+      ctx.translate(0, y);
+      ctx.rotate(a);
+      rr(ctx, -0.9, -0.17, 1.8, 0.34, 0.08);
+      fillStroke(ctx, '#e0a05a');
+      ctx.fillStyle = INK;
+      for (const x of [-0.66, 0.66]) { ctx.beginPath(); ctx.arc(x, 0, 0.06, 0, Math.PI * 2); ctx.fill(); }
+      ctx.restore();
+    }
+  },
   moon(ctx) {
     ctx.save();
     ctx.beginPath();

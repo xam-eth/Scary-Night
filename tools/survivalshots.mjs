@@ -10,7 +10,12 @@
  *   node tools/survivalshots.mjs --tag=before       # file prefix
  *
  * The playfield metric ignores the top 120 and bottom 90 CSS pixels so the
- * HUD chrome does not inflate or hide the result. */
+ * HUD chrome does not inflate or hide the result.
+ *
+ * The adaptive quality ladder reacts to wall-clock frame time, which in a
+ * software-WebGL browser depends on machine load; captures therefore pin the
+ * top tier (override with --quality=N) so two runs are comparable.
+ * --no-progression skips the building-level / Hunter captures. */
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
@@ -67,13 +72,15 @@ await page.waitForFunction(() => {
   const state = window.__survEnemy?.readiness?.();
   return !!(state && (state.ready || state.failed.length));
 }, { timeout: 90000, polling: 100 }).catch(() => {});
-await page.evaluate(() => {
+await page.evaluate((tier) => {
   const g = window.__LN;
+  g.setQuality(tier == null ? 99 : tier);
+  g._frameCheck = -Infinity;          // no adaptive steps during the captures
   g.survival.restart();
   window.__origUpdate = g.update;
   g.update = () => {};
   g.render();
-});
+}, args.quality == null ? null : Number(args.quality));
 
 async function luma(file) {
   const img = await loadImage(fs.readFileSync(file));
@@ -98,7 +105,8 @@ async function shot(name, prepare) {
   const file = path.join(OUT, `${TAG}${name}.png`);
   await page.screenshot({ path: file, type: 'png' });
   const metrics = await luma(file);
-  results.push({ name, file: path.relative(ROOT, file), ...metrics, state });
+  const quality = await page.evaluate(() => window.__LN.quality);
+  results.push({ name, file: path.relative(ROOT, file), ...metrics, quality, state });
   console.log(`  SHOT ${name.padEnd(14)} luma=${metrics.meanLuma} dark=${metrics.darkPct}% ${JSON.stringify(state)}`);
 }
 
@@ -195,6 +203,92 @@ await shot('night-door', `(() => {
   g.render();
   return { t: +m.elapsed.toFixed(1), doorHp: Math.round(door.hp), target: !!m.currentTarget, guardsAtDoor: m.guards.filter((gd) => gd.post && gd.post.doorId === 'frontDoor').length, kills: m.nightStats.kills, zoom: +g.renderer.cam.zoom.toFixed(3) };
 })()`);
+
+// Progression: building levels + the Hunter's track. A real Night 2 with a
+// pump, a sawmill and a shelter standing (hearth kept fed so the capture is
+// about the UI, not the balance), then the dawn reward, sheets and pennants.
+if (!args['no-progression']) {
+  const finishJob = () => {
+    const g = window.__LN;
+    let n = 0;
+    while (g.survival.builderJob && n++ < 3000) window.__origUpdate.call(g, 1 / 60);
+  };
+  await shot('prog-reward', `(() => {
+    const g = window.__LN;
+    const m = g.survival;
+    m.restart();
+    let steps = 0;
+    while (m.phase === 'night' && steps++ < 6000) { m.oil = Math.max(m.oil, 40); window.__origUpdate.call(g, 1 / 60); }
+    const collect0 = g.ui.find((b) => b.label === 'survival:COLLECT');
+    if (collect0) collect0.onClick(); else m.ackRewards();
+    m.perapianLevel = 3; m.refreshFireplace(true);
+    m.oil = 160; m.wood = 160;
+    const rooms = m.buildableRooms();
+    const plan = [['extractor', rooms[0]], ['sawmill', rooms[1]], ['shelter', rooms[2]]];
+    for (const [type, room] of plan) { if (room && m.startBuild(type, room.id)) (${finishJob})(); }
+    m.startNight();
+    steps = 0;
+    while (m.phase === 'night' && steps++ < 6000) { m.oil = Math.max(m.oil, 60); window.__origUpdate.call(g, 1 / 60); }
+    (${stepFrames})(30);
+    return { phase: m.phase, day: m.day, rewards: m.lastRewards, buildings: { ...m.buildings }, ui: g.ui.map((b) => b.label).slice(0, 8) };
+  })()`);
+  await shot('prog-built', `(() => {
+    const g = window.__LN;
+    const m = g.survival;
+    const collect = g.ui.find((b) => b.label === 'survival:COLLECT');
+    if (collect) collect.onClick();
+    m.oil = 120; m.wood = 120;
+    (${stepFrames})(20);
+    const pump = Object.keys(m.buildings).find((r) => m.buildings[r] === 'extractor');
+    const bubble = g.ui.find((b) => b.label === 'survival:select:' + pump);
+    if (bubble) bubble.onClick();
+    (${stepFrames})(30);
+    return { pump, selected: m.dayFocus, ui: g.ui.map((b) => b.label).filter((l) => /UPGRADE|select:/.test(l)) };
+  })()`);
+  await shot('prog-upgrading', `(() => {
+    const g = window.__LN;
+    const m = g.survival;
+    const btn = g.ui.find((b) => /^survival:UPGRADE extractor LV2$/.test(b.label) && !b.disabled);
+    if (btn) btn.onClick();
+    (${stepFrames})(150);
+    return { clicked: btn ? btn.label : null, job: m.builderJob };
+  })()`);
+  await shot('prog-hunter', `(() => {
+    const g = window.__LN;
+    const m = g.survival;
+    (${finishJob})();
+    (${stepFrames})(5);
+    const bubble = g.ui.find((b) => b.label === 'survival:select:hunter');
+    if (bubble) bubble.onClick();
+    (${stepFrames})(30);
+    return { selected: m.dayFocus, levels: { ...m.buildingLevels }, ui: g.ui.map((b) => b.label).filter((l) => /UPGRADE|hunter/.test(l)) };
+  })()`);
+  await shot('prog-levels', `(() => {
+    const g = window.__LN;
+    const m = g.survival;
+    const btn = g.ui.find((b) => /^survival:UPGRADE HUNTER LV2$/.test(b.label) && !b.disabled);
+    if (btn) btn.onClick();
+    (${finishJob})();
+    const pump = Object.keys(m.buildings).find((r) => m.buildings[r] === 'extractor');
+    const mill = Object.keys(m.buildings).find((r) => m.buildings[r] === 'sawmill');
+    m.oil = 120; m.wood = 120;
+    if (m.startBuild('upgrade', pump)) (${finishJob})();
+    if (m.startBuild('upgrade', mill)) (${finishJob})();
+    // look at the Lv3 pump: bigger model + two gold pennants
+    m.dayFocus = pump; m.selectedRoom = pump;
+    (${stepFrames})(60);
+    return { hunter: m.hunterLevel, levels: { ...m.buildingLevels }, hp: g.player.blood + '/' + g.player.bloodMax, door: m.doorHpBonus(), focus: m.dayFocus };
+  })()`);
+  await shot('prog-night', `(() => {
+    const g = window.__LN;
+    const m = g.survival;
+    m.startNight();
+    let steps = 0;
+    while (m.elapsed < 14 && m.phase === 'night' && steps++ < 3000) window.__origUpdate.call(g, 1 / 60);
+    g.render();
+    return { t: +m.elapsed.toFixed(1), hunter: m.hunterLevel, hp: Math.round(g.player.blood) + '/' + g.player.bloodMax, pumped: +(m.nightStats.pumped || 0).toFixed(2), kills: m.nightStats.kills };
+  })()`);
+}
 
 fs.writeFileSync(path.join(OUT, `${TAG}metrics.json`), `${JSON.stringify({ capturedAt: new Date().toISOString(), results, pageErrors }, null, 2)}\n`);
 console.log(`pageErrors=${pageErrors.length}`);

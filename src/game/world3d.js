@@ -745,6 +745,46 @@ class World3DRuntime {
     return group;
   }
 
+  /**
+   * A levelled building reads from the camera: it grows per level and
+   * flies a pennant (Lv2 blue, Lv3 gold with a second flag).
+   */
+  _setSurvivalBuildingLevel(group, level) {
+    group.userData.level = level;
+    // ×1.3 at Lv1 so a building reads at the day camera's zoom; +0.18 a level
+    group.scale.setScalar(1.3 + 0.18 * (level - 1));
+    const old = group.getObjectByName('survival-building-pennant');
+    if (old) {
+      group.remove(old);
+      old.traverse((item) => { if (item.isMesh) { item.geometry.dispose(); item.material.dispose(); } });
+    }
+    if (level < 2) return;
+    const pennant = new THREE.Group();
+    pennant.name = 'survival-building-pennant';
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, 64, 6),
+      new THREE.MeshStandardMaterial({ color: 0x4b3424, roughness: 0.9 }));
+    pole.position.set(0, 32, 0);
+    pole.castShadow = true;
+    pennant.add(pole);
+    const color = level >= 3 ? 0xffc93a : 0x4aa8ff;
+    const flags = level >= 3 ? 2 : 1;
+    for (let i = 0; i < flags; i++) {
+      const shape = new THREE.Shape();
+      shape.moveTo(0, 0); shape.lineTo(34, -9); shape.lineTo(0, -18); shape.closePath();
+      const flag = new THREE.Mesh(new THREE.ShapeGeometry(shape),
+        new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.35, roughness: 0.6, side: THREE.DoubleSide }));
+      flag.position.set(1.5, 63 - i * 21, 0);
+      flag.castShadow = true;
+      pennant.add(flag);
+    }
+    // screen-right of the model (+x −z is sideways in the iso view), so the
+    // day bubble above the building never hides it
+    pennant.position.set(50, 0, -50);
+    pennant.rotation.y = Math.PI / 4;
+    pennant.traverse((item) => { if (item.isMesh) item.userData.survivalBuilding = group.userData.type; });
+    group.add(pennant);
+  }
+
   _makeSurvivalRadiusRing() {
     const geometry = new THREE.RingGeometry(0.984, 1, 128);
     const material = new THREE.MeshBasicMaterial({
@@ -1112,6 +1152,8 @@ class World3DRuntime {
       }
       mesh.visible = true;
       mesh.position.set(room.x + room.w / 2 + 48, 0, room.y + room.h / 2 + 24);
+      const level = mode.buildingLevel ? mode.buildingLevel(roomId) : 1;
+      if (mesh.userData.level !== level) this._setSurvivalBuildingLevel(mesh, level);
     }
     for (const [roomId, mesh] of this.survivalBuildingMeshes) if (!activeBuildings.has(roomId)) mesh.visible = false;
 

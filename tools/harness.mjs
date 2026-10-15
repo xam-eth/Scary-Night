@@ -793,15 +793,159 @@ async function runSurvivalMilestone() {
     const finished = queued && waitForBuilder();
     economyBuilt.push({ type, room: room && room.id, queued, finished });
   }
+  // the shelter houses its survivor as soon as it stands (tonight's guard)
+  const survivorsAtBuild = economyMode.survivors;
   economyMode.phase = 'night';
   economyMode.day = 1;
   economyMode.elapsed = 0;
   economyMode.oilBurned = 0;
-  economyMode.nightStats = { kills: 0, hits: 0, damageToWalls: 0 };
+  economyMode.nightStats = { kills: 0, hits: 0, damageToWalls: 0, drained: 0, pumped: 0 };
+  // the pump pours its oil into the stock during the night, not at dawn
+  const oilBeforeNight = economyMode.oil;
+  for (let t = 0; t < economyMode.nightDuration * 60; t++) economyMode.updateLightFuel(step);
+  const pumpedOvernight = economyMode.nightStats.pumped;
+  const burnedOvernight = economyMode.oilBurned;
+  const purseDelta = economyMode.oil - oilBeforeNight;
   economyMode.completeNight();
   const economyPass = economyBuilt.length === 3 && economyBuilt.every((row) => row.queued && row.finished)
-    && economyMode.lastRewards.oil === 20 && economyMode.lastRewards.wood === 21 && economyMode.survivors === 3;
-  console.log(`  economy: ${JSON.stringify(economyBuilt)} → +${economyMode.lastRewards.oil} Oil, +${economyMode.lastRewards.wood} Wood, Survivors ${economyMode.survivors} (${economyPass ? 'PASS' : 'FAIL'})`);
+    && survivorsAtBuild === 3 && economyMode.survivors === 3
+    && Math.abs(pumpedOvernight - 6) < 0.01 && Math.abs(purseDelta - (pumpedOvernight - burnedOvernight)) < 0.01
+    && economyMode.lastRewards.pumped === 6 && economyMode.lastRewards.survivors === 0
+    && economyMode.lastRewards.oil === 14 && economyMode.lastRewards.wood === 21;
+  console.log(`  economy: ${JSON.stringify(economyBuilt)} → survivors ${survivorsAtBuild} at build, pumped ${pumpedOvernight.toFixed(2)} Oil overnight (purse ${purseDelta >= 0 ? '+' : ''}${purseDelta.toFixed(2)} after burn ${burnedOvernight.toFixed(2)}), dawn +${economyMode.lastRewards.oil} Oil, +${economyMode.lastRewards.wood} Wood, Survivors ${economyMode.survivors} (${economyPass ? 'PASS' : 'FAIL'})`);
+
+  // ---- progression: building levels + the Hunter's track (no skill cards) ----
+  const progressionChecks = [];
+  const progCheck = (name, ok, detail) => {
+    progressionChecks.push(!!ok);
+    console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} (${detail})`);
+  };
+  {
+    const mode = survivalGame.survival;
+    mode.restart();
+    resetControls();
+    mode.phase = 'day'; mode.day = 2;
+    survivalGame.screen = 'playing'; survivalGame.uiPanel = 'survival-day';
+    mode.perapianLevel = 3;
+    mode.refreshFireplace(true);
+    mode.oil = 150; mode.wood = 150;
+    const rooms = mode.buildableRooms();
+    const [pumpRoom, millRoom, shelterRoom] = rooms;
+    mode.startBuild('extractor', pumpRoom.id); waitForBuilder();
+    const lv1 = mode.buildingLevel(pumpRoom.id);
+    const cost2 = mode.upgradeCost(pumpRoom.id);
+    const purse = { oil: mode.oil, wood: mode.wood };
+    const queued = mode.startBuild('upgrade', pumpRoom.id);
+    const paid = purse.oil - mode.oil === 4 && purse.wood - mode.wood === 12;
+    const job = mode.builderJob ? { ...mode.builderJob } : null;
+    // one builder: nothing else starts while the pump is being raised
+    const lockBuild = mode.startBuild('sawmill', millRoom.id);
+    const lockHunter = mode.startBuild('hunter');
+    const lockOther = mode.startUpgrade(pumpRoom.id);
+    const done2 = waitForBuilder();
+    const lv2 = mode.buildingLevel(pumpRoom.id);
+    const cost3 = mode.upgradeCost(pumpRoom.id);
+    mode.startBuild('upgrade', pumpRoom.id); waitForBuilder();
+    const lv3 = mode.buildingLevel(pumpRoom.id);
+    const atMax = mode.upgradeCost(pumpRoom.id) === null && mode.startUpgrade(pumpRoom.id) === false;
+    progCheck('building levels: queued, paid and finished through the one builder; Lv3 is the cap',
+      lv1 === 1 && queued && paid && job && job.kind === 'upgrade' && job.targetLevel === 2
+        && !lockBuild && !lockHunter && !lockOther && done2 && lv2 === 2 && lv3 === 3 && atMax
+        && cost2 && cost2.oil === 4 && cost2.wood === 12 && cost3 && cost3.oil === 6 && cost3.wood === 16,
+      `pump Lv${lv1}→${lv2}→${lv3}, cost Lv2 ${cost2 && `${cost2.oil}/${cost2.wood}`}, Lv3 ${cost3 && `${cost3.oil}/${cost3.wood}`}, queue lock build=${lockBuild} hunter=${lockHunter} upgrade=${lockOther}, max locked=${atMax}`);
+
+    // the pump's level sets the oil poured in overnight
+    const pumpNight = mode.pumpPerNight();
+    mode.phase = 'night';
+    const nightUpgrade = mode.startBuild('upgrade', pumpRoom.id) || mode.startBuild('hunter') || mode.startUpgrade(pumpRoom.id);
+    mode.nightStats.pumped = 0;
+    for (let t = 0; t < mode.nightDuration * 60; t++) mode.updateLightFuel(step);
+    const pumpedLv3 = mode.nightStats.pumped;
+    progCheck('Lv3 pump pours 14 Oil over one night; nothing is bought at night',
+      pumpNight === 14 && Math.abs(pumpedLv3 - 14) < 0.01 && nightUpgrade === false,
+      `pumpPerNight ${pumpNight}, pumped ${pumpedLv3.toFixed(2)}, night purchase=${nightUpgrade}`);
+    mode.phase = 'day';
+
+    // shelters house survivors at once: Lv1 1, Lv2 2, Lv3 3 → guards
+    const s0 = mode.survivors;
+    mode.startBuild('shelter', shelterRoom.id); waitForBuilder();
+    const s1 = mode.survivors;
+    mode.startBuild('upgrade', shelterRoom.id); waitForBuilder();
+    const s2 = mode.survivors;
+    mode.startBuild('upgrade', shelterRoom.id); waitForBuilder();
+    const s3 = mode.survivors;
+    progCheck('shelter levels house 1 / 2 / 3 survivors as soon as they stand; each one guards',
+      s1 - s0 === 1 && s2 - s0 === 2 && s3 - s0 === 3 && mode.guards.length === Math.min(8, s3),
+      `survivors ${s0} → ${s1} → ${s2} → ${s3}, guards ${mode.guards.length}`);
+
+    // sawmill planks: every outer door +10% (Lv1) → +20% (Lv2), full by day
+    const doors = survivalGame.mansion.entrances.filter((e) => e.exterior && e.kind === 'door');
+    const gate = mode.mainGate();
+    const expect = (bonus) => doors.every((e) => e.hpMax === Math.round(e.baseHpMax * (1 + bonus)) + (e === gate && mode.gateBuilt ? mode.tuning.gateHpBonus : 0) && e.hp === e.hpMax);
+    const base = doors.map((e) => e.hpMax).join('/');
+    mode.startBuild('sawmill', millRoom.id); waitForBuilder();
+    const mill1 = expect(0.1);
+    const after1 = doors.map((e) => e.hpMax).join('/');
+    mode.startBuild('upgrade', millRoom.id); waitForBuilder();
+    const mill2 = expect(0.2);
+    const after2 = doors.map((e) => e.hpMax).join('/');
+    progCheck('sawmill planks raise every outer door +10% at Lv1, +20% at Lv2 (doors full by day)',
+      doors.length > 0 && mill1 && mill2 && mode.doorHpBonus() === 0.2,
+      `door max HP ${base} → ${after1} → ${after2}`);
+
+    // the Hunter's own track: Lv2 = 32 bolt damage / 120 HP, healed on completion
+    survivalGame.player.blood = 40;
+    const hunterCost = mode.hunterUpgradeCost();
+    const hPurse = { oil: mode.oil, wood: mode.wood };
+    const hQueued = mode.startBuild('hunter');
+    const hPaid = hPurse.oil - mode.oil === 14 && hPurse.wood - mode.wood === 8;
+    const hDone = waitForBuilder();
+    survivalGame.player.weapon = 'shot';
+    survivalGame.player.swingAngle = 0;
+    const boltsBefore = survivalGame.bolts.length;
+    survivalGame.playerAttackHit(survivalGame.player);
+    const bolt = survivalGame.bolts[survivalGame.bolts.length - 1];
+    const boltDamage = survivalGame.bolts.length > boltsBefore && bolt ? bolt.damage : null;
+    survivalGame.bolts.length = 0;
+    progCheck('Hunter Lv2: bolt damage 26 → 32, health 100 → 120, healed when the training ends',
+      hunterCost && hQueued && hPaid && hDone && mode.hunterLevel === 2 && boltDamage === 32
+        && survivalGame.player.bloodMax === 120 && survivalGame.player.blood === 120,
+      `cost ${hunterCost && `${hunterCost.oil}/${hunterCost.wood}`}, Lv${mode.hunterLevel}, bolt ${boltDamage}, HP ${survivalGame.player.blood}/${survivalGame.player.bloodMax}`);
+
+    // persistence: levels survive a reload; an old save without levels is Lv1
+    mode._persist(true);
+    const saved = JSON.parse(window.localStorage.getItem('lastnight.save.v1') || 'null');
+    const reloaded = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+    const rs = reloaded.survival;
+    const levelsKept = rs.buildingLevel(pumpRoom.id) === 3 && rs.buildingLevel(shelterRoom.id) === 3
+      && rs.buildingLevel(millRoom.id) === 2 && rs.hunterLevel === 2 && reloaded.player.bloodMax === 120
+      && rs.doorHpBonus() === 0.2;
+    const legacySave = JSON.parse(JSON.stringify(saved));
+    delete legacySave.survival.buildingLevels;
+    delete legacySave.survival.hunterLevel;
+    window.localStorage.setItem('lastnight.save.v1', JSON.stringify(legacySave));
+    const oldGame = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+    const os = oldGame.survival;
+    const oldDefaults = Object.keys(os.buildings).length === 3
+      && Object.keys(os.buildings).every((roomId) => os.buildingLevel(roomId) === 1)
+      && os.hunterLevel === 1 && oldGame.player.bloodMax === 100;
+    // a mid-night reload keeps the Hunter's absolute health on his own bar
+    window.localStorage.setItem('lastnight.save.v1', JSON.stringify(saved));
+    const nightGame = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+    const ns = nightGame.survival;
+    ns.startNight();
+    for (let i = 0; i < 90; i++) nightGame.update(step);
+    nightGame.player.blood = 60;
+    ns._persist(true);
+    const nightReload = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+    const midNightHp = `${Math.round(nightReload.player.blood)}/${nightReload.player.bloodMax}`;
+    progCheck('save/reload keeps building levels + Hunter level; old saves load as Lv1; a mid-night reload keeps 60/120 HP',
+      saved && saved.survival && saved.survival.hunterLevel === 2 && saved.survival.buildingLevels
+        && levelsKept && oldDefaults && nightReload.survival.phase === 'night' && midNightHp === '60/120',
+      `saved levels ${JSON.stringify(saved && saved.survival && saved.survival.buildingLevels)}, hunter ${saved && saved.survival && saved.survival.hunterLevel}; old save → ${Object.keys(os.buildings).map((r) => `${os.buildings[r]} Lv${os.buildingLevel(r)}`).join(', ')}, Hunter Lv${os.hunterLevel}; mid-night ${midNightHp}`);
+    window.localStorage.removeItem('lastnight.save.v1');
+  }
+  const progressionPass = progressionChecks.length === 6 && progressionChecks.every(Boolean);
 
   console.log(`  idle Night 3: ${idle.nightThree.peakEnemies} peak enemies / ${idle.nightThree.peakBreakers} Breakers, ${idle.nightThree.kills} kills, ${idle.nightThree.wallDamage} wall damage, gate ${idle.nightThree.gateHp} HP, Hunter ${idle.nightThree.playerHp} HP; ${idle.phase}`);
   console.log(`  builder Night 3: ${builder.nightThree.peakEnemies} peak enemies / ${builder.nightThree.peakBreakers} Breakers, ${builder.nightThree.kills} kills, ${builder.nightThree.wallDamage} wall damage, gate ${builder.nightThree.gateHp} HP, Hunter ${builder.nightThree.playerHp} HP; Perapian Lv${builder.perapianLevel}, survivors ${builder.survivors}, buildings ${builder.buildings.join(',') || 'none'}, gateBuilt=${builder.gateBuilt}; ${builder.phase}`);
@@ -815,7 +959,7 @@ async function runSurvivalMilestone() {
     && hunterAutoShot && hunterRealLos && hunterSkill
     && idleLoses && builder.complete && builder.perapianLevel === 3
     && builder.queueLockVerified && builder.sawmillBuilt && builder.gateBuilt && builder.shelterBuilt
-    && saveProgressPass && economyPass && builder.upgrades.map((item) => item.level).join(',') === '1,2,3';
+    && saveProgressPass && economyPass && progressionPass && builder.upgrades.map((item) => item.level).join(',') === '1,2,3';
   console.log(`  ${pass ? 'PASS' : 'FAIL'}  three-day loop, Perapian Lv1→Lv3, one builder queue, idle loses / engaged builder wins`);
   if (!pass) process.exitCode = 1;
   window.localStorage.removeItem('lastnight.save.v1');

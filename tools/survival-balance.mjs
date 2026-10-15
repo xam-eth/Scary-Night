@@ -10,8 +10,10 @@
  *   flare    never moves, never builds, taps Flare on clusters
  *   fire-builder  active defence, but only ever upgrades the Perapian
  *
- *   node tools/survival-balance.mjs [--seeds=3] [--duration=72] [--bots=idle,active,builder] [--json=out.json]
+ *   node tools/survival-balance.mjs [--seeds=3] [--duration=72] [--bots=idle,active,builder] [--json=out.json] [--economy]
+ *   bots: idle, active, flare, builder, passive-builder, fire-builder, hunter-builder
  *
+ * --economy prints every day decision with the purse before/after.
  * Diagnostics (print and exit): --debug (6 s snapshots of enemy states/doors),
  * --layout (rooms + entrances), --navprobe (hearth flow-field distances per
  * door/room), --cellprobe=x,y (nav cells/solids around a point),
@@ -107,6 +109,24 @@ function debugDump(game) {
   console.log(`  t=${mode.elapsed.toFixed(1)} oil=${mode.oil.toFixed(1)} ${doors}\n    ${JSON.stringify(rows)}\n    ${sample}`);
 }
 
+/** --economy: print every day decision with the purse before and after. */
+function traceEconomy(mode, kind, seed) {
+  const purse = () => `oil=${Math.floor(mode.oil)} wood=${Math.floor(mode.wood)} surv=${mode.survivors}`;
+  const wrap = (name, label) => {
+    const orig = mode[name].bind(mode);
+    mode[name] = (...a) => {
+      const before = purse();
+      const ok = orig(...a);
+      if (ok) console.log(`  [${kind} s${seed}] D${mode.day} ${label(...a)}  ${before} -> ${purse()}`);
+      return ok;
+    };
+  };
+  wrap('startBuild', (type, room) => `build ${type}${room ? '@' + room : ''}`);
+  if (mode.startUpgrade) wrap('startUpgrade', (room) => `upgrade @${room}`);
+  if (mode.startHunterUpgrade) wrap('startHunterUpgrade', () => 'upgrade hunter');
+  wrap('startNight', () => 'START NIGHT');
+}
+
 function runOne(kind, seed) {
   reseed(seed);
   win.localStorage._d = {};
@@ -115,6 +135,7 @@ function runOne(kind, seed) {
   game.input.layout(390, 844);
   const mode = game.survival;
   mode.restart();
+  if (args.economy) traceEconomy(mode, kind, seed);
   const nights = [];
   const step = 1 / 60;
   let guard = 0;
@@ -123,8 +144,8 @@ function runOne(kind, seed) {
   const t0 = performance.now();
   while (guard++ < 60 * 60 * 30) {
     if (mode.phase === 'night' && !game.uiPanel) {
-      if (!night) night = { day: mode.day, spawned: 0, peakAlive: 0, peakFeeders: 0, minHp: 100, seen: new Set() };
-      if (kind === 'active' || kind === 'builder' || kind === 'fire-builder') botNight(game, state, { ROOM, ISO_CAMERA });
+      if (!night) night = { day: mode.day, spawned: 0, peakAlive: 0, peakFeeders: 0, minHp: game.player.bloodMax, hpMax: game.player.bloodMax, hunter: mode.hunterLevel || 1, seen: new Set() };
+      if (kind === 'active' || kind === 'builder' || kind === 'fire-builder' || kind === 'hunter-builder') botNight(game, state, { ROOM, ISO_CAMERA });
       else if (kind === 'flare') {
         // stands still, only taps Flare when three or more are in reach
         release(game);
@@ -157,7 +178,7 @@ function runOne(kind, seed) {
       release(game);
     }
     if (mode.phase === 'day') {
-      botDay(game, kind === 'builder' || kind === 'passive-builder' ? 'builder' : kind === 'fire-builder' ? 'fire' : 'idle');
+      botDay(game, kind === 'builder' || kind === 'passive-builder' ? 'builder' : kind === 'fire-builder' ? 'fire' : kind === 'hunter-builder' ? 'hunter' : 'idle');
       game.update(step);
       continue;
     }
@@ -166,7 +187,8 @@ function runOne(kind, seed) {
   return {
     kind, seed, complete: mode.phase === 'complete', phase: mode.phase,
     failure: mode.phase === 'failed' ? mode.failureReason : null,
-    perapian: mode.perapianLevel, buildings: { ...mode.buildings }, gate: mode.gateBuilt,
+    perapian: mode.perapianLevel, hunter: mode.hunterLevel || 1,
+    buildings: { ...mode.buildings }, buildingLevels: { ...(mode.buildingLevels || {}) }, gate: mode.gateBuilt,
     nights, ms: Math.round(performance.now() - t0),
   };
 }
@@ -272,8 +294,9 @@ for (const kind of BOTS) {
   for (let i = 0; i < SEEDS; i++) {
     const r = runOne(kind, 20261012 + i * 7919);
     results.push(r);
-    const line = r.nights.map((n) => `N${n.day}:${n.result === 'OK' ? 'ok' : 'FAIL'} sp${n.spawned} pk${n.peakAlive} k${n.kills} feed${n.peakFeeders} drain${n.drained} oil${n.oil} hp${n.minHp} br${n.breaches}${n.result === 'OK' ? '' : ' @' + n.elapsed + 's ' + n.result.slice(5)}`).join(' | ');
-    console.log(`${kind.padEnd(8)} seed${i} ${r.complete ? 'WIN ' : 'LOSS'} Lv${r.perapian} ${line} (${r.ms}ms)`);
+    const line = r.nights.map((n) => `N${n.day}:${n.result === 'OK' ? 'ok' : 'FAIL'} H${n.hunter} sp${n.spawned} pk${n.peakAlive} k${n.kills} feed${n.peakFeeders} drain${n.drained} oil${n.oil} hp${n.minHp}/${n.hpMax} br${n.breaches}${n.result === 'OK' ? '' : ' @' + n.elapsed + 's ' + n.result.slice(5)}`).join(' | ');
+    const levels = Object.entries(r.buildings).map(([roomId, type]) => `${type}${r.buildingLevels[roomId] || 1}`).join(',') || '-';
+    console.log(`${kind.padEnd(8)} seed${i} ${r.complete ? 'WIN ' : 'LOSS'} Lv${r.perapian} H${r.hunter} [${levels}${r.gate ? ',gate' : ''}] ${line} (${r.ms}ms)`);
   }
 }
 const summary = {};

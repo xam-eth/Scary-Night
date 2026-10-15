@@ -3,7 +3,7 @@
  * Interact key for Flare); nothing here reaches into enemy internals.
  *
  *   botNight(game, state, { ROOM, ISO_CAMERA })  active defender, one frame
- *   botDay(game, plan)                           'idle' | 'fire' | 'builder' day turn
+ *   botDay(game, plan)                           'idle' | 'fire' | 'hunter' | 'builder' day turn
  */
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -87,17 +87,35 @@ export function botDay(game, plan) {
     if (mode.perapianLevel < 3 && mode.startBuild('perapian')) return false;
     return mode.startNight();
   }
+  if (plan === 'hunter') {
+    // fighter: the Hunter's own track first, then the Perapian, no rooms
+    if (mode.builderJob) return false;
+    if (mode.hunterLevel < 3 && mode.startBuild('hunter')) return false;
+    if (mode.perapianLevel < 3 && mode.startBuild('perapian')) return false;
+    return mode.startNight();
+  }
   if (plan !== 'builder') return mode.startNight();
   if (mode.builderJob) return false;
   const rooms = mode.buildableRooms();
-  const counts = Object.values(mode.buildings).reduce((m, t) => { m[t] = (m[t] || 0) + 1; return m; }, {});
+  const built = Object.entries(mode.buildings);
+  const counts = built.reduce((m, [, t]) => { m[t] = (m[t] || 0) + 1; return m; }, {});
+  const lastDay = mode.day >= 3;
   const tryBuild = (type, roomId) => mode.startBuild(type, roomId);
+  // raise the first building of a type to Lv2 (the builder's one queue)
+  const tryLevel = (type) => {
+    const row = built.find(([roomId, t]) => t === type && mode.buildingLevel(roomId) < 2);
+    return !!row && mode.startBuild('upgrade', row[0]);
+  };
   if (mode.perapianLevel < 2 && tryBuild('perapian')) return false;
+  // the pump pours oil in every night, so it pays back even when bought late
   if (!counts.extractor && rooms[0] && tryBuild('extractor', rooms[0].id)) return false;
   if (!mode.gateBuilt && tryBuild('gate')) return false;
-  if (!counts.sawmill && rooms[0] && tryBuild('sawmill', rooms[0].id)) return false;
+  // a sawmill pays at dawn: never worth buying on the last day
+  if (!counts.sawmill && !lastDay && rooms[0] && tryBuild('sawmill', rooms[0].id)) return false;
   if (mode.perapianLevel < 3 && tryBuild('perapian')) return false;
-  if ((counts.extractor || 0) < 2 && rooms[0] && tryBuild('extractor', rooms[0].id)) return false;
+  if (mode.hunterLevel < 2 && tryBuild('hunter')) return false;
+  if (tryLevel('extractor')) return false;
   if (!counts.shelter && rooms[0] && tryBuild('shelter', rooms[0].id)) return false;
+  if ((counts.extractor || 0) < 2 && rooms[0] && tryBuild('extractor', rooms[0].id)) return false;
   return mode.startNight();
 }

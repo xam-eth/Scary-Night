@@ -1743,7 +1743,9 @@ export class Game {
     if (this.mode === 'survival') {
       this.spawnWeaponFx(player, tool);
       if (tool.kind === 'ranged') {
-        this.spawnBolt(player, player.swingAngle || player.angle || 0, tool);
+        // the Hunter's level sets the bolt (Survival's own track, bought by day)
+        const damage = this.survival && this.survival.hunterDamage ? this.survival.hunterDamage() : tool.damage;
+        this.spawnBolt(player, player.swingAngle || player.angle || 0, { ...tool, damage });
         this.stats.shotsFired = (this.stats.shotsFired || 0) + 1;
       }
       return;
