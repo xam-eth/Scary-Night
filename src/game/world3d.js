@@ -735,6 +735,54 @@ class World3DRuntime {
       add(new THREE.TorusGeometry(14, 2, 5, 16), iron, 0, 27, 8, Math.PI / 2, 0, 0);
       add(new THREE.BoxGeometry(8, 26, 8), woodLight, -25, 13, -10);
       add(new THREE.BoxGeometry(8, 26, 8), woodLight, 25, 13, -10);
+    } else if (type === 'tower') {
+      // An open watchtower: legs, a railed deck and a ballista on a swivel
+      // that turns to what it shoots (no roof, so the camera sees it aim).
+      const stone = new THREE.MeshStandardMaterial({ color: 0x8d867b, roughness: 0.95, flatShading: true });
+      add(new THREE.CylinderGeometry(33, 37, 10, 8), stone, 0, 5, 0);
+      for (const x of [-21, 21]) for (const z of [-21, 21]) add(new THREE.BoxGeometry(7, 72, 7), woodLight, x, 44, z);
+      for (const face of [-1, 1]) {
+        // X-braces on all four faces
+        add(new THREE.BoxGeometry(4, 56, 3), wood, 0, 44, face * 21, 0, 0, 0.62);
+        add(new THREE.BoxGeometry(4, 56, 3), wood, 0, 44, face * 21, 0, 0, -0.62);
+        add(new THREE.BoxGeometry(3, 56, 4), wood, face * 21, 44, 0, 0.62, 0, 0);
+        add(new THREE.BoxGeometry(3, 56, 4), wood, face * 21, 44, 0, -0.62, 0, 0);
+      }
+      add(new THREE.BoxGeometry(64, 6, 64), wood, 0, 82, 0);
+      for (const face of [-1, 1]) {
+        add(new THREE.BoxGeometry(64, 10, 4), woodLight, 0, 90, face * 30);
+        add(new THREE.BoxGeometry(4, 10, 64), woodLight, face * 30, 90, 0);
+      }
+      const yaw = new THREE.Group();
+      yaw.name = 'survival-tower-yaw';
+      yaw.position.set(0, 86, 0);
+      group.add(yaw);
+      const part = (geometry, material, parent, x, y, z, rx = 0, ry = 0, rz = 0) => {
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.position.set(x, y, z);
+        mesh.rotation.set(rx, ry, rz);
+        mesh.castShadow = true;
+        parent.add(mesh);
+        return mesh;
+      };
+      part(new THREE.CylinderGeometry(6, 8, 10, 8), iron, yaw, 0, 5, 0);
+      const stock = new THREE.Group();   // slides back on a shot (recoil)
+      stock.name = 'survival-tower-stock';
+      stock.position.set(0, 12, 0);
+      yaw.add(stock);
+      part(new THREE.BoxGeometry(9, 7, 46), wood, stock, 0, 0, 4);
+      part(new THREE.BoxGeometry(28, 4, 5), iron, stock, -12, 1, 22, 0, 0.42, 0);
+      part(new THREE.BoxGeometry(28, 4, 5), iron, stock, 12, 1, 22, 0, -0.42, 0);
+      part(new THREE.BoxGeometry(46, 1.4, 1.4), new THREE.MeshStandardMaterial({ color: 0xe8dcc0, roughness: 0.7 }), stock, 0, 1, 15);
+      const loaded = new THREE.Group();  // hidden for a moment after each shot
+      loaded.name = 'survival-tower-bolt';
+      part(new THREE.CylinderGeometry(1.8, 1.8, 40, 6), woodLight, loaded, 0, 0, 0, Math.PI / 2, 0, 0);
+      part(new THREE.ConeGeometry(3.6, 9, 6), new THREE.MeshStandardMaterial({ color: 0xff8a3a, emissive: 0xff5a1a, emissiveIntensity: 0.6, roughness: 0.5 }), loaded, 0, 0, 24, Math.PI / 2, 0, 0);
+      loaded.position.set(0, 5, 8);
+      stock.add(loaded);
+      group.userData.yaw = yaw;
+      group.userData.stock = stock;
+      group.userData.loaded = loaded;
     } else {
       add(new THREE.BoxGeometry(70, 4, 54), wood, 0, 3, 0);
       for (const x of [-27, 27]) for (const z of [-20, 20]) add(new THREE.BoxGeometry(5, 40, 5), woodLight, x, 23, z);
@@ -778,11 +826,65 @@ class World3DRuntime {
       pennant.add(flag);
     }
     // screen-right of the model (+x −z is sideways in the iso view), so the
-    // day bubble above the building never hides it
-    pennant.position.set(50, 0, -50);
+    // day bubble above the building never hides it; a tower flies it from
+    // the screen-right corner of its deck
+    if (group.userData.type === 'tower') pennant.position.set(28, 86, -28);
+    else pennant.position.set(50, 0, -50);
     pennant.rotation.y = Math.PI / 4;
     pennant.traverse((item) => { if (item.isMesh) item.userData.survivalBuilding = group.userData.type; });
     group.add(pennant);
+  }
+
+  /** Height of the ballista on the deck of the tower that shot this bolt. */
+  _towerMuzzle(bolt) {
+    const roomId = bolt.owner && bolt.owner.roomId;
+    const mesh = roomId ? this.survivalBuildingMeshes.get(roomId) : null;
+    // deck swivel (86) + stock (12) + the loaded bolt (5), in model units
+    return mesh ? 103 * mesh.scale.y - 18 : 0;
+  }
+
+  /** The ballista swings to its tower's bearing and kicks back on a shot. */
+  _syncSurvivalTower(mesh, mode, roomId) {
+    const tower = (mode.towers || []).find((item) => item.roomId === roomId);
+    const { yaw, stock, loaded } = mesh.userData;
+    if (!yaw) return;
+    const aim = tower ? tower.aim : Math.PI / 2;
+    yaw.rotation.y = Math.PI / 2 - aim;
+    const kick = tower ? tower.shotT : 0;
+    if (stock) stock.position.z = -kick * 34;
+    if (loaded) loaded.visible = kick < 0.12;
+  }
+
+  /**
+   * By day the selected tower shows how far it reaches: a red ring on the
+   * floor (the genre's AoE circle), so where it stands reads as a choice.
+   */
+  _syncSurvivalTowerRing(game, mode) {
+    const roomId = mode.phase === 'day' && game.screen === 'playing' ? mode.dayFocus : null;
+    const show = !!(roomId && mode.buildings[roomId] === 'tower' && mode.buildingSpot);
+    if (!show && !this.survivalTowerRing) return;
+    if (!this.survivalTowerRing) {
+      const group = new THREE.Group();
+      group.name = 'survival-tower-range-3d';
+      const fill = new THREE.Mesh(new THREE.CircleGeometry(1, 72), new THREE.MeshBasicMaterial({
+        color: 0xff4a3a, transparent: true, opacity: 0.2, side: THREE.DoubleSide, depthWrite: false, toneMapped: false,
+      }));
+      const edge = new THREE.Mesh(new THREE.RingGeometry(0.952, 1, 96), new THREE.MeshBasicMaterial({
+        color: 0xff4433, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false, toneMapped: false,
+      }));
+      for (const item of [fill, edge]) { item.rotation.x = -Math.PI / 2; item.renderOrder = 3; item.frustumCulled = false; group.add(item); }
+      group.userData.edge = edge;
+      this.root.add(group);
+      this.survivalTowerRing = group;
+    }
+    const ring = this.survivalTowerRing;
+    ring.visible = show;
+    if (!show) return;
+    const spot = mode.buildingSpot(roomId, 'tower');
+    const range = (mode.towerStats(roomId).range) || 0;
+    ring.position.set(spot.x, 3.8, spot.y);
+    ring.scale.set(range, 1, range);
+    ring.userData.edge.material.opacity = 0.78 + 0.2 * (0.5 + 0.5 * Math.sin(game.time * 3));
   }
 
   _makeSurvivalRadiusRing() {
@@ -1151,11 +1253,15 @@ class World3DRuntime {
         this.root.add(mesh);
       }
       mesh.visible = true;
-      mesh.position.set(room.x + room.w / 2 + 48, 0, room.y + room.h / 2 + 24);
+      const spot = mode.buildingSpot ? mode.buildingSpot(roomId, type) : null;
+      if (spot) mesh.position.set(spot.x, 0, spot.y);
+      else mesh.position.set(room.x + room.w / 2 + 48, 0, room.y + room.h / 2 + 24);
       const level = mode.buildingLevel ? mode.buildingLevel(roomId) : 1;
       if (mesh.userData.level !== level) this._setSurvivalBuildingLevel(mesh, level);
+      if (type === 'tower') this._syncSurvivalTower(mesh, mode, roomId);
     }
     for (const [roomId, mesh] of this.survivalBuildingMeshes) if (!activeBuildings.has(roomId)) mesh.visible = false;
+    this._syncSurvivalTowerRing(game, mode);
 
     if (!this.survivalGateMesh) this.survivalGateMesh = this._makeSurvivalGate();
     const gate = mode.mainGate();
@@ -1380,6 +1486,7 @@ class World3DRuntime {
   /** Which mesh/trail recipe a bolt uses (pooled per look). */
   _boltLook(bolt) {
     if (bolt.kind === 'knife') return 'knife';
+    if (bolt.tower) return 'tower';
     if (bolt.guard) return 'guard';
     if (bolt.friendly) return 'tracer';
     return bolt.kit && bolt.kit.blessed ? 'blessed' : 'plain';
@@ -1399,14 +1506,16 @@ class World3DRuntime {
       mesh.name = 'throwing-knife-3d';
       return mesh;
     }
-    if (look === 'tracer' || look === 'guard') {
+    if (look === 'tracer' || look === 'guard' || look === 'tower') {
       // Survival reads at phone zoom: a thick, unlit tracer instead of a
-      // 1px wooden shaft. Warm for the Hunter, cool blue for the guards.
+      // 1px wooden shaft. Warm for the Hunter, cool blue for the guards, a
+      // fat red-orange ballista bolt for a tower.
       const mesh = new THREE.Mesh(this.boltGeometry, new THREE.MeshBasicMaterial({
-        color: look === 'guard' ? 0xa8ecff : 0xffe08a, toneMapped: false,
+        color: look === 'guard' ? 0xa8ecff : look === 'tower' ? 0xff7a3a : 0xffe08a, toneMapped: false,
       }));
-      mesh.scale.set(2.6, 1.5, 2.6);
-      mesh.name = look === 'guard' ? 'guard-bolt-3d' : 'crossbow-bolt-3d';
+      if (look === 'tower') mesh.scale.set(4, 2.1, 4);
+      else mesh.scale.set(2.6, 1.5, 2.6);
+      mesh.name = look === 'guard' ? 'guard-bolt-3d' : look === 'tower' ? 'tower-bolt-3d' : 'crossbow-bolt-3d';
       return mesh;
     }
     const blessed = look === 'blessed';
@@ -1423,9 +1532,9 @@ class World3DRuntime {
   _makeBoltTrail(look) {
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(7 * 3), 3).setUsage(THREE.DynamicDrawUsage));
-    const bright = look === 'tracer' || look === 'guard';
+    const bright = look === 'tracer' || look === 'guard' || look === 'tower';
     const material = new THREE.LineBasicMaterial({
-      color: look === 'knife' ? 0xc4d4e0 : look === 'guard' ? 0x7fd8ff : look === 'tracer' ? 0xffc04a : look === 'blessed' ? 0xffe2a2 : 0x9b9aa9,
+      color: look === 'knife' ? 0xc4d4e0 : look === 'guard' ? 0x7fd8ff : look === 'tower' ? 0xff6a2a : look === 'tracer' ? 0xffc04a : look === 'blessed' ? 0xffe2a2 : 0x9b9aa9,
       transparent: true, opacity: bright ? 0.8 : 0.42, depthWrite: false, toneMapped: false,
     });
     const line = new THREE.Line(geometry, material);
@@ -1467,15 +1576,24 @@ class World3DRuntime {
         this.bolts.set(id, mesh);
         this.boltTrails.set(id, trail);
       }
-      direction.set(Math.cos(bolt.angle || 0), 0, Math.sin(bolt.angle || 0)).normalize();
-      mesh.position.set(bolt.x, 18, bolt.y);
+      // a tower's bolt leaves the ballista on the deck and drops to body
+      // height where it was aimed; everything else flies at 18
+      const muzzle = bolt.tower ? this._towerMuzzle(bolt) : 0;
+      const heightAt = (x, y) => (muzzle > 0
+        ? 18 + muzzle * Math.max(0, 1 - Math.hypot(x - bolt.ox, y - bolt.oy) / Math.max(1, bolt.aimDist || 1))
+        : 18);
+      const bh = heightAt(bolt.x, bolt.y);
+      direction.set(Math.cos(bolt.angle || 0), 0, Math.sin(bolt.angle || 0));
+      if (muzzle > 0 && bh > 18.5) direction.y = -muzzle / Math.max(1, bolt.aimDist || 1);
+      direction.normalize();
+      mesh.position.set(bolt.x, bh, bolt.y);
       mesh.quaternion.setFromUnitVectors(up, direction);
       mesh.visible = true;
       const points = bolt.trail || [];
       const attribute = trail.geometry.getAttribute('position');
       const pointCount = Math.min(points.length, 6);
-      for (let i = 0; i < pointCount; i++) attribute.setXYZ(i, points[i].x, 18, points[i].y);
-      if (pointCount < 7) attribute.setXYZ(pointCount, bolt.x, 18, bolt.y);
+      for (let i = 0; i < pointCount; i++) attribute.setXYZ(i, points[i].x, heightAt(points[i].x, points[i].y), points[i].y);
+      if (pointCount < 7) attribute.setXYZ(pointCount, bolt.x, bh, bolt.y);
       attribute.needsUpdate = true;
       trail.geometry.setDrawRange(0, pointCount + 1);
       trail.visible = pointCount > 0;

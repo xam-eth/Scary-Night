@@ -6,7 +6,7 @@
  * resources, builder queue, night waves, and rewards.
  */
 
-import { clamp, damp, dist, rand, writeSave } from '../core/util.js';
+import { approachAngle, clamp, damp, dist, rand, writeSave } from '../core/util.js';
 import { SURVIVAL_TUNING } from '../core/config.js';
 import { CrowdBody, Zombie, outwardOf, CROWD, ESTATE } from './enemies.js';
 import { ROOM } from './mansion.js';
@@ -45,6 +45,7 @@ export const SURVIVAL_BUILDINGS = Object.freeze({
   extractor: Object.freeze({ id: 'extractor', label: 'OIL EXTRACTOR', oil: 2, wood: 10, seconds: 7, produces: { oil: 6 } }),
   sawmill: Object.freeze({ id: 'sawmill', label: 'SAWMILL', oil: 2, wood: 10, seconds: 7, produces: { wood: 7 } }),
   shelter: Object.freeze({ id: 'shelter', label: 'SURVIVOR SHELTER', oil: 4, wood: 14, seconds: 9, produces: { survivors: 1 } }),
+  tower: Object.freeze({ id: 'tower', label: 'CROSSBOW TOWER', oil: 4, wood: 16, seconds: 8, produces: {} }),
 });
 
 /**
@@ -54,6 +55,8 @@ export const SURVIVAL_BUILDINGS = Object.freeze({
  *   sawmill    wood every dawn, and planks: every outer door gets +% max HP
  *   shelter    houses survivors; a build or level moves one in at once
  *              (one more door guard tonight)
+ *   tower      a crossbow tower by the room's outer door: harder bolts,
+ *              further reach (see TOWER)
  */
 export const BUILDING_MAX_LEVEL = 3;
 export const SURVIVAL_BUILDING_LEVELS = Object.freeze({
@@ -72,8 +75,32 @@ export const SURVIVAL_BUILDING_LEVELS = Object.freeze({
     2: Object.freeze({ oil: 6, wood: 16, seconds: 8, houses: 2 }),
     3: Object.freeze({ oil: 8, wood: 20, seconds: 9, houses: 3 }),
   }),
+  tower: Object.freeze({
+    1: Object.freeze({ oil: 4, wood: 16, seconds: 8, damage: 16, range: 520 }),
+    2: Object.freeze({ oil: 6, wood: 18, seconds: 7, damage: 22, range: 580 }),
+    3: Object.freeze({ oil: 8, wood: 22, seconds: 8, damage: 30, range: 640 }),
+  }),
 });
 const DOOR_BONUS_CAP = 0.6;
+
+/**
+ * A crossbow tower is the house fighting back on its own. It is built in a
+ * lit room like any building, but it stands just inside that room's outer
+ * door (the middle of a room without one) and, by night, shoots a heavy bolt
+ * through the door slit that runs on through a second body. It never walks
+ * to the pressed door like a guard does: where it stands is the choice.
+ */
+export const TOWER = Object.freeze({
+  every: 1.1,          // s between shots
+  pierce: 1,           // extra bodies one bolt runs through
+  boltSpeed: 900,
+  reach: 120,          // px a bolt flies past the tower's range before it drops
+  setback: 150,        // px inside the door it guards
+  side: 64,            // px off the doorway line, toward the room's middle
+  turn: 12,            // rad/s the ballista swings
+  // a room with two outer doors guards the busier one
+  doors: Object.freeze(['frontDoor', 'cellarDoor', 'chapelDoor', 'diningDoor', 'palisade', 'kitchenDoor', 'postern']),
+});
 
 /** The Hunter's own track, bought by day like a building (no skill cards). */
 export const HUNTER_MAX_LEVEL = 3;
@@ -681,6 +708,7 @@ export class SurvivalMode {
     this._savedDurationOverride = options.nightDuration || null;
     this.uiClock = 0;
     this.guards = [];
+    this.towers = [];
     this.floaters = [];
     this.bannerQueue = [];
     this.banner = null;
@@ -702,6 +730,7 @@ export class SurvivalMode {
     this.game.mansion.buildNav();
     this.refreshFireplace(true);
     this._syncGuardRoster(true);
+    this._syncTowers();
     if (this.phase === 'night' && this.elapsed < 1) this._nightIntro();
   }
 
@@ -717,7 +746,10 @@ export class SurvivalMode {
     this.wood = clamp(Math.floor(Number(s.wood) || 0), 0, RESOURCE_CAP);
     this.survivors = clamp(Math.floor(Number(s.survivors) || 0), 0, 99);
     this.perapianLevel = clamp(Math.round(Number(s.perapianLevel) || 1), 1, 3);
-    this.buildings = s.buildings && typeof s.buildings === 'object' ? s.buildings : {};
+    this.buildings = {};
+    if (s.buildings && typeof s.buildings === 'object') {
+      for (const [roomId, type] of Object.entries(s.buildings)) if (SURVIVAL_BUILDINGS[type]) this.buildings[roomId] = type;
+    }
     // saves from before building levels have no table: every building is Lv1
     const levels = s.buildingLevels && typeof s.buildingLevels === 'object' ? s.buildingLevels : {};
     this.buildingLevels = {};
@@ -881,6 +913,7 @@ export class SurvivalMode {
     this._fields.clear();
     this.refreshFireplace(true);
     this._syncGuardRoster(true);
+    this._syncTowers();
     this._guardAssignT = 0;
     if (g.renderer.setZoomMul) g.renderer.setZoomMul(this.frameMul(true));
     g.renderer.snapCamera(g.player.x, g.player.y);
@@ -965,6 +998,7 @@ export class SurvivalMode {
     this.hearthFeeders = feeders;
     this.updateHearthBurn(dt);
     this.updateGuards(dt);
+    this.updateTowers(dt);
     const p = g.player;
     if (this._lastPlayerPos) this._movedSinceStart += Math.hypot(p.x - this._lastPlayerPos.x, p.y - this._lastPlayerPos.y);
     this._lastPlayerPos = { x: p.x, y: p.y };
@@ -1003,6 +1037,7 @@ export class SurvivalMode {
     this.refreshFireplace(false);
     g.player.anim(dt);
     this.updateGuards(dt);
+    this.updateTowers(dt);
     if (this.builderJob) {
       this.builderJob.remaining = Math.max(0, this.builderJob.remaining - dt);
       if (this.builderJob.remaining <= 0) this.finishBuilderJob();
@@ -1436,6 +1471,162 @@ export class SurvivalMode {
     }
   }
 
+  /** The outer door a tower in this room guards (null: the room has none). */
+  towerDoor(room) {
+    if (!room) return null;
+    let best = null, bestRank = Infinity;
+    for (const e of this.game.mansion.entrances) {
+      if (!e.exterior || e.kind !== 'door' || !e.inside) continue;
+      const { x, y } = e.inside;
+      if (!(x > room.x && x < room.x + room.w && y > room.y && y < room.y + room.h)) continue;
+      const rank = TOWER.doors.includes(e.id) ? TOWER.doors.indexOf(e.id) : TOWER.doors.length;
+      if (rank < bestRank) { best = e; bestRank = rank; }
+    }
+    return best;
+  }
+
+  /**
+   * Where a building stands (its model, and the day bubble over it): an
+   * economy building near the middle of its room, a tower beside the room's
+   * outer door, a little off the doorway so the slit stays in its sights.
+   * Either way on clear floor, never on a table; fixed per room and type.
+   */
+  buildingSpot(roomId, type = this.buildings[roomId]) {
+    const key = `${roomId}:${type === 'tower' ? 'tower' : 'building'}`;
+    if (!this._spots) this._spots = new Map();
+    if (this._spots.has(key)) return this._spots.get(key);
+    const room = this.game.mansion.room(roomId);
+    if (!room) return null;
+    const spot = this._findSpot(room, type === 'tower' ? this.towerDoor(room) : null);
+    this._spots.set(key, spot);
+    return spot;
+  }
+
+  _findSpot(room, door) {
+    const m = this.game.mansion;
+    const pad = 46;
+    let ideal;
+    if (door) {
+      let nx = door.inside.x - door.x, ny = door.inside.y - door.y;
+      const nl = Math.hypot(nx, ny) || 1;
+      nx /= nl; ny /= nl;
+      let sx = -ny, sy = nx;
+      if ((room.x + room.w / 2 - door.x) * sx + (room.y + room.h / 2 - door.y) * sy < 0) { sx = -sx; sy = -sy; }
+      ideal = { x: door.x + nx * TOWER.setback + sx * TOWER.side, y: door.y + ny * TOWER.setback + sy * TOWER.side };
+    } else {
+      ideal = { x: room.x + room.w / 2 + 48, y: room.y + room.h / 2 + 24 };
+    }
+    ideal.x = clamp(ideal.x, room.x + pad, room.x + room.w - pad);
+    ideal.y = clamp(ideal.y, room.y + pad, room.y + room.h - pad);
+    const clear = (x, y) => {
+      if (x < room.x + pad || x > room.x + room.w - pad || y < room.y + pad || y > room.y + room.h - pad) return false;
+      if (m.solidAt(x, y)) return false;
+      for (const r of [26, 42]) {
+        for (let k = 0; k < 8; k++) {
+          const a = k * Math.PI / 4;
+          if (m.solidAt(x + Math.cos(a) * r, y + Math.sin(a) * r)) return false;
+        }
+      }
+      // a tower must see out through its door's slit with nothing in the way
+      return !door || this.boltPath(x, y, door.outside.x, door.outside.y);
+    };
+    const out = (p) => ({ x: Math.round(p.x), y: Math.round(p.y), doorId: door ? door.id : null });
+    if (clear(ideal.x, ideal.y)) return out(ideal);
+    for (let r = 16; r <= 192; r += 16) {
+      const steps = Math.max(8, Math.round(r / 8));
+      for (let k = 0; k < steps; k++) {
+        const a = (k / steps) * Math.PI * 2;
+        const x = ideal.x + Math.cos(a) * r, y = ideal.y + Math.sin(a) * r;
+        if (clear(x, y)) return out({ x, y });
+      }
+    }
+    return out(ideal);
+  }
+
+  /**
+   * A bolt from (x0, y0) reaches (x1, y1): sight through door slits, and no
+   * masonry or furniture in its way from where it leaves the string.
+   */
+  boltPath(x0, y0, x1, y1, start = 20) {
+    const m = this.game.mansion;
+    if (!m.hasLOS(x0, y0, x1, y1, { throughDoors: true })) return false;
+    const dx = x1 - x0, dy = y1 - y0;
+    const d = Math.hypot(dx, dy);
+    for (let s = start; s < d - 6; s += 10) if (m.solidAt(x0 + dx / d * s, y0 + dy / d * s)) return false;
+    return true;
+  }
+
+  towerStats(roomId) { return this.buildingStats('tower', this.buildingLevel(roomId)); }
+
+  /** Towers mirror `buildings`: one per room holding a tower, any level. */
+  _syncTowers() {
+    const ids = Object.keys(this.buildings).filter((id) => this.buildings[id] === 'tower');
+    if (ids.length === this.towers.length && ids.every((id, i) => this.towers[i].roomId === id)) return;
+    const old = new Map(this.towers.map((t) => [t.roomId, t]));
+    this.towers = ids.map((roomId, i) => old.get(roomId) || this._makeTower(roomId, i)).filter(Boolean);
+  }
+
+  _makeTower(roomId, index) {
+    const spot = this.buildingSpot(roomId, 'tower');
+    if (!spot) return null;
+    const door = spot.doorId ? this.entranceById(spot.doorId) : null;
+    const angle = door ? Math.atan2(door.y - spot.y, door.x - spot.x) : Math.PI / 2;
+    return {
+      id: 6000000 + index, key: 'tower', roomId, doorId: spot.doorId,
+      x: spot.x, y: spot.y, radius: 18,
+      angle, aim: angle,                // shot bearing / the ballista's swing
+      cd: 0.4 + index * 0.27, shotT: 0, target: null, shots: 0,
+      type: { boltSpeed: TOWER.boltSpeed, boltDamage: 1 },
+    };
+  }
+
+  towerTarget(tower, range) {
+    let best = null, bestS = Infinity;
+    for (const e of this.game.enemies) {
+      if (e.dead || e.removeMe || !(e.hp > 0)) continue;
+      if (dist(tower.x, tower.y, e.x, e.y) > range) continue;
+      const s = this.targetScore(tower, e);
+      if (s >= bestS) continue;
+      if (!this.boltPath(tower.x, tower.y, e.x, e.y)) continue;
+      best = e; bestS = s;
+    }
+    return best;
+  }
+
+  updateTowers(dt) {
+    this._syncTowers();
+    if (!this.towers.length) return;
+    const g = this.game;
+    const night = this.phase === 'night';
+    for (const t of this.towers) {
+      t.shotT = Math.max(0, t.shotT - dt);
+      t.aim = approachAngle(t.aim, t.angle, TOWER.turn * dt);
+      if (!night) { t.target = null; continue; }
+      t.cd -= dt;
+      if (t.cd > 0) {
+        if (t.target && !t.target.dead) t.angle = Math.atan2(t.target.y - t.y, t.target.x - t.x);
+        continue;
+      }
+      const st = this.towerStats(t.roomId);
+      const target = this.towerTarget(t, st.range || 0);
+      t.target = target;
+      if (!target) { t.cd = 0.25; continue; }
+      const lead = dist(t.x, t.y, target.x, target.y) / TOWER.boltSpeed;
+      t.angle = Math.atan2(target.y + (target.vy || 0) * lead - t.y, target.x + (target.vx || 0) * lead - t.x);
+      const bolt = g.spawnBolt(t, t.angle, {
+        offset: 20, boltSpeed: TOWER.boltSpeed, damage: st.damage, friendly: true,
+        boltPierce: TOWER.pierce, boltRange: (st.range || 0) + TOWER.reach,
+      });
+      // aimDist: where the bolt drops from the deck to body height (3D)
+      if (bolt) { bolt.tower = true; bolt.aimDist = Math.max(40, dist(t.x, t.y, target.x, target.y) - 20); }
+      t.cd = TOWER.every + rand(-0.06, 0.1);
+      t.shotT = 0.26;
+      t.shots++;
+      this.nightStats.towerShots = (this.nightStats.towerShots || 0) + 1;
+      g.audio.play('crossbow', { x: t.x, y: t.y, cam: g.renderer.cam, vol: 0.42 });
+    }
+  }
+
   useSkill() {
     if (this.phase !== 'night' || this.skillCooldown > 0) return false;
     const g = this.game;
@@ -1650,7 +1841,7 @@ export class SurvivalMode {
     const job = this.builderJob;
     if (!job) return;
     let text = 'BUILT!';
-    let icon = job.type === 'extractor' ? 'extractor' : job.type === 'sawmill' ? 'sawmill' : 'shelter';
+    let icon = SURVIVAL_BUILDINGS[job.type] ? job.type : 'shelter';
     if (job.kind === 'perapian') {
       this.perapianLevel = clamp(job.targetLevel, 1, 3);
       icon = 'perapian'; text = `PERAPIAN Lv${this.perapianLevel}`;
@@ -1761,6 +1952,7 @@ export class SurvivalMode {
     this.applyBuildingEffects(false);
     this.refreshFireplace(true);
     this._syncGuardRoster(true);
+    this._syncTowers();
     this._persist(true);
   }
 
@@ -1802,6 +1994,7 @@ export class SurvivalMode {
     this.refreshFireplace(true);
     this.guards.length = 0;
     this._syncGuardRoster(true);
+    this._syncTowers();
     this.enter();
     this._nightIntro();
   }
@@ -1889,6 +2082,8 @@ export class SurvivalMode {
     if (key === 'gate') { const gate = this.mainGate(); if (gate) return { x: gate.x, y: gate.y }; }
     if (key === 'hunter') return { x: this.game.player.x, y: this.game.player.y };
     if (key !== 'perapian') {
+      // a tower stands by its door: frame the tower and its reach
+      if (this.buildings[key] === 'tower') { const spot = this.buildingSpot(key, 'tower'); if (spot) return { x: spot.x, y: spot.y }; }
       const room = this.game.mansion.room(key);
       if (room) return { x: room.x + room.w / 2, y: room.y + room.h / 2 };
     }

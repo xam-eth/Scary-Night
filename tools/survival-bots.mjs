@@ -3,7 +3,7 @@
  * Interact key for Flare); nothing here reaches into enemy internals.
  *
  *   botNight(game, state, { ROOM, ISO_CAMERA })  active defender, one frame
- *   botDay(game, plan)                           'idle' | 'fire' | 'hunter' | 'builder' day turn
+ *   botDay(game, plan)                           'idle' | 'fire' | 'hunter' | 'builder' | 'tower' day turn
  */
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -92,6 +92,23 @@ export function botDay(game, plan) {
     if (mode.builderJob) return false;
     if (mode.hunterLevel < 3 && mode.startBuild('hunter')) return false;
     if (mode.perapianLevel < 3 && mode.startBuild('perapian')) return false;
+    return mode.startNight();
+  }
+  if (plan === 'tower') {
+    // defender: one pump for fuel, then a crossbow tower by every outer door
+    // the fire lights (hall → front door; Lv2 adds cellar + chapel), then
+    // the Perapian and tower levels
+    if (mode.builderJob) return false;
+    const rooms = mode.buildableRooms();
+    const built = Object.entries(mode.buildings);
+    if (mode.perapianLevel < 2 && mode.startBuild('perapian')) return false;
+    if (!built.some(([, t]) => t === 'extractor')) {
+      const back = rooms.find((room) => !mode.towerDoor(room));
+      if (back && mode.startBuild('extractor', back.id)) return false;
+    }
+    for (const room of rooms) if (mode.towerDoor(room) && mode.startBuild('tower', room.id)) return false;
+    if (mode.perapianLevel < 3 && mode.startBuild('perapian')) return false;
+    for (const [roomId, t] of built) if (t === 'tower' && mode.buildingLevel(roomId) < 2 && mode.startBuild('upgrade', roomId)) return false;
     return mode.startNight();
   }
   if (plan !== 'builder') return mode.startNight();

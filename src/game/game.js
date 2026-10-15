@@ -2113,6 +2113,10 @@ export class Game {
       b.pierceDoors = true;
       b.friendly = true;
     }
+    // a tower's heavy bolt runs on through bodies and drops past its reach
+    // (own keys: the Hunter's spec is his weapon, which has a `range`)
+    if (spec && spec.boltPierce > 0) b.pierce = Math.floor(spec.boltPierce);
+    if (spec && spec.boltRange > 0) b.range = spec.boltRange;
     this.bolts.push(b);
     if (!spec) {
       this.audio.play('crossbow', { x: owner.x, y: owner.y, cam: this.renderer.cam, vol: 0.85 });

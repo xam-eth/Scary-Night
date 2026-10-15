@@ -34,11 +34,12 @@ const BUTTON_COLORS = Object.freeze({
   gray: ['#a3a8ba', '#6c7189', '#43485c'],
 });
 
-const BUILD_ORDER = ['extractor', 'sawmill', 'shelter'];
+const BUILD_ORDER = ['extractor', 'sawmill', 'shelter', 'tower'];
 const BUILD_META = Object.freeze({
   extractor: { icon: 'extractor', name: 'OIL PUMP', out: 'oil' },     // pumped during the night
   sawmill: { icon: 'sawmill', name: 'SAWMILL', out: 'wood' },        // every dawn + door planks
   shelter: { icon: 'shelter', name: 'SHELTER', out: 'guard' },       // houses survivors = door guards
+  tower: { icon: 'tower', name: 'TOWER', out: 'damage' },            // shoots through its room's door
 });
 
 /**
@@ -52,6 +53,12 @@ function buildingRows(mode, type, level) {
     return [
       { icon: 'wood', value: `+${st.dawnWood || 0}`, label: 'EVERY DAWN' },
       { icon: 'planks', value: `+${Math.round((st.doorBonus || 0) * 100)}%`, label: 'DOOR HP' },
+    ];
+  }
+  if (type === 'tower') {
+    return [
+      { icon: 'crossbow', value: `${st.damage || 0}`, label: 'BOLT DAMAGE' },
+      { icon: 'target', value: `${st.range || 0}`, label: 'RANGE' },
     ];
   }
   return [{ icon: 'guard', value: `+${st.houses || 0}`, label: 'GUARDS' }];
@@ -551,10 +558,12 @@ function dayTargets(game) {
     if (!room) continue;
     const level = mode.buildingLevel(roomId);
     const upJob = mode.builderJob && mode.builderJob.kind === 'upgrade' && mode.builderJob.roomId === roomId ? mode.builderJob : null;
+    const spot = mode.buildingSpot(roomId, type) || { x: room.x + room.w / 2 + 48, y: room.y + room.h / 2 + 24 };
     out.push({
       key: roomId, room, built: type, level, icon: BUILD_META[type] ? BUILD_META[type].icon : 'shelter',
-      // high enough that the model (and its level pennant) shows under the bubble
-      x: room.x + room.w / 2 + 48, y: room.y + room.h / 2 + 24, height: 185 + (level - 1) * 26,
+      // high enough that the model (and its level pennant) shows under the
+      // bubble; a tower is taller than the rest
+      x: spot.x, y: spot.y, height: (type === 'tower' ? 232 : 185) + (level - 1) * (type === 'tower' ? 34 : 26),
       badge: `Lv${level}`, job: upJob,
       up: !upJob && level < BUILDING_MAX_LEVEL && affordable(mode, mode.upgradeCost(roomId)),
     });
@@ -562,7 +571,9 @@ function dayTargets(game) {
   const job = mode.builderJob;
   if (job && job.kind === 'building' && job.roomId) {
     const room = game.mansion.room(job.roomId);
-    if (room) out.push({ key: job.roomId, room, building: job.type, icon: BUILD_META[job.type] ? BUILD_META[job.type].icon : 'hammer', x: room.x + room.w / 2, y: room.y + room.h / 2, height: 60, job });
+    // a tower under construction already marks the spot by its door
+    const spot = job.type === 'tower' ? mode.buildingSpot(job.roomId, 'tower') : null;
+    if (room) out.push({ key: job.roomId, room, building: job.type, icon: BUILD_META[job.type] ? BUILD_META[job.type].icon : 'hammer', x: spot ? spot.x : room.x + room.w / 2, y: spot ? spot.y : room.y + room.h / 2, height: 60, job });
   }
   return out;
 }
@@ -887,11 +898,16 @@ function drawSheet(game, ctx, frame, focus) {
 
   drawSurvivalIcon(ctx, 'plus', innerX + 14, titleY, 26);
   drawLabel(ctx, room ? room.name : 'LIT ROOM', innerX + 34, titleY, 14, '#ffffff', { align: 'left' });
-  const gap = 8;
-  const cardW = (innerW - gap * 2) / 3;
+  // four cards across (pump, sawmill, shelter, tower); a narrow card trims
+  // its icon and cost row so the numbers keep their size
+  const count = BUILD_ORDER.length;
+  const gap = count > 3 ? 6 : 8;
+  const cardW = (innerW - gap * (count - 1)) / count;
+  const narrow = cardW < 96;
   const cardY = top + 42;
   const cardH = sheetH - 54;
-  for (let i = 0; i < BUILD_ORDER.length; i++) {
+  const costSize = narrow ? 14 : 15;
+  for (let i = 0; i < count; i++) {
     const type = BUILD_ORDER[i];
     const spec = SURVIVAL_BUILDINGS[type];
     const meta = BUILD_META[type];
@@ -900,17 +916,20 @@ function drawSheet(game, ctx, frame, focus) {
     const box = { x: cx, y: cardY, w: cardW, h: cardH };
     addHit(game, box, `BUILD ${type}`, () => mode.startBuild(type, room && room.id), !ok);
     drawPanel(ctx, cx, cardY, cardW, cardH, {
-      radius: 14, top: ok ? '#fff8e8' : '#c9cbd6', bottom: ok ? '#ffe2b0' : '#a8abb9', lineWidth: 2.4,
+      radius: narrow ? 12 : 14, top: ok ? '#fff8e8' : '#c9cbd6', bottom: ok ? '#ffe2b0' : '#a8abb9', lineWidth: 2.4,
     });
     const compact = cardH < 120;
-    drawSurvivalIcon(ctx, meta.icon, cx + cardW / 2, cardY + (compact ? 22 : 30), compact ? 30 : 40, { alpha: ok ? 1 : 0.7 });
-    if (!compact) drawLabel(ctx, meta.name, cx + cardW / 2, cardY + 60, 11, '#3a2a50', { outline: 0 });
+    drawSurvivalIcon(ctx, meta.icon, cx + cardW / 2, cardY + (compact ? 22 : 30), compact ? 30 : narrow ? 36 : 40, { alpha: ok ? 1 : 0.7 });
+    if (!compact) drawLabel(ctx, meta.name, cx + cardW / 2, cardY + 60, narrow ? 10 : 11, '#3a2a50', { outline: 0 });
     const main = buildingRows(mode, type, 1)[0];
     const outY = compact ? cardY + 48 : cardY + 80;
     drawSurvivalIcon(ctx, main.icon, cx + cardW / 2 - 14, outY, 18);
     drawLabel(ctx, main.value, cx + cardW / 2 + 2, outY + 1, 14, '#1f8a3a', { align: 'left', outline: 0 });
-    const costW = measureLabel(ctx, `${spec.oil}`, 12) + measureLabel(ctx, `${spec.wood}`, 12) + 46;
-    costRow(ctx, cx + cardW / 2 - costW / 2, cardY + cardH - 16, spec, mode, 15);
+    // centre the cost row on what costRow() will actually draw
+    const label = Math.round(costSize * 0.86);
+    const costW = (spec.oil ? costSize + 12 + measureLabel(ctx, spec.oil, label) : 0)
+      + (spec.wood ? costSize + 12 + measureLabel(ctx, spec.wood, label) : 0) - 6;
+    costRow(ctx, cx + cardW / 2 - costW / 2, cardY + cardH - 16, spec, mode, costSize);
   }
 }
 

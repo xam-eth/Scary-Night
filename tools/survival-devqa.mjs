@@ -213,6 +213,62 @@ try {
   check('guards: one 3D guard pawn per survivor at night', pool.guards === pool.survivors && pool.visibleGuardMeshes === pool.guards, pool);
   check('pooling: bolt meshes do not grow with every shot', pool.shots > 20 && pool.boltObjects > 0 && pool.boltObjects < pool.shots / 2, { shots: pool.shots, boltObjectsInScene: pool.boltObjects });
 
+  // ---------------- towers: ring by day, swivel + pooled bolts by night ----------------
+  const towerDay = await page.evaluate(() => {
+    const g = window.__LN;
+    const m = g.survival;
+    m.restart();
+    m.phase = 'night'; m.completeNight(); m.ackRewards();
+    m.oil = 200; m.wood = 200;
+    const queued = m.startBuild('tower', 'hall');
+    let n = 0;
+    while (m.builderJob && n++ < 3000) window.__orig.call(g, 1 / 60);
+    m.dayFocus = 'hall'; m.selectedRoom = 'hall';
+    window.__step(5);
+    const W = window.__W;
+    const mesh = W.survivalBuildingMeshes.get('hall');
+    const spot = m.buildingSpot('hall');
+    return {
+      queued, built: m.buildings.hall, model: !!(mesh && mesh.visible && mesh.userData.yaw),
+      at: mesh ? [Math.round(mesh.position.x), Math.round(mesh.position.z)] : null, spot: [spot.x, spot.y],
+      ring: !!(W.survivalTowerRing && W.survivalTowerRing.visible), ringR: W.survivalTowerRing ? W.survivalTowerRing.scale.x : 0,
+    };
+  });
+  check('tower: model on its spot by the front door, red reach ring when selected by day',
+    towerDay.queued && towerDay.built === 'tower' && towerDay.model && towerDay.at && towerDay.at[0] === towerDay.spot[0]
+      && towerDay.at[1] === towerDay.spot[1] && towerDay.ring && towerDay.ringR === 520, towerDay);
+  await page.evaluate(() => {
+    const g = window.__LN;
+    const m = g.survival;
+    m.dayFocus = 'perapian';
+    m.startNight();
+    m.waveIndex = 99; m.breakerIndex = 99; m.individualIndex = 99;
+    g.enemies.length = 0; g.bolts.length = 0;
+    m.spawnSwarm(21, 0, m.entranceById('frontDoor'));
+    m.entranceById('frontDoor').hp = m.entranceById('frontDoor').hpMax = 99999;
+    window.__towerShots0 = m.nightStats.towerShots || 0;
+  });
+  for (let k = 0; k < 60; k++) await page.evaluate(() => window.__step(15));
+  const towerNight = await page.evaluate(() => {
+    const g = window.__LN;
+    const m = g.survival;
+    const W = window.__W;
+    const t = m.towers[0];
+    const mesh = W.survivalBuildingMeshes.get('hall');
+    let towerBolts = 0;
+    W.root.traverse((o) => { if (o.name === 'tower-bolt-3d') towerBolts++; });
+    const yaw = mesh && mesh.userData.yaw ? mesh.userData.yaw.rotation.y : null;
+    const want = t ? Math.PI / 2 - t.aim : null;
+    const diff = yaw == null || want == null ? 9 : Math.abs(Math.atan2(Math.sin(yaw - want), Math.cos(yaw - want)));
+    return {
+      shots: (m.nightStats.towerShots || 0) - window.__towerShots0, kills: m.nightStats.kills,
+      ringHidden: !(W.survivalTowerRing && W.survivalTowerRing.visible), towerBolts, swivelDiff: +diff.toFixed(3),
+    };
+  });
+  check('tower: by night the ballista swivels to its aim and its bolts are pooled',
+    towerNight.shots >= 8 && towerNight.swivelDiff < 0.01 && towerNight.towerBolts > 0 && towerNight.towerBolts < towerNight.shots / 2 && towerNight.ringHidden,
+    towerNight);
+
   // ---------------- end panel: no pause ----------------
   await page.evaluate(() => { const g = window.__LN; g.survival.fail('THE FIRE WENT OUT'); window.__step(3); });
   await page.touchscreen.tap(30, 30);

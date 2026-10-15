@@ -9,9 +9,11 @@
  *   passive-builder  builds every day but never moves or uses Flare
  *   flare    never moves, never builds, taps Flare on clusters
  *   fire-builder  active defence, but only ever upgrades the Perapian
+ *   tower-builder active defence; one pump, then crossbow towers by the lit
+ *                 outer doors, the Perapian and tower levels
  *
  *   node tools/survival-balance.mjs [--seeds=3] [--duration=72] [--bots=idle,active,builder] [--json=out.json] [--economy]
- *   bots: idle, active, flare, builder, passive-builder, fire-builder, hunter-builder
+ *   bots: idle, active, flare, builder, passive-builder, fire-builder, hunter-builder, tower-builder
  *
  * --economy prints every day decision with the purse before/after.
  * Diagnostics (print and exit): --debug (6 s snapshots of enemy states/doors),
@@ -145,7 +147,7 @@ function runOne(kind, seed) {
   while (guard++ < 60 * 60 * 30) {
     if (mode.phase === 'night' && !game.uiPanel) {
       if (!night) night = { day: mode.day, spawned: 0, peakAlive: 0, peakFeeders: 0, minHp: game.player.bloodMax, hpMax: game.player.bloodMax, hunter: mode.hunterLevel || 1, seen: new Set() };
-      if (kind === 'active' || kind === 'builder' || kind === 'fire-builder' || kind === 'hunter-builder') botNight(game, state, { ROOM, ISO_CAMERA });
+      if (kind === 'active' || kind === 'builder' || kind === 'fire-builder' || kind === 'hunter-builder' || kind === 'tower-builder') botNight(game, state, { ROOM, ISO_CAMERA });
       else if (kind === 'flare') {
         // stands still, only taps Flare when three or more are in reach
         release(game);
@@ -159,6 +161,7 @@ function runOne(kind, seed) {
       night.peakFeeders = Math.max(night.peakFeeders, mode.hearthFeeders);
       night.minHp = Math.min(night.minHp, Math.round(game.player.blood));
       night.kills = mode.nightStats.kills;
+      night.towerShots = mode.nightStats.towerShots || 0;
       night.drained = Math.round(mode.nightStats.drained || 0);
       night.oil = Math.round(mode.oil * 10) / 10;
       night.elapsed = Math.round(mode.elapsed * 10) / 10;
@@ -178,7 +181,7 @@ function runOne(kind, seed) {
       release(game);
     }
     if (mode.phase === 'day') {
-      botDay(game, kind === 'builder' || kind === 'passive-builder' ? 'builder' : kind === 'fire-builder' ? 'fire' : kind === 'hunter-builder' ? 'hunter' : 'idle');
+      botDay(game, kind === 'builder' || kind === 'passive-builder' ? 'builder' : kind === 'fire-builder' ? 'fire' : kind === 'hunter-builder' ? 'hunter' : kind === 'tower-builder' ? 'tower' : 'idle');
       game.update(step);
       continue;
     }
@@ -294,7 +297,7 @@ for (const kind of BOTS) {
   for (let i = 0; i < SEEDS; i++) {
     const r = runOne(kind, 20261012 + i * 7919);
     results.push(r);
-    const line = r.nights.map((n) => `N${n.day}:${n.result === 'OK' ? 'ok' : 'FAIL'} H${n.hunter} sp${n.spawned} pk${n.peakAlive} k${n.kills} feed${n.peakFeeders} drain${n.drained} oil${n.oil} hp${n.minHp}/${n.hpMax} br${n.breaches}${n.result === 'OK' ? '' : ' @' + n.elapsed + 's ' + n.result.slice(5)}`).join(' | ');
+    const line = r.nights.map((n) => `N${n.day}:${n.result === 'OK' ? 'ok' : 'FAIL'} H${n.hunter} sp${n.spawned} pk${n.peakAlive} k${n.kills} feed${n.peakFeeders} drain${n.drained} oil${n.oil} hp${n.minHp}/${n.hpMax} br${n.breaches}${n.towerShots ? ` tw${n.towerShots}` : ''}${n.result === 'OK' ? '' : ' @' + n.elapsed + 's ' + n.result.slice(5)}`).join(' | ');
     const levels = Object.entries(r.buildings).map(([roomId, type]) => `${type}${r.buildingLevels[roomId] || 1}`).join(',') || '-';
     console.log(`${kind.padEnd(8)} seed${i} ${r.complete ? 'WIN ' : 'LOSS'} Lv${r.perapian} H${r.hunter} [${levels}${r.gate ? ',gate' : ''}] ${line} (${r.ms}ms)`);
   }

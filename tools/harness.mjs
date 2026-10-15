@@ -947,6 +947,183 @@ async function runSurvivalMilestone() {
   }
   const progressionPass = progressionChecks.length === 6 && progressionChecks.every(Boolean);
 
+  // ---- towers: a building that fights, by its room's outer door ----
+  const towerChecks = [];
+  const towerCheck = (name, ok, detail) => {
+    towerChecks.push(!!ok);
+    console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} (${detail})`);
+  };
+  {
+    const { TOWER } = await import('../src/game/survival.js');
+    const mode = survivalGame.survival;
+    const m = survivalGame.mansion;
+    mode.restart();
+    resetControls();
+    mode.phase = 'day'; mode.day = 2;
+    survivalGame.screen = 'playing'; survivalGame.uiPanel = 'survival-day';
+    mode.perapianLevel = 1;
+    mode.refreshFireplace(true);
+    mode.oil = 150; mode.wood = 150;
+    const hallSlot = mode.buildableRooms().some((room) => room.id === 'hall');
+    const purse = { oil: mode.oil, wood: mode.wood };
+    const queued = mode.startBuild('tower', 'hall');
+    const paid = purse.oil - mode.oil === 4 && purse.wood - mode.wood === 16;
+    const done = waitForBuilder();
+    tick();
+    const spot = mode.buildingSpot('hall');
+    const door = mode.entranceById('frontDoor');
+    const hall = m.room('hall');
+    const inHall = spot.x > hall.x && spot.x < hall.x + hall.w && spot.y > hall.y && spot.y < hall.y + hall.h;
+    const doorDist = Math.hypot(spot.x - door.x, spot.y - door.y);
+    const cons = m.room('conservatory');
+    const consSpot = mode.buildingSpot('conservatory', 'tower');
+    const middle = !!consSpot && consSpot.doorId === null && m.findRoom(consSpot.x, consSpot.y) === 'conservatory'
+      && Math.hypot(consSpot.x - (cons.x + cons.w / 2), consSpot.y - (cons.y + cons.h / 2)) < 220;
+    // every spot stands on clear floor (no table under a model, nothing at the bolt's start)
+    const clearFloor = [spot, consSpot].every((p) => p && !m.solidAt(p.x, p.y)
+      && [0, 1, 2, 3, 4, 5, 6, 7].every((k) => !m.solidAt(p.x + Math.cos(k * Math.PI / 4) * 26, p.y + Math.sin(k * Math.PI / 4) * 26)));
+    const tower = mode.towers[0];
+    towerCheck('tower: built in a lit room through the one builder; it stands just inside that room\'s outer door (a doorless room: its middle)',
+      hallSlot && queued && paid && done && mode.buildings.hall === 'tower' && mode.buildingLevel('hall') === 1
+        && spot.doorId === 'frontDoor' && inHall && doorDist > 100 && doorDist < 320 && middle && clearFloor
+        && mode.boltPath(spot.x, spot.y, door.outside.x, door.outside.y)
+        && mode.towers.length === 1 && tower.x === spot.x && tower.y === spot.y,
+      `hall slot=${hallSlot}, paid 4/16=${paid}, spot (${spot.x}, ${spot.y}) ${Math.round(doorDist)}px from ${spot.doorId}, conservatory (${consSpot && consSpot.x}, ${consSpot && consSpot.y}) doorless=${middle}, clear floor=${clearFloor}, towers ${mode.towers.length}`);
+
+    // a body on the line from the tower through the door centre, `past` px outside
+    const lineDir = { x: door.x - tower.x, y: door.y - tower.y };
+    const lineLen = Math.hypot(lineDir.x, lineDir.y);
+    const onLine = (past) => ({ x: door.x + lineDir.x / lineLen * past, y: door.y + lineDir.y / lineLen * past });
+    const body = (at, frozen = true) => {
+      const z = new SurvivalCrowdZombie(at.x, at.y, door, 0, 1);
+      z.hp = z.hpMax = 999;
+      z.vx = 0; z.vy = 0;
+      if (frozen) z.update = () => {};
+      survivalGame.enemies.push(z);
+      return z;
+    };
+    const resolveShot = (frames = 60) => {
+      // let the bolt fly out; the tower does not shoot again meanwhile
+      for (let i = 0; i < frames && survivalGame.bolts.some((b) => b.tower); i++) { tower.cd = 99; tick(); }
+    };
+
+    // by day a tower watches, it does not shoot
+    survivalGame.enemies.length = 0; survivalGame.bolts.length = 0;
+    const dayBody = body(onLine(110));
+    tick(120);
+    const dayShots = mode.nightStats.towerShots || 0;
+    const dayQuiet = dayShots === 0 && dayBody.hp === 999 && !survivalGame.bolts.some((b) => b.tower);
+
+    // by night it shoots the crowd at its door through the slit
+    mode.startNight();
+    quietNight(mode);
+    mode.guards.length = 0; mode.survivors = 0;
+    mode.tuning = { ...mode.tuning, autoAttackRange: 0 };   // the Hunter's own shot off
+    door.hp = door.hpMax = 99999;
+    const target = body(onLine(110), false);
+    let boltSeen = null;
+    for (let i = 0; i < 120; i++) {
+      tick();
+      const b = survivalGame.bolts.find((item) => item.tower);
+      if (b && !boltSeen) boltSeen = { pierce: b.pierce, range: b.range, friendly: !!b.friendly, slits: !!b.pierceDoors, damage: b.damage };
+    }
+    const nightShots = mode.nightStats.towerShots || 0;
+    const lost = 999 - target.hp;
+    const plainBlocked = !m.hasLOS(tower.x, tower.y, target.x, target.y);
+    towerCheck('tower: watches by day; by night fires its heavy bolt through the door slit (Hunter shot + guards off)',
+      dayQuiet && nightShots >= 1 && lost >= 16 && Math.abs(lost / 16 - Math.round(lost / 16)) < 0.01
+        && boltSeen && boltSeen.pierce === TOWER.pierce && boltSeen.range === 520 + TOWER.reach && boltSeen.friendly && boltSeen.slits
+        && plainBlocked && !door.open && !door.broken,
+      `day shots ${dayShots}; night ${nightShots} shots, body 999 → ${Math.round(target.hp)} (${Math.round(lost / 16)}×16), bolt ${JSON.stringify(boltSeen)}, plain LOS blocked=${plainBlocked}`);
+
+    // the tower's keys never leak into the Hunter's or a guard's bolt: the
+    // Hunter's spec is his weapon (which has a `range`)
+    survivalGame.bolts.length = 0;
+    survivalGame.player.weapon = 'shot';
+    survivalGame.player.swingAngle = 0;
+    survivalGame.playerAttackHit(survivalGame.player);
+    const hunterBolt = survivalGame.bolts[survivalGame.bolts.length - 1];
+    const guardBolt = survivalGame.spawnBolt({ x: 0, y: 0, key: 'guard', type: { boltSpeed: 640, boltDamage: 10 } }, 0, { offset: 16, boltSpeed: 640, damage: 10, friendly: true });
+    towerCheck('the Hunter\'s and guards\' bolts keep no reach cap and no pierce',
+      hunterBolt && hunterBolt.range === 0 && hunterBolt.pierce === 0 && !hunterBolt.tower
+        && guardBolt && guardBolt.range === 0 && guardBolt.pierce === 0,
+      `hunter range ${hunterBolt && hunterBolt.range} pierce ${hunterBolt && hunterBolt.pierce}; guard range ${guardBolt && guardBolt.range} pierce ${guardBolt && guardBolt.pierce}`);
+    survivalGame.bolts.length = 0;
+
+    // one bolt runs through two bodies, never a third
+    quietNight(mode);
+    const first = body(onLine(60)), second = body(onLine(100)), third = body(onLine(140));
+    const shotsBefore = mode.nightStats.towerShots || 0;
+    tower.cd = 0; tower.target = null;
+    for (let i = 0; i < 30 && (mode.nightStats.towerShots || 0) === shotsBefore; i++) tick();
+    resolveShot();
+    const pierceHp = [first, second, third].map((z) => Math.round(z.hp));
+    towerCheck('tower bolt runs through 2 bodies in a line and stops in the 2nd (pierce 1)',
+      (mode.nightStats.towerShots || 0) === shotsBefore + 1 && pierceHp.join('/') === '983/983/999',
+      `one shot, bodies ${pierceHp.join(' / ')}`);
+
+    // masonry stops it: a body in range but out of sight behind a wall
+    quietNight(mode);
+    let hiddenAt = null;
+    for (let gy = tower.y - 500; gy <= tower.y + 500 && !hiddenAt; gy += 20) {
+      for (let gx = tower.x - 500; gx <= tower.x + 500 && !hiddenAt; gx += 20) {
+        if (Math.hypot(gx - tower.x, gy - tower.y) > 480 || Math.hypot(gx - tower.x, gy - tower.y) < 200 || m.solidAt(gx, gy)) continue;
+        if (m.findRoom(gx, gy) === 'hall') continue;
+        if (!m.hasLOS(tower.x, tower.y, gx, gy, { throughDoors: true })) hiddenAt = { x: gx, y: gy };
+      }
+    }
+    const hidden = body(hiddenAt || { x: -100, y: 700 });
+    const hiddenShots = mode.nightStats.towerShots || 0;
+    tower.cd = 0;
+    tick(90);
+    const inRange = Math.hypot(hidden.x - tower.x, hidden.y - tower.y) <= 520;
+    const noLos = !m.hasLOS(tower.x, tower.y, hidden.x, hidden.y, { throughDoors: true });
+    towerCheck('tower never shoots through a wall (a body in range behind masonry is ignored)',
+      !!hiddenAt && inRange && noLos && (mode.nightStats.towerShots || 0) === hiddenShots && hidden.hp === 999,
+      `body at (${Math.round(hidden.x)}, ${Math.round(hidden.y)}) in ${m.findRoom(hidden.x, hidden.y)}, in range=${inRange}, no LOS=${noLos}, shots ${hiddenShots} → ${mode.nightStats.towerShots || 0}, body ${Math.round(hidden.hp)}`);
+
+    // levels: Lv2 22 dmg / 580, Lv3 30 dmg / 640; a Lv3 bolt lands for 30
+    mode.phase = 'day'; survivalGame.screen = 'playing'; survivalGame.uiPanel = 'survival-day';
+    survivalGame.enemies.length = 0; survivalGame.bolts.length = 0;
+    mode.oil = 150; mode.wood = 150;
+    const cost2 = mode.upgradeCost('hall');
+    mode.startBuild('upgrade', 'hall'); waitForBuilder();
+    const st2 = { ...mode.towerStats('hall') };
+    const cost3 = mode.upgradeCost('hall');
+    mode.startBuild('upgrade', 'hall'); waitForBuilder();
+    const st3 = { ...mode.towerStats('hall') };
+    mode.startNight();
+    quietNight(mode);
+    mode.guards.length = 0; mode.survivors = 0;
+    door.hp = door.hpMax = 99999;
+    const lv3Body = body(onLine(110));
+    const lv3Shots = mode.nightStats.towerShots || 0;
+    tower.cd = 0; tower.target = null;
+    for (let i = 0; i < 30 && (mode.nightStats.towerShots || 0) === lv3Shots; i++) tick();
+    resolveShot();
+    towerCheck('tower levels: Lv2 22 dmg / 580 range, Lv3 30 / 640 (costs 6/18, 8/22); a Lv3 bolt lands for 30',
+      cost2 && cost2.oil === 6 && cost2.wood === 18 && cost3 && cost3.oil === 8 && cost3.wood === 22
+        && st2.damage === 22 && st2.range === 580 && st3.damage === 30 && st3.range === 640
+        && mode.buildingLevel('hall') === 3 && Math.round(lv3Body.hp) === 969,
+      `cost Lv2 ${cost2 && `${cost2.oil}/${cost2.wood}`}, Lv3 ${cost3 && `${cost3.oil}/${cost3.wood}`}; Lv2 ${st2.damage}/${st2.range}, Lv3 ${st3.damage}/${st3.range}; body 999 → ${Math.round(lv3Body.hp)}`);
+    mode.tuning = SURVIVAL_TUNING;
+
+    // persistence: the tower and its level survive a reload, on the same spot
+    mode.phase = 'day';
+    survivalGame.enemies.length = 0; survivalGame.bolts.length = 0;
+    mode._persist(true);
+    const reloaded = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+    reloaded.update(step);
+    const rs = reloaded.survival;
+    const rt = rs.towers[0];
+    towerCheck('save/reload keeps the tower at Lv3 on the same spot',
+      rs.buildings.hall === 'tower' && rs.buildingLevel('hall') === 3 && rs.towers.length === 1
+        && rt && rt.x === spot.x && rt.y === spot.y && rt.doorId === 'frontDoor',
+      `reloaded ${rs.buildings.hall} Lv${rs.buildingLevel('hall')}, towers ${rs.towers.length} at (${rt && Math.round(rt.x)}, ${rt && Math.round(rt.y)})`);
+    window.localStorage.removeItem('lastnight.save.v1');
+  }
+  const towerPass = towerChecks.length === 7 && towerChecks.every(Boolean);
+
   console.log(`  idle Night 3: ${idle.nightThree.peakEnemies} peak enemies / ${idle.nightThree.peakBreakers} Breakers, ${idle.nightThree.kills} kills, ${idle.nightThree.wallDamage} wall damage, gate ${idle.nightThree.gateHp} HP, Hunter ${idle.nightThree.playerHp} HP; ${idle.phase}`);
   console.log(`  builder Night 3: ${builder.nightThree.peakEnemies} peak enemies / ${builder.nightThree.peakBreakers} Breakers, ${builder.nightThree.kills} kills, ${builder.nightThree.wallDamage} wall damage, gate ${builder.nightThree.gateHp} HP, Hunter ${builder.nightThree.playerHp} HP; Perapian Lv${builder.perapianLevel}, survivors ${builder.survivors}, buildings ${builder.buildings.join(',') || 'none'}, gateBuilt=${builder.gateBuilt}; ${builder.phase}`);
   // Balance target (M1 rebuild): doing nothing must not win; an engaged
@@ -959,7 +1136,7 @@ async function runSurvivalMilestone() {
     && hunterAutoShot && hunterRealLos && hunterSkill
     && idleLoses && builder.complete && builder.perapianLevel === 3
     && builder.queueLockVerified && builder.sawmillBuilt && builder.gateBuilt && builder.shelterBuilt
-    && saveProgressPass && economyPass && progressionPass && builder.upgrades.map((item) => item.level).join(',') === '1,2,3';
+    && saveProgressPass && economyPass && progressionPass && towerPass && builder.upgrades.map((item) => item.level).join(',') === '1,2,3';
   console.log(`  ${pass ? 'PASS' : 'FAIL'}  three-day loop, Perapian Lv1→Lv3, one builder queue, idle loses / engaged builder wins`);
   if (!pass) process.exitCode = 1;
   window.localStorage.removeItem('lastnight.save.v1');

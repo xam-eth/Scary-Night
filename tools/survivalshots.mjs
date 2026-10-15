@@ -15,7 +15,8 @@
  * The adaptive quality ladder reacts to wall-clock frame time, which in a
  * software-WebGL browser depends on machine load; captures therefore pin the
  * top tier (override with --quality=N) so two runs are comparable.
- * --no-progression skips the building-level / Hunter captures. */
+ * --no-progression skips the building-level / Hunter captures, --no-towers
+ * the crossbow-tower ones; --towers-only captures just the towers. */
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
@@ -124,14 +125,17 @@ const advanceTo = (target) => {
     ui: g.ui.length,
   };
 };
-await shot('night-00s', `(${advanceTo})(0.2)`);
-await shot('night-20s', `(${advanceTo})(20)`);
-await shot('night-40s', `(${advanceTo})(40)`);
 const stepFrames = (n) => {
   const g = window.__LN;
   for (let i = 0; i < n; i++) window.__origUpdate.call(g, 1 / 60);
   g.render();
 };
+// --towers-only: just the tower captures (each starts its own run)
+const TOWERS_ONLY = !!args['towers-only'];
+if (!TOWERS_ONLY) {
+await shot('night-00s', `(${advanceTo})(0.2)`);
+await shot('night-20s', `(${advanceTo})(20)`);
+await shot('night-40s', `(${advanceTo})(40)`);
 await shot('day-reward', `(() => {
   const g = window.__LN;
   g.survival.completeNight();
@@ -204,15 +208,17 @@ await shot('night-door', `(() => {
   return { t: +m.elapsed.toFixed(1), doorHp: Math.round(door.hp), target: !!m.currentTarget, guardsAtDoor: m.guards.filter((gd) => gd.post && gd.post.doorId === 'frontDoor').length, kills: m.nightStats.kills, zoom: +g.renderer.cam.zoom.toFixed(3) };
 })()`);
 
+}
+
 // Progression: building levels + the Hunter's track. A real Night 2 with a
 // pump, a sawmill and a shelter standing (hearth kept fed so the capture is
 // about the UI, not the balance), then the dawn reward, sheets and pennants.
-if (!args['no-progression']) {
-  const finishJob = () => {
-    const g = window.__LN;
-    let n = 0;
-    while (g.survival.builderJob && n++ < 3000) window.__origUpdate.call(g, 1 / 60);
-  };
+const finishJob = () => {
+  const g = window.__LN;
+  let n = 0;
+  while (g.survival.builderJob && n++ < 3000) window.__origUpdate.call(g, 1 / 60);
+};
+if (!args['no-progression'] && !TOWERS_ONLY) {
   await shot('prog-reward', `(() => {
     const g = window.__LN;
     const m = g.survival;
@@ -287,6 +293,60 @@ if (!args['no-progression']) {
     while (m.elapsed < 14 && m.phase === 'night' && steps++ < 3000) window.__origUpdate.call(g, 1 / 60);
     g.render();
     return { t: +m.elapsed.toFixed(1), hunter: m.hunterLevel, hp: Math.round(g.player.blood) + '/' + g.player.bloodMax, pumped: +(m.nightStats.pumped || 0).toFixed(2), kills: m.nightStats.kills };
+  })()`);
+}
+
+// Towers: a crossbow tower built by the front door through the real UI (slot
+// → TOWER card), its sheet with the red reach ring, then Lv2 firing on a
+// real Night 2 (Hunter parked by the front door so the camera holds the
+// tower, the door slit and the crowd).
+if (!args['no-towers']) {
+  await shot('tower-day', `(() => {
+    const g = window.__LN;
+    const m = g.survival;
+    m.restart();
+    let steps = 0;
+    while (m.phase === 'night' && steps++ < 6000) { m.oil = Math.max(m.oil, 40); window.__origUpdate.call(g, 1 / 60); }
+    const collect = g.ui.find((b) => b.label === 'survival:COLLECT');
+    if (collect) collect.onClick(); else m.ackRewards();
+    m.oil = Math.max(m.oil, 60); m.wood = Math.max(m.wood, 60);
+    (${stepFrames})(20);
+    const slot = g.ui.find((b) => b.label === 'survival:slot:hall');
+    if (slot) slot.onClick();
+    (${stepFrames})(10);
+    const card = g.ui.find((b) => b.label === 'survival:BUILD tower' && !b.disabled);
+    if (card) card.onClick();
+    (${finishJob})();
+    (${stepFrames})(10);
+    const bubble = g.ui.find((b) => b.label === 'survival:select:hall');
+    if (bubble) bubble.onClick();
+    (${stepFrames})(60);
+    const w = window.__survWorld;
+    return { slot: !!slot, card: !!card, built: m.buildings.hall, spot: m.buildingSpot('hall'), ring: !!(w.survivalTowerRing && w.survivalTowerRing.visible), ui: g.ui.map((b) => b.label).filter((l) => /UPGRADE|select:hall/.test(l)) };
+  })()`);
+  await shot('tower-night', `(() => {
+    const g = window.__LN;
+    const m = g.survival;
+    m.oil = Math.max(m.oil, 60); m.wood = Math.max(m.wood, 60);
+    (${stepFrames})(5);
+    const up = g.ui.find((b) => b.label === 'survival:UPGRADE tower LV2' && !b.disabled);
+    if (up) up.onClick();
+    (${finishJob})();
+    m.startNight();
+    // the Hunter stands between the tower and the front door: the camera
+    // holds the tower, the door slit and the crowd outside it
+    const park = () => { g.player.x = 236; g.player.y = 610; };
+    park();
+    g.renderer.snapCamera(g.player.x, g.player.y);
+    const flying = () => g.bolts.some((b) => b.tower && Math.hypot(b.x - b.ox, b.y - b.oy) > 50);
+    let steps = 0;
+    while (m.phase === 'night' && steps++ < 4800 && !((m.nightStats.towerShots || 0) >= 3 && flying())) {
+      m.oil = Math.max(m.oil, 40); park();
+      window.__origUpdate.call(g, 1 / 60);
+    }
+    g.render();
+    const t = m.towers[0];
+    return { t: +m.elapsed.toFixed(1), day: m.day, level: m.buildingLevel('hall'), upgraded: !!up, shots: m.nightStats.towerShots || 0, kills: m.nightStats.kills, flying: flying(), aim: t && +t.aim.toFixed(2) };
   })()`);
 }
 

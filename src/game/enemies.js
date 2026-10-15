@@ -1516,6 +1516,10 @@ export class Bolt {
     this.owner = owner;
     this.dead = false;
     this.trail = [];
+    this.ox = x; this.oy = y;   // where it left the string (range)
+    this.range = 0;             // 0: flies until it hits something
+    this.pierce = 0;            // extra bodies it runs through
+    this.hitSet = null;
   }
   update(dt, game) {
     const steps = 3;
@@ -1524,6 +1528,7 @@ export class Bolt {
       this.x += this.vx * sdt;
       this.y += this.vy * sdt;
       if (this.dead) return;
+      if (this.range > 0 && dist(this.x, this.y, this.ox, this.oy) > this.range) { this.dead = true; return; }
       // wall / door
       const e = game.mansion.entrances.find((en) =>
         Math.abs(this.x - en.x) < en.w / 2 + 3 && Math.abs(this.y - en.y) < en.h / 2 + 3);
@@ -1546,7 +1551,16 @@ export class Bolt {
       for (const o of game.enemies) {
         const hunterBolt = this.owner && this.owner.key === 'hunter';
         if (o !== this.owner && !o.dead && dist(this.x, this.y, o.x, o.y) < o.radius + 4 && !(hunterBolt && o.key === 'hunter')) {
+          if (this.hitSet && this.hitSet.has(o)) continue;
           o.hurt((hunterBolt ? this.damage * 0.5 : this.damage) * kitDamage(this.kit, o), game, this.x, this.y);
+          if (this.pierce > 0) {
+            // runs on: one body per sub-step, never the same body twice
+            this.pierce--;
+            (this.hitSet || (this.hitSet = new Set())).add(o);
+            game.audio.play('hitFlesh', { x: this.x, y: this.y, cam: game.renderer.cam, vol: 0.5 });
+            game.particles.burst('spark', this.x, this.y, 5, { color: 'rgba(255,190,110,0.85)', sizeMin: 1, sizeMax: 2.5, speedMin: 20, speedMax: 90, lifeMin: 0.1, lifeMax: 0.3, glow: true });
+            break;
+          }
           this.hit(game, false);
           return;
         }

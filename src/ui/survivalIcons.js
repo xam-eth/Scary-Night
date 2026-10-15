@@ -374,6 +374,51 @@ const ICONS = {
     rr(ctx, -0.2, 0.32, 0.4, 0.56, 0.08);
     fillStroke(ctx, '#7a4a2a');
   },
+  /** Crossbow tower: a building that fights back. */
+  tower(ctx) {
+    ctx.save();
+    ctx.lineWidth *= 2.8;
+    ctx.beginPath();
+    ctx.moveTo(-0.56, 0.92); ctx.lineTo(-0.42, -0.16);
+    ctx.moveTo(0.56, 0.92); ctx.lineTo(0.42, -0.16);
+    ctx.stroke();
+    ctx.lineWidth /= 2.4;
+    ctx.strokeStyle = '#c58546';
+    ctx.stroke();
+    ctx.restore();
+    ctx.save();
+    ctx.lineWidth *= 0.9;
+    ctx.beginPath();
+    ctx.moveTo(-0.5, 0.64); ctx.lineTo(0.45, 0.06);
+    ctx.moveTo(0.5, 0.64); ctx.lineTo(-0.45, 0.06);
+    ctx.stroke();
+    ctx.restore();
+    rr(ctx, -0.74, -0.3, 1.48, 0.26, 0.06);
+    fillStroke(ctx, '#8a5a34');
+    rr(ctx, -0.62, -0.6, 1.24, 0.32, 0.06);
+    fillStroke(ctx, '#e0a05a');
+    shine(ctx, -0.36, -0.5, 0.16, 0.05, 0.6);
+    // the ballista on the deck, aimed up and out
+    ctx.save();
+    ctx.translate(0.02, -0.72);
+    ctx.rotate(-0.5);
+    ctx.beginPath();
+    ctx.moveTo(-0.1, -0.36); ctx.quadraticCurveTo(0.24, 0, -0.1, 0.36);
+    ctx.save();
+    ctx.lineWidth *= 2.4;
+    ctx.stroke();
+    ctx.lineWidth /= 2;
+    ctx.strokeStyle = '#d6dde8';
+    ctx.stroke();
+    ctx.restore();
+    rr(ctx, -0.48, -0.08, 0.98, 0.16, 0.05);
+    fillStroke(ctx, '#c58546');
+    ctx.beginPath();
+    ctx.moveTo(0.8, 0); ctx.lineTo(0.5, -0.17); ctx.lineTo(0.5, 0.17);
+    ctx.closePath();
+    fillStroke(ctx, '#ff7a3a');
+    ctx.restore();
+  },
   up(ctx) {
     ctx.beginPath();
     ctx.moveTo(0, -0.92); ctx.lineTo(0.78, 0.0); ctx.lineTo(0.32, 0.0);

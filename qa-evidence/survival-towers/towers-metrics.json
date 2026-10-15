@@ -1,0 +1,45 @@
+{
+  "capturedAt": "2026-10-15T05:33:09.535Z",
+  "results": [
+    {
+      "name": "tower-day",
+      "file": "tools/shots-browser/survival/tow2-tower-day.png",
+      "meanLuma": 118.6,
+      "darkPct": 5.2,
+      "quality": 3,
+      "state": {
+        "slot": true,
+        "card": true,
+        "built": "tower",
+        "spot": {
+          "x": 212,
+          "y": 483,
+          "doorId": "frontDoor"
+        },
+        "ring": true,
+        "ui": [
+          "survival:select:hall",
+          "survival:UPGRADE tower LV2"
+        ]
+      }
+    },
+    {
+      "name": "tower-night",
+      "file": "tools/shots-browser/survival/tow2-tower-night.png",
+      "meanLuma": 62.5,
+      "darkPct": 15.8,
+      "quality": 3,
+      "state": {
+        "t": 21.3,
+        "day": 2,
+        "level": 2,
+        "upgraded": true,
+        "shots": 3,
+        "kills": 0,
+        "flying": true,
+        "aim": 1.94
+      }
+    }
+  ],
+  "pageErrors": []
+}
