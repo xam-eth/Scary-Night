@@ -195,6 +195,13 @@ try {
   const shots0 = await page.evaluate(() => {
     const g = window.__LN;
     g.survival.restart();
+    // the Hunter stands behind the front door that wave 1 claws, so he and
+    // the guards shoot through its slit: enough shots to exercise the pool.
+    // (Until 2026-10-15 part of that wave spawned inside the basement and
+    // walked past him, which is what kept this count above 20.)
+    const door = g.survival.entranceById('frontDoor');
+    const ix = door.inside.x - door.x, iy = door.inside.y - door.y, il = Math.hypot(ix, iy) || 1;
+    g.player.x = door.inside.x + ix / il * 60; g.player.y = door.inside.y + iy / il * 60;
     return g.stats.shotsFired || 0;
   });
   // 20 s of night with a render every 0.25 s (one render per __step call;
