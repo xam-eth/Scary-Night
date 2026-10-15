@@ -8,7 +8,7 @@
 
 import { clamp, damp, dist, rand, writeSave } from '../core/util.js';
 import { SURVIVAL_TUNING } from '../core/config.js';
-import { CrowdBody, Zombie, crowdSpot, outwardOf, CROWD, ESTATE } from './enemies.js';
+import { CrowdBody, Zombie, outwardOf, CROWD, ESTATE } from './enemies.js';
 import { ROOM } from './mansion.js';
 
 const RESOURCE_CAP = 999;
@@ -25,9 +25,16 @@ const WAVE_COUNTS = Object.freeze([
   Object.freeze([30, 30, 30]),
 ]);
 const SWARM_CAP = 30;
+// Doors per night: waves 1-3, then the two Individuals.
+const NIGHT_DOORS = Object.freeze([
+  Object.freeze(['frontDoor', 'chapelDoor', 'cellarDoor', 'cellarDoor', 'diningDoor']),
+  Object.freeze(['cellarDoor', 'diningDoor', 'palisade', 'palisade', 'kitchenDoor']),
+  Object.freeze(['chapelDoor', 'palisade', 'frontDoor', 'kitchenDoor', 'cellarDoor']),
+]);
 const RESERVE_SLACK = 8;
 // A hotter Perapian scorches whatever claws at it (damage per second by level).
-const HEARTH_BURN = Object.freeze({ 1: 0, 2: 14, 3: 28 });
+// (no knock-back: the burn thins a crowd at the hearth, it is not a wall)
+const HEARTH_BURN = Object.freeze({ 1: 0, 2: 8, 3: 14 });
 const HEARTH_BURN_RADIUS = 250;
 const NIGHT_PHASE = { id: 'survival-night', label: 'NIGHT', danger: 0.24, ambient: [108, 114, 132] };
 const DAY_PHASE = { id: 'survival-day', label: 'DAY', danger: 0.02, ambient: [186, 174, 150] };
@@ -81,6 +88,7 @@ function clampDuration(value) {
 /* ------------------------------------------------------------------ */
 
 const HEARTH_REACH = 132;
+const SIEGE_REACH = 250;       // px from a door the pressing ranks still claw it
 const FEED_EVERY = 1.5;
 const FEED_OIL = Object.freeze({ swarm: 1, individual: 3, breaker: 6 });
 
@@ -115,11 +123,42 @@ function trackInside(enemy, game) {
   return !!enemy._inHouse;
 }
 
-/** Outside the walls: walk the lane to a door (flow field near the house). */
+/**
+ * Outside the walls: walk the lane to a door. The door's flow field routes
+ * around the house while the body is still far away; inside the last stretch
+ * it walks straight to its own spot. (Following the field all the way made
+ * every body whose rank stands further out than the field's goal orbit that
+ * goal forever — whole waves never reached the wood.)
+ */
+const DOOR_LANE_NEAR = 200;
 function approachDoor(enemy, dt, game, mode, door, point, speed, accel) {
-  const dir = mode.flowDir(`door:${door.id}`, enemy.x, enemy.y);
+  const out = door.outside || door;
+  const far = dist(enemy.x, enemy.y, out.x, out.y) > DOOR_LANE_NEAR;
+  const dir = far ? mode.flowDir(`door:${door.id}`, enemy.x, enemy.y) : null;
   if (dir && dist(enemy.x, enemy.y, point.x, point.y) > 60) stepDir(enemy, dt, game, dir, speed, accel);
   else stepToward(enemy, dt, game, point.x, point.y, speed, accel);
+}
+
+/**
+ * Where a swarm body stands in its door's crowd. Unlike the legacy rank
+ * layout (left-to-right, as wide as the frame + 220 px), Survival fills the
+ * front rank centre-out and keeps it about one door wide, so the bodies that
+ * are clawing are the ones the Hunter and the guards can see through the
+ * door's slit; alternate ranks are staggered half a gap.
+ */
+const RANK_GAP = 44;
+const RANK_ROW = 36;
+export function survivalSpot(e, index, ring = 72) {
+  const out = outwardOf(e);
+  const along = { x: -out.y, y: out.x };
+  const span = e.axis === 'v' ? e.h : e.w;
+  const perRow = clamp(Math.round((span + 120) / RANK_GAP), 3, 7);
+  const rank = Math.floor(index / perRow);
+  const k = index % perRow;
+  const step = Math.ceil(k / 2) * (k % 2 ? 1 : -1);
+  const lateral = step * RANK_GAP + (rank % 2 ? RANK_GAP / 2 : 0);
+  const depth = ring + rank * RANK_ROW;
+  return { x: e.x + out.x * depth + along.x * lateral, y: e.y + out.y * depth + along.y * lateral };
 }
 
 /**
@@ -132,7 +171,10 @@ function invade(enemy, dt, game, mode, speed, accel, preferHunter, fallback = nu
   const lit = mode.isLit(enemy.x, enemy.y);
   const pd = dist(enemy.x, enemy.y, p.x, p.y);
   enemy.feeding = false;
-  if (!lit && pd < enemy.radius + p.radius + 12 && p.state !== 'death' && p.state !== 'dead') {
+  // Firelight never makes a body harmless: in the light it will not hunt the
+  // Hunter, but one standing in its way still gets clawed (weaker, see
+  // SurvivalMode.enemyAttackMul).
+  if (pd < enemy.radius + p.radius + 12 && p.state !== 'death' && p.state !== 'dead') {
     settle(enemy, dt);
     enemy.state = 'strike';
     enemy.angle = Math.atan2(p.y - enemy.y, p.x - enemy.x);
@@ -250,7 +292,7 @@ class SurvivalCrowdZombie extends CrowdBody {
     }
 
     if (!entrance) { this.state = CROWD.LEAVE; return; }
-    const spot = crowdSpot(entrance, this.index, 72);
+    const spot = survivalSpot(entrance, this.index, 72);
     const targetX = spot.x + this.jx * 0.25;
     const targetY = spot.y + this.jy * 0.25;
     const d = dist(this.x, this.y, targetX, targetY);
@@ -516,6 +558,43 @@ class FlowField {
   }
 }
 
+/**
+ * Survivors are the house's garrison. By day they stand around the Perapian
+ * (the count the HUD shows is people you can see); by night each one walks to
+ * the door under the most pressure and shoots through its slit. They are not
+ * targets — losing the house is still the fire or the Hunter — so a Shelter is
+ * a straight, readable trade: more guards, more dead at the doors.
+ */
+export const GUARD = Object.freeze({
+  speed: 210,          // px/s walking between posts
+  range: 420,          // px a guard will shoot at
+  every: 1.6,          // s between shots
+  damage: 10,          // per bolt (x1.75 on lit enemies, like the Hunter's)
+  boltSpeed: 640,
+  perDoor: 2,          // most guards one door takes before the next door gets one
+  cap: 8,              // most guards on the map (== maxSurvivors)
+});
+
+class SurvivalGuard {
+  constructor(index, x, y) {
+    this.id = 5000000 + index;
+    this.index = index;
+    this.key = 'guard';
+    this.x = x; this.y = y;
+    this.angle = -Math.PI / 2;
+    this.radius = 12;
+    this.type = { boltSpeed: GUARD.boltSpeed, boltDamage: GUARD.damage };
+    this.cd = 0.5 + index * 0.23;  // staggered so a pair never fires in lockstep
+    this.post = null;              // { key, x, y, doorId }
+    this.path = null;
+    this.pathI = 0;
+    this.moving = false;
+    this.shotT = 0;                // recoil, for the 3D pawn
+    this.walkT = 0;
+    this.target = null;
+  }
+}
+
 export class SurvivalMode {
   constructor(game, options = {}) {
     this.game = game;
@@ -549,6 +628,7 @@ export class SurvivalMode {
     this._lastGateOpen = null;
     this._savedDurationOverride = options.nightDuration || null;
     this.uiClock = 0;
+    this.guards = [];
     this.floaters = [];
     this.bannerQueue = [];
     this.banner = null;
@@ -568,6 +648,7 @@ export class SurvivalMode {
     this.applyBuildingEffects(false);
     this.game.mansion.buildNav();
     this.refreshFireplace(true);
+    this._syncGuardRoster(true);
     if (this.phase === 'night' && this.elapsed < 1) this._nightIntro();
   }
 
@@ -593,6 +674,7 @@ export class SurvivalMode {
     this.breakerIndex = Math.max(0, Math.floor(Number(s.breakerIndex) || 0));
     this.individualIndex = Math.max(0, Math.floor(Number(s.individualIndex) || 0));
     this.oilBurned = Math.max(0, Number(s.oilBurned) || 0);
+    this.nightOilStart = Number.isFinite(Number(s.nightOilStart)) && s.nightOilStart != null ? Number(s.nightOilStart) : null;
     this.siegeTimers = s.siegeTimers && typeof s.siegeTimers === 'object' ? { ...s.siegeTimers } : {};
     this.nightStats = { kills: 0, hits: 0, damageToWalls: 0, drained: 0, ...(s.nightStats || {}) };
     this.lastRewards = s.lastRewards || null;
@@ -635,6 +717,12 @@ export class SurvivalMode {
         if (row[key] != null) e[key] = row[key];
       }
       if (row.targetEntranceId) e.targetEntranceId = row.targetEntranceId;
+      if (row.targetKind) e.targetKind = row.targetKind;
+      // a body that already crossed a doorway keeps walking to the fire
+      // instead of turning back toward its door after a reload
+      if (row.inHouse) e._inHouse = true;
+      if (Number.isFinite(row.feedCd)) e.feedCd = row.feedCd;
+      if (Number.isFinite(row.staggerT)) e.staggerT = row.staggerT;
       if (e._crowd) e.index = Number(row.index) || 0;
       g.enemies.push(e);
     }
@@ -655,7 +743,8 @@ export class SurvivalMode {
     m.survivalLighting = true;
     this._syncBakePhase();
     for (const prop of m.props || []) {
-      if (prop.type === 'carpet' && prop.color === 'dark') prop.color = 'crimson';
+      if (prop.type === 'carpet' && (prop.color === 'dark' || prop.color === 'crimson')) prop.color = 'rose';
+      else if (prop.type === 'carpet' && prop.color === 'purple') prop.color = 'violet';
     }
     for (const light of m.lights) {
       if (light !== m.fireplaceLight) { light.i = 0; light.curI = 0; }
@@ -686,6 +775,7 @@ export class SurvivalMode {
     g.paused = false;
     g.uiPanel = this.phase === 'day' ? 'survival-day' : this.phase === 'complete' ? 'survival-complete' : this.phase === 'failed' ? 'survival-failed' : null;
     g.player.state = 'idle';
+    if (g.renderer.setZoomMul) g.renderer.setZoomMul(this.frameMul(this.phase !== 'day'));
     g.renderer.snapCamera(g.player.x, g.player.y);
     g.input.gameplay = this.phase === 'night';
     g.mansion.update(0, g);
@@ -699,6 +789,7 @@ export class SurvivalMode {
     this.phase = 'night';
     this.elapsed = 0;
     this.oilBurned = 0;
+    this.nightOilStart = this.oil;
     this.waveIndex = 0;
     this.breakerIndex = 0;
     this.individualIndex = 0;
@@ -726,7 +817,9 @@ export class SurvivalMode {
     g.mansion.buildNav();
     this._fields.clear();
     this.refreshFireplace(true);
-    if (g.renderer.setZoomMul) g.renderer.setZoomMul(1);
+    this._syncGuardRoster(true);
+    this._guardAssignT = 0;
+    if (g.renderer.setZoomMul) g.renderer.setZoomMul(this.frameMul(true));
     g.renderer.snapCamera(g.player.x, g.player.y);
     this._nightIntro();
     this._persist(true);
@@ -754,9 +847,13 @@ export class SurvivalMode {
     const g = this.game;
     this._syncBakePhase();
     this.uiClock += dt;
-    this._updateFx(dt);
-    this.skillCooldown = Math.max(0, this.skillCooldown - dt);
-    this.skillFlash = Math.max(0, this.skillFlash - dt);
+    // Pause freezes the run: Flare cooldown, banners and damage numbers all
+    // wait with the night instead of quietly running out behind the panel.
+    if (g.screen === 'playing') {
+      this._updateFx(dt);
+      this.skillCooldown = Math.max(0, this.skillCooldown - dt);
+      this.skillFlash = Math.max(0, this.skillFlash - dt);
+    }
     if (this.phase === 'night' && g.screen === 'playing' && !g.uiPanel) this.updateNight(dt);
     else if (this.phase === 'day' && g.screen === 'playing') this.updateDay(dt);
     else {
@@ -803,6 +900,7 @@ export class SurvivalMode {
     }
     this.hearthFeeders = feeders;
     this.updateHearthBurn(dt);
+    this.updateGuards(dt);
     const p = g.player;
     if (this._lastPlayerPos) this._movedSinceStart += Math.hypot(p.x - this._lastPlayerPos.x, p.y - this._lastPlayerPos.y);
     this._lastPlayerPos = { x: p.x, y: p.y };
@@ -817,6 +915,10 @@ export class SurvivalMode {
     }
     this.updateCrowdSiege(dt);
     this.updateGateMeter();
+    // A hit makes a door flash for a moment; Survival owns the decay (the
+    // legacy loop that used to fade it never runs here), otherwise one claw
+    // marked a door "under attack" for the rest of the night.
+    for (const e of g.mansion.entrances) if (e.flash > 0) e.flash = Math.max(0, e.flash - dt * 1.6);
     this.followPlayer(dt);
     if (this.phase !== 'night') return;
     if (this.oil <= 0) this.fail('THE FIRE WENT OUT');
@@ -836,6 +938,7 @@ export class SurvivalMode {
     g.mansion.update(dt, g);
     this.refreshFireplace(false);
     g.player.anim(dt);
+    this.updateGuards(dt);
     if (this.builderJob) {
       this.builderJob.remaining = Math.max(0, this.builderJob.remaining - dt);
       if (this.builderJob.remaining <= 0) this.finishBuilderJob();
@@ -868,13 +971,14 @@ export class SurvivalMode {
     }
   }
 
-  spawnSwarm(count, wave) {
+  spawnSwarm(count, wave, forced = null) {
     const g = this.game;
-    const entrance = this.chooseTargetEntrance(g.player.x, g.player.y, wave);
+    const entrance = forced || this.chooseTargetEntrance(g.player.x, g.player.y, wave);
     if (!entrance) return;
     const out = outwardOf(entrance);
     const along = { x: -out.y, y: out.x };
     const total = clamp(Math.round(count), 1, SWARM_CAP);
+    const queued = this.crowdAt(entrance.id).length;
     for (let i = 0; i < total; i++) {
       const row = Math.floor(i / 7);
       const col = i % 7;
@@ -882,7 +986,9 @@ export class SurvivalMode {
       const depth = 150 + row * 56 + rand(-16, 16);
       const x = entrance.outside.x + out.x * depth + along.x * lateral;
       const y = entrance.outside.y + out.y * depth + along.y * lateral;
-      const body = new SurvivalCrowdZombie(x, y, entrance, i + wave * total, this.day);
+      // Ranks count from the front of *this* door's crowd: a wave that joins
+      // an existing crowd queues behind it, a fresh door starts at rank 0.
+      const body = new SurvivalCrowdZombie(x, y, entrance, queued + i, this.day);
       body.id = 1000000 + this.day * 10000 + wave * 100 + i;
       g.enemies.push(body);
     }
@@ -920,7 +1026,15 @@ export class SurvivalMode {
   chooseTargetEntrance(_x, _y, offset = 0) {
     const doors = this.game.mansion.entrances.filter((e) => e.kind === 'door' && e.exterior);
     if (!doors.length) return this.mainGate();
-    // Night n rotates the opening doors so every night tests a different side.
+    // Every night tests a different side, and the nights get *closer*: the
+    // old rotation sent Night 3 to the three doors furthest from the fire, so
+    // its biggest waves never reached the Perapian before dawn. Night 3 now
+    // opens with the chapel (near), presses the palisade, and ends with its
+    // largest wave on the front gate beside both Breakers.
+    const plan = NIGHT_DOORS[clamp(this.day - 1, 0, NIGHT_DOORS.length - 1)];
+    const wanted = plan[offset % plan.length];
+    const exact = doors.find((e) => e.id === wanted);
+    if (exact) return exact;
     const priority = ['frontDoor', 'chapelDoor', 'cellarDoor', 'diningDoor', 'palisade', 'kitchenDoor', 'postern'];
     const start = (offset + (this.day - 1) * 2) % priority.length;
     for (let i = 0; i < priority.length; i++) {
@@ -945,13 +1059,56 @@ export class SurvivalMode {
   entranceById(id) { return this.game.mansion.entrances.find((e) => e.id === id) || null; }
   mainGate() { return this.game.mansion.frontDoor || this.entranceById('frontDoor') || this.game.mansion.doors[0] || null; }
 
+  /** Living swarm bodies still outside, queued at one door. */
+  crowdAt(id) {
+    return this.game.enemies.filter((e) => !e.dead && !e.removeMe && e._survivalType === 'swarm'
+      && !e._inHouse && e.entranceId === id);
+  }
+
+  /**
+   * Close the ranks: front-rank deaths are filled by the nearest body behind,
+   * so a crowd keeps leaning on the wood (and stays in reach of the Hunter
+   * and the guards) instead of standing on its spawn spots.
+   */
+  reslotCrowds() {
+    const byDoor = new Map();
+    for (const e of this.game.enemies) {
+      if (e.dead || e.removeMe || e._survivalType !== 'swarm' || e._inHouse) continue;
+      const door = this.entranceById(e.entranceId);
+      if (!door || door.broken) continue;
+      let list = byDoor.get(door);
+      if (!list) byDoor.set(door, (list = []));
+      list.push(e);
+    }
+    for (const [door, list] of byDoor) {
+      const free = list.slice();
+      for (let slot = 0; slot < list.length; slot++) {
+        const spot = survivalSpot(door, slot, 72);
+        let best = 0, bestD = Infinity;
+        for (let k = 0; k < free.length; k++) {
+          const b = free[k];
+          // a small bias keeps a body on its own slot when it is a tie
+          const d = (b.x - spot.x) ** 2 + (b.y - spot.y) ** 2 - (b.index === slot ? 1600 : 0);
+          if (d < bestD) { bestD = d; best = k; }
+        }
+        free[best].index = slot;
+        free.splice(best, 1);
+      }
+    }
+  }
+
   updateCrowdSiege(dt) {
     const g = this.game;
+    this._reslotT = (this._reslotT || 0) - dt;
+    if (this._reslotT <= 0) { this._reslotT = 0.6; this.reslotCrowds(); }
     const pressed = new Map();
     for (const e of g.enemies) {
       if (!e._survivalType || e.dead || e._survivalType !== 'swarm' || e.state !== CROWD.PRESS) continue;
       const id = e.entranceId || (e.entrance && e.entrance.id);
       if (!id) continue;
+      // only the ranks actually leaning on the wood claw it
+      const door = e.entrance;
+      if (door && dist(e.x, e.y, door.x, door.y) > SIEGE_REACH) continue;
       const row = pressed.get(id) || { count: 0, sample: e };
       row.count++;
       pressed.set(id, row);
@@ -1016,19 +1173,203 @@ export class SurvivalMode {
     return dealt;
   }
 
-  enemyCanAttack(enemy) { return !this.isLit(enemy.x, enemy.y); }
+  /** Light weakens claws; it never makes a body harmless (Hunter can still die). */
+  enemyCanAttack() { return true; }
+  enemyAttackMul(enemy) { return enemy && this.isLit(enemy.x, enemy.y) ? this.tuning.litAttackMul : 1; }
 
   autoTarget() {
     const p = this.game.player;
+    // Closed doors have shooting slits: the Hunter picks off a crowd leaning
+    // on a door from inside. Solid walls still block the shot.
     const candidates = this.game.enemies.filter((e) => !e.dead && !e.removeMe && e.hp > 0
       && dist(p.x, p.y, e.x, e.y) <= this.tuning.autoAttackRange
-      && this.game.mansion.hasLOS(p.x, p.y, e.x, e.y));
-    candidates.sort((a, b) => {
-      const aa = (a._survivalType === 'breaker' ? -70 : a._survivalType === 'individual' ? -20 : 0) + dist(p.x, p.y, a.x, a.y);
-      const bb = (b._survivalType === 'breaker' ? -70 : b._survivalType === 'individual' ? -20 : 0) + dist(p.x, p.y, b.x, b.y);
-      return aa - bb;
-    });
+      && this.game.mansion.hasLOS(p.x, p.y, e.x, e.y, { throughDoors: true }));
+    candidates.sort((a, b) => this.targetScore(p, a) - this.targetScore(p, b));
     return candidates[0] || null;
+  }
+
+  /** Lower is shot first: whatever is eating the fire, then what is already inside. */
+  targetScore(from, e) {
+    let s = dist(from.x, from.y, e.x, e.y);
+    if (e._survivalType === 'breaker') s -= 70;
+    else if (e._survivalType === 'individual') s -= 20;
+    if (e.feeding) s -= 160;
+    else if (e._inHouse) s -= 60;
+    return s;
+  }
+
+  /* ---------------- guards (survivors) ---------------- */
+
+  /** One pawn per survivor (capped). New ones step out by the fire. */
+  _syncGuardRoster(snap = false) {
+    const want = clamp(Math.floor(this.survivors || 0), 0, GUARD.cap);
+    while (this.guards.length > want) this.guards.pop();
+    while (this.guards.length < want) {
+      const i = this.guards.length;
+      const post = this._hearthPost(i);
+      const guard = new SurvivalGuard(i, post.x, post.y);
+      guard.post = post;
+      this.guards.push(guard);
+    }
+    if (snap) {
+      for (const guard of this.guards) {
+        const post = this._hearthPost(guard.index);
+        guard.x = post.x; guard.y = post.y; guard.post = post;
+        guard.path = null; guard.moving = false; guard.target = null; guard.shotT = 0;
+      }
+    }
+  }
+
+  /** A loose arc in front of the fire (day camp / spare guards at night). */
+  _hearthPost(i) {
+    const fire = this.hearth() || { x: 0, y: 0 };
+    const t = (i + 0.5) / GUARD.cap;
+    const a = Math.PI * (0.12 + 0.76 * t);
+    const r = 205 + (i % 2) * 34;
+    return this._freePost(fire.x + Math.cos(a) * r, fire.y + 60 + Math.sin(a) * r, 'hearth', null);
+  }
+
+  /** Just inside a door, beside its frame: slot 0/1 left and right of the slit. */
+  _doorPost(door, slot) {
+    const out = outwardOf(door);
+    const inward = { x: -out.x, y: -out.y };
+    const along = { x: -inward.y, y: inward.x };
+    const base = door.inside || door;
+    const side = slot % 2 === 0 ? -1 : 1;
+    const lateral = side * (26 + Math.floor(slot / 2) * 30);
+    const depth = 46 + Math.floor(slot / 2) * 26;
+    return this._freePost(base.x + inward.x * depth + along.x * lateral,
+      base.y + inward.y * depth + along.y * lateral, `door:${door.id}:${slot}`, door.id, inward);
+  }
+
+  /** Nudge a post off furniture so a pawn never stands inside a table. */
+  _freePost(x, y, key, doorId, push = null) {
+    const m = this.game.mansion;
+    const free = (px, py) => !m.solidAt(px, py) && !m.solidAt(px + 10, py) && !m.solidAt(px - 10, py)
+      && !m.solidAt(px, py + 10) && !m.solidAt(px, py - 10);
+    if (!free(x, y)) {
+      const tries = push ? [[push.x * 24, push.y * 24], [push.x * 48, push.y * 48], [-push.y * 30, push.x * 30], [push.y * 30, -push.x * 30]]
+        : [[0, 30], [30, 0], [-30, 0], [0, -30], [36, 36], [-36, 36]];
+      for (const [ox, oy] of tries) if (free(x + ox, y + oy)) { x += ox; y += oy; break; }
+    }
+    return { key, x, y, doorId };
+  }
+
+  /**
+   * Who stands where tonight: doors ranked by how many bodies lean on them
+   * (outside crowds + anything coming through a breach), up to GUARD.perDoor
+   * each; the rest hold the fire. A guard keeps its post while that door is
+   * still in the ranking, so they do not ping-pong across the house.
+   */
+  assignGuards() {
+    const g = this.game;
+    if (!this.guards.length) return;
+    if (this.phase !== 'night') {
+      for (const guard of this.guards) this._setGuardPost(guard, this._hearthPost(guard.index));
+      return;
+    }
+    const threat = new Map();
+    for (const e of g.enemies) {
+      if (e.dead || e.removeMe || !e._survivalType) continue;
+      if (!e._inHouse) {
+        const id = e._survivalType === 'breaker' ? e.targetEntranceId : e.entranceId;
+        const door = id && this.entranceById(id);
+        if (!door || dist(e.x, e.y, door.x, door.y) > 520) continue;
+        threat.set(door, (threat.get(door) || 0) + (e._survivalType === 'swarm' ? 1 : 3));
+      }
+    }
+    // a breach keeps its guards: invaders still walk past them
+    for (const door of g.mansion.entrances) {
+      if (door.kind === 'door' && door.exterior && door.broken) {
+        const near = this.enemiesNear(door.x, door.y, 420);
+        if (near > 0) threat.set(door, (threat.get(door) || 0) + near);
+      }
+    }
+    const ranked = [...threat.entries()].filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1]);
+    const slots = [];
+    for (let pass = 0; pass < GUARD.perDoor; pass++) {
+      for (const [door] of ranked) slots.push({ door, slot: pass });
+    }
+    const taken = new Set();
+    const pending = [];
+    for (const guard of this.guards) {
+      const keep = guard.post && guard.post.doorId
+        && slots.find((s) => s.door.id === guard.post.doorId && !taken.has(`${s.door.id}:${s.slot}`));
+      if (keep) { taken.add(`${keep.door.id}:${keep.slot}`); this._setGuardPost(guard, this._doorPost(keep.door, keep.slot)); }
+      else pending.push(guard);
+    }
+    for (const guard of pending) {
+      const free = slots.find((s) => !taken.has(`${s.door.id}:${s.slot}`));
+      if (free) { taken.add(`${free.door.id}:${free.slot}`); this._setGuardPost(guard, this._doorPost(free.door, free.slot)); }
+      else this._setGuardPost(guard, this._hearthPost(guard.index));
+    }
+  }
+
+  _setGuardPost(guard, post) {
+    if (guard.post && guard.post.key === post.key && Math.hypot(guard.post.x - post.x, guard.post.y - post.y) < 4) return;
+    guard.post = post;
+    guard.path = this.game.mansion.navPath(guard.x, guard.y, post.x, post.y) || [{ x: post.x, y: post.y }];
+    guard.pathI = 0;
+  }
+
+  /** Nearest thing worth a bolt that this guard can actually hit. */
+  guardTarget(guard) {
+    const m = this.game.mansion;
+    let best = null, bestS = Infinity;
+    for (const e of this.game.enemies) {
+      if (e.dead || e.removeMe || !(e.hp > 0)) continue;
+      const d = dist(guard.x, guard.y, e.x, e.y);
+      if (d > GUARD.range) continue;
+      const s = this.targetScore(guard, e);
+      if (s >= bestS) continue;
+      if (!m.hasLOS(guard.x, guard.y, e.x, e.y, { throughDoors: true })) continue;
+      best = e; bestS = s;
+    }
+    return best;
+  }
+
+  updateGuards(dt) {
+    const g = this.game;
+    this._syncGuardRoster(false);
+    if (!this.guards.length) return;
+    this._guardAssignT = (this._guardAssignT || 0) - dt;
+    if (this._guardAssignT <= 0) { this._guardAssignT = 0.5; this.assignGuards(); }
+    const night = this.phase === 'night';
+    for (const guard of this.guards) {
+      guard.shotT = Math.max(0, guard.shotT - dt);
+      // walk the path to the post
+      guard.moving = false;
+      if (guard.path && guard.pathI < guard.path.length) {
+        const wp = guard.path[guard.pathI];
+        const dx = wp.x - guard.x, dy = wp.y - guard.y;
+        const d = Math.hypot(dx, dy);
+        const step = GUARD.speed * dt;
+        if (d <= step) { guard.x = wp.x; guard.y = wp.y; guard.pathI++; }
+        else { guard.x += dx / d * step; guard.y += dy / d * step; }
+        if (d > 0.5) guard.angle = Math.atan2(dy, dx);
+        guard.moving = true;
+        guard.walkT += dt;
+      }
+      if (!night) { guard.target = null; continue; }
+      guard.cd -= dt;
+      if (guard.moving) { guard.cd = Math.max(guard.cd, 0.25); continue; }
+      if (guard.cd > 0) {
+        if (guard.target && !guard.target.dead) guard.angle = Math.atan2(guard.target.y - guard.y, guard.target.x - guard.x);
+        continue;
+      }
+      const target = this.guardTarget(guard);
+      guard.target = target;
+      if (!target) { guard.cd = 0.3; continue; }
+      const lead = dist(guard.x, guard.y, target.x, target.y) / GUARD.boltSpeed;
+      const tx = target.x + (target.vx || 0) * lead, ty = target.y + (target.vy || 0) * lead;
+      guard.angle = Math.atan2(ty - guard.y, tx - guard.x);
+      const bolt = g.spawnBolt(guard, guard.angle, { offset: 16, boltSpeed: GUARD.boltSpeed, damage: GUARD.damage, friendly: true });
+      if (bolt) bolt.guard = true;
+      guard.cd = GUARD.every + rand(-0.12, 0.18);
+      guard.shotT = 0.2;
+      this.nightStats.guardShots = (this.nightStats.guardShots || 0) + 1;
+      g.audio.play('crossbow', { x: guard.x, y: guard.y, cam: g.renderer.cam, vol: 0.3 });
+    }
   }
 
   useSkill() {
@@ -1194,12 +1535,17 @@ export class SurvivalMode {
       wood += spec.produces.wood || 0;
       if (spec.produces.survivors) this.survivors = Math.min(this.tuning.maxSurvivors, this.survivors + spec.produces.survivors);
     }
-    const killOil = Math.floor(this.nightStats.kills / 4);
-    const killWood = Math.floor(this.nightStats.kills / 3);
+    // kills pay a little (guards shoot too, so this stays a trickle)
+    const killOil = Math.floor(this.nightStats.kills / 6);
+    const killWood = Math.floor(this.nightStats.kills / 4);
     oil += killOil; wood += killWood;
     this.oil = clamp(this.oil + oil, 0, RESOURCE_CAP);
     this.wood = clamp(this.wood + wood, 0, RESOURCE_CAP);
     this.nightsCompleted = Math.min(3, this.nightsCompleted + 1);
+    // Dawn tops the fire back up to its full radius: the day plans with the
+    // radius the sheet shows (lit rooms = buildable rooms), not the embers
+    // of the night before.
+    this.oilBurned = 0;
     this.repairDoors();
     this.lastRewards = {
       oil, wood, kills: this.nightStats.kills, walls: this.nightStats.damageToWalls,
@@ -1229,6 +1575,7 @@ export class SurvivalMode {
     g.input.gameplay = false;
     this.applyBuildingEffects(false);
     this.refreshFireplace(true);
+    this._syncGuardRoster(true);
     this._persist(true);
   }
 
@@ -1251,12 +1598,13 @@ export class SurvivalMode {
       gateHp: 0, builderJob: null, selectedRoom: null, nightsCompleted: 0, waveIndex: 0,
       breakerIndex: 0, individualIndex: 0, oilBurned: 0, siegeTimers: Object.create(null),
       nightStats: { kills: 0, hits: 0, damageToWalls: 0, drained: 0 }, lastRewards: null, skillCooldown: 0,
-      rewardAck: 0, dayFocus: null,
+      rewardAck: 0, dayFocus: null, nightOilStart: this.tuning.startOil,
     });
     this._resetNightFx();
     this._fields.clear();
     for (const e of g.mansion.entrances) {
       e.hp = e.baseHpMax; e.hpMax = e.baseHpMax; e.broken = false; e.open = false; e.barricade = 0;
+      e.flash = 0; e.attackers = 0;
     }
     g.enemies.length = 0; g.bolts.length = 0;
     const fire = g.mansion.fireplaceLight;
@@ -1266,6 +1614,8 @@ export class SurvivalMode {
     this.phase = 'night';
     g.mansion.buildNav();
     this.refreshFireplace(true);
+    this.guards.length = 0;
+    this._syncGuardRoster(true);
     this.enter();
     this._nightIntro();
   }
@@ -1308,17 +1658,36 @@ export class SurvivalMode {
     if (this.phase === 'day') {
       // Day is a base view: zoom out and frame the selected build target
       // above the bottom sheet.
-      if (r.setZoomMul) r.setZoomMul(0.8, dt);
+      if (r.setZoomMul) r.setZoomMul(this.frameMul(false), dt);
       const focus = this.dayFocusPoint();
       const a = r.screenToWorld(r.w / 2, r.h / 2);
       const b = r.screenToWorld(r.w / 2, r.h / 2 + Math.min(150, r.h * 0.17));
       r.followCamera(focus.x + (b.x - a.x), focus.y + (b.y - a.y), dt, 0, 0, g.mansion.camBounds);
       return;
     }
-    if (r.setZoomMul) r.setZoomMul(1, dt);
-    const lookX = clamp(p.vx * 0.18, -56, 56);
-    const lookY = clamp(p.vy * 0.18, -56, 56);
+    if (r.setZoomMul) r.setZoomMul(this.frameMul(true), dt);
+    let lookX = clamp(p.vx * 0.18, -56, 56);
+    let lookY = clamp(p.vy * 0.18, -56, 56);
+    // lean toward what the Hunter is shooting so a crowd at a door is on screen
+    const t = this.currentTarget;
+    if (t && !t.dead) {
+      lookX += clamp((t.x - p.x) * 0.3, -130, 130);
+      lookY += clamp((t.y - p.y) * 0.3, -130, 130);
+    }
     r.followCamera(p.x, p.y, dt, lookX, lookY, g.mansion.camBounds);
+  }
+
+  /**
+   * Survival frames by the screen's short side, so a portrait phone and the
+   * same phone turned sideways see the same depth of house around the Hunter
+   * (landscape used to clamp to a much tighter zoom). Night pulls back far
+   * enough that a crowd at the nearest door is in frame; day shows the base.
+   */
+  frameMul(night) {
+    const r = this.game.renderer;
+    const short = Math.min(r.w || 390, r.h || 844);
+    const target = clamp(short / 720, 0.5, 0.82) * (night ? 0.86 : 0.74);
+    return target / (r.baseZoom || 1);
   }
 
   dayFocusPoint() {
@@ -1339,7 +1708,7 @@ export class SurvivalMode {
   swarmSpeed(breached) {
     const base = 59 + Math.max(0, this.day - 1) * 5;
     // Inside the walls they rush; outside they shamble in ranks.
-    return breached ? 84 * (1 + (this.day - 1) * 0.06) : base;
+    return breached ? 92 * (1 + (this.day - 1) * 0.08) : base;
   }
 
   hearth() { return this.game.mansion.fireplaceLight || null; }
@@ -1415,7 +1784,7 @@ export class SurvivalMode {
       e._burnT = (e._burnT || 0) + dt;
       if (e._burnT >= 0.5) {
         e._burnT -= 0.5;
-        if (typeof e.hurt === 'function') e.hurt(dps * 0.5, g, fire.x, fire.y);
+        if (typeof e.hurt === 'function') e.hurt(dps * 0.5, g);
       }
     }
   }
@@ -1441,6 +1810,11 @@ export class SurvivalMode {
   }
 
   doorPressure(id) { return this._doorPressure.get(id) || 0; }
+
+  /** Intact exterior doors something is clawing right now. */
+  besiegedDoors() {
+    return this.game.mansion.entrances.filter((e) => e.exterior && e.kind === 'door' && !e.broken && this.doorPressure(e.id) > 0);
+  }
 
   breachAge(id) { return this._breachAt[id] == null ? Infinity : this.uiClock - this._breachAt[id]; }
 
@@ -1558,6 +1932,7 @@ export class SurvivalMode {
       alpha: e.alpha, dead: e.dead, deathT: e.deathT, attackCd: e.attackCd,
       press: e.press, t: e.t, index: e.index || e.waveIndex || e.breakerIndex || 0,
       entranceId: e.entranceId, targetEntranceId: e.targetEntranceId,
+      inHouse: !!e._inHouse, feedCd: e.feedCd, staggerT: e.staggerT || 0, targetKind: e.targetKind || null,
     }));
   }
 
@@ -1574,6 +1949,7 @@ export class SurvivalMode {
     s.selectedRoom = this.selectedRoom; s.nightsCompleted = this.nightsCompleted;
     s.waveIndex = this.waveIndex; s.breakerIndex = this.breakerIndex; s.individualIndex = this.individualIndex;
     s.oilBurned = +this.oilBurned.toFixed(2); s.siegeTimers = { ...this.siegeTimers };
+    s.nightOilStart = this.nightOilStart == null ? null : +Number(this.nightOilStart).toFixed(2);
     s.nightStats = { ...this.nightStats }; s.lastRewards = this.lastRewards ? { ...this.lastRewards } : null;
     s.rewardAck = this.rewardAck;
     s.player = { x: g.player.x, y: g.player.y, angle: g.player.angle, blood: g.player.blood };

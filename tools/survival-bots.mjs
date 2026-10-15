@@ -3,7 +3,7 @@
  * Interact key for Flare); nothing here reaches into enemy internals.
  *
  *   botNight(game, state, { ROOM, ISO_CAMERA })  active defender, one frame
- *   botDay(game, plan)                           'idle' | 'builder' day turn
+ *   botDay(game, plan)                           'idle' | 'fire' | 'builder' day turn
  */
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -42,7 +42,8 @@ export function botNight(game, state, { ROOM, ISO_CAMERA }) {
   const radius = mode.getFireRadius();
   let goal = { x: fire.x + 60, y: fire.y + 190 };
   const nearFire = inside.filter((e) => dist(e, fire) < 520);
-  if (mode.hearthFeeders > 0 || nearFire.length) {
+  const hurt = p.blood < p.bloodMax * 0.45;
+  if (mode.hearthFeeders > 0 || nearFire.length || hurt) {
     goal = { x: fire.x + 30, y: fire.y + 170 };
   } else if (inside.length) {
     inside.sort((a, b) => dist(a, fire) - dist(b, fire));
@@ -51,6 +52,16 @@ export function botNight(game, state, { ROOM, ISO_CAMERA }) {
     // Never stray far from the hearth: intercept inside ~600 px of the fire.
     const reach = Math.min(d * 0.6, radius * 0.72, 600);
     goal = { x: fire.x + (t.x - fire.x) / d * reach, y: fire.y + (t.y - fire.y) / d * reach };
+  } else if (state.doors !== false && mode.besiegedDoors) {
+    // Nothing inside: go and shoot the crowd through the door it is clawing
+    // (door slits), standing a step back from the wood.
+    const doors = mode.besiegedDoors().sort((a, b) => mode.doorPressure(b.id) - mode.doorPressure(a.id));
+    const door = doors[0];
+    if (door && door.inside) {
+      const ix = door.inside.x - door.x, iy = door.inside.y - door.y;
+      const il = Math.hypot(ix, iy) || 1;
+      goal = { x: door.inside.x + ix / il * 70, y: door.inside.y + iy / il * 70 };
+    }
   }
   if (dist(p, goal) > 46) {
     const path = game.mansion.navPath(p.x, p.y, goal.x, goal.y);
@@ -70,6 +81,12 @@ export function botNight(game, state, { ROOM, ISO_CAMERA }) {
 export function botDay(game, plan) {
   const mode = game.survival;
   if (mode.rewardPending()) mode.ackRewards();
+  if (plan === 'fire') {
+    // light builder: only ever upgrades the Perapian
+    if (mode.builderJob) return false;
+    if (mode.perapianLevel < 3 && mode.startBuild('perapian')) return false;
+    return mode.startNight();
+  }
   if (plan !== 'builder') return mode.startNight();
   if (mode.builderJob) return false;
   const rooms = mode.buildableRooms();

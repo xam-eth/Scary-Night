@@ -36,7 +36,7 @@ const BUILD_ORDER = ['extractor', 'sawmill', 'shelter'];
 const BUILD_META = Object.freeze({
   extractor: { icon: 'extractor', name: 'OIL PUMP', out: 'oil', outKey: 'oil' },
   sawmill: { icon: 'sawmill', name: 'SAWMILL', out: 'wood', outKey: 'wood' },
-  shelter: { icon: 'shelter', name: 'SHELTER', out: 'survivor', outKey: 'survivors' },
+  shelter: { icon: 'shelter', name: 'SHELTER', out: 'guard', outKey: 'survivors' },   // +1 survivor = +1 door guard
 });
 
 /* ------------------------------------------------------------------ */
@@ -131,6 +131,8 @@ const HINTS = Object.freeze({
   fire: { icon: 'perapian', text: 'GUARD THE PERAPIAN', life: 5 },
   flare: { icon: 'flare', text: 'TAP FLARE TO BLAST THEM', life: 6 },
   build: { icon: 'hammer', text: 'TAP + TO BUILD IN LIT ROOMS', life: 7 },
+  guard: { icon: 'guard', text: 'SURVIVORS GUARD THE DOORS', life: 5 },
+  door: { icon: 'door', text: 'GO TO THE DOOR: SHOOT THROUGH IT', life: 6 },
 });
 
 function hintStore(game) {
@@ -173,6 +175,9 @@ export function updateSurvivalHints(game, dt) {
     else if (mode.elapsed > 16) offerSurvivalHint(game, 'light');
     if (mode.hearthFeeders > 0) offerSurvivalHint(game, 'fire');
     if (mode.skillCooldown <= 0 && mode.enemiesNear(game.player.x, game.player.y, mode.tuning.skillRadius) >= 3) offerSurvivalHint(game, 'flare');
+    if ((mode.nightStats.guardShots || 0) > 0 && mode.elapsed > 6) offerSurvivalHint(game, 'guard');
+    // a door is being clawed and the Hunter has nothing to shoot: send him there
+    if (mode.elapsed > 12 && !mode.currentTarget && mode.besiegedDoors().length > 0) offerSurvivalHint(game, 'door');
   } else if (mode.phase === 'day' && !mode.rewardPending()) {
     offerSurvivalHint(game, 'build');
   }
@@ -208,7 +213,7 @@ function drawHint(game, ctx, w, y) {
 
 function drawPauseButton(game, ctx, w, h) {
   const hit = pauseButtonBox(w, h);
-  addHit(game, hit, 'PAUSE', () => game.togglePause(true));
+  addHit(game, hit, 'PAUSE', () => { if (game.survivalCanPause()) game.togglePause(true); });
   game.ui[game.ui.length - 1].label = 'PAUSE';
   const size = 38;
   const x = hit.x + (hit.w - size) / 2;
@@ -361,8 +366,22 @@ function drawNightWorldLayer(game, ctx, w, h) {
     }
   }
 
-  // Hearth under attack
+  // The Perapian's fuel is its life bar: the thing to protect, on the thing.
   const fire = mode.hearth();
+  if (fire) {
+    const at = project(game, fire.x, fire.y, 190);
+    if (onScreen(at, w, h, 30)) {
+      const full = Math.max(1, mode.nightOilStart || Math.max(mode.oil, mode.oilReserveForNight()));
+      const pct = clamp(mode.oil / full, 0, 1);
+      const bw = 78, bh = 14;
+      const danger = mode.hearthFeeders > 0;
+      const shake = danger ? Math.sin(t * 40) * 1.5 : 0;
+      drawBar(ctx, at.x - bw / 2 + 10 + shake, at.y - bh / 2, bw, bh, pct, pct > 0.35 ? '#ffb22e' : '#ff4d4d', { lineWidth: 2 });
+      drawSurvivalIcon(ctx, 'fire', at.x - bw / 2 - 4 + shake, at.y - 2, 30);
+    }
+  }
+
+  // Hearth under attack
   if (fire && mode.hearthFeeders > 0) {
     const at = project(game, fire.x, fire.y, 60);
     if (onScreen(at, w, h, 24)) {
@@ -426,7 +445,10 @@ function drawBanner(game, ctx, w, h) {
   const textW = measureLabel(ctx, ev.text, size);
   const bw = Math.min(w - 30, textW + 86);
   const bh = 54;
-  const y = Math.round(h * 0.27);
+  // short (landscape) screens: right under the night pill, so the banner never
+  // sits on the Hunter in the middle of the frame (the FTUE chip moves to the
+  // bottom edge there, between the stick and the Flare button)
+  const y = h < 560 ? 84 : Math.round(h * 0.27);
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.translate(w / 2, y + bh / 2);
@@ -447,12 +469,13 @@ function drawNightHud(game, ctx, w, h) {
   const blink = Math.sin(clock(game) * 9) > 0;
   drawCounters(game, ctx, w, [
     { icon: 'oil', value: Math.floor(mode.oil), flash: lowOil && blink, color: lowOil ? '#ffb0a8' : '#ffffff' },
-    { icon: 'wood', value: Math.floor(mode.wood) },
+    // wood does nothing at night; the guards on the doors do
+    { icon: 'guard', value: mode.guards ? mode.guards.length : 0 },
     { icon: 'skull', value: mode.aliveEnemies() },
   ]);
   drawHearthBadge(game, ctx, 30, 86);
   drawBanner(game, ctx, w, h);
-  drawHint(game, ctx, w, h < 560 ? 84 : 126);
+  drawHint(game, ctx, w, h < 560 ? h - 58 : 126);
 }
 
 /* ------------------------------------------------------------------ */
@@ -756,7 +779,8 @@ function drawDayScreen(game, ctx, w, h) {
     }
   }
 
-  drawPauseButton(game, ctx, w, h);
+  // the dawn reward is modal: no pause button underneath it
+  if (!reward) drawPauseButton(game, ctx, w, h);
   drawPhasePill(game, ctx, w, 'day');
   drawCounters(game, ctx, w, [
     { icon: 'oil', value: Math.floor(mode.oil) },
@@ -765,10 +789,11 @@ function drawDayScreen(game, ctx, w, h) {
   ], 42);
   // Tonight's fuel is locked: a small flame tag hanging off the Oil pill.
   {
-    const tagX = w - 8 - 88 + 32, tagY = 10 + 30 - 5;
-    drawPanel(ctx, tagX, tagY, 52, 16, { radius: 8, top: '#ffb347', bottom: '#e46b16', lineWidth: 1.6, highlight: false, shadow: false });
-    drawSurvivalIcon(ctx, 'fire', tagX + 9, tagY + 8, 13);
-    drawLabel(ctx, `-${mode.oilReserveForNight()}`, tagX + 32, tagY + 9, 10, '#ffffff', { outline: 2 });
+    const tagW = 58, tagH = 19;
+    const tagX = w - 8 - tagW - 4, tagY = 10 + 30 - 8;
+    drawPanel(ctx, tagX, tagY, tagW, tagH, { radius: 9, top: '#ffb347', bottom: '#e46b16', lineWidth: 1.8, highlight: false, shadow: false });
+    drawSurvivalIcon(ctx, 'moon', tagX + 11, tagY + tagH / 2, 14);
+    drawLabel(ctx, `-${mode.oilReserveForNight()}`, tagX + 36, tagY + tagH / 2 + 1, 12, '#ffffff', { outline: 2.4 });
   }
 
   if (reward) {
@@ -808,7 +833,8 @@ function drawDayScreen(game, ctx, w, h) {
   drawButton(game, ctx, { x: px + pillW + 8, y: rowY + 4, w: frame.width - pillW - 8, h: 48 }, `NIGHT ${mode.day}`,
     () => mode.startNight(), { id: 'START NIGHT', icon: 'moon', color: 'purple', disabled: !!job });
 
-  drawHint(game, ctx, w, h < 560 ? 60 : 136);
+  // FTUE chip sits just above the sheet, clear of the world bubbles
+  drawHint(game, ctx, w, Math.max(h < 560 ? 60 : 136, sheetTop - 48));
 }
 
 /* ------------------------------------------------------------------ */
@@ -948,10 +974,9 @@ export function drawSurvivalControls(game, ctx, w, h) {
     }
   };
   const b = input.buttons;
-  drawRound(b.attack, 'target', BUTTON_COLORS.red, {});
+  // One action button: the Hunter shoots by himself, the thumb only Flares.
   const cd = mode ? clamp(mode.skillCooldown / Math.max(0.01, mode.skillCooldownMax), 0, 1) : 0;
   drawRound(b.interact, 'flare', BUTTON_COLORS.orange, {
-    visualR: (b.interact.r || 22) * 1.25,
     cd, cdText: cd > 0 ? `${Math.ceil(mode.skillCooldown)}` : null, glow: cd <= 0,
   });
 }

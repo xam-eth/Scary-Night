@@ -178,6 +178,24 @@ await shot('failed', `(() => {
   return { phase: g.survival.phase, ui: g.ui.map((b) => b.label) };
 })()`);
 
+// Door-slit defence: the Hunter steps up behind the front door while wave 1
+// claws it; guards post beside him; the camera leans toward the crowd.
+await shot('night-door', `(() => {
+  const g = window.__LN;
+  const m = g.survival;
+  m.restart();
+  let steps = 0;
+  while (m.elapsed < 9 && m.phase === 'night' && steps++ < 2000) window.__origUpdate.call(g, 1 / 60);
+  const door = m.entranceById('frontDoor');
+  const ix = door.inside.x - door.x, iy = door.inside.y - door.y, il = Math.hypot(ix, iy) || 1;
+  g.player.x = door.inside.x + ix / il * 60; g.player.y = door.inside.y + iy / il * 60;
+  g.renderer.snapCamera(g.player.x, g.player.y);
+  steps = 0;
+  while (m.elapsed < 13 && m.phase === 'night' && steps++ < 2000) window.__origUpdate.call(g, 1 / 60);
+  g.render();
+  return { t: +m.elapsed.toFixed(1), doorHp: Math.round(door.hp), target: !!m.currentTarget, guardsAtDoor: m.guards.filter((gd) => gd.post && gd.post.doorId === 'frontDoor').length, kills: m.nightStats.kills, zoom: +g.renderer.cam.zoom.toFixed(3) };
+})()`);
+
 fs.writeFileSync(path.join(OUT, `${TAG}metrics.json`), `${JSON.stringify({ capturedAt: new Date().toISOString(), results, pageErrors }, null, 2)}\n`);
 console.log(`pageErrors=${pageErrors.length}`);
 await browser.close();

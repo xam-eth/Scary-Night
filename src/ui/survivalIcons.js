@@ -170,6 +170,20 @@ const ICONS = {
     ctx.closePath();
     fillStroke(ctx, '#6b4428');
   },
+  guard(ctx) {
+    ICONS.survivor(ctx);
+    // a crossbow across the chest: this survivor holds a door tonight
+    ctx.save();
+    ctx.translate(0.22, 0.5);
+    ctx.rotate(-0.55);
+    rr(ctx, -0.62, -0.1, 1.24, 0.2, 0.1);
+    fillStroke(ctx, '#9a6232');
+    ctx.beginPath();
+    ctx.moveTo(0.36, -0.46);
+    ctx.quadraticCurveTo(0.66, 0, 0.36, 0.46);
+    ctx.stroke();
+    ctx.restore();
+  },
   moon(ctx) {
     ctx.save();
     ctx.beginPath();

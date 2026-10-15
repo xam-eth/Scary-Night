@@ -822,7 +822,15 @@ class World3DRuntime {
       new THREE.MeshBasicMaterial({ color: 0x5cf08a, transparent: true, opacity: 0.18, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }),
     );
     fill.rotation.x = -Math.PI / 2;
-    group.add(ring, fill);
+    // Behind a south wall the Hunter is hidden from this camera; a faint copy
+    // of his ring is drawn through the walls so you never lose him at a door.
+    const xray = new THREE.Mesh(
+      ring.geometry,
+      new THREE.MeshBasicMaterial({ color: 0x5cf08a, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false, depthTest: false, toneMapped: false }),
+    );
+    xray.rotation.x = -Math.PI / 2;
+    xray.renderOrder = 20;
+    group.add(ring, fill, xray);
     group.renderOrder = 5;
     ring.renderOrder = 5; fill.renderOrder = 5;
     this.root.add(group);
@@ -893,6 +901,164 @@ class World3DRuntime {
     return group;
   }
 
+  /**
+   * The Perapian as the base's visual anchor: a real campfire in front of the
+   * hearth (logs + layered additive flames) and a hot glow pool on the floor,
+   * so "the thing to protect" reads at a glance from the phone camera.
+   */
+  _makeSurvivalHearth() {
+    const group = new THREE.Group();
+    group.name = 'survival-perapian-campfire-3d';
+    const flame = (r, h, color, opacity) => {
+      const mesh = new THREE.Mesh(
+        new THREE.ConeGeometry(r, h, 10, 1, true),
+        new THREE.MeshBasicMaterial({
+          color, transparent: true, opacity, depthWrite: false, toneMapped: false,
+          blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+        }),
+      );
+      mesh.geometry.translate(0, h / 2, 0);
+      mesh.renderOrder = 6;
+      return mesh;
+    };
+    const outer = flame(25, 74, 0xff5a12, 0.8);
+    const mid = flame(16, 56, 0xffa22e, 0.9);
+    const core = flame(8.5, 34, 0xfff0b0, 0.95);
+    outer.position.y = mid.position.y = core.position.y = 6;
+    const logMat = new THREE.MeshStandardMaterial({ color: 0x6a4428, roughness: 0.92, flatShading: true });
+    const emberMat = new THREE.MeshBasicMaterial({ color: 0xff7a2a, toneMapped: false });
+    const stoneMat = new THREE.MeshStandardMaterial({ color: 0x8d8a86, roughness: 0.95, flatShading: true });
+    for (const a of [0.45, -0.45, Math.PI / 2]) {
+      const log = new THREE.Mesh(new THREE.CylinderGeometry(4.5, 4.5, 50, 6), logMat);
+      log.rotation.set(0, a, Math.PI / 2);
+      log.position.y = 6;
+      log.castShadow = true;
+      group.add(log);
+    }
+    const embers = new THREE.Mesh(new THREE.CircleGeometry(20, 16), emberMat);
+    embers.rotation.x = -Math.PI / 2;
+    embers.position.y = 2.6;
+    group.add(embers);
+    for (let i = 0; i < 9; i++) {
+      const a = (i / 9) * Math.PI * 2;
+      const stone = new THREE.Mesh(new THREE.DodecahedronGeometry(6.5, 0), stoneMat);
+      stone.position.set(Math.cos(a) * 31, 4, Math.sin(a) * 31);
+      stone.rotation.set(a, a * 2, 0);
+      stone.castShadow = true;
+      group.add(stone);
+    }
+    let texture = null;
+    if (this.survivalFireDisc && this.survivalFireDisc.material.map) texture = this.survivalFireDisc.material.map;
+    const glow = new THREE.Mesh(
+      new THREE.CircleGeometry(1, 40),
+      new THREE.MeshBasicMaterial({
+        color: 0xffb04a, map: texture, transparent: true, opacity: 0.55,
+        blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
+      }),
+    );
+    glow.rotation.x = -Math.PI / 2;
+    glow.position.y = 3.2;
+    glow.renderOrder = 3;
+    glow.frustumCulled = false;
+    group.add(outer, mid, core, glow);
+    group.userData = { outer, mid, core, glow, embers };
+    this.root.add(group);
+    return group;
+  }
+
+  _syncSurvivalHearth(game, mode, fire) {
+    if (!this.survivalHearth) this.survivalHearth = this._makeSurvivalHearth();
+    const hearth = this.survivalHearth;
+    const lit = !!fire && mode.oil > 0 && mode.phase !== 'failed';
+    hearth.visible = !!fire;
+    if (!fire) return;
+    // in front of the fireplace mouth, where the enemies' hearth goal is
+    hearth.position.set(fire.x, 0, fire.y + 48);
+    const { outer, mid, core, glow, embers } = hearth.userData;
+    for (const f of [outer, mid, core]) f.visible = lit;
+    glow.visible = lit;
+    embers.material.color.setHex(lit ? 0xff7a2a : 0x3a2a22);
+    if (!lit) return;
+    const t = game.now || 0;
+    const base = mode.tuning.perapianRadius[mode.perapianLevel] || 1;
+    const fuel = Math.max(0, Math.min(1, mode.getFireRadius() / base));
+    const size = (1.25 + (mode.perapianLevel - 1) * 0.22) * (0.72 + 0.28 * fuel);
+    const flick = 1 + Math.sin(t * 13.1) * 0.07 + Math.sin(t * 7.3 + 1.2) * 0.05;
+    outer.scale.set(size, size * flick, size);
+    mid.scale.set(size, size * (2 - flick) * 1.02, size);
+    core.scale.set(size, size * (1 + Math.sin(t * 19) * 0.08), size);
+    outer.rotation.y = t * 0.6;
+    mid.rotation.y = -t * 0.9;
+    const night = mode.phase !== 'day';
+    const feeders = mode.hearthFeeders > 0;
+    glow.scale.setScalar(175 + (mode.perapianLevel - 1) * 30);
+    glow.material.opacity = (night ? 0.62 : 0.32) + Math.sin(t * 9.7) * 0.05 + (feeders ? Math.sin(t * 20) * 0.12 : 0);
+    glow.material.color.setHex(feeders ? 0xff6a3a : 0xffb04a);
+  }
+
+  /** Survivors as small readable pawns: blue tunic, crossbow, ally ring. */
+  _makeSurvivalGuard() {
+    const mats = this._guardMats || (this._guardMats = {
+      tunic: new THREE.MeshStandardMaterial({ color: 0x3f8fe8, roughness: 0.7, flatShading: true }),
+      skin: new THREE.MeshStandardMaterial({ color: 0xf2c9a0, roughness: 0.8 }),
+      hair: new THREE.MeshStandardMaterial({ color: 0x6b4428, roughness: 0.9, flatShading: true }),
+      dark: new THREE.MeshStandardMaterial({ color: 0x2c3140, roughness: 0.9 }),
+      wood: new THREE.MeshStandardMaterial({ color: 0x8a5a30, roughness: 0.85, flatShading: true }),
+      ring: new THREE.MeshBasicMaterial({ color: 0x5ab8ff, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }),
+      // seen through walls: a guard at a south door stays findable
+      xray: new THREE.MeshBasicMaterial({ color: 0x5ab8ff, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false, depthTest: false, toneMapped: false }),
+    });
+    const geo = this._guardGeo || (this._guardGeo = {
+      leg: new THREE.BoxGeometry(6, 16, 6).translate(0, -8, 0),
+      body: new THREE.CylinderGeometry(9, 11.5, 25, 8),
+      head: new THREE.SphereGeometry(8.5, 12, 8),
+      hair: new THREE.SphereGeometry(9.2, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2),
+      stock: new THREE.BoxGeometry(4, 4, 24),
+      bow: new THREE.BoxGeometry(24, 2.5, 3),
+      ring: new THREE.RingGeometry(15, 20.5, 28),
+    });
+    const group = new THREE.Group();
+    group.name = 'survival-guard-3d';
+    const legL = new THREE.Mesh(geo.leg, mats.dark); legL.position.set(-4.5, 16, 0);
+    const legR = new THREE.Mesh(geo.leg, mats.dark); legR.position.set(4.5, 16, 0);
+    const body = new THREE.Mesh(geo.body, mats.tunic); body.position.y = 28;
+    const head = new THREE.Mesh(geo.head, mats.skin); head.position.y = 48;
+    const hair = new THREE.Mesh(geo.hair, mats.hair); hair.position.y = 49;
+    const bow = new THREE.Group(); bow.position.set(5, 31, 8);
+    const stock = new THREE.Mesh(geo.stock, mats.wood); stock.position.z = 6;
+    const arms = new THREE.Mesh(geo.bow, mats.dark); arms.position.z = 16;
+    bow.add(stock, arms);
+    const ring = new THREE.Mesh(geo.ring, mats.ring);
+    ring.rotation.x = -Math.PI / 2; ring.position.y = 2.2; ring.renderOrder = 4;
+    const xray = new THREE.Mesh(geo.ring, mats.xray);
+    xray.rotation.x = -Math.PI / 2; xray.position.y = 2.2; xray.renderOrder = 19;
+    for (const m of [legL, legR, body, head, hair, stock, arms]) m.castShadow = true;
+    group.add(legL, legR, body, head, hair, bow, ring, xray);
+    group.userData = { legL, legR, bow };
+    this.root.add(group);
+    return group;
+  }
+
+  _syncSurvivalGuards(game, mode) {
+    const list = (mode && mode.guards) || [];
+    if (!this.survivalGuardMeshes) this.survivalGuardMeshes = [];
+    const show = (game.screen === 'playing' || game.screen === 'paused') && (mode.phase === 'night' || mode.phase === 'day');
+    for (let i = 0; i < list.length; i++) {
+      let mesh = this.survivalGuardMeshes[i];
+      if (!mesh) { mesh = this._makeSurvivalGuard(); this.survivalGuardMeshes[i] = mesh; }
+      const guard = list[i];
+      mesh.visible = show;
+      if (!show) continue;
+      const stride = guard.moving ? Math.sin(guard.walkT * 11) : 0;
+      mesh.position.set(guard.x, guard.moving ? Math.abs(stride) * 2.4 : 0, guard.y);
+      mesh.rotation.y = Math.PI / 2 - guard.angle;
+      mesh.userData.legL.rotation.x = stride * 0.6;
+      mesh.userData.legR.rotation.x = -stride * 0.6;
+      mesh.userData.bow.position.z = 8 - guard.shotT * 22;
+    }
+    for (let i = list.length; i < this.survivalGuardMeshes.length; i++) this.survivalGuardMeshes[i].visible = false;
+  }
+
   _syncSurvivalObjects(game) {
     const mode = game.survival;
     if (!mode) return;
@@ -959,6 +1125,9 @@ class World3DRuntime {
       const scale = gate.w ? Math.max(0.7, Math.min(1.3, gate.w / 160)) : 1;
       this.survivalGateMesh.scale.set(scale, 1, 1);
     }
+
+    this._syncSurvivalHearth(game, mode, fire);
+    this._syncSurvivalGuards(game, mode);
 
     this._syncExteriorPalette(true);
     if (!this.survivalPlayerRing) this.survivalPlayerRing = this._makeSurvivalPlayerRing();
@@ -1166,59 +1335,100 @@ class World3DRuntime {
     for (const [id, mesh] of this.pickups) if (!active.has(id)) mesh.visible = false;
   }
 
+  /** Which mesh/trail recipe a bolt uses (pooled per look). */
+  _boltLook(bolt) {
+    if (bolt.kind === 'knife') return 'knife';
+    if (bolt.guard) return 'guard';
+    if (bolt.friendly) return 'tracer';
+    return bolt.kit && bolt.kit.blessed ? 'blessed' : 'plain';
+  }
+
+  _makeBoltMesh(look) {
+    if (look === 'knife') {
+      const mesh = new THREE.Group();
+      const blade = new THREE.Mesh(this.knifeGeometry, new THREE.MeshStandardMaterial({
+        color: 0xb6c3cd, metalness: 0.72, roughness: 0.24, emissive: 0x111820, emissiveIntensity: 0.12,
+      }));
+      const handle = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.65, 8, 5), new THREE.MeshStandardMaterial({
+        color: 0x423329, roughness: 0.88, metalness: 0.02,
+      }));
+      handle.position.y = -12;
+      mesh.add(blade, handle);
+      mesh.name = 'throwing-knife-3d';
+      return mesh;
+    }
+    if (look === 'tracer' || look === 'guard') {
+      // Survival reads at phone zoom: a thick, unlit tracer instead of a
+      // 1px wooden shaft. Warm for the Hunter, cool blue for the guards.
+      const mesh = new THREE.Mesh(this.boltGeometry, new THREE.MeshBasicMaterial({
+        color: look === 'guard' ? 0xa8ecff : 0xffe08a, toneMapped: false,
+      }));
+      mesh.scale.set(2.6, 1.5, 2.6);
+      mesh.name = look === 'guard' ? 'guard-bolt-3d' : 'crossbow-bolt-3d';
+      return mesh;
+    }
+    const blessed = look === 'blessed';
+    const mesh = new THREE.Mesh(this.boltGeometry, new THREE.MeshStandardMaterial({
+      color: blessed ? 0xffedb0 : 0xa88a5d,
+      emissive: blessed ? 0xd29a38 : 0x19130d,
+      emissiveIntensity: blessed ? 0.8 : 0.08,
+      roughness: 0.55,
+    }));
+    mesh.name = 'crossbow-bolt-3d';
+    return mesh;
+  }
+
+  _makeBoltTrail(look) {
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(7 * 3), 3).setUsage(THREE.DynamicDrawUsage));
+    const bright = look === 'tracer' || look === 'guard';
+    const material = new THREE.LineBasicMaterial({
+      color: look === 'knife' ? 0xc4d4e0 : look === 'guard' ? 0x7fd8ff : look === 'tracer' ? 0xffc04a : look === 'blessed' ? 0xffe2a2 : 0x9b9aa9,
+      transparent: true, opacity: bright ? 0.8 : 0.42, depthWrite: false, toneMapped: false,
+    });
+    const line = new THREE.Line(geometry, material);
+    line.name = look === 'knife' ? 'throwing-knife-trail-3d' : 'crossbow-bolt-trail-3d';
+    line.frustumCulled = false;
+    return line;
+  }
+
+  /**
+   * Bolt meshes are pooled per look. Survival fires thousands of bolts over a
+   * run (Hunter + guards); one fresh mesh + material + trail per bolt that was
+   * only ever hidden made the scene graph grow for the whole session.
+   */
   _syncBolts(game) {
     if (!this.boltGeometry) this.boltGeometry = new THREE.CylinderGeometry(1.2, 1.2, 26, 6, 1);
     if (!this.knifeGeometry) this.knifeGeometry = new THREE.ConeGeometry(1.8, 20, 5, 1);
+    if (!this.boltPool) this.boltPool = new Map();
     const active = new Set();
-    const up = new THREE.Vector3(0, 1, 0);
+    const up = this._boltUp || (this._boltUp = new THREE.Vector3(0, 1, 0));
+    const direction = this._boltDir || (this._boltDir = new THREE.Vector3());
     for (const bolt of game.bolts || []) {
       if (bolt.dead) continue;
       const id = bolt.id || this._idFor(bolt, 'bolt');
       active.add(id);
       let mesh = this.bolts.get(id);
+      let trail = this.boltTrails.get(id);
       if (!mesh) {
-        if (bolt.kind === 'knife') {
-          mesh = new THREE.Group();
-          const blade = new THREE.Mesh(this.knifeGeometry, new THREE.MeshStandardMaterial({
-            color: 0xb6c3cd, metalness: 0.72, roughness: 0.24, emissive: 0x111820, emissiveIntensity: 0.12,
-          }));
-          const handle = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.65, 8, 5), new THREE.MeshStandardMaterial({
-            color: 0x423329, roughness: 0.88, metalness: 0.02,
-          }));
-          handle.position.y = -12;
-          mesh.add(blade, handle);
-          mesh.name = 'throwing-knife-3d';
-        } else {
-          mesh = new THREE.Mesh(this.boltGeometry, new THREE.MeshStandardMaterial({
-            color: bolt.kit && bolt.kit.blessed ? 0xffedb0 : 0xa88a5d,
-            emissive: bolt.kit && bolt.kit.blessed ? 0xd29a38 : 0x19130d,
-            emissiveIntensity: bolt.kit && bolt.kit.blessed ? 0.8 : 0.08,
-            roughness: 0.55,
-          }));
-          mesh.name = 'crossbow-bolt-3d';
+        const look = this._boltLook(bolt);
+        const pool = this.boltPool.get(look);
+        const spare = pool && pool.pop();
+        if (spare) { mesh = spare.mesh; trail = spare.trail; }
+        else {
+          mesh = this._makeBoltMesh(look);
+          trail = this._makeBoltTrail(look);
+          mesh.userData.boltLook = look;
+          this.root.add(mesh);
+          this.root.add(trail);
         }
         this.bolts.set(id, mesh);
-        this.root.add(mesh);
+        this.boltTrails.set(id, trail);
       }
-      const direction = new THREE.Vector3(Math.cos(bolt.angle || 0), 0, Math.sin(bolt.angle || 0)).normalize();
+      direction.set(Math.cos(bolt.angle || 0), 0, Math.sin(bolt.angle || 0)).normalize();
       mesh.position.set(bolt.x, 18, bolt.y);
       mesh.quaternion.setFromUnitVectors(up, direction);
       mesh.visible = true;
-      let trail = this.boltTrails.get(id);
-      if (!trail) {
-        const geometry = new THREE.BufferGeometry();
-        geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(7 * 3), 3).setUsage(THREE.DynamicDrawUsage));
-        const material = new THREE.LineBasicMaterial({
-          color: bolt.kind === 'knife' ? 0xc4d4e0 : bolt.kit && bolt.kit.blessed ? 0xffe2a2 : 0x9b9aa9,
-          transparent: true, opacity: 0.42, depthWrite: false, toneMapped: false,
-        });
-        const line = new THREE.Line(geometry, material);
-        line.name = bolt.kind === 'knife' ? 'throwing-knife-trail-3d' : 'crossbow-bolt-trail-3d';
-        line.frustumCulled = false;
-        this.boltTrails.set(id, line);
-        this.root.add(line);
-        trail = line;
-      }
       const points = bolt.trail || [];
       const attribute = trail.geometry.getAttribute('position');
       const pointCount = Math.min(points.length, 6);
@@ -1228,8 +1438,23 @@ class World3DRuntime {
       trail.geometry.setDrawRange(0, pointCount + 1);
       trail.visible = pointCount > 0;
     }
-    for (const [id, mesh] of this.bolts) if (!active.has(id)) mesh.visible = false;
-    for (const [id, trail] of this.boltTrails) if (!active.has(id)) trail.visible = false;
+    for (const [id, mesh] of this.bolts) {
+      if (active.has(id)) continue;
+      const trail = this.boltTrails.get(id);
+      mesh.visible = false;
+      if (trail) trail.visible = false;
+      this.bolts.delete(id);
+      this.boltTrails.delete(id);
+      const look = mesh.userData.boltLook || 'plain';
+      let pool = this.boltPool.get(look);
+      if (!pool) this.boltPool.set(look, (pool = []));
+      if (pool.length < 64 && trail) pool.push({ mesh, trail });
+      else {
+        this.root.remove(mesh);
+        if (trail) { this.root.remove(trail); trail.geometry.dispose(); trail.material.dispose(); }
+        if (mesh.material && mesh.material.dispose) mesh.material.dispose();
+      }
+    }
   }
 
   _hideLegacyWorldCues() {

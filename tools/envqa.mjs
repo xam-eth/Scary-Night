@@ -203,7 +203,7 @@ async function survivalFtueSection() {
   check(final.mode === 'survival' && final.screen === 'playing' && final.day === 1 && final.phase === 'night',
     'the default route reaches playable Night 1 directly (no menu, intro or narration)');
   check(final.ui.length === 1 && final.ui[0] === 'PAUSE' && !final.coach && !final.narration,
-    `Night-1 icon HUD registers only PAUSE as a tap target (oil/wood/enemy counters, night clock and Perapian badge are read-only; legacy coach/narration hidden; UI=${final.ui.join(',')})`);
+    `Night-1 icon HUD registers only PAUSE as a tap target (oil/guard/enemy counters, night clock, Perapian badge and fuel bar are read-only; legacy coach/narration hidden; UI=${final.ui.join(',')})`);
   const readable = await playfieldLuma(path.join(evidenceDir, 'survival-ftue-15s.png'));
   checkpoints.find((row) => row.seconds === 15).luma = readable;
   check(readable.meanLuma >= 40 && readable.darkPct <= 45,

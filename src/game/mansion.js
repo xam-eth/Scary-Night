@@ -809,10 +809,13 @@ export class Mansion {
     return null;
   }
 
-  blocksSight(x, y) {
+  blocksSight(x, y, throughDoors = false) {
     for (const e of this.entrances) {
       // a closed door blocks sight, an open/broken one does not
-      if (e.kind === 'door' && !e.open && !e.broken && x > e.x - e.w / 2 - 2 && x < e.x + e.w / 2 + 2 && y > e.y - e.h / 2 - 2 && y < e.y + e.h / 2 + 2) return true;
+      // (Survival's Hunter and guards shoot through door slits: throughDoors)
+      if (e.kind === 'door' && !e.open && !e.broken && x > e.x - e.w / 2 - 2 && x < e.x + e.w / 2 + 2 && y > e.y - e.h / 2 - 2 && y < e.y + e.h / 2 + 2) {
+        if (!throughDoors) return true;
+      }
       if (e.kind === 'window' && !e.broken && x > e.x - e.w / 2 && x < e.x + e.w / 2 && y > e.y - e.h / 2 && y < e.y + e.h / 2) return true;
     }
     const s = this.solidAt(x, y);
@@ -821,13 +824,14 @@ export class Mansion {
     return true;
   }
 
-  hasLOS(x1, y1, x2, y2) {
+  hasLOS(x1, y1, x2, y2, opts = null) {
+    const through = !!(opts && opts.throughDoors);
     const dx = x2 - x1, dy = y2 - y1;
     const d = Math.hypot(dx, dy);
     const steps = Math.max(2, Math.ceil(d / 15));
     for (let i = 1; i < steps; i++) {
       const t = i / steps;
-      if (this.blocksSight(x1 + dx * t, y1 + dy * t)) return false;
+      if (this.blocksSight(x1 + dx * t, y1 + dy * t, through)) return false;
     }
     return true;
   }

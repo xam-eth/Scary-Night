@@ -1307,8 +1307,12 @@ class EnvKitRuntime {
         addSurfaceVessel(p, 'basin');
       } else if (p.type === 'carpet') {
         const w = p.w || 120, h = p.h || 80;
-        const palette = p.color === 'crimson' ? 0x57121f : p.color === 'purple' ? 0x33204a : 0x22242c;
-        box(p.x, 1.2, p.y, w, 1.4, h, 0x80683f);
+        // 'rose' is Survival's readable rug: the legacy crimson reads as a
+        // hole in the floor from the bright top-down camera.
+        const palette = p.color === 'rose' ? 0xb34a48 : p.color === 'violet' ? 0x7d68b0
+          : p.color === 'crimson' ? 0x57121f : p.color === 'purple' ? 0x33204a : 0x22242c;
+        const bright = p.color === 'rose' || p.color === 'violet';
+        box(p.x, 1.2, p.y, w, 1.4, h, bright ? 0xd9b064 : 0x80683f);
         box(p.x, 2.2, p.y, Math.max(8, w - 12), 1.2, Math.max(8, h - 12), palette);
         p.env3d = true;
       } else if (p.type === 'portrait') {

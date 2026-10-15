@@ -353,7 +353,10 @@ export class Player {
     // Distance and bearing as they are DRAWN: the reach is a circle on screen,
     // not an ellipse on the floor, so aim assist and the hit agree (weapons.js).
     const face = visualAngle(this.angle, game.renderer);
-    for (const e of game.enemies) {
+    // Survival already aimed at a target it can actually hit (line of sight,
+    // door slits); bending toward a nearer body behind a wall wastes the shot.
+    const aimed = game.mode === 'survival' && game.survival && game.survival.currentTarget;
+    for (const e of aimed ? [] : game.enemies) {
       if (e.dead) continue;
       const d = swingDist(game, this, e);
       const reach = (tool0.kind === 'ranged' ? Math.min(tool0.range, 220) : tool0.range) + (e.radius || 0);

@@ -394,7 +394,7 @@ export const SURVIVAL_TUNING = Object.freeze({
   oilBurnPerSecond: 0.14,
   oilBurnTargetPerNight: 11,
   oilRadiusShrink: 0.34,
-  perapianRadius: Object.freeze({ 1: 980, 2: 1760, 3: 2500 }),
+  perapianRadius: Object.freeze({ 1: 980, 2: 1560, 3: 2000 }),
   perapianUpgrade: Object.freeze({
     2: Object.freeze({ oil: 12, wood: 8, seconds: 5 }),
     3: Object.freeze({ oil: 18, wood: 12, seconds: 6 }),
@@ -405,8 +405,9 @@ export const SURVIVAL_TUNING = Object.freeze({
   }),
   gateCost: Object.freeze({ oil: 4, wood: 16, seconds: 9 }),
   gateHpBonus: 220,
-  lightDamageTakenMul: 1.75,
-  lightMoveMul: 0.7,   // firelight slows; it never freezes
+  lightDamageTakenMul: 1.5,
+  lightMoveMul: 0.8,   // firelight slows; it never freezes
+  litAttackMul: 0.5,   // ...and blunts claws; it never makes a body harmless
   autoAttackRange: 620,
   skillCooldown: 14,
   skillRadius: 235,

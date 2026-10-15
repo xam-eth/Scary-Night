@@ -41,6 +41,10 @@ export class Input {
     };
     this.touchSeen = false;
     this.gameplay = false;   // set by Game — stick must not swallow menu clicks
+    // Survival: a floating stick that starts wherever the thumb lands (except
+    // the top HUD band and the buttons). Legacy keeps its left-half zone.
+    this.stickAnywhere = false;
+    this.stickTopBand = 128;
     this.firstGesture = [];
     this.anyInput = false;
     this.debug = false;
@@ -65,6 +69,12 @@ export class Input {
 
   _insideButton(b, p) {
     return Math.hypot(p.x - b.x, p.y - b.y) < this._buttonHitRadius(b);
+  }
+
+  /** Where a drag may start the stick. */
+  _stickZone(p, c, xFrac, yFrac) {
+    if (this.stickAnywhere) return p.y > Math.min(this.stickTopBand, c.clientHeight * 0.3);
+    return p.x < c.clientWidth * xFrac && p.y > c.clientHeight * yFrac;
   }
 
   _hitButton(p) {
@@ -151,7 +161,7 @@ export class Input {
       }
       // Left thumb zone moves. The right half aims and claws, so a drag never
       // swings and a keyboard player can still point with the mouse.
-      const moveZone = p.x < c.clientWidth * 0.46 && p.y > c.clientHeight * 0.2;
+      const moveZone = this._stickZone(p, c, 0.46, 0.2);
       if (this.gameplay && moveZone && !this.stick.active) {
         this.stick.active = true;
         this.stick.pointer = true;
@@ -184,7 +194,7 @@ export class Input {
         if (!this.gameplay) continue;
         const b = this._hitButton(p);
         if (b) { this.buttons[b].down = true; this.buttons[b].pulse = 1; this.buttons[b].id = t.identifier; continue; }
-        if (!this.stick.active && p.x < c.clientWidth * 0.5 && p.y > c.clientHeight * 0.18) {
+        if (!this.stick.active && this._stickZone(p, c, 0.5, 0.18)) {
           this.stick.active = true; this.stick.pointer = false; this.stick.id = t.identifier;
           this.stick.ox = p.x; this.stick.oy = p.y;
           this.stick.x = p.x; this.stick.y = p.y;
@@ -270,6 +280,34 @@ export class Input {
     this.mouse.clicked = false;
     this.mouse.rightClick = false;
     Object.assign(this.prevKeys, k);
+  }
+
+  /**
+   * Survival controls: one floating stick and one big Flare button in the
+   * thumb corner. The hit circle IS the drawn circle (+4px of forgiveness),
+   * so a tap on the visible edge always fires.
+   */
+  layoutSurvival(w, h) {
+    const phone = w < 840 || h < 500;
+    const short = h < 500;
+    const b = this.buttons;
+    const pad = phone ? 14 : Math.max(16, Math.min(28, Math.round(Math.min(w, h) * 0.03)));
+    const fr = phone ? (short ? 36 : 40) : 44;
+    const bottomGap = phone && !short ? 22 : 10;
+    b.interact.r = fr;
+    b.interact.x = w - pad - fr;
+    b.interact.y = h - pad - bottomGap - fr;
+    b.interact.hitR = fr + 4;
+    b.attack.r = 0; b.attack.hitR = 0;
+    b.attack.x = -999; b.attack.y = -999;
+    for (const key of ['run', 'dash', 'repair', 'barricade']) {
+      b[key].x = -999; b[key].y = -999; b[key].hitR = 0;
+    }
+    const stickR = short ? 46 : 56;
+    this.stick.r = stickR;
+    this.stick.homeX = pad + stickR + 8;
+    this.stick.homeY = h - pad - bottomGap - stickR;
+    this.clusterLeft = b.interact.x - fr - 8;
   }
 
   layout(w, h) {

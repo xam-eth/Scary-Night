@@ -1527,14 +1527,16 @@ export class Bolt {
       // wall / door
       const e = game.mansion.entrances.find((en) =>
         Math.abs(this.x - en.x) < en.w / 2 + 3 && Math.abs(this.y - en.y) < en.h / 2 + 3);
-      if (e && !(e.kind === 'door' && (e.open || e.broken)) && !(e.kind === 'window' && e.broken)) {
+      // pierceDoors: Survival's door slits — the Hunter's and the guards'
+      // bolts pass a closed door (never a window or a wall).
+      if (e && !(e.kind === 'door' && (e.open || e.broken || this.pierceDoors)) && !(e.kind === 'window' && e.broken)) {
         this.hit(game, true);
         return;
       }
       const s = game.mansion.solidAt(this.x, this.y);
       if (s) { this.hit(game, true); return; }
       const p = game.player;
-      if (this.owner !== p && p.alive && dist(this.x, this.y, p.x, p.y) < p.radius + 5) {
+      if (this.owner !== p && !this.friendly && p.alive && dist(this.x, this.y, p.x, p.y) < p.radius + 5) {
         if (p.takeDamage(this.damage, game, this.x - Math.cos(this.angle) * 40, this.y - Math.sin(this.angle) * 40, 'bolt')) {
           this.hit(game, false);
           game.showCombatText('BOLT', p.x, p.y, '#ff8080');

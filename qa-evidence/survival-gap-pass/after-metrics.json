@@ -1,0 +1,170 @@
+{
+  "capturedAt": "2026-10-15T02:12:44.323Z",
+  "results": [
+    {
+      "name": "night-00s",
+      "file": "tools/shots-browser/survival/gap3-night-00s.png",
+      "meanLuma": 75.1,
+      "darkPct": 8.1,
+      "state": {
+        "t": 0.2,
+        "alive": 0,
+        "oil": 37,
+        "hp": 100,
+        "phase": "night",
+        "ui": 1
+      }
+    },
+    {
+      "name": "night-20s",
+      "file": "tools/shots-browser/survival/gap3-night-20s.png",
+      "meanLuma": 79.4,
+      "darkPct": 7.3,
+      "state": {
+        "t": 20,
+        "alive": 15,
+        "oil": 35,
+        "hp": 100,
+        "phase": "night",
+        "ui": 1
+      }
+    },
+    {
+      "name": "night-40s",
+      "file": "tools/shots-browser/survival/gap3-night-40s.png",
+      "meanLuma": 79.4,
+      "darkPct": 10.1,
+      "state": {
+        "t": 40,
+        "alive": 28,
+        "oil": 21,
+        "hp": 100,
+        "phase": "night",
+        "ui": 1
+      }
+    },
+    {
+      "name": "day-reward",
+      "file": "tools/shots-browser/survival/gap3-day-reward.png",
+      "meanLuma": 116.5,
+      "darkPct": 6.1,
+      "state": {
+        "phase": "day",
+        "day": 2,
+        "ui": [
+          "survival:COLLECT"
+        ]
+      }
+    },
+    {
+      "name": "day-panel",
+      "file": "tools/shots-browser/survival/gap3-day-panel.png",
+      "meanLuma": 123.3,
+      "darkPct": 3.7,
+      "state": {
+        "collected": true,
+        "ui": [
+          "survival:select:gate",
+          "survival:slot:hall",
+          "survival:slot:conservatory",
+          "survival:slot:study",
+          "survival:slot:oratory",
+          "survival:select:perapian",
+          "PAUSE",
+          "survival:UPGRADE PERAPIAN LV2",
+          "survival:START NIGHT"
+        ]
+      }
+    },
+    {
+      "name": "day-select",
+      "file": "tools/shots-browser/survival/gap3-day-select.png",
+      "meanLuma": 138.8,
+      "darkPct": 4.5,
+      "state": {
+        "clicked": "survival:slot:hall",
+        "ui": [
+          "survival:select:perapian",
+          "survival:select:gate",
+          "survival:slot:conservatory",
+          "survival:slot:study",
+          "survival:slot:oratory",
+          "survival:slot:hall",
+          "PAUSE",
+          "survival:BUILD extractor",
+          "survival:BUILD sawmill",
+          "survival:BUILD shelter",
+          "survival:START NIGHT"
+        ]
+      }
+    },
+    {
+      "name": "day-build",
+      "file": "tools/shots-browser/survival/gap3-day-build.png",
+      "meanLuma": 106.7,
+      "darkPct": 5.9,
+      "state": {
+        "built": "survival:BUILD extractor",
+        "job": {
+          "kind": "building",
+          "type": "extractor",
+          "roomId": "hall",
+          "remaining": 5.000000000000007,
+          "duration": 7
+        },
+        "ui": [
+          "survival:select:perapian",
+          "survival:select:gate",
+          "survival:slot:conservatory",
+          "survival:slot:study",
+          "survival:slot:oratory",
+          "survival:select:hall",
+          "PAUSE",
+          "survival:START NIGHT"
+        ]
+      }
+    },
+    {
+      "name": "night2-flare",
+      "file": "tools/shots-browser/survival/gap3-night2-flare.png",
+      "meanLuma": 54.3,
+      "darkPct": 12,
+      "state": {
+        "t": 34.2,
+        "day": 2,
+        "alive": 53,
+        "feeders": 0,
+        "oil": 30,
+        "nearest": 421,
+        "floaters": 0
+      }
+    },
+    {
+      "name": "failed",
+      "file": "tools/shots-browser/survival/gap3-failed.png",
+      "meanLuma": 43.5,
+      "darkPct": 54,
+      "state": {
+        "phase": "failed",
+        "ui": [
+          "survival:PLAY AGAIN"
+        ]
+      }
+    },
+    {
+      "name": "night-door",
+      "file": "tools/shots-browser/survival/gap3-night-door.png",
+      "meanLuma": 56,
+      "darkPct": 16.4,
+      "state": {
+        "t": 13,
+        "doorHp": 62,
+        "target": true,
+        "guardsAtDoor": 2,
+        "kills": 4,
+        "zoom": 0.466
+      }
+    }
+  ],
+  "pageErrors": []
+}

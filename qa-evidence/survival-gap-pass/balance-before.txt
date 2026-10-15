@@ -1,0 +1,17 @@
+idle     seed0 LOSS Lv1 N1:FAIL sp68 pk58 k28 feed14 drain28 oil0 hp100 br3 @68.7s THE FIRE WENT OUT (680ms)
+idle     seed1 LOSS Lv1 N1:FAIL sp68 pk59 k28 feed14 drain28 oil0 hp100 br3 @68.7s THE FIRE WENT OUT (457ms)
+idle     seed2 LOSS Lv1 N1:FAIL sp68 pk58 k28 feed14 drain28 oil0 hp100 br3 @68.7s THE FIRE WENT OUT (319ms)
+active   seed0 WIN  Lv1 N1:ok sp68 pk48 k42 feed0 drain0 oil51.9 hp100 br0 | N2:ok sp81 pk63 k52 feed1 drain1 oil69.8 hp100 br0 | N3:ok sp94 pk91 k52 feed15 drain55 oil35.8 hp100 br0 (2478ms)
+active   seed1 WIN  Lv1 N1:ok sp68 pk48 k42 feed2 drain1 oil50.9 hp100 br0 | N2:ok sp81 pk60 k52 feed0 drain0 oil69.8 hp100 br0 | N3:ok sp94 pk91 k52 feed15 drain54 oil36.8 hp100 br0 (2379ms)
+active   seed2 LOSS Lv1 N1:ok sp68 pk47 k43 feed3 drain4 oil47.9 hp100 br0 | N2:ok sp81 pk62 k52 feed1 drain0 oil66.8 hp100 br0 | N3:FAIL sp94 pk91 k50 feed16 drain57 oil0 hp100 br5 @71.4s THE FIRE WENT OUT (2297ms)
+builder  seed0 WIN  Lv3 N1:ok sp68 pk48 k42 feed0 drain0 oil51.9 hp100 br0 | N2:ok sp81 pk76 k51 feed0 drain0 oil59.8 hp100 br0 | N3:ok sp94 pk94 k30 feed0 drain0 oil64.8 hp100 br0 (3126ms)
+builder  seed1 WIN  Lv3 N1:ok sp68 pk48 k42 feed2 drain1 oil50.9 hp100 br0 | N2:ok sp81 pk75 k51 feed0 drain0 oil58.8 hp100 br0 | N3:ok sp94 pk94 k30 feed0 drain0 oil63.8 hp100 br0 (2873ms)
+builder  seed2 WIN  Lv3 N1:ok sp68 pk47 k43 feed3 drain4 oil47.9 hp100 br0 | N2:ok sp81 pk76 k51 feed0 drain0 oil55.8 hp100 br0 | N3:ok sp94 pk94 k30 feed0 drain0 oil60.8 hp100 br0 (2988ms)
+passive-builder seed0 LOSS Lv1 N1:FAIL sp68 pk58 k28 feed14 drain28 oil0 hp100 br3 @68.7s THE FIRE WENT OUT (656ms)
+passive-builder seed1 LOSS Lv1 N1:FAIL sp68 pk59 k28 feed14 drain28 oil0 hp100 br3 @68.7s THE FIRE WENT OUT (648ms)
+passive-builder seed2 LOSS Lv1 N1:FAIL sp68 pk58 k28 feed14 drain28 oil0 hp100 br3 @68.7s THE FIRE WENT OUT (673ms)
+flare    seed0 LOSS Lv1 N1:ok sp68 pk58 k39 feed6 drain16 oil34.9 hp100 br0 | N2:FAIL sp81 pk79 k23 feed10 drain28 oil0 hp100 br3 @51.7s THE FIRE WENT OUT (1175ms)
+flare    seed1 LOSS Lv1 N1:ok sp68 pk59 k39 feed6 drain16 oil34.9 hp100 br0 | N2:FAIL sp81 pk78 k40 feed9 drain26 oil0 hp100 br3 @63.7s THE FIRE WENT OUT (1398ms)
+flare    seed2 LOSS Lv1 N1:ok sp68 pk58 k39 feed8 drain23 oil27.9 hp100 br0 | N2:FAIL sp80 pk79 k20 feed10 drain21 oil0 hp100 br3 @49.3s THE FIRE WENT OUT (1192ms)
+SUMMARY {"idle":{"wins":0,"runs":3},"active":{"wins":2,"runs":3},"builder":{"wins":3,"runs":3},"passive-builder":{"wins":0,"runs":3},"flare":{"wins":0,"runs":3}}
+EXIT 0

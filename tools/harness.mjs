@@ -275,11 +275,12 @@ async function runSurvivalMilestone() {
   const lightEffectsPass = lightMode.isLit(litPoint.x, litPoint.y)
     && !lightMode.isLit(unlitPoint.x, unlitPoint.y)
     && lightDamage > darkDamage
-    && !lightMode.enemyCanAttack(litProbe) && lightMode.enemyCanAttack(unlitProbe)
+    && lightMode.enemyCanAttack(litProbe) && lightMode.enemyCanAttack(unlitProbe)
+    && lightMode.enemyAttackMul(litProbe) < lightMode.enemyAttackMul(unlitProbe) && lightMode.enemyAttackMul(litProbe) > 0
     && litWalk.lit && !darkWalk.lit
     && litWalk.speed < darkWalk.speed && litWalk.speed > darkWalk.speed * 0.45
     && litWalk.state !== 'stagger';
-  console.log(`  ${lightEffectsPass ? 'PASS' : 'FAIL'}  Perapian light weakens but never freezes enemies (damage ${lightDamage.toFixed(1)} vs ${darkDamage.toFixed(1)}, breached walk ${litWalk.speed.toFixed(1)} vs ${darkWalk.speed.toFixed(1)} px/s, attack blocked only while lit)`);
+  console.log(`  ${lightEffectsPass ? 'PASS' : 'FAIL'}  Perapian light weakens but never freezes enemies (damage ${lightDamage.toFixed(1)} vs ${darkDamage.toFixed(1)}, breached walk ${litWalk.speed.toFixed(1)} vs ${darkWalk.speed.toFixed(1)} px/s, lit claws ×${lightMode.enemyAttackMul(litProbe)} — weakened, never blocked)`);
 
   // Closed doors are solid across their whole width (entrances are authored by
   // their center; the old resolve() treated x/y as a corner).
@@ -503,6 +504,168 @@ async function runSurvivalMilestone() {
     && skillTarget.staggerT > 0 && survivalGame.survival.skillCooldown > 0);
   console.log(`  ${hunterSkill ? 'PASS' : 'FAIL'}  Hunter's Flare skill damages/staggers in radius and respects cooldown (${skillHp} → ${skillTarget.hp} HP)`);
 
+  /* ---------- gap/bug regressions (crowd ranks, door slits, guards, pause) ---------- */
+  const { GUARD } = await import('../src/game/survival.js');
+  const quietNight = (mode) => {
+    // freeze the scheduled spawners so a probe controls every body
+    mode.waveIndex = 99; mode.breakerIndex = 99; mode.individualIndex = 99;
+    survivalGame.enemies.length = 0; survivalGame.bolts.length = 0;
+    mode.oil = 200;
+  };
+
+  // 1) A 30-body wave reaches its own ranks and claws the door (the old
+  //    global rank index sent wave 3 to spots it orbited forever).
+  survivalGame.survival.restart();
+  const rankMode = survivalGame.survival;
+  quietNight(rankMode);
+  rankMode.day = 3;
+  survivalGame.player.x = rankMode.hearth().x + 70; survivalGame.player.y = rankMode.hearth().y + 210;
+  rankMode.guards.length = 0; rankMode.survivors = 0;
+  const posternDoor = rankMode.entranceById('postern');
+  const posternHp = posternDoor.hp;
+  rankMode.spawnSwarm(30, 2, posternDoor);
+  let rankPressing = 0;
+  for (let i = 0; i < 60 * 10; i++) {
+    tick();
+    if (posternDoor.broken) break;
+    rankPressing = Math.max(rankPressing, survivalGame.enemies.filter((e) => e._survivalType === 'swarm' && !e.dead && e.state === 'press').length);
+  }
+  const rankIdx = survivalGame.enemies.filter((e) => e._survivalType === 'swarm').map((e) => e.index);
+  const crowdRankPass = rankPressing >= 24 && (posternDoor.broken || posternDoor.hp < posternHp) && Math.min(...rankIdx) === 0;
+  console.log(`  ${crowdRankPass ? 'PASS' : 'FAIL'}  wave 3 (30 bodies) reaches its own ranks at the postern: ${rankPressing} pressing, door ${posternHp} → ${posternDoor.broken ? 'broken' : Math.round(posternDoor.hp)} within 10s, front rank index ${Math.min(...rankIdx)}`);
+
+  // 2) Ranks close up: kill the front row, the bodies behind step forward.
+  survivalGame.survival.restart();
+  const promoteMode = survivalGame.survival;
+  quietNight(promoteMode);
+  promoteMode.guards.length = 0; promoteMode.survivors = 0;
+  promoteMode.tuning = { ...promoteMode.tuning, autoAttackRange: 0 };
+  const promoteDoor = promoteMode.entranceById('chapelDoor');
+  promoteDoor.hp = promoteDoor.hpMax = 99999;
+  promoteMode.spawnSwarm(24, 0, promoteDoor);
+  tick(60 * 9);
+  const nearest = () => Math.min(...survivalGame.enemies.filter((e) => !e.dead && e._survivalType === 'swarm').map((e) => Math.hypot(e.x - promoteDoor.x, e.y - promoteDoor.y)));
+  const front = survivalGame.enemies.filter((e) => !e.dead && e._survivalType === 'swarm')
+    .sort((a, b) => Math.hypot(a.x - promoteDoor.x, a.y - promoteDoor.y) - Math.hypot(b.x - promoteDoor.x, b.y - promoteDoor.y)).slice(0, 8);
+  const frontBefore = nearest();
+  for (const e of front) e.die(survivalGame);
+  tick(60 * 4);
+  const frontAfter = nearest();
+  promoteMode.tuning = SURVIVAL_TUNING;
+  const promotePass = Number.isFinite(frontAfter) && frontAfter < frontBefore + 30;
+  console.log(`  ${promotePass ? 'PASS' : 'FAIL'}  ranks close up after the front row dies (nearest body ${frontBefore.toFixed(0)} px → ${frontAfter.toFixed(0)} px from the chapel door)`);
+
+  // 3) Door slits: from inside, the Hunter shoots a body clawing a closed
+  //    door; the bolt passes the wood and the door takes no bolt damage.
+  survivalGame.survival.restart();
+  resetControls();
+  const slitMode = survivalGame.survival;
+  quietNight(slitMode);
+  slitMode.guards.length = 0; slitMode.survivors = 0;
+  const slitDoor = slitMode.entranceById('frontDoor');
+  const inward = { x: slitDoor.inside.x - slitDoor.x, y: slitDoor.inside.y - slitDoor.y };
+  const inLen = Math.hypot(inward.x, inward.y) || 1;
+  survivalGame.player.x = slitDoor.inside.x + inward.x / inLen * 60;
+  survivalGame.player.y = slitDoor.inside.y + inward.y / inLen * 60;
+  const { survivalSpot } = await import('../src/game/survival.js');
+  const slitSpot = survivalSpot(slitDoor, 0, 72);
+  const slitBody = new SurvivalCrowdZombie(slitSpot.x, slitSpot.y, slitDoor, 0, 1);
+  slitBody.hp = slitBody.hpMax = 400;
+  survivalGame.enemies.push(slitBody);
+  const slitDoorHp = slitDoor.hp;
+  const losBlocked = !survivalGame.mansion.hasLOS(survivalGame.player.x, survivalGame.player.y, slitBody.x, slitBody.y);
+  tick(60 * 3);
+  const slitPass = losBlocked && slitBody.hp < 400 && !slitDoor.broken && !slitDoor.open
+    && slitDoor.hp >= slitDoorHp - 30;
+  console.log(`  ${slitPass ? 'PASS' : 'FAIL'}  Hunter shoots through a closed door's slit (plain LOS blocked=${losBlocked}; body 400 → ${Math.round(slitBody.hp)} HP; door ${slitDoorHp} → ${Math.round(slitDoor.hp)}, still closed)`);
+
+  // 4) Guards: one per survivor; they post at the clawed door and shoot.
+  survivalGame.survival.restart();
+  resetControls();
+  const guardMode = survivalGame.survival;
+  quietNight(guardMode);
+  guardMode.tuning = { ...guardMode.tuning, autoAttackRange: 0 };
+  survivalGame.player.x = guardMode.hearth().x + 70; survivalGame.player.y = guardMode.hearth().y + 210;
+  const guardDoor = guardMode.entranceById('frontDoor');
+  guardDoor.hp = guardDoor.hpMax = 99999;
+  guardMode.spawnSwarm(21, 0, guardDoor);
+  let guardsAtDoor = 0;
+  for (let i = 0; i < 60 * 22; i++) {
+    tick();
+    guardsAtDoor = Math.max(guardsAtDoor, guardMode.guards.filter((gd) => gd.post && gd.post.doorId === 'frontDoor' && !gd.moving).length);
+  }
+  const guardKills = guardMode.nightStats.kills;
+  const guardShots = guardMode.nightStats.guardShots || 0;
+  guardMode.tuning = SURVIVAL_TUNING;
+  const guardPass = guardMode.guards.length === guardMode.survivors && guardMode.survivors === 2
+    && guardsAtDoor >= 1 && guardShots > 0 && guardKills > 0;
+  console.log(`  ${guardPass ? 'PASS' : 'FAIL'}  survivors guard the clawed door (${guardMode.guards.length} guards, ${guardsAtDoor} posted at frontDoor, ${guardShots} shots, ${guardKills} kills with the Hunter's shot disabled)`);
+
+  // 5) Friendly bolts never hit the Hunter.
+  survivalGame.survival.restart();
+  const ffMode = survivalGame.survival;
+  quietNight(ffMode);
+  const ffHp = survivalGame.player.blood;
+  const ffGuard = ffMode.guards[0];
+  ffGuard.x = survivalGame.player.x - 120; ffGuard.y = survivalGame.player.y;
+  survivalGame.spawnBolt(ffGuard, 0, { offset: 16, boltSpeed: GUARD.boltSpeed, damage: 50, friendly: true });
+  survivalGame.player.iframes = 0;
+  tick(30);
+  const friendlyPass = survivalGame.player.blood === ffHp;
+  console.log(`  ${friendlyPass ? 'PASS' : 'FAIL'}  a guard's bolt passes through the Hunter (blood ${ffHp} → ${survivalGame.player.blood})`);
+
+  // 6) Pause freezes the run; no pause on the end panel; the day after a
+  //    night plans with the full fire radius.
+  survivalGame.survival.restart();
+  resetControls();
+  const pauseMode = survivalGame.survival;
+  quietNight(pauseMode);
+  pauseMode.skillCooldown = 10;
+  const elapsedBefore = pauseMode.elapsed;
+  survivalGame.togglePause(true);
+  tick(120);
+  const pausedCd = pauseMode.skillCooldown;
+  const pausedElapsed = pauseMode.elapsed;
+  survivalGame.resumeSurvival();
+  tick(60);
+  const resumedCd = pauseMode.skillCooldown;
+  pauseMode.fail('THE FIRE WENT OUT');
+  const canPauseOnEnd = survivalGame.survivalCanPause();
+  sInput.keys.pause = true; tick(); sInput.keys.pause = false; tick();
+  const endScreen = survivalGame.screen;
+  survivalGame.survival.restart();
+  const dawnMode = survivalGame.survival;
+  quietNight(dawnMode);
+  dawnMode.elapsed = dawnMode.nightDuration - 0.01;
+  dawnMode.oilBurned = 9;
+  tick(2);
+  const dayRadius = dawnMode.getFireRadius();
+  const fullRadius = dawnMode.tuning.perapianRadius[dawnMode.perapianLevel];
+  const canPauseOnReward = survivalGame.survivalCanPause();
+  if (dawnMode.rewardPending()) dawnMode.ackRewards();
+  const canPauseOnDay = survivalGame.survivalCanPause();
+  const pausePass = pausedCd === 10 && pausedElapsed === elapsedBefore && resumedCd < 10
+    && !canPauseOnEnd && endScreen === 'playing' && !canPauseOnReward && canPauseOnDay
+    && dawnMode.phase === 'day' && Math.abs(dayRadius - fullRadius) < 1;
+  console.log(`  ${pausePass ? 'PASS' : 'FAIL'}  pause freezes Flare cooldown (${pausedCd} while paused → ${resumedCd.toFixed(2)} after 1s) and the clock; no pause on the end panel (${endScreen}) or the dawn reward (${canPauseOnReward}), pause on the build day (${canPauseOnDay}); dawn radius ${Math.round(dayRadius)}/${fullRadius}`);
+
+  // 7) A body that already crossed a doorway keeps that through a reload.
+  survivalGame.survival.restart();
+  const reloadMode = survivalGame.survival;
+  quietNight(reloadMode);
+  const hall = survivalGame.mansion.roomCenter(ROOM.HALL);
+  const insideBody = new SurvivalCrowdZombie(hall.x, hall.y, reloadMode.mainGate(), 0, 1);
+  insideBody._inHouse = true;
+  survivalGame.enemies.push(insideBody);
+  reloadMode._persist(true);
+  const reloadedGame = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+  const reloadedBody = reloadedGame.enemies.find((e) => e._survivalType === 'swarm');
+  const inHousePass = !!(reloadedBody && reloadedBody._inHouse === true && reloadedGame.survival.guards.length === reloadedGame.survival.survivors);
+  console.log(`  ${inHousePass ? 'PASS' : 'FAIL'}  reload keeps an invader inside (_inHouse=${reloadedBody && reloadedBody._inHouse}) and rebuilds ${reloadedGame.survival.guards.length} guards`);
+  survivalGame.enemies.length = 0;
+  window.localStorage.removeItem('lastnight.save.v1');
+  const gapRegressionPass = crowdRankPass && promotePass && slitPass && guardPass && friendlyPass && pausePass && inHousePass;
+
   const { botNight, botDay, releaseControls } = await import('./survival-bots.mjs');
   const { ISO_CAMERA } = await import('../src/core/util.js');
   const runScenario = (builderBot) => {
@@ -647,7 +810,7 @@ async function runSurvivalMilestone() {
   const idleLoses = !idle.complete && /FIRE/.test(idle.failure || '');
   console.log(`  ${idleLoses ? 'PASS' : 'FAIL'}  idle (no input, no builds) does not survive: ${idle.phase} on Night ${idle.day} (${idle.failure || 'no failure'})`);
   console.log(`  ${builder.complete ? 'PASS' : 'FAIL'}  engaged builder survives Night 3 (Flare ×${builder.flares}, Perapian Lv${builder.perapianLevel}, oil ${builder.oil})`);
-  const pass = waveSchedulePass && lightEffectsPass && survivalMovementPass && breakerTargetsWall
+  const pass = waveSchedulePass && lightEffectsPass && survivalMovementPass && breakerTargetsWall && gapRegressionPass
     && doorSolidPass && siegeLightPass && fireOutPass && breakerRetargetPass
     && hunterAutoShot && hunterRealLos && hunterSkill
     && idleLoses && builder.complete && builder.perapianLevel === 3

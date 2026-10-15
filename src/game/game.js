@@ -762,15 +762,24 @@ export class Game {
     this.dt = dt * this.timeScale;
     this.now += dt;
     this.fpsSmooth = lerp(this.fpsSmooth, 1 / Math.max(dt, 0.0001), 0.05);
-    this.input.gameplay = this.screen === 'playing' && this.survival.phase === 'night' && !this.uiPanel;
+    // The night only runs while its world is on screen: at boot the 3D house
+    // can arrive a second after the night was armed, and a lost WebGL context
+    // shows a loading card. Neither may cost the player oil or blood.
+    // (survivalWorldReady is only ever set by a real render; node harnesses
+    // that never render are unaffected.)
+    const worldHeld = this.survivalWorldReady === false && this.screen === 'playing';
+    this.input.gameplay = !worldHeld && this.screen === 'playing' && this.survival.phase === 'night' && !this.uiPanel;
     const b = this.input.buttons;
-    b.attack.hidden = !this.input.gameplay;
+    // Survival shoots automatically; the red attack button was a second,
+    // redundant thumb target (keyboard F still forces a shot).
+    b.attack.hidden = true;
     b.interact.hidden = !this.input.gameplay;
     b.run.hidden = true;
     b.dash.hidden = true;
     b.repair.hidden = true;
     b.barricade.hidden = true;
-    if (this.input.gameplay) this.input.layout(this.renderer.w, this.renderer.h);
+    this.input.stickAnywhere = true;
+    if (this.input.gameplay) this.input.layoutSurvival(this.renderer.w, this.renderer.h);
     this.input.update(dt);
     // Movement stays active, but night combat is Hunter's automatic shot; the
     // attack control can still force a shot and the Interact control is Flare.
@@ -778,9 +787,10 @@ export class Game {
     this.input.runDown = false;
     this.handleUIInput();
 
-    if (this.screen === 'playing' || this.screen === 'paused') this.survival.update(this.dt);
+    if (worldHeld) this.player.anim(dt);
+    else if (this.screen === 'playing' || this.screen === 'paused') this.survival.update(this.dt);
     else this.player.anim(dt);
-    updateSurvivalHints(this, dt);
+    if (!worldHeld) updateSurvivalHints(this, dt);
     this.renderer.decayFlash(dt);
     this.lightningFlash = Math.max(0, this.lightningFlash - dt * 2.2);
     this.particles.update(dt);
@@ -1696,7 +1706,10 @@ export class Game {
   enemyHitPlayer(enemy, amount, kind) {
     const p = this.player;
     if (!p.alive) return;
-    if (this.mode === 'survival' && !this.survival.enemyCanAttack(enemy)) return false;
+    if (this.mode === 'survival') {
+      if (!this.survival.enemyCanAttack(enemy)) return false;
+      amount *= this.survival.enemyAttackMul(enemy);
+    }
     enemy.lastPlayerHitT = this.time;
     const ok = p.takeDamage(amount, this, enemy.x, enemy.y, kind);
     if (ok) {
@@ -2092,11 +2105,18 @@ export class Game {
     b.kind = spec && spec.ammo === 'knives' ? 'knife' : 'bolt';
     // the kit travels with the bolt: a blessed bolt is not the same wood
     if (owner === this.player) b.kit = this.player.kit || null;
+    // Survival: the Hunter and his guards shoot through door slits and never
+    // hit each other (see Bolt.update).
+    if (this.mode === 'survival' && (owner === this.player || (spec && spec.friendly))) {
+      b.pierceDoors = true;
+      b.friendly = true;
+    }
     this.bolts.push(b);
     if (!spec) {
       this.audio.play('crossbow', { x: owner.x, y: owner.y, cam: this.renderer.cam, vol: 0.85 });
       this.showCombatText('!', owner.x, owner.y - 30, '#e8c060');
     }
+    return b;
   }
 
   addPickup(x, y, kind, amount) {
@@ -2484,6 +2504,7 @@ export class Game {
         console.error('3D survival world render failed:', error);
       }
       if (!worldReady) World3D.setVisible(false);
+      this.survivalWorldReady = worldReady;
     } else World3D.setVisible(false);
     r.clear(worldReady ? null : PAL.void);
     r.resetForUI();
@@ -2779,16 +2800,26 @@ export class Game {
     this.input.gameplay = this.survival.phase === 'night' && !this.uiPanel;
   }
 
+  /** Pause exists during play: a night, or a day with no reward modal up.
+   *  The end panels and the dawn reward have no pause button to hit. */
+  survivalCanPause() {
+    const mode = this.survival;
+    if (this.screen !== 'playing' || !mode) return false;
+    if (mode.phase === 'night') return !this.uiPanel;
+    if (mode.phase === 'day') return !mode.rewardPending();
+    return false;
+  }
+
   handleSurvivalUIInput() {
     const input = this.input;
     if (input.keys.pause && !this._pauseHeld) {
       this._pauseHeld = true;
-      if (this.screen === 'playing') this.togglePause(true);
+      if (this.survivalCanPause()) this.togglePause(true);
       else if (this.screen === 'paused') this.resumeSurvival();
     }
     if (!input.keys.pause) this._pauseHeld = false;
 
-    if (this.screen === 'playing' && input.uiTap) {
+    if (this.survivalCanPause() && input.uiTap) {
       const box = pauseButtonBox(this.renderer.w, this.renderer.h);
       const tap = input.uiTap;
       if (tap.x >= box.x && tap.x <= box.x + box.w && tap.y >= box.y && tap.y <= box.y + box.h) {
@@ -2801,8 +2832,9 @@ export class Game {
     const uiActive = this.screen === 'paused' || (this.screen === 'playing' && !!this.uiPanel);
     if (!uiActive) { this.uiIndex = 0; input.uiTap = null; return; }
     if (input.keys.up && !this._navUp) { this.uiIndex = Math.max(0, this.uiIndex - 1); this.usingKeyboard = true; }
-    if (input.keys.down && !this._navDown) { this.uiIndex = Math.min(99, this.uiIndex + 1); this.usingKeyboard = true; }
+    if (input.keys.down && !this._navDown) { this.uiIndex = Math.min(Math.max(0, this.ui.length - 1), this.uiIndex + 1); this.usingKeyboard = true; }
     this._navUp = input.keys.up; this._navDown = input.keys.down;
+    if (this.uiIndex > this.ui.length - 1) this.uiIndex = Math.max(0, this.ui.length - 1);
     if (input.uiTap) {
       const tap = input.uiTap;
       input.uiTap = null;

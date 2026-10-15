@@ -8,6 +8,7 @@
  *   builder  active defence + spends every day on the builder queue
  *   passive-builder  builds every day but never moves or uses Flare
  *   flare    never moves, never builds, taps Flare on clusters
+ *   fire-builder  active defence, but only ever upgrades the Perapian
  *
  *   node tools/survival-balance.mjs [--seeds=3] [--duration=72] [--bots=idle,active,builder] [--json=out.json]
  *
@@ -123,7 +124,7 @@ function runOne(kind, seed) {
   while (guard++ < 60 * 60 * 30) {
     if (mode.phase === 'night' && !game.uiPanel) {
       if (!night) night = { day: mode.day, spawned: 0, peakAlive: 0, peakFeeders: 0, minHp: 100, seen: new Set() };
-      if (kind === 'active' || kind === 'builder') botNight(game, state, { ROOM, ISO_CAMERA });
+      if (kind === 'active' || kind === 'builder' || kind === 'fire-builder') botNight(game, state, { ROOM, ISO_CAMERA });
       else if (kind === 'flare') {
         // stands still, only taps Flare when three or more are in reach
         release(game);
@@ -142,6 +143,10 @@ function runOne(kind, seed) {
       night.elapsed = Math.round(mode.elapsed * 10) / 10;
       night.breaches = game.mansion.entrances.filter((e) => e.exterior && e.kind === 'door' && e.broken).length;
       if (args.debug && Math.floor(mode.elapsed / 6) !== state.lastDump) { state.lastDump = Math.floor(mode.elapsed / 6); debugDump(game); }
+      if (args.oiltrace && mode.elapsed < 9 && Math.floor(mode.elapsed) !== state.lastOil) {
+        state.lastOil = Math.floor(mode.elapsed);
+        console.log(`  N${mode.day} t=${mode.elapsed.toFixed(2)} oil=${mode.oil.toFixed(2)} feeders=${mode.hearthFeeders} drained=${(mode.nightStats.drained || 0).toFixed(1)}`);
+      }
       continue;
     }
     if (night) {
@@ -152,7 +157,7 @@ function runOne(kind, seed) {
       release(game);
     }
     if (mode.phase === 'day') {
-      botDay(game, kind === 'builder' || kind === 'passive-builder' ? 'builder' : 'idle');
+      botDay(game, kind === 'builder' || kind === 'passive-builder' ? 'builder' : kind === 'fire-builder' ? 'fire' : 'idle');
       game.update(step);
       continue;
     }
