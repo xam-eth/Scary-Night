@@ -392,6 +392,9 @@ if (!args['no-guards'] && !TOWERS_ONLY) {
     let steps = 0;
     while (a.down && steps++ < 120) { m._guardAssignT = 99; g.player.x = a.x + 34; g.player.y = a.y - 24; window.__origUpdate.call(g, 1 / 60); }
     b.downT = Math.max(b.downT, 19.9);
+    // let this banner show now rather than behind the breach (the capture
+    // is about how it looks)
+    m.banner = null; m.bannerQueue.length = 0;
     steps = 0;
     while (m.guards.includes(b) && steps++ < 60) { m._guardAssignT = 99; window.__origUpdate.call(g, 1 / 60); }
     for (let i = 0; i < 8; i++) window.__origUpdate.call(g, 1 / 60);

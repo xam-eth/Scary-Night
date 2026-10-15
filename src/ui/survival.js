@@ -449,14 +449,27 @@ function drawNightWorldLayer(game, ctx, w, h) {
   // while the Hunter stands beside it, his help (green, filling)
   for (const guard of mode.guards || []) {
     if (guard.down) {
-      const at = project(game, guard.x, guard.y, 46);
+      // high enough that the pawn lying on its red ring stays visible below
+      const at = project(game, guard.x, guard.y, 84);
       if (!onScreen(at, w, h, 16)) { drawEdgeMarker(ctx, w, h, at, 'medic', '#ff5a4d'); continue; }
       const help = clamp(guard.rescueT / GUARD.rescueTime, 0, 1);
       const left = clamp(1 - guard.downT / GUARD.bleedOut, 0, 1);
-      const r = 21;
+      const r = 18;
       const urgent = left < 0.3;
       const bob = help > 0 ? 0 : Math.sin(t * (urgent ? 12 : 6) + guard.index) * 3;
+      // a pin from the badge down to the pawn on the floor
+      const foot = project(game, guard.x, guard.y, 12);
       ctx.save();
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(at.x, at.y + bob + r + 3);
+      ctx.lineTo(foot.x, foot.y);
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = INK;
+      ctx.stroke();
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = help > 0 ? '#5ee07a' : '#ff4d4d';
+      ctx.stroke();
       ctx.beginPath();
       ctx.arc(at.x, at.y + bob, r + 4, 0, TAU);
       ctx.fillStyle = help > 0 ? 'rgba(20,40,24,0.6)' : `rgba(60,10,12,${0.5 + 0.15 * Math.sin(t * (urgent ? 14 : 8))})`;
@@ -468,7 +481,7 @@ function drawNightWorldLayer(game, ctx, w, h) {
       ctx.strokeStyle = help > 0 ? '#5ee07a' : urgent && Math.sin(t * 14) > 0 ? '#ffffff' : '#ff4d4d';
       ctx.stroke();
       ctx.restore();
-      drawSurvivalIcon(ctx, 'medic', at.x, at.y + bob, 30);
+      drawSurvivalIcon(ctx, 'medic', at.x, at.y + bob, 26);
       continue;
     }
     if (!(guard.hp < guard.hpMax)) continue;

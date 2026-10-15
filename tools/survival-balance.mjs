@@ -144,7 +144,8 @@ function runOne(kind, seed) {
   const mode = game.survival;
   mode.restart();
   if (args.economy) traceEconomy(mode, kind, seed);
-  if (args['no-guard-damage']) mode.hurtGuard = () => false;
+  // the pre-2026-10-15 rule: guards are never hunted and never hurt
+  if (args['no-guard-damage']) { mode.hurtGuard = () => false; mode.guardToHunt = () => null; }
   const nights = [];
   const step = 1 / 60;
   let guard = 0;

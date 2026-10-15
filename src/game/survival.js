@@ -2494,9 +2494,16 @@ export class SurvivalMode {
   pushEvent(kind, icon, text, opts = {}) {
     const ev = { kind, icon, text, sub: opts.sub || null, life: opts.life || 1.9, age: 0 };
     const urgent = kind === 'breach' || kind === 'hearth' || kind === 'breaker';
+    // a guard alarm is next in line (its clock is running), once per kind:
+    // two guards falling together raise one banner, the HUD counts them
+    const guardAlarm = kind === 'guardDown' || kind === 'guardLost';
+    if (guardAlarm && ((this.banner && this.banner.kind === kind) || this.bannerQueue.some((q) => q.kind === kind))) return;
     if (!this.banner) this.banner = ev;
     else if (urgent && this.banner.kind !== 'breach' && this.banner.kind !== 'hearth') {
       this.banner = ev;
+    } else if (guardAlarm) {
+      this.bannerQueue.unshift(ev);
+      if (this.bannerQueue.length > 4) this.bannerQueue.pop();
     } else if (this.bannerQueue.length < 4) this.bannerQueue.push(ev);
   }
 
