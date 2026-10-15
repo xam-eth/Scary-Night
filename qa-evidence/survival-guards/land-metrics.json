@@ -1,0 +1,395 @@
+{
+  "capturedAt": "2026-10-15T07:16:13.293Z",
+  "results": [
+    {
+      "name": "night-00s",
+      "file": "tools/.cache/view/gdl-night-00s.png",
+      "meanLuma": 73.1,
+      "darkPct": 8.1,
+      "quality": 3,
+      "state": {
+        "t": 0.2,
+        "alive": 0,
+        "oil": 37,
+        "hp": 100,
+        "phase": "night",
+        "ui": 1
+      }
+    },
+    {
+      "name": "night-20s",
+      "file": "tools/.cache/view/gdl-night-20s.png",
+      "meanLuma": 72.2,
+      "darkPct": 8.2,
+      "quality": 3,
+      "state": {
+        "t": 20,
+        "alive": 19,
+        "oil": 35,
+        "hp": 100,
+        "phase": "night",
+        "ui": 1
+      }
+    },
+    {
+      "name": "night-40s",
+      "file": "tools/.cache/view/gdl-night-40s.png",
+      "meanLuma": 70.4,
+      "darkPct": 9.1,
+      "quality": 3,
+      "state": {
+        "t": 40,
+        "alive": 34,
+        "oil": 22,
+        "hp": 100,
+        "phase": "night",
+        "ui": 1
+      }
+    },
+    {
+      "name": "day-reward",
+      "file": "tools/.cache/view/gdl-day-reward.png",
+      "meanLuma": 115.3,
+      "darkPct": 7.6,
+      "quality": 3,
+      "state": {
+        "phase": "day",
+        "day": 2,
+        "ui": [
+          "survival:COLLECT"
+        ]
+      }
+    },
+    {
+      "name": "day-panel",
+      "file": "tools/.cache/view/gdl-day-panel.png",
+      "meanLuma": 110.3,
+      "darkPct": 6.8,
+      "quality": 3,
+      "state": {
+        "collected": true,
+        "ui": [
+          "survival:select:gate",
+          "survival:select:hunter",
+          "survival:slot:hall",
+          "survival:slot:conservatory",
+          "survival:slot:study",
+          "survival:slot:oratory",
+          "survival:select:perapian",
+          "PAUSE",
+          "survival:UPGRADE PERAPIAN LV2",
+          "survival:START NIGHT"
+        ]
+      }
+    },
+    {
+      "name": "day-select",
+      "file": "tools/.cache/view/gdl-day-select.png",
+      "meanLuma": 141.8,
+      "darkPct": 6.2,
+      "quality": 3,
+      "state": {
+        "clicked": "survival:slot:hall",
+        "ui": [
+          "survival:select:perapian",
+          "survival:select:gate",
+          "survival:select:hunter",
+          "survival:slot:conservatory",
+          "survival:slot:study",
+          "survival:slot:oratory",
+          "survival:slot:hall",
+          "PAUSE",
+          "survival:BUILD extractor",
+          "survival:BUILD sawmill",
+          "survival:BUILD shelter",
+          "survival:BUILD tower",
+          "survival:START NIGHT"
+        ]
+      }
+    },
+    {
+      "name": "day-build",
+      "file": "tools/.cache/view/gdl-day-build.png",
+      "meanLuma": 111,
+      "darkPct": 6.7,
+      "quality": 3,
+      "state": {
+        "built": "survival:BUILD extractor",
+        "job": {
+          "kind": "building",
+          "type": "extractor",
+          "roomId": "hall",
+          "remaining": 5.000000000000007,
+          "duration": 7
+        },
+        "ui": [
+          "survival:select:perapian",
+          "survival:select:gate",
+          "survival:select:hunter",
+          "survival:slot:conservatory",
+          "survival:slot:study",
+          "survival:slot:oratory",
+          "survival:select:hall",
+          "PAUSE",
+          "survival:START NIGHT"
+        ]
+      }
+    },
+    {
+      "name": "night2-flare",
+      "file": "tools/.cache/view/gdl-night2-flare.png",
+      "meanLuma": 70.6,
+      "darkPct": 12.8,
+      "quality": 3,
+      "state": {
+        "t": 34.2,
+        "day": 2,
+        "alive": 53,
+        "feeders": 0,
+        "oil": 33,
+        "nearest": 432,
+        "floaters": 0
+      }
+    },
+    {
+      "name": "failed",
+      "file": "tools/.cache/view/gdl-failed.png",
+      "meanLuma": 49.2,
+      "darkPct": 41.6,
+      "quality": 3,
+      "state": {
+        "phase": "failed",
+        "ui": [
+          "survival:PLAY AGAIN"
+        ]
+      }
+    },
+    {
+      "name": "night-door",
+      "file": "tools/.cache/view/gdl-night-door.png",
+      "meanLuma": 68.6,
+      "darkPct": 16.2,
+      "quality": 3,
+      "state": {
+        "t": 13,
+        "doorHp": 55,
+        "target": true,
+        "guardsAtDoor": 2,
+        "kills": 3,
+        "zoom": 0.466
+      }
+    },
+    {
+      "name": "prog-reward",
+      "file": "tools/.cache/view/gdl-prog-reward.png",
+      "meanLuma": 115.7,
+      "darkPct": 7.4,
+      "quality": 3,
+      "state": {
+        "phase": "day",
+        "day": 3,
+        "rewards": {
+          "oil": 24,
+          "wood": 36,
+          "kills": 52,
+          "walls": 660,
+          "survivors": 0,
+          "drained": 0,
+          "pumped": 6,
+          "lost": 0,
+          "rescued": 0
+        },
+        "buildings": {
+          "dining": "extractor",
+          "hall": "sawmill",
+          "basement": "shelter"
+        },
+        "ui": [
+          "survival:COLLECT"
+        ]
+      }
+    },
+    {
+      "name": "prog-built",
+      "file": "tools/.cache/view/gdl-prog-built.png",
+      "meanLuma": 109.3,
+      "darkPct": 6.5,
+      "quality": 3,
+      "state": {
+        "pump": "dining",
+        "selected": "dining",
+        "ui": [
+          "survival:select:perapian",
+          "survival:select:gate",
+          "survival:select:hunter",
+          "survival:select:hall",
+          "survival:select:basement",
+          "survival:select:dining",
+          "survival:UPGRADE extractor LV2"
+        ]
+      }
+    },
+    {
+      "name": "prog-upgrading",
+      "file": "tools/.cache/view/gdl-prog-upgrading.png",
+      "meanLuma": 115.9,
+      "darkPct": 7.2,
+      "quality": 3,
+      "state": {
+        "clicked": "survival:UPGRADE extractor LV2",
+        "job": {
+          "kind": "upgrade",
+          "type": "extractor",
+          "roomId": "dining",
+          "targetLevel": 2,
+          "remaining": 3.500000000000009,
+          "duration": 6
+        }
+      }
+    },
+    {
+      "name": "prog-hunter",
+      "file": "tools/.cache/view/gdl-prog-hunter.png",
+      "meanLuma": 107.9,
+      "darkPct": 5.9,
+      "quality": 3,
+      "state": {
+        "selected": "hunter",
+        "levels": {
+          "dining": 2,
+          "hall": 1,
+          "basement": 1
+        },
+        "ui": [
+          "survival:select:hunter",
+          "survival:UPGRADE HUNTER LV2"
+        ]
+      }
+    },
+    {
+      "name": "prog-levels",
+      "file": "tools/.cache/view/gdl-prog-levels.png",
+      "meanLuma": 109.6,
+      "darkPct": 5.6,
+      "quality": 3,
+      "state": {
+        "hunter": 2,
+        "levels": {
+          "dining": 3,
+          "hall": 2,
+          "basement": 1
+        },
+        "hp": "120/120",
+        "door": 0.2,
+        "focus": "dining"
+      }
+    },
+    {
+      "name": "prog-night",
+      "file": "tools/.cache/view/gdl-prog-night.png",
+      "meanLuma": 79.4,
+      "darkPct": 10.2,
+      "quality": 3,
+      "state": {
+        "t": 14,
+        "hunter": 2,
+        "hp": "120/120",
+        "pumped": 2.72,
+        "kills": 0
+      }
+    },
+    {
+      "name": "tower-day",
+      "file": "tools/.cache/view/gdl-tower-day.png",
+      "meanLuma": 110.6,
+      "darkPct": 4.8,
+      "quality": 3,
+      "state": {
+        "slot": true,
+        "card": true,
+        "built": "tower",
+        "spot": {
+          "x": 212,
+          "y": 483,
+          "doorId": "frontDoor"
+        },
+        "ring": true,
+        "ui": [
+          "survival:select:hall",
+          "survival:UPGRADE tower LV2"
+        ]
+      }
+    },
+    {
+      "name": "tower-night",
+      "file": "tools/.cache/view/gdl-tower-night.png",
+      "meanLuma": 68.2,
+      "darkPct": 15.4,
+      "quality": 3,
+      "state": {
+        "t": 21.4,
+        "day": 2,
+        "level": 2,
+        "upgraded": true,
+        "shots": 3,
+        "kills": 0,
+        "flying": true,
+        "aim": 1.94
+      }
+    },
+    {
+      "name": "guard-down",
+      "file": "tools/.cache/view/gdl-guard-down.png",
+      "meanLuma": 68.1,
+      "darkPct": 16.3,
+      "quality": 3,
+      "state": {
+        "t": 8.6,
+        "broken": true,
+        "helped": 0.92,
+        "aloneLeft": 10.8,
+        "hurt": 16,
+        "hud": "1/3",
+        "banner": "breach",
+        "alive": 21
+      },
+      "evidence": "qa-evidence/survival-guards/land-guard-down.png"
+    },
+    {
+      "name": "guard-lost",
+      "file": "tools/.cache/view/gdl-guard-lost.png",
+      "meanLuma": 68,
+      "darkPct": 15.9,
+      "quality": 3,
+      "state": {
+        "t": 9.5,
+        "survivors": 2,
+        "guards": 2,
+        "lost": 1,
+        "rescued": 1,
+        "banner": "guardLost",
+        "queue": []
+      },
+      "evidence": "qa-evidence/survival-guards/land-guard-lost.png"
+    },
+    {
+      "name": "guard-reward",
+      "file": "tools/.cache/view/gdl-guard-reward.png",
+      "meanLuma": 114.7,
+      "darkPct": 7.8,
+      "quality": 3,
+      "state": {
+        "phase": "day",
+        "survivors": 2,
+        "lost": 1,
+        "rescued": 1,
+        "guards": [
+          40,
+          40
+        ]
+      },
+      "evidence": "qa-evidence/survival-guards/land-guard-reward.png"
+    }
+  ],
+  "pageErrors": []
+}

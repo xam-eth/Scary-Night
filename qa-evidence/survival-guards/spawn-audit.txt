@@ -1,0 +1,20 @@
+# Spawn audit (2026-10-15) — where a wave's 7-wide formation lands
+# before: the old formula (spawnSwarm slot = outside + out*depth + along*lateral), checked with jitter extremes:
+diningDoor   out 0.00 -1.00 bad 6 #4(r0c4) outside+solid #5(r0c5) gallery #6(r0c6) gallery #11(r1c4) outside+solid #12(r1c5) gallery #13(r1c6) gallery
+frontDoor    out 0.00 1.00 bad 10 #0(r0c0) basement #1(r0c1) outside+solid #7(r1c0) basement #8(r1c1) outside+solid #14(r2c0) basement+solid #15(r2c1) outside+solid #21(r3c0) basement #22(r3c1) outside+solid #28(r4c0) basement #29(r4c1) outside+solid
+cellarDoor   out 0.00 1.00 bad 3 #7(r1c0) outside+solid #18(r2c4) outside+solid #19(r2c5) outside+solid
+chapelDoor   out 0.00 1.00 bad 6 #0(r0c0) outside+solid #7(r1c0) outside+solid #19(r2c5) outside+solid #20(r2c6) outside+solid #26(r3c5) outside+solid #27(r3c6) outside+solid
+kitchenDoor  out -1.00 0.00 bad 0
+palisade     out -1.00 0.00 bad 2 #28(r4c0) outside+solid #29(r4c1) outside+solid
+postern      out -1.00 0.00 bad 0
+
+# after: the real spawnSwarm (30 bodies) + spawnIndividual x4 per door, 5 trials, and 3 Breakers (_outsideSpot):
+diningDoor   bodies 34 inside/solid 0  farthest 393
+frontDoor    bodies 34 inside/solid 0  farthest 427
+cellarDoor   bodies 34 inside/solid 0  farthest 396
+chapelDoor   bodies 34 inside/solid 0  farthest 394
+kitchenDoor  bodies 34 inside/solid 0  farthest 396
+palisade     bodies 34 inside/solid 0  farthest 421
+postern      bodies 34 inside/solid 0  farthest 402
+breakers (116,1027)outside (117,1126)outside (92,1188)outside
+worst bad count over 5 trials per door: 0

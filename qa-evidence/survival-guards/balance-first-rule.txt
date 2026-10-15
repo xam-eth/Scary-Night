@@ -1,0 +1,30 @@
+# First version of the guard rule (2026-10-15, superseded before commit 616108f):
+# guards 40 HP clawed in the way only, NO i-frames, NO hunting in the dark,
+# a guard still down at dawn was lost. Spawn fix already in. Bots rescue.
+# NOTE: br here is the OLD metric (doors broken after the dawn repair → 0 on won nights).
+# Every engaged bot lost exactly 1 guard at the end of Night 1 (8 claws in one frame, no time to help).
+idle     seed0 LOSS Lv1 H1 S2 [-] N1:FAIL H1 sp67 pk52 k16 feed13 drain32 oil0 hp100/100 br2 @40.9s THE FIRE WENT OUT
+idle     seed1 LOSS Lv1 H1 S2 [-] N1:FAIL H1 sp67 pk56 k14 feed13 drain32 oil0 hp100/100 br2 @42.7s THE FIRE WENT OUT
+idle     seed2 LOSS Lv1 H1 S2 [-] N1:FAIL H1 sp67 pk54 k16 feed12 drain32 oil0 hp100/100 br2 @42.9s THE FIRE WENT OUT
+active   seed0 LOSS Lv1 H1 S1 [-] N1:ok H1 sp68 pk46 k55 feed0 drain0 oil50.9 hp95/100 br0 gd1 gr0 gl1 | N2:ok H1 sp81 pk56 k53 feed7 drain11 oil53.8 hp100/100 br0 | N3:FAIL H1 sp94 pk72 k69 feed23 drain44 oil0 hp63/100 br4 @69.2s THE FIRE WENT OUT
+active   seed1 LOSS Lv1 H1 S1 [-] N1:ok H1 sp68 pk47 k56 feed0 drain0 oil50.9 hp95/100 br0 gd1 gr0 gl1 | N2:ok H1 sp81 pk56 k53 feed5 drain6 oil58.8 hp100/100 br0 | N3:FAIL H1 sp94 pk74 k61 feed24 drain50 oil0 hp78/100 br4 @63.1s THE FIRE WENT OUT
+active   seed2 LOSS Lv1 H1 S1 [-] N1:ok H1 sp68 pk46 k56 feed0 drain0 oil50.9 hp95/100 br0 gd1 gr0 gl1 | N2:ok H1 sp81 pk56 k52 feed6 drain9 oil55.8 hp100/100 br0 | N3:FAIL H1 sp94 pk74 k61 feed22 drain47 oil0 hp78/100 br4 @63.1s THE FIRE WENT OUT
+builder  seed0 WIN  Lv3 H1 S1 [extractor2,sawmill1,shelter1,gate] N1:ok H1 sp68 pk46 k55 feed0 drain0 oil50.9 hp95/100 br0 gd1 gr0 gl1 | N2:ok H1 sp81 pk56 k52 feed0 drain0 oil50.8 hp100/100 br0 | N3:ok H1 sp94 pk81 k73 feed9 drain0 oil54.8 hp100/100 br0 gd3 gr2 gl1
+builder  seed1 WIN  Lv3 H2 S1 [extractor1,sawmill1,extractor1,gate] N1:ok H1 sp68 pk47 k56 feed0 drain0 oil50.9 hp95/100 br0 gd1 gr0 gl1 | N2:ok H1 sp81 pk56 k52 feed0 drain0 oil54.8 hp100/100 br0 | N3:ok H2 sp94 pk84 k62 feed12 drain0 oil52.8 hp120/120 br0 gd1 gr1 gl0
+builder  seed2 WIN  Lv3 H2 S1 [extractor1,sawmill1,extractor1,gate] N1:ok H1 sp68 pk46 k56 feed0 drain0 oil50.9 hp95/100 br0 gd1 gr0 gl1 | N2:ok H1 sp81 pk56 k52 feed0 drain0 oil54.8 hp100/100 br0 | N3:ok H2 sp94 pk84 k60 feed4 drain0 oil52.8 hp120/120 br0 gd1 gr1 gl0
+passive-builder seed0 LOSS Lv1 H1 S2 [-] N1:FAIL H1 sp67 pk52 k16 feed13 drain32 oil0 hp100/100 br2 @40.9s THE FIRE WENT OUT
+passive-builder seed1 LOSS Lv1 H1 S2 [-] N1:FAIL H1 sp67 pk56 k14 feed13 drain32 oil0 hp100/100 br2 @42.7s THE FIRE WENT OUT
+passive-builder seed2 LOSS Lv1 H1 S2 [-] N1:FAIL H1 sp67 pk54 k16 feed12 drain32 oil0 hp100/100 br2 @42.9s THE FIRE WENT OUT
+flare    seed0 LOSS Lv1 H1 S1 [-] N1:ok H1 sp68 pk46 k44 feed7 drain12 oil36.9 hp100/100 br0 gd1 gr0 gl1 | N2:FAIL H1 sp80 pk69 k14 feed13 drain31 oil0 hp100/100 br3 @43.9s THE FIRE WENT OUT
+flare    seed1 LOSS Lv1 H1 S1 [-] N1:ok H1 sp68 pk49 k45 feed6 drain17 oil31.9 hp100/100 br0 gd1 gr0 gl1 | N2:FAIL H1 sp80 pk68 k16 feed12 drain26 oil0 hp100/100 br3 @43.7s THE FIRE WENT OUT
+flare    seed2 LOSS Lv1 H1 S0 [-] N1:ok H1 sp68 pk48 k45 feed6 drain18 oil30.9 hp100/100 br0 gd2 gr0 gl2 | N2:FAIL H1 sp80 pk71 k11 feed15 drain25 oil0 hp100/100 br3 @42.6s THE FIRE WENT OUT
+fire-builder seed0 WIN  Lv3 H1 S1 [-] N1:ok H1 sp68 pk46 k55 feed0 drain0 oil50.9 hp95/100 br0 gd1 gr0 gl1 | N2:ok H1 sp81 pk64 k51 feed0 drain0 oil34.8 hp100/100 br0 | N3:ok H1 sp94 pk85 k90 feed8 drain0 oil57.8 hp93/100 br0 gd1 gr1 gl0
+fire-builder seed1 WIN  Lv3 H1 S1 [-] N1:ok H1 sp68 pk47 k56 feed0 drain0 oil50.9 hp95/100 br0 gd1 gr0 gl1 | N2:ok H1 sp81 pk63 k52 feed2 drain0 oil34.8 hp100/100 br0 | N3:ok H1 sp94 pk86 k90 feed8 drain0 oil57.8 hp100/100 br0 gd1 gr1 gl0
+fire-builder seed2 WIN  Lv3 H1 S1 [-] N1:ok H1 sp68 pk46 k56 feed0 drain0 oil50.9 hp95/100 br0 gd1 gr0 gl1 | N2:ok H1 sp81 pk65 k52 feed0 drain0 oil34.8 hp100/100 br0 | N3:ok H1 sp94 pk85 k90 feed8 drain0 oil57.8 hp100/100 br0 gd1 gr1 gl0
+hunter-builder seed0 WIN  Lv2 H3 S1 [-] N1:ok H1 sp68 pk46 k55 feed0 drain0 oil50.9 hp95/100 br0 gd1 gr0 gl1 | N2:ok H2 sp81 pk56 k54 feed0 drain0 oil39.8 hp120/120 br0 | N3:ok H3 sp94 pk63 k91 feed0 drain0 oil42.8 hp140/140 br0 gd1 gr1 gl0
+hunter-builder seed1 WIN  Lv3 H2 S1 [-] N1:ok H1 sp68 pk47 k56 feed0 drain0 oil50.9 hp95/100 br0 gd1 gr0 gl1 | N2:ok H2 sp81 pk56 k53 feed0 drain0 oil38.8 hp120/120 br0 | N3:ok H2 sp94 pk83 k91 feed8 drain0 oil43.8 hp113/120 br0 gd1 gr1 gl0
+hunter-builder seed2 WIN  Lv3 H2 S1 [-] N1:ok H1 sp68 pk46 k56 feed0 drain0 oil50.9 hp95/100 br0 gd1 gr0 gl1 | N2:ok H2 sp81 pk56 k53 feed0 drain0 oil38.8 hp120/120 br0 | N3:ok H2 sp94 pk83 k90 feed8 drain0 oil43.8 hp120/120 br0 gd1 gr1 gl0
+tower-builder seed0 WIN  Lv3 H1 S1 [extractor1,tower1,tower1,tower1] N1:ok H1 sp68 pk46 k55 feed0 drain0 oil50.9 hp95/100 br0 gd1 gr0 gl1 | N2:ok H1 sp81 pk55 k55 feed0 drain0 oil49.8 hp100/100 br0 tw59 | N3:ok H1 sp94 pk62 k92 feed5 drain0 oil56.8 hp100/100 br0 tw74
+tower-builder seed1 WIN  Lv3 H1 S1 [extractor1,tower1,tower1,tower1] N1:ok H1 sp68 pk47 k56 feed0 drain0 oil50.9 hp95/100 br0 gd1 gr0 gl1 | N2:ok H1 sp81 pk55 k54 feed0 drain0 oil49.8 hp100/100 br0 tw59 | N3:ok H1 sp94 pk62 k92 feed6 drain0 oil56.8 hp100/100 br0 tw75
+tower-builder seed2 WIN  Lv3 H1 S1 [extractor1,tower1,tower1,tower1] N1:ok H1 sp68 pk46 k56 feed0 drain0 oil50.9 hp95/100 br0 gd1 gr0 gl1 | N2:ok H1 sp81 pk55 k53 feed0 drain0 oil48.8 hp100/100 br0 tw59 | N3:ok H1 sp94 pk66 k92 feed8 drain0 oil55.8 hp100/100 br0 tw79
+SUMMARY {"idle":{"wins":0,"runs":3,"guardsDown":0,"rescued":0,"lost":0},"active":{"wins":0,"runs":3,"guardsDown":3,"rescued":0,"lost":3},"builder":{"wins":3,"runs":3,"guardsDown":8,"rescued":4,"lost":4},"passive-builder":{"wins":0,"runs":3,"guardsDown":0,"rescued":0,"lost":0},"flare":{"wins":0,"runs":3,"guardsDown":4,"rescued":0,"lost":4},"fire-builder":{"wins":3,"runs":3,"guardsDown":6,"rescued":3,"lost":3},"hunter-builder":{"wins":3,"runs":3,"guardsDown":6,"rescued":3,"lost":3},"tower-builder":{"wins":3,"runs":3,"guardsDown":3,"rescued":0,"lost":3}}
