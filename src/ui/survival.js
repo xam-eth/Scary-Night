@@ -15,7 +15,7 @@
  */
 
 import { clamp, writeSave } from '../core/util.js';
-import { SURVIVAL_BUILDINGS, BUILDING_MAX_LEVEL, HUNTER_MAX_LEVEL, daySideColumn } from '../game/survival.js';
+import { SURVIVAL_BUILDINGS, BUILDING_MAX_LEVEL, HUNTER_MAX_LEVEL, GUARD, daySideColumn } from '../game/survival.js';
 import { pauseButtonBox } from '../game/hud.js';
 import {
   drawSurvivalIcon, drawLabel, measureLabel, drawPanel, drawCounter, drawBar,
@@ -159,6 +159,7 @@ const HINTS = Object.freeze({
   guard: { icon: 'guard', text: 'SURVIVORS GUARD THE DOORS', life: 5 },
   door: { icon: 'door', text: 'GO TO THE DOOR: SHOOT THROUGH IT', life: 6 },
   level: { icon: 'up', text: 'TAP A GREEN ARROW TO LEVEL UP', life: 6 },
+  rescue: { icon: 'medic', text: 'STAND BY A FALLEN GUARD TO HELP', life: 6 },
 });
 
 function hintStore(game) {
@@ -191,6 +192,7 @@ export function updateSurvivalHints(game, dt) {
     if (state.id === 'move' && mode._movedSinceStart > 80) state.t = Math.max(state.t, state.life - 0.35);
     if (state.id === 'flare' && mode.skillCooldown > 0) state.t = Math.max(state.t, state.life - 0.35);
     if ((state.id === 'build' || state.id === 'level') && mode.builderJob) state.t = Math.max(state.t, state.life - 0.35);
+    if (state.id === 'rescue' && mode.guards && mode.guards.some((guard) => guard.down && guard.rescueT > 0.3)) state.t = Math.max(state.t, state.life - 0.35);
     if (state.t >= state.life) game._survivalHint = null;
   }
   if (game.screen !== 'playing') return;
@@ -202,6 +204,7 @@ export function updateSurvivalHints(game, dt) {
     if (mode.hearthFeeders > 0) offerSurvivalHint(game, 'fire');
     if (mode.skillCooldown <= 0 && mode.enemiesNear(game.player.x, game.player.y, mode.tuning.skillRadius) >= 3) offerSurvivalHint(game, 'flare');
     if ((mode.nightStats.guardShots || 0) > 0 && mode.elapsed > 6) offerSurvivalHint(game, 'guard');
+    if (mode.guards && mode.guards.some((guard) => guard.down)) offerSurvivalHint(game, 'rescue');
     // a door is being clawed and the Hunter has nothing to shoot: send him there
     if (mode.elapsed > 12 && !mode.currentTarget && mode.besiegedDoors().length > 0) offerSurvivalHint(game, 'door');
   } else if (mode.phase === 'day' && !mode.rewardPending()) {
@@ -441,6 +444,40 @@ function drawNightWorldLayer(game, ctx, w, h) {
     if (e._survivalType === 'breaker') drawSurvivalIcon(ctx, 'breaker', at.x - bw / 2 - 10, at.y, 18);
   }
 
+  // Guards: a bar once hurt; a fallen one gets a first-aid badge (edge
+  // pointer off screen) and the Hunter's help as a filling ring
+  for (const guard of mode.guards || []) {
+    if (guard.down) {
+      const at = project(game, guard.x, guard.y, 46);
+      if (!onScreen(at, w, h, 16)) { drawEdgeMarker(ctx, w, h, at, 'medic', '#ff5a4d'); continue; }
+      const pct = clamp(guard.rescueT / GUARD.rescueTime, 0, 1);
+      const r = 21;
+      const bob = pct > 0 ? 0 : Math.sin(t * 6 + guard.index) * 3;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(at.x, at.y + bob, r + 4, 0, TAU);
+      ctx.fillStyle = pct > 0 ? 'rgba(20,40,24,0.55)' : `rgba(255,60,50,${0.25 + 0.2 * Math.sin(t * 8)})`;
+      ctx.fill();
+      if (pct > 0) {
+        ctx.beginPath();
+        ctx.arc(at.x, at.y + bob, r + 1, -Math.PI / 2, -Math.PI / 2 + TAU * pct);
+        ctx.lineWidth = 5;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#5ee07a';
+        ctx.stroke();
+      }
+      ctx.restore();
+      drawSurvivalIcon(ctx, 'medic', at.x, at.y + bob, 30);
+      continue;
+    }
+    if (!(guard.hp < guard.hpMax)) continue;
+    const at = project(game, guard.x, guard.y, 70);
+    if (!onScreen(at, w, h, -10)) continue;
+    const pct = clamp(guard.hp / Math.max(1, guard.hpMax), 0, 1);
+    const flash = guard.hurtFlash > 0.5 ? '#ffffff' : pct > 0.5 ? '#5ab8ff' : pct > GUARD.woundedAt ? '#ffcc33' : '#ff4d4d';
+    drawBar(ctx, at.x - 14, at.y - 3, 28, 6, pct, flash, { lineWidth: 1.4 });
+  }
+
   // Hunter HP, with his level on a gold chip
   const head = project(game, p.x, p.y, 98);
   drawHpBar(ctx, head.x, head.y, 50, 9, clamp(p.blood / Math.max(1, p.bloodMax), 0, 1));
@@ -477,7 +514,7 @@ function drawBanner(game, ctx, w, h) {
   const palette = {
     wave: ['#a35bff', '#5a2bb0'], breaker: ['#ff6a52', '#b3261c'], breach: ['#ff6a52', '#b3261c'],
     fireLow: ['#ffb43a', '#d0600c'], hearth: ['#ff6a52', '#b3261c'], dawn: ['#ffd65a', '#f08c1a'],
-    build: ['#6ee77f', '#259a43'],
+    build: ['#6ee77f', '#259a43'], guardDown: ['#ff6a52', '#b3261c'],
   }[ev.kind] || ['#5a62b8', '#343a7e'];
   const size = 22;
   const textW = measureLabel(ctx, ev.text, size);
@@ -498,6 +535,13 @@ function drawBanner(game, ctx, w, h) {
   ctx.restore();
 }
 
+function guardCounter(mode) {
+  const all = mode.guards ? mode.guards.length : 0;
+  const standing = mode.standingGuards ? mode.standingGuards() : all;
+  if (standing >= all) return { icon: 'guard', value: all };
+  return { icon: 'guard', value: `${standing}/${all}`, color: '#ffb0a8', flash: Math.sin(clock(mode.game) * 9) > 0.6 };
+}
+
 function drawNightHud(game, ctx, w, h) {
   const mode = game.survival;
   drawNightWorldLayer(game, ctx, w, h);
@@ -507,8 +551,9 @@ function drawNightHud(game, ctx, w, h) {
   const blink = Math.sin(clock(game) * 9) > 0;
   drawCounters(game, ctx, w, [
     { icon: 'oil', value: Math.floor(mode.oil), flash: lowOil && blink, color: lowOil ? '#ffb0a8' : '#ffffff' },
-    // wood does nothing at night; the guards on the doors do
-    { icon: 'guard', value: mode.guards ? mode.guards.length : 0 },
+    // wood does nothing at night; the guards on the doors do (standing/all
+    // once one has fallen)
+    guardCounter(mode),
     { icon: 'skull', value: mode.aliveEnemies() },
   ]);
   drawHearthBadge(game, ctx, 30, 86);
@@ -940,7 +985,7 @@ function drawRewardModal(game, ctx, w, h) {
   ctx.fillStyle = 'rgba(12,10,30,0.62)';
   ctx.fillRect(0, 0, w, h);
   ctx.restore();
-  const rowsCount = 3 + (reward.survivors ? 1 : 0) + (reward.drained ? 1 : 0) + (reward.pumped ? 1 : 0);
+  const rowsCount = 3 + (reward.survivors > 0 ? 1 : 0) + (reward.drained ? 1 : 0) + (reward.pumped ? 1 : 0) + (reward.lost ? 1 : 0);
   const bw = Math.min(330, w - 32), bh = 92 + Math.ceil(rowsCount / 2) * 52 + 86;
   const x = (w - bw) / 2, y = (h - bh) / 2 + 10;
   const t = clock(game);
@@ -963,8 +1008,10 @@ function drawRewardModal(game, ctx, w, h) {
     { icon: 'wood', value: `+${reward.wood || 0}`, color: '#1f8a3a' },
   ];
   if (reward.pumped) rows.push({ icon: 'extractor', value: `+${reward.pumped}`, color: '#1f8a3a' });   // pumped overnight
-  if (reward.survivors) rows.push({ icon: 'survivor', value: `+${reward.survivors}`, color: '#1f8a3a' });
+  if (reward.survivors > 0) rows.push({ icon: 'survivor', value: `+${reward.survivors}`, color: '#1f8a3a' });
   if (reward.drained) rows.push({ icon: 'fire', value: `-${reward.drained}`, color: '#d23a2a' });
+  // a guard nobody helped up by dawn: one survivor fewer
+  if (reward.lost) rows.push({ icon: 'guard', value: `-${reward.lost}`, color: '#d23a2a' });
   const cols = 2;
   const cellW = (bw - 40) / cols, cellH = 44;
   rows.forEach((row, i) => {

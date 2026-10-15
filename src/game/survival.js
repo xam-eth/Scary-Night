@@ -262,6 +262,19 @@ function invade(enemy, dt, game, mode, speed, accel, preferHunter, fallback = nu
     }
     return 'press';
   }
+  // A guard standing in its way gets clawed the same way (never hunted).
+  const guard = mode.guardInReach(enemy);
+  if (guard) {
+    settle(enemy, dt);
+    enemy.state = 'strike';
+    enemy.angle = Math.atan2(guard.y - enemy.y, guard.x - enemy.x);
+    enemy.attackCd -= dt;
+    if (enemy.attackCd <= 0) {
+      enemy.attackCd = enemy.hitEvery || 1.6;
+      mode.hurtGuard(guard, (enemy.hitDamage || 10) * mode.enemyAttackMul(enemy), enemy);
+    }
+    return 'press';
+  }
   if (fire && dist(enemy.x, enemy.y, fire.x, fire.y) <= HEARTH_REACH) {
     settle(enemy, dt);
     enemy.feeding = true;
@@ -638,9 +651,14 @@ class FlowField {
 /**
  * Survivors are the house's garrison. By day they stand around the Perapian
  * (the count the HUD shows is people you can see); by night each one walks to
- * the door under the most pressure and shoots through its slit. They are not
- * targets — losing the house is still the fire or the Hunter — so a Shelter is
- * a straight, readable trade: more guards, more dead at the doors.
+ * the door under the most pressure and shoots through its slit.
+ *
+ * They can be hurt: a body that gets inside (a breach) claws a guard standing
+ * in its way like it claws the Hunter (halved in firelight). A badly hurt
+ * guard falls back to the fire; one that drops stays down where it fell and
+ * stops shooting. The Hunter helps a fallen guard up by standing beside it;
+ * one still down at dawn is lost (one survivor fewer). Losing the house is
+ * still only the fire or the Hunter.
  */
 export const GUARD = Object.freeze({
   speed: 210,          // px/s walking between posts
@@ -650,6 +668,12 @@ export const GUARD = Object.freeze({
   boltSpeed: 640,
   perDoor: 2,          // most guards one door takes before the next door gets one
   cap: 8,              // most guards on the map (== maxSurvivors)
+  hp: 40,              // a survivor is no Hunter (100+): 3-4 claws in the dark
+  reach: 12,           // px past both bodies' radii a claw lands from
+  woundedAt: 0.35,     // at or below this share of HP a guard falls back to the fire
+  rescueRange: 70,     // px from a fallen guard the Hunter stands to help him up
+  rescueTime: 1.5,     // s he stays there
+  rescueHp: 0.5,       // share of HP a guard gets up with
 });
 
 class SurvivalGuard {
@@ -669,6 +693,12 @@ class SurvivalGuard {
     this.shotT = 0;                // recoil, for the 3D pawn
     this.walkT = 0;
     this.target = null;
+    this.hpMax = GUARD.hp;
+    this.hp = GUARD.hp;
+    this.down = false;             // dropped: lies where it fell, no shots
+    this.downT = 0;
+    this.rescueT = 0;              // how long the Hunter has stood beside it
+    this.hurtFlash = 0;
   }
 }
 
@@ -730,6 +760,7 @@ export class SurvivalMode {
     this.game.mansion.buildNav();
     this.refreshFireplace(true);
     this._syncGuardRoster(true);
+    this._applyGuardState();
     this._syncTowers();
     if (this.phase === 'night' && this.elapsed < 1) this._nightIntro();
   }
@@ -799,6 +830,26 @@ export class SurvivalMode {
 
     this._restoreEnemies(Array.isArray(s.enemies) ? s.enemies : []);
     this._savedEntrances = Array.isArray(s.entrances) ? s.entrances : null;
+    this._savedGuards = this.phase === 'night' && Array.isArray(s.guards) ? s.guards : null;
+  }
+
+  /** After the roster is rebuilt on load: put back each guard's wounds. */
+  _applyGuardState() {
+    const rows = this._savedGuards;
+    this._savedGuards = null;
+    if (!rows) return;
+    this.guards.forEach((guard, i) => {
+      const row = rows[i];
+      if (!row) return;
+      guard.hp = clamp(Number(row.hp), 0, guard.hpMax);
+      if (!Number.isFinite(guard.hp)) guard.hp = guard.hpMax;
+      guard.down = !!row.down || guard.hp <= 0;
+      if (guard.down) {
+        guard.hp = 0;
+        guard.rescueT = clamp(Number(row.rescueT) || 0, 0, GUARD.rescueTime);
+        if (Number.isFinite(row.x) && Number.isFinite(row.y)) { guard.x = row.x; guard.y = row.y; }
+      }
+    });
   }
 
   _restoreEnemies(rows) {
@@ -1083,8 +1134,7 @@ export class SurvivalMode {
       const col = i % 7;
       const lateral = (col - 3) * 42 + rand(-8, 8);
       const depth = 150 + row * 56 + rand(-16, 16);
-      const x = entrance.outside.x + out.x * depth + along.x * lateral;
-      const y = entrance.outside.y + out.y * depth + along.y * lateral;
+      const { x, y } = this._outsideSpot(entrance, out, along, lateral, depth);
       // Ranks count from the front of *this* door's crowd: a wave that joins
       // an existing crowd queues behind it, a fresh door starts at rank 0.
       const body = new SurvivalCrowdZombie(x, y, entrance, queued + i, this.day);
@@ -1093,13 +1143,42 @@ export class SurvivalMode {
     }
   }
 
+  /**
+   * Where a body queued at a door starts: its formation slot outside the
+   * walls, or — when that slot falls inside another room of the house (the
+   * front door's crowd reached into the basement, the dining door's into the
+   * gallery) or on a prop — the nearest clear slot further out. A body that
+   * started inside skipped the door and walked straight to the fire.
+   */
+  _outsideSpot(entrance, out, along, lateral, depth) {
+    const m = this.game.mansion;
+    const b = m.bounds;
+    const at = (l, d) => ({ x: entrance.outside.x + out.x * d + along.x * l, y: entrance.outside.y + out.y * d + along.y * l });
+    const clear = (q) => (!b || (q.x > b.x + 24 && q.x < b.x + b.w - 24 && q.y > b.y + 24 && q.y < b.y + b.h - 24))
+      && m.findRoom(q.x, q.y) === ROOM.OUTSIDE
+      && !m.solidAt(q.x, q.y) && !m.solidAt(q.x + 14, q.y) && !m.solidAt(q.x - 14, q.y)
+      && !m.solidAt(q.x, q.y + 14) && !m.solidAt(q.x, q.y - 14);
+    const first = at(lateral, depth);
+    if (clear(first)) return first;
+    for (let k = 1; k <= 10; k++) {
+      const d = depth + k * 26;
+      for (const l of [lateral, -lateral, lateral * 0.6, -lateral * 0.6, lateral * 0.25, -lateral * 0.25]) {
+        const q = at(l, d);
+        if (clear(q)) return q;
+      }
+    }
+    return first;
+  }
+
   spawnIndividual(index) {
     const g = this.game;
     const entrance = this.chooseTargetEntrance(g.player.x, g.player.y, index + 2);
     if (!entrance) return;
     const out = outwardOf(entrance);
-    const x = entrance.outside.x + out.x * (180 + index * 54) + rand(-42, 42);
-    const y = entrance.outside.y + out.y * (180 + index * 54) + rand(-42, 42);
+    const along = { x: -out.y, y: out.x };
+    const jx = rand(-42, 42), jy = rand(-42, 42);
+    const depth = 180 + index * 54 + (out.x * jx + out.y * jy);
+    const { x, y } = this._outsideSpot(entrance, out, along, along.x * jx + along.y * jy, depth);
     const enemy = new SurvivalIndividualZombie(x, y, entrance, this.day, index);
     enemy.id = 2000000 + this.day * 100 + index;
     g.enemies.push(enemy);
@@ -1110,8 +1189,10 @@ export class SurvivalMode {
     const entrance = this.mainGate();
     if (!entrance) return;
     const out = outwardOf(entrance);
-    const x = entrance.outside.x + out.x * (330 + index * 80) + rand(-20, 20);
-    const y = entrance.outside.y + out.y * (330 + index * 80) + rand(-20, 20);
+    const along = { x: -out.y, y: out.x };
+    const jx = rand(-20, 20), jy = rand(-20, 20);
+    const depth = 330 + index * 80 + (out.x * jx + out.y * jy);
+    const { x, y } = this._outsideSpot(entrance, out, along, along.x * jx + along.y * jy, depth);
     const breaker = new SurvivalBreaker(x, y, entrance, this.day, index);
     breaker.id = 3000000 + this.day * 10 + index;
     // Preserve a permanent structure target even if the hero is the nearest
@@ -1311,12 +1392,71 @@ export class SurvivalMode {
       this.guards.push(guard);
     }
     if (snap) {
+      // a new phase (dawn, dusk, a fresh run): everyone stands, healed, by the fire
       for (const guard of this.guards) {
         const post = this._hearthPost(guard.index);
         guard.x = post.x; guard.y = post.y; guard.post = post;
         guard.path = null; guard.moving = false; guard.target = null; guard.shotT = 0;
+        guard.hp = guard.hpMax; guard.down = false; guard.downT = 0; guard.rescueT = 0; guard.hurtFlash = 0;
       }
     }
+  }
+
+  /** Guards still on their feet (the HUD counts these). */
+  standingGuards() { return this.guards.filter((guard) => !guard.down).length; }
+
+  /** The nearest standing guard a body is close enough to claw. */
+  guardInReach(enemy) {
+    let best = null, bestD = Infinity;
+    for (const guard of this.guards) {
+      if (guard.down) continue;
+      const d = dist(enemy.x, enemy.y, guard.x, guard.y);
+      if (d < (enemy.radius || 13) + guard.radius + GUARD.reach && d < bestD) { best = guard; bestD = d; }
+    }
+    return best;
+  }
+
+  /** A claw lands on a guard (already scaled for firelight). */
+  hurtGuard(guard, amount, from = null) {
+    if (!guard || guard.down || this.phase !== 'night' || !(amount > 0)) return false;
+    guard.hp = Math.max(0, guard.hp - amount);
+    guard.hurtFlash = 1;
+    this.nightStats.guardDamage = (this.nightStats.guardDamage || 0) + amount;
+    this.pushFloater(guard.x, guard.y, `-${Math.round(amount)}`, '#ff6b5e', { h: 64, size: 15 });
+    const g = this.game;
+    g.audio.play('slash', { x: guard.x, y: guard.y, cam: g.renderer.cam, vol: 0.45 });
+    if (guard.hp <= 0) this._downGuard(guard, from);
+    else if (guard.hp <= guard.hpMax * GUARD.woundedAt) this._guardAssignT = 0;   // fall back now
+    return true;
+  }
+
+  _downGuard(guard) {
+    guard.down = true;
+    guard.hp = 0;
+    guard.downT = 0;
+    guard.rescueT = 0;
+    guard.path = null; guard.moving = false; guard.target = null; guard.shotT = 0;
+    this.nightStats.guardsDown = (this.nightStats.guardsDown || 0) + 1;
+    this.pushEvent('guardDown', 'medic', 'GUARD DOWN!', { life: 2.2 });
+    this.game.audio.play('playerHurt', { vol: 0.5 });
+    this._guardAssignT = 0;
+  }
+
+  /** The Hunter stands beside a fallen guard: after a moment it gets up. */
+  _updateRescue(guard, dt) {
+    const p = this.game.player;
+    const near = this.phase === 'night' && p.state !== 'death' && p.state !== 'dead'
+      && dist(p.x, p.y, guard.x, guard.y) <= GUARD.rescueRange;
+    guard.rescueT = near ? guard.rescueT + dt : Math.max(0, guard.rescueT - dt * 2);
+    if (guard.rescueT < GUARD.rescueTime) return;
+    guard.down = false;
+    guard.rescueT = 0;
+    guard.hp = Math.round(guard.hpMax * GUARD.rescueHp);
+    guard.cd = 0.6;
+    this.nightStats.rescued = (this.nightStats.rescued || 0) + 1;
+    this.pushFloater(guard.x, guard.y, `+${guard.hp}`, '#5ee07a', { h: 70, size: 18, icon: 'heart', life: 1.2 });
+    this.game.audio.play('uiConfirm', { vol: 0.5 });
+    this._guardAssignT = 0;
   }
 
   /** A loose arc in front of the fire (day camp / spare guards at night). */
@@ -1367,6 +1507,13 @@ export class SurvivalMode {
       for (const guard of this.guards) this._setGuardPost(guard, this._hearthPost(guard.index));
       return;
     }
+    // a fallen guard stays where it fell; a badly hurt one holds the fire
+    const able = [];
+    for (const guard of this.guards) {
+      if (guard.down) continue;
+      if (guard.hp <= guard.hpMax * GUARD.woundedAt) this._setGuardPost(guard, this._hearthPost(guard.index));
+      else able.push(guard);
+    }
     const threat = new Map();
     for (const e of g.enemies) {
       if (e.dead || e.removeMe || !e._survivalType) continue;
@@ -1391,7 +1538,7 @@ export class SurvivalMode {
     }
     const taken = new Set();
     const pending = [];
-    for (const guard of this.guards) {
+    for (const guard of able) {
       const keep = guard.post && guard.post.doorId
         && slots.find((s) => s.door.id === guard.post.doorId && !taken.has(`${s.door.id}:${s.slot}`));
       if (keep) { taken.add(`${keep.door.id}:${keep.slot}`); this._setGuardPost(guard, this._doorPost(keep.door, keep.slot)); }
@@ -1436,6 +1583,13 @@ export class SurvivalMode {
     const night = this.phase === 'night';
     for (const guard of this.guards) {
       guard.shotT = Math.max(0, guard.shotT - dt);
+      guard.hurtFlash = Math.max(0, (guard.hurtFlash || 0) - dt * 4);
+      if (guard.down) {
+        guard.downT += dt;
+        guard.moving = false;
+        this._updateRescue(guard, dt);
+        continue;
+      }
       // walk the path to the post
       guard.moving = false;
       if (guard.path && guard.pathI < guard.path.length) {
@@ -1903,6 +2057,9 @@ export class SurvivalMode {
     const dayIndex = clamp(this.day - 1, 0, 2);
     let oil = this.tuning.nightRewards.oil[dayIndex];
     let wood = this.tuning.nightRewards.wood[dayIndex];
+    // a guard still down at dawn is lost: one survivor fewer from today on
+    const lost = this.guards.filter((guard) => guard.down).length;
+    if (lost) this.survivors = Math.max(0, this.survivors - lost);
     const survivorsBefore = this.survivors;
     // Dawn pays the sawmills; the pumps already poured their oil in during
     // the night, and shelters house their survivors as soon as they stand.
@@ -1925,7 +2082,7 @@ export class SurvivalMode {
     this.lastRewards = {
       oil, wood, kills: this.nightStats.kills, walls: this.nightStats.damageToWalls,
       survivors: this.survivors - survivorsBefore, drained: Math.round(this.nightStats.drained || 0),
-      pumped,
+      pumped, lost, rescued: this.nightStats.rescued || 0,
     };
     this._resetNightFx();
     g.enemies.length = 0;
@@ -2303,6 +2460,7 @@ export class SurvivalMode {
       breakers: this.game.enemies.filter((e) => e._survivalType === 'breaker' && !e.dead).length,
       kills: this.nightStats.kills, gateHp: Math.round(this.gateHp),
       feeders: this.hearthFeeders, drained: Math.round(this.nightStats.drained || 0),
+      guards: this.guards.length, guardsDown: this.guards.filter((guard) => guard.down).length,
       gateBroken: !!(this.mainGate() && this.mainGate().broken),
       job: this.builderJob ? { ...this.builderJob } : null,
     };
@@ -2347,6 +2505,11 @@ export class SurvivalMode {
     s.player = { x: g.player.x, y: g.player.y, angle: g.player.angle, blood: g.player.blood };
     s.entrances = g.mansion.entrances.map((e) => ({ id: e.id, hp: e.hp, hpMax: e.hpMax, broken: e.broken, open: e.open, barricade: e.barricade }));
     s.enemies = this.phase === 'night' ? this._serializeEnemies() : [];
+    // hurt / fallen guards survive a mid-night reload (a fallen one where it lies)
+    s.guards = this.phase === 'night' ? this.guards.map((guard) => ({
+      hp: Math.round(guard.hp * 10) / 10, down: !!guard.down, rescueT: +guard.rescueT.toFixed(2),
+      x: Math.round(guard.x), y: Math.round(guard.y),
+    })) : [];
     if (force) this._saveT = 0;
     try { window.__LN_SURVIVAL = this.getNightSnapshot(); } catch (_) { /* node harness */ }
     // writeSave is intentionally batched while simulating; phase/build changes

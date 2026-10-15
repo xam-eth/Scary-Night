@@ -30,6 +30,9 @@ export function releaseControls(game) {
 /**
  * Engaged defender: hold the firelight between the hearth and the nearest
  * intruder, fall back to the Perapian when it is being clawed, Flare clusters.
+ * When a guard is down (and the fire is not being fed, and he is not hurt) he
+ * goes and stands beside it until it is back up; state.rescue === false turns
+ * that off (measurement only).
  */
 export function botNight(game, state, { ROOM, ISO_CAMERA }) {
   const mode = game.survival;
@@ -43,8 +46,14 @@ export function botNight(game, state, { ROOM, ISO_CAMERA }) {
   let goal = { x: fire.x + 60, y: fire.y + 190 };
   const nearFire = inside.filter((e) => dist(e, fire) < 520);
   const hurt = p.blood < p.bloodMax * 0.45;
+  const fallen = state.rescue === false ? [] : (mode.guards || []).filter((gd) => gd.down);
   if (mode.hearthFeeders > 0 || nearFire.length || hurt) {
     goal = { x: fire.x + 30, y: fire.y + 170 };
+  } else if (fallen.length) {
+    fallen.sort((a, b) => dist(a, p) - dist(b, p));
+    goal = { x: fallen[0].x, y: fallen[0].y };
+    state.rescueTrips = (state.rescueTrips || 0) + (state.lastRescue === fallen[0] ? 0 : 1);
+    state.lastRescue = fallen[0];
   } else if (inside.length) {
     inside.sort((a, b) => dist(a, fire) - dist(b, fire));
     const t = inside[0];

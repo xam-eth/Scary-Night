@@ -1124,6 +1124,172 @@ async function runSurvivalMilestone() {
   }
   const towerPass = towerChecks.length === 7 && towerChecks.every(Boolean);
 
+  // ---- guards can fall: claws inside the house, rescue by the Hunter, loss at dawn ----
+  const fallChecks = [];
+  const fallCheck = (name, ok, detail) => {
+    fallChecks.push(!!ok);
+    console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} (${detail})`);
+  };
+  {
+    const mode = survivalGame.survival;
+    const m = survivalGame.mansion;
+    const p = survivalGame.player;
+    mode.restart();
+    resetControls();
+    mode.startNight();
+    quietNight(mode);
+    mode.tuning = { ...mode.tuning, autoAttackRange: 0 };   // the Hunter's own shot off
+    const hallC = m.roomCenter(ROOM.HALL);
+    const parkHunter = () => { p.x = hallC.x; p.y = hallC.y; p.blood = p.bloodMax; };
+    parkHunter();
+    mode.survivors = 2;
+    mode._syncGuardRoster(true);
+    const [ga, gb] = mode.guards;
+    const pin = (guard, at) => {
+      guard.x = at.x; guard.y = at.y; guard.path = null; guard.moving = false;
+      guard.post = { key: 'test', x: at.x, y: at.y, doorId: null };
+    };
+    const kc = m.roomCenter(ROOM.KITCHEN);
+    const dark = mode._freePost(kc.x, kc.y, 'test', null);
+    const lit = mode._hearthPost(0);
+    const clawOnce = (guard, frames = 40) => {
+      // one live invader right beside the guard: count only its first claw
+      const before = guard.hp;
+      const z = new SurvivalCrowdZombie(guard.x + 22, guard.y, mode.mainGate(), 0, mode.day);
+      z.hp = z.hpMax = 9999; z._inHouse = true; z.attackCd = 0;
+      survivalGame.enemies.push(z);
+      for (let i = 0; i < frames && guard.hp === before && !guard.down; i++) { mode._guardAssignT = 1e9; tick(); }
+      survivalGame.enemies.length = 0; survivalGame.bolts.length = 0;
+      return { dealt: before - guard.hp, hit: z.hitDamage };
+    };
+
+    // 1) a claw in the dark lands full; in the firelight at half (like the Hunter's)
+    mode._guardAssignT = 1e9;
+    pin(ga, dark); pin(gb, lit);
+    const darkClaw = clawOnce(ga);
+    const litClaw = clawOnce(gb);
+    const darkSpot = !mode.isLit(dark.x, dark.y), litSpot = mode.isLit(lit.x, lit.y);
+    fallCheck('guards take claws from invaders: full in the dark, x0.5 in the firelight',
+      darkSpot && litSpot && Math.abs(darkClaw.dealt - darkClaw.hit) < 0.01
+        && Math.abs(litClaw.dealt - litClaw.hit * mode.tuning.litAttackMul) < 0.01
+        && ga.hp === GUARD.hp - darkClaw.hit && !ga.down && (mode.nightStats.guardDamage || 0) > 0,
+      `dark spot ${darkSpot}: ${GUARD.hp} → ${ga.hp} (claw ${darkClaw.hit}); lit spot ${litSpot}: ${GUARD.hp} → ${gb.hp}`);
+
+    // 2) at 0 HP it drops: no more shots, claws pass it by
+    ga.hp = 3;
+    const downedBy = clawOnce(ga);
+    const banner = [mode.banner, ...mode.bannerQueue].some((ev) => ev && ev.kind === 'guardDown');
+    pin(gb, lit);
+    const decoy = new SurvivalCrowdZombie(ga.x + 150, ga.y, mode.mainGate(), 0, mode.day);
+    decoy.hp = decoy.hpMax = 9999; decoy.update = () => {};
+    survivalGame.enemies.push(decoy);
+    const walker = new SurvivalCrowdZombie(ga.x + 24, ga.y, mode.mainGate(), 0, mode.day);
+    walker.hp = walker.hpMax = 9999; walker._inHouse = true; walker.attackCd = 0;
+    survivalGame.enemies.push(walker);
+    const ignoredAtStart = mode.guardInReach(walker) === null;
+    let downShot = 0;
+    for (let i = 0; i < 60 * 3; i++) { tick(); downShot = Math.max(downShot, ga.shotT); }
+    const walkedOn = Math.hypot(walker.x - ga.x, walker.y - ga.y) > 60;
+    survivalGame.enemies.length = 0; survivalGame.bolts.length = 0;
+    fallCheck('at 0 HP a guard drops where it stands: it stops shooting and invaders walk past it',
+      ga.down && ga.hp === 0 && downedBy.dealt === 3 && banner && (mode.nightStats.guardsDown || 0) === 1
+        && downShot === 0 && ignoredAtStart && walkedOn && ga.hp === 0 && mode.standingGuards() === 1,
+      `down=${ga.down}, banner=${banner}, guardsDown ${mode.nightStats.guardsDown}, shots while down ${downShot ? 'yes' : 'none'}, walker ${Math.round(Math.hypot(walker.x - ga.x, walker.y - ga.y))}px on, standing ${mode.standingGuards()}/2`);
+
+    // 3) the Hunter helps it up by standing beside it; leaving early resets
+    p.x = ga.x + 40; p.y = ga.y;
+    tick(Math.round(60 * 0.8));
+    const partial = ga.rescueT;
+    const stillDown = ga.down;
+    parkHunter();
+    tick(30);
+    const decayed = ga.rescueT;
+    p.x = ga.x + 40; p.y = ga.y;
+    let upAt = null;
+    for (let i = 0; i < 60 * 2.2 && ga.down; i++) { tick(); if (!ga.down) upAt = i / 60; }
+    fallCheck('the Hunter beside a fallen guard helps it up in 1.5 s with half HP; stepping away resets it',
+      stillDown && partial > 0.7 && decayed === 0 && !ga.down && upAt != null && upAt > 1.4 && upAt < 1.6
+        && ga.hp === Math.round(GUARD.hp * GUARD.rescueHp) && (mode.nightStats.rescued || 0) === 1,
+      `0.8 s beside → ${partial.toFixed(2)} s (still down=${stillDown}); after stepping away ${decayed.toFixed(2)}; back → up after ${upAt && upAt.toFixed(2)} s with ${ga.hp} HP, rescued ${mode.nightStats.rescued}`);
+    parkHunter();
+
+    // 4) a badly hurt guard leaves its door for the fire; a healthy one stays
+    mode._syncGuardRoster(true);
+    const fd = mode.entranceById('frontDoor');
+    fd.hp = fd.hpMax = 99999;
+    mode._guardAssignT = 0;
+    mode.spawnSwarm(21, 0, fd);
+    let posted = false;
+    for (let i = 0; i < 60 * 20 && !posted; i++) {
+      tick();
+      posted = mode.guards.every((gd) => gd.post && gd.post.doorId === 'frontDoor');
+    }
+    // let them walk the ~1400 px from the fire and hold the door while the
+    // crowd claws the wood
+    for (let i = 0; i < 60 * 14; i++) tick();
+    const atPosts = mode.guards.every((gd) => !gd.moving && Math.hypot(gd.x - gd.post.x, gd.y - gd.post.y) < 30);
+    const throughWood = atPosts && mode.guards.every((gd) => gd.hp === GUARD.hp) && fd.attackers !== undefined;
+    ga.hp = Math.floor(GUARD.hp * GUARD.woundedAt) - 1;
+    mode._guardAssignT = 0;
+    tick();
+    fallCheck('a guard at or below 35% HP falls back to a post by the fire; the healthy one keeps the door; no claws through an intact door',
+      posted && throughWood && ga.post.key === 'hearth' && gb.post.doorId === 'frontDoor',
+      `both posted at frontDoor=${posted} (standing at their posts=${atPosts}), door ${Math.round(fd.hpMax - fd.hp)} damage taken, guard HP after 14 s ${mode.guards.map((gd) => gd.hp).join('/')}, wounded ${ga.hp} HP → ${ga.post.key}, healthy → ${gb.post.doorId}`);
+
+    // 5) a mid-night reload keeps the wounds, and the fallen guard where it lies
+    survivalGame.enemies.length = 0; survivalGame.bolts.length = 0;
+    pin(ga, dark);
+    mode._downGuard(ga);
+    ga.rescueT = 0.4;
+    gb.hp = 23;
+    mode._persist(true);
+    const reloaded = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+    const [ra, rb] = reloaded.survival.guards;
+    fallCheck('a mid-night reload keeps a fallen guard down where it fell and a hurt one\'s HP',
+      reloaded.survival.phase === 'night' && ra && ra.down && ra.hp === 0 && Math.abs(ra.x - dark.x) < 1 && Math.abs(ra.y - dark.y) < 1
+        && Math.abs(ra.rescueT - 0.4) < 0.01 && rb && !rb.down && rb.hp === 23,
+      `reloaded: guard 0 down=${ra && ra.down} at (${ra && Math.round(ra.x)}, ${ra && Math.round(ra.y)}) vs (${Math.round(dark.x)}, ${Math.round(dark.y)}), help ${ra && ra.rescueT}s; guard 1 ${rb && rb.hp} HP`);
+
+    // 6) dawn: still down = lost (one survivor fewer); the rest heal
+    mode.elapsed = mode.nightDuration - 0.01;
+    tick(2);
+    const reward = mode.lastRewards || {};
+    fallCheck('at dawn a guard still down is lost: survivors 2 → 1, the rest stand healed by the fire',
+      mode.phase === 'day' && mode.survivors === 1 && reward.lost === 1 && reward.survivors === 0
+        && mode.guards.length === 1 && mode.guards[0].hp === GUARD.hp && !mode.guards[0].down
+        && mode.guards[0].post && mode.guards[0].post.key === 'hearth',
+      `phase ${mode.phase}, survivors ${mode.survivors}, reward lost ${reward.lost} / survivors ${reward.survivors} / rescued ${reward.rescued}, guards ${mode.guards.map((gd) => `${gd.hp}${gd.down ? 'X' : ''}`).join('/')}`);
+    mode.tuning = SURVIVAL_TUNING;
+    if (mode.rewardPending && mode.rewardPending()) mode.ackRewards();
+
+    // 7) every wave starts outside the walls: the front door's crowd used to
+    //    reach into the basement and the dining door's into the gallery, so
+    //    those bodies skipped the door (and clawed guards behind intact wood)
+    const insideAt = [];
+    let spawned = 0;
+    for (const door of m.entrances.filter((e) => e.exterior && e.kind === 'door')) {
+      survivalGame.enemies.length = 0;
+      mode.spawnSwarm(30, 0, door);
+      for (const z of survivalGame.enemies) {
+        spawned++;
+        if (m.findRoom(z.x, z.y) !== ROOM.OUTSIDE || m.solidAt(z.x, z.y)) insideAt.push(`${door.id}:${m.findRoom(z.x, z.y)}`);
+      }
+    }
+    survivalGame.enemies.length = 0;
+    for (let k = 0; k < 3; k++) mode.spawnBreaker(k);
+    for (let k = 0; k < 6; k++) mode.spawnIndividual(k);
+    for (const z of survivalGame.enemies) {
+      spawned++;
+      if (m.findRoom(z.x, z.y) !== ROOM.OUTSIDE || m.solidAt(z.x, z.y)) insideAt.push(`${z._survivalType}:${m.findRoom(z.x, z.y)}`);
+    }
+    survivalGame.enemies.length = 0;
+    fallCheck('every wave body starts outside the walls and off props (no crowd starts inside the basement or gallery)',
+      spawned >= 7 * 30 + 9 && insideAt.length === 0,
+      `${spawned} bodies over 7 doors + Breakers + individuals, ${insideAt.length} inside/on props${insideAt.length ? ': ' + insideAt.slice(0, 6).join(' ') : ''}`);
+    window.localStorage.removeItem('lastnight.save.v1');
+  }
+  const guardFallPass = fallChecks.length === 7 && fallChecks.every(Boolean);
+
   console.log(`  idle Night 3: ${idle.nightThree.peakEnemies} peak enemies / ${idle.nightThree.peakBreakers} Breakers, ${idle.nightThree.kills} kills, ${idle.nightThree.wallDamage} wall damage, gate ${idle.nightThree.gateHp} HP, Hunter ${idle.nightThree.playerHp} HP; ${idle.phase}`);
   console.log(`  builder Night 3: ${builder.nightThree.peakEnemies} peak enemies / ${builder.nightThree.peakBreakers} Breakers, ${builder.nightThree.kills} kills, ${builder.nightThree.wallDamage} wall damage, gate ${builder.nightThree.gateHp} HP, Hunter ${builder.nightThree.playerHp} HP; Perapian Lv${builder.perapianLevel}, survivors ${builder.survivors}, buildings ${builder.buildings.join(',') || 'none'}, gateBuilt=${builder.gateBuilt}; ${builder.phase}`);
   // Balance target (M1 rebuild): doing nothing must not win; an engaged
@@ -1136,7 +1302,7 @@ async function runSurvivalMilestone() {
     && hunterAutoShot && hunterRealLos && hunterSkill
     && idleLoses && builder.complete && builder.perapianLevel === 3
     && builder.queueLockVerified && builder.sawmillBuilt && builder.gateBuilt && builder.shelterBuilt
-    && saveProgressPass && economyPass && progressionPass && towerPass && builder.upgrades.map((item) => item.level).join(',') === '1,2,3';
+    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && builder.upgrades.map((item) => item.level).join(',') === '1,2,3';
   console.log(`  ${pass ? 'PASS' : 'FAIL'}  three-day loop, Perapian Lv1→Lv3, one builder queue, idle loses / engaged builder wins`);
   if (!pass) process.exitCode = 1;
   window.localStorage.removeItem('lastnight.save.v1');

@@ -16,6 +16,10 @@
  *   bots: idle, active, flare, builder, passive-builder, fire-builder, hunter-builder, tower-builder
  *
  * --economy prints every day decision with the purse before/after.
+ * --no-rescue: the defending bots never help a fallen guard up.
+ * --no-guard-damage: guards cannot be hurt (the pre-2026-10-15 rule), to
+ *   measure what hurtable guards change.
+ * Night columns: gd fallen guards, gr helped up, gl lost at dawn.
  * Diagnostics (print and exit): --debug (6 s snapshots of enemy states/doors),
  * --layout (rooms + entrances), --navprobe (hearth flow-field distances per
  * door/room), --cellprobe=x,y (nav cells/solids around a point),
@@ -138,11 +142,12 @@ function runOne(kind, seed) {
   const mode = game.survival;
   mode.restart();
   if (args.economy) traceEconomy(mode, kind, seed);
+  if (args['no-guard-damage']) mode.hurtGuard = () => false;
   const nights = [];
   const step = 1 / 60;
   let guard = 0;
   let night = null;
-  const state = { flareHeld: false };
+  const state = { flareHeld: false, rescue: !args['no-rescue'] };
   const t0 = performance.now();
   while (guard++ < 60 * 60 * 30) {
     if (mode.phase === 'night' && !game.uiPanel) {
@@ -162,6 +167,9 @@ function runOne(kind, seed) {
       night.minHp = Math.min(night.minHp, Math.round(game.player.blood));
       night.kills = mode.nightStats.kills;
       night.towerShots = mode.nightStats.towerShots || 0;
+      night.guardsDown = mode.nightStats.guardsDown || 0;
+      night.rescued = mode.nightStats.rescued || 0;
+      night.downNow = mode.guards ? mode.guards.filter((gd) => gd.down).length : 0;
       night.drained = Math.round(mode.nightStats.drained || 0);
       night.oil = Math.round(mode.oil * 10) / 10;
       night.elapsed = Math.round(mode.elapsed * 10) / 10;
@@ -175,6 +183,8 @@ function runOne(kind, seed) {
     }
     if (night) {
       night.result = mode.phase === 'failed' ? `FAIL:${mode.failureReason}` : 'OK';
+      night.lost = mode.phase === 'failed' ? night.downNow : (mode.lastRewards && mode.lastRewards.lost) || 0;
+      night.survivorsAfter = mode.survivors;
       delete night.seen;
       nights.push(night);
       night = null;
@@ -190,7 +200,7 @@ function runOne(kind, seed) {
   return {
     kind, seed, complete: mode.phase === 'complete', phase: mode.phase,
     failure: mode.phase === 'failed' ? mode.failureReason : null,
-    perapian: mode.perapianLevel, hunter: mode.hunterLevel || 1,
+    perapian: mode.perapianLevel, hunter: mode.hunterLevel || 1, survivors: mode.survivors,
     buildings: { ...mode.buildings }, buildingLevels: { ...(mode.buildingLevels || {}) }, gate: mode.gateBuilt,
     nights, ms: Math.round(performance.now() - t0),
   };
@@ -297,15 +307,20 @@ for (const kind of BOTS) {
   for (let i = 0; i < SEEDS; i++) {
     const r = runOne(kind, 20261012 + i * 7919);
     results.push(r);
-    const line = r.nights.map((n) => `N${n.day}:${n.result === 'OK' ? 'ok' : 'FAIL'} H${n.hunter} sp${n.spawned} pk${n.peakAlive} k${n.kills} feed${n.peakFeeders} drain${n.drained} oil${n.oil} hp${n.minHp}/${n.hpMax} br${n.breaches}${n.towerShots ? ` tw${n.towerShots}` : ''}${n.result === 'OK' ? '' : ' @' + n.elapsed + 's ' + n.result.slice(5)}`).join(' | ');
+    const line = r.nights.map((n) => `N${n.day}:${n.result === 'OK' ? 'ok' : 'FAIL'} H${n.hunter} sp${n.spawned} pk${n.peakAlive} k${n.kills} feed${n.peakFeeders} drain${n.drained} oil${n.oil} hp${n.minHp}/${n.hpMax} br${n.breaches}${n.towerShots ? ` tw${n.towerShots}` : ''}${n.guardsDown ? ` gd${n.guardsDown} gr${n.rescued} gl${n.lost}` : ''}${n.result === 'OK' ? '' : ' @' + n.elapsed + 's ' + n.result.slice(5)}`).join(' | ');
     const levels = Object.entries(r.buildings).map(([roomId, type]) => `${type}${r.buildingLevels[roomId] || 1}`).join(',') || '-';
-    console.log(`${kind.padEnd(8)} seed${i} ${r.complete ? 'WIN ' : 'LOSS'} Lv${r.perapian} H${r.hunter} [${levels}${r.gate ? ',gate' : ''}] ${line} (${r.ms}ms)`);
+    console.log(`${kind.padEnd(8)} seed${i} ${r.complete ? 'WIN ' : 'LOSS'} Lv${r.perapian} H${r.hunter} S${r.survivors} [${levels}${r.gate ? ',gate' : ''}] ${line} (${r.ms}ms)`);
   }
 }
 const summary = {};
 for (const kind of BOTS) {
   const rows = results.filter((r) => r.kind === kind);
-  summary[kind] = { wins: rows.filter((r) => r.complete).length, runs: rows.length };
+  summary[kind] = {
+    wins: rows.filter((r) => r.complete).length, runs: rows.length,
+    guardsDown: rows.reduce((a, r) => a + r.nights.reduce((b, n) => b + (n.guardsDown || 0), 0), 0),
+    rescued: rows.reduce((a, r) => a + r.nights.reduce((b, n) => b + (n.rescued || 0), 0), 0),
+    lost: rows.reduce((a, r) => a + r.nights.reduce((b, n) => b + (n.lost || 0), 0), 0),
+  };
 }
 console.log('SUMMARY', JSON.stringify(summary));
 if (args.json) fs.writeFileSync(String(args.json), JSON.stringify({ duration: DURATION, summary, results }, null, 2));

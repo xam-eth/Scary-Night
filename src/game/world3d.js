@@ -1149,6 +1149,9 @@ class World3DRuntime {
       ring: new THREE.MeshBasicMaterial({ color: 0x5ab8ff, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }),
       // seen through walls: a guard at a south door stays findable
       xray: new THREE.MeshBasicMaterial({ color: 0x5ab8ff, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false, depthTest: false, toneMapped: false }),
+      // a fallen guard: the same rings in alarm red
+      ringDown: new THREE.MeshBasicMaterial({ color: 0xff4a3d, transparent: true, opacity: 0.95, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }),
+      xrayDown: new THREE.MeshBasicMaterial({ color: 0xff4a3d, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false, depthTest: false, toneMapped: false }),
     });
     const geo = this._guardGeo || (this._guardGeo = {
       leg: new THREE.BoxGeometry(6, 16, 6).translate(0, -8, 0),
@@ -1175,8 +1178,12 @@ class World3DRuntime {
     const xray = new THREE.Mesh(geo.ring, mats.xray);
     xray.rotation.x = -Math.PI / 2; xray.position.y = 2.2; xray.renderOrder = 19;
     for (const m of [legL, legR, body, head, hair, stock, arms]) m.castShadow = true;
-    group.add(legL, legR, body, head, hair, bow, ring, xray);
-    group.userData = { legL, legR, bow };
+    // the body is its own group so a fallen guard can lie down on its ring
+    const figure = new THREE.Group();
+    figure.name = 'survival-guard-figure';
+    figure.add(legL, legR, body, head, hair, bow);
+    group.add(figure, ring, xray);
+    group.userData = { legL, legR, bow, figure, ring, xray, down: false };
     this.root.add(group);
     return group;
   }
@@ -1191,6 +1198,25 @@ class World3DRuntime {
       const guard = list[i];
       mesh.visible = show;
       if (!show) continue;
+      const ud = mesh.userData;
+      const down = !!guard.down;
+      if (ud.down !== down) {
+        // fallen: flat on its back across the ring, which turns red
+        ud.down = down;
+        ud.figure.rotation.x = down ? -Math.PI / 2 : 0;
+        ud.figure.position.set(0, down ? 9 : 0, down ? 24 : 0);
+        ud.ring.material = down ? this._guardMats.ringDown : this._guardMats.ring;
+        ud.xray.material = down ? this._guardMats.xrayDown : this._guardMats.xray;
+      }
+      if (down) {
+        // a slow pulse on the ring while it waits for the Hunter
+        const k = 1 + 0.12 * Math.sin(game.time * 6 + i);
+        ud.ring.scale.set(k, k, k);
+        mesh.position.set(guard.x, 0, guard.y);
+        mesh.rotation.y = Math.PI / 2 - guard.angle;
+        continue;
+      }
+      if (ud.ring.scale.x !== 1) ud.ring.scale.set(1, 1, 1);
       const stride = guard.moving ? Math.sin(guard.walkT * 11) : 0;
       mesh.position.set(guard.x, guard.moving ? Math.abs(stride) * 2.4 : 0, guard.y);
       mesh.rotation.y = Math.PI / 2 - guard.angle;

@@ -293,6 +293,16 @@ const ICONS = {
     for (const x of [-0.2, 0, 0.2]) { ctx.moveTo(x, 0.5); ctx.lineTo(x, 0.76); }
     ctx.stroke();
   },
+  /** A fallen guard: red first-aid badge with a white cross. */
+  medic(ctx) {
+    circle(ctx, 0, 0, 0.86, '#ff4d4d');
+    ctx.fillStyle = '#ffffff';
+    rr(ctx, -0.17, -0.56, 0.34, 1.12, 0.08); ctx.fill(); ctx.stroke();
+    rr(ctx, -0.56, -0.17, 1.12, 0.34, 0.08); ctx.fill(); ctx.stroke();
+    // redraw the vertical bar over the stroke where the bars cross
+    rr(ctx, -0.17, -0.56, 0.34, 1.12, 0.08); ctx.fill();
+    shine(ctx, -0.36, -0.42, 0.16, 0.1, 0.55);
+  },
   heart(ctx) {
     ctx.beginPath();
     ctx.moveTo(0, 0.88);
