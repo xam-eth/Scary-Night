@@ -1,6 +1,6 @@
 {
   "title": "Survival FTUE — first 30 playable seconds",
-  "capturedAt": "2026-10-16T00:15:03.660Z",
+  "capturedAt": "2026-10-16T07:26:28.739Z",
   "viewport": {
     "width": 390,
     "height": 844,
@@ -38,6 +38,9 @@
         "keepHp": 600,
         "keepMesh": true,
         "territoryPlanes": 5,
+        "fortressTowers": 12,
+        "fortressMeshes": 13,
+        "fortressMerlons": 146,
         "renderMode": "webgl-3d"
       }
     },
@@ -70,11 +73,14 @@
         "keepHp": 600,
         "keepMesh": true,
         "territoryPlanes": 5,
+        "fortressTowers": 12,
+        "fortressMeshes": 13,
+        "fortressMerlons": 146,
         "renderMode": "webgl-3d"
       },
       "luma": {
-        "meanLuma": 72,
-        "darkPct": 11.2
+        "meanLuma": 98.9,
+        "darkPct": 4.2
       }
     },
     {
@@ -100,12 +106,15 @@
         ],
         "coach": false,
         "narration": false,
-        "swarm": 40,
+        "swarm": 38,
         "riggedCrowd": 14,
-        "proxyCrowd": 26,
+        "proxyCrowd": 24,
         "keepHp": 600,
         "keepMesh": true,
         "territoryPlanes": 5,
+        "fortressTowers": 12,
+        "fortressMeshes": 13,
+        "fortressMerlons": 146,
         "renderMode": "webgl-3d"
       }
     }
@@ -118,8 +127,8 @@
     "before": 1,
     "after": 2,
     "roomsBefore": 5,
-    "roomsAfter": 8,
+    "roomsAfter": 7,
     "planesBefore": 5,
-    "planesAfter": 8
+    "planesAfter": 7
   }
 }

@@ -6,7 +6,7 @@
  */
 import * as THREE from '../vendor/three/three.module.min.js';
 import { ISO_CAMERA, clamp, visualAngle } from '../core/util.js';
-import { EnvKit, PX_PER_METRE, VALEN_METRES } from './envkit.js';
+import { EnvKit, PIECE_METRES, PX_PER_METRE, VALEN_METRES } from './envkit.js';
 import { Valen3D } from './valen3d.js';
 import { Enemy3D, ENEMY_HEIGHT } from './enemy3d.js';
 import { ROOM_MARKS } from './narrative.js';
@@ -63,6 +63,55 @@ const PARTICLE_FRAGMENT_SHADER = `
     #include <colorspace_fragment>
   }
 `;
+
+/**
+ * Static procedural pieces become one mesh per material: each mesh's
+ * transform (relative to `group`) is baked into a non-indexed copy of its
+ * geometry and the copies are concatenated. Instanced meshes are left alone.
+ * `flat(material)` marks ground planes: merged without casting shadows and
+ * drawn first, as the planes were.
+ */
+function mergeStaticByMaterial(group, flat = () => false) {
+  group.updateMatrixWorld(true);
+  const inverse = new THREE.Matrix4().copy(group.matrixWorld).invert();
+  const buckets = new Map();
+  const doomed = [];
+  group.traverse((obj) => {
+    if (!obj.isMesh || obj.isInstancedMesh) return;
+    const geo = obj.geometry.index ? obj.geometry.toNonIndexed() : obj.geometry.clone();
+    geo.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inverse, obj.matrixWorld));
+    if (!buckets.has(obj.material)) buckets.set(obj.material, []);
+    buckets.get(obj.material).push(geo);
+    doomed.push(obj);
+  });
+  for (const obj of doomed) {
+    obj.parent.remove(obj);
+    obj.geometry.dispose();
+  }
+  for (const [material, geos] of buckets) {
+    let count = 0;
+    for (const geo of geos) count += geo.attributes.position.count;
+    const position = new Float32Array(count * 3);
+    const normal = new Float32Array(count * 3);
+    let at = 0;
+    for (const geo of geos) {
+      position.set(geo.attributes.position.array, at * 3);
+      if (geo.attributes.normal) normal.set(geo.attributes.normal.array, at * 3);
+      at += geo.attributes.position.count;
+      geo.dispose();
+    }
+    const merged = new THREE.BufferGeometry();
+    merged.setAttribute('position', new THREE.BufferAttribute(position, 3));
+    merged.setAttribute('normal', new THREE.BufferAttribute(normal, 3));
+    merged.computeBoundingSphere();
+    const mesh = new THREE.Mesh(merged, material);
+    const ground = flat(material);
+    mesh.castShadow = !ground;
+    mesh.receiveShadow = true;
+    if (ground) mesh.renderOrder = -1;
+    group.add(mesh);
+  }
+}
 
 class World3DRuntime {
   constructor() {
@@ -1317,6 +1366,168 @@ class World3DRuntime {
   }
 
   /** Yard ground: the house sits on readable terrain instead of a void. */
+  /**
+   * THE BAILEY'S MASONRY (survival only; src/game/fortress.js).
+   *
+   * The curtain wall itself is the EnvKit wall kit, built from the fortress
+   * solids like any room wall. On top of it go the parts that make it a
+   * fortress: a parapet cap and merlons along every run, round towers on the
+   * corners, square gatehouse towers either side of each big gate with a
+   * crenellated bridge over the gate, the keep's blue banners, and trodden
+   * earth in the grass yards so the inside of the wall reads apart from the
+   * forest floor. All procedural meshes; every tower is also a solid in the
+   * sim (fortress.towers), so what you see is what blocks.
+   */
+  _makeFortressDressing(m) {
+    const group = new THREE.Group();
+    group.name = 'survival-fortress-3d';
+    const mat = (o) => new THREE.MeshStandardMaterial({ roughness: 0.95, flatShading: true, ...o });
+    const stone = mat({ color: 0x77716b });
+    const stoneDark = mat({ color: 0x4f4a47 });
+    const stoneLight = mat({ color: 0x938c83 });
+    const slit = mat({ color: 0x15110e, roughness: 1 });
+    const wood = mat({ color: 0x4a3423, roughness: 0.92 });
+    const blue = mat({ color: 0x3e6bff, emissive: 0x1a3aa8, emissiveIntensity: 0.35, roughness: 0.65, side: THREE.DoubleSide, flatShading: false });
+    const gold = mat({ color: 0xffd24a, emissive: 0x8a6000, emissiveIntensity: 0.3, metalness: 0.4, roughness: 0.45 });
+    const yardMat = new THREE.MeshStandardMaterial({ color: 0x86a35a, roughness: 1, metalness: 0 });
+    const wallTop = PIECE_METRES.wall * PX_PER_METRE;
+    const WALL_T = 26;
+    const add = (geo, material, x, y, z, ry = 0, parent = group) => {
+      const mesh = new THREE.Mesh(geo, material);
+      mesh.position.set(x, y, z);
+      mesh.rotation.y = ry;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    };
+    const towers = m.towers || [];
+    const inTower = (x, z, pad = 0) => towers.some((t) => Math.abs(x - t.x) < t.size / 2 + pad && Math.abs(z - t.y) < t.size / 2 + pad);
+
+    // grass yards inside the wall: trodden earth, a shade off the forest floor
+    for (const room of m.roomList) {
+      if (room.floor !== 'grass') continue;
+      const plane = new THREE.Mesh(new THREE.PlaneGeometry(room.w, room.h), yardMat);
+      plane.rotation.x = -Math.PI / 2;
+      plane.position.set(room.x + room.w / 2, -1, room.y + room.h / 2);
+      plane.receiveShadow = true;
+      plane.renderOrder = -1;
+      group.add(plane);
+    }
+
+    // parapet cap and merlons along every run of the curtain wall
+    const spots = [];
+    for (const s of m.solids) {
+      if (s.type !== 'wall') continue;
+      const horiz = s.w >= s.h;
+      const len = horiz ? s.w : s.h;
+      const cx = s.x + s.w / 2, cz = s.y + s.h / 2;
+      add(new THREE.BoxGeometry(horiz ? len : WALL_T + 12, 8, horiz ? WALL_T + 12 : len), stoneLight, cx, wallTop + 4, cz);
+      const n = Math.max(1, Math.floor(len / 46));
+      for (let i = 0; i < n; i++) {
+        const a = (horiz ? s.x : s.y) + (i + 0.5) * (len / n);
+        const x = horiz ? a : cx, z = horiz ? cz : a;
+        if (inTower(x, z, 6)) continue;
+        spots.push({ x, z, ry: horiz ? 0 : Math.PI / 2 });
+      }
+    }
+    const merlons = new THREE.InstancedMesh(new THREE.BoxGeometry(24, 20, WALL_T + 8), stone, Math.max(1, spots.length));
+    const dummy = new THREE.Object3D();
+    spots.forEach((p, i) => {
+      dummy.position.set(p.x, wallTop + 18, p.z);
+      dummy.rotation.set(0, p.ry, 0);
+      dummy.updateMatrix();
+      merlons.setMatrixAt(i, dummy.matrix);
+    });
+    merlons.count = spots.length;
+    merlons.castShadow = true;
+    merlons.receiveShadow = true;
+    group.add(merlons);
+
+    // the towers
+    const flags = [];
+    const flagSpots = [];
+    for (const t of towers) {
+      if (t.kind === 'corner') {
+        const r = t.size / 2;
+        const h = wallTop + 70;
+        add(new THREE.CylinderGeometry(r + 8, r + 12, 16, 16), stoneDark, t.x, 8, t.y);
+        add(new THREE.CylinderGeometry(r - 4, r, h, 16), stone, t.x, h / 2, t.y);
+        add(new THREE.CylinderGeometry(r + 1, r + 1, 7, 16), stoneLight, t.x, h * 0.55, t.y);
+        add(new THREE.CylinderGeometry(r + 8, r - 2, 14, 16), stoneLight, t.x, h + 5, t.y);
+        for (let i = 0; i < 12; i++) {
+          const a = (i / 12) * Math.PI * 2;
+          add(new THREE.BoxGeometry(26, 22, 14), stone, t.x + Math.sin(a) * (r + 1), h + 22, t.y + Math.cos(a) * (r + 1), a);
+        }
+        for (const a of [Math.PI * 0.25, Math.PI * 0.75, Math.PI * 1.25, Math.PI * 1.75]) {
+          add(new THREE.BoxGeometry(8, 30, 4), slit, t.x + Math.sin(a) * (r - 2), h * 0.72, t.y + Math.cos(a) * (r - 2), a);
+        }
+        // a pole and the keep's blue banner over every corner (the cloth
+        // waves, so it is made after the static masonry is merged)
+        add(new THREE.CylinderGeometry(2.5, 2.5, 80, 6), wood, t.x, h + 52, t.y);
+        flagSpots.push({ x: t.x, y: h + 86, z: t.y });
+      } else {
+        const sz = t.size;
+        const h = wallTop + 52;
+        add(new THREE.BoxGeometry(sz + 10, 14, sz + 10), stoneDark, t.x, 7, t.y);
+        add(new THREE.BoxGeometry(sz, h, sz), stone, t.x, h / 2, t.y);
+        add(new THREE.BoxGeometry(sz + 10, 10, sz + 10), stoneLight, t.x, h + 3, t.y);
+        for (const [ox, oz] of [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]]) {
+          add(new THREE.BoxGeometry(18, 20, 18), stone, t.x + ox * (sz / 2 - 4), h + 18, t.y + oz * (sz / 2 - 4));
+        }
+        // a slit and a blue banner on the forest face and the yard face
+        const horiz = t.side === 'north' || t.side === 'south';
+        for (const dir of [-1, 1]) {
+          const fx = horiz ? 0 : dir, fz = horiz ? dir : 0;
+          add(new THREE.BoxGeometry(horiz ? 8 : 4, 30, horiz ? 4 : 8), slit, t.x + fx * (sz / 2 + 1), h * 0.8, t.y + fz * (sz / 2 + 1));
+          const banner = add(new THREE.PlaneGeometry(34, 64), blue, t.x + fx * (sz / 2 + 2), h * 0.44, t.y + fz * (sz / 2 + 2), Math.atan2(fx, fz));
+          banner.castShadow = false;
+          add(new THREE.BoxGeometry(horiz ? 40 : 4, 4, horiz ? 4 : 40), gold, t.x + fx * (sz / 2 + 3), h * 0.44 + 33, t.y + fz * (sz / 2 + 3));
+        }
+      }
+    }
+
+    // a crenellated bridge over every big gate, tower to tower
+    for (const e of m.entrances) {
+      if (!e.gate || !e.big) continue;
+      const horiz = e.axis === 'h';
+      const span = (horiz ? e.w : e.h) + 20;
+      add(new THREE.BoxGeometry(horiz ? span : WALL_T + 16, 24, horiz ? WALL_T + 16 : span), stoneLight, e.x, wallTop + 8, e.y);
+      for (let i = 0; i < 3; i++) {
+        const a = -span / 2 + (i + 0.5) * (span / 3);
+        add(new THREE.BoxGeometry(horiz ? 24 : WALL_T + 8, 20, horiz ? WALL_T + 8 : 24), stone,
+          e.x + (horiz ? a : 0), wallTop + 30, e.y + (horiz ? 0 : a));
+      }
+    }
+
+    // ~250 static pieces become one mesh per material (a handful of draw
+    // calls on a phone); the merlons are already one instanced mesh
+    mergeStaticByMaterial(group, (material) => material === yardMat);
+    for (const spot of flagSpots) {
+      const flag = new THREE.Group();
+      flag.position.set(spot.x, spot.y, spot.z);
+      group.add(flag);
+      const cloth = add(new THREE.PlaneGeometry(54, 32), blue, 27, -14, 0, 0, flag);
+      cloth.castShadow = false;
+      flags.push({ flag, seed: spot.x * 0.01 + spot.z * 0.013 });
+    }
+    let meshes = 0;
+    group.traverse((obj) => { if (obj.isMesh) meshes++; });
+    group.userData = { flags, yardMat, towers: towers.length, merlons: spots.length, meshes };
+    this.root.add(group);
+    return group;
+  }
+
+  _syncFortressDressing(game, mode) {
+    const m = game.mansion;
+    if (!m || !m.isFortress) return;
+    if (!this.fortressDressing) this.fortressDressing = this._makeFortressDressing(m);
+    const ud = this.fortressDressing.userData;
+    const t = game.now || 0;
+    ud.yardMat.color.setHex(mode.phase === 'day' ? 0x86a35a : 0x4b6448);
+    for (const f of ud.flags) f.flag.rotation.y = Math.sin(t * 1.7 + f.seed) * 0.35;
+  }
+
   _makeSurvivalYard() {
     const yard = new THREE.Mesh(
       new THREE.PlaneGeometry(12000, 12000),
@@ -1521,6 +1732,7 @@ class World3DRuntime {
     this.survivalYard.visible = true;
     this.survivalYard.material.color.setHex(mode.phase === 'day' ? 0x7c9a55 : 0x3f5a46);
 
+    this._syncFortressDressing(game, mode);
     this._syncSurvivalKeep(game, mode);
     this._syncSurvivalTerritory(game, mode);
     this._syncSurvivalCircles(game, mode);
@@ -2533,6 +2745,9 @@ class World3DRuntime {
       visibleSurvivalCrowdProxies: [...this.survivalCrowdProxies.values()].filter((object) => object.visible).length,
       survivalCrowdProxyPool: this.survivalCrowdProxies.size,
       survivalKeepVisible: !!(this.survivalKeep && this.survivalKeep.visible),
+      fortressTowers: this.fortressDressing ? this.fortressDressing.userData.towers : 0,
+      fortressMerlons: this.fortressDressing ? this.fortressDressing.userData.merlons : 0,
+      fortressMeshes: this.fortressDressing ? this.fortressDressing.userData.meshes : 0,
       survivalKeepLevel: this.survivalKeep ? this.survivalKeep.userData.level : 0,
       survivalTerritoryRooms: [...this.survivalTerritory.values()].filter((object) => object.visible).length,
       visibleSurvivalBuildSlots: [...this.survivalCircles.values()].filter((rec) => rec.ring.visible).length,

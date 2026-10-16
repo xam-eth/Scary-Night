@@ -196,6 +196,9 @@ async function survivalFtueSection() {
         keepHp: Math.round(g.survival.keepHp),
         keepMesh: !!(world.survivalKeep && world.survivalKeep.visible),
         territoryPlanes: world.diagnostics().survivalTerritoryRooms,
+        fortressTowers: world.diagnostics().fortressTowers,
+        fortressMeshes: world.diagnostics().fortressMeshes,
+        fortressMerlons: world.diagnostics().fortressMerlons,
         renderMode: world.diagnostics().mode,
       };
     });
@@ -217,8 +220,9 @@ async function survivalFtueSection() {
   check(final.elapsed >= 30 && final.duration >= 60 && final.duration <= 90,
     `the first 30 playable seconds stay in the configurable ${final.duration}s night`);
   check(final.swarm > 0 && final.renderMode === 'webgl-3d'
-    && final.keepMesh && final.territoryPlanes === 5 && final.riggedCrowd + final.proxyCrowd > 0,
-  `the full 3D house, the 3D keep, its banner's 5 rooms and the crowd are visible (${final.riggedCrowd} GLB + ${final.proxyCrowd} silhouette actors)`);
+    && final.keepMesh && final.territoryPlanes === 5 && final.riggedCrowd + final.proxyCrowd > 0
+    && final.fortressTowers === 12 && final.fortressMerlons > 100 && final.fortressMeshes > 0 && final.fortressMeshes <= 16,
+  `the full 3D bailey (curtain wall, towers, gates), the 3D keep, its banner's 5 yards and the crowd are visible (${final.fortressTowers} towers, ${final.fortressMerlons} merlons in ${final.fortressMeshes} meshes; ${final.riggedCrowd} GLB + ${final.proxyCrowd} silhouette actors)`);
 
   const radiusTest = await page.evaluate(() => {
     const g = window.__LN, world = window.__survWorld;
@@ -249,7 +253,7 @@ async function survivalFtueSection() {
   });
   check(radiusTest.clicked && radiusTest.queued === 2 && radiusTest.level === 2 && radiusTest.after === 2 && radiusTest.before === 1
     && radiusTest.roomsAfter > radiusTest.roomsBefore && radiusTest.planesAfter === radiusTest.roomsAfter,
-    `a keep upgrade through its UI button raises the 3D keep Lv${radiusTest.before} → Lv${radiusTest.after} (${radiusTest.hp}) and widens the banner ${radiusTest.roomsBefore} → ${radiusTest.roomsAfter} rooms (floor tint ${radiusTest.planesBefore} → ${radiusTest.planesAfter})`);
+    `a keep upgrade through its UI button raises the 3D keep Lv${radiusTest.before} → Lv${radiusTest.after} (${radiusTest.hp}) and widens the banner ${radiusTest.roomsBefore} → ${radiusTest.roomsAfter} yards (ground tint ${radiusTest.planesBefore} → ${radiusTest.planesAfter})`);
   const evidence = {
     title: 'Survival FTUE — first 30 playable seconds',
     capturedAt: new Date().toISOString(),

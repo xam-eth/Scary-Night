@@ -765,24 +765,30 @@ class EnvKitRuntime {
         // floor under the rooms and nothing under the doorway.
         let room = null;
         let use = false;
-        for (let sy2 = -1; sy2 <= 1 && !use; sy2++) {
-          for (let sx2 = -1; sx2 <= 1 && !use; sx2++) {
+        // An open yard (floor 'grass', the survival bailey) keeps the ground
+        // plane: a tile goes down only where a probe finds paved ground, so
+        // a road's edge is tiled up to the grass and never left ragged.
+        const paved = () => use && !(room && room.floor === 'grass');
+        for (let sy2 = -1; sy2 <= 1 && !paved(); sy2++) {
+          for (let sx2 = -1; sx2 <= 1 && !paved(); sx2++) {
             const px2 = cx + sx2 * tw * 0.33;
             const pz2 = cy + sy2 * th * 0.33;
             if (inWall(px2, pz2)) continue;
             const here = roomAt(px2, pz2);
-            if (here) { room = here; use = true; continue; }
+            if (here) { if (!use || here.floor !== 'grass') room = here; use = true; continue; }
             const arch = passageAt(px2, pz2);
             const door = doorAt(px2, pz2);
             if (arch || door) {
               room = mansion.room((arch && arch.room) || (door && door.room))
                 || mansion.room(arch && arch.to)
                 || mansion.room(door && door.room);
+              // a gate in a grass yard still gets a stone threshold
+              if (room && room.floor === 'grass') room = null;
               use = true;
             }
           }
         }
-        if (!use) continue;
+        if (!use || (room && room.floor === 'grass')) continue;
         floors[FLOOR_FOR(room ? room.floor : 'stone')].push({
           x: cx, y: 0, z: cy, sx: tw / TILE, sy: this._rise('floorStone', PIECE_METRES.floorStone), sz: th / TILE,
         });

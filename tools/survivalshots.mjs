@@ -3,8 +3,9 @@
  * Captures the phone viewport (390×844 @2x) at fixed simulation times and
  * measures what is actually on the pixels: mean luma of the playfield and
  * the share of near-black pixels. Use it for before/after comparisons when
- * the lighting or HUD changes. K1 "Benteng Terakhir": the keep in the Main
- * Hall, the day's walk-to-a-circle builder (P1) and its contextual button.
+ * the lighting or HUD changes. K1 "Benteng Terakhir": the keep in the middle
+ * of the walled bailey (src/game/fortress.js), the day's walk-to-a-circle
+ * builder (P1) and its contextual button.
  *
  *   node tools/survivalshots.mjs                    # writes tools/shots-browser/survival/*.png
  *   node tools/survivalshots.mjs --out=qa-evidence  # write elsewhere
@@ -176,7 +177,7 @@ await shot('day-keep', `(() => {
 })()`);
 await shot('day-circle', `(() => {
   const g = window.__LN;
-  const at = (${walkTo})('hall:tower');
+  const at = (${walkTo})('south:tower');
   const w = window.__survWorld;
   return { at, ring: !!(w.survivalTowerRing && w.survivalTowerRing.visible), ui: g.ui.map((b) => b.label).filter((l) => !/walk:/.test(l)) };
 })()`);
@@ -192,7 +193,7 @@ await shot('day-built', `(() => {
   const g = window.__LN;
   const m = g.survival;
   (${finishJob})();
-  const at = (${walkTo})('dining');
+  const at = (${walkTo})('west');
   return { at, buildings: { ...m.buildings }, chips: g.ui.filter((b) => /walk:/.test(b.label)).length, ui: g.ui.map((b) => b.label).filter((l) => !/walk:/.test(l)) };
 })()`);
 await shot('night2-flare', `(() => {
@@ -217,16 +218,16 @@ await shot('failed', `(() => {
   return { phase: g.survival.phase, ui: g.ui.map((b) => b.label) };
 })()`);
 
-// Door-slit defence: the Hunter steps up behind the door wave 1 claws (K1:
-// the chapel door — Night 1 opens on the far side of the house); guards post
-// beside him; the camera leans toward the crowd.
+// Gate-slit defence: the Hunter steps up behind the gate wave 1 claws (the
+// north gate — Night 1 opens across the bailey); guards post beside him; the
+// camera leans toward the crowd.
 await shot('night-door', `(() => {
   const g = window.__LN;
   const m = g.survival;
   m.restart();
   let steps = 0;
   while (m.elapsed < 9 && m.phase === 'night' && steps++ < 2000) window.__origUpdate.call(g, 1 / 60);
-  const door = m.entranceById('chapelDoor');
+  const door = m.entranceById('northGate');
   const ix = door.inside.x - door.x, iy = door.inside.y - door.y, il = Math.hypot(ix, iy) || 1;
   g.player.x = door.inside.x + ix / il * 60; g.player.y = door.inside.y + iy / il * 60;
   g.renderer.snapCamera(g.player.x, g.player.y);
@@ -248,7 +249,7 @@ if (!args['no-progression'] && !TOWERS_ONLY && !GUARDS_ONLY) {
     m.ackRewards();
     m.gold = 160; m.wood = 160;
     for (const lv of [2, 3]) { if (m.startBuild('keep')) (${finishJob})(); }
-    for (const [type, id] of [['mine', 'basement'], ['sawmill', 'dining'], ['barracks', 'library'], ['tower', 'hall:tower']]) { if (m.startBuild(type, id)) (${finishJob})(); }
+    for (const [type, id] of [['mine', 'north'], ['sawmill', 'west'], ['barracks', 'ward'], ['tower', 'south:tower']]) { if (m.startBuild(type, id)) (${finishJob})(); }
     m.keepHp = m.keepHpMax() * 0.45;   // hurt: the cracks and the REPAIR button show
     const k = m.keep();
     g.player.x = k.x + 30; g.player.y = k.y + k.r + 70;
@@ -282,9 +283,9 @@ if (!args['no-progression'] && !TOWERS_ONLY && !GUARDS_ONLY) {
   })()`);
 }
 
-// Towers: a ballista built on the front-door circle through the real day
+// Towers: a ballista built on the main-gate circle through the real day
 // walk + BUILD button, then Lv2 firing on a real Night 2 (Hunter parked by
-// the front door so the camera holds the tower, the door slit and the crowd).
+// the main gate so the camera holds the tower, the gate slit and the crowd).
 if (!args['no-towers'] && !GUARDS_ONLY) {
   await shot('tower-day', `(() => {
     const g = window.__LN;
@@ -295,13 +296,13 @@ if (!args['no-towers'] && !GUARDS_ONLY) {
     if (collect) collect.onClick(); else m.ackRewards();
     m.gold = Math.max(m.gold, 60); m.wood = Math.max(m.wood, 60);
     (${stepFrames})(10);
-    const at = (${walkTo})('hall:tower');
+    const at = (${walkTo})('south:tower');
     const card = g.ui.find((b) => b.label === 'survival:BUILD tower' && !b.disabled);
     if (card) card.onClick();
     (${finishJob})();
     (${stepFrames})(30);
     const w = window.__survWorld;
-    return { at, built: m.buildings['hall:tower'] || null, spot: m.buildingSpot('hall:tower'), ring: !!(w.survivalTowerRing && w.survivalTowerRing.visible), ui: g.ui.map((b) => b.label).filter((l) => /UPGRADE|BUILD/.test(l)) };
+    return { at, built: m.buildings['south:tower'] || null, spot: m.buildingSpot('south:tower'), ring: !!(w.survivalTowerRing && w.survivalTowerRing.visible), ui: g.ui.map((b) => b.label).filter((l) => /UPGRADE|BUILD/.test(l)) };
   })()`);
   await shot('tower-night', `(() => {
     const g = window.__LN;
@@ -323,11 +324,11 @@ if (!args['no-towers'] && !GUARDS_ONLY) {
     }
     g.render();
     const t = m.towers[0];
-    return { t: +m.elapsed.toFixed(1), day: m.day, level: m.buildingLevel('hall:tower'), upgraded: !!up, shots: m.nightStats.towerShots || 0, kills: m.nightStats.kills, flying: flying(), aim: t && +t.aim.toFixed(2) };
+    return { t: +m.elapsed.toFixed(1), day: m.day, level: m.buildingLevel('south:tower'), upgraded: !!up, shots: m.nightStats.towerShots || 0, kills: m.nightStats.kills, flying: flying(), aim: t && +t.aim.toFixed(2) };
   })()`);
 }
 
-// Guards can fall: a real Night 1 until the chapel door (wave 1) gives way; just
+// Guards can fall: a real Night 1 until the north gate (wave 1) gives way; just
 // inside it one guard down with the Hunter beside it (green ring = his help),
 // one down alone (red ring = time it has left), one hurt (HP bar). Then the
 // lone one's clock runs out (GUARD LOST), and dawn shows the loss.
@@ -339,16 +340,21 @@ if (!args['no-guards'] && !TOWERS_ONLY) {
     m.survivors = 3;
     let steps = 0;
     while (m.elapsed < 8 && m.phase === 'night' && steps++ < 2000) { (${holdKeep})(); window.__origUpdate.call(g, 1 / 60); }
-    const door = m.entranceById('chapelDoor');
+    const door = m.entranceById('northGate');
     door.hp = Math.min(door.hp, 1);
     steps = 0;
     while (!door.broken && m.phase === 'night' && steps++ < 1200) { (${holdKeep})(); window.__origUpdate.call(g, 1 / 60); }
     const [a, b, c] = m.guards;
     const pa = m._doorPost(door, 0), pb = m._doorPost(door, 1);
     const place = (gd, x, y) => { gd.x = x; gd.y = y; gd.post = { key: 'shot', x, y, doorId: null }; gd.path = null; };
+    // offsets along the gate and inward from it, whichever wall it is in
+    const nl = Math.hypot(door.inside.x - door.x, door.inside.y - door.y) || 1;
+    const n = { x: (door.inside.x - door.x) / nl, y: (door.inside.y - door.y) / nl };
+    const off = (p, along, inward) => ({ x: p.x - n.y * along + n.x * inward, y: p.y + n.x * along + n.y * inward });
+    const qb = off(pb, 150, 40), qc = off(pb, 40, 120);
     place(a, pa.x, pa.y);
-    place(b, pb.x + 150, pb.y - 40);
-    place(c, pb.x + 40, pb.y - 120);
+    place(b, qb.x, qb.y);
+    place(c, qc.x, qc.y);
     m._downGuard(a); a.rescueT = 0.75;
     m._downGuard(b); b.downT = 9;
     c.hp = 16;

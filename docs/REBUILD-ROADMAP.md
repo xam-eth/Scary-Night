@@ -1,9 +1,76 @@
 # Status Rebuild 3D & Survival Milestone 1
 
 **Pembaruan:** 2026-10-16 (Asia/Makassar)
-**Status keseluruhan: MASIH TERBUKA — bukan klaim siap rilis.** Inti rebuild dunia 3D dan loop Survival Milestone 1 sudah terimplementasi. Pada 2026-10-12 arah UI/UX dan threat model dikoreksi mengikuti feedback user; pada 2026-10-15 dilakukan pass analisis gap & bug (lihat bagian "Gap & bug pass 2026-10-15"), lalu pass progres Hunter + level bangunan (lihat "Progres Hunter & level bangunan"), lalu pass menara crossbow (lihat "Menara crossbow"), lalu pass guard yang bisa jatuh (lihat "Guard bisa jatuh"; termasuk perbaikan bug gelombang yang muncul di dalam rumah), dan seluruh gate otomatis dijalankan ulang. Setelah itu user memutuskan **game landscape only** dan meminta brainstorming + design system plan sebelum koding lagi (lihat "Arah desain & orientasi" dan `docs/DESIGN-SYSTEM-PLAN.md`; belum ada perubahan kode game untuk arah ini). Revisi 1 desain (konsep api) ditolak user. Di revisi 2 user memilih konsep **K1 "Benteng Terakhir"**, pola build **jalan ke lingkaran + BUILD**, dan nada **dark stylized**, lalu menyetujui semua rekomendasi aturan dan meminta "pastikan dunianya 3D". K1 kini **terimplementasi sebagai vertical slice** (lihat "K1 Benteng Terakhir — implementasi"); acceptance manusia/perangkat untuk K1 belum ada. Acceptance visual/manual di perangkat, playtest manusia, dan packaging Play masih terbuka. Hasil tiap skrip hanya berlaku untuk cakupan yang benar-benar diuji.
+**Status keseluruhan: MASIH TERBUKA — bukan klaim siap rilis.** Inti rebuild dunia 3D dan loop Survival Milestone 1 sudah terimplementasi. Pada 2026-10-12 arah UI/UX dan threat model dikoreksi mengikuti feedback user; pada 2026-10-15 dilakukan pass analisis gap & bug (lihat bagian "Gap & bug pass 2026-10-15"), lalu pass progres Hunter + level bangunan (lihat "Progres Hunter & level bangunan"), lalu pass menara crossbow (lihat "Menara crossbow"), lalu pass guard yang bisa jatuh (lihat "Guard bisa jatuh"; termasuk perbaikan bug gelombang yang muncul di dalam rumah), dan seluruh gate otomatis dijalankan ulang. Setelah itu user memutuskan **game landscape only** dan meminta brainstorming + design system plan sebelum koding lagi (lihat "Arah desain & orientasi" dan `docs/DESIGN-SYSTEM-PLAN.md`; belum ada perubahan kode game untuk arah ini). Revisi 1 desain (konsep api) ditolak user. Di revisi 2 user memilih konsep **K1 "Benteng Terakhir"**, pola build **jalan ke lingkaran + BUILD**, dan nada **dark stylized**, lalu menyetujui semua rekomendasi aturan dan meminta "pastikan dunianya 3D". K1 kini **terimplementasi sebagai vertical slice** (lihat "K1 Benteng Terakhir — implementasi"); acceptance manusia/perangkat untuk K1 belum ada. Atas feedback user berikutnya, Survival kini dimainkan di **dunia benteng (bailey)** baru, bukan di dalam ruangan mansion (lihat "Dunia benteng untuk Survival"). Acceptance visual/manual di perangkat, playtest manusia, dan packaging Play masih terbuka. Hasil tiap skrip hanya berlaku untuk cakupan yang benar-benar diuji.
+
+## Dunia benteng untuk Survival — revisi dunia K1 (2026-10-16)
+
+**Feedback user:** "terasa aneh barack dll ada di dalam ruangan harusnya dunia nya di sesuaikan bukan menggunakan dunia yg cerita sudah beda".
+
+**Keputusan:** Survival mendapat level sendiri, yaitu **benteng (bailey)** terbuka sesuai gambar konsep K1 (`docs/concepts/k1-benteng-terakhir.jpg`).
+- Mansion tetap dipakai route `?legacy=1`.
+- Nada tetap dark stylized.
+- Semua objek dunia tetap mesh 3D: prosedural, atau kit berlisensi yang sama. Byte aset tidak diubah.
+- Tidak menyentuh IAP, `src/shop`, atau server.
+
+**Implementasi** (yang ada di kode):
+
+| Area | Isi | File |
+|---|---|---|
+| Level | `Fortress extends Mansion`: bailey 2600×1900 px (±50×37 m) dengan 9 zona yang menutup halaman persis, tanpa tembok di antaranya (`findRoom()` menyebut zona). Zonanya: inner ward, 4 jalan batu berbentuk salib, dan 4 halaman rumput. Tembok hanya di keliling luar, dipotong gerbang. 12 menara (4 sudut 150 px, 8 gerbang 84 px) adalah solid collision. Perabot halaman berskala nyata: tong, tumpukan peti, sumur, meja pasar. Hutan luar memakai `makeExterior()` yang sama. Batas dunia = bailey + 760 px untuk gerombolan | `src/game/fortress.js` (baru) |
+| Gerbang | 6 gerbang bekerja sebagai pintu (HP, celah tembak, breach, papan, barikade): MAIN GATE di selatan 260 HP (menghadap kamera; alias `frontDoor`), NORTH/EAST/WEST GATE 200, postern NW/SE 110 | `fortress.js` |
+| Pemilihan dunia | `game.js` membuat `Fortress` untuk mode survival dan `Mansion` untuk legacy. Titik mulai di sisi timur menara | `src/game/game.js` |
+| Aturan K1 | Menara Utama di tengah inner ward (`keepSpot`). Wilayah panji tumbuh per zona: Lv1 5 (inner ward + 4 jalan), Lv2 7 (+ halaman postern), Lv3 9 (+ 2 sudut terakhir). 15 lingkaran bertipe: 1 ekonomi per zona (posisi `at` di luar badan jalan, jadi jalan ke menara tetap terbuka) + 1 ballista di dalam setiap gerbang. Gelombang per malam: N1 utara → timur → selatan (gerbang utama baru di gelombang 3), N2 barat → postern NW → selatan, N3 postern SE → utara → selatan. Breaker tetap menyerang gerbang utama dulu | `src/game/survival.js` |
+| Save | Bangunan dengan id lingkaran rumah (mis. `basement`, `hall:tower`) dipindah ke lingkaran kosong bertipe sama di bailey (dalam panji dulu), levelnya dipertahankan | `survival.js` |
+| Lantai | EnvKit: zona `grass` tidak diberi ubin sehingga tanah halaman terlihat. Tepi jalan tetap diubin penuh, dan ambang gerbang di halaman rumput tetap batu | `src/game/envkit.js` |
+| Dunia 3D | Parapet + 146 merlon (instanced) di tembok. Menara sudut bundar bergerigi dengan bendera biru berkibar. Menara gerbang dengan jembatan bergerigi di atas gerbang dan panji biru/emas. Tanah halaman sedikit berbeda dari lantai hutan, dengan warna siang/malam. ±250 bagian statis digabung per material, jadi seluruh benteng hanya 13 mesh | `src/game/world3d.js` |
+| Teks | `BLUE GROUND: YOU HIT HARDER`, `SOLDIERS GUARD THE GATES`, `GO TO THE GATE: SHOOT THROUGH IT`. Kartu menara menghitung jumlah zona dari `TERRITORY` | `src/ui/survival.js` |
+| QA tools | harness, devqa, survivalshots, dan balance memakai id gerbang/zona benteng (`southGate`, `northGate`, `posternNW`, `south:tower`, `north`/`west`/`ward` …) | `tools/*.mjs` |
+
+**Balance bot** (3 seed, 72 dtk per malam), dibandingkan dengan dunia mansion:
+
+| Bot | Benteng | Mansion (`2b14636`) |
+|---|---|---|
+| builder | 3/3 menang (menara 1200/1200 di Malam 2) | 3/3 |
+| hunter-builder | 3/3 | 3/3 |
+| tower-builder | 3/3 | 0/3 |
+| keep-builder | 0/3 | 1/3 |
+| idle / flare / passive-builder | 0/3 (menara jatuh di Malam 1, ±40 dtk) | 0/3 (±51 dtk) |
+| active (menembak tanpa membangun) | 0/3 (kalah Malam 2) | 0/3 (kalah Malam 3) |
+
+Ballista di gerbang lebih efektif di halaman terbuka. Idle kalah lebih cepat karena jalan dari gerbang ke menara lurus. Semua ini **perlu playtest manusia**.
+
+**Gate otomatis** (implementasi, bukan acceptance): semua dijalankan ulang setelah perubahan dunia, serial (2 core).
+- `node tools/harness.mjs`: **44 PASS, 0 FAIL**. Bagian survival 43 cek, antara lain: gelombang 66/78/90; panji ×1,5; breach → flow field → menara di benteng (8,3 dtk dari gerbang utama); semua badan gelombang mulai di luar tembok untuk 6 gerbang; loop 3 hari dengan panji 5 → 7 → 9 zona; migrasi save rumah per tipe; lingkaran ballista di dalam gerbang utama; idle kalah / builder menang. Bot run legacy: no runtime errors.
+- `survival-devqa.mjs`: **18/18 PASS** (0 page error, 0 console error, 0 request gagal).
+- `envqa.mjs --mode=3d-smoke`: **PASS**.
+  - Luma playfield Malam 1 98,9/255 dengan 4,2% hampir hitam (dunia mansion: 72).
+  - Benteng terlihat: 12 menara, 146 merlon, 13 mesh.
+  - Upgrade menara lewat UI memperlebar panji 5 → 7 zona.
+- `layoutqa.mjs`: **9/9 PASS**. Desktop boot route default sekarang memeriksa `world=bailey, zones=9/9`; cek rumah legacy tidak berubah.
+- `glbtest.mjs`: **PASS**.
+- `survivalshots.mjs --landscape --tag=land`: **20 shot, 0 page error**, disimpan di `qa-evidence/survival-k1/` (50%). Shot `guard-*` diambil ulang setelah offset skenario dibuat relatif terhadap arah dalam gerbang (sebelumnya offset untuk pintu kapel menaruh guard di tembok gerbang utara).
+- Probe geometri Node: keenam gerbang terhubung dalam → menara dan luar → keliling tembok; 0 perabot menembus tembok/menara.
+- `node --check`: 71 file PASS. `npm audit --prefix tools`: 0 kerentanan.
+- `node tools/bundle.mjs check`: **FAIL 1** (token origin trial Digital Goods di `index.html`; hanya pemilik akun yang bisa mengisi). Tidak berubah.
+
+Ekspektasi tes yang diubah karena dunianya berubah (bukan dilonggarkan):
+- id pintu/ruangan → gerbang/zona benteng;
+- jumlah gerbang 7 → 6;
+- panji akhir 11 → 9;
+- desktop boot 11 ruangan → 9 zona benteng;
+- tes flow field ke menara meniadakan guard. Guard kini berjaga tepat di jalur selatan dan memang dicakar lebih dulu.
+
+Tes envqa malah diperketat: sekarang ikut memeriksa jumlah menara, merlon, dan mesh benteng.
+
+**Belum / terbuka:**
+- Playtest manusia di dunia benteng: keterbacaan gerbang yang diserang dari luar layar, jarak jalan siang, dan apakah idle 40 dtk cukup untuk FTUE.
+- Perf di perangkat: mesh benteng sudah digabung, tetapi belum diukur di HP.
+- Konten benteng tambahan (mis. lingkaran build di atas tembok, parit) belum ada.
 
 ## K1 "Benteng Terakhir" — implementasi vertical slice (2026-10-16)
+
+> **Catatan revisi dunia (2026-10-16):** slice ini dibuat di dunia mansion. Posisi menara (Main Hall), wilayah per ruangan (5/8/11), 16 lingkaran per ruangan, dan pintu Night 1 (chapel/cellar/front) di bawah ini sudah **diganti** oleh bagian "Dunia benteng untuk Survival" di atas. Aturan K1 lainnya tetap.
 
 **Permintaan user:** "ya saya setuju dan pastikan dunia nya 3d".
 - Ke-8 rekomendasi di `docs/DESIGN-SYSTEM-PLAN.md` §13 disetujui.
@@ -22,7 +89,7 @@
 | Dunia 3D | Menara prosedural: 3 level (hoarding kayu → lonceng + panji besar → 2 panji + ballista atap yang menembak dari Lv2), 3 warga yang bereaksi per status, retakan, panji robek, guncangan saat dipukul, memudar saat Hunter di belakangnya. Tint lantai biru untuk wilayah panji. Lingkaran putus-putus + bangunan hantu biru (abu-abu bila terkunci). Model tambang emas dan barak baru. Perancah + tukang berpalu. Pop 0.85 → 1.08 → 1.0 saat bangunan jadi. Cincin jangkauan ballista saat berdiri di lingkarannya | `world3d.js` |
 | HUD | Malam: bar Menara Utama (landscape: di samping pause; portrait: di bawah pill), alarm merah di kaki menara / pointer tepi, banner di bawah pada layar pendek. Siang: track 3 malam + panji bala bantuan, chip bangunan di atas lingkaran, pointer ke lingkaran terdekat, cincin progres di atas perancah. Kartu fajar: emas/kayu/tambang/kerusakan menara/tambalan + "REINFORCEMENTS IN N". Layar akhir: `REINFORCEMENTS ARRIVED!` / `THE KEEP FELL`. Ikon baru: gold, keep, mine, barracks, banner, instant | `src/ui/survival.js`, `survivalIcons.js` |
 | Tembakan | Damage Hunter 32 / 40 / 48. Lv2: bolt tembus 1 tubuh. Lv3: kipas 3 bolt. Angka damage 18 / 24 (wilayah) / 30 (kill) dengan pop. Knockback 120 (kill 260). Partikel kill. Muzzle flash + hentakan mundur. Hit-stop 50–60 ms untuk kill besar dan Flare. Shake bertingkat (beruntun 0,05 · besar 0,16 · breach 0,22 · Flare 0,42) | `survival.js`, `game.js` |
-| Pembuka & FTUE | Banner Malam 1 `HOLD THE KEEP / REINFORCEMENTS IN 3 NIGHTS`. Chip: move, auto, banner ("BLUE ROOMS: YOU HIT HARDER"), keep, flare, build ("WALK INTO A CIRCLE TO BUILD"), level, guard, door, rescue. Chip direset tiap ganti fase dan teksnya mengecil agar muat | `survival.js`, `src/ui/survival.js` |
+| Pembuka & FTUE | Banner Malam 1 `HOLD THE KEEP / REINFORCEMENTS IN 3 NIGHTS`. Chip: move, auto, banner ("BLUE GROUND: YOU HIT HARDER"), keep, flare, build ("WALK INTO A CIRCLE TO BUILD"), level, guard, door, rescue. Chip direset tiap ganti fase dan teksnya mengecil agar muat | `survival.js`, `src/ui/survival.js` |
 | Save | `save.survival` memakai `gold`, `keepLevel`, `keepHp`, id lingkaran. Save pra-K1 dimigrasi (oil → emas, perapianLevel → keepLevel, extractor → mine, shelter → barracks, menara bebas → lingkaran `<room>:tower`; bangunan yang tak punya lingkaran bertipe sama dibuang) | `survival.js`, `util.js` |
 
 **Tuning yang berubah dari usulan dokumen** (diukur dengan bot, perlu playtest manusia):

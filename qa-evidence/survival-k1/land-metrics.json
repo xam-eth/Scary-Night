@@ -1,11 +1,11 @@
 {
-  "capturedAt": "2026-10-15T23:52:15.926Z",
+  "capturedAt": "2026-10-16T07:11:31.582Z",
   "results": [
     {
       "name": "night-00s",
       "file": "qa-evidence/survival-k1/land-night-00s.png",
-      "meanLuma": 70.1,
-      "darkPct": 15.3,
+      "meanLuma": 96.6,
+      "darkPct": 4.7,
       "quality": 3,
       "state": {
         "t": 0.2,
@@ -20,8 +20,8 @@
     {
       "name": "night-20s",
       "file": "qa-evidence/survival-k1/land-night-20s.png",
-      "meanLuma": 66.8,
-      "darkPct": 15.1,
+      "meanLuma": 98.7,
+      "darkPct": 2.9,
       "quality": 3,
       "state": {
         "t": 20,
@@ -36,14 +36,14 @@
     {
       "name": "night-40s",
       "file": "qa-evidence/survival-k1/land-night-40s.png",
-      "meanLuma": 66.9,
-      "darkPct": 15.3,
+      "meanLuma": 98.4,
+      "darkPct": 3.1,
       "quality": 3,
       "state": {
         "t": 40,
-        "alive": 22,
+        "alive": 39,
         "gold": 38,
-        "keep": 396,
+        "keep": 192,
         "hp": 100,
         "phase": "night",
         "ui": 1
@@ -52,20 +52,20 @@
     {
       "name": "day-reward",
       "file": "qa-evidence/survival-k1/land-day-reward.png",
-      "meanLuma": 130.8,
-      "darkPct": 8,
+      "meanLuma": 140.4,
+      "darkPct": 2.9,
       "quality": 3,
       "state": {
         "phase": "day",
         "day": 2,
         "rewards": {
-          "gold": 17,
-          "wood": 19,
-          "kills": 21,
-          "walls": 260,
+          "gold": 14,
+          "wood": 15,
+          "kills": 4,
+          "walls": 365.3,
           "survivors": 0,
-          "keepDamage": 204,
-          "keepPatched": 71,
+          "keepDamage": 408,
+          "keepPatched": 143,
           "mined": 0,
           "lost": 0,
           "rescued": 0,
@@ -79,8 +79,8 @@
     {
       "name": "day-keep",
       "file": "qa-evidence/survival-k1/land-day-keep.png",
-      "meanLuma": 108.1,
-      "darkPct": 5.5,
+      "meanLuma": 142.1,
+      "darkPct": 2.5,
       "quality": 3,
       "state": {
         "collected": true,
@@ -96,11 +96,11 @@
     {
       "name": "day-circle",
       "file": "qa-evidence/survival-k1/land-day-circle.png",
-      "meanLuma": 106.4,
-      "darkPct": 4.2,
+      "meanLuma": 137.1,
+      "darkPct": 1.3,
       "quality": 3,
       "state": {
-        "at": "hall:tower",
+        "at": "south:tower",
         "ring": true,
         "ui": [
           "PAUSE",
@@ -112,14 +112,14 @@
     {
       "name": "day-build",
       "file": "qa-evidence/survival-k1/land-day-build.png",
-      "meanLuma": 104.9,
-      "darkPct": 4.5,
+      "meanLuma": 134.9,
+      "darkPct": 1.8,
       "quality": 3,
       "state": {
         "clicked": "survival:BUILD tower",
         "job": {
           "kind": "building",
-          "slot": "hall:tower",
+          "slot": "south:tower",
           "left": 5.5
         }
       }
@@ -127,15 +127,15 @@
     {
       "name": "day-built",
       "file": "qa-evidence/survival-k1/land-day-built.png",
-      "meanLuma": 110.2,
-      "darkPct": 4.8,
+      "meanLuma": 141.5,
+      "darkPct": 2,
       "quality": 3,
       "state": {
-        "at": "dining",
+        "at": "west",
         "buildings": {
-          "hall:tower": "tower"
+          "south:tower": "tower"
         },
-        "chips": 4,
+        "chips": 2,
         "ui": [
           "PAUSE",
           "survival:BUILD sawmill",
@@ -146,24 +146,24 @@
     {
       "name": "night2-flare",
       "file": "qa-evidence/survival-k1/land-night2-flare.png",
-      "meanLuma": 60.8,
-      "darkPct": 11.2,
+      "meanLuma": 88,
+      "darkPct": 6,
       "quality": 3,
       "state": {
         "t": 34.2,
         "day": 2,
-        "alive": 45,
-        "keep": 330,
-        "attackers": 16,
-        "state": "attacked",
-        "floaters": 12
+        "alive": 34,
+        "keep": 335,
+        "attackers": 0,
+        "state": "safe",
+        "floaters": 1
       }
     },
     {
       "name": "failed",
       "file": "qa-evidence/survival-k1/land-failed.png",
-      "meanLuma": 47.7,
-      "darkPct": 42.9,
+      "meanLuma": 52.4,
+      "darkPct": 16,
       "quality": 3,
       "state": {
         "phase": "failed",
@@ -175,13 +175,13 @@
     {
       "name": "night-door",
       "file": "qa-evidence/survival-k1/land-night-door.png",
-      "meanLuma": 64.5,
-      "darkPct": 7.6,
+      "meanLuma": 82.7,
+      "darkPct": 4.4,
       "quality": 3,
       "state": {
         "t": 13,
-        "door": "chapelDoor",
-        "doorHp": 53,
+        "door": "northGate",
+        "doorHp": 125,
         "target": true,
         "guardsAtDoor": 2,
         "kills": 4,
@@ -191,13 +191,13 @@
     {
       "name": "prog-keep",
       "file": "qa-evidence/survival-k1/land-prog-keep.png",
-      "meanLuma": 107.1,
-      "darkPct": 5.4,
+      "meanLuma": 139.5,
+      "darkPct": 2.1,
       "quality": 3,
       "state": {
         "keepLevel": 3,
         "hp": "540/1200",
-        "territory": 11,
+        "territory": 9,
         "context": "keep",
         "ui": [
           "PAUSE",
@@ -210,8 +210,8 @@
     {
       "name": "prog-hunter",
       "file": "qa-evidence/survival-k1/land-prog-hunter.png",
-      "meanLuma": 105.7,
-      "darkPct": 5.2,
+      "meanLuma": 138.2,
+      "darkPct": 2.2,
       "quality": 3,
       "state": {
         "at": "armory",
@@ -226,8 +226,8 @@
     {
       "name": "prog-night",
       "file": "qa-evidence/survival-k1/land-prog-night.png",
-      "meanLuma": 60.2,
-      "darkPct": 14.6,
+      "meanLuma": 95.7,
+      "darkPct": 5.1,
       "quality": 3,
       "state": {
         "t": 24,
@@ -242,8 +242,8 @@
     {
       "name": "complete",
       "file": "qa-evidence/survival-k1/land-complete.png",
-      "meanLuma": 98.6,
-      "darkPct": 28.4,
+      "meanLuma": 105.5,
+      "darkPct": 4,
       "quality": 3,
       "state": {
         "phase": "complete",
@@ -255,16 +255,16 @@
     {
       "name": "tower-day",
       "file": "qa-evidence/survival-k1/land-tower-day.png",
-      "meanLuma": 104.7,
-      "darkPct": 4.5,
+      "meanLuma": 136.7,
+      "darkPct": 1.6,
       "quality": 3,
       "state": {
-        "at": "hall:tower",
+        "at": "south:tower",
         "built": "tower",
         "spot": {
-          "x": 212,
-          "y": 483,
-          "doorId": "frontDoor"
+          "x": 64,
+          "y": 813,
+          "doorId": "southGate"
         },
         "ring": true,
         "ui": [
@@ -275,28 +275,28 @@
     {
       "name": "tower-night",
       "file": "qa-evidence/survival-k1/land-tower-night.png",
-      "meanLuma": 64.8,
-      "darkPct": 14.3,
+      "meanLuma": 91.5,
+      "darkPct": 4.2,
       "quality": 3,
       "state": {
-        "t": 21.2,
+        "t": 16.9,
         "day": 2,
         "level": 2,
         "upgraded": true,
         "shots": 3,
-        "kills": 1,
+        "kills": 0,
         "flying": true,
-        "aim": 1.94
+        "aim": 1.68
       }
     },
     {
       "name": "guard-down",
       "file": "qa-evidence/survival-k1/land-guard-down.png",
-      "meanLuma": 67.2,
-      "darkPct": 7.8,
+      "meanLuma": 83,
+      "darkPct": 5.4,
       "quality": 3,
       "state": {
-        "t": 8.7,
+        "t": 8.6,
         "broken": true,
         "helped": 0.92,
         "aloneLeft": 10.8,
@@ -309,11 +309,11 @@
     {
       "name": "guard-lost",
       "file": "qa-evidence/survival-k1/land-guard-lost.png",
-      "meanLuma": 66,
-      "darkPct": 7.6,
+      "meanLuma": 79.8,
+      "darkPct": 5.4,
       "quality": 3,
       "state": {
-        "t": 9.6,
+        "t": 9.5,
         "survivors": 2,
         "guards": 2,
         "lost": 1,
@@ -325,8 +325,8 @@
     {
       "name": "guard-reward",
       "file": "qa-evidence/survival-k1/land-guard-reward.png",
-      "meanLuma": 131.9,
-      "darkPct": 7.7,
+      "meanLuma": 141.6,
+      "darkPct": 2.6,
       "quality": 3,
       "state": {
         "phase": "day",
@@ -341,5 +341,5 @@
     }
   ],
   "pageErrors": [],
-  "note": "Landscape 844x390 @2x captures (tools/survivalshots.mjs --landscape --tag=land), stored at 50% scale."
+  "note": "Survival K1 in the walled bailey (src/game/fortress.js); guard-* re-captured after the gate-relative offsets fix (survivalshots --guards-only)."
 }

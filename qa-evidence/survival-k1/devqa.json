@@ -1,11 +1,11 @@
 {
-  "capturedAt": "2026-10-16T00:10:34.824Z",
+  "capturedAt": "2026-10-16T07:02:35.401Z",
   "results": [
     {
       "name": "boot: the night clock waits for the 3D house",
       "pass": true,
       "detail": {
-        "nightArmedAt": 0.08,
+        "nightArmedAt": 0,
         "elapsedWhenWorldShown": 0.08
       }
     },
@@ -75,7 +75,7 @@
         "survivors": 2,
         "guards": 2,
         "visibleGuardMeshes": 2,
-        "boltObjects": 4,
+        "boltObjects": 6,
         "shots": 51
       }
     },
@@ -84,7 +84,7 @@
       "pass": true,
       "detail": {
         "shots": 51,
-        "boltObjectsInScene": 4
+        "boltObjectsInScene": 6
       }
     },
     {
@@ -108,19 +108,19 @@
       }
     },
     {
-      "name": "tower: model on its circle by the front door, red reach ring while the Hunter stands at it by day",
+      "name": "tower: model on its circle by the main gate, red reach ring while the Hunter stands at it by day",
       "pass": true,
       "detail": {
         "queued": true,
         "built": "tower",
         "model": true,
         "at": [
-          212,
-          483
+          64,
+          813
         ],
         "spot": [
-          212,
-          483
+          64,
+          813
         ],
         "ring": true,
         "ringR": 520
@@ -131,7 +131,7 @@
       "pass": true,
       "detail": {
         "shots": 14,
-        "kills": 1,
+        "kills": 6,
         "ringHidden": true,
         "towerBolts": 1,
         "swivelDiff": 0
@@ -159,21 +159,21 @@
       }
     },
     {
-      "name": "keep: the 3D keep stands in the middle of the Main Hall (solid), banner up, three townsfolk on top",
+      "name": "keep: the 3D keep stands in the middle of the inner ward (solid), banner up, three townsfolk on top",
       "pass": true,
       "detail": {
         "visible": true,
         "at": [
-          440,
-          310
+          0,
+          0
         ],
         "hallCentre": [
-          440,
-          310
+          0,
+          0
         ],
         "keep": [
-          440,
-          310
+          0,
+          0
         ],
         "villagers": 3,
         "banner": true,
@@ -186,7 +186,7 @@
       "pass": true,
       "detail": {
         "stickMoved": 134,
-        "context": "hall:tower",
+        "context": "south:tower",
         "gameplay": true,
         "build": {
           "x": 622,
@@ -196,12 +196,12 @@
           "disabled": false
         },
         "oldLabels": [],
-        "circles": 17,
-        "ghosts": 17,
+        "circles": 16,
+        "ghosts": 16,
         "tallPanels": 0,
         "job": {
           "kind": "building",
-          "slot": "hall:tower"
+          "slot": "south:tower"
         }
       }
     },

@@ -20,6 +20,7 @@ import {
   phaseAt, DIFFICULTY, TUNING, SHARDS, nightHeat, threatMix,
 } from '../core/config.js';
 import { Mansion, ROOM } from './mansion.js';
+import { Fortress } from './fortress.js';
 import { Player, PSTATE } from './player.js';
 import { Bolt } from './enemies.js';
 import { Director } from './director.js';
@@ -220,9 +221,11 @@ export class Game {
     this.night = 1;
     this.log = [];
 
-    this.mansion = new Mansion();
+    // Survival is fought over a walled bailey (src/game/fortress.js); the
+    // legacy route keeps the house its story was written for.
+    this.mansion = this.mode === 'survival' ? new Fortress() : new Mansion();
     this.decals = new Decals(260, this.mansion.bounds);
-    const hallStart = this.mansion.roomCenter(ROOM.HALL);
+    const hallStart = this.mansion.startPoint ? this.mansion.startPoint() : this.mansion.roomCenter(ROOM.HALL);
     this.player = new Player(hallStart.x, hallStart.y);
     this.director = new Director();
     this.objectives = new Objectives();   // the night's purpose (src/game/objectives.js)

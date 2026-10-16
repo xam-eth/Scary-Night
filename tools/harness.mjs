@@ -136,6 +136,7 @@ Math.random = function () {
 const Audio = await import('../src/core/audio.js');
 const { Game } = await import('../src/game/game.js');
 const { ROOM } = await import('../src/game/mansion.js');
+const { FORT } = await import('../src/game/fortress.js');
 const { TUNING, NIGHT_DURATION, SURVIVAL_TUNING } = await import('../src/core/config.js');
 
 function makeHarnessCanvas() {
@@ -245,8 +246,8 @@ async function runSurvivalMilestone() {
   // banner differs, never the geometry.
   survivalGame.survival.restart();
   const lightMode = survivalGame.survival;
-  const heldPoint = survivalGame.mansion.roomCenter(ROOM.DINING);     // under the Lv1 banner
-  const wildPoint = survivalGame.mansion.roomCenter(ROOM.CONSERV);    // beyond it at Lv1
+  const heldPoint = survivalGame.mansion.roomCenter(FORT.WEST);       // under the Lv1 banner
+  const wildPoint = survivalGame.mansion.roomCenter(FORT.NE);         // beyond it at Lv1
   const litProbe = { x: heldPoint.x, y: heldPoint.y, hp: 1e9 };
   const unlitProbe = { x: wildPoint.x, y: wildPoint.y, hp: 1e9 };
   const lightDoor = lightMode.mainGate();
@@ -285,7 +286,7 @@ async function runSurvivalMilestone() {
   // Closed doors are solid across their whole width (entrances are authored by
   // their center; the old resolve() treated x/y as a corner).
   survivalGame.survival.restart();
-  const doorProbe = survivalGame.mansion.entranceById('frontDoor');
+  const doorProbe = survivalGame.mansion.entranceById('southGate');
   const doorSamples = [-0.4, -0.2, 0, 0.2, 0.4].map((frac) => {
     const startX = doorProbe.x + doorProbe.w * frac;
     const outside = doorProbe.outside || { x: doorProbe.x, y: doorProbe.y + 80 };
@@ -299,7 +300,7 @@ async function runSurvivalMilestone() {
   // K1 has no light rule: a siege is never halved, inside or beyond the banner.
   survivalGame.survival.restart();
   const siegeMode = survivalGame.survival;
-  const siegeDoor = siegeMode.entranceById('chapelDoor');
+  const siegeDoor = siegeMode.entranceById('northGate');
   const siegeHp = siegeDoor.hp;
   siegeMode.damageEntrance(siegeDoor, 20, unlitProbe);
   const darkLoss = siegeHp - siegeDoor.hp;
@@ -318,6 +319,8 @@ async function runSurvivalMilestone() {
   feedMode.damageEntrance(feedDoor, feedDoor.hp + 5, unlitProbe);
   const navRefreshed = feedDoor.broken && survivalGame.mansion.navVersion > navBefore;
   const feeder = new SurvivalCrowdZombie(feedDoor.inside.x, feedDoor.inside.y, feedDoor, 0, 1);
+  // no guard on the road: they stand at the keep and would (rightly) be clawed first
+  feedMode.guards.length = 0; feedMode.survivors = 0;
   survivalGame.enemies.length = 0;
   survivalGame.enemies.push(feeder);
   survivalGame.player.x = -2000; survivalGame.player.y = -2000;
@@ -522,7 +525,7 @@ async function runSurvivalMilestone() {
   rankMode.day = 3;
   survivalGame.player.x = rankMode.hunterHome().x; survivalGame.player.y = rankMode.hunterHome().y;
   rankMode.guards.length = 0; rankMode.survivors = 0;
-  const posternDoor = rankMode.entranceById('postern');
+  const posternDoor = rankMode.entranceById('posternNW');
   const posternHp = posternDoor.hp;
   rankMode.spawnSwarm(30, 2, posternDoor);
   let rankPressing = 0;
@@ -533,7 +536,7 @@ async function runSurvivalMilestone() {
   }
   const rankIdx = survivalGame.enemies.filter((e) => e._survivalType === 'swarm').map((e) => e.index);
   const crowdRankPass = rankPressing >= 24 && (posternDoor.broken || posternDoor.hp < posternHp) && Math.min(...rankIdx) === 0;
-  console.log(`  ${crowdRankPass ? 'PASS' : 'FAIL'}  wave 3 (30 bodies) reaches its own ranks at the postern: ${rankPressing} pressing, door ${posternHp} → ${posternDoor.broken ? 'broken' : Math.round(posternDoor.hp)} within 10s, front rank index ${Math.min(...rankIdx)}`);
+  console.log(`  ${crowdRankPass ? 'PASS' : 'FAIL'}  wave 3 (30 bodies) reaches its own ranks at the NW postern: ${rankPressing} pressing, door ${posternHp} → ${posternDoor.broken ? 'broken' : Math.round(posternDoor.hp)} within 10s, front rank index ${Math.min(...rankIdx)}`);
 
   // 2) Ranks close up: kill the front row, the bodies behind step forward.
   survivalGame.survival.restart();
@@ -541,7 +544,7 @@ async function runSurvivalMilestone() {
   quietNight(promoteMode);
   promoteMode.guards.length = 0; promoteMode.survivors = 0;
   promoteMode.tuning = { ...promoteMode.tuning, autoAttackRange: 0 };
-  const promoteDoor = promoteMode.entranceById('chapelDoor');
+  const promoteDoor = promoteMode.entranceById('northGate');
   promoteDoor.hp = promoteDoor.hpMax = 99999;
   promoteMode.spawnSwarm(24, 0, promoteDoor);
   tick(60 * 9);
@@ -563,7 +566,7 @@ async function runSurvivalMilestone() {
   const slitMode = survivalGame.survival;
   quietNight(slitMode);
   slitMode.guards.length = 0; slitMode.survivors = 0;
-  const slitDoor = slitMode.entranceById('frontDoor');
+  const slitDoor = slitMode.entranceById('southGate');
   const inward = { x: slitDoor.inside.x - slitDoor.x, y: slitDoor.inside.y - slitDoor.y };
   const inLen = Math.hypot(inward.x, inward.y) || 1;
   survivalGame.player.x = slitDoor.inside.x + inward.x / inLen * 60;
@@ -587,20 +590,20 @@ async function runSurvivalMilestone() {
   quietNight(guardMode);
   guardMode.tuning = { ...guardMode.tuning, autoAttackRange: 0 };
   survivalGame.player.x = guardMode.hunterHome().x; survivalGame.player.y = guardMode.hunterHome().y;
-  const guardDoor = guardMode.entranceById('frontDoor');
+  const guardDoor = guardMode.entranceById('southGate');
   guardDoor.hp = guardDoor.hpMax = 99999;
   guardMode.spawnSwarm(21, 0, guardDoor);
   let guardsAtDoor = 0;
   for (let i = 0; i < 60 * 22; i++) {
     tick();
-    guardsAtDoor = Math.max(guardsAtDoor, guardMode.guards.filter((gd) => gd.post && gd.post.doorId === 'frontDoor' && !gd.moving).length);
+    guardsAtDoor = Math.max(guardsAtDoor, guardMode.guards.filter((gd) => gd.post && gd.post.doorId === 'southGate' && !gd.moving).length);
   }
   const guardKills = guardMode.nightStats.kills;
   const guardShots = guardMode.nightStats.guardShots || 0;
   guardMode.tuning = SURVIVAL_TUNING;
   const guardPass = guardMode.guards.length === guardMode.survivors && guardMode.survivors === 2
     && guardsAtDoor >= 1 && guardShots > 0 && guardKills > 0;
-  console.log(`  ${guardPass ? 'PASS' : 'FAIL'}  survivors guard the clawed door (${guardMode.guards.length} guards, ${guardsAtDoor} posted at frontDoor, ${guardShots} shots, ${guardKills} kills with the Hunter's shot disabled)`);
+  console.log(`  ${guardPass ? 'PASS' : 'FAIL'}  survivors guard the clawed door (${guardMode.guards.length} guards, ${guardsAtDoor} posted at southGate, ${guardShots} shots, ${guardKills} kills with the Hunter's shot disabled)`);
 
   // 5) Friendly bolts never hit the Hunter.
   survivalGame.survival.restart();
@@ -658,7 +661,7 @@ async function runSurvivalMilestone() {
   survivalGame.survival.restart();
   const reloadMode = survivalGame.survival;
   quietNight(reloadMode);
-  const hall = survivalGame.mansion.roomCenter(ROOM.DINING);   // (the hall's middle is the keep now)
+  const hall = survivalGame.mansion.roomCenter(FORT.WEST);     // open road, clear of the keep
   const insideBody = new SurvivalCrowdZombie(hall.x, hall.y, reloadMode.mainGate(), 0, 1);
   insideBody._inHouse = true;
   survivalGame.enemies.push(insideBody);
@@ -779,13 +782,13 @@ async function runSurvivalMilestone() {
   economyMode.gold = 100; economyMode.wood = 100; economyMode.survivors = 2;
   survivalGame.screen = 'playing'; survivalGame.uiPanel = 'survival-day';
   const economyBuilt = [];
-  for (const [type, slotId] of [['mine', 'basement'], ['sawmill', 'dining'], ['barracks', 'library']]) {
+  for (const [type, slotId] of [['mine', 'north'], ['sawmill', 'west'], ['barracks', 'ward']]) {
     const queued = economyMode.startBuild(type, slotId);
     const finished = queued && waitForBuilder();
     economyBuilt.push({ type, slot: slotId, queued, finished: !!(finished && economyMode.buildings[slotId] === type) });
   }
   // a mismatched circle never takes another type (typed circles)
-  const wrongType = economyMode.startBuild('tower', 'study');
+  const wrongType = economyMode.startBuild('tower', 'east');
   const survivorsAtBuild = economyMode.survivors;
   economyMode.phase = 'night';
   economyMode.day = 1;
@@ -817,7 +820,7 @@ async function runSurvivalMilestone() {
     survivalGame.screen = 'playing'; survivalGame.uiPanel = 'survival-day';
     mode.keepLevel = 3;
     mode.gold = 150; mode.wood = 150;
-    const pumpRoom = { id: 'basement' }, millRoom = { id: 'dining' }, shelterRoom = { id: 'library' };
+    const pumpRoom = { id: 'north' }, millRoom = { id: 'west' }, shelterRoom = { id: 'ward' };
     mode.startBuild('mine', pumpRoom.id); waitForBuilder();
     const lv1 = mode.buildingLevel(pumpRoom.id);
     const cost2 = mode.upgradeCost(pumpRoom.id);
@@ -836,7 +839,7 @@ async function runSurvivalMilestone() {
     const lv3 = mode.buildingLevel(pumpRoom.id);
     const atMax = mode.upgradeCost(pumpRoom.id) === null && mode.startUpgrade(pumpRoom.id) === false;
     progCheck('building levels: queued, paid and finished through the one builder; Lv3 is the cap',
-      lv1 === 1 && queued && paid && job && job.kind === 'upgrade' && job.targetLevel === 2 && job.slotId === 'basement'
+      lv1 === 1 && queued && paid && job && job.kind === 'upgrade' && job.targetLevel === 2 && job.slotId === 'north'
         && !lockBuild && !lockHunter && !lockOther && done2 && lv2 === 2 && lv3 === 3 && atMax
         && cost2 && cost2.gold === 4 && cost2.wood === 12 && cost3 && cost3.gold === 6 && cost3.wood === 16,
       `mine Lv${lv1}→${lv2}→${lv3}, cost Lv2 ${cost2 && `${cost2.gold}/${cost2.wood}`}, Lv3 ${cost3 && `${cost3.gold}/${cost3.wood}`}, queue lock build=${lockBuild} hunter=${lockHunter} upgrade=${lockOther}, max locked=${atMax}`);
@@ -908,7 +911,8 @@ async function runSurvivalMilestone() {
       `cost ${hunterCost && `${hunterCost.gold}/${hunterCost.wood}`}, Lv2 shot ${JSON.stringify(lv2Shot)} HP ${hpAfterLv2}, Lv3 shot ${JSON.stringify(lv3Shot)}`);
 
     // persistence: levels survive a reload; a pre-K1 save (Oil, Perapian,
-    // extractor/shelter, one free building per room) moves onto the circles
+    // extractor/shelter, one free building per house room) moves each
+    // building onto a free circle of its type in the bailey, banner first
     mode._persist(true);
     const saved = JSON.parse(window.localStorage.getItem('lastnight.save.v1') || 'null');
     const reloaded = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
@@ -925,8 +929,9 @@ async function runSurvivalMilestone() {
     const oldGame = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
     const os = oldGame.survival;
     const oldDefaults = os.gold === 77 && os.keepLevel === 2 && os.keepHp === os.keepHpMax()
-      && os.buildings.basement === 'mine' && os.buildings.library === 'barracks' && os.buildings.dining === 'sawmill'
-      && os.buildings['hall:tower'] === 'tower' && !os.buildings.study && !os.buildings.hall
+      && os.buildings.north === 'mine' && os.buildings.ward === 'barracks' && os.buildings.south === 'sawmill'
+      && os.buildings['south:tower'] === 'tower' && os.buildings.west === 'sawmill'
+      && ['basement', 'library', 'dining', 'hall', 'study', 'hall:tower'].every((key) => !os.buildings[key])
       && Object.keys(os.buildings).every((slotId) => os.buildingLevel(slotId) === 1)
       && os.hunterLevel === 1 && oldGame.player.bloodMax === 100;
     // a mid-night reload keeps the Hunter's absolute health on his own bar
@@ -963,22 +968,22 @@ async function runSurvivalMilestone() {
     survivalGame.screen = 'playing'; survivalGame.uiPanel = 'survival-day';
     mode.keepLevel = 1;
     mode.gold = 150; mode.wood = 150;
-    const hallSlot = mode.buildableSlots().some((slot) => slot.id === 'hall:tower');
-    const refused = mode.startBuild('tower', 'hall') === false && mode.startBuild('mine', 'hall:tower') === false;
+    const hallSlot = mode.buildableSlots().some((slot) => slot.id === 'south:tower');
+    const refused = mode.startBuild('tower', 'south') === false && mode.startBuild('mine', 'south:tower') === false;
     const purse = { gold: mode.gold, wood: mode.wood };
-    const queued = mode.startBuild('tower', 'hall:tower');
+    const queued = mode.startBuild('tower', 'south:tower');
     const paid = purse.gold - mode.gold === 4 && purse.wood - mode.wood === 16;
     const done = waitForBuilder();
     tick();
-    const spot = mode.buildingSpot('hall:tower');
-    const door = mode.entranceById('frontDoor');
-    const hall = m.room('hall');
+    const spot = mode.buildingSpot('south:tower');
+    const door = mode.entranceById('southGate');
+    const hall = m.room('south');   // the gate road
     const inHall = spot.x > hall.x && spot.x < hall.x + hall.w && spot.y > hall.y && spot.y < hall.y + hall.h;
     const doorDist = Math.hypot(spot.x - door.x, spot.y - door.y);
-    // a ballista circle only where a room has an outer door, by that door;
-    // a room's two circles keep apart; every spot is on clear floor
+    // a ballista circle only where a gate opens into a yard, by that gate;
+    // a yard's two circles keep apart; every spot is on clear ground
     const towerRooms = SURVIVAL_SLOTS.filter((slot) => slot.type === 'tower').map((slot) => slot.room);
-    const doorless = ['library', 'study', 'conservatory', 'oratory', 'gallery'].every((room) => !towerRooms.includes(room));
+    const doorless = [FORT.WARD, FORT.NE, FORT.SW].every((room) => !towerRooms.includes(room));
     const everyDoor = SURVIVAL_SLOTS.filter((slot) => slot.type === 'tower').every((slot) => !!mode.buildingSpot(slot.id).doorId);
     const pairs = SURVIVAL_SLOTS.filter((slot) => slot.type === 'tower').map((slot) => {
       const econ = SURVIVAL_SLOTS.find((other) => other.room === slot.room && other.type !== 'tower');
@@ -989,11 +994,11 @@ async function runSurvivalMilestone() {
       && [0, 1, 2, 3, 4, 5, 6, 7].every((k) => !m.solidAt(p.x + Math.cos(k * Math.PI / 4) * 26, p.y + Math.sin(k * Math.PI / 4) * 26)));
     const tower = mode.towers[0];
     towerCheck('ballista: built on its own circle under the banner through the one builder, just inside the room\'s outer door; other circles refuse it; doorless rooms have none; circles keep apart on clear floor',
-      hallSlot && refused && queued && paid && done && mode.buildings['hall:tower'] === 'tower' && mode.buildingLevel('hall:tower') === 1
-        && spot.doorId === 'frontDoor' && inHall && doorDist > 100 && doorDist < 320 && doorless && everyDoor && apart && clearFloor
+      hallSlot && refused && queued && paid && done && mode.buildings['south:tower'] === 'tower' && mode.buildingLevel('south:tower') === 1
+        && spot.doorId === 'southGate' && inHall && doorDist > 100 && doorDist < 320 && doorless && everyDoor && apart && clearFloor
         && mode.boltPath(spot.x, spot.y, door.outside.x, door.outside.y)
-        && mode.towers.length === 1 && tower.x === spot.x && tower.y === spot.y && tower.slotId === 'hall:tower',
-      `hall:tower circle=${hallSlot}, wrong circles refused=${refused}, paid 4/16=${paid}, spot (${spot.x}, ${spot.y}) ${Math.round(doorDist)}px from ${spot.doorId}, doorless rooms without=${doorless}, every ballista by a door=${everyDoor}, pair gaps ${pairs.map((d) => Math.round(d)).join('/')}, clear floor=${clearFloor}, towers ${mode.towers.length}`);
+        && mode.towers.length === 1 && tower.x === spot.x && tower.y === spot.y && tower.slotId === 'south:tower',
+      `south:tower circle=${hallSlot}, wrong circles refused=${refused}, paid 4/16=${paid}, spot (${spot.x}, ${spot.y}) ${Math.round(doorDist)}px from ${spot.doorId}, doorless rooms without=${doorless}, every ballista by a door=${everyDoor}, pair gaps ${pairs.map((d) => Math.round(d)).join('/')}, clear floor=${clearFloor}, towers ${mode.towers.length}`);
 
     // a body on the line from the tower through the door centre, `past` px outside
     const lineDir = { x: door.x - tower.x, y: door.y - tower.y };
@@ -1091,12 +1096,12 @@ async function runSurvivalMilestone() {
     mode.phase = 'day'; survivalGame.screen = 'playing'; survivalGame.uiPanel = 'survival-day';
     survivalGame.enemies.length = 0; survivalGame.bolts.length = 0;
     mode.gold = 150; mode.wood = 150;
-    const cost2 = mode.upgradeCost('hall:tower');
-    mode.startBuild('upgrade', 'hall:tower'); waitForBuilder();
-    const st2 = { ...mode.towerStats('hall:tower') };
-    const cost3 = mode.upgradeCost('hall:tower');
-    mode.startBuild('upgrade', 'hall:tower'); waitForBuilder();
-    const st3 = { ...mode.towerStats('hall:tower') };
+    const cost2 = mode.upgradeCost('south:tower');
+    mode.startBuild('upgrade', 'south:tower'); waitForBuilder();
+    const st2 = { ...mode.towerStats('south:tower') };
+    const cost3 = mode.upgradeCost('south:tower');
+    mode.startBuild('upgrade', 'south:tower'); waitForBuilder();
+    const st3 = { ...mode.towerStats('south:tower') };
     mode.startNight();
     quietNight(mode);
     mode.guards.length = 0; mode.survivors = 0;
@@ -1109,7 +1114,7 @@ async function runSurvivalMilestone() {
     towerCheck('tower levels: Lv2 22 dmg / 580 range, Lv3 30 / 640 (costs 6/18, 8/22); a Lv3 bolt lands for 30',
       cost2 && cost2.gold === 6 && cost2.wood === 18 && cost3 && cost3.gold === 8 && cost3.wood === 22
         && st2.damage === 22 && st2.range === 580 && st3.damage === 30 && st3.range === 640
-        && mode.buildingLevel('hall:tower') === 3 && Math.round(lv3Body.hp) === 969,
+        && mode.buildingLevel('south:tower') === 3 && Math.round(lv3Body.hp) === 969,
       `cost Lv2 ${cost2 && `${cost2.gold}/${cost2.wood}`}, Lv3 ${cost3 && `${cost3.gold}/${cost3.wood}`}; Lv2 ${st2.damage}/${st2.range}, Lv3 ${st3.damage}/${st3.range}; body 999 → ${Math.round(lv3Body.hp)}`);
     mode.tuning = SURVIVAL_TUNING;
 
@@ -1122,9 +1127,9 @@ async function runSurvivalMilestone() {
     const rs = reloaded.survival;
     const rt = rs.towers[0];
     towerCheck('save/reload keeps the ballista at Lv3 on the same circle',
-      rs.buildings['hall:tower'] === 'tower' && rs.buildingLevel('hall:tower') === 3 && rs.towers.length === 1
-        && rt && rt.x === spot.x && rt.y === spot.y && rt.doorId === 'frontDoor' && rt.slotId === 'hall:tower',
-      `reloaded ${rs.buildings['hall:tower']} Lv${rs.buildingLevel('hall:tower')}, towers ${rs.towers.length} at (${rt && Math.round(rt.x)}, ${rt && Math.round(rt.y)})`);
+      rs.buildings['south:tower'] === 'tower' && rs.buildingLevel('south:tower') === 3 && rs.towers.length === 1
+        && rt && rt.x === spot.x && rt.y === spot.y && rt.doorId === 'southGate' && rt.slotId === 'south:tower',
+      `reloaded ${rs.buildings['south:tower']} Lv${rs.buildingLevel('south:tower')}, towers ${rs.towers.length} at (${rt && Math.round(rt.x)}, ${rt && Math.round(rt.y)})`);
     window.localStorage.removeItem('lastnight.save.v1');
   }
   const towerPass = towerChecks.length === 7 && towerChecks.every(Boolean);
@@ -1154,10 +1159,10 @@ async function runSurvivalMilestone() {
       guard.x = at.x; guard.y = at.y; guard.path = null; guard.moving = false;
       guard.post = { key: 'test', x: at.x, y: at.y, doorId: null };
     };
-    // "dark" = beyond the keep's banner (kitchen at keep Lv1), "lit" = under it (dining)
-    const kc = m.roomCenter(ROOM.KITCHEN);
+    // "dark" = beyond the keep's banner (NE yard at keep Lv1), "lit" = under it (west road)
+    const kc = m.roomCenter(FORT.NE);
     const dark = mode._freePost(kc.x, kc.y, 'test', null);
-    const dc = m.roomCenter(ROOM.DINING);
+    const dc = m.roomCenter(FORT.WEST);
     const lit = mode._freePost(dc.x + 60, dc.y - 60, 'test', null);
     const clawOnce = (guard, frames = 40) => {
       // one live invader right beside the guard: count only its first claw
@@ -1266,14 +1271,14 @@ async function runSurvivalMilestone() {
 
     // 4) a badly hurt guard leaves its door for the keep; a healthy one stays
     mode._syncGuardRoster(true);
-    const fd = mode.entranceById('frontDoor');
+    const fd = mode.entranceById('southGate');
     fd.hp = fd.hpMax = 99999;
     mode._guardAssignT = 0;
     mode.spawnSwarm(21, 0, fd);
     let posted = false;
     for (let i = 0; i < 60 * 20 && !posted; i++) {
       tick();
-      posted = mode.guards.every((gd) => gd.post && gd.post.doorId === 'frontDoor');
+      posted = mode.guards.every((gd) => gd.post && gd.post.doorId === 'southGate');
     }
     // let them walk from the keep and hold the door while the
     // crowd claws the wood
@@ -1284,8 +1289,8 @@ async function runSurvivalMilestone() {
     mode._guardAssignT = 0;
     tick();
     fallCheck('a guard at or below 35% HP falls back to a post by the keep; the healthy one keeps the door; no claws through an intact door',
-      posted && throughWood && ga.post.key === 'keep' && gb.post.doorId === 'frontDoor',
-      `both posted at frontDoor=${posted} (standing at their posts=${atPosts}), door ${Math.round(fd.hpMax - fd.hp)} damage taken, guard HP after 14 s ${mode.guards.map((gd) => gd.hp).join('/')}, wounded ${ga.hp} HP → ${ga.post.key}, healthy → ${gb.post.doorId}`);
+      posted && throughWood && ga.post.key === 'keep' && gb.post.doorId === 'southGate',
+      `both posted at southGate=${posted} (standing at their posts=${atPosts}), door ${Math.round(fd.hpMax - fd.hp)} damage taken, guard HP after 14 s ${mode.guards.map((gd) => gd.hp).join('/')}, wounded ${ga.hp} HP → ${ga.post.key}, healthy → ${gb.post.doorId}`);
 
     // 5) a mid-night reload keeps the wounds, and the fallen guard where it
     //    lies with the time it has left
@@ -1323,12 +1328,13 @@ async function runSurvivalMilestone() {
     mode.tuning = SURVIVAL_TUNING;
     if (mode.rewardPending && mode.rewardPending()) mode.ackRewards();
 
-    // 7) every wave starts outside the walls: the front door's crowd used to
-    //    reach into the basement and the dining door's into the gallery, so
-    //    those bodies skipped the door (and clawed guards behind intact wood)
+    // 7) every wave starts outside the walls: in the house the front door's
+    //    crowd used to reach into the basement, so those bodies skipped the
+    //    door (and clawed guards behind intact wood). Same check on every gate.
     const insideAt = [];
     let spawned = 0;
-    for (const door of m.entrances.filter((e) => e.exterior && e.kind === 'door')) {
+    const gates = m.entrances.filter((e) => e.exterior && e.kind === 'door');
+    for (const door of gates) {
       survivalGame.enemies.length = 0;
       mode.spawnSwarm(30, 0, door);
       for (const z of survivalGame.enemies) {
@@ -1344,9 +1350,9 @@ async function runSurvivalMilestone() {
       if (m.findRoom(z.x, z.y) !== ROOM.OUTSIDE || m.solidAt(z.x, z.y)) insideAt.push(`${z._survivalType}:${m.findRoom(z.x, z.y)}`);
     }
     survivalGame.enemies.length = 0;
-    fallCheck('every wave body starts outside the walls and off props (no crowd starts inside the basement or gallery)',
-      spawned >= 7 * 30 + 9 && insideAt.length === 0,
-      `${spawned} bodies over 7 doors + Breakers + individuals, ${insideAt.length} inside/on props${insideAt.length ? ': ' + insideAt.slice(0, 6).join(' ') : ''}`);
+    fallCheck('every wave body starts outside the curtain wall and off props (no crowd starts inside the bailey)',
+      gates.length === 6 && spawned >= gates.length * 30 + 9 && insideAt.length === 0,
+      `${spawned} bodies over ${gates.length} gates + Breakers + individuals, ${insideAt.length} inside/on props${insideAt.length ? ': ' + insideAt.slice(0, 6).join(' ') : ''}`);
     window.localStorage.removeItem('lastnight.save.v1');
   }
   const guardFallPass = fallChecks.length === 8 && fallChecks.every(Boolean);
@@ -1365,9 +1371,9 @@ async function runSurvivalMilestone() {
     && builder.queueLockVerified && builder.sawmillBuilt && builder.gateBuilt && builder.barracksBuilt
     && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass
     && builder.upgrades[0].level === 1 && builder.upgrades[0].rooms === 5
-    && builder.upgrades[builder.upgrades.length - 1].level === 3 && builder.upgrades[builder.upgrades.length - 1].rooms === 11
+    && builder.upgrades[builder.upgrades.length - 1].level === 3 && builder.upgrades[builder.upgrades.length - 1].rooms === 9
     && builder.upgrades.every((item, i, all) => i === 0 || item.level >= all[i - 1].level);
-  console.log(`  ${pass ? 'PASS' : 'FAIL'}  three-day loop, keep Lv${builder.upgrades.map((item) => item.level).join('→')} (banner ${builder.upgrades.map((item) => item.rooms).join('→')} rooms), one builder queue, idle loses / engaged builder wins`);
+  console.log(`  ${pass ? 'PASS' : 'FAIL'}  three-day loop, keep Lv${builder.upgrades.map((item) => item.level).join('→')} (banner ${builder.upgrades.map((item) => item.rooms).join('→')} yards), one builder queue, idle loses / engaged builder wins`);
   if (!pass) process.exitCode = 1;
   window.localStorage.removeItem('lastnight.save.v1');
 }

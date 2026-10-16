@@ -4,7 +4,7 @@
  * Visual language: the "build by day, defend by night" mobile genre. Icons
  * carry the meaning (gold coin, log, soldier, the keep, skull, moon/sun),
  * text is a short outlined label or a number. Canvas is UI-only: the keep,
- * the build circles and their ghost buildings, the banner's rooms, the crowd
+ * the build circles and their ghost buildings, the banner's yards, the crowd
  * and every placed object are 3D, in World3D.
  *
  * The day has no side panel and no "+" bubbles. The Hunter walks into a
@@ -170,12 +170,12 @@ function affordable(mode, cost) {
 const HINTS = Object.freeze({
   move: { icon: 'joystick', text: 'DRAG TO MOVE', life: 6 },
   auto: { icon: 'target', text: 'AUTO-SHOOTS IN RANGE', life: 5 },
-  banner: { icon: 'banner', text: 'BLUE ROOMS: YOU HIT HARDER', life: 5.5 },
+  banner: { icon: 'banner', text: 'BLUE GROUND: YOU HIT HARDER', life: 5.5 },
   keep: { icon: 'keep', text: 'GUARD THE KEEP', life: 5 },
   flare: { icon: 'flare', text: 'TAP FLARE TO BLAST THEM', life: 6 },
   build: { icon: 'hammer', text: 'WALK INTO A CIRCLE TO BUILD', life: 7 },
-  guard: { icon: 'guard', text: 'SOLDIERS GUARD THE DOORS', life: 5 },
-  door: { icon: 'door', text: 'GO TO THE DOOR: SHOOT THROUGH IT', life: 6 },
+  guard: { icon: 'guard', text: 'SOLDIERS GUARD THE GATES', life: 5 },
+  door: { icon: 'door', text: 'GO TO THE GATE: SHOOT THROUGH IT', life: 6 },
   level: { icon: 'up', text: 'STAND BY A BUILDING TO LEVEL IT UP', life: 6 },
   rescue: { icon: 'medic', text: 'STAND BY A FALLEN GUARD TO HELP', life: 6 },
 });
@@ -633,7 +633,7 @@ function dayAction(mode, here) {
       icon: 'keep', name: 'KEEP', level, maxLevel: 3,
       rows: [
         { icon: 'heart', now: `${hp}`, next: max ? null : `${hpNext}` },
-        { icon: 'banner', now: `${rooms}`, next: max ? null : `${({ 1: 5, 2: 8, 3: 11 })[level + 1] || rooms}` },
+        { icon: 'banner', now: `${rooms}`, next: max ? null : `${mode.territoryRooms(level + 1).length}` },
       ],
       main: max
         ? { label: 'MAX', icon: 'star', id: 'UPGRADE MAX', disabled: true, color: 'gold' }

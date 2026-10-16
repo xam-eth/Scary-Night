@@ -10,6 +10,7 @@ import { approachAngle, clamp, damp, dist, rand, writeSave } from '../core/util.
 import { SURVIVAL_TUNING } from '../core/config.js';
 import { CrowdBody, Zombie, outwardOf, CROWD, ESTATE } from './enemies.js';
 import { ROOM } from './mansion.js';
+import { FORT } from './fortress.js';
 
 const RESOURCE_CAP = 999;
 const SAVE_EVERY = 2.5;
@@ -25,18 +26,18 @@ const WAVE_COUNTS = Object.freeze([
   Object.freeze([30, 30, 30]),
 ]);
 const SWARM_CAP = 30;
-// Doors per night: waves 1-3, then the two Individuals. K1: the front door
-// opens straight into the keep's hall, so Night 1 opens on the far side of
-// the house (chapel, then cellar) and reaches the front gate last — the first
-// contact is a door the Hunter has time to walk to.
+// Gates per night: waves 1-3, then the two Individuals (src/game/fortress.js).
+// Night 1 opens at the north gate, across the bailey from the camera, so the
+// first contact is a gate the Hunter has time to walk to and the main gate
+// is pressed only by the third wave. The posterns open from Night 2.
 const NIGHT_DOORS = Object.freeze([
-  Object.freeze(['chapelDoor', 'cellarDoor', 'frontDoor', 'cellarDoor', 'diningDoor']),
-  Object.freeze(['cellarDoor', 'diningDoor', 'palisade', 'palisade', 'kitchenDoor']),
-  Object.freeze(['chapelDoor', 'palisade', 'frontDoor', 'kitchenDoor', 'cellarDoor']),
+  Object.freeze(['northGate', 'eastGate', 'southGate', 'westGate', 'eastGate']),
+  Object.freeze(['westGate', 'posternNW', 'southGate', 'northGate', 'posternNW']),
+  Object.freeze(['posternSE', 'northGate', 'southGate', 'westGate', 'posternSE']),
 ]);
 /**
- * The keep (K1 "Benteng Terakhir"): the stone tower in the middle of the Main
- * Hall, with the townsfolk on its battlements. Bodies that reach its wall claw
+ * The keep (K1 "Benteng Terakhir"): the stone tower in the middle of the
+ * bailey's inner ward, with the townsfolk on its battlements. Bodies that reach its wall claw
  * it; at 0 HP the run is lost. From Lv2 a ballista on its roof shoots back.
  */
 export const KEEP = Object.freeze({
@@ -54,42 +55,44 @@ export const KEEP = Object.freeze({
 });
 
 /**
- * The keep's banner: the rooms you may build in, by keep level (the hall is
- * the keep's own). Inside them the garrison hits harder
- * (SURVIVAL_TUNING.territoryDamageTakenMul) — the banner never slows a body.
+ * The keep's banner: the yards of the bailey you may build in, by keep level
+ * (the inner ward is the keep's own; Lv1 adds the four gate roads, Lv2 the
+ * postern yards, Lv3 the last two corners). Inside them the garrison hits
+ * harder (SURVIVAL_TUNING.territoryDamageTakenMul) — the banner never slows
+ * a body.
  */
+const TERRITORY_LV1 = [FORT.WARD, FORT.NORTH, FORT.SOUTH, FORT.EAST, FORT.WEST];
 export const TERRITORY = Object.freeze({
-  1: Object.freeze([ROOM.HALL, ROOM.DINING, ROOM.LIBRARY, ROOM.STUDY, ROOM.BASEMENT]),
-  2: Object.freeze([ROOM.HALL, ROOM.DINING, ROOM.LIBRARY, ROOM.STUDY, ROOM.BASEMENT,
-    ROOM.KITCHEN, ROOM.GATEHOUSE, ROOM.CHAPEL]),
-  3: Object.freeze([ROOM.HALL, ROOM.DINING, ROOM.LIBRARY, ROOM.STUDY, ROOM.BASEMENT,
-    ROOM.KITCHEN, ROOM.GATEHOUSE, ROOM.CHAPEL, ROOM.CONSERV, ROOM.ORATORY, ROOM.GALLERY]),
+  1: Object.freeze(TERRITORY_LV1.slice()),
+  2: Object.freeze([...TERRITORY_LV1, FORT.NW, FORT.SE]),
+  3: Object.freeze([...TERRITORY_LV1, FORT.NW, FORT.SE, FORT.NE, FORT.SW]),
 });
 
 /**
  * Typed build circles (P1, "walk into a circle, tap BUILD"). Every circle is
- * one building type, drawn on the floor as that building's ghost, so what and
- * where read without text. A room has one economy circle and, when it has an
- * outer door, a ballista circle beside that door. Ids: the room id for the
- * economy circle (old saves keep their key), `<room>:tower` for the ballista.
+ * one building type, drawn on the ground as that building's ghost, so what
+ * and where read without text. Every yard of the bailey has one economy
+ * circle (at `at`, a fraction of the yard: off the gate road, so the road to
+ * the keep stays open) and, when a gate opens into it, a ballista circle
+ * inside that gate. Ids: the yard id for the economy circle, `<yard>:tower`
+ * for the ballista.
  */
 export const SURVIVAL_SLOTS = Object.freeze([
-  Object.freeze({ id: 'hall:tower', room: ROOM.HALL, type: 'tower' }),
-  Object.freeze({ id: ROOM.DINING, room: ROOM.DINING, type: 'sawmill' }),
-  Object.freeze({ id: 'dining:tower', room: ROOM.DINING, type: 'tower' }),
-  Object.freeze({ id: ROOM.BASEMENT, room: ROOM.BASEMENT, type: 'mine' }),
-  Object.freeze({ id: 'basement:tower', room: ROOM.BASEMENT, type: 'tower' }),
-  Object.freeze({ id: ROOM.LIBRARY, room: ROOM.LIBRARY, type: 'barracks' }),
-  Object.freeze({ id: ROOM.STUDY, room: ROOM.STUDY, type: 'mine' }),
-  Object.freeze({ id: ROOM.KITCHEN, room: ROOM.KITCHEN, type: 'sawmill' }),
-  Object.freeze({ id: 'kitchen:tower', room: ROOM.KITCHEN, type: 'tower' }),
-  Object.freeze({ id: ROOM.GATEHOUSE, room: ROOM.GATEHOUSE, type: 'barracks' }),
-  Object.freeze({ id: 'gatehouse:tower', room: ROOM.GATEHOUSE, type: 'tower' }),
-  Object.freeze({ id: ROOM.CHAPEL, room: ROOM.CHAPEL, type: 'mine' }),
-  Object.freeze({ id: 'chapel:tower', room: ROOM.CHAPEL, type: 'tower' }),
-  Object.freeze({ id: ROOM.CONSERV, room: ROOM.CONSERV, type: 'sawmill' }),
-  Object.freeze({ id: ROOM.ORATORY, room: ROOM.ORATORY, type: 'barracks' }),
-  Object.freeze({ id: ROOM.GALLERY, room: ROOM.GALLERY, type: 'mine' }),
+  Object.freeze({ id: 'south:tower', room: FORT.SOUTH, type: 'tower' }),
+  Object.freeze({ id: FORT.WARD, room: FORT.WARD, type: 'barracks', at: Object.freeze([0.80, 0.80]) }),
+  Object.freeze({ id: FORT.SOUTH, room: FORT.SOUTH, type: 'sawmill', at: Object.freeze([0.80, 0.42]) }),
+  Object.freeze({ id: FORT.NORTH, room: FORT.NORTH, type: 'mine', at: Object.freeze([0.22, 0.55]) }),
+  Object.freeze({ id: 'north:tower', room: FORT.NORTH, type: 'tower' }),
+  Object.freeze({ id: FORT.WEST, room: FORT.WEST, type: 'sawmill', at: Object.freeze([0.50, 0.78]) }),
+  Object.freeze({ id: 'west:tower', room: FORT.WEST, type: 'tower' }),
+  Object.freeze({ id: FORT.EAST, room: FORT.EAST, type: 'mine', at: Object.freeze([0.50, 0.22]) }),
+  Object.freeze({ id: 'east:tower', room: FORT.EAST, type: 'tower' }),
+  Object.freeze({ id: FORT.NW, room: FORT.NW, type: 'barracks', at: Object.freeze([0.58, 0.42]) }),
+  Object.freeze({ id: 'northwest:tower', room: FORT.NW, type: 'tower' }),
+  Object.freeze({ id: FORT.SE, room: FORT.SE, type: 'mine', at: Object.freeze([0.42, 0.58]) }),
+  Object.freeze({ id: 'southeast:tower', room: FORT.SE, type: 'tower' }),
+  Object.freeze({ id: FORT.NE, room: FORT.NE, type: 'sawmill', at: Object.freeze([0.38, 0.52]) }),
+  Object.freeze({ id: FORT.SW, room: FORT.SW, type: 'barracks', at: Object.freeze([0.55, 0.45]) }),
 ]);
 const SLOT_BY_ID = new Map(SURVIVAL_SLOTS.map((slot) => [slot.id, slot]));
 export function survivalSlot(id) { return SLOT_BY_ID.get(id) || null; }
@@ -157,14 +160,14 @@ export const TOWER = Object.freeze({
   setback: 150,        // px inside the door it guards
   side: 64,            // px off the doorway line, toward the room's middle
   turn: 12,            // rad/s the ballista swings
-  // a room with two outer doors guards the busier one
-  doors: Object.freeze(['frontDoor', 'cellarDoor', 'chapelDoor', 'diningDoor', 'palisade', 'kitchenDoor', 'postern']),
+  // a yard with two gates guards the busier one
+  doors: Object.freeze(['southGate', 'northGate', 'eastGate', 'westGate', 'posternNW', 'posternSE']),
 });
 
 /**
  * The Hunter's own track, bought by day at the armory rack (no skill cards).
  * Shots are meant to feel heavy: a swarm body (48/54/60 HP) drops in two
- * bolts at Lv1 and one inside the banner's rooms. Every level adds something
+ * bolts at Lv1 and one inside the banner's yards. Every level adds something
  * you can SEE: Lv2 bolts run on through a body, Lv3 fires a fan of three.
  */
 export const HUNTER_MAX_LEVEL = 3;
@@ -291,7 +294,7 @@ export function survivalSpot(e, index, ring = 72) {
 
 /**
  * Inside the walls: follow the flow field to the keep (or the Hunter when he
- * stands outside the banner's rooms) and claw the keep's wall once in reach.
+ * stands outside the banner's yards) and claw the keep's wall once in reach.
  * The banner never slows or blunts a body; it only makes the garrison's shots
  * hit harder (SurvivalMode.enemyDamageTaken).
  */
@@ -733,7 +736,7 @@ export const GUARD = Object.freeze({
   speed: 210,          // px/s walking between posts
   range: 420,          // px a guard will shoot at
   every: 1.6,          // s between shots
-  damage: 10,          // per bolt (x1.5 inside the banner's rooms, like the Hunter's)
+  damage: 10,          // per bolt (x1.5 inside the banner's yards, like the Hunter's)
   boltSpeed: 640,
   perDoor: 2,          // most guards one door takes before the next door gets one
   cap: 8,              // most guards on the map (== maxSurvivors)
@@ -862,18 +865,30 @@ export class SurvivalMode {
     this.keepHp = Number.isFinite(hp) ? clamp(hp, 0, this.keepHpMax()) : this.keepHpMax();
     this.buildings = {};
     this.buildingLevels = {};
-    // Typed circles: a building lives on the circle of its own type. Old
-    // free-choice saves move onto their room's circle when the type matches.
+    // Typed circles: a building lives on the circle of its own type. Saves
+    // from the house (room-keyed circles) move each building onto a free
+    // circle of the same type in the bailey, keeping its level — inside the
+    // banner first, in circle order.
     const levels = s.buildingLevels && typeof s.buildingLevels === 'object' ? s.buildingLevels : {};
     if (s.buildings && typeof s.buildings === 'object') {
+      const homeless = [];
       for (const [key, raw] of Object.entries(s.buildings)) {
         const type = TYPE_MIGRATE[raw] || raw;
         if (!SURVIVAL_BUILDINGS[type]) continue;
+        const level = clamp(Math.round(Number(levels[key]) || 1), 1, BUILDING_MAX_LEVEL);
         const id = type === 'tower' && !String(key).endsWith(':tower') ? `${key}:tower` : key;
         const slot = SLOT_BY_ID.get(id);
-        if (!slot || slot.type !== type) continue;
+        if (!slot || slot.type !== type || this.buildings[id]) { homeless.push({ type, level }); continue; }
         this.buildings[id] = type;
-        this.buildingLevels[id] = clamp(Math.round(Number(levels[key]) || 1), 1, BUILDING_MAX_LEVEL);
+        this.buildingLevels[id] = level;
+      }
+      const banner = TERRITORY[this.keepLevel] || TERRITORY[1];
+      const order = [...SURVIVAL_SLOTS].sort((a, b) => (banner.includes(b.room) ? 1 : 0) - (banner.includes(a.room) ? 1 : 0));
+      for (const old of homeless) {
+        const slot = order.find((c) => c.type === old.type && !this.buildings[c.id]);
+        if (!slot) continue;
+        this.buildings[slot.id] = old.type;
+        this.buildingLevels[slot.id] = old.level;
       }
     }
     this.hunterLevel = clamp(Math.round(Number(s.hunterLevel) || 1), 1, HUNTER_MAX_LEVEL);
@@ -984,10 +999,9 @@ export class SurvivalMode {
   }
 
   /**
-   * K1: the Main Hall's middle belongs to the keep. Its rug and candelabras
-   * step aside, the old library hearth goes dark (just furniture now), a
-   * warm lamp marks the keep's lit window, and the tower is solid: bodies,
-   * bolts and the Hunter walk around it.
+   * K1: the inner ward's middle belongs to the keep. Any house fixtures go
+   * dark (the legacy house only), a warm lamp marks the keep's lit window,
+   * and the tower is solid: bodies, bolts and the Hunter walk around it.
    */
   _configureMansion() {
     const m = this.game.mansion;
@@ -1002,7 +1016,7 @@ export class SurvivalMode {
     const keep = this.keep();
     let lamp = m.lights.find((light) => light.id === 'keep');
     if (!lamp) {
-      lamp = { id: 'keep', on: true, flicker: 0, seed: 1, x: keep.x, y: keep.y + 30, r: 560, color: [255, 220, 170], flick: 0, room: ROOM.HALL, type: 'lamp' };
+      lamp = { id: 'keep', on: true, flicker: 0, seed: 1, x: keep.x, y: keep.y + 30, r: 560, color: [255, 220, 170], flick: 0, room: m.findRoom(keep.x, keep.y), type: 'lamp' };
       m.lights.push(lamp);
     }
     lamp.i = 0.62; lamp.curI = 0.62; lamp.f = 1;
@@ -1399,7 +1413,7 @@ export class SurvivalMode {
     const wanted = plan[offset % plan.length];
     const exact = doors.find((e) => e.id === wanted);
     if (exact) return exact;
-    const priority = ['frontDoor', 'chapelDoor', 'cellarDoor', 'diningDoor', 'palisade', 'kitchenDoor', 'postern'];
+    const priority = ['southGate', 'northGate', 'eastGate', 'westGate', 'posternNW', 'posternSE'];
     const start = (offset + (this.day - 1) * 2) % priority.length;
     for (let i = 0; i < priority.length; i++) {
       const candidate = doors.find((e) => e.id === priority[(start + i) % priority.length]);
@@ -1526,7 +1540,7 @@ export class SurvivalMode {
   }
 
   /**
-   * Inside the banner's rooms the garrison hits harder (gold numbers). The
+   * Inside the banner's yards the garrison hits harder (gold numbers). The
    * number pops bigger on the bolt that kills, so a heavy shot reads.
    */
   enemyDamageTaken(enemy, amount) {
@@ -1900,12 +1914,12 @@ export class SurvivalMode {
       if (other === slot || other.room !== slot.room || !this._spots.has(other.id)) continue;
       avoid.push(this._spots.get(other.id));
     }
-    const spot = this._findSpot(room, door, avoid);
+    const spot = this._findSpot(room, door, avoid, slot.at);
     this._spots.set(slotId, spot);
     return spot;
   }
 
-  _findSpot(room, door, avoid = []) {
+  _findSpot(room, door, avoid = [], at = null) {
     const m = this.game.mansion;
     const pad = 46;
     const keep = this.keep();
@@ -1917,6 +1931,8 @@ export class SurvivalMode {
       let sx = -ny, sy = nx;
       if ((room.x + room.w / 2 - door.x) * sx + (room.y + room.h / 2 - door.y) * sy < 0) { sx = -sx; sy = -sy; }
       ideal = { x: door.x + nx * TOWER.setback + sx * TOWER.side, y: door.y + ny * TOWER.setback + sy * TOWER.side };
+    } else if (at) {
+      ideal = { x: room.x + room.w * at[0], y: room.y + room.h * at[1] };
     } else {
       ideal = { x: room.x + room.w / 2 + 48, y: room.y + room.h / 2 + 24 };
     }
@@ -2071,12 +2087,13 @@ export class SurvivalMode {
 
   /* ---------------- the keep and its banner ---------------- */
 
-  /** The keep: a round stone tower in the middle of the Main Hall. */
+  /** The keep: a round stone tower in the middle of the bailey's inner ward. */
   keep() {
     if (!this._keep) {
-      const hall = this.game.mansion.room(ROOM.HALL);
-      this._keep = hall
-        ? { x: Math.round(hall.x + hall.w / 2), y: Math.round(hall.y + hall.h / 2), r: this.tuning.keepRadius }
+      const m = this.game.mansion;
+      const spot = m.keepSpot || m.roomCenter(ROOM.HALL);
+      this._keep = spot
+        ? { x: Math.round(spot.x), y: Math.round(spot.y), r: this.tuning.keepRadius }
         : { x: 0, y: 0, r: this.tuning.keepRadius };
     }
     return this._keep;
@@ -2164,8 +2181,8 @@ export class SurvivalMode {
   }
 
   /** Rooms under the keep's banner (by keep level). */
-  territoryRooms() {
-    const ids = TERRITORY[this.keepLevel] || TERRITORY[1];
+  territoryRooms(level = this.keepLevel) {
+    const ids = TERRITORY[level] || TERRITORY[1];
     return this.game.mansion.roomList.filter((room) => ids.includes(room.id));
   }
 

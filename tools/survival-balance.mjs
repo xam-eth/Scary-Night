@@ -215,7 +215,7 @@ if (args.walkprobe) {
   const mode = game.survival;
   const m = game.mansion;
   const { SurvivalCrowdZombie } = await import('../src/game/survival.js');
-  const door = m.entranceById('frontDoor');
+  const door = m.entranceById('southGate');
   door.broken = true; door.open = true; m.refreshNavAround(door);
   mode._fields.clear();
   const [px, py] = String(args.walkprobe).split(',').map(Number);
@@ -248,7 +248,7 @@ if (args.cellprobe) {
   const game = new Game(makeCanvas(), { mode: 'survival', nightDuration: DURATION });
   const mode = game.survival;
   const m = game.mansion;
-  for (const e of m.entrances.filter((d) => d.exterior && d.kind === 'door' && ['frontDoor', 'cellarDoor', 'chapelDoor'].includes(d.id))) {
+  for (const e of m.entrances.filter((d) => d.exterior && d.kind === 'door' && ['northGate', 'eastGate', 'southGate'].includes(d.id))) {
     e.broken = true; e.open = true; m.refreshNavAround(e);
   }
   mode._fields.clear();

@@ -2,7 +2,7 @@
 
 **Tanggal:** 2026-10-16 (Asia/Makassar) · **Revisi 2**
 
-**Status:** arah disetujui. **K1 terimplementasi sebagai vertical slice (2026-10-16)** setelah user menyetujui semua rekomendasi dan meminta "pastikan dunianya 3D". Detail implementasi, QA, tuning yang berbeda dari dokumen ini, dan hal yang belum ada ada di `docs/REBUILD-ROADMAP.md` (bagian "K1 Benteng Terakhir — implementasi"). Acceptance manusia/perangkat belum ada.
+**Status:** arah disetujui. **K1 terimplementasi sebagai vertical slice (2026-10-16)** setelah user menyetujui semua rekomendasi dan meminta "pastikan dunianya 3D". Detail implementasi, QA, tuning yang berbeda dari dokumen ini, dan hal yang belum ada ada di `docs/REBUILD-ROADMAP.md` (bagian "K1 Benteng Terakhir — implementasi"). Acceptance manusia/perangkat belum ada. **Revisi dunia (2026-10-16):** atas feedback user ("terasa aneh barack dll ada di dalam ruangan … dunianya disesuaikan"), Survival kini dimainkan di **dunia benteng (bailey)** baru: alternatif "halaman luar" di §3.4.2, yang dulu tidak direkomendasikan, kini dipilih. Mansion hanya dipakai route `?legacy=1`.
 
 **Yang sudah diputuskan user:**
 - Game **landscape only**. `manifest.webmanifest` sudah `orientation: landscape`; layout portrait tidak lagi menjadi target desain.
@@ -239,6 +239,17 @@ Gambar di atas adalah mockup AI, bukan aset game. Referensinya: screenshot game 
 
 #### 3.4.2 Penempatan di peta sekarang
 
+> **Diperbarui 2026-10-16 — dunia benteng dipilih (atas feedback user).** Bangunan K1 di dalam ruangan mansion terasa salah cerita, jadi Survival mendapat level sendiri (`src/game/fortress.js`):
+> - **Bailey** 2600×1900 px (±50×37 m) dikelilingi **tembok keliling** bergerigi. Ada 4 **menara sudut** bundar, dan setiap gerbang besar diapit 2 **menara gerbang** dengan jembatan bergerigi dan panji biru.
+> - **Menara Utama** berdiri di tengah **inner ward** (0, 0).
+> - **9 zona** tanpa tembok di antaranya: inner ward + 4 jalan batu menuju gerbang (bentuk salib), serta 4 halaman rumput di sudut.
+> - **Gerbang:** gerbang utama di selatan (menghadap kamera, HP 260), gerbang utara/timur/barat (200), dan postern barat laut/tenggara (110).
+> - **Hutan** di luar tembok menjadi asal gerombolan.
+> - **Wilayah panji tumbuh per zona:** Lv1 inner ward + 4 jalan (5), Lv2 + 2 halaman postern (7), Lv3 + 2 sudut terakhir (9).
+> - Setiap zona punya 1 lingkaran ekonomi di luar badan jalan. Setiap zona bergerbang punya 1 lingkaran ballista di dalam gerbangnya (15 lingkaran).
+>
+> Teks di bawah ini adalah rencana awal di Main Hall (masih berlaku untuk route `?legacy=1`, tidak lagi untuk Survival).
+
 Main Hall (0,0 · 880×620) adalah **hub** denah cross-wing (`src/game/mansion.js`). Dining (barat), library (timur), study (utara), dan basement (selatan) terhubung langsung ke hall.
 
 Usulan penempatan:
@@ -253,7 +264,7 @@ Akibatnya:
 - **Perapian lama** di library, ±(1296, 36), dihapus atau menjadi dekorasi biasa. Library menjadi ruangan biasa.
 - **Kamera:** menara yang tinggi bisa menutupi study (utara), jadi menara **memudar** saat menutupi Hunter/musuh.
 
-**Alternatif (tidak direkomendasikan sekarang):** halaman luar seperti gambar konsep K1, tetapi ini butuh level baru.
+**Alternatif (dulu tidak direkomendasikan; dipilih user 2026-10-16):** halaman luar seperti gambar konsep K1, dengan level baru. Kini terimplementasi sebagai dunia benteng (lihat kotak di atas).
 
 #### 3.4.3 Level & status Menara Utama
 
@@ -895,7 +906,7 @@ Status acceptance di roadmap tetap berlaku. Dokumen ini tidak mengklaim apa pun 
 
 **Dikonfirmasi user (2026-10-16): semua rekomendasi** (yang dipilih ada di dalam kurung; semuanya sudah ada di kode):
 
-1. **Posisi Menara Utama:** tengah Main Hall (rekomendasi) / halaman luar dengan level baru (§3.4.2).
+1. **Posisi Menara Utama:** tengah Main Hall (rekomendasi) / halaman luar dengan level baru (§3.4.2). → **Diganti user 2026-10-16: halaman luar, dunia benteng baru** (`src/game/fortress.js`).
 2. **Pengganti aturan cahaya:** wilayah panji ×1.5 tanpa perlambatan (rekomendasi) / hapus total / pertahankan ketiga efek sebagai "moral" (§3.4.5).
 3. **Resource Oil diganti:** emas (rekomendasi) / nama lain.
 4. **Pengganti Oil yang terbakar:** perbaikan menara saat fajar, dibayar kayu (rekomendasi) / tanpa pengganti.

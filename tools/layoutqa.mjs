@@ -471,17 +471,20 @@ for (let i = 0; i < 160; i++) {
   desktopView = await desktopPage.evaluate(async () => {
     const world = window.__LN_API.world3d();
     const stage = document.getElementById('stage').getBoundingClientRect();
-    return { width: Math.round(stage.width), height: Math.round(stage.height), mode: world.mode, fullScene: world.fullScene, rooms: world.rooms, screen: window.__LN.screen };
+    // the default route is Survival: its world is the walled bailey (9 zones)
+    const m = window.__LN.mansion;
+    return { width: Math.round(stage.width), height: Math.round(stage.height), mode: world.mode, fullScene: world.fullScene, rooms: world.rooms, expected: m.roomList.length, fortress: !!m.isFortress, screen: window.__LN.screen };
   });
-  if (desktopView.screen === 'playing' && desktopView.fullScene && desktopView.rooms === 11) break;
+  if (desktopView.screen === 'playing' && desktopView.fullScene && desktopView.rooms === desktopView.expected) break;
   await wait(120);
 }
 await wait(300);
 await desktopPage.screenshot({ path: path.join(shots, '3d-migration-desktop.png') });
 const desktopPass = desktopView.width > 0 && desktopView.height > 0 && desktopView.mode === 'webgl-3d'
-  && desktopView.fullScene && desktopView.rooms === 11 && desktopView.screen === 'playing' && desktopErrors.length === 0;
+  && desktopView.fullScene && desktopView.fortress && desktopView.rooms === 9 && desktopView.rooms === desktopView.expected
+  && desktopView.screen === 'playing' && desktopErrors.length === 0;
 console.log(`---- DESKTOP BOOT: ${desktopPass ? 'PASS' : 'FAIL'} ----`);
-console.log(`  viewport=1280x720, game stage=${desktopView.width}x${desktopView.height}, mode=${desktopView.mode}, rooms=${desktopView.rooms}, errors=${desktopErrors.length}`);
+console.log(`  viewport=1280x720, game stage=${desktopView.width}x${desktopView.height}, mode=${desktopView.mode}, world=${desktopView.fortress ? 'bailey' : 'house'}, zones=${desktopView.rooms}/${desktopView.expected}, errors=${desktopErrors.length}`);
 if (!desktopPass) process.exitCode = 1;
 await desktopPage.close();
 
