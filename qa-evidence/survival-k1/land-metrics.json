@@ -1,11 +1,11 @@
 {
-  "capturedAt": "2026-10-16T12:19:14.931Z",
+  "capturedAt": "2026-10-16T14:56:41.997Z",
   "results": [
     {
       "name": "night-00s",
-      "file": "tools/.cache/after/land-night-00s.png",
-      "meanLuma": 90.5,
-      "darkPct": 7.8,
+      "file": "qa-evidence/survival-k1/land-night-00s.png",
+      "meanLuma": 90.6,
+      "darkPct": 7.7,
       "quality": 3,
       "state": {
         "t": 0.2,
@@ -19,7 +19,7 @@
     },
     {
       "name": "night-20s",
-      "file": "tools/.cache/after/land-night-20s.png",
+      "file": "qa-evidence/survival-k1/land-night-20s.png",
       "meanLuma": 93,
       "darkPct": 5.9,
       "quality": 3,
@@ -35,13 +35,13 @@
     },
     {
       "name": "night-40s",
-      "file": "tools/.cache/after/land-night-40s.png",
-      "meanLuma": 90.6,
-      "darkPct": 8.8,
+      "file": "qa-evidence/survival-k1/land-night-40s.png",
+      "meanLuma": 92.3,
+      "darkPct": 6,
       "quality": 3,
       "state": {
         "t": 40,
-        "alive": 39,
+        "alive": 40,
         "gold": 38,
         "keep": 330,
         "hp": 100,
@@ -51,8 +51,8 @@
     },
     {
       "name": "day-reward",
-      "file": "tools/.cache/after/land-day-reward.png",
-      "meanLuma": 137,
+      "file": "qa-evidence/survival-k1/land-day-reward.png",
+      "meanLuma": 136.9,
       "darkPct": 5.5,
       "quality": 3,
       "state": {
@@ -60,11 +60,11 @@
         "day": 2,
         "rewards": {
           "gold": 14,
-          "wood": 15,
-          "kills": 4,
+          "wood": 14,
+          "kills": 3,
           "walls": 365.3,
           "survivors": 0,
-          "keepDamage": 1224,
+          "keepDamage": 1080,
           "keepPatched": 95,
           "mined": 0,
           "lost": 0,
@@ -73,7 +73,7 @@
           "sawn": 0,
           "killsBy": {
             "captain": 0,
-            "guard": 4,
+            "guard": 3,
             "tower": 0,
             "keep": 0,
             "flare": 0
@@ -87,7 +87,7 @@
     },
     {
       "name": "day-keep",
-      "file": "tools/.cache/after/land-day-keep.png",
+      "file": "qa-evidence/survival-k1/land-day-keep.png",
       "meanLuma": 136,
       "darkPct": 2.6,
       "quality": 3,
@@ -104,7 +104,7 @@
     },
     {
       "name": "day-circle",
-      "file": "tools/.cache/after/land-day-circle.png",
+      "file": "qa-evidence/survival-k1/land-day-circle.png",
       "meanLuma": 132.1,
       "darkPct": 1.7,
       "quality": 3,
@@ -120,7 +120,7 @@
     },
     {
       "name": "day-build",
-      "file": "tools/.cache/after/land-day-build.png",
+      "file": "qa-evidence/survival-k1/land-day-build.png",
       "meanLuma": 129.8,
       "darkPct": 2.2,
       "quality": 3,
@@ -135,8 +135,8 @@
     },
     {
       "name": "day-built",
-      "file": "tools/.cache/after/land-day-built.png",
-      "meanLuma": 131.7,
+      "file": "qa-evidence/survival-k1/land-day-built.png",
+      "meanLuma": 132.1,
       "darkPct": 3,
       "quality": 3,
       "state": {
@@ -154,9 +154,9 @@
     },
     {
       "name": "night2-flare",
-      "file": "tools/.cache/after/land-night2-flare.png",
-      "meanLuma": 82,
-      "darkPct": 10.7,
+      "file": "qa-evidence/survival-k1/land-night2-flare.png",
+      "meanLuma": 82.1,
+      "darkPct": 10.3,
       "quality": 3,
       "state": {
         "t": 34.2,
@@ -170,9 +170,9 @@
     },
     {
       "name": "failed",
-      "file": "tools/.cache/after/land-failed.png",
-      "meanLuma": 49.6,
-      "darkPct": 24,
+      "file": "qa-evidence/survival-k1/land-failed.png",
+      "meanLuma": 57,
+      "darkPct": 22,
       "quality": 3,
       "state": {
         "phase": "failed",
@@ -183,9 +183,9 @@
     },
     {
       "name": "night-door",
-      "file": "tools/.cache/after/land-night-door.png",
-      "meanLuma": 76.7,
-      "darkPct": 6.6,
+      "file": "qa-evidence/survival-k1/land-night-door.png",
+      "meanLuma": 77.3,
+      "darkPct": 6.2,
       "quality": 3,
       "state": {
         "t": 13,
@@ -193,14 +193,14 @@
         "doorHp": 125,
         "target": true,
         "guardsAtDoor": 2,
-        "kills": 5,
+        "kills": 4,
         "zoom": 0.596
       }
     },
     {
       "name": "prog-keep",
-      "file": "tools/.cache/after/land-prog-keep.png",
-      "meanLuma": 130.4,
+      "file": "qa-evidence/survival-k1/land-prog-keep.png",
+      "meanLuma": 130.3,
       "darkPct": 2.6,
       "quality": 3,
       "state": {
@@ -218,9 +218,9 @@
     },
     {
       "name": "prog-hunter",
-      "file": "tools/.cache/after/land-prog-hunter.png",
-      "meanLuma": 128,
-      "darkPct": 2.8,
+      "file": "qa-evidence/survival-k1/land-prog-hunter.png",
+      "meanLuma": 127.9,
+      "darkPct": 3,
       "quality": 3,
       "state": {
         "at": "armory",
@@ -234,7 +234,7 @@
     },
     {
       "name": "prog-night",
-      "file": "tools/.cache/after/land-prog-night.png",
+      "file": "qa-evidence/survival-k1/land-prog-night.png",
       "meanLuma": 88.8,
       "darkPct": 8.2,
       "quality": 3,
@@ -250,12 +250,15 @@
     },
     {
       "name": "complete",
-      "file": "tools/.cache/after/land-complete.png",
-      "meanLuma": 133.3,
-      "darkPct": 8.1,
+      "file": "qa-evidence/survival-k1/land-complete.png",
+      "meanLuma": 146,
+      "darkPct": 7.9,
       "quality": 3,
       "state": {
         "phase": "complete",
+        "stars": 3,
+        "newBest": true,
+        "kills": 2,
         "ui": [
           "survival:PLAY AGAIN"
         ]
@@ -263,8 +266,8 @@
     },
     {
       "name": "tower-day",
-      "file": "tools/.cache/after/land-tower-day.png",
-      "meanLuma": 130.9,
+      "file": "qa-evidence/survival-k1/land-tower-day.png",
+      "meanLuma": 131,
       "darkPct": 2.1,
       "quality": 3,
       "state": {
@@ -283,7 +286,7 @@
     },
     {
       "name": "tower-night",
-      "file": "tools/.cache/after/land-tower-night.png",
+      "file": "qa-evidence/survival-k1/land-tower-night.png",
       "meanLuma": 76.2,
       "darkPct": 6.3,
       "quality": 3,
@@ -293,19 +296,19 @@
         "level": 2,
         "upgraded": true,
         "shots": 3,
-        "kills": 1,
+        "kills": 2,
         "flying": true,
-        "aim": 1.68
+        "aim": 1.67
       }
     },
     {
       "name": "guard-down",
-      "file": "tools/.cache/after/land-guard-down.png",
-      "meanLuma": 77.5,
-      "darkPct": 9.4,
+      "file": "qa-evidence/survival-k1/land-guard-down.png",
+      "meanLuma": 76.9,
+      "darkPct": 9.3,
       "quality": 3,
       "state": {
-        "t": 8.7,
+        "t": 8.6,
         "broken": true,
         "helped": 0.92,
         "aloneLeft": 10.8,
@@ -317,12 +320,12 @@
     },
     {
       "name": "guard-lost",
-      "file": "tools/.cache/after/land-guard-lost.png",
-      "meanLuma": 75.4,
-      "darkPct": 8,
+      "file": "qa-evidence/survival-k1/land-guard-lost.png",
+      "meanLuma": 75.2,
+      "darkPct": 8.3,
       "quality": 3,
       "state": {
-        "t": 9.5,
+        "t": 9.4,
         "survivors": 2,
         "guards": 2,
         "lost": 1,
@@ -333,7 +336,7 @@
     },
     {
       "name": "guard-reward",
-      "file": "tools/.cache/after/land-guard-reward.png",
+      "file": "qa-evidence/survival-k1/land-guard-reward.png",
       "meanLuma": 139.1,
       "darkPct": 5,
       "quality": 3,
@@ -350,8 +353,8 @@
     },
     {
       "name": "intro-keep",
-      "file": "tools/.cache/after/land-intro-keep.png",
-      "meanLuma": 85.2,
+      "file": "qa-evidence/survival-k1/land-intro-keep.png",
+      "meanLuma": 85.1,
       "darkPct": 10.6,
       "quality": 3,
       "state": {
@@ -367,9 +370,9 @@
     },
     {
       "name": "intro-horde",
-      "file": "tools/.cache/after/land-intro-horde.png",
+      "file": "qa-evidence/survival-k1/land-intro-horde.png",
       "meanLuma": 74.3,
-      "darkPct": 9.4,
+      "darkPct": 9.3,
       "quality": 3,
       "state": {
         "kind": "intro",
@@ -384,9 +387,9 @@
     },
     {
       "name": "intro-captain",
-      "file": "tools/.cache/after/land-intro-captain.png",
-      "meanLuma": 97.3,
-      "darkPct": 7,
+      "file": "qa-evidence/survival-k1/land-intro-captain.png",
+      "meanLuma": 97.2,
+      "darkPct": 7.1,
       "quality": 3,
       "state": {
         "kind": "intro",
@@ -401,7 +404,7 @@
     },
     {
       "name": "arrival-gate",
-      "file": "tools/.cache/after/land-arrival-gate.png",
+      "file": "qa-evidence/survival-k1/land-arrival-gate.png",
       "meanLuma": 140.3,
       "darkPct": 0.9,
       "quality": 3,
@@ -422,7 +425,7 @@
     },
     {
       "name": "arrival-lines",
-      "file": "tools/.cache/after/land-arrival-lines.png",
+      "file": "qa-evidence/survival-k1/land-arrival-lines.png",
       "meanLuma": 137.1,
       "darkPct": 1.4,
       "quality": 3,

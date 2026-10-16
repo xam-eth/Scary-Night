@@ -16,6 +16,10 @@
  *   bots: idle, active, flare, builder, passive-builder, keep-builder, hunter-builder, tower-builder
  *
  * --economy prints every day decision with the purse before/after.
+ * --panels=dir writes each run's end panel (the real 2D UI, drawn 2 s after
+ *   it opened so the stars have landed, 844x390, no 3D world behind it) to
+ *   dir/end-<bot>-s<seed index>.png: a real three-night win, not a scripted
+ *   jump to the third dawn.
  * --no-rescue: the defending bots never help a fallen guard up.
  * --no-guard-damage: guards cannot be hurt (the pre-2026-10-15 rule), to
  *   measure what hurtable guards change.
@@ -85,6 +89,7 @@ Math.random = function () {
 };
 
 const { Game } = await import('../src/game/game.js');
+const { drawSurvivalScreen } = await import('../src/ui/survival.js');
 const { ROOM } = await import('../src/game/mansion.js');
 const { ISO_CAMERA } = await import('../src/core/util.js');
 
@@ -200,11 +205,33 @@ function runOne(kind, seed) {
     }
     break;
   }
+  if (args.panels && (mode.phase === 'complete' || mode.phase === 'failed')) {
+    const dir = String(args.panels);
+    fs.mkdirSync(dir, { recursive: true });
+    const canvas = createCanvas(844, 390);
+    const ctx = canvas.getContext('2d');
+    // the panel opens (its stars start to pop), then 2 s pass and it is drawn
+    drawSurvivalScreen(game, ctx, 844, 390, true);
+    for (let i = 0; i < 120; i++) game.update(step);
+    const bg = ctx.createLinearGradient(0, 0, 0, 390);
+    bg.addColorStop(0, '#4a5878'); bg.addColorStop(1, '#2a3048');
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, 844, 390);
+    drawSurvivalScreen(game, ctx, 844, 390, true);
+    const index = Math.round((seed - 20261012) / 7919);
+    fs.writeFileSync(`${dir}/end-${kind}-s${index}.png`, canvas.toBuffer('image/png'));
+  }
   return {
     kind, seed, complete: mode.phase === 'complete', phase: mode.phase,
     failure: mode.phase === 'failed' ? mode.failureReason : null,
     perapian: mode.keepLevel, hunter: mode.hunterLevel || 1, survivors: mode.survivors,
     buildings: { ...mode.buildings }, buildingLevels: { ...(mode.buildingLevels || {}) }, gate: mode.gateBuilt,
+    // the end panel's reading (R2 stars, R4 tip, R19 MVP)
+    result: mode.runResult ? {
+      stars: mode.runResult.stars, keepMin: mode.runResult.keepMin, toDawn: mode.runResult.toDawn,
+      tip: mode.runResult.tip ? mode.runResult.tip.text : null,
+      mvp: mode.runResult.mvp ? `${mode.runResult.mvp.name}:${mode.runResult.mvp.kills}` : null,
+      by: { ...mode.runStats.by }, towers: { ...(mode.runStats.towers || {}) },
+    } : null,
     nights, ms: Math.round(performance.now() - t0),
   };
 }
@@ -312,7 +339,8 @@ for (const kind of BOTS) {
     results.push(r);
     const line = r.nights.map((n) => `N${n.day}:${n.result === 'OK' ? 'ok' : 'FAIL'} H${n.hunter} sp${n.spawned} pk${n.peakAlive} k${n.kills} atk${n.peakFeeders} kd${n.drained} keep${n.oil} hp${n.minHp}/${n.hpMax} br${n.breaches}${n.towerShots ? ` tw${n.towerShots}` : ''}${n.guardsDown ? ` gd${n.guardsDown} gr${n.rescued} gl${n.lost}` : ''}${n.result === 'OK' ? '' : ' @' + n.elapsed + 's ' + n.result.slice(5)}`).join(' | ');
     const levels = Object.entries(r.buildings).map(([roomId, type]) => `${type}${r.buildingLevels[roomId] || 1}`).join(',') || '-';
-    console.log(`${kind.padEnd(8)} seed${i} ${r.complete ? 'WIN ' : 'LOSS'} K${r.perapian} H${r.hunter} S${r.survivors} [${levels}${r.gate ? ',gate' : ''}] ${line} (${r.ms}ms)`);
+    const end = r.result ? (r.complete ? ` END stars${r.result.stars} keepMin${r.result.keepMin}%` : ` END ${r.result.toDawn}s-to-dawn tip="${r.result.tip}"`) + ` mvp=${r.result.mvp}` : '';
+    console.log(`${kind.padEnd(8)} seed${i} ${r.complete ? 'WIN ' : 'LOSS'} K${r.perapian} H${r.hunter} S${r.survivors} [${levels}${r.gate ? ',gate' : ''}] ${line}${end} (${r.ms}ms)`);
   }
 }
 const summary = {};
@@ -320,6 +348,8 @@ for (const kind of BOTS) {
   const rows = results.filter((r) => r.kind === kind);
   summary[kind] = {
     wins: rows.filter((r) => r.complete).length, runs: rows.length,
+    stars: rows.map((r) => (r.result ? r.result.stars : null)),
+    tips: [...new Set(rows.filter((r) => r.result && r.result.tip).map((r) => r.result.tip))],
     guardsDown: rows.reduce((a, r) => a + r.nights.reduce((b, n) => b + (n.guardsDown || 0), 0), 0),
     rescued: rows.reduce((a, r) => a + r.nights.reduce((b, n) => b + (n.rescued || 0), 0), 0),
     lost: rows.reduce((a, r) => a + r.nights.reduce((b, n) => b + (n.lost || 0), 0), 0),

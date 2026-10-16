@@ -15,7 +15,11 @@
  *                        icon + number status pills over built buildings
  *   fx-barracks          a new barracks: its soldier steps out and walks
  *                        to the keep (blue rally ring, "+1")
- *   fx-end               the end panel counts the whole run, by source
+ *   fx-end               a loss on Night 2: the whole run by source, the
+ *                        night's track ("Ns TO DAWN") and one tip (R1, R4)
+ *   fx-win               a real three-night win played by the builder bot
+ *                        (tools/survival-bots.mjs) in the page: stars, the
+ *                        MVP building, the records, NEW BEST! (R1-R3, R19)
  *
  * Usage: node tools/survival-fxshots.mjs [--out=qa-evidence/survival-fixes]
  *        [--dpr=1] [--port=8106]
@@ -220,16 +224,70 @@ check('barracks: the housed soldier steps out of its door, a blue rally ring pop
   barracks.ok && barracks.fromSpot <= 80 && barracks.rally >= 1 && walked.post && Math.hypot(walked.at[0] - walked.post[0], walked.at[1] - walked.post[1]) < 24,
   { ...barracks, walked });
 
-// 7. the end panel: the whole run, by source
+// 7. a loss on Night 2: the whole run by source, the night's track and the
+// tip. The night is played for real (no input: the captain only auto-shoots)
+// up to 50 s; if the keep still stands then, the fall is forced there.
 const end = await shot('fx-end', () => {
   const g = window.__LN; const m = g.survival;
-  m.fail('THE KEEP FELL');
-  window.__fxRealtime(2);
+  if (m.rewardPending && m.rewardPending()) m.ackRewards();
+  const started = m.startNight();
+  window.__fxFast(() => m.phase === 'night' && m.elapsed < 50);
+  const natural = m.phase === 'failed';
+  if (m.phase === 'night') m.fail('THE KEEP FELL');
+  window.__fxRealtime(40);
   const by = m.runStats.by;
-  return { phase: m.phase, run: m.runStats, sum: Object.values(by).reduce((a, b) => a + b, 0), ui: g.ui.map((u) => u.label).filter(Boolean) };
+  const r = m.runResult || {};
+  return {
+    started, natural, phase: m.phase, run: m.runStats, sum: Object.values(by).reduce((a, b) => a + b, 0),
+    result: { night: r.night, toDawn: r.toDawn, nights: r.nights, kills: r.kills, tip: r.tip, mvp: r.mvp, newBest: r.newBest },
+    ui: g.ui.map((u) => u.label).filter(Boolean),
+  };
 });
-check('end: the panel counts every kill of the run and who made it (R1)',
-  end.phase === 'failed' && end.run.kills > 0 && end.sum === end.run.kills && end.ui.includes('survival:PLAY AGAIN'), { kills: end.run.kills, by: end.run.by });
+check('end: a loss counts every kill of the run by source, shows the night\'s track with the seconds to dawn and one tip (R1, R4)',
+  end.phase === 'failed' && end.run.kills > 0 && end.sum === end.run.kills && end.result.kills === end.run.kills && end.result.night === 2
+    && end.result.toDawn > 0 && end.result.tip && end.result.tip.text.split(/\s+/).length <= 8 && end.result.newBest === false
+    && end.ui.includes('survival:PLAY AGAIN'), { natural: end.natural, kills: end.run.kills, by: end.run.by, result: end.result });
+
+// 8. a real three-night win: the builder bot plays it in the page, fast
+await page.evaluate(async () => {
+  window.__fxBots = await import('./tools/survival-bots.mjs');
+  window.__fxRoom = (await import('./src/game/mansion.js')).ROOM;
+  window.__fxIso = (await import('./src/core/util.js')).ISO_CAMERA;
+});
+const win = await shot('fx-win', () => {
+  const g = window.__LN; const m = g.survival;
+  const { botNight, botDay, releaseControls } = window.__fxBots;
+  m.restart();
+  g.input.touchSeen = true;
+  const state = { flareHeld: false, rescue: true };
+  const nightKills = [];
+  let frames = 0;
+  while (frames++ < 60 * 60 * 20 && m.phase !== 'complete' && m.phase !== 'failed') {
+    if (m.phase === 'night' && !g.uiPanel) {
+      botNight(g, state, { ROOM: window.__fxRoom, ISO_CAMERA: window.__fxIso });
+      window.__fxOrig.call(g, 1 / 60);
+      if (m.phase !== 'night') nightKills.push(m.phase === 'failed' ? m.nightStats.kills : m.lastRewards.kills);
+      continue;
+    }
+    releaseControls(g);
+    if (m.phase === 'day') botDay(g, 'builder');
+    window.__fxOrig.call(g, 1 / 60);
+  }
+  releaseControls(g);
+  window.__fxRealtime(90);
+  const r = m.runResult || {};
+  return {
+    frames, phase: m.phase, nightKills, run: { kills: m.runStats.kills, by: m.runStats.by, towers: m.runStats.towers, keepMin: m.runStats.keepMin, lost: m.runStats.lost },
+    result: { stars: r.stars, kills: r.kills, keepLeft: r.keepLeft, built: r.built, time: r.time, mvp: r.mvp, newBest: r.newBest },
+    records: m.records, ui: g.ui.map((u) => u.label).filter(Boolean),
+  };
+});
+check('win: the builder\'s real three nights end on stars from the keep\'s lowest point, the run\'s numbers, the MVP building, the records and NEW BEST! over the loss (R1-R3, R19)',
+  win.phase === 'complete' && win.nightKills.length === 3 && win.result.kills === win.nightKills.reduce((a, b) => a + b, 0)
+    && win.result.stars >= 1 && win.result.stars === (win.run.keepMin < 0.5 ? 1 : (win.run.lost > 0 ? 2 : 3))
+    && win.result.newBest === true && win.records.runs === 2 && win.records.wins === 1 && win.records.bestStars === win.result.stars
+    && (!win.result.mvp || win.result.mvp.name !== 'CAPTAIN') && win.ui.includes('survival:PLAY AGAIN'),
+  { frames: win.frames, nightKills: win.nightKills, result: win.result, records: win.records, by: win.run.by, towers: win.run.towers });
 
 check('health: 0 page errors, 0 console errors', !pageErrors.length && !consoleErrors.length, { pageErrors: pageErrors.slice(0, 3), consoleErrors: consoleErrors.slice(0, 3) });
 const passed = checks.filter((c) => c.ok).length;

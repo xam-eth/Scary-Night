@@ -690,6 +690,7 @@ async function runSurvivalMilestone() {
     let queueLockVerified = false;
     let failure = null;
     const nightThree = { peakEnemies: 0, peakBreakers: 0, kills: 0, wallDamage: 0, gateHp: 0, playerHp: 0 };
+    const nightKills = [];   // each night's own tally (the dawn panel's), for R1's run total
 
     for (let day = 1; day <= 3; day++) {
       if (mode.phase !== 'night' || mode.day !== day) break;
@@ -710,6 +711,7 @@ async function runSurvivalMilestone() {
         }
       }
       releaseControls(survivalGame);
+      nightKills.push(mode.phase === 'failed' ? mode.nightStats.kills : (mode.lastRewards ? mode.lastRewards.kills : 0));
       if (mode.phase === 'failed') { failure = mode.failureReason; break; }
       if (mode.phase === 'complete') break;
       if (mode.phase !== 'day') break;
@@ -746,6 +748,9 @@ async function runSurvivalMilestone() {
       sawmillBuilt: Object.values(mode.buildings).includes('sawmill'), gateBuilt: mode.gateBuilt,
       barracksBuilt: Object.values(mode.buildings).includes('barracks'), nightThree, flares: botState.flares,
       gold: +mode.gold.toFixed(1), wood: mode.wood,
+      elapsed: mode.elapsed, nightKills,
+      runStats: JSON.parse(JSON.stringify(mode.runStats)),
+      runResult: mode.runResult ? JSON.parse(JSON.stringify(mode.runResult)) : null,
     };
   };
 
@@ -1421,6 +1426,118 @@ async function runSurvivalMilestone() {
   }
   const cinePass = cineChecks.length === 5 && cineChecks.every(Boolean);
 
+  // ---- the end of a run (UX-REPLAY-RESEARCH §5 P0): R1 the run summary,
+  // R2 stars, R3 records, R4 the near miss + one tip, R19 the MVP ----
+  const endChecks = [];
+  const endCheck = (name, ok, detail) => {
+    endChecks.push(!!ok);
+    console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} (${detail})`);
+  };
+  {
+    const { survivalStars, survivalMvp, RUN_STARS } = await import('../src/game/survival.js');
+    // R1 + R2 on the builder's real three nights (runScenario above)
+    const br = builder.runResult || {};
+    const nightSum = builder.nightKills.reduce((a, b) => a + b, 0);
+    const expectStars = survivalStars(true, builder.runStats);
+    endCheck('R1/R2: a won run counts all three nights and earns its stars from the keep\'s lowest point and the guards lost',
+      builder.complete && br.won === true && builder.nightKills.length === 3 && br.kills === nightSum && builder.runStats.kills === nightSum
+        && br.stars === expectStars && br.stars >= 2 && br.nights === 3 && br.keepMin === Math.round(100 * builder.runStats.keepMin)
+        && br.built === builder.buildings.length && br.time >= 3 * 60 && br.keepLeft > 0 && br.keepLeft <= 100 && br.tip === null,
+      `nights ${builder.nightKills.join('+')} = ${nightSum}, panel ${br.kills}; keep low ${br.keepMin}% (2 stars from ${RUN_STARS.keepMin * 100}%), guards lost ${builder.runStats.lost} → ${br.stars} stars; keep left ${br.keepLeft}%, built ${br.built}, time ${br.time}s`);
+    const rule = [
+      survivalStars(true, { keepMin: 0.95, lost: 0 }), survivalStars(true, { keepMin: 0.95, lost: 1 }),
+      survivalStars(true, { keepMin: 0.49, lost: 0 }), survivalStars(true, { keepMin: 0.5, lost: 0 }), survivalStars(false, { keepMin: 1, lost: 0 }),
+    ];
+    endCheck('R2: 3 stars = the keep never below half and no guard lost, 2 = a guard lost, 1 = the keep fell below half, a loss 0',
+      rule.join(',') === '3,2,1,3,0', `stars ${rule.join(',')}`);
+
+    // R4 on the idle bot's real loss
+    const ir = idle.runResult || {};
+    endCheck('R4: the idle loss shows how close dawn was and a Night-1 tip read off it (never moved: walk to the gate)',
+      !idle.complete && ir.won === false && ir.stars === 0 && ir.night === 1 && ir.toDawn === Math.ceil(60 - idle.elapsed) && ir.toDawn > 0
+        && ir.progress > 0 && ir.progress < 1 && ir.tip && ir.tip.icon === 'gate' && ir.tip.text === 'WALK TO THE GATE UNDER ATTACK',
+      `night ${ir.night}, keep fell at ${idle.elapsed.toFixed(1)} s → ${ir.toDawn}s to dawn, tip "${ir.tip && ir.tip.text}"`);
+    // R4: each cause gets its own tip
+    window.localStorage.removeItem('lastnight.save.v1');
+    const tg = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+    const tm = tg.survival;
+    const lose = (setup, reason = 'THE KEEP FELL') => { tm.restart(); setup(); tm.fail(reason); return tm.runResult.tip; };
+    const tips = {
+      moved: lose(() => { tm._movedSinceStart = 900; }),
+      nothing: lose(() => { tm.day = 2; tm.nightsCompleted = 1; }),
+      ballista: lose(() => { tm.day = 3; tm.nightsCompleted = 2; tm.keepLevel = 2; tm.buildings = { north: 'mine' }; tm.onBreach(tm.entranceById('eastGate')); }),
+      locked: lose(() => { tm.day = 3; tm.nightsCompleted = 2; tm.buildings = { north: 'mine' }; tm.onBreach(tm.entranceById('posternNW')); }),
+      keep: lose(() => { tm.day = 3; tm.nightsCompleted = 2; tm.keepLevel = 2; tm.buildings = { 'east:tower': 'tower' }; tm.onBreach(tm.entranceById('eastGate')); }),
+      captain: lose(() => { tm.day = 2; tm.nightsCompleted = 1; }, 'Hunter lost'),
+    };
+    endCheck('R4: the tip names the first missing piece (8 words at most): Flare, build by day, the breached gate\'s ballista, the keep level that unlocks it, a keep a level behind, the captain\'s HP',
+      tips.moved.icon === 'flare' && tips.nothing.text === 'BUILD BY DAY: WALK INTO A CIRCLE' && tips.ballista.text === 'BUILD A BALLISTA AT THE EAST GATE'
+        && tips.locked.text === 'RAISE THE KEEP TO GUARD THE NW GATE' && tips.keep.text === 'UPGRADE THE KEEP BY DAY' && tips.captain.icon === 'heart'
+        && Object.values(tips).every((tip) => tip.text.split(/\s+/).length <= 8),
+      Object.entries(tips).map(([k, tip]) => `${k}: ${tip.text}`).join('; '));
+
+    // R3: records across runs
+    window.localStorage.removeItem('lastnight.save.v1');
+    const rg = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+    const rm = rg.survival;
+    rm.restart(); rm.fail('THE KEEP FELL');
+    const first = { ...rm.runResult };
+    rm.restart(); rm.day = 2; rm.nightsCompleted = 1; rm.fail('THE KEEP FELL');
+    const second = { ...rm.runResult };
+    rm.restart(); rm.day = 3; rm.nightsCompleted = 2; rm.runStats.kills = 40; rm.runStats.keepMin = 0.8; rm.completeNight();
+    const third = { ...rm.runResult };
+    const back = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 }).survival;
+    const kept = back.phase === 'complete' && !!back.runResult && back.runResult.stars === third.stars && back.records.runs === 3 && back.records.wins === 1;
+    back.restart();
+    const cleared = back.runResult === null && back.records.runs === 3;
+    back.fail('THE KEEP FELL');
+    const fourth = { ...back.runResult };
+    const saved = JSON.parse(window.localStorage.getItem('lastnight.save.v1') || 'null');
+    const rec = saved && saved.survival && saved.survival.records;
+    endCheck('R3: records across runs in save.survival.records; NEW BEST only when one falls (never on the first run); a reload keeps the panel and the records; PLAY AGAIN keeps the records',
+      first.newBest === false && second.newBest === true && third.newBest === true && third.stars === 3 && fourth.newBest === false
+        && kept && cleared && !!rec && rec.runs === 4 && rec.wins === 1 && rec.bestStars === 3 && rec.bestNights === 3 && rec.totalKills >= 40,
+      `NEW BEST ${[first, second, third, fourth].map((r) => r.newBest).join('/')}; reload kept=${kept}, PLAY AGAIN cleared the result=${cleared}; saved ${JSON.stringify(rec)}`);
+
+    // R19: the MVP — and a ballista's kill tallied on its own circle (the real bolt)
+    const mvpA = survivalMvp({ by: { captain: 140, flare: 40, guard: 12, keep: 3 }, towers: { 'north:tower': 31, 'east:tower': 9 } });
+    const mvpB = survivalMvp({ by: { captain: 140, guard: 12, keep: 3 }, towers: { 'east:tower': 9 } });
+    const mvpC = survivalMvp({ by: { captain: 140 }, towers: {} });
+    window.localStorage.removeItem('lastnight.save.v1');
+    const mg = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+    const mm = mg.survival;
+    const mtick = (n = 1) => { for (let i = 0; i < n; i++) mg.update(step); };
+    mm.restart();
+    mm.phase = 'day'; mm.day = 2; mg.screen = 'playing'; mg.uiPanel = 'survival-day';
+    mm.keepLevel = 1; mm.gold = 150; mm.wood = 150;
+    mm.startBuild('tower', 'south:tower');
+    for (let i = 0; i < 1200 && mm.builderJob; i++) mtick();
+    mtick();
+    mm.startNight();
+    mm.waveIndex = 99; mm.breakerIndex = 99; mm.individualIndex = 99;
+    mg.enemies.length = 0; mg.bolts.length = 0;
+    mm.guards.length = 0; mm.survivors = 0;
+    mm.tuning = { ...mm.tuning, autoAttackRange: 0 };
+    const sgate = mm.entranceById('southGate');
+    sgate.hp = sgate.hpMax = 99999;
+    const tw = mm.towers[0];
+    const len = tw ? Math.hypot(sgate.x - tw.x, sgate.y - tw.y) : 1;
+    const victim = new SurvivalCrowdZombie(sgate.x + (sgate.x - (tw ? tw.x : 0)) / len * 110, sgate.y + (sgate.y - (tw ? tw.y : 0)) / len * 110, sgate, 0, 1);
+    victim.hp = 1; victim.vx = 0; victim.vy = 0; victim.update = () => {};
+    mg.enemies.push(victim);
+    if (tw) tw.cd = 0;
+    for (let i = 0; i < 240 && !victim.dead; i++) mtick();
+    mm.tuning = SURVIVAL_TUNING;
+    const towerKills = (mm.runStats.towers || {})['south:tower'] || 0;
+    const mvpReal = survivalMvp(mm.runStats);
+    endCheck('R19: the MVP is the garrison piece with most kills (one ballista by its circle, the keep\'s, the guards), never the captain; a ballista bolt\'s kill is tallied on its circle',
+      !!mvpA && mvpA.name === 'NORTH BALLISTA' && mvpA.kills === 31 && !!mvpB && mvpB.name === 'GUARDS' && mvpC === null
+        && victim.dead && towerKills === 1 && mm.runStats.by.tower === 1 && !!mvpReal && mvpReal.name === 'SOUTH BALLISTA',
+      `${mvpA && `${mvpA.name} ${mvpA.kills}`} over guards 12 / captain 180; ${mvpB && mvpB.name} over one ballista 9; captain only → ${mvpC}; south ballista kill tallied ${towerKills}, MVP ${mvpReal && mvpReal.name}`);
+    window.localStorage.removeItem('lastnight.save.v1');
+  }
+  const endPass = endChecks.length === 6 && endChecks.every(Boolean);
+
   console.log(`  idle Night 3: ${idle.nightThree.peakEnemies} peak enemies / ${idle.nightThree.peakBreakers} Breakers, ${idle.nightThree.kills} kills, ${idle.nightThree.wallDamage} wall damage, gate ${idle.nightThree.gateHp} HP, Hunter ${idle.nightThree.playerHp} HP; ${idle.phase}`);
   console.log(`  builder Night 3: ${builder.nightThree.peakEnemies} peak enemies / ${builder.nightThree.peakBreakers} Breakers, ${builder.nightThree.kills} kills, ${builder.nightThree.wallDamage} wall damage, gate ${builder.nightThree.gateHp} HP, Hunter ${builder.nightThree.playerHp} HP; keep Lv${builder.keepLevel} ${builder.keepHp} HP, soldiers ${builder.survivors}, buildings ${builder.buildings.join(',') || 'none'}, gateBuilt=${builder.gateBuilt}; ${builder.phase}`);
   // Balance target (M1 rebuild, K1): doing nothing must not win; an engaged
@@ -1433,7 +1550,7 @@ async function runSurvivalMilestone() {
     && hunterAutoShot && hunterRealLos && hunterSkill
     && idleLoses && builder.complete && builder.keepLevel === 3
     && builder.queueLockVerified && builder.sawmillBuilt && builder.gateBuilt && builder.barracksBuilt
-    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass
+    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass
     && builder.upgrades[0].level === 1 && builder.upgrades[0].rooms === 5
     && builder.upgrades[builder.upgrades.length - 1].level === 3 && builder.upgrades[builder.upgrades.length - 1].rooms === 9
     && builder.upgrades.every((item, i, all) => i === 0 || item.level >= all[i - 1].level);

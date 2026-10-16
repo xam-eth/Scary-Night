@@ -102,7 +102,10 @@ console.log('DUSKHOLD — service worker\n');
 await fire('install', null);
 const cacheNames = [...stores.keys()];
 ok(cacheNames.length === 1, `install opens one cache (${cacheNames[0] || 'none'})`);
-ok(cacheNames[0] === 'duskhold-v5', 'the new brand uses the duskhold-v5 cache version');
+// the cache is named after sw.js's VERSION (bumped whenever players must see
+// a change), still under the DUSKHOLD brand
+const VERSION = (SRC.match(/const VERSION = '([^']+)'/) || [])[1];
+ok(!!VERSION && /^duskhold-v\d+$/.test(VERSION) && cacheNames[0] === VERSION, `the cache is the brand's current version (${cacheNames[0]} = sw.js VERSION ${VERSION})`);
 const shell = stores.get(cacheNames[0]);
 ok(shell && shell.size >= 8, `the shell is precached (${shell ? shell.size : 0} entries)`);
 ok(!!(shell && shell.get('./offline.html')), 'offline.html is in it');

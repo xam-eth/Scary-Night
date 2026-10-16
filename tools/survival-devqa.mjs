@@ -17,7 +17,8 @@
  *   day       P1: by day the stick walks the Hunter; standing in a circle
  *             shows ONE contextual BUILD button (no side panel, no "+"),
  *             and a real tap on it starts the builder
- *   reload    a mid-night reload resumes the clock and the enemies
+ *   reload    a mid-night reload resumes the clock and the enemies, and the
+ *             run records (save.survival.records, R3) survive it
  *   cine      K1 bookends on the real route (no ?cine=0): a fresh save opens
  *             on the intro (clock and horde wait, only SKIP is live), a real
  *             tap hands over to the night, a reload does not replay it, and
@@ -405,13 +406,16 @@ try {
   await page.evaluate(() => { window.__LN.survival.restart(); window.__step(5); });
 
   // ---------------- reload mid-night ----------------
-  const pre = await page.evaluate(() => { const g = window.__LN; window.__step(60 * 15); g.survival._persist(true); return { t: +g.survival.elapsed.toFixed(2), alive: g.survival.aliveEnemies() }; });
+  const pre = await page.evaluate(() => { const g = window.__LN; window.__step(60 * 15); g.survival._persist(true); return { t: +g.survival.elapsed.toFixed(2), alive: g.survival.aliveEnemies(), records: { ...g.survival.records } }; });
   await page.evaluate(() => sessionStorage.setItem('devqaKeep', '1'));
   await withTimeout(page.reload({ waitUntil: 'domcontentloaded', timeout: 120000 }), 130000, 'reload');
   await page.waitForFunction(() => window.__LN && window.__LN.survival && window.__LN.screen === 'playing', { timeout: 120000 });
-  const post = await page.evaluate(() => { const g = window.__LN; return { t: +g.survival.elapsed.toFixed(2), alive: g.survival.aliveEnemies(), phase: g.survival.phase }; });
+  const post = await page.evaluate(() => { const g = window.__LN; return { t: +g.survival.elapsed.toFixed(2), alive: g.survival.aliveEnemies(), phase: g.survival.phase, records: { ...g.survival.records } }; });
   check('reload: a mid-night reload resumes the clock and the enemies',
     post.phase === 'night' && Math.abs(post.t - pre.t) < 1.5 && Math.abs(post.alive - pre.alive) <= 2, { before: pre, after: post });
+  // the lost run of the end-panel step above is on the record (R3)
+  check('records: the run records (save.survival.records) survive a reload',
+    pre.records.runs >= 1 && JSON.stringify(post.records) === JSON.stringify(pre.records), { before: pre.records, after: post.records });
 
   // ---------------- K1 bookends: the real route (cinematics on), landscape ----------------
   // The first page scripted its nights with ?cine=0; it closes first so its

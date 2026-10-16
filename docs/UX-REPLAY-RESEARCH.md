@@ -1,6 +1,7 @@
 # Riset UX & Replay — "Apakah pemain mau main sekali lagi?"
 
 **Status (2026-10-16, v2):** dokumen riset dan rekomendasi. **Belum ada kode untuk item §5.**
+*Pembaruan status implementasi (2026-10-16): dari §5 kini terbangun R1, R2, R3, R4, R19 (pass "Momen akhir run") dan R18a (pass feedback). R5, R6, dan P1/P2 lainnya belum. Rincian dan apa yang sudah di-assert ada di catatan status di bawah tabel P0. Semua verdict di dokumen ini tetap verdict desain + bot sampai ada playtest manusia.*
 Bukti playtest bot ada di `qa-evidence/ux-replay/` (`uxprobe.txt` dan `uxprobe.json`), dan bisa diulang dengan
 `node tools/survival-uxprobe.mjs`. Belum ada playtest manusia, jadi semua verdict di bawah adalah
 penilaian desain + bot, **bukan** hasil uji pemain.
@@ -321,6 +322,7 @@ Sampel: review positif di halaman toko dan forum. Game-game ini ratingnya tinggi
    - `startNight()` me-reset `nightStats` setiap malam, jadi panel menang hanya menghitung kill malam 3.
    - Di `land-complete.png` terlihat "💀 2".
    - *Status 2026-10-16:* bug kode diperbaiki. Panel akhir kini memakai `runStats` (total 3 malam + kill per sumber, tersimpan di `save.survival`). Koreksi atas bukti: angka "2" di `land-complete.png` juga artefak skrip. `survivalshots` men-set `nightsCompleted = 2; day = 3` lalu memanggil `completeNight()` tanpa memainkan malam 1–2, jadi screenshot itu tetap menunjukkan 2 setelah perbaikan. Bukti panel dengan kill hasil simulasi ada di `qa-evidence/survival-fixes/fx-end.png`.
+   - *Status (pass "Momen akhir run"):* panel menang setelah 3 malam yang benar-benar dimainkan kini tertangkap di `qa-evidence/survival-fixes/fx-win.png` (bot builder di browser, 238 kill, ★★★, NEW BEST!).
 2. **Panel akhir** (`src/ui/survival.js` `drawEndPanel`):
    - hanya 3 sel (malam, kill, Lv keep) + PLAY AGAIN;
    - tidak ada "terbaik", bintang, durasi, penduduk selamat, atau tip.
@@ -463,6 +465,8 @@ Skala: 2 = kuat, 1 = sebagian, 0 = tidak ada.
 
 **Total 16/30.** Fondasinya kuat: enam faktor bernilai 2, termasuk area yang paling sering dikritik di game mobile sejenis (energi, iklan, P2W, chores), dan di sini semuanya bersih. Kekurangannya ada di **alasan untuk kembali**: U2, U3, U4, momen akhir run, dan tempo.
 
+*Status (pass "Momen akhir run", 2026-10-16): scorecard ini **tidak di-skor ulang**, karena skor faktor yang disentuh perlu playtest manusia. Faktor yang disentuh: "Momen akhir run" (ringkasan kini benar, ada bintang dan rekor), "Kalah yang mendidik" (kini ada "seberapa dekat" + satu tip), dan sebagian "Tujuan setelah menang" (★★★ dan NEW BEST! sebagai target). Faktor variasi, progres meta, dan kontrol tempo tetap 0.*
+
 ### 4.1 Checklist UX positif (lensa bintang 5, §2.1)
 
 Skala sama: 2 = kuat, 1 = sebagian, 0 = tidak ada. P9 (developer mendengar) tidak dinilai karena urusan pasca rilis.
@@ -509,6 +513,18 @@ Semua rekomendasi menghormati keputusan sebelumnya:
 | R5 | **Fajar lebih cepat.** Bila semua spawn malam sudah keluar dan musuh hidup = 0 → "NIGHT CLEARED", fajar dalam 2 s, bonus gold = detik yang dihemat (versi aman dari early call Kingdom Rush). | U11; ekor kosong ±10–12 s | Ekor kosong ≤ 3 s di probe |
 | R6 | **Kontak pertama ≤ 5 s + gerbang ditandai.** Saat START NIGHT: horn + panah tepi ke gerbang gelombang 1, dan gelombang 1 mencapai gerbangnya dalam ±4–5 s. | U1/U6: "time to fun"; pembuka malam 2–3 kosong ±14 s | Target pertama ≤ 5 s di semua malam (probe) |
 | R19 | **Kontribusi bangunan di ringkasan** (v2). Contoh: "MVP: NORTH BALLISTA · 31 KILLS", "GUARDS HELD THE EAST GATE", "BARRICADE TOOK 400 HITS". Perlu pencatatan kill per sumber (§3.4 no. 7). | P6: BTD6 "enjoy watching them pop", Thronefall "I build one structure and win a wave…". Juga menjawab tuntutan desain sebelumnya agar build/upgrade "terasa" | Ringkasan menyebut bangunan dengan kontribusi terbesar (assert harness) |
+
+**Status implementasi P0 (2026-10-16, pass "Momen akhir run"; implementasi, belum acceptance manusia):**
+
+| ID | Status | Yang di-assert / diukur |
+|---|---|---|
+| R1 | Terbangun. Panel akhir: malam x/3, total kill run, keep (sisa HP % saat fajar ke-3 / level bila kalah), bangunan berdiri, durasi run, baris kru. "Penduduk selamat" tidak ditampilkan sebagai angka (di K1 penduduk selalu di dalam keep). | Harness: kill panel = jumlah kill 3 malam bot builder (54 + 78 + 93 = 225). fxshots: menang 3 malam nyata di browser (66 + 79 + 93 = 238) |
+| R2 | Terbangun dengan ambang usulan: ★ bertahan 3 malam, ★★ keep tidak pernah < 50 % HP, ★★★ + tidak ada guard hilang. | Bot 5 seed: builder ★★★ ×5 (keep terendah 88–100 %), tower-builder ★ ×4 (menang tipis, keep terendah 2–33 %). Sesuai ukuran berhasil. Harness meng-assert aturannya |
+| R3 | Terbangun: `save.survival.records` (runs, wins, bestStars, bestNights, bestKills, totalKills) + tag "NEW BEST!" (tidak muncul di run pertama). | devqa: rekor sama sebelum/sesudah reload. Harness: NEW BEST hanya saat rekor pecah, reload mempertahankan panel + rekor, PLAY AGAIN mempertahankan rekor |
+| R4 | Terbangun: "NIGHT n · Ns TO DAWN" (≤ 10 dtk: "SO CLOSE!"), track malam, satu tip ≤ 8 kata dari penyebab nyata. | Bot: idle → "WALK TO THE GATE UNDER ATTACK", active → "BUILD BY DAY: WALK INTO A CIRCLE", tower-builder → "BUILD A BALLISTA AT THE SE GATE". Sesuai 3 skenario ukuran berhasil. Harness meng-assert 6 penyebab. Apakah tip membantu manusia belum diuji |
+| R5 | **Belum.** Di bot, 2 musuh biasanya masih hidup saat fajar (spawn 68 / kill 66), jadi aturan "musuh hidup = 0" jarang terpicu tanpa mengubah tempo gelombang. Perlu pass tempo sendiri dengan `survival-uxprobe` | — |
+| R6 | **Belum** (menyentuh FTUE dan tempo malam). | — |
+| R19 | Terbangun: MVP = ballista per lingkaran, ballista atap keep, atau guard, dengan kill terbanyak. **Penyimpangan dari contoh:** Kapten tidak pernah jadi MVP. Di bot yang bertahan (builder, hunter-builder, tower-builder, keep-builder, active), Kapten termasuk Flare mengambil 78–97 % kill, jadi MVP berbasis kill murni hampir selalu "CAPTAIN" dan tidak membuat bangunan terasa. | Harness: kill bolt ballista nyata tercatat di lingkarannya (MVP "SOUTH BALLISTA"), contoh "NORTH BALLISTA 31" mengalahkan guard 12 / Kapten 180. Catatan: di run bot, ballista jarang mendapat kill terakhir (tower-builder: 25–35 kill ballista per run dari 104–119 tembakan), sehingga MVP bot umumnya GUARDS (satu seed: SOUTH BALLISTA 14) |
 
 ### P1 — "Alasan untuk kembali"
 

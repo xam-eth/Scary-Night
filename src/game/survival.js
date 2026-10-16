@@ -765,11 +765,23 @@ class FlowField {
 export const KILL_SOURCES = Object.freeze(['captain', 'guard', 'tower', 'keep', 'flare']);
 const freshKillsBy = () => ({ captain: 0, guard: 0, tower: 0, keep: 0, flare: 0 });
 function freshNightStats() {
-  return { kills: 0, hits: 0, damageToWalls: 0, keepDamage: 0, mined: 0, by: freshKillsBy() };
+  // breached: gate ids in the order they gave way tonight (R4's tip)
+  return { kills: 0, hits: 0, damageToWalls: 0, keepDamage: 0, mined: 0, by: freshKillsBy(), breached: [], flares: 0, keepMin: 1 };
 }
-/** The whole run (three nights): the end panel's numbers. */
+/**
+ * The whole run (three nights): the end panel's numbers. keepMin is the
+ * lowest share of HP the keep fell to (R2's stars), lost the guards nobody
+ * helped up, towers the kills per ballista circle (R19's MVP), time the
+ * seconds played (nights and days, pause excluded).
+ */
 function freshRunStats() {
-  return { kills: 0, by: freshKillsBy(), mined: 0, sawn: 0, recruited: 0, nights: 0 };
+  return { kills: 0, by: freshKillsBy(), mined: 0, sawn: 0, recruited: 0, nights: 0, keepMin: 1, lost: 0, towers: {}, time: 0 };
+}
+/** A save-safe copy of a stats object (its nested tallies copied too). */
+function cloneStats(stats) {
+  const out = {};
+  for (const [k, v] of Object.entries(stats || {})) out[k] = Array.isArray(v) ? v.slice() : (v && typeof v === 'object' ? { ...v } : v);
+  return out;
 }
 /** A kill's source from the bolt owner (or 'flare') that hit the body last. */
 function killSource(game, by) {
@@ -782,6 +794,50 @@ function killSource(game, by) {
 }
 /** The colour of a hit by source: warm for the captain, cool for guards, hot for ballistas. */
 const HIT_COLOR = Object.freeze({ captain: '#ffd36a', guard: '#8fe3ff', tower: '#ff8a3a', keep: '#ff8a3a', flare: '#fff2b0' });
+
+/**
+ * THE END OF A RUN (UX-REPLAY-RESEARCH §5 P0: R1 summary, R2 stars, R3
+ * records, R4 the near miss and its tip, R19 the MVP).
+ *
+ * Stars rate a won run by how the keep held, the way Kingdom Rush rates a
+ * level by the lives left: one for holding three nights, two when the keep
+ * never fell below half, three when no guard was lost as well. A lost run
+ * has none; it shows how close dawn was and one tip read off what really
+ * happened.
+ */
+export const RUN_STARS = Object.freeze({ keepMin: 0.5 });
+export function survivalStars(won, stats) {
+  if (!won) return 0;
+  const keepMin = stats && Number.isFinite(stats.keepMin) ? stats.keepMin : 1;
+  if (keepMin < RUN_STARS.keepMin) return 1;
+  return stats && stats.lost > 0 ? 2 : 3;
+}
+/** Best results across runs (save.survival.records); PLAY AGAIN keeps them. */
+function freshRecords() {
+  return { runs: 0, wins: 0, bestStars: 0, bestNights: 0, bestKills: 0, totalKills: 0 };
+}
+const SIDE_NAMES = Object.freeze({ north: 'NORTH', south: 'SOUTH', east: 'EAST', west: 'WEST', northwest: 'NW', southeast: 'SE' });
+const GATE_NAMES = Object.freeze({ northGate: 'NORTH', southGate: 'SOUTH', eastGate: 'EAST', westGate: 'WEST', posternNW: 'NW', posternSE: 'SE' });
+/**
+ * The run's MVP (R19): the part of the garrison the player raised that
+ * brought down the most — one ballista by its circle, the keep's roof
+ * ballista, or the guards. The captain is the player, never the MVP (his
+ * share is on the crew row): the line exists to make the build felt, and in
+ * every balance bot that defends, the captain takes most of the kills. A tie
+ * goes to the ballista listed first. Null when the garrison killed nothing.
+ */
+export function survivalMvp(stats) {
+  const by = (stats && stats.by) || {};
+  const rows = [];
+  for (const [slotId, kills] of Object.entries((stats && stats.towers) || {})) {
+    rows.push({ id: slotId, icon: 'tower', name: `${SIDE_NAMES[String(slotId).split(':')[0]] || 'GATE'} BALLISTA`, kills: kills || 0 });
+  }
+  rows.push({ id: 'keep', icon: 'keep', name: 'KEEP BALLISTA', kills: by.keep || 0 });
+  rows.push({ id: 'guard', icon: 'guard', name: 'GUARDS', kills: by.guard || 0 });
+  let best = null;
+  for (const row of rows) if (row.kills > 0 && (!best || row.kills > best.kills)) best = row;
+  return best;
+}
 
 export const GUARD = Object.freeze({
   speed: 210,          // px/s walking between posts
@@ -891,6 +947,8 @@ export class SurvivalMode {
     this.cinematics = options.cinematics === true;
     this.cine = null;              // { kind: 'intro' | 'arrival', t, dur, keys, night }
     this.reinforcements = null;    // the relief column (victory)
+    this.records = freshRecords();  // best results across runs (R3)
+    this.runResult = null;          // how the last run ended (stars, MVP, tip)
     this._restore(game.save.survival || freshProgress(this.nightDuration));
     this.applyHunterStats(false);
     this._configureMansion();
@@ -974,8 +1032,13 @@ export class SurvivalMode {
     this.siegeTimers = s.siegeTimers && typeof s.siegeTimers === 'object' ? { ...s.siegeTimers } : {};
     this.nightStats = { ...freshNightStats(), ...(s.nightStats || {}) };
     this.nightStats.by = { ...freshKillsBy(), ...((s.nightStats && s.nightStats.by) || {}) };
+    this.nightStats.breached = Array.isArray(this.nightStats.breached) ? this.nightStats.breached.slice() : [];
     this.runStats = { ...freshRunStats(), ...(s.runStats || {}) };
     this.runStats.by = { ...freshKillsBy(), ...((s.runStats && s.runStats.by) || {}) };
+    this.runStats.towers = { ...((s.runStats && s.runStats.towers) || {}) };
+    this.records = { ...freshRecords(), ...(s.records && typeof s.records === 'object' ? s.records : {}) };
+    this.runResult = (this.phase === 'complete' || this.phase === 'failed') && s.runResult && typeof s.runResult === 'object'
+      ? cloneStats(s.runResult) : null;
     this.lastRewards = s.lastRewards || null;
     this.rewardAck = Math.max(0, Math.floor(Number(s.rewardAck) || 0));
 
@@ -1472,6 +1535,9 @@ export class SurvivalMode {
     // wait with the night instead of quietly running out behind the panel.
     if (g.screen === 'playing') {
       this._updateFx(dt);
+      // the run's clock for the end panel: nights and days, never a pause
+      // or a cinematic
+      if (!this.cine && (this.phase === 'night' || this.phase === 'day')) this.runStats.time = (this.runStats.time || 0) + dt;
       // (the Flare's cooldown belongs to the run: it waits out a cinematic)
       if (!this.cine) {
         this.skillCooldown = Math.max(0, this.skillCooldown - dt);
@@ -1880,6 +1946,8 @@ export class SurvivalMode {
   onBreach(entrance) {
     if (this._breachAt[entrance.id] != null) return;
     this._breachAt[entrance.id] = this.uiClock;
+    if (!Array.isArray(this.nightStats.breached)) this.nightStats.breached = [];
+    if (!this.nightStats.breached.includes(entrance.id)) this.nightStats.breached.push(entrance.id);
     this.game.mansion.refreshNavAround(entrance);
     this.pushEvent('breach', 'doorBroken', 'BREACH!');
     this.game.renderer.shake(0.22);
@@ -2068,6 +2136,7 @@ export class SurvivalMode {
     this.guards.forEach((g, k) => { g.index = k; g.id = 5000000 + k; });
     this.survivors = Math.max(0, this.survivors - 1);
     this.nightStats.lost = (this.nightStats.lost || 0) + 1;
+    this.runStats.lost = (this.runStats.lost || 0) + 1;
     this.pushEvent('guardLost', 'guard', 'GUARD LOST', { life: 2.2 });
     this.game.audio.play('playerHurt', { vol: 0.65 });
     this._guardAssignT = 0;
@@ -2424,6 +2493,7 @@ export class SurvivalMode {
     const p = g.player;
     this.skillCooldown = this.skillCooldownMax;
     this.skillFlash = 0.65;
+    this.nightStats.flares = (this.nightStats.flares || 0) + 1;
     g.audio.play('chandelier', { vol: 0.72 });
     g.particles.burst('spark', p.x, p.y, 26, {
       color: 'rgba(255,214,140,0.95)', sizeMin: 2, sizeMax: 6, speedMin: 55, speedMax: 240,
@@ -2520,6 +2590,10 @@ export class SurvivalMode {
     this.keepHp = Math.max(0, this.keepHp - amount);
     const lost = before - this.keepHp;
     this.nightStats.keepDamage = (this.nightStats.keepDamage || 0) + lost;
+    // the lowest the keep fell (R2: two stars need it never below half)
+    const share = this.keepHp / Math.max(1, this.keepHpMax());
+    this.nightStats.keepMin = Math.min(this.nightStats.keepMin == null ? 1 : this.nightStats.keepMin, share);
+    this.runStats.keepMin = Math.min(this.runStats.keepMin == null ? 1 : this.runStats.keepMin, share);
     this._keepHitAt = this.uiClock;
     const keep = this.keep();
     const a = Math.atan2(enemy.y - keep.y, enemy.x - keep.x);
@@ -2971,6 +3045,8 @@ export class SurvivalMode {
     this.gold = clamp(this.gold + gold, 0, RESOURCE_CAP);
     this.wood = clamp(this.wood + wood, 0, RESOURCE_CAP);
     this.nightsCompleted = Math.min(3, this.nightsCompleted + 1);
+    // the keep as dawn found it (the end panel's "keep left", before the patch)
+    this._keepAtDawn = this.keepHp / Math.max(1, this.keepHpMax());
     // the townsfolk patch part of the keep for free; the rest is wood by day
     const missing = this.keepHpMax() - this.keepHp;
     const patched = Math.round(missing * this.tuning.keepDawnHeal);
@@ -3009,6 +3085,7 @@ export class SurvivalMode {
       if (gate && !gate.broken) gate.open = true;
       this.reinforcements = this._reliefColumn(!this.cinematics);
       if (this.cinematics) this._startArrival();
+      this._finishRun(true);
       g.uiPanel = this.panelFor();
     } else {
       this.day = Math.min(3, this.day + 1);
@@ -3030,6 +3107,7 @@ export class SurvivalMode {
     if (this.phase === 'failed') return;
     this.phase = 'failed';
     this.failureReason = reason || 'The Hunter fell.';
+    this._finishRun(false);
     this.game.screen = 'playing';
     this.game.uiPanel = 'survival-failed';
     this.game.input.gameplay = false;
@@ -3047,7 +3125,7 @@ export class SurvivalMode {
       breakerIndex: 0, individualIndex: 0, siegeTimers: Object.create(null),
       nightStats: freshNightStats(), runStats: freshRunStats(), lastRewards: null, skillCooldown: 0,
       rewardAck: 0, dayFocus: null, nightKeepStart: this.tuning.keepHp[1], walkPath: null, lastBuilt: null,
-      cine: null, reinforcements: null,
+      cine: null, reinforcements: null, runResult: null,
     });
     this._syncTerritory();
     this._resetNightFx();
@@ -3073,6 +3151,92 @@ export class SurvivalMode {
   }
 
   useBuilding(slotId) { return this.buildings[slotId] || null; }
+
+  /**
+   * Close the run once, at the third dawn or the fall (R1-R4, R19): stars,
+   * the MVP, how close dawn was and the tip, and the records across runs.
+   * "NEW BEST" needs a run to beat, so the very first result is just that.
+   */
+  _finishRun(won) {
+    const rs = this.runStats;
+    const nights = won ? 3 : clamp(this.nightsCompleted, 0, 3);
+    const stars = survivalStars(won, rs);
+    const prev = { ...freshRecords(), ...(this.records || {}) };
+    const kills = rs.kills || 0;
+    this.records = {
+      runs: prev.runs + 1,
+      wins: prev.wins + (won ? 1 : 0),
+      bestStars: Math.max(prev.bestStars, stars),
+      bestNights: Math.max(prev.bestNights, nights),
+      bestKills: Math.max(prev.bestKills, kills),
+      totalKills: prev.totalKills + kills,
+    };
+    this.runResult = {
+      won, stars, nights, kills,
+      newBest: prev.runs > 0 && (stars > prev.bestStars || nights > prev.bestNights),
+      night: this.day,
+      toDawn: won ? 0 : Math.max(0, Math.ceil(this.nightDuration - this.elapsed)),
+      progress: won ? 1 : clamp(this.elapsed / Math.max(1, this.nightDuration), 0, 1),
+      keepLeft: won ? Math.round(100 * (this._keepAtDawn == null ? this.keepHp / Math.max(1, this.keepHpMax()) : this._keepAtDawn)) : 0,
+      keepMin: Math.round(100 * (rs.keepMin == null ? 1 : rs.keepMin)),
+      built: Object.keys(this.buildings).length,
+      time: Math.round(rs.time || 0),
+      mvp: survivalMvp(rs),
+      tip: won ? null : this._lossTip(),
+    };
+    return this.runResult;
+  }
+
+  /** The end panel's numbers: the closed run, or (old saves) a fresh reading. */
+  endSummary() {
+    if (this.runResult) return this.runResult;
+    if (this.phase !== 'complete' && this.phase !== 'failed') return null;
+    const records = this.records;
+    const result = this._finishRun(this.phase === 'complete');
+    this.records = records;          // reading an old save is not a new run
+    result.newBest = false;
+    return result;
+  }
+
+  /** The ballista circle that covers a gate (its spot's door), if any. */
+  _towerSlotFor(gateId) {
+    for (const slot of SURVIVAL_SLOTS) {
+      if (slot.type !== 'tower') continue;
+      const spot = this.buildingSpot(slot.id);
+      if (spot && spot.doorId === gateId) return slot;
+    }
+    return null;
+  }
+
+  /**
+   * R4: one tip read off what really happened (8 words at most). The first
+   * night has no day before it, so its tips are about defending; after that
+   * the first missing piece in the build is named (nothing built, the gate
+   * that gave way first without a ballista, a keep a level behind, lost
+   * guards, no barracks).
+   */
+  _lossTip() {
+    const ns = this.nightStats || {};
+    if (!/KEEP/i.test(String(this.failureReason || ''))) return { icon: 'heart', text: 'FALL BACK TO THE KEEP WHEN HURT' };
+    if (this.day <= 1) {
+      if ((this._movedSinceStart || 0) < 400) return { icon: 'gate', text: 'WALK TO THE GATE UNDER ATTACK' };
+      if (!(ns.flares > 0)) return { icon: 'flare', text: 'TAP FLARE ON BIG GROUPS' };
+      return { icon: 'guard', text: 'FIGHT BESIDE YOUR GUARDS AT THE GATE' };
+    }
+    const built = Object.values(this.buildings);
+    if (!built.length && this.keepLevel <= 1) return { icon: 'hammer', text: 'BUILD BY DAY: WALK INTO A CIRCLE' };
+    for (const gateId of Array.isArray(ns.breached) ? ns.breached : []) {
+      const slot = this._towerSlotFor(gateId);
+      if (!slot || this.buildings[slot.id]) continue;
+      const name = GATE_NAMES[gateId] || 'BROKEN';
+      if (this.slotUnlockLevel(slot.id) > this.keepLevel) return { icon: 'keep', text: `RAISE THE KEEP TO GUARD THE ${name} GATE` };
+      return { icon: 'tower', text: `BUILD A BALLISTA AT THE ${name} GATE` };
+    }
+    if (this.keepLevel < Math.min(3, this.day)) return { icon: 'keep', text: 'UPGRADE THE KEEP BY DAY' };
+    if ((ns.lost || 0) > 0) return { icon: 'guard', text: 'HELP FALLEN GUARDS UP' };
+    if (!built.includes('barracks')) return { icon: 'barracks', text: 'BUILD BARRACKS FOR MORE GUARDS' };
+    return { icon: 'up', text: 'UPGRADE YOUR BALLISTAS BY DAY' };
+  }
 
   buildingCost(type) {
     if (type === 'keep') return this.keepUpgradeCost();
@@ -3101,7 +3265,14 @@ export class SurvivalMode {
     this.nightStats.by[src] = (this.nightStats.by[src] || 0) + 1;
     this.runStats.kills++;
     this.runStats.by[src] = (this.runStats.by[src] || 0) + 1;
-    if (src === 'tower' && enemy._lastHitBy) enemy._lastHitBy.kills = (enemy._lastHitBy.kills || 0) + 1;
+    if (src === 'tower' && enemy._lastHitBy) {
+      enemy._lastHitBy.kills = (enemy._lastHitBy.kills || 0) + 1;
+      const slotId = enemy._lastHitBy.slotId;
+      if (slotId) {
+        if (!this.runStats.towers) this.runStats.towers = {};
+        this.runStats.towers[slotId] = (this.runStats.towers[slotId] || 0) + 1;
+      }
+    }
     const big = enemy._survivalType === 'breaker' || enemy._survivalType === 'individual';
     g.audio.play('hitFlesh', { vol: big ? 0.6 : 0.42, weight: big ? 1 : 0.8 });
     // the kill pops: a burst and a shock ring on the floor (world3d), then
@@ -3414,8 +3585,10 @@ export class SurvivalMode {
     s.waveIndex = this.waveIndex; s.breakerIndex = this.breakerIndex; s.individualIndex = this.individualIndex;
     s.siegeTimers = { ...this.siegeTimers };
     s.nightKeepStart = this.nightKeepStart == null ? null : Math.round(Number(this.nightKeepStart));
-    s.nightStats = { ...this.nightStats, by: { ...this.nightStats.by } }; s.lastRewards = this.lastRewards ? { ...this.lastRewards } : null;
-    s.runStats = { ...this.runStats, by: { ...this.runStats.by } };
+    s.nightStats = cloneStats(this.nightStats); s.lastRewards = this.lastRewards ? { ...this.lastRewards } : null;
+    s.runStats = cloneStats(this.runStats);
+    s.records = { ...this.records };
+    s.runResult = this.runResult ? cloneStats(this.runResult) : null;
     s.rewardAck = this.rewardAck;
     s.player = { x: g.player.x, y: g.player.y, angle: g.player.angle, blood: g.player.blood };
     s.entrances = g.mansion.entrances.map((e) => ({ id: e.id, hp: e.hp, hpMax: e.hpMax, broken: e.broken, open: e.open, barricade: e.barricade }));

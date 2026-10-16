@@ -290,8 +290,12 @@ if (!args['no-progression'] && !TOWERS_ONLY && !GUARDS_ONLY && !CINE_ONLY) {
     const m = g.survival;
     m.nightsCompleted = 2; m.day = 3;
     m.completeNight();
+    g.render();                                   // the end panel opens
+    // 1.5 s on: its stars, the line under them and NEW BEST! have landed
+    for (let i = 0; i < 90; i++) window.__origUpdate.call(g, 1 / 60);
     g.render();
-    return { phase: m.phase, ui: g.ui.map((b) => b.label) };
+    const r = m.runResult || {};
+    return { phase: m.phase, stars: r.stars, newBest: r.newBest, kills: r.kills, ui: g.ui.map((b) => b.label) };
   })()`);
 }
 

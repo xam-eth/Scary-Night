@@ -64,6 +64,17 @@ function rr(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+function starPath(ctx) {
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2 - Math.PI / 2;
+    const r = i % 2 === 0 ? 0.95 : 0.42;
+    const x = Math.cos(a) * r, y = Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+}
+
 function fillStroke(ctx, fill) {
   ctx.fillStyle = fill;
   ctx.fill();
@@ -703,15 +714,18 @@ const ICONS = {
     }
   },
   star(ctx) {
-    ctx.beginPath();
-    for (let i = 0; i < 10; i++) {
-      const a = (i / 10) * Math.PI * 2 - Math.PI / 2;
-      const r = i % 2 === 0 ? 0.95 : 0.42;
-      const x = Math.cos(a) * r, y = Math.sin(a) * r;
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-    ctx.closePath();
+    starPath(ctx);
     fillStroke(ctx, '#ffd24a');
+    // a glint on the upper arm, so a won star reads as gold, not yellow
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.beginPath(); ctx.moveTo(-0.08, -0.62); ctx.lineTo(0.05, -0.62); ctx.lineTo(-0.12, -0.18); ctx.lineTo(-0.24, -0.2); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  },
+  /** A star not earned (the end panel's stars): the slot, hollow. */
+  starEmpty(ctx) {
+    starPath(ctx);
+    fillStroke(ctx, '#d8c8a8');
   },
   plus(ctx) {
     circle(ctx, 0, 0, 0.9, '#45d06a');

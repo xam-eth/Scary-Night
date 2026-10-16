@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-10-16T12:56:33.786Z",
+  "capturedAt": "2026-10-16T15:13:18.397Z",
   "results": [
     {
       "name": "boot: the night clock waits for the 3D house",
@@ -75,7 +75,7 @@
         "survivors": 2,
         "guards": 2,
         "visibleGuardMeshes": 2,
-        "boltObjects": 3,
+        "boltObjects": 5,
         "shots": 53
       }
     },
@@ -84,7 +84,7 @@
       "pass": true,
       "detail": {
         "shots": 53,
-        "boltObjectsInScene": 3
+        "boltObjectsInScene": 5
       }
     },
     {
@@ -138,7 +138,7 @@
       "name": "tower: by night the ballista swivels to its aim and its bolts are pooled",
       "pass": true,
       "detail": {
-        "shots": 13,
+        "shots": 14,
         "kills": 7,
         "ringHidden": true,
         "towerBolts": 1,
@@ -219,12 +219,50 @@
       "detail": {
         "before": {
           "t": 15.08,
-          "alive": 19
+          "alive": 20,
+          "records": {
+            "runs": 1,
+            "wins": 0,
+            "bestStars": 0,
+            "bestNights": 1,
+            "bestKills": 7,
+            "totalKills": 7
+          }
         },
         "after": {
-          "t": 15.16,
-          "alive": 19,
-          "phase": "night"
+          "t": 15.08,
+          "alive": 20,
+          "phase": "night",
+          "records": {
+            "runs": 1,
+            "wins": 0,
+            "bestStars": 0,
+            "bestNights": 1,
+            "bestKills": 7,
+            "totalKills": 7
+          }
+        }
+      }
+    },
+    {
+      "name": "records: the run records (save.survival.records) survive a reload",
+      "pass": true,
+      "detail": {
+        "before": {
+          "runs": 1,
+          "wins": 0,
+          "bestStars": 0,
+          "bestNights": 1,
+          "bestKills": 7,
+          "totalKills": 7
+        },
+        "after": {
+          "runs": 1,
+          "wins": 0,
+          "bestStars": 0,
+          "bestNights": 1,
+          "bestKills": 7,
+          "totalKills": 7
         }
       }
     },
@@ -234,16 +272,16 @@
       "detail": {
         "cine": {
           "kind": "intro",
-          "t": 0.43
+          "t": 0.38
         },
-        "t": 1.33,
+        "t": 1.28,
         "elapsed": [
           2.88,
           2.88
         ],
         "horde": 21,
         "still": true,
-        "closeUp": 2.2,
+        "closeUp": 2.21,
         "caption": "PROTECT THE KEEP",
         "labels": [
           "survival:SKIP"
@@ -276,7 +314,7 @@
         "cine": false,
         "phase": "night",
         "panel": null,
-        "elapsed": 4.6
+        "elapsed": 4.55
       }
     },
     {
