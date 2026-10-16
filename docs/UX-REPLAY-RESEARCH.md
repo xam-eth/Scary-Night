@@ -1,9 +1,19 @@
 # Riset UX & Replay — "Apakah pemain mau main sekali lagi?"
 
-**Status (2026-10-16):** dokumen riset dan rekomendasi. **Belum ada kode untuk item §5.**
+**Status (2026-10-16, v2):** dokumen riset dan rekomendasi. **Belum ada kode untuk item §5.**
 Bukti playtest bot ada di `qa-evidence/ux-replay/` (`uxprobe.txt` dan `uxprobe.json`), dan bisa diulang dengan
 `node tools/survival-uxprobe.mjs`. Belum ada playtest manusia, jadi semua verdict di bawah adalah
 penilaian desain + bot, **bukan** hasil uji pemain.
+
+**v2** dikerjakan atas permintaan user "tidak ada coding, only research dan pelajari experience user". Isinya riset saja, tanpa perubahan kode game atau tools:
+
+- §2.1–§2.2: apa yang dipuji di review **bintang 5** (dan keluhan kecil di game yang dipuji);
+- §3.4: temuan UX tambahan dari bermain ulang;
+- §3.5: persona gamer;
+- §3.6: peta perjalanan pemain;
+- §4.1: checklist UX positif;
+- R17–R19;
+- §6.1–§6.5: protokol playtest manusia dan pemantauan review.
 
 ---
 
@@ -37,6 +47,37 @@ penilaian desain + bot, **bukan** hasil uji pemain.
 
 Ini menjawab langsung keluhan nomor satu Duck Survival ("selalu sama").
 
+**Tambahan v2 — lensa review positif & pengalaman pengguna:**
+
+- **Yang membuat orang memberi bintang 5.** Sumbernya:
+  - Kingdom Rush (Play 4,7★);
+  - BTD6 (Play 4,8★);
+  - Vampire Survivors (Play 4,4★, Editors' Choice);
+  - Duck Survival (App Store 4,9★);
+  - Thronefall (Steam 95 %);
+  - Archero.
+
+  Dari sumber-sumber itu ada 9 pola yang paling sering dipuji (§2.1).
+- **DUSKHOLD sudah memenuhi 5 pola itu:**
+  - adil, tanpa iklan atau energi;
+  - buka langsung main, tanpa login;
+  - kontrol sederhana;
+  - belajar sambil main (chip FTUE ≤ 8 kata);
+  - visual bersih.
+- **Yang belum:**
+  - pilihan tingkat kesulitan;
+  - momen "lihat pertahananmu bekerja" di ringkasan;
+  - tantangan berikutnya setelah menang.
+
+  Checklist UX positif: **11/16** (§4.1). Artinya kesan pertama kuat; kelemahannya sama dengan scorecard replay.
+- **Temuan baru saat bermain:** tombol NIGHT ada tepat di samping BUILD, berjarak 10 px. NIGHT tidak bisa dibatalkan dan tidak minta konfirmasi walau gold masih cukup untuk membangun. Ini risiko salah ketuk (§3.4, R18).
+- **Persona** (§3.5):
+  - Pemain kasual dan penggemar aksi kemungkinan main lagi setelah kalah.
+  - Penggemar strategi dan kolektor kemungkinan berhenti setelah menang sekali.
+- **Peta perjalanan** (§3.6):
+  - Puncak emosi: intro, akhir malam 1, dan bala bantuan tiba.
+  - Lembah: pembuka malam 2–3, menunggu builder, panel menang yang datar, dan run kedua yang identik.
+
 ---
 
 ## 1. Metode
@@ -46,6 +87,17 @@ Ini menjawab langsung keluhan nomor satu Duck Survival ("selalu sama").
 - Steam: Thronefall, Kingdom Two Crowns, Dome Keeper.
 - Reddit: r/VampireSurvivors, r/gamedev, r/Survivorio, r/MobileGaming, r/domekeeper, r/patientgamers, r/iosgaming.
 - HowLongToBeat, Metacritic, App Store (Brotato), Uptodown, AppGamer.
+- v2, khusus review positif:
+  - Google Play: Kingdom Rush, Bloons TD 6, Vampire Survivors;
+  - App Store: Duck Survival, Vampire Survivors;
+  - TouchArcade;
+  - Reddit: r/VampireSurvivors, r/ShouldIbuythisgame, r/gaming, r/AndroidGaming;
+  - Steam Discussions (Thronefall);
+  - review Archero (GuruGamer, Androidsis) dan Thronefall (StackUp, Medium).
+- v2, pedoman UX:
+  - NN/g (aksi berisiko di samping aksi biasa);
+  - pedoman tutorial/FTUE (Udonis, Playio);
+  - diskusi kontrol sentuh (Unity forum, r/gamedev).
 
 **Data pembanding:**
 - Studi akademik atas 10,9 juta review Steam (Lin dkk., EMSE 2018).
@@ -65,6 +117,9 @@ Ini menjawab langsung keluhan nomor satu Duck Survival ("selalu sama").
 - Review yang paling "helpful" di toko cenderung negatif.
 - Rating agregat (Duck Survival 4,6★) menunjukkan mayoritas pemain tetap menikmati loop intinya.
 - Bot ≠ manusia. Bot membeli di tempat (jarak jalan dihitung terpisah) dan sudah tahu urutan build yang baik.
+- v2 sengaja mengambil review **positif** untuk mengimbangi bias review negatif itu.
+  - Review positif juga bias, karena ditulis penggemar.
+  - Jadi review positif dipakai untuk menjawab "apa yang disukai", bukan "apa yang kurang".
 
 ---
 
@@ -88,6 +143,40 @@ Ini menjawab langsung keluhan nomor satu Duck Survival ("selalu sama").
 **Satu temuan umum:** dari 10,9 juta review Steam, **57 % review negatif menyebut desain game** dan hanya 17 % menyebut bug. Kesimpulannya, "players value a well-designed gameplay over software quality" (Lin dkk., 2018).
 
 Jadi kekhawatiran replay di atas adalah masalah desain, bukan polish.
+
+### 2.1 Yang membuat reviewer memberi bintang 5
+
+Sampel: review positif di halaman toko dan forum. Game-game ini ratingnya tinggi dan unduhannya besar:
+
+- Kingdom Rush: 4,7★ / 847K review;
+- BTD6: 4,8★ / 342K;
+- Vampire Survivors: 4,4★ / 81,6K, Editors' Choice;
+- Duck Survival App Store: 4,9★ / 4,7K;
+- Thronefall: Steam 95 %.
+
+| # | Pola yang dipuji | Kutipan review positif | Status DUSKHOLD |
+|---|---|---|---|
+| P1 | **Gratis & jujur, tanpa jebakan** | Kingdom Rush (Play): "high-quality content that is BOTH free and exceptionally well-made - and with zero bait-and-switch… upgrades available for either cash OR a small bit of our time… 100% fair". Vampire Survivors (Play): "No forced ads, no micro transactions"; iklan hanya muncul "if you want a free revive or more gold at the end of a run". App Store VS: "makes ads optional and rewarding". BTD6 (Play): "you don't have to pay to win!" | ✅ survival tanpa iklan, energi, atau P2W. IAP di luar scope dan tidak disentuh |
+| P2 | **Buka langsung main, bisa offline** | r/VampireSurvivors: "No internet access(!) or account login required; you just open the game and play." Kingdom Rush memasang "★ PLAY OFFLINE!" di halaman tokonya. Sebaliknya di r/gaming: game single-player yang wajib online → "instant uninstall". Pedoman FTUE 2026: masuk gameplay inti ≤ 60 s, momen "aha" ≤ 90 s, tunda akun dan izin (Playio). | ✅ loading veil langsung masuk malam 1 (`main.js` memanggil `beginNight()` otomatis), tanpa menu atau login. Target pertama ±13 s setelah intro mulai. ⚠️ Offline: service worker (`sw.js`) men-cache aset setelah load pertama, tapi belum diuji di perangkat |
+| P3 | **Kontrol sederhana, bisa satu tangan** | Archero: "You can literally do it with one hand tied behind your back" (GuruGamer); "Simple controls ideal for playing with one hand" (Androidsis). VS: "I can play mobile while feeding my 2 month old son" (r/VampireSurvivors). Thronefall: "pretty fun to play on steam deck too due to simple controls" (r/ShouldIbuythisgame). Keluhan umum: jempol menutupi aksi (VS: "awkward to control"); joystick tetap terasa kurang pas, dan joystick mengambang lebih disukai (Unity forum, r/gamedev). | ✅ stik mengambang + tembak otomatis + tap-to-walk. Malam bisa dimainkan dengan jempol kiri saja (FLARE opsional). Landscape menaruh jempol di sisi layar, jauh dari aksi. ⚠️ Belum diuji di ponsel kecil |
+| P4 | **Belajar sambil main, sedikit teks** | Kingdom Rush: kampanye "introduces towers over time to help you learn" (Play). 80–90 % pemain tidak membaca teks tutorial; George Fan (PvZ): tidak lebih dari delapan kata di layar (Udonis). | ✅ 10 chip FTUE, 3–8 kata + ikon. Tiap chip tampil sekali dan hilang saat aksinya dilakukan. Yang terpanjang: "STAND BY A BUILDING TO LEVEL IT UP" (8 kata). ⚠️ Malam 2–3 tidak memperkenalkan hal baru |
+| P5 | **Visual bersih, mudah dibaca** | Thronefall: "Units and structures are easily distinguishable… the minimalist visuals reduce cognitive load"; "That looks so simple and friendly" (Medium). Permintaan pemain di Steam Thronefall: tempat bangun diberi ikon bangunannya, supaya tidak perlu "move from spot to spot to look it up". | ✅ dunia terang; malam ditandai tint, bukan gelap. Lingkaran bangun sudah berikon tipe, terlihat dari jauh (`land-day-circle.png`: ikon gergaji dan tenda). Ada preview jangkauan ballista |
+| P6 | **Melihat pertahanan bekerja** | BTD6: "My favorite part is to set up a powerful team and just enjoy watching them pop Bloons… The popping Bloons are satisfying to hear" (Play). Thronefall: "I build one structure and win a wave, then I want to build many structures" (StackUp). | ⚠️ ballista dan guard bertarung otomatis, tapi tidak ada momen yang menunjukkan *apa* hasil kerja bangunanmu (R19) |
+| P7 | **Pilihan tingkat kesulitan** | BTD6: "if you aren't good at tower defense games, there's an easy difficulty (in addition to medium and hard)"; "many modes… so that both casual and serious players… can always enjoy the game" (Play). | ❌ hanya satu tingkat (R17, R7) |
+| P8 | **Selalu ada tantangan berikutnya** | BTD6: "It doesn't ever get boring because there is so many things challenges" (Play). Duck Survival (App Store): "has side games so even if you get stuck, there is something you can do"; "the levels are actually levels and not just given". | ❌ setelah menang tidak ada (R2, R7, R11) |
+| P9 | **Developer mendengar** | Duck Survival (App Store): "the devs are actually replying and taking feedback. First time in a while I actually play a game like this and don't delete it 3 days later." | — urusan pasca rilis: balas review, changelog (§6.5) |
+
+### 2.2 Keluhan kecil di game yang dipuji (pelajaran murah)
+
+- **Mekanik tap cepat merusak ritme.** Kingdom Rush: "the tap like crazy to unfreeze the towers mechanic. It feels jarringly out of place in what is otherwise a reasonably paced strategic game." Jangan menambah mekanik "spam tap" di malam.
+- **Teks kecil dan run kepanjangan di ponsel.** TouchArcade tentang VS: "some of the text and UI can be a bit tiny on an iPhone, and… runs last a bit too long compared to what I typically want from a mobile game, sometimes stretching 20 minutes or more." Run DUSKHOLD ±5,3 mnt ✅. Ukuran teks perlu dicek di ponsel kecil.
+- **Pemain ingin melihat angka.**
+  - App Store VS: "we can't see the stat page when paused".
+  - BTD6 (r/patientgamers): "it hides information like damage at RoF info which is annoying".
+  - DUSKHOLD: kartu bangunan sudah menampilkan damage dan jangkauan ✅, tapi PAUSE belum punya statistik.
+- **Tombol yang muncul di zona jempol tertekan tak sengaja.** Duck Survival (App Store): tombol reset muncul tepat di area jempol, sehingga "I almost always am hitting reset when I don't want to" (lihat §3.4 no. 1).
+- **Monetisasi yang disukai** (catatan untuk masa depan, di luar scope sekarang):
+  - Bila kelak ada iklan, yang dipuji adalah pola VS: opt-in di akhir run, untuk revive atau bonus gold. "There are no pop-ups. An advert will appear after runs… They can be ignored" (dev VS di r/VampireSurvivors).
 
 ---
 
@@ -156,6 +245,75 @@ Jadi kekhawatiran replay di atas adalah masalah desain, bukan polish.
    - satu tombol COLLECT;
    - tanpa energi/iklan di survival.
 
+### 3.4 Temuan UX tambahan (main ulang dengan lensa review positif)
+
+1. **Tombol NIGHT menempel di samping BUILD.**
+   - **Posisi:** di landscape, NIGHT (ungu, 148×50) dan tombol aksi BUILD/UPGRADE (hijau, 210×56) berdampingan di pojok kanan bawah. Jaraknya tepat 10 px (`src/ui/survival.js`: `nightX = btnX - 10 - nightW`; lihat `land-day-circle.png`). Aksi kedua (mis. REPAIR) ada tepat di atas NIGHT.
+   - **Risiko:** sekali ketuk NIGHT langsung memulai malam. Tidak ada konfirmasi, tidak bisa dibatalkan, juga saat gold masih cukup untuk membangun.
+   - **Yang sudah baik:**
+     - NIGHT nonaktif selama builder bekerja;
+     - warna dan ikon kedua tombol berbeda (ungu/bulan vs hijau/palu). Ini "sinyal redundan" yang disarankan NN/g.
+   - **Yang belum:** jarak, dan jalan untuk membatalkan.
+   - **Dasar riset:**
+     - NN/g: "Avoid placing highly consequential actions … directly next to options that are benign";
+     - Duck Survival (App Store): tombol di zona jempol terus tertekan tak sengaja.
+   - Jarak 10 px memenuhi spasi minimum ±8 dp, jadi ini **risiko yang perlu diamati di playtest**, bukan bug pasti. → R18
+2. **Nol ketukan menuju game** ✅. Veil hilang → `beginNight()` dipanggil otomatis. Ini cocok dengan P2.
+   - Konsekuensinya: kelak pilihan kesulitan (R17) jangan menambah ketukan di run pertama.
+   - Misalnya, pilihan itu baru muncul setelah menang pertama atau setelah kalah.
+3. **Teks FTUE sudah pendek** ✅. Kesepuluh chip berisi 3–8 kata, sesuai batas PvZ (§2.1 P4).
+4. **Info:**
+   - Kartu bangunan menampilkan damage dan jangkauan ✅.
+   - PAUSE tidak punya statistik run maupun pengaturan (R12).
+5. **Audio:** belum ada toggle. Cek di perangkat apakah musik latar pemain (Spotify/YouTube Music) berhenti saat game berbunyi.
+6. **Berat unduhan pertama:**
+   - Di disk: `assets/` 8,2 MB + `src/` 2,3 MB. Ini batas atas, karena tidak semua dimuat.
+   - Veil punya progress bar ✅.
+   - Waktu load pertama perlu diukur di 4G Indonesia.
+7. **Kill dihitung di satu tempat tanpa sumbernya** (`survival.js`: `nightStats.kills++`). Untuk ringkasan "bangunan mana yang bekerja" (R19), kill perlu dicatat per sumber. Ini catatan kelayakan, belum dikerjakan.
+
+### 3.5 Persona gamer: apakah mereka main lagi?
+
+Dugaan berbasis review dan probe, bukan hasil wawancara. Diverifikasi dengan protokol §6.1.
+
+| Persona | Mencari (dari review) | Yang kena di DUSKHOLD | Pemicu berhenti | Main lagi? | Yang menaikkan |
+|---|---|---|---|---|---|
+| **Kasual mobile**: main ±5 mnt di sela aktivitas, sering tanpa suara, kadang satu tangan (VS, Archero) | run pendek, tanpa iklan/login, kontrol simpel | intro 7 s, tembak otomatis, run ±5 mnt, nol ketukan | menunggu: pembuka malam kosong ±14 s, ekor ±10 s, antre builder | setelah kalah **tinggi**; setelah menang **sedang** ("sudah tamat") | R5, R6, R13, R1 |
+| **Penggemar strategi/TD** (Kingdom Rush, BTD6, Thronefall) | pilihan bermakna, bintang, tingkat sulit, tantangan, angka jelas | lingkaran berikon, preview jangkauan, barricade, guard, Lv keep | hanya 2 hari membangun (±8 pembelian); tidak ada bintang atau tingkat setelah menang | setelah menang **rendah** | R2, R7, R8, R11, R17 |
+| **Penggemar aksi/horde** (VS, Survivor.io) | layar penuh musuh, angka besar, power naik | tembakan, FLARE, Lv kapten, puncak gelombang | 28–52 % detik malam tanpa target | **sedang** | R6, R10, R15 |
+| **Kolektor/completionist** | rekor, unlock, bintang, 100 % | belum ada | tidak ada yang dikumpulkan | setelah menang **rendah** | R3, R9, R2 |
+| **Pemula/non-gamer** | mudah dipahami, pemaaf | tujuan jelas, chip singkat | kalah di malam 2 tanpa tahu sebabnya (persona active kalah di ±55 s) | **sedang → rendah** setelah 2× kalah | R4, R14, R17 |
+
+**Bacaan:**
+
+- Loop sekarang paling cocok untuk pemain kasual yang **kalah**.
+- Persona strategi dan kolektor tidak punya alasan untuk run berikutnya setelah menang. Padahal justru persona inilah yang di review Kingdom Rush dan BTD6 paling memuji bintang dan tantangan.
+
+### 3.6 Peta perjalanan pemain (sesi pertama → hari berikutnya)
+
+| # | Momen | Emosi (dugaan) | Bukti | Friksi / risiko | Peluang |
+|---|---|---|---|---|---|
+| 1 | Halaman toko → install | penasaran | screenshot/video toko | gameplay tidak sesuai janji iklan → keluar (Playio) | tampilkan gameplay asli: malam + bangun |
+| 2 | Buka aplikasi, loading | netral | veil + progress bar, tanpa login | load pertama di jaringan lambat | ukur di 4G |
+| 3 | Intro 7,2 s | ▲ tertarik | peran, tujuan, dan objek terlihat | — | — |
+| 4 | Malam 1 | ● jalan dulu ±6 s, lalu ▲ | target di ±9 s jam malam; ledakan kill di akhir | 30–46 % malam tanpa target | R6, R10 |
+| 5 | Fajar 1 + COLLECT | ▲ puas | satu ketukan | — | — |
+| 6 | Hari 2 | ● fokus, lalu menunggu | 12 pilihan; ±50 s; kerja builder total 34 s dalam satu antrean | menunggu; salah ketuk NIGHT | R13, R18 |
+| 7 | Malam 2 | ▼ sepi, lalu ▲ breaker | pembuka kosong ±14 s; ekor ±10 s | "kenapa sepi?"; menunggu jam | R5, R6 |
+| 8 | Hari 3 | ● | 16 pilihan, ±31 s | — | — |
+| 9 | Malam 3 | ▲ tegang bila keep tipis | target 48–52 %; bot tower nyaris kalah | malam terakhir kurang padat | R10 |
+| 10a | Menang: bala bantuan | ▲▲ puncak | sinematik 7 s + fanfare | — | — |
+| 10b | Panel menang | ▼ datar | "💀 2", tanpa rekor/bintang | bug kill; tidak ada "berikutnya" | R1–R3, R9, R19 |
+| 10c | Kalah | ▼ kecewa → ingin membalas | PLAY AGAIN instan | tidak tahu sebab dan seberapa dekat | R4, R14 |
+| 11 | Run kedua | ● déjà vu | run identik | "sama saja" (keluhan no. 1 Duck Survival) | R7, R8 |
+| 12 | Hari berikutnya | ? | tidak ada alasan baru untuk membuka | tidak ada tujuan tersimpan | R3, R7, R9, tanpa red dot atau tugas harian |
+
+**Kurva emosi:**
+
+▲ intro → ● jalan → ▲ akhir malam 1 → ▲ fajar → ● hari 2 (menunggu) → ▼ pembuka malam 2 → ▲ breaker → ● hari 3 → ▲ malam 3 → ▲▲ bala bantuan → ▼ panel datar → ● run kedua identik
+
+Puncak terbesar (bala bantuan) langsung disusul lembah (panel). Momen paling emosional di run berakhir tanpa "hadiah" dan tanpa "berikutnya". Karena itu R1–R3 dan R19 diletakkan di P0.
+
 ---
 
 ## 4. Scorecard faktor replay
@@ -182,6 +340,27 @@ Skala: 2 = kuat, 1 = sebagian, 0 = tidak ada.
 
 **Total 16/30.** Fondasinya kuat: enam faktor bernilai 2, termasuk area yang paling sering dikritik di game mobile sejenis (energi, iklan, P2W, chores), dan di sini semuanya bersih. Kekurangannya ada di **alasan untuk kembali**: U2, U3, U4, momen akhir run, dan tempo.
 
+### 4.1 Checklist UX positif (lensa bintang 5, §2.1)
+
+Skala sama: 2 = kuat, 1 = sebagian, 0 = tidak ada. P9 (developer mendengar) tidak dinilai karena urusan pasca rilis.
+
+| Pola | Skor | Alasan singkat |
+|---|---|---|
+| P1 Gratis & jujur | 2 | survival tanpa iklan, energi, atau P2W |
+| P2 Buka langsung main | 2 | nol ketukan, tanpa login. Offline belum diuji di perangkat |
+| P3 Kontrol sederhana | 2 | stik mengambang + tembak otomatis. Belum diuji di ponsel kecil |
+| P4 Belajar sambil main | 2 | chip 3–8 kata, sekali tampil |
+| P5 Visual bersih | 2 | dunia terang, lingkaran berikon |
+| P6 Melihat pertahanan bekerja | 1 | bertarung otomatis, tapi tanpa momen pengakuan |
+| P7 Pilihan kesulitan | 0 | satu tingkat |
+| P8 Tantangan berikutnya | 0 | tidak ada setelah menang |
+
+**Total 11/16.**
+
+- Pola yang membuat orang memberi bintang 5 di **hari pertama** sudah ada.
+- Pola untuk **minggu pertama** (P6–P8) belum, dan ini sama dengan kekurangan di scorecard replay.
+- Kedua lensa sampai di kesimpulan yang sama.
+
 ---
 
 ## 5. Rekomendasi
@@ -206,6 +385,7 @@ Semua rekomendasi menghormati keputusan sebelumnya:
 | R4 | **Panel kalah "nyaris".** "THE KEEP FELL — 8s TO DAWN", progress malam, dan **satu tip dari penyebab nyata** (mis. "North gate had no ballista", "Keep was Lv1 on Night 2", "Guards fell — build barracks"). PLAY AGAIN tetap instan. | U9: kalah harus mendidik; near-miss memancing coba lagi | Tip sesuai penyebab di 3 skenario bot (idle / active / tower) |
 | R5 | **Fajar lebih cepat.** Bila semua spawn malam sudah keluar dan musuh hidup = 0 → "NIGHT CLEARED", fajar dalam 2 s, bonus gold = detik yang dihemat (versi aman dari early call Kingdom Rush). | U11; ekor kosong ±10–12 s | Ekor kosong ≤ 3 s di probe |
 | R6 | **Kontak pertama ≤ 5 s + gerbang ditandai.** Saat START NIGHT: horn + panah tepi ke gerbang gelombang 1, dan gelombang 1 mencapai gerbangnya dalam ±4–5 s. | U1/U6: "time to fun"; pembuka malam 2–3 kosong ±14 s | Target pertama ≤ 5 s di semua malam (probe) |
+| R19 | **Kontribusi bangunan di ringkasan** (v2). Contoh: "MVP: NORTH BALLISTA · 31 KILLS", "GUARDS HELD THE EAST GATE", "BARRICADE TOOK 400 HITS". Perlu pencatatan kill per sumber (§3.4 no. 7). | P6: BTD6 "enjoy watching them pop", Thronefall "I build one structure and win a wave…". Juga menjawab tuntutan desain sebelumnya agar build/upgrade "terasa" | Ringkasan menyebut bangunan dengan kontribusi terbesar (assert harness) |
 
 ### P1 — "Alasan untuk kembali"
 
@@ -216,12 +396,14 @@ Semua rekomendasi menghormati keputusan sebelumnya:
 | R9 | **Jalur unlock yang terlihat di panel akhir** ("2★ more: STONE BALLISTA"). Bintang/tingkat membuka varian bangunan, senjata kapten, atau warna panji. **Bukan** kartu acak. | U2 + transparansi: "players should clearly understand what they're working toward" (Entalto) | Setiap panel akhir menunjukkan unlock berikutnya |
 | R10 | **Pacing malam lebih padat**: selipkan gerombolan kecil di antara 3 gelombang besar. | U6: target 48–72 % | Target ≥ 75 % untuk bot builder |
 | R11 | **Commander's Orders** (opsional): mutator yang dipilih *sebelum* run (pola Thronefall) untuk ★ tambahan, mis. "NO BARRICADE", "HALF GOLD", "BLOOD MOON +30 %". Dipilih sadar, bukan acak. | U3: mutator Thronefall menambah skor/replay | Dipakai ≥ 1× oleh penguji yang sudah menang |
+| R17 | **Pilihan EASY / NORMAL** (v2), dengan Siege I–V (R7) untuk yang sudah menang. Contoh EASY: keep +50 % HP, breaker lebih lambat (di-tune dengan bot). Run pertama tetap nol ketukan: pilihan **ditawarkan, tidak dipaksakan**, setelah kalah 2× atau dari PAUSE. | P7: BTD6 dipuji karena ada easy/medium/hard; persona pemula (§3.5) | Persona active (tanpa membangun) mencapai malam 3 di EASY; NORMAL tidak berubah |
+| R18 | **NIGHT anti-salah-ketuk** (v2). Pilihan, dari yang paling ringan: (a) jauhkan NIGHT dari BUILD; (b) "HOLD TO START" 0,5 s dengan cincin terisi; (c) konfirmasi singkat **hanya** bila gold masih cukup untuk build termurah ("52 GOLD UNSPENT — START?"). | NN/g: aksi berisiko jangan di samping aksi biasa; Duck Survival (App Store): tombol di zona jempol tertekan tak sengaja | 0 malam dimulai tak sengaja di playtest. Naik ke P0 bila playtest mencatat ≥ 1 salah ketuk |
 
 ### P2 — QoL
 
 | ID | Apa | Kenapa |
 |---|---|---|
-| R12 | Toggle suara / musik / getar di PAUSE | QoL dasar mobile; banyak yang main tanpa suara |
+| R12 | Toggle suara / musik / getar di PAUSE | QoL dasar mobile; banyak yang main tanpa suara; cek juga musik latar pemain (§3.4 no. 5) |
 | R13 | Antre build (tap lingkaran berikutnya saat builder bekerja) atau waktu build 3–4 s | kerja builder ±34 s di hari 2 dengan satu antrean; K2C dikeluhkan "too much waiting" |
 | R14 | "TRY NIGHT 3 AGAIN" (checkpoint dawn terakhir, bintang maksimal −1) | kalah di malam 3 = mengulang ±3,5–4 mnt yang identik |
 | R15 | Kamera malam sedikit melebar saat horde berkumpul di gerbang (cek perf) | U6: tontonan horde |
@@ -235,6 +417,10 @@ Semua rekomendasi menghormati keputusan sebelumnya:
 - **Tembok P2W dan lonjakan kesulitan** yang memaksa membayar.
 - **Kartu skill acak** (keluhan "frustratingly random" di Survivor.io, dan sudah ditolak di proyek ini).
 - **Grind meta sebelum bisa menang:** Brotato dipuji karena "no initial grinding… before you are able to win".
+- **Mekanik "spam tap"** yang merusak ritme strategi (Kingdom Rush: "jarringly out of place", v2).
+- **Teks/UI terlalu kecil** di ponsel (TouchArcade tentang VS, v2).
+- **Tombol yang muncul mendadak di zona jempol** (Duck Survival App Store, v2).
+- **Pilihan yang menambah ketukan sebelum run pertama:** menu, login, atau izin sebelum gameplay (Playio, v2).
 
 ---
 
@@ -262,6 +448,61 @@ Semua rekomendasi menghormati keputusan sebelumnya:
 - Sesi 25 % teratas: 8–9 mnt.
 
 Angka ini hanya pembanding, bukan janji.
+
+### 6.1 Protokol playtest manusia (v2; riset, tanpa kode)
+
+- **Peserta:** 6–8 orang, campuran persona §3.5:
+  - 2 kasual;
+  - 2 penggemar strategi/TD;
+  - 2 penggemar aksi;
+  - 1–2 pemula/non-gamer.
+- **Perangkat:**
+  - Android landscape: satu ponsel kecil (≤ 6") dan satu besar;
+  - separuh sesi dengan suara, separuh tanpa suara.
+- **Save bersih:** hapus data situs/aplikasi, supaya intro dan chip FTUE muncul seperti untuk pemain baru.
+- **Instruksi tunggal:** "Mainkan sesukamu sambil ceritakan apa yang kamu pikirkan." Jangan membantu kecuali pemain macet > 60 s, dan catat setiap bantuan.
+- **Rekam layar**, catat timestamp, dan biarkan pemain bermain sampai berhenti sendiri (maks. 20 mnt).
+
+### 6.2 Lembar observasi
+
+| Momen | Yang dicatat |
+|---|---|
+| 0–10 s | Tahu harus ke mana? Komentar pertama? |
+| Target pertama | Detik ke berapa; reaksi |
+| Chip FTUE | Dibaca? Diikuti? |
+| Hari 2 | Menemukan lingkaran sendiri? Berapa lama? Bingung gold vs wood? |
+| Tombol NIGHT | Ditekan sengaja atau tak sengaja? Berapa gold tersisa? |
+| Pembuka malam 2 | Ada komentar "sepi" atau "nunggu"? |
+| Akhir run | Reaksi 5 s pertama; panel dibaca? |
+| PLAY AGAIN | Ditekan tanpa diminta dalam 10 s? |
+| Run kedua | Apa yang diubah pemain? Kapan berhenti, dan kenapa? |
+
+### 6.3 Wawancara singkat (≤ 5 mnt)
+
+1. Di game ini kamu siapa, tujuanmu apa, dan apa yang kamu lindungi? (uji 3 pertanyaan)
+2. Mau main lagi? Skala 1–5. Kenapa?
+3. Kapan paling seru? Kapan paling bosan?
+4. Apa yang ingin kamu coba di run berikutnya?
+5. Kalau ini di Play Store, kamu kasih berapa bintang, dan apa yang akan kamu tulis? Ulasan imajiner ini menangkap bahasa pemain sendiri.
+6. Besok kamu akan membukanya lagi? Tanyakan lagi lewat chat keesokan harinya: benar dibuka atau tidak (pengganti D1 sebelum ada analitik).
+
+### 6.4 Kriteria keputusan (usulan)
+
+| Hasil playtest | Keputusan |
+|---|---|
+| < 4/5 lolos uji 3 pertanyaan | perbaiki intro/caption dulu, sebelum fitur replay |
+| PLAY AGAIN tanpa diminta setelah kalah < 60 % | R4 (panel nyaris) + R14 naik prioritas |
+| Setelah menang, mayoritas berhenti | konfirmasi P0 (R1–R3, R19), lalu R7/R8 |
+| ≥ 1 salah ketuk NIGHT | R18 naik ke P0 |
+| ≥ 2 orang menyebut "sepi" / "nunggu" | R5, R6, R10 diprioritaskan |
+| Rata-rata "mau main lagi" ≥ 4 dan ≥ 50 % membuka lagi besoknya | loop inti cukup; fokus ke variasi dan tantangan |
+
+### 6.5 Memantau review setelah rilis (tanpa kode)
+
+- Tandai setiap review baru dengan kode pola di dokumen ini: U1–U12 untuk keluhan dan pujian umum, P1–P9 untuk pujian bintang 5.
+- Hitung 3 keluhan teratas tiap minggu.
+- Balas review, terutama yang menyebut bug atau kebingungan. Duck Survival dipuji karena "devs are actually replying" (P9).
+- Bandingkan bahasa ulasan imajiner dari playtest (§6.3 no. 5) dengan ulasan nyata. Bila kata-katanya sama, temuan playtest kemungkinan besar mewakili pemain sungguhan.
 
 ---
 
@@ -320,6 +561,30 @@ Angka ini hanya pembanding, bukan janji.
 - Lin, Bezemer, Zou, Hassan — *An Empirical Study of Game Reviews on the Steam Platform* (EMSE 2018) — https://sail.cs.queensu.ca/data/pdfs/EMSE2018_AnEmpiricalStudyOfGameReviewsOnTheSteamPlatform.pdf
 - GameAnalytics 2025 (ringkasan) — https://gamedevreports.substack.com/p/gameanalytics-mobile-gaming-benchmarks
 - AppHarbr via PocketGamer.biz — https://www.pocketgamer.biz/bad-ads-are-killing-the-mobile-gaming-experience-heres-how-we-fix-it/
+
+**Review positif & pedoman UX (v2):**
+- Kingdom Rush, Google Play (4,7★ / 847K; "zero bait-and-switch", "PLAY OFFLINE", keluhan "tap like crazy") — https://play.google.com/store/apps/details?id=com.ironhidegames.android.kingdomrush&hl=en_SG
+- Bloons TD 6, Google Play (4,8★; "watching them pop", easy difficulty, "you don't have to pay to win") — https://play.google.com/store/apps/details?id=com.ninjakiwi.bloonstd6&hl=en_US
+- BTD6, r/patientgamers ("easy to get into but hard to master"; info tersembunyi) — https://www.reddit.com/r/patientgamers/comments/jau2it/bloons_td_6_is_the_pinnacle_of_tower_defense/
+- Vampire Survivors, Google Play (4,4★ / 81,6K, Editors' Choice; "No forced ads") — https://play.google.com/store/apps/details?id=com.poncle.vampiresurvivors&hl=en_US
+- Vampire Survivors, App Store ("makes ads optional and rewarding"; stat page saat pause) — https://apps.apple.com/us/app/vampire-survivors/id6444525702?see-all=reviews
+- Vampire Survivors, r/VampireSurvivors (rilis mobile: offline, tanpa login, iklan setelah run) — https://www.reddit.com/r/VampireSurvivors/comments/zghl3k/vampire_survivors_out_now_on_ios_and_android_for/
+- Vampire Survivors, r/VampireSurvivors ("while feeding my 2 month old son") — https://www.reddit.com/r/VampireSurvivors/comments/10mlzp0/is_the_mobile_version_worth_it/
+- TouchArcade, Game of the Week VS (teks kecil, run kepanjangan) — https://toucharcade.com/2022/12/09/toucharcade-game-of-the-week-vampire-survivors/
+- Duck Survival, App Store (4,9★ / 4,7K; "side games", "devs are actually replying", tombol reset) — https://apps.apple.com/us/app/duck-survival/id6761410877
+- Thronefall, r/ShouldIbuythisgame ("simple controls") — https://www.reddit.com/r/ShouldIbuythisgame/comments/1ipx5i0/thronefalldo_you_suggest_this_game/
+- Thronefall, Medium (minimalisme, keterbacaan) — https://donatvatoci1.medium.com/thronefall-a-take-on-minimalism-trimming-the-fat-from-strategy-b76b2413a10c
+- Thronefall, StackUp ("I build one structure and win a wave") — https://www.stackup.org/post/review-thronefall
+- Thronefall, Steam Discussions (ikon di tempat bangun, overview) — https://steamcommunity.com/app/2239150/discussions/0/4034724996299636024/
+- Archero, GuruGamer ("one hand tied behind your back") — https://gurugamer.com/reviews/archero-review-a-simple-but-great-dungeon-crawler-3565
+- Archero, Androidsis ("ideal for playing with one hand") — https://en.androidsis.com/archero-is-an-intense-casual-in-which-you-only-have-one-life-to-succeed/
+- r/gaming (wajib online → "instant uninstall") — https://www.reddit.com/r/gaming/comments/1c39qt9/i_hate_games_forcing_an_online_connection/
+- r/AndroidGaming (game offline yang ternyata minta login) — https://www.reddit.com/r/AndroidGaming/comments/16bo2ve/offline_games_to_play_where_i_have_no_internet_at/
+- Udonis, tutorial mobile (80–90 % tidak membaca teks; ≤ 8 kata) — https://www.blog.udonis.co/mobile-marketing/mobile-games/mobile-game-tutorial
+- Playio, onboarding & D1 (gameplay ≤ 60 s, "aha" ≤ 90 s) — https://blog.playio.co/mobile-game-onboarding-retention
+- NN/g, *Dangerous UX: Consequential Options Close to Benign Options* — https://www.nngroup.com/articles/proximity-consequential-options/
+- Unity Discussions (joystick virtual vs mengambang) — https://forum.unity.com/threads/opinions-wanted-why-are-joystick-controls-so-terrible-on-mobile.431413/
+- r/gamedev (jenis joystick di layar) — https://www.reddit.com/r/gamedev/comments/1gmlemv/mobile_whats_the_best_type_of_virtual_onscreen/
 
 **Desain layar kalah & roguelite:**
 - r/gamedev — https://www.reddit.com/r/gamedev/comments/1is8ag2/were_working_on_our_death_screen_and_really/
