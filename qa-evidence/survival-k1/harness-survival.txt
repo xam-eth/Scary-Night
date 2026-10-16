@@ -40,6 +40,11 @@
   PASS  a mid-night reload keeps a fallen guard down where it fell (with its clock) and a hurt one's HP (reloaded: guard 0 down=true at (875, -635) vs (875, -635), help 0.4s, alone 6.5s; guard 1 23 HP)
   PASS  a fallen guard left alone 20 s is lost (survivors 2 → 1 at once); one still down at dawn stands up healed (lost after 20 s alone (banner=true): survivors 1, guards 1; dawn: phase day, survivors 1, reward lost 1 / rescued 1, guards 40)
   PASS  every wave body starts outside the curtain wall and off props (no crowd starts inside the bailey) (189 bodies over 6 gates + Breakers + individuals, 0 inside/on props)
+  PASS  intro: a fresh save opens on the first wave at its gate; the clock, the horde and the banners wait; the run holds (wave 1, 21 bodies, clock 2.4 s → 2.4 s, horde still true, introSeen true)
+  PASS  intro: SKIP is refused in the first beat, then hands over: HOLD THE KEEP, the night clock runs, the play frame (refused early true, clock 3.4 s, zoomMul 0.647 / 0.647)
+  PASS  intro: told once (restart and a new session play straight on); cinematics off starts the night at 0 s (restart true, new session true, off true)
+  PASS  arrival: the third dawn opens the main gate and marches 9 troops in from outside to two lines before the keep, then the end panel (gate open true, 9/9 start outside, 9 marching at 3 s, in line true, panel survival-complete)
+  PASS  arrival: a reload after the victory shows the column in line under the end panel (no replay); PLAY AGAIN clears it and shuts the gate (reload true, restart true)
   idle Night 3: 0 peak enemies / 0 Breakers, 0 kills, 0 wall damage, gate 0 HP, Hunter 100 HP; failed
   builder Night 3: 63 peak enemies / 2 Breakers, 92 kills, 847 wall damage, gate 0 HP, Hunter 105 HP; keep Lv3 993 HP, soldiers 3, buildings mine,sawmill,barracks, gateBuilt=true; complete
   PASS  idle (no input, no builds) does not survive: failed on Night 1 (THE KEEP FELL)

@@ -19,7 +19,9 @@
  * top tier (override with --quality=N) so two runs are comparable.
  * --no-progression skips the keep-level / Hunter captures, --no-towers the
  * ballista ones, --no-guards the fallen-guard ones; --towers-only /
- * --guards-only capture just those. */
+ * --guards-only capture just those. The K1 bookends (intro-keep/horde/
+ * captain, arrival-gate/lines) replay the cinematics the page otherwise
+ * skips (`?cine=0`); --no-cine leaves them out, --cine-only takes just them. */
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
@@ -62,7 +64,8 @@ page.on('pageerror', (e) => { pageErrors.push(String(e.message).slice(0, 250)); 
 const VIEW = args.landscape ? { width: 844, height: 390 } : { width: 390, height: 844 };
 await page.setViewport({ ...VIEW, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
 await page.evaluateOnNewDocument(() => { try { localStorage.clear(); } catch (_) { /* ignore */ } });
-await page.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'domcontentloaded', timeout: 180000 });
+// the scripted captures start from the night's first second (no K1 opening)
+await page.goto(`http://127.0.0.1:${PORT}/?cine=0`, { waitUntil: 'domcontentloaded', timeout: 180000 });
 await page.waitForFunction(() => {
   const g = window.__LN;
   return !!(g && g.mode === 'survival' && g.screen === 'playing' && g.survival && g.survival.phase === 'night');
@@ -136,6 +139,7 @@ const stepFrames = (n) => {
 // --towers-only: just the tower captures (each starts its own run)
 const TOWERS_ONLY = !!args['towers-only'];
 const GUARDS_ONLY = !!args['guards-only'];
+const CINE_ONLY = !!args['cine-only'];
 const finishJob = () => {
   const g = window.__LN;
   let n = 0;
@@ -157,10 +161,18 @@ const walkTo = (id) => {
 };
 // a capture that is about the UI keeps the keep standing (not the balance)
 const holdKeep = () => { const m = window.__LN.survival; m.keepHp = Math.max(m.keepHp, m.keepHpMax() * 0.55); };
-if (!TOWERS_ONLY && !GUARDS_ONLY) {
+if (!TOWERS_ONLY && !GUARDS_ONLY && !CINE_ONLY) {
 await shot('night-00s', `(${advanceTo})(0.2)`);
 await shot('night-20s', `(${advanceTo})(20)`);
-await shot('night-40s', `(${advanceTo})(40)`);
+// The idle keep falls between 38.5 and 40.5 s depending on the (unseeded)
+// RNG — node, 8 seeds — so a bare run to 40 s sometimes lands on the fail
+// panel. This capture is about the night's readability: the keep is held.
+await shot('night-40s', `(() => {
+  const g = window.__LN;
+  let n = 0;
+  while (g.survival.elapsed + 1e-6 < 40 && g.survival.phase === 'night' && n++ < 12000) { (${holdKeep})(); window.__origUpdate.call(g, 1 / 60); }
+  return (${advanceTo})(40);
+})()`);
 await shot('day-reward', `(() => {
   const g = window.__LN;
   g.survival.completeNight();
@@ -240,7 +252,7 @@ await shot('night-door', `(() => {
 
 // Progression: the keep's levels (Lv3: two banners and a roof ballista),
 // the armory rack (the Hunter's track), then a real night with both.
-if (!args['no-progression'] && !TOWERS_ONLY && !GUARDS_ONLY) {
+if (!args['no-progression'] && !TOWERS_ONLY && !GUARDS_ONLY && !CINE_ONLY) {
   await shot('prog-keep', `(() => {
     const g = window.__LN;
     const m = g.survival;
@@ -286,7 +298,7 @@ if (!args['no-progression'] && !TOWERS_ONLY && !GUARDS_ONLY) {
 // Towers: a ballista built on the main-gate circle through the real day
 // walk + BUILD button, then Lv2 firing on a real Night 2 (Hunter parked by
 // the main gate so the camera holds the tower, the gate slit and the crowd).
-if (!args['no-towers'] && !GUARDS_ONLY) {
+if (!args['no-towers'] && !GUARDS_ONLY && !CINE_ONLY) {
   await shot('tower-day', `(() => {
     const g = window.__LN;
     const m = g.survival;
@@ -332,7 +344,7 @@ if (!args['no-towers'] && !GUARDS_ONLY) {
 // inside it one guard down with the Hunter beside it (green ring = his help),
 // one down alone (red ring = time it has left), one hurt (HP bar). Then the
 // lone one's clock runs out (GUARD LOST), and dawn shows the loss.
-if (!args['no-guards'] && !TOWERS_ONLY) {
+if (!args['no-guards'] && !TOWERS_ONLY && !CINE_ONLY) {
   await shot('guard-down', `(() => {
     const g = window.__LN;
     const m = g.survival;
@@ -388,6 +400,39 @@ if (!args['no-guards'] && !TOWERS_ONLY) {
     (${stepFrames})(30);
     return { phase: m.phase, survivors: m.survivors, lost: m.lastRewards && m.lastRewards.lost, rescued: m.lastRewards && m.lastRewards.rescued, guards: m.guards.map((gd) => gd.hp) };
   })()`);
+}
+
+// K1 bookends: the opening's three shots and the relief column's march.
+// The page loads ?cine=0 (every capture above scripts the night from its
+// first second); these switch the cinematics on and replay them.
+if (!args['no-cine'] && (CINE_ONLY || (!TOWERS_ONLY && !GUARDS_ONLY))) {
+  const toCine = (t) => `(() => {
+    const g = window.__LN; const m = g.survival;
+    let n = 0;
+    while (m.cine && m.cine.t < ${t} && n++ < 2000) window.__origUpdate.call(g, 1 / 60);
+    g.render();
+    const cap = m.cineCaption();
+    return { kind: m.cine && m.cine.kind, t: m.cine && +m.cine.t.toFixed(2), caption: cap && cap.title, ui: g.ui.map((b) => b.label), zoom: +g.renderer.cam.zoom.toFixed(3), relief: m.getNightSnapshot().relief };
+  })()`;
+  await page.evaluate(() => {
+    const g = window.__LN; const m = g.survival;
+    m.cinematics = true;
+    if (g.save.survival) g.save.survival.introSeen = false;
+    m.restart();
+  });
+  await shot('intro-keep', toCine(1.2));
+  await shot('intro-horde', toCine(4.2));
+  await shot('intro-captain', toCine(6.0));
+  await page.evaluate(() => {
+    const g = window.__LN; const m = g.survival;
+    m.endCine();
+    m.keepLevel = 3; m.keepHp = m.keepHpMax();
+    m.day = 3; m.nightsCompleted = 2;
+    m.completeNight();
+  });
+  await shot('arrival-gate', toCine(1.3));
+  await shot('arrival-lines', toCine(6.2));
+  await page.evaluate(() => { const m = window.__LN.survival; m.endCine(); m.cinematics = false; });
 }
 
 fs.writeFileSync(path.join(OUT, `${TAG}metrics.json`), `${JSON.stringify({ capturedAt: new Date().toISOString(), results, pageErrors }, null, 2)}\n`);

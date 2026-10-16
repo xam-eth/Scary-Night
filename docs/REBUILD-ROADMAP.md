@@ -1,7 +1,47 @@
 # Status Rebuild 3D & Survival Milestone 1
 
 **Pembaruan:** 2026-10-16 (Asia/Makassar)
-**Status keseluruhan: MASIH TERBUKA — bukan klaim siap rilis.** Inti rebuild dunia 3D dan loop Survival Milestone 1 sudah terimplementasi. Pada 2026-10-12 arah UI/UX dan threat model dikoreksi mengikuti feedback user; pada 2026-10-15 dilakukan pass analisis gap & bug (lihat bagian "Gap & bug pass 2026-10-15"), lalu pass progres Hunter + level bangunan (lihat "Progres Hunter & level bangunan"), lalu pass menara crossbow (lihat "Menara crossbow"), lalu pass guard yang bisa jatuh (lihat "Guard bisa jatuh"; termasuk perbaikan bug gelombang yang muncul di dalam rumah), dan seluruh gate otomatis dijalankan ulang. Setelah itu user memutuskan **game landscape only** dan meminta brainstorming + design system plan sebelum koding lagi (lihat "Arah desain & orientasi" dan `docs/DESIGN-SYSTEM-PLAN.md`; belum ada perubahan kode game untuk arah ini). Revisi 1 desain (konsep api) ditolak user. Di revisi 2 user memilih konsep **K1 "Benteng Terakhir"**, pola build **jalan ke lingkaran + BUILD**, dan nada **dark stylized**, lalu menyetujui semua rekomendasi aturan dan meminta "pastikan dunianya 3D". K1 kini **terimplementasi sebagai vertical slice** (lihat "K1 Benteng Terakhir — implementasi"); acceptance manusia/perangkat untuk K1 belum ada. Atas feedback user berikutnya, Survival kini dimainkan di **dunia benteng (bailey)** baru, bukan di dalam ruangan mansion (lihat "Dunia benteng untuk Survival"). Acceptance visual/manual di perangkat, playtest manusia, dan packaging Play masih terbuka. Hasil tiap skrip hanya berlaku untuk cakupan yang benar-benar diuji.
+**Status keseluruhan: MASIH TERBUKA — bukan klaim siap rilis.** Inti rebuild dunia 3D dan loop Survival Milestone 1 sudah terimplementasi. Pada 2026-10-12 arah UI/UX dan threat model dikoreksi mengikuti feedback user; pada 2026-10-15 dilakukan pass analisis gap & bug (lihat bagian "Gap & bug pass 2026-10-15"), lalu pass progres Hunter + level bangunan (lihat "Progres Hunter & level bangunan"), lalu pass menara crossbow (lihat "Menara crossbow"), lalu pass guard yang bisa jatuh (lihat "Guard bisa jatuh"; termasuk perbaikan bug gelombang yang muncul di dalam rumah), dan seluruh gate otomatis dijalankan ulang. Setelah itu user memutuskan **game landscape only** dan meminta brainstorming + design system plan sebelum koding lagi (lihat "Arah desain & orientasi" dan `docs/DESIGN-SYSTEM-PLAN.md`; belum ada perubahan kode game untuk arah ini). Revisi 1 desain (konsep api) ditolak user. Di revisi 2 user memilih konsep **K1 "Benteng Terakhir"**, pola build **jalan ke lingkaran + BUILD**, dan nada **dark stylized**, lalu menyetujui semua rekomendasi aturan dan meminta "pastikan dunianya 3D". K1 kini **terimplementasi sebagai vertical slice** (lihat "K1 Benteng Terakhir — implementasi"); acceptance manusia/perangkat untuk K1 belum ada. Atas feedback user berikutnya, Survival kini dimainkan di **dunia benteng (bailey)** baru, bukan di dalam ruangan mansion (lihat "Dunia benteng untuk Survival"). Setelah itu kedua bookend cerita K1 dibuat: **intro sinematik** di malam pertama dan **adegan bala bantuan tiba** di fajar ke-3 (lihat "Bookend K1"); pemahaman pemain atas keduanya belum diuji. Acceptance visual/manual di perangkat, playtest manusia, dan packaging Play masih terbuka. Hasil tiap skrip hanya berlaku untuk cakupan yang benar-benar diuji.
+
+## Bookend K1: intro sinematik + bala bantuan tiba (2026-10-16)
+
+**Konteks:** user menulis "next" tanpa rincian. Dari rencana §12 fase 2 dan daftar "Belum ada" K1, dua hal ini paling dekat dengan tes 3 pertanyaan (kamu siapa / melindungi apa / tujuannya apa):
+- **intro sinematik K1** (§4) — sebelumnya hanya banner pembuka;
+- **bala bantuan tiba di fajar ke-3** — sebelumnya langsung panel menang.
+
+**Implementasi** (yang ada di kode):
+
+| Area | Isi | File |
+|---|---|---|
+| Intro (7,2 dtk) | Dimainkan di dalam run: dunia 3D tetap digambar, sedangkan jam malam, horde, dan cooldown Flare menunggu. HUD dan stick disembunyikan. Malam dibuka saat gelombang 1 sudah berkumpul di luar gerbangnya: jam melompat ke tanda gelombang pertama (4% malam) dan menggantikan detik-detik kosong. **Shot 1** puncak menara (warga + bendera) → **shot 2** horde di luar gerbang utara, gerbang di tengah frame, kamera mendorong pelan → **shot 3** Kapten (chevron kuning + ring hijau), terompet berbunyi di 5,2 dtk → frame main. Serah terima ditandai banner `HOLD THE KEEP` | `src/game/survival.js` (`CINE`, `_startIntro`, `_introKeys`, `updateCine`, `endCine`) |
+| Caption | Satu caption per shot: chip ikon + judul di atas bar bawah, baris kecil di dalam letterbox. `PROTECT THE KEEP` / `ITS PEOPLE SHELTER INSIDE`; `THE HORDE COMES AT NIGHT` / `THEY BREAK IN THROUGH THE GATES`; `YOU ARE THE CAPTAIN` / `HOLD 3 NIGHTS. REINFORCEMENTS ARE COMING` + trek 3 bulan → panji. Teks UI tetap bahasa Inggris | `src/ui/survival.js` (`drawCine`) |
+| Sekali per save | `save.survival.introSeen` diset saat intro mulai, jadi tab yang ditutup di tengah intro tidak mengulangnya. Reload tengah malam, PLAY AGAIN, dan sesi baru langsung main | `survival.js` |
+| Skip | Tap di mana saja sesudah 0,35 dtk. Satu-satunya item UI adalah `survival:SKIP` seluas layar; Enter/Space juga bisa. Skip memotong ke frame akhir. Pause/tab tersembunyi di tengah sinematik kembali ke sinematik | `ui/survival.js`, `game.js` (`resumeSurvival` → `panelFor()`) |
+| Bala bantuan (7,0 dtk) | Fajar ke-3 berjalan begini: gerbang utama terbuka. Pembawa panji + 8 prajurit tombak (4 baris × 2) berbaris dari luar gerbang (210 px/dtk) ke dua barisan di depan menara. Hunter menoleh ke mereka, warga di atas menara bersorak (lompat, dua tangan naik), fanfare berbunyi. Kamera bergerak dari gerbang + jalan luar, masuk, lalu ke menara + barisan. Caption warna fajar `REINFORCEMENTS ARRIVED!` / `THE KEEP HELD FOR 3 NIGHTS`. Sesudahnya panel menang yang sudah ada (`PLAY AGAIN`). Reload setelah menang: kolom berdiri di barisannya di bawah panel, tanpa replay. PLAY AGAIN membersihkan kolom dan menutup gerbang | `survival.js` (`_reliefColumn`, `updateRelief`, `_startArrival`) |
+| Model 3D | Prajurit: tunik biru dengan garis tabard putih, sabuk, helm baja kerucut berpinggiran, perisai bulat biru dengan pinggir + boss emas, tombak. Bagian prosedural digabung menjadi satu geometri ber-vertex-color: 1 InstancedMesh badan, 1 InstancedMesh kaki (melangkah), dan bayangan blob instanced. Pembawa panji 1 mesh + bendera swallowtail biru/emas yang berkibar. ±6 draw call, hanya ada di fase menang | `src/game/world3d.js` (`mergeColoredParts`, `_makeRelief`, `_syncRelief`) |
+| Audio | 2 suara WebAudio prosedural baru (tanpa sampel): `horn` (sawtooth 110/165 Hz + sub 55 Hz, lowpass yang membuka) dan `fanfare` (G3–C4–E4 pendek + G4 panjang, dengan oktaf atas) | `src/core/audio.js` |
+| Kamera | `renderer.setZoomAbsolute()` untuk close-up di luar batas zoom main (0,5–1,5×). Frame setiap shot diangkat setengah tinggi chip caption agar subjek tidak tertutup | `src/core/render.js`, `survival.js` (`_cineLift`) |
+| Toggle | Route asli memutar sinematik; `?cine=0` mematikan keduanya. Harness, bot, dan balance (Node) tidak memintanya. Tool QA yang men-skrip malam dari detik pertama memuat `/?cine=0` (devqa, survivalshots, envqa, layoutqa desktop) | `src/main.js`, `tools/*.mjs` |
+
+**Perbaikan yang ditemukan sambil jalan:**
+1. Fase `complete` (fajar kemenangan) dulu dirender dengan rig malam, karena hanya `day` yang dianggap siang; `land-complete.png` lama gelap (luma 105,5). Kini memakai `daylight()`: luma 117,9 dan kolom bala bantuan terlihat di belakang panel.
+2. Kadens update shadow map World3D memakai `game.time`, yang mulai ulang setiap malam dan siang. Akibatnya setelah ganti fase shadow map membeku sampai waktu fase baru menyusul waktu fase lama, misalnya sampai ±72 dtk pertama siang. Kini jam yang mundur langsung memicu refresh, lalu kadens berjalan seperti biasa; ini juga berlaku di route legacy. Percobaan pertama memakai jam `game.now` justru membuat cek envqa "door shadow maps refresh at swing start/end" gagal (refresh tambahan di tengah ayunan pintu), jadi diganti dengan cara ini.
+3. Muzzle flash tembakan terakhir malam tidak lagi terbawa ke fajar atau membeku selama sinematik.
+
+**Gate otomatis** (implementasi, bukan acceptance), dijalankan serial:
+- `node tools/harness.mjs` — bagian survival 49 PASS / 0 FAIL, termasuk 5 cek sinematik, "no runtime errors" → `qa-evidence/survival-k1/harness-survival.txt`.
+- `node tools/survival-devqa.mjs` (browser, landscape + portrait) — **22/22 PASS**, termasuk 4 cek sinematik di halaman kedua dengan sinematik menyala → `qa-evidence/survival-k1/devqa.json`.
+- `node tools/survivalshots.mjs --landscape --tag=land` — 25 shot, 0 page error. Termasuk 5 shot baru `land-intro-keep/horde/captain` dan `land-arrival-gate/lines`. `land-night-40s` kini menahan keep agar shot tetap malam: keep yang dibiarkan idle jatuh di 38,5–40,5 dtk tergantung RNG browser → `qa-evidence/survival-k1/land-*.png` (50 %) + `land-metrics.json`.
+- `node tools/envqa.mjs --mode=3d-smoke` — **PASS**. Cek "door shadow maps refresh at swing start/end": buka 1/1/2, tutup 3/3/4.
+- `node tools/layoutqa.mjs` — PASS (semua bagian, termasuk browser errors).
+- `node tools/glbtest.mjs` — PASS.
+- `node --check` — 72 file JS/MJS OK.
+
+**Belum / terbuka:**
+- Tes 3 pertanyaan dengan pemain baru (≥ 4/5) belum dilakukan. Belum dinilai juga apakah 7,2 dtk terlalu panjang atau pendek, dan apakah caption terbaca di HP.
+- Terompet/fanfare belum didengar di perangkat. Headless tidak memutar audio; yang dicek hanya bahwa tidak ada error.
+- Bala bantuan hanya adegan penutup: mereka tidak ikut bertarung. Kekalahan tetap langsung ke panel kalah, tanpa adegan.
+- Variasi pitch audio umum dan art pass production masih terbuka.
 
 ## Dunia benteng untuk Survival — revisi dunia K1 (2026-10-16)
 
@@ -131,9 +171,9 @@ Rencana spesialis lebih lemah dibanding aturan api lama (dulu semua builder 3/3)
 - FTUE portrait diperbarui: `qa-evidence/survival-ftue-*.png`.
 
 **Belum ada / masih terbuka:**
-- intro sinematik (kamera di puncak menara) — yang ada baru banner pembuka;
-- adegan bala bantuan tiba di fajar ke-3 — yang ada baru panel menang;
-- audio baru dan variasi pitch;
+- ~~intro sinematik (kamera di puncak menara)~~ — **kini ada** (lihat "Bookend K1"); belum diuji pemain;
+- ~~adegan bala bantuan tiba di fajar ke-3~~ — **kini ada** (lihat "Bookend K1"); bala bantuan belum ikut bertarung;
+- audio: terompet + fanfare prosedural kini ada; variasi pitch umum dan audio lain belum;
 - art pass production (material, prop, kehidupan);
 - playtest manusia: pemahaman "siapa/melindungi apa/tujuan", rasa tembakan, rasa wilayah panji, keterbacaan lingkaran;
 - performa perangkat (menara + lingkaran + crowd);
@@ -432,7 +472,7 @@ Ini screenshot checkpoint, bukan rekaman, dan bukan review di perangkat fisik.
 
 ## Acceptance yang masih terbuka
 
-1. **FTUE/readability:** dunia kini terang dan terbaca di screenshot headless (luma diassert di envqa), UI berbasis ikon, chip hint kontekstual ada. Belum: review di perangkat nyata, uji pemahaman pemain baru, rekaman 30 detik.
+1. **FTUE/readability:** dunia kini terang dan terbaca di screenshot headless (luma diassert di envqa), UI berbasis ikon, chip hint kontekstual ada. Sejak 2026-10-16 save baru dibuka dengan intro sinematik K1 (menara → horde di gerbang → Kapten + trek 3 malam; diassert devqa/harness, lihat "Bookend K1"). Belum: review di perangkat nyata, uji pemahaman pemain baru (tes 3 pertanyaan), rekaman 30 detik.
 2. **Combat Survival manual:** bot menggerakkan stick virtual dan Flare melalui Input; devqa kini mengetes stick mengambang, hit tombol Flare, dan pause lewat touch emulasi. Walkthrough manusia (gerak, bertahan di pintu, Flare, mempertahankan Perapian, **menolong guard yang jatuh**) belum dilakukan; apakah badge/ring waktu guard terbaca saat ramai belum dinilai pemain.
 3. **Light weakness → wilayah panji (K1, 2026-10-16):** aturan cahaya diganti user (konsep api ditolak). Kini musuh di ruangan wilayah panji menerima damage ×1,5, tanpa perlambatan, tanpa pelemahan cakaran, dan pintu tanpa diskon (diassert harness). Rasa/feel dan keterbacaan tint biru di perangkat belum dinilai.
 4. **Balance/progression:** *(K1 2026-10-16: builder 3/3, hunter-builder 3/3, keep-builder 1/3, tower-builder 0/3, idle/flare/active/passive 0/3 — lihat bagian K1; catatan di bawah ini dari aturan api lama)* target bot terpenuhi (idle/flare/active-tanpa-build kalah; upgrade Perapian saja sudah cukup menang 3/3; builder 3/3). **Pass guard:** perbaikan bug spawn (body muncul di basement/gallery) membuat permainan builder *lebih mudah* — Night 3 builder kini 0–1 musuh mencapai api (dulu 7–8) dan `hunter-builder` naik dari 1/3 ke 3/3, sehingga kesimpulan trade-off Hunter Lv3 di bawah sebagian berasal dari bug itu. Guard yang bisa jatuh menambah risiko terutama untuk permainan pasif; bot builder hampir tidak pernah kehilangan guard. Kesulitan untuk pemain yang membangun masih rendah dan kini makin jelas perlu playtest manusia sebelum mengubah biaya/ancaman. Progres kini ada (level bangunan Lv1–3 + jalur Hunter Lv1–3, diassert harness) dan bot `hunter-builder` menunjukkan trade-off nyata (Hunter Lv3 dengan Perapian Lv2 kalah 2/3 karena api padam di detik ±71). Menara (pass menara) menambah strategi menang ketiga: `tower-builder` 3/3 dengan Night 3 paling bersih (puncak 61 musuh, 0 mencapai api) — kuat, tetapi tidak mengubah peta menang/kalah. Masih terbuka: bot builder yang memeluk api tetap tidak kehilangan HP (100/100) dan tidak tercakar di Night 3; cadangan Oil 19 membuat pilihan Day 3 sangat ketat (Perapian Lv3 18 + Hunter Lv2 14 = 32 kurang 1 Oil) — biaya sengaja tidak diubah tanpa playtest manusia; rasa progres (apakah upgrade terasa) belum dinilai di perangkat.

@@ -234,7 +234,7 @@ export class Game {
     this.player.applyUpgrades(this.save);
     this.applySettings();
     if (this.mode === 'survival') {
-      this.survival = new SurvivalMode(this, { nightDuration: options.nightDuration });
+      this.survival = new SurvivalMode(this, { nightDuration: options.nightDuration, cinematics: options.cinematics === true });
     } else this.survival = null;
     this.decals.canvas.getContext('2d');
     window.__LN = this;   // used by the automated playtest harness
@@ -2824,9 +2824,8 @@ export class Game {
     if (this.screen !== 'paused') return;
     this.paused = false;
     this.screen = 'playing';
-    this.uiPanel = this.survival.phase === 'day' ? 'survival-day'
-      : this.survival.phase === 'complete' ? 'survival-complete'
-        : this.survival.phase === 'failed' ? 'survival-failed' : null;
+    // a cinematic paused half-way (hidden tab) resumes where it stood
+    this.uiPanel = this.survival.panelFor();
     this.input.gameplay = (this.survival.phase === 'night' && !this.uiPanel)
       || (this.survival.phase === 'day' && !this.survival.rewardPending());
   }

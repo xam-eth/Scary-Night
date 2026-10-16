@@ -124,6 +124,13 @@ export class Renderer {
     this._applyZoom();
   }
 
+  /** A cinematic sets the zoom itself (wider/closer than play allows). */
+  setZoomAbsolute(zoom) {
+    const base = this.baseZoom || 1;
+    this.zoomMul = clamp((Number(zoom) || base) / base, 0.25, 3);
+    this._applyZoom();
+  }
+
   /* ---------------- camera ---------------- */
   snapCamera(x, y) {
     this.cam.x = x; this.cam.y = y;

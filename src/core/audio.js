@@ -571,6 +571,46 @@ S.dawnbreak = (t, o) => {
   osc(t, 1.2, { out: o.out, gain: 0.16 * v, type: 'sine', freq: 70, to: 46, pan: 0, rev: 0.6, attack: 0.01 });
 };
 
+/* K1 bookends. A brass voice: sawtooth through a lowpass that opens as the
+ * note swells, held, then let go (synthesised here, no sample). */
+function brass(t, dur, freq, gain, o, { pan = 0, rise = 0.2, open = 1500, detune = 0 } = {}) {
+  const v = ctx.createOscillator(); v.type = 'sawtooth'; v.detune.value = detune;
+  v.frequency.setValueAtTime(freq * 0.95, t);
+  v.frequency.exponentialRampToValueAtTime(freq, t + Math.min(0.2, dur * 0.4));
+  const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.Q.value = 1.1;
+  f.frequency.setValueAtTime(280, t);
+  f.frequency.exponentialRampToValueAtTime(open, t + rise + 0.12);
+  f.frequency.exponentialRampToValueAtTime(Math.max(300, open * 0.45), t + dur);
+  const g = ctx.createGain();
+  const p = panNode(pan);
+  v.connect(f); f.connect(g); g.connect(p); p.connect(o.out);
+  const rg = ctx.createGain(); rg.gain.value = 0.65; p.connect(rg); rg.connect(revSend);
+  const peak = Math.max(0.0002, gain);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(peak, t + rise);
+  g.gain.setValueAtTime(peak, t + Math.max(rise, dur - 0.35));
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  v.start(t); v.stop(t + dur + 0.05);
+}
+
+/* The captain's horn over the keep (the opening): one long call, a fifth on top. */
+S.horn = (t, o) => {
+  const v = o.vol ?? 1;
+  brass(t, 1.9, 110, 0.13 * v, o, { rise: 0.28, open: 1300 });
+  brass(t + 0.04, 1.8, 165, 0.06 * v, o, { rise: 0.32, open: 1500, pan: 0.12, detune: 4 });
+  osc(t, 1.8, { out: o.out, gain: 0.05 * v, type: 'sine', freq: 55, pan: 0, rev: 0.5, attack: 0.25 });
+};
+
+/* The reinforcements at the gate: three quick notes and a held fourth. */
+S.fanfare = (t, o) => {
+  const v = o.vol ?? 1;
+  [[0, 196, 0.2], [0.17, 261.63, 0.2], [0.34, 329.63, 0.2], [0.52, 392, 1.5]].forEach(([d, f, dur], i) => {
+    brass(t + d, dur, f, 0.1 * v, o, { rise: 0.04, open: 2200, pan: (i - 1.5) * 0.12 });
+    brass(t + d, dur, f * 2, 0.035 * v, o, { rise: 0.05, open: 3000, pan: -(i - 1.5) * 0.12, detune: 5 });
+  });
+  osc(t + 0.52, 1.4, { out: o.out, gain: 0.09 * v, type: 'sine', freq: 98, pan: 0, rev: 0.6, attack: 0.04 });
+};
+
 function distCurve(amount) {
   const n = 1024, curve = new Float32Array(n);
   for (let i = 0; i < n; i++) {

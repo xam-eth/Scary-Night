@@ -113,6 +113,41 @@ function mergeStaticByMaterial(group, flat = () => false) {
   }
 }
 
+/**
+ * Merge primitive parts into one vertex-coloured geometry (a figure drawn by
+ * one InstancedMesh): rows are [geometry, hex colour, x, y, z, rx, ry, rz].
+ */
+function mergeColoredParts(rows) {
+  const geos = [];
+  const m = new THREE.Matrix4();
+  const q = new THREE.Quaternion();
+  const e = new THREE.Euler();
+  const one = new THREE.Vector3(1, 1, 1);
+  for (const [source, hex, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0] of rows) {
+    const geo = source.index ? source.toNonIndexed() : source.clone();
+    source.dispose();
+    geo.applyMatrix4(m.compose(new THREE.Vector3(x, y, z), q.setFromEuler(e.set(rx, ry, rz)), one));
+    const color = new THREE.Color(hex);
+    const n = geo.attributes.position.count;
+    const colors = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { colors[i * 3] = color.r; colors[i * 3 + 1] = color.g; colors[i * 3 + 2] = color.b; }
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    geos.push(geo);
+  }
+  let count = 0;
+  for (const geo of geos) count += geo.attributes.position.count;
+  const merged = new THREE.BufferGeometry();
+  for (const name of ['position', 'normal', 'color']) {
+    const out = new Float32Array(count * 3);
+    let at = 0;
+    for (const geo of geos) { out.set(geo.attributes[name].array, at); at += geo.attributes[name].array.length; }
+    merged.setAttribute(name, new THREE.BufferAttribute(out, 3));
+  }
+  for (const geo of geos) geo.dispose();
+  merged.computeBoundingSphere();
+  return merged;
+}
+
 class World3DRuntime {
   constructor() {
     this.host = null;
@@ -464,7 +499,7 @@ class World3DRuntime {
 
   /** Survival light rig: bright, readable, phase-tinted. */
   _survivalRig(game) {
-    const day = !!(game.survival && game.survival.phase === 'day');
+    const day = !!(game.survival && game.survival.daylight());
     if (day) {
       return {
         exposure: 1.18, lamp: 1.05, lampColor: 0xfff1da, hemi: 1.25, sky: 0xfff4e0, ground: 0x8c7a5e,
@@ -528,7 +563,7 @@ class World3DRuntime {
       this.playerPointLight.position.set(p.x, 44, p.y);
       this.playerPointLight.distance = survival ? 280 : Math.max(100, (p.lightR || 150) * 1.35);
       this.playerPointLight.intensity = survival
-        ? (game.survival && game.survival.phase === 'day' ? 0.35 : 1.05)
+        ? (game.survival && game.survival.daylight() ? 0.35 : 1.05)
         : clamp((p.lightI == null ? 0.45 : p.lightI) * ambientFactor * 1.35, 0, 1.25);
       this.playerPointLight.color.set(survival ? 0xfff0d2
         : p.kit && p.kit.blessed ? 0xffdda0 : (p.bloodPct < 0.24 ? 0x9aa9e8 : 0x9aa7c7));
@@ -576,6 +611,11 @@ class World3DRuntime {
     // limiting map refreshes to a cadence that avoids a full extra pass every
     // rendered frame; lightning and the first frame always refresh immediately.
     const shadowCadence = game.quality >= 3 ? 0.08 : 0.14;
+    // `game.time` restarts with every night and day (Survival: and stands at
+    // 0 on the end panels). A clock that ran backwards refreshes at once —
+    // the map used to stay frozen until the new phase caught up with the old
+    // one's time (a whole night's worth of seconds into the day).
+    if (game.time < this.lastShadowUpdate) this.lastShadowUpdate = Number.NEGATIVE_INFINITY;
     if (EnvKit.renderer && EnvKit.renderer.shadowMap &&
         (game.time - this.lastShadowUpdate >= shadowCadence || lightning > 0.02)) {
       EnvKit.renderer.shadowMap.needsUpdate = true;
@@ -1178,12 +1218,15 @@ class World3DRuntime {
       ud.yaw.rotation.y = Math.PI / 2 - b.aim;
       ud.stock.position.z = -b.shotT * 34;
     }
-    // the townsfolk: wave (safe), point (threat), jump (attacked), huddle (critical)
+    // the townsfolk: wave (safe), point (threat), jump (attacked), huddle
+    // (critical) — and cheer, both arms up, the morning help arrives
+    const cheering = mode.phase === 'complete' && !fallen;
     for (const v of ud.villagers) {
       v.person.visible = !fallen;
       const k = t * 6 + v.seed;
       let lift = 0, armA = 0.2, armB = 0.2, squash = 1;
-      if (state === 'safe') { armA = 2.6 + Math.sin(k) * 0.5; armB = 0.25; }
+      if (cheering) { lift = Math.abs(Math.sin(k * 1.3)) * 7; armA = 2.7 + Math.sin(k * 2) * 0.35; armB = 2.7 - Math.sin(k * 2) * 0.35; }
+      else if (state === 'safe') { armA = 2.6 + Math.sin(k) * 0.5; armB = 0.25; }
       else if (state === 'threat') { armA = 1.6; armB = 1.6; }
       else if (state === 'attacked') { lift = Math.abs(Math.sin(k * 1.6)) * 6; armA = 2.9; armB = 2.9; }
       else if (state === 'critical') { squash = 0.82; armA = 0.9; armB = 0.9; }
@@ -1524,7 +1567,7 @@ class World3DRuntime {
     if (!this.fortressDressing) this.fortressDressing = this._makeFortressDressing(m);
     const ud = this.fortressDressing.userData;
     const t = game.now || 0;
-    ud.yardMat.color.setHex(mode.phase === 'day' ? 0x86a35a : 0x4b6448);
+    ud.yardMat.color.setHex(mode.daylight() ? 0x86a35a : 0x4b6448);
     for (const f of ud.flags) f.flag.rotation.y = Math.sin(t * 1.7 + f.seed) * 0.35;
   }
 
@@ -1725,12 +1768,133 @@ class World3DRuntime {
     for (let i = list.length; i < this.survivalGuardMeshes.length; i++) this.survivalGuardMeshes[i].visible = false;
   }
 
+  /**
+   * The relief column (K1's third dawn): spearmen in royal blue with round
+   * shields and kettle helms, and one banner-bearer carrying the keep's own
+   * swallowtail. Spearmen share two InstancedMeshes (body, legs); the bearer
+   * is one figure and the banner. Soft blob shadows ground them.
+   */
+  _makeRelief() {
+    const cap = 16;
+    const C = { tabard: 0x2f5fd8, trim: 0xf2efe6, belt: 0x4a3420, skin: 0xf2c9a0, steel: 0xb9c2cf, wood: 0x8a5a30, shield: 0x2448b0, gold: 0xffd24a, legs: 0x2c3140 };
+    const torso = (rows) => {
+      rows.push(
+        [new THREE.CylinderGeometry(9.5, 12, 26, 8), C.tabard, 0, 28, 0],
+        [new THREE.BoxGeometry(6, 21, 1.6), C.trim, 0, 27, 10.6],
+        [new THREE.CylinderGeometry(12.1, 12.1, 3, 8), C.belt, 0, 21, 0],
+        [new THREE.SphereGeometry(8.5, 12, 8), C.skin, 0, 49, 0],
+        [new THREE.CylinderGeometry(9.6, 10, 6, 10), C.steel, 0, 53, 0],
+        [new THREE.ConeGeometry(9.8, 9, 10), C.steel, 0, 60.5, 0],
+        [new THREE.CylinderGeometry(13.5, 13.5, 1.6, 12), C.steel, 0, 50.2, 0],
+        [new THREE.BoxGeometry(3.6, 14, 3.6), C.tabard, 11.5, 31, 2, -0.35, 0, 0],
+      );
+      return rows;
+    };
+    const spearRows = torso([]);
+    spearRows.push(
+      [new THREE.CylinderGeometry(11, 11, 2.4, 14), C.shield, -12.5, 30, 5, Math.PI / 2, 0, 0],
+      [new THREE.CylinderGeometry(11.8, 11.8, 1.2, 14), C.gold, -12.5, 30, 4.2, Math.PI / 2, 0, 0],
+      [new THREE.SphereGeometry(3.2, 8, 6), C.gold, -12.5, 30, 6.8],
+      [new THREE.CylinderGeometry(1.3, 1.3, 88, 6), C.wood, 13, 46, 6],
+      [new THREE.ConeGeometry(3, 11, 6), C.steel, 13, 95, 6],
+    );
+    const bearerRows = torso([]);
+    bearerRows.push([new THREE.CylinderGeometry(1.8, 1.8, 132, 6), C.wood, 12, 62, 4]);
+    bearerRows.push([new THREE.SphereGeometry(3.4, 8, 6), C.gold, 12, 129, 4]);
+    const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.72, flatShading: true });
+    const legGeo = mergeColoredParts([[new THREE.BoxGeometry(6.5, 17, 6.5).translate(0, -8.5, 0), C.legs]]);
+    const inst = (geo, count, name) => {
+      const mesh = new THREE.InstancedMesh(geo, mat, count);
+      mesh.name = name;
+      mesh.count = 0;
+      mesh.frustumCulled = false;
+      mesh.castShadow = false;
+      mesh.receiveShadow = true;
+      mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      this.root.add(mesh);
+      return mesh;
+    };
+    const blobGeo = new THREE.CircleGeometry(15, 16).rotateX(-Math.PI / 2);
+    const blobMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.32, depthWrite: false });
+    const blobs = new THREE.InstancedMesh(blobGeo, blobMat, cap);
+    blobs.name = 'survival-relief-shadows';
+    blobs.count = 0;
+    blobs.frustumCulled = false;
+    blobs.renderOrder = 2;
+    blobs.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.root.add(blobs);
+    const bearer = new THREE.Mesh(mergeColoredParts(bearerRows), mat);
+    bearer.name = 'survival-relief-bearer';
+    bearer.visible = false;
+    this.root.add(bearer);
+    // the keep's banner on the pole: blue swallowtail with a gold trim
+    const shape = new THREE.Shape();
+    shape.moveTo(0, 0); shape.lineTo(58, 0); shape.lineTo(48, -17); shape.lineTo(58, -34); shape.lineTo(0, -34); shape.closePath();
+    const flag = new THREE.Group();
+    const cloth = new THREE.Mesh(new THREE.ShapeGeometry(shape), new THREE.MeshStandardMaterial({ color: 0x3e6bff, emissive: 0x1a3aa8, emissiveIntensity: 0.4, roughness: 0.65, side: THREE.DoubleSide }));
+    const trim = new THREE.Mesh(new THREE.BoxGeometry(58, 3.5, 1.2), new THREE.MeshStandardMaterial({ color: 0xffd24a, emissive: 0x8a6000, emissiveIntensity: 0.35, metalness: 0.4, roughness: 0.45 }));
+    trim.position.set(29, -17, 0.5);
+    flag.add(cloth, trim);
+    flag.position.set(12, 124, 4);
+    bearer.add(flag);
+    return {
+      cap, bodies: inst(mergeColoredParts(spearRows), cap, 'survival-relief-spearmen'),
+      legs: inst(legGeo, cap * 2, 'survival-relief-legs'), blobs, bearer, flag,
+      base: new THREE.Object3D(), part: new THREE.Object3D(), matrix: new THREE.Matrix4(),
+    };
+  }
+
+  _syncRelief(game, mode) {
+    const list = mode && mode.reinforcements;
+    const show = !!(list && list.length) && mode.phase === 'complete' && (game.screen === 'playing' || game.screen === 'paused');
+    if (!show) {
+      const r = this.relief;
+      if (r) { r.bodies.count = 0; r.legs.count = 0; r.blobs.count = 0; r.bodies.visible = r.legs.visible = r.blobs.visible = false; r.bearer.visible = false; }
+      return;
+    }
+    if (!this.relief) this.relief = this._makeRelief();
+    const r = this.relief;
+    const { base, part, matrix } = r;
+    const t = game.now || 0;
+    let n = 0, legs = 0, blobs = 0;
+    r.bearer.visible = false;
+    for (const s of list) {
+      if (blobs >= r.cap) break;
+      const stride = s.moving ? Math.sin(s.walkT * 11) : 0;
+      base.position.set(s.x, s.moving ? Math.abs(stride) * 2.6 : 0, s.y);
+      base.rotation.set(0, Math.PI / 2 - s.angle, 0);
+      base.scale.setScalar(1.12);
+      base.updateMatrix();
+      part.position.set(s.x, 0.6, s.y); part.rotation.set(0, 0, 0); part.scale.setScalar(1); part.updateMatrix();
+      r.blobs.setMatrixAt(blobs++, part.matrix);
+      for (let side = 0; side < 2; side++) {
+        const sign = side === 0 ? -1 : 1;
+        part.position.set(sign * 4.6, 17, 0);
+        part.rotation.set(stride * 0.62 * sign, 0, 0);
+        part.updateMatrix();
+        matrix.multiplyMatrices(base.matrix, part.matrix);
+        r.legs.setMatrixAt(legs++, matrix);
+      }
+      if (s.role === 'banner') {
+        r.bearer.visible = true;
+        r.bearer.position.copy(base.position);
+        r.bearer.rotation.copy(base.rotation);
+        r.bearer.scale.copy(base.scale);
+        r.flag.rotation.y = Math.sin(t * 2.4 + 0.6) * 0.32 - (s.moving ? 0.25 : 0);
+        continue;
+      }
+      r.bodies.setMatrixAt(n++, base.matrix);
+    }
+    r.bodies.count = n; r.legs.count = legs; r.blobs.count = blobs;
+    for (const mesh of [r.bodies, r.legs, r.blobs]) { mesh.visible = mesh.count > 0; mesh.instanceMatrix.needsUpdate = true; }
+  }
+
   _syncSurvivalObjects(game) {
     const mode = game.survival;
     if (!mode) return;
     if (!this.survivalYard) this.survivalYard = this._makeSurvivalYard();
     this.survivalYard.visible = true;
-    this.survivalYard.material.color.setHex(mode.phase === 'day' ? 0x7c9a55 : 0x3f5a46);
+    this.survivalYard.material.color.setHex(mode.daylight() ? 0x7c9a55 : 0x3f5a46);
 
     this._syncFortressDressing(game, mode);
     this._syncSurvivalKeep(game, mode);
@@ -1780,6 +1944,7 @@ class World3DRuntime {
     }
 
     this._syncSurvivalGuards(game, mode);
+    this._syncRelief(game, mode);
 
     this._syncExteriorPalette(true);
     if (!this.survivalPlayerRing) this.survivalPlayerRing = this._makeSurvivalPlayerRing();
@@ -2754,6 +2919,7 @@ class World3DRuntime {
       visibleSurvivalGhosts: [...this.survivalCircles.values()].filter((rec) => rec.ghost && rec.ghost.visible).length,
       visibleSurvivalBuildings: [...this.survivalBuildingMeshes.values()].filter((object) => object.visible).length,
       survivalGateVisible: !!(this.survivalGateMesh && this.survivalGateMesh.visible),
+      visibleReliefTroops: this.relief ? (this.relief.bodies.visible ? this.relief.bodies.count : 0) + (this.relief.bearer.visible ? 1 : 0) : 0,
       visibleVariants3D: [...this.variantRings.values()].filter((object) => object.visible).length,
       visibleFoodCues3D: [...this.foodCues.values()].filter((cue) => cue.group.visible).length,
       visibleDrinkTrails3D: [...this.drinkTrails.values()].filter((trail) => trail.group.visible).length,

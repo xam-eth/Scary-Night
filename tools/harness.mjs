@@ -1357,6 +1357,70 @@ async function runSurvivalMilestone() {
   }
   const guardFallPass = fallChecks.length === 8 && fallChecks.every(Boolean);
 
+  // ---- K1 bookends: the opening and the reinforcements' arrival ----
+  // (the route plays them; every other battery runs without: cinematics off)
+  const cineChecks = [];
+  const cineCheck = (name, ok, detail) => {
+    cineChecks.push(!!ok);
+    console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} (${detail})`);
+  };
+  {
+    const { CINE } = await import('../src/game/survival.js');
+    const step = 1 / 60;
+    const run = (game, seconds) => { for (let i = 0; i < Math.round(seconds * 60); i++) game.update(step); };
+    window.localStorage.removeItem('lastnight.save.v1');
+    const a = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60, cinematics: true });
+    a.renderer.resize(844, 390, 1);
+    const am = a.survival;
+    a.beginNight();
+    const intro = { kind: am.cine && am.cine.kind, panel: a.uiPanel, gameplay: a.input.gameplay, wave: am.waveIndex, bodies: a.enemies.length, elapsed: am.elapsed, banner: !!am.banner, seen: !!(a.save.survival && a.save.survival.introSeen) };
+    const before = a.enemies.map((e) => [e.x, e.y]);
+    run(a, 1.5);
+    const still = a.enemies.every((e, i) => Math.hypot(e.x - before[i][0], e.y - before[i][1]) < 0.01);
+    cineCheck('intro: a fresh save opens on the first wave at its gate; the clock, the horde and the banners wait; the run holds',
+      intro.kind === 'intro' && intro.panel === 'survival-cine' && !intro.gameplay && intro.wave === 1 && intro.bodies === 21 && !intro.banner && intro.seen
+        && am.elapsed === intro.elapsed && still && am.cineCaption() && am.cineCaption().title === 'PROTECT THE KEEP',
+      `wave ${intro.wave}, ${intro.bodies} bodies, clock ${intro.elapsed.toFixed(1)} s → ${am.elapsed.toFixed(1)} s, horde still ${still}, introSeen ${intro.seen}`);
+    const refused = (() => { const b = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60, cinematics: true }); b.survival.restart(); b.save.survival.introSeen = false; b.survival.phase = 'night'; b.survival.elapsed = 0; b.survival.enter(); b.update(step); return b.survival.skipCine() === false && !!b.survival.cine; })();
+    const skipped = am.skipCine();
+    run(a, 1);
+    cineCheck('intro: SKIP is refused in the first beat, then hands over: HOLD THE KEEP, the night clock runs, the play frame',
+      refused && skipped && !am.cine && a.uiPanel === null && a.input.gameplay && am.banner && am.banner.text === 'HOLD THE KEEP' && am.elapsed > intro.elapsed + 0.9
+        && Math.abs(a.renderer.zoomMul - am.frameMul(true)) < 0.06,
+      `refused early ${refused}, clock ${am.elapsed.toFixed(1)} s, zoomMul ${a.renderer.zoomMul.toFixed(3)} / ${am.frameMul(true).toFixed(3)}`);
+    am.restart();
+    const again = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60, cinematics: true });
+    again.beginNight();
+    const off = (() => { window.localStorage.removeItem('lastnight.save.v1'); const c = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 }); c.beginNight(); return !c.survival.cine && c.survival.elapsed === 0 && c.survival.waveIndex === 0; })();
+    cineCheck('intro: told once (restart and a new session play straight on); cinematics off starts the night at 0 s',
+      !am.cine && !again.survival.cine && off, `restart ${!am.cine}, new session ${!again.survival.cine}, off ${off}`);
+    window.localStorage.removeItem('lastnight.save.v1');
+    const d = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60, cinematics: true });
+    d.renderer.resize(844, 390, 1);
+    const dm = d.survival;
+    d.beginNight(); dm.endCine();
+    dm.day = 3; dm.nightsCompleted = 2;
+    dm.completeNight();
+    const start = { kind: dm.cine && dm.cine.kind, panel: d.uiPanel, gate: !!dm.mainGate().open, troops: dm.reinforcements ? dm.reinforcements.length : 0, outside: dm.reinforcements ? dm.reinforcements.filter((t) => t.y > dm.mainGate().y).length : 0 };
+    run(d, 3);
+    const marching = dm.reinforcements.filter((t) => t.moving).length;
+    run(d, CINE.arrival.dur - 3 + 0.1);
+    const lined = dm.reinforcements.every((t) => t.i === t.path.length && Math.abs(t.angle - t.face) < 1e-6);
+    cineCheck('arrival: the third dawn opens the main gate and marches 9 troops in from outside to two lines before the keep, then the end panel',
+      start.kind === 'arrival' && start.panel === 'survival-cine' && start.gate && start.troops === 9 && start.outside === 9 && marching > 0
+        && !dm.cine && d.uiPanel === 'survival-complete' && lined && dm.daylight(),
+      `gate open ${start.gate}, ${start.outside}/9 start outside, ${marching} marching at 3 s, in line ${lined}, panel ${d.uiPanel}`);
+    const e = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60, cinematics: true });
+    e.beginNight();
+    const reloadOk = e.survival.phase === 'complete' && !e.survival.cine && e.uiPanel === 'survival-complete' && e.survival.reinforcements && e.survival.reinforcements.every((t) => t.i === t.path.length);
+    e.survival.restart();
+    const restartOk = !e.survival.reinforcements && !e.survival.cine && e.survival.phase === 'night' && !e.survival.mainGate().open;
+    cineCheck('arrival: a reload after the victory shows the column in line under the end panel (no replay); PLAY AGAIN clears it and shuts the gate',
+      reloadOk && restartOk, `reload ${reloadOk}, restart ${restartOk}`);
+    window.localStorage.removeItem('lastnight.save.v1');
+  }
+  const cinePass = cineChecks.length === 5 && cineChecks.every(Boolean);
+
   console.log(`  idle Night 3: ${idle.nightThree.peakEnemies} peak enemies / ${idle.nightThree.peakBreakers} Breakers, ${idle.nightThree.kills} kills, ${idle.nightThree.wallDamage} wall damage, gate ${idle.nightThree.gateHp} HP, Hunter ${idle.nightThree.playerHp} HP; ${idle.phase}`);
   console.log(`  builder Night 3: ${builder.nightThree.peakEnemies} peak enemies / ${builder.nightThree.peakBreakers} Breakers, ${builder.nightThree.kills} kills, ${builder.nightThree.wallDamage} wall damage, gate ${builder.nightThree.gateHp} HP, Hunter ${builder.nightThree.playerHp} HP; keep Lv${builder.keepLevel} ${builder.keepHp} HP, soldiers ${builder.survivors}, buildings ${builder.buildings.join(',') || 'none'}, gateBuilt=${builder.gateBuilt}; ${builder.phase}`);
   // Balance target (M1 rebuild, K1): doing nothing must not win; an engaged
@@ -1369,7 +1433,7 @@ async function runSurvivalMilestone() {
     && hunterAutoShot && hunterRealLos && hunterSkill
     && idleLoses && builder.complete && builder.keepLevel === 3
     && builder.queueLockVerified && builder.sawmillBuilt && builder.gateBuilt && builder.barracksBuilt
-    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass
+    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass
     && builder.upgrades[0].level === 1 && builder.upgrades[0].rooms === 5
     && builder.upgrades[builder.upgrades.length - 1].level === 3 && builder.upgrades[builder.upgrades.length - 1].rooms === 9
     && builder.upgrades.every((item, i, all) => i === 0 || item.level >= all[i - 1].level);

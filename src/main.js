@@ -24,7 +24,10 @@ const query = new URLSearchParams(location.search);
 const gameMode = query.get('legacy') === '1' || query.get('mode') === 'legacy' ? 'legacy' : 'survival';
 const requestedNight = Number(query.get('night'));
 const nightDuration = Number.isFinite(requestedNight) && requestedNight > 0 ? requestedNight : undefined;
-const game = new Game(canvas, { mode: gameMode, nightDuration });
+// K1's opening and the reinforcements' arrival play in a real run; QA tools
+// that script the night from its first second pass `?cine=0`.
+const cinematics = query.get('cine') !== '0';
+const game = new Game(canvas, { mode: gameMode, nightDuration, cinematics });
 const input = game.input;
 World3D.bindStage(canvas.parentElement);
 Ads.init(game);
@@ -95,6 +98,7 @@ window.__LN_API = {
   beginNight: () => game.beginNight(),
   skipIntro: () => {
     if (game.screen === 'intro') game.introT = (game.introLen || 3) + 1;
+    if (game.survival && game.survival.cine) game.survival.endCine();
     // Capture asks for the night, so anything the narrator would have queued
     // behind the intro stays shut too.
     game.skipNarration();

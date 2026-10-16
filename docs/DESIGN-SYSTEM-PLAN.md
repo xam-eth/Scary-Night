@@ -2,7 +2,7 @@
 
 **Tanggal:** 2026-10-16 (Asia/Makassar) · **Revisi 2**
 
-**Status:** arah disetujui. **K1 terimplementasi sebagai vertical slice (2026-10-16)** setelah user menyetujui semua rekomendasi dan meminta "pastikan dunianya 3D". Detail implementasi, QA, tuning yang berbeda dari dokumen ini, dan hal yang belum ada ada di `docs/REBUILD-ROADMAP.md` (bagian "K1 Benteng Terakhir — implementasi"). Acceptance manusia/perangkat belum ada. **Revisi dunia (2026-10-16):** atas feedback user ("terasa aneh barack dll ada di dalam ruangan … dunianya disesuaikan"), Survival kini dimainkan di **dunia benteng (bailey)** baru: alternatif "halaman luar" di §3.4.2, yang dulu tidak direkomendasikan, kini dipilih. Mansion hanya dipakai route `?legacy=1`.
+**Status:** arah disetujui. **K1 terimplementasi sebagai vertical slice (2026-10-16)** setelah user menyetujui semua rekomendasi dan meminta "pastikan dunianya 3D". Detail implementasi, QA, tuning yang berbeda dari dokumen ini, dan hal yang belum ada ada di `docs/REBUILD-ROADMAP.md` (bagian "K1 Benteng Terakhir — implementasi"). Acceptance manusia/perangkat belum ada. **Revisi dunia (2026-10-16):** atas feedback user ("terasa aneh barack dll ada di dalam ruangan … dunianya disesuaikan"), Survival kini dimainkan di **dunia benteng (bailey)** baru: alternatif "halaman luar" di §3.4.2, yang dulu tidak direkomendasikan, kini dipilih. Mansion hanya dipakai route `?legacy=1`. **Bookend K1 (2026-10-16):** intro sinematik §4 dan adegan bala bantuan di fajar ke-3 kini ada (roadmap, bagian "Bookend K1"; `?cine=0` mematikannya untuk QA).
 
 **Yang sudah diputuskan user:**
 - Game **landscape only**. `manifest.webmanifest` sudah `orientation: landscape`; layout portrait tidak lagi menjadi target desain.
@@ -384,6 +384,14 @@ Pola ini dipakai untuk semua konsep:
 | K4 | Telur bergoyang dan satu retakan bercahaya. Penjinak melindunginya, pendamping kecil mendesis ke arah pintu. | `PROTECT THE EGG. IT HATCHES ON DAY 3` |
 
 Setelah intro: chip FTUE yang sudah ada (move, auto-shot, Flare) tetap dipakai. Di fajar pertama, penanda tujuan maju satu langkah (pasukan bantuan mendekat / komponen terpasang / helikopter di radio / retakan bertambah).
+
+**K1 terimplementasi 2026-10-16** (detail dan batas bukti: roadmap, bagian "Bookend K1"). Intro berjalan di dalam run selama 7,2 dtk: dunia 3D tetap digambar, jam malam menunggu.
+- **Shot 1** — puncak menara dari dekat: warga dan bendera. Caption `PROTECT THE KEEP`, baris bawah `ITS PEOPLE SHELTER INSIDE`.
+- **Shot 2** — horde gelombang 1 sudah berkumpul di luar gerbang utara, gerbang di tengah frame, kamera mendorong pelan. Caption `THE HORDE COMES AT NIGHT`, baris bawah `THEY BREAK IN THROUGH THE GATES`.
+- **Shot 3** — kamera turun ke Kapten (chevron kuning + ring hijau) dan terompet berbunyi. Caption `YOU ARE THE CAPTAIN`, baris bawah `HOLD 3 NIGHTS. REINFORCEMENTS ARE COMING`, lengkap dengan trek 3 bulan → panji.
+- **Serah terima** — banner `HOLD THE KEEP`.
+
+Pola §4 diikuti: diputar sekali per save, tap di mana saja untuk lewat (setelah 0,35 dtk), tanpa tombol tambahan. Pasangannya, di fajar ke-3, adalah adegan **bala bantuan tiba**: gerbang utama terbuka, pembawa panji dan 8 tombak berbaris masuk dan membentuk dua barisan di depan menara, warga bersorak, fanfare berbunyi. Setelah itu baru panel menang.
 
 ---
 
@@ -882,7 +890,7 @@ Target usulan, arah **"horde power fantasy"**:
 |---|---|---|---|
 | 0. Keputusan | Konsep, pola build, nada visual | Tidak | **Selesai 2026-10-16:** K1 + P1 + dark stylized |
 | 1. Artefak desain | Konfirmasi aturan §3.4.5 + keputusan §13; mockup K1 siang (sudah: `k1-mockup-dark-day.jpg`) + malam + pratinjau + upgrade + fajar; sketsa Menara Utama 3 level × 5 status; sheet ikon (emas, menara utama, lingkaran, chevron, bulan/matahari/petir, panji bantuan); storyboard intro K1 | Tidak | User menyetujui mockup + aturan |
-| 2. Vertical slice | Menara Utama di Main Hall + HP + 5 status; Hunter berjalan di siang hari + lingkaran bertipe (P1) end-to-end; layout landscape; juice tembakan; intro K1. **Terimplementasi 2026-10-16** (semua lingkaran, bukan hanya menara; intro baru berupa banner) | Ya | Tes 3 pertanyaan ≥ 4/5; tes lingkaran ≥ 4/5; harness/devqa/layoutqa hijau; tombol kontekstual di zona jempol, tanpa panel di 844×390 |
+| 2. Vertical slice | Menara Utama di Main Hall + HP + 5 status; Hunter berjalan di siang hari + lingkaran bertipe (P1) end-to-end; layout landscape; juice tembakan; intro K1. **Terimplementasi 2026-10-16** (semua lingkaran, bukan hanya menara; dunia benteng menggantikan Main Hall; intro sinematik 3 shot + adegan bala bantuan di fajar ke-3, lihat §4) | Ya | Tes 3 pertanyaan ≥ 4/5; tes lingkaran ≥ 4/5; harness/devqa/layoutqa hijau; tombol kontekstual di zona jempol, tanpa panel di 844×390 |
 | 3. Roll-out | Semua bangunan & upgrade; kredit fajar; level jantung; TTK + balance pass; migrasi save | Ya | Bot + playtest manusia; 0 regresi QA |
 | 4. Produksi | Art pass dunia, audio, performa perangkat | Ya | Target 60 fps / minimum 30 fps di perangkat mid-range; review visual di perangkat |
 

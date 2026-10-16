@@ -18,7 +18,13 @@
  *             shows ONE contextual BUILD button (no side panel, no "+"),
  *             and a real tap on it starts the builder
  *   reload    a mid-night reload resumes the clock and the enemies
+ *   cine      K1 bookends on the real route (no ?cine=0): a fresh save opens
+ *             on the intro (clock and horde wait, only SKIP is live), a real
+ *             tap hands over to the night, a reload does not replay it, and
+ *             the third dawn marches the 3D relief column in before the panel
  *   health    0 page errors, 0 console errors, 0 failed requests
+ *
+ * Every other section loads `/?cine=0` (scripted from the night's first second).
  *
  *   node tools/survival-devqa.mjs [--port=8112] [--json=out.json]
  *
@@ -39,7 +45,7 @@ const args = Object.fromEntries(process.argv.slice(2).map((a) => {
 }));
 const PORT = Number(args.port || 8112);
 // A full run takes ~6 min on software WebGL (three page loads + ~100 renders).
-const HARD_LIMIT_MS = 12 * 60 * 1000;
+const HARD_LIMIT_MS = 15 * 60 * 1000;
 let server = null;
 const killTimer = setTimeout(() => {
   console.log('FAIL  devqa hard time limit reached');
@@ -91,7 +97,7 @@ try {
   await page.evaluateOnNewDocument(() => {
     try { if (sessionStorage.getItem('devqaKeep') !== '1') localStorage.clear(); } catch (_) { /* ignore */ }
   });
-  await withTimeout(page.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'domcontentloaded', timeout: 120000 }), 130000, 'goto');
+  await withTimeout(page.goto(`http://127.0.0.1:${PORT}/?cine=0`, { waitUntil: 'domcontentloaded', timeout: 120000 }), 130000, 'goto');
 
   // ---------------- boot: no night before the world ----------------
   let firstWorld = null;
@@ -395,6 +401,87 @@ try {
   const post = await page.evaluate(() => { const g = window.__LN; return { t: +g.survival.elapsed.toFixed(2), alive: g.survival.aliveEnemies(), phase: g.survival.phase }; });
   check('reload: a mid-night reload resumes the clock and the enemies',
     post.phase === 'night' && Math.abs(post.t - pre.t) < 1.5 && Math.abs(post.alive - pre.alive) <= 2, { before: pre, after: post });
+
+  // ---------------- K1 bookends: the real route (cinematics on), landscape ----------------
+  // The first page scripted its nights with ?cine=0; it closes first so its
+  // save cannot land in the fresh storage this page starts from.
+  await withTimeout(page.close(), 15000, 'page.close');
+  const cine = await browser.newPage();
+  cine.on('pageerror', (e) => errors.push(String(e.message).slice(0, 300)));
+  cine.on('console', (m) => { if (m.type() === 'error') consoleErrors.push(m.text().slice(0, 200)); });
+  cine.on('requestfailed', (r) => failed.push(`${r.url()} ${r.failure() && r.failure().errorText}`));
+  cine.on('response', (r) => { if (r.status() >= 400) failed.push(`${r.status()} ${r.url()}`); });
+  await cine.setViewport({ width: 844, height: 390, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  await cine.evaluateOnNewDocument(() => {
+    try { if (sessionStorage.getItem('devqaKeep') !== '1') localStorage.clear(); } catch (_) { /* ignore */ }
+  });
+  await withTimeout(cine.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'domcontentloaded', timeout: 120000 }), 130000, 'goto cine');
+  const freeze = async () => {
+    await cine.waitForFunction(() => {
+      const g = window.__LN;
+      const host = document.querySelector('#game') && document.querySelector('#game').parentElement;
+      return !!(g && g.survival && g.screen === 'playing' && host && host.dataset.renderMode === 'webgl-3d');
+    }, { timeout: 120000, polling: 50 });
+    await cine.evaluate(async () => {
+      const g = window.__LN;
+      window.__W = (await import('./src/game/world3d.js')).World3D;
+      window.__orig = g.update;
+      g.update = () => {};
+      window.__step = (n = 1) => { for (let i = 0; i < n; i++) window.__orig.call(g, 1 / 60); g.render(); };
+    });
+  };
+  await freeze();
+  const opening = await cine.evaluate(() => {
+    const g = window.__LN; const m = g.survival;
+    const at0 = m.cine ? { kind: m.cine.kind, t: +m.cine.t.toFixed(2) } : null;
+    const elapsed0 = m.elapsed;
+    const swarm0 = g.enemies.filter((e) => e._survivalType === 'swarm' && !e.dead).map((e) => [e.x, e.y]);
+    const playZoom = m.frameMul(true) * g.renderer.baseZoom;
+    window.__step(54);
+    const swarm1 = g.enemies.filter((e) => e._survivalType === 'swarm' && !e.dead);
+    const still = swarm1.length === swarm0.length && swarm1.every((e, i) => Math.hypot(e.x - swarm0[i][0], e.y - swarm0[i][1]) < 0.01);
+    const cap = m.cineCaption();
+    return {
+      cine: at0, t: m.cine && +m.cine.t.toFixed(2), elapsed: [+elapsed0.toFixed(2), +m.elapsed.toFixed(2)], horde: swarm1.length, still,
+      closeUp: +(g.renderer.cam.zoom / playZoom).toFixed(2), caption: cap && cap.title, labels: g.ui.map((u) => u.label),
+      panel: g.uiPanel, gameplay: g.input.gameplay, stick: !g.input.buttons.interact.hidden, introSeen: !!g.save.survival.introSeen,
+    };
+  });
+  check('cine: a fresh save opens on the K1 intro — keep close-up, captioned, the clock and the horde wait, no HUD but SKIP',
+    opening.cine && opening.cine.kind === 'intro' && opening.t > 0.8 && opening.elapsed[0] === opening.elapsed[1] && opening.horde >= 21 && opening.still
+      && opening.closeUp > 1.6 && opening.caption === 'PROTECT THE KEEP' && opening.labels.length === 1 && opening.labels[0] === 'survival:SKIP'
+      && opening.panel === 'survival-cine' && !opening.gameplay && !opening.stick && opening.introSeen, opening);
+  await cine.touchscreen.tap(422, 195);
+  await cine.evaluate(() => window.__step(3));
+  const handover = await cine.evaluate(() => {
+    const g = window.__LN; const m = g.survival;
+    const elapsed0 = m.elapsed;
+    window.__step(60);
+    return { cine: !!m.cine, panel: g.uiPanel, banner: m.banner && m.banner.text, gameplay: g.input.gameplay, labels: g.ui.map((u) => u.label).filter((l) => /PAUSE|SKIP/.test(l)), ran: +(m.elapsed - elapsed0).toFixed(2), zoom: +(g.renderer.cam.zoom / (m.frameMul(true) * g.renderer.baseZoom)).toFixed(2) };
+  });
+  check('cine: a real tap skips to the hand-over — HOLD THE KEEP, the night clock runs, the HUD and the stick are back',
+    !handover.cine && handover.panel === null && handover.banner === 'HOLD THE KEEP' && handover.gameplay && handover.labels.includes('PAUSE')
+      && !handover.labels.includes('survival:SKIP') && handover.ran > 0.9 && Math.abs(handover.zoom - 1) < 0.08, handover);
+  await cine.evaluate(() => { window.__LN.survival._persist(true); sessionStorage.setItem('devqaKeep', '1'); });
+  await withTimeout(cine.reload({ waitUntil: 'domcontentloaded' }), 130000, 'reload cine');
+  await freeze();
+  const replay = await cine.evaluate(() => { const g = window.__LN; const m = g.survival; window.__step(5); return { cine: !!m.cine, phase: m.phase, panel: g.uiPanel, elapsed: +m.elapsed.toFixed(2) }; });
+  check('cine: the intro is told once (a reload plays straight on)', !replay.cine && replay.phase === 'night' && replay.panel === null, replay);
+  const arrival = await cine.evaluate(() => {
+    const g = window.__LN; const m = g.survival;
+    m.keepLevel = 3; m.keepHp = m.keepHpMax();
+    m.day = 3; m.nightsCompleted = 2;
+    m.completeNight();
+    window.__step(150);
+    const mid = { cine: m.cine && m.cine.kind, gateOpen: !!m.mainGate().open, relief: m.getNightSnapshot().relief, troops3d: window.__W.diagnostics().visibleReliefTroops, caption: m.cineCaption() && m.cineCaption().title, labels: g.ui.map((u) => u.label), panel: g.uiPanel };
+    window.__step(60 * 6);
+    return { ...mid, after: { cine: !!m.cine, panel: g.uiPanel, relief: m.getNightSnapshot().relief, troops3d: window.__W.diagnostics().visibleReliefTroops, labels: g.ui.map((u) => u.label), phase: m.phase } };
+  });
+  check('cine: the third dawn plays the arrival — gate open, nine 3D troops march in under REINFORCEMENTS ARRIVED!, then the end panel with the column in line',
+    arrival.cine === 'arrival' && arrival.gateOpen && arrival.relief && arrival.relief.troops === 9 && arrival.relief.marching > 0 && arrival.troops3d === 9
+      && arrival.caption === 'REINFORCEMENTS ARRIVED!' && arrival.labels.length === 1 && arrival.labels[0] === 'survival:SKIP' && arrival.panel === 'survival-cine'
+      && !arrival.after.cine && arrival.after.panel === 'survival-complete' && arrival.after.relief.inLine === 9 && arrival.after.troops3d === 9
+      && arrival.after.labels.includes('survival:PLAY AGAIN') && arrival.after.phase === 'complete', arrival);
 
   check('health: 0 page errors, 0 console errors, 0 failed requests', !errors.length && !consoleErrors.length && !failed.length,
     { pageErrors: errors.slice(0, 3), consoleErrors: consoleErrors.slice(0, 3), failed: failed.slice(0, 3) });

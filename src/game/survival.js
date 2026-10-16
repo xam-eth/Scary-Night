@@ -6,7 +6,7 @@
  * resources, builder queue, night waves, and rewards.
  */
 
-import { approachAngle, clamp, damp, dist, rand, writeSave } from '../core/util.js';
+import { approachAngle, clamp, damp, dist, lerp, rand, writeSave } from '../core/util.js';
 import { SURVIVAL_TUNING } from '../core/config.js';
 import { CrowdBody, Zombie, outwardOf, CROWD, ESTATE } from './enemies.js';
 import { ROOM } from './mansion.js';
@@ -35,6 +35,35 @@ const NIGHT_DOORS = Object.freeze([
   Object.freeze(['westGate', 'posternNW', 'southGate', 'northGate', 'posternNW']),
   Object.freeze(['posternSE', 'northGate', 'southGate', 'westGate', 'posternSE']),
 ]);
+/**
+ * K1's two bookends (DESIGN-SYSTEM-PLAN §4): the opening shot — the keep and
+ * its people, the horde at a gate, then the captain and the three nights —
+ * and the reinforcements marching in through the main gate at the third dawn.
+ * Both play inside the run (the world keeps drawing, the clock waits), a tap
+ * anywhere skips, and the opening is told once per save. Times in seconds;
+ * camera zooms are multiples of the play framing (`frameMul`).
+ */
+export const CINE = Object.freeze({
+  armAfter: 0.35,        // s before a tap may skip (the tap that started the run must not)
+  march: 210,            // px/s, the relief column's pace
+  intro: Object.freeze({
+    dur: 7.2,
+    horn: 5.2,           // the captain's horn, as the camera finds him
+    captions: Object.freeze([
+      Object.freeze({ from: 0.3, to: 2.5, icon: 'keep', title: 'PROTECT THE KEEP', sub: 'ITS PEOPLE SHELTER INSIDE' }),
+      Object.freeze({ from: 2.9, to: 4.9, icon: 'swarm', title: 'THE HORDE COMES AT NIGHT', sub: 'THEY BREAK IN THROUGH THE GATES' }),
+      Object.freeze({ from: 5.3, to: 7.2, icon: 'hunter', title: 'YOU ARE THE CAPTAIN', sub: 'HOLD 3 NIGHTS. REINFORCEMENTS ARE COMING', track: true }),
+    ]),
+  }),
+  arrival: Object.freeze({
+    dur: 7.0,
+    fanfare: 0.7,
+    captions: Object.freeze([
+      Object.freeze({ from: 0.8, to: 7.0, icon: 'banner', title: 'REINFORCEMENTS ARRIVED!', sub: 'THE KEEP HELD FOR 3 NIGHTS', tone: 'dawn' }),
+    ]),
+  }),
+});
+
 /**
  * The keep (K1 "Benteng Terakhir"): the stone tower in the middle of the
  * bailey's inner ward, with the townsfolk on its battlements. Bodies that reach its wall claw
@@ -832,6 +861,11 @@ export class SurvivalMode {
     this._keepHitAt = -99;
     this._keepWarnAt = -99;
     this._keepLowWarned = false;
+    // the K1 bookends (CINE): only a real run asks for them (main.js; QA
+    // passes ?cine=0); a node harness that never opts in plays straight
+    this.cinematics = options.cinematics === true;
+    this.cine = null;              // { kind: 'intro' | 'arrival', t, dur, keys, night }
+    this.reinforcements = null;    // the relief column (victory)
     this._restore(game.save.survival || freshProgress(this.nightDuration));
     this.applyHunterStats(false);
     this._configureMansion();
@@ -844,6 +878,8 @@ export class SurvivalMode {
     this._applyGuardState();
     this._syncTowers();
     if (this.phase === 'night' && this.elapsed < 1) this._nightIntro();
+    // a run that was won stays won on reload: the column stands at the keep
+    if (this.phase === 'complete') this.reinforcements = this._reliefColumn(true);
   }
 
   _restore(saved) {
@@ -936,7 +972,7 @@ export class SurvivalMode {
     g.player.attackCd = 0;
     g.time = this.elapsed;
     g.timeLeft = this.nightDuration - this.elapsed;
-    g.phase = this.phase === 'day' ? DAY_PHASE : NIGHT_PHASE;
+    g.phase = this.daylight() ? DAY_PHASE : NIGHT_PHASE;
     g.nightDuration = this.nightDuration;
     g.survival = this;
 
@@ -991,7 +1027,7 @@ export class SurvivalMode {
   /** The bake is phase-tinted (cool night / warm day); rebake on change. */
   _syncBakePhase() {
     const m = this.game.mansion;
-    const want = this.phase === 'day' ? 'day' : 'night';
+    const want = this.daylight() ? 'day' : 'night';
     if (m.survivalPhase !== want) {
       m.survivalPhase = want;
       this.game.survivalBakeDirty = true;
@@ -1050,14 +1086,281 @@ export class SurvivalMode {
     const g = this.game;
     g.screen = 'playing';
     g.paused = false;
-    g.uiPanel = this.phase === 'day' ? 'survival-day' : this.phase === 'complete' ? 'survival-complete' : this.phase === 'failed' ? 'survival-failed' : null;
     g.player.state = 'idle';
     if (g.renderer.setZoomMul) g.renderer.setZoomMul(this.frameMul(this.phase !== 'day'));
     g.renderer.snapCamera(g.player.x, g.player.y);
-    g.input.gameplay = this.phase === 'night' || this.phase === 'day';
+    if (this._wantsIntro()) this._startIntro();
+    g.uiPanel = this.panelFor();
+    g.input.gameplay = !this.cine && (this.phase === 'night' || this.phase === 'day');
     g.mansion.update(0, g);
     this._persist(true);
     return true;
+  }
+
+  /** The panel the run shows right now (a cinematic holds every other one). */
+  panelFor() {
+    if (this.cine) return 'survival-cine';
+    return this.phase === 'day' ? 'survival-day' : this.phase === 'complete' ? 'survival-complete' : this.phase === 'failed' ? 'survival-failed' : null;
+  }
+
+  /** Dawn light: the day, and the morning the reinforcements arrive. */
+  daylight() { return this.phase === 'day' || this.phase === 'complete'; }
+
+  /* ---------------- K1 bookends (CINE) ---------------- */
+
+  /** The opening belongs to the first night of a save that never saw it. */
+  _wantsIntro() {
+    if (!this.cinematics || this.cine) return false;
+    if (this.phase !== 'night' || this.day !== 1 || this.nightsCompleted > 0) return false;
+    // a reload in the middle of a night is not an opening
+    if (this.elapsed > 0.5) return false;
+    const s = this.game.save.survival;
+    return !(s && s.introSeen);
+  }
+
+  _startIntro() {
+    const g = this.game;
+    const s = g.save.survival || (g.save.survival = freshProgress(this.nightDuration));
+    // told once: a tab closed half-way through does not owe it again
+    s.introSeen = true;
+    // The night opens on its first wave already at a gate — the state the
+    // night reaches at its first wave mark, minus the empty seconds before.
+    this.elapsed = Math.max(this.elapsed, this.nightDuration * WAVE_TIMES[0]);
+    g.time = this.elapsed;
+    g.timeLeft = Math.max(0, this.nightDuration - this.elapsed);
+    this.updateWaves();
+    // the banners wait for the handover (the opening says it all first)
+    this.banner = null;
+    this.bannerQueue.length = 0;
+    g.player.slashAge = null;
+    const horde = g.enemies.filter((e) => e._survivalType === 'swarm' && !e.dead);
+    let hx = 0, hy = 0;
+    for (const e of horde) { hx += e.x; hy += e.y; }
+    const gate = horde.length ? this.entranceById(horde[0].entranceId) : this.mainGate();
+    const center = horde.length ? { x: hx / horde.length, y: hy / horde.length }
+      : gate ? { x: gate.x + outwardOf(gate).x * 260, y: gate.y + outwardOf(gate).y * 260 } : { x: 0, y: -1200 };
+    this.cine = { kind: 'intro', t: 0, dur: CINE.intro.dur, night: true, keys: this._introKeys(center, gate), horn: false };
+    g.uiPanel = 'survival-cine';
+    g.input.gameplay = false;
+    this._cineCamera();
+  }
+
+  /** Height (world px) of the keep's roof walk, where its people stand. */
+  _keepRoof() { return 228 * (1 + (this.keepLevel - 1) * 0.06); }
+
+  /**
+   * Where the play camera sits on the Hunter (followPlayer's goal without the
+   * look-ahead): the hand-over frame the opening ends on.
+   */
+  _playFocus(night) {
+    const p = this.game.player;
+    const r = this.game.renderer;
+    return { x: p.x, y: p.y - ((r.h || 720) < 560 ? (night ? 90 : 70) : 0) };
+  }
+
+  /**
+   * World offset (along +x and +y) that lifts a framed subject clear of the
+   * caption chip: half the chip's height (drawCineCaption: 48 / 58 px) plus
+   * its gap, turned into floor distance at the key's zoom.
+   */
+  _cineLift(z, night) {
+    const r = this.game.renderer;
+    const px = (((r.h || 720) < 560 ? 48 : 58) + 10) / 2;
+    const zoom = this.frameMul(night) * (r.baseZoom || 1) * z;
+    return px / Math.max(0.05, zoom * 0.8165);
+  }
+
+  /**
+   * Camera keys. A raised point shows where the floor point (x − h, y − h)
+   * would: the keep's roof walk is framed from its floor offset.
+   * 1 the keep's roof walk, close; 2 the horde massed outside its gate, the
+   * gate in frame, with a slow push in; 3 the Hunter; 4 the play frame.
+   */
+  _introKeys(horde, gate) {
+    const keep = this.keep();
+    const roof = this._keepRoof();
+    const top = { x: keep.x - roof * 0.72, y: keep.y - roof * 0.72 };
+    const door = gate || { x: horde.x, y: horde.y + 300 };
+    const along = (f, z) => {
+      const a = this._cineLift(z, true);
+      return { x: lerp(door.x, horde.x, f) + a, y: lerp(door.y, horde.y, f) + a, z };
+    };
+    const p = this.game.player;
+    const play = this._playFocus(true);
+    return [
+      { t: 0, x: top.x, y: top.y, z: 2.4 },
+      { t: 2.2, x: top.x, y: top.y, z: 2.1 },
+      { t: 3.3, ...along(0.45, 0.95) },
+      { t: 4.7, ...along(0.52, 1.05) },
+      { t: 5.7, x: p.x - 30, y: p.y - 30, z: 1.55 },
+      { t: CINE.intro.dur, x: play.x, y: play.y, z: 1 },
+    ];
+  }
+
+  /** Drive the camera along the current cinematic's keys (eased per leg). */
+  _cineCamera() {
+    const c = this.cine;
+    const r = this.game.renderer;
+    if (!c || !c.keys || !c.keys.length || !r || !r.cam) return;
+    const keys = c.keys;
+    let i = 0;
+    while (i < keys.length - 2 && c.t >= keys[i + 1].t) i++;
+    const a = keys[i];
+    const b = keys[Math.min(keys.length - 1, i + 1)];
+    const k = clamp((c.t - a.t) / Math.max(1e-6, b.t - a.t), 0, 1);
+    const e = k * k * (3 - 2 * k);
+    r.cam.x = lerp(a.x, b.x, e);
+    r.cam.y = lerp(a.y, b.y, e);
+    r.cam.shake = 0; r.cam.sx = 0; r.cam.sy = 0;
+    const play = this.frameMul(c.night) * (r.baseZoom || 1);
+    const zoom = play * lerp(a.z, b.z, e);
+    if (r.setZoomAbsolute) r.setZoomAbsolute(zoom);
+    else if (r.setZoomMul) r.setZoomMul(zoom / (r.baseZoom || 1));
+  }
+
+  /** The caption on screen now (+ its age), or null. */
+  cineCaption() {
+    const c = this.cine;
+    if (!c) return null;
+    const spec = CINE[c.kind];
+    const row = spec && spec.captions.find((cap) => c.t >= cap.from && c.t < cap.to);
+    return row ? { ...row, age: c.t - row.from, left: row.to - c.t } : null;
+  }
+
+  updateCine(dt) {
+    const g = this.game;
+    const c = this.cine;
+    c.t += dt;
+    g.mansion.update(dt, g);
+    g.player.anim(dt);
+    // a muzzle flash in flight still fades (the player's update is held)
+    if (g.player.slashAge != null && g.player.slashAge < 1) g.player.slashAge += dt;
+    if (c.kind === 'intro') {
+      // the horde waits at its gate, restless: arms sway, nobody advances
+      for (const e of g.enemies) if (e._crowd && !e.dead) e.t = (e.t || 0) + dt;
+      if (!c.horn && c.t >= CINE.intro.horn) { c.horn = true; g.audio.play('horn', { vol: 0.85 }); }
+    } else if (c.kind === 'arrival') {
+      this.updateRelief(dt);
+      if (!c.fanfare && c.t >= CINE.arrival.fanfare) { c.fanfare = true; g.audio.play('fanfare', { vol: 0.8 }); }
+    }
+    this._cineCamera();
+    if (c.t >= c.dur) this.endCine();
+  }
+
+  /** A tap anywhere (after the arming beat) skips to the hand-over. */
+  skipCine() {
+    if (!this.cine || this.cine.t < CINE.armAfter) return false;
+    this.endCine();
+    return true;
+  }
+
+  endCine() {
+    const c = this.cine;
+    if (!c) return;
+    const g = this.game;
+    const r = g.renderer;
+    // the frame the cinematic would have ended on (a skip cuts straight to it)
+    c.t = c.dur;
+    this._cineCamera();
+    this.cine = null;
+    if (c.kind === 'intro') {
+      if (r.setZoomMul) r.setZoomMul(this.frameMul(true));
+      this._nightIntro();
+    } else if (c.kind === 'arrival') {
+      this.updateRelief(Infinity);
+    }
+    g.uiPanel = this.panelFor();
+    g.input.gameplay = this.phase === 'night' || this.phase === 'day';
+    this._persist(true);
+  }
+
+  /**
+   * The relief column: a banner-bearer and four ranks of two spears. They
+   * start outside the main gate and march in along the gate road to two
+   * lines in front of the keep (or stand there already: `placed`).
+   */
+  _reliefColumn(placed = false) {
+    const keep = this.keep();
+    const gate = this.mainGate();
+    const out = gate ? outwardOf(gate) : { x: 0, y: 1 };
+    const along = { x: -out.y, y: out.x };
+    const gx = gate ? gate.x : keep.x + out.x * 900;
+    const gy = gate ? gate.y : keep.y + out.y * 900;
+    const front = keep.r + 118;
+    const at = (o, d, l) => ({ x: o.x + out.x * d + along.x * l, y: o.y + out.y * d + along.y * l });
+    const face = Math.atan2(-out.y, -out.x);
+    const troops = [{ role: 'banner', rank: 0, file: 0, slot: at(keep, front, 0) }];
+    for (let rank = 1; rank <= 4; rank++) {
+      for (const file of [-1, 1]) {
+        // two lines of four behind the banner: ranks 1–2 in front, 3–4 behind
+        const line = rank <= 2 ? 0 : 1;
+        const col = (rank % 2 === 1 ? 0.5 : 1.5) * file;
+        troops.push({ role: 'spear', rank, file, slot: at(keep, front + 66 + line * 60, col * 62) });
+      }
+    }
+    const gatePt = { x: gx, y: gy };
+    return troops.map((tr, i) => {
+      const start = at(gatePt, 130 + tr.rank * 56, tr.file * 27);
+      const inside = at(gatePt, -90, tr.file * 27);
+      const s = {
+        id: i, role: tr.role, x: start.x, y: start.y, angle: face, face,
+        path: [inside, tr.slot], i: 0, delay: tr.rank * 0.1 + 0.25, walkT: rand(0, 1), moving: false,
+      };
+      if (placed) Object.assign(s, { x: tr.slot.x, y: tr.slot.y, i: 2, delay: 0 });
+      return s;
+    });
+  }
+
+  /** March the column along its path; Infinity snaps everyone into line. */
+  updateRelief(dt) {
+    const list = this.reinforcements;
+    if (!list) return;
+    for (const s of list) {
+      if (dt === Infinity) {
+        const end = s.path[s.path.length - 1];
+        s.x = end.x; s.y = end.y; s.i = s.path.length; s.delay = 0; s.moving = false; s.angle = s.face;
+        continue;
+      }
+      if (s.delay > 0) { s.delay -= dt; continue; }
+      if (s.i >= s.path.length) { s.moving = false; s.angle = s.face; continue; }
+      const wp = s.path[s.i];
+      const dx = wp.x - s.x, dy = wp.y - s.y;
+      const d = Math.hypot(dx, dy);
+      const step = CINE.march * dt;
+      if (d <= step) { s.x = wp.x; s.y = wp.y; s.i++; }
+      else { s.x += (dx / d) * step; s.y += (dy / d) * step; s.angle = Math.atan2(dy, dx); }
+      s.moving = s.i < s.path.length;
+      s.walkT += dt;
+    }
+  }
+
+  _startArrival() {
+    const g = this.game;
+    const keep = this.keep();
+    const gate = this.mainGate();
+    const out = gate ? outwardOf(gate) : { x: 0, y: 1 };
+    const roof = this._keepRoof();
+    const gx = gate ? gate.x : keep.x, gy = gate ? gate.y : keep.y + 900;
+    // the gate with the road outside it (the column comes up it), then in
+    // through the gate and up to the keep: its roof and the two lines in one
+    // frame, all of it lifted clear of the caption
+    const key = (t, x, y, z) => { const a = this._cineLift(z, false); return { t, x: x + a, y: y + a, z }; };
+    const lines = { x: keep.x + out.x * (keep.r + 180), y: keep.y + out.y * (keep.r + 180) };
+    const finale = { x: (lines.x + keep.x - roof) / 2, y: (lines.y + keep.y - roof) / 2 };
+    this.cine = {
+      kind: 'arrival', t: 0, dur: CINE.arrival.dur, night: false, fanfare: false,
+      keys: [
+        key(0, gx - out.x * 50 - 40, gy - out.y * 50, 1.55),
+        key(2.0, gx - out.x * 130 - 40, gy - out.y * 130, 1.45),
+        key(3.6, gx - out.x * 420 - 70, gy - out.y * 420 - 70, 1.3),
+        key(5.2, finale.x, finale.y, 1.2),
+        key(CINE.arrival.dur, finale.x, finale.y, 1.14),
+      ],
+    };
+    // the captain turns to meet them
+    const p = g.player;
+    p.angle = Math.atan2(lines.y - p.y, lines.x - p.x);
+    this._cineCamera();
   }
 
   startNight() {
@@ -1137,8 +1440,19 @@ export class SurvivalMode {
     // wait with the night instead of quietly running out behind the panel.
     if (g.screen === 'playing') {
       this._updateFx(dt);
-      this.skillCooldown = Math.max(0, this.skillCooldown - dt);
-      this.skillFlash = Math.max(0, this.skillFlash - dt);
+      // (the Flare's cooldown belongs to the run: it waits out a cinematic)
+      if (!this.cine) {
+        this.skillCooldown = Math.max(0, this.skillCooldown - dt);
+        this.skillFlash = Math.max(0, this.skillFlash - dt);
+      }
+    }
+    // a cinematic owns the frame: the world draws, the run's clock waits
+    if (this.cine) {
+      if (g.screen === 'playing') this.updateCine(dt);
+      else g.player.anim(0);
+      this._saveT += dt;
+      if (this._saveT >= SAVE_EVERY) { this._saveT = 0; this._persist(false); }
+      return;
     }
     // a heavy kill holds the night still for a few frames (hit-stop)
     if (this.hitStop > 0 && this.phase === 'night' && g.screen === 'playing') {
@@ -2579,6 +2893,7 @@ export class SurvivalMode {
     g.player.state = 'idle';
     g.player.attackT = 0;
     g.player.attackCd = 0;
+    g.player.slashAge = null;   // the night's last shot does not flash on into the dawn
     this.applyHunterStats(true);
     this.elapsed = 0;
     this.walkPath = null;
@@ -2589,7 +2904,14 @@ export class SurvivalMode {
     if (this.nightsCompleted >= 3) {
       this.day = 3;
       this.phase = 'complete';
-      g.uiPanel = 'survival-complete';
+      // K1's promise kept: the main gate swings open and the relief column
+      // marches in to the keep (a cinematic when the run asked for them;
+      // otherwise the column already stands in its two lines)
+      const gate = this.mainGate();
+      if (gate && !gate.broken) gate.open = true;
+      this.reinforcements = this._reliefColumn(!this.cinematics);
+      if (this.cinematics) this._startArrival();
+      g.uiPanel = this.panelFor();
     } else {
       this.day = Math.min(3, this.day + 1);
       this.phase = 'day';
@@ -2627,6 +2949,7 @@ export class SurvivalMode {
       breakerIndex: 0, individualIndex: 0, siegeTimers: Object.create(null),
       nightStats: { kills: 0, hits: 0, damageToWalls: 0, keepDamage: 0, mined: 0 }, lastRewards: null, skillCooldown: 0,
       rewardAck: 0, dayFocus: null, nightKeepStart: this.tuning.keepHp[1], walkPath: null, lastBuilt: null,
+      cine: null, reinforcements: null,
     });
     this._syncTerritory();
     this._resetNightFx();
@@ -2911,6 +3234,13 @@ export class SurvivalMode {
       gateBroken: !!(this.mainGate() && this.mainGate().broken),
       job: this.builderJob ? { ...this.builderJob } : null,
       context: this.phase === 'day' && this.dayContext() ? this.dayContext().id : null,
+      cine: this.cine ? { kind: this.cine.kind, t: +this.cine.t.toFixed(2), dur: this.cine.dur } : null,
+      relief: this.reinforcements ? {
+        troops: this.reinforcements.length,
+        marching: this.reinforcements.filter((s) => s.moving || s.delay > 0).length,
+        inLine: this.reinforcements.filter((s) => s.i >= s.path.length).length,
+      } : null,
+      introSeen: !!(this.game.save.survival && this.game.save.survival.introSeen),
     };
   }
 

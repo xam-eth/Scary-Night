@@ -138,7 +138,8 @@ async function survivalFtueSection() {
   console.log('\n---- DEFAULT SURVIVAL ROUTE · FIRST 30 SECONDS ----');
   const evidenceDir = path.join(ROOT, 'qa-evidence');
   fs.mkdirSync(evidenceDir, { recursive: true });
-  await page.goto('http://127.0.0.1:8102/', { waitUntil: 'domcontentloaded', timeout: 180000 });
+  // measured from the night's first second, comparable run to run (no K1 opening)
+  await page.goto('http://127.0.0.1:8102/?cine=0', { waitUntil: 'domcontentloaded', timeout: 180000 });
   await page.waitForFunction(() => {
     const g = window.__LN;
     return !!(g && g.mode === 'survival' && g.screen === 'playing'

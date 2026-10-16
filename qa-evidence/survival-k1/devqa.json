@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-10-16T07:02:35.401Z",
+  "capturedAt": "2026-10-16T09:12:04.183Z",
   "results": [
     {
       "name": "boot: the night clock waits for the 3D house",
@@ -75,7 +75,7 @@
         "survivors": 2,
         "guards": 2,
         "visibleGuardMeshes": 2,
-        "boltObjects": 6,
+        "boltObjects": 3,
         "shots": 51
       }
     },
@@ -84,7 +84,7 @@
       "pass": true,
       "detail": {
         "shots": 51,
-        "boltObjectsInScene": 6
+        "boltObjectsInScene": 3
       }
     },
     {
@@ -130,8 +130,8 @@
       "name": "tower: by night the ballista swivels to its aim and its bolts are pooled",
       "pass": true,
       "detail": {
-        "shots": 14,
-        "kills": 6,
+        "shots": 13,
+        "kills": 7,
         "ringHidden": true,
         "towerBolts": 1,
         "swivelDiff": 0
@@ -211,12 +211,96 @@
       "detail": {
         "before": {
           "t": 15.08,
-          "alive": 21
+          "alive": 20
         },
         "after": {
           "t": 15.16,
-          "alive": 21,
+          "alive": 20,
           "phase": "night"
+        }
+      }
+    },
+    {
+      "name": "cine: a fresh save opens on the K1 intro — keep close-up, captioned, the clock and the horde wait, no HUD but SKIP",
+      "pass": true,
+      "detail": {
+        "cine": {
+          "kind": "intro",
+          "t": 0.25
+        },
+        "t": 1.15,
+        "elapsed": [
+          2.88,
+          2.88
+        ],
+        "horde": 21,
+        "still": true,
+        "closeUp": 2.24,
+        "caption": "PROTECT THE KEEP",
+        "labels": [
+          "survival:SKIP"
+        ],
+        "panel": "survival-cine",
+        "gameplay": false,
+        "stick": false,
+        "introSeen": true
+      }
+    },
+    {
+      "name": "cine: a real tap skips to the hand-over — HOLD THE KEEP, the night clock runs, the HUD and the stick are back",
+      "pass": true,
+      "detail": {
+        "cine": false,
+        "panel": null,
+        "banner": "HOLD THE KEEP",
+        "gameplay": true,
+        "labels": [
+          "PAUSE"
+        ],
+        "ran": 1,
+        "zoom": 1
+      }
+    },
+    {
+      "name": "cine: the intro is told once (a reload plays straight on)",
+      "pass": true,
+      "detail": {
+        "cine": false,
+        "phase": "night",
+        "panel": null,
+        "elapsed": 4.38
+      }
+    },
+    {
+      "name": "cine: the third dawn plays the arrival — gate open, nine 3D troops march in under REINFORCEMENTS ARRIVED!, then the end panel with the column in line",
+      "pass": true,
+      "detail": {
+        "cine": "arrival",
+        "gateOpen": true,
+        "relief": {
+          "troops": 9,
+          "marching": 9,
+          "inLine": 0
+        },
+        "troops3d": 9,
+        "caption": "REINFORCEMENTS ARRIVED!",
+        "labels": [
+          "survival:SKIP"
+        ],
+        "panel": "survival-cine",
+        "after": {
+          "cine": false,
+          "panel": "survival-complete",
+          "relief": {
+            "troops": 9,
+            "marching": 0,
+            "inLine": 9
+          },
+          "troops3d": 9,
+          "labels": [
+            "survival:PLAY AGAIN"
+          ],
+          "phase": "complete"
         }
       }
     },
