@@ -15,6 +15,13 @@ penilaian desain + bot, **bukan** hasil uji pemain.
 - R17–R19;
 - §6.1–§6.5: protokol playtest manusia dan pemantauan review.
 
+**v3** dikerjakan untuk permintaan yang sama, dikirim ulang. Isinya tetap riset saja:
+
+- §2.3: data pasar dan ulasan **pemain Indonesia** (Play Store versi ID, Jakpat, Adjust, IDC);
+- §3.7: analisis loop 3 lapis (inti / sesi / meta) dan lensa motivasi SDT;
+- R20;
+- §6.6: uji HP kelas bawah dan diary 7 hari.
+
 ---
 
 ## 0. Ringkasan
@@ -78,6 +85,26 @@ Ini menjawab langsung keluhan nomor satu Duck Survival ("selalu sama").
   - Puncak emosi: intro, akhir malam 1, dan bala bantuan tiba.
   - Lembah: pembuka malam 2–3, menunggu builder, panel menang yang datar, dan run kedua yang identik.
 
+**Tambahan v3 — pemain Indonesia & analisis loop:**
+
+- **Pemain Indonesia** (§2.3):
+  - 82 % main untuk mengisi waktu luang dan 60 % untuk melepas stres (Jakpat 2025).
+  - Sesi rata-rata 44 menit, terpanjang di dunia (Adjust 2025).
+  - 76 % HP di pasar berharga < US$200 (IDC).
+  - Ulasan Kingdom Rush versi Indonesia: "Grafiknya gak gitu bagus. Tapi gameplay-nya seru banget!! … game offline yg gak berat di hp".
+  - Implikasinya:
+    - ringan di HP murah dan bisa offline adalah **syarat UX**, bukan polish;
+    - EASY dan retry lebih penting di pasar ini;
+    - sesi yang panjang memberi ruang untuk banyak run, asalkan ada alasan main lagi.
+- **Loop 3 lapis** (§3.7):
+  - loop inti ✅;
+  - loop sesi ✅, dengan lubang;
+  - loop meta ❌. Inilah sebabnya pemain berhenti setelah menang.
+  - Lensa motivasi SDT: kompetensi ✅, otonomi ⚠️, keterhubungan ❌.
+- **Baru:**
+  - R20: kartu hasil untuk dibagikan, tanpa server;
+  - §6.6: uji HP RAM 3 GB dan diary 7 hari.
+
 ---
 
 ## 1. Metode
@@ -98,6 +125,16 @@ Ini menjawab langsung keluhan nomor satu Duck Survival ("selalu sama").
   - NN/g (aksi berisiko di samping aksi biasa);
   - pedoman tutorial/FTUE (Udonis, Playio);
   - diskusi kontrol sentuh (Unity forum, r/gamedev).
+- v3, pemain Indonesia:
+  - Google Play versi Indonesia (`hl=id&gl=ID`): Kingdom Rush, BTD6, Duck Survival;
+  - survei Jakpat 2023 dan 2025;
+  - Adjust *Gaming App Insights 2025*;
+  - data pasar HP dari IDC;
+  - media teknologi dan game Indonesia (IDN Times, MyRepublic, Uzone, Gameyplay).
+  - TapTap juga dicek, tapi Duck Survival belum punya cukup ulasan di sana.
+- v3, kerangka:
+  - core loop vs meta loop (Tono, Mystic Media, FoxData, r/gamedesign);
+  - Self-Determination Theory (Ryan, Rigby & Przybylski, 2006).
 
 **Data pembanding:**
 - Studi akademik atas 10,9 juta review Steam (Lin dkk., EMSE 2018).
@@ -177,6 +214,59 @@ Sampel: review positif di halaman toko dan forum. Game-game ini ratingnya tinggi
 - **Tombol yang muncul di zona jempol tertekan tak sengaja.** Duck Survival (App Store): tombol reset muncul tepat di area jempol, sehingga "I almost always am hitting reset when I don't want to" (lihat §3.4 no. 1).
 - **Monetisasi yang disukai** (catatan untuk masa depan, di luar scope sekarang):
   - Bila kelak ada iklan, yang dipuji adalah pola VS: opt-in di akhir run, untuk revive atau bonus gold. "There are no pop-ups. An advert will appear after runs… They can be ignored" (dev VS di r/VampireSurvivors).
+
+### 2.3 Pemain Indonesia: data & ulasan berbahasa Indonesia (v3)
+
+**Data pasar** (pembanding, bukan janji):
+
+| Data | Angka | Arti untuk DUSKHOLD |
+|---|---|---|
+| Alasan main: Jakpat, *Indonesian Gaming Behavior 2025* (survei 3–4 Sep 2025) | 82 % main untuk mengisi waktu luang; 60 % untuk menghilangkan stres | Run ±5 mnt cocok. Kalah yang terasa menghukum bertentangan dengan "lepas stres" → R14, R17 |
+| Profil gamer mobile: Jakpat 2023 (1.191 responden) | 55 % gamer mobile adalah gamer kasual (≤ 2 jam per sesi); 68 % gamer kasual adalah perempuan | Mayoritas pemain kasual. Jangan merancang hanya untuk "gamer inti" |
+| Panjang sesi: Adjust, *Gaming App Insights 2025* | Indonesia **44,31 mnt** rata-rata per sesi pada 2024, terpanjang di dunia (global 30,75) | Ada waktu untuk beberapa run per sesi, asalkan ada alasan main lagi (§3.7). GameAnalytics (§6) memakai median 5–6 mnt; metodenya beda, jadi angkanya tidak bisa dibandingkan langsung |
+| Kelas HP: IDC | HP < US$200 = 76 % pasar (Q1 2023); segmen < US$100 jadi motor pertumbuhan (Q4 2024) | Performa di HP murah adalah syarat UX |
+| HP RAM 3 GB (Gameyplay) | Android + aplikasi latar sudah memakai sekitar 1,8–2,2 GB | Sisa RAM untuk game WebGL 3D tipis → uji di perangkat (§6.6) |
+
+**Yang ditulis pemain Indonesia** (Google Play, versi ID):
+
+- **Kingdom Rush** (toko ID: 4,8★ / 853 rb ulasan):
+  - "Grafiknya gak gitu bagus. Tapi gameplay-nya seru banget!! … Pokoknya kalau mau cari game offline yg gak berat di hp dan buat ngisi waktu luang, Recommended"
+  - "kalo udah paham tower dan musuhnya, main tanpa item dari shop juga bisa 3 bintang di kesulitan paling tinggipun" (221 orang menilai berguna)
+  - "hadiah/gemsnya juga gampang untuk didapatkan"
+- **BTD6** (toko ID: 4,8★ / 342 rb ulasan):
+  - "sangat bagus karena dapat dimainkan secara offline … dapat dimainkan secara tenang maupun kompetitif … pembuat game ini juga perhatian pada penggunanya"
+  - "map nya ada banyak banget … boss challenge, bahkan ada mode multiplayer juga"
+- **Media Indonesia** berulang kali menulis kriteria yang sama:
+  - offline adalah "andalan ketika kuota habis atau jaringan lagi gak stabil", dan ukurannya kecil (IDN Times);
+  - "hemat kuota, bebas lag, dan lebih fokus tanpa iklan pop-up" (MyRepublic);
+  - "Masalah HP panas saat bermain game merupakan keluhan sejuta umat" (Uzone).
+
+**Yang ditonjolkan halaman toko versi Indonesia:**
+
+- **Kingdom Rush:** "MAIN OFFLINE DI MANA SAJA!", ensiklopedia musuh dan pahlawan, "60+ PENCAPAIAN DALAM GAME".
+- **Duck Survival:**
+  - "Hadiah Login … 777 Undian Gratis". Ini pola login + undian, anti-pola untuk kita.
+  - "Setiap malam Anda bertahan hidup akan memicu evolusi markas Anda". Markas berubah secara terlihat.
+  - Developer-nya membalas review dengan alasan memilih format vertikal: "easy to handle all activities with one hand".
+
+**Implikasi** (riset, belum dikerjakan):
+
+1. **"Gak berat di HP" mengalahkan grafis.** Ulasan KR versi ID paling jelas: grafis dimaafkan bila gameplay seru dan ringan. Uji HP kelas bawah (§6.6) jadi prioritas acceptance UX.
+2. **Offline & hemat kuota.**
+   - Service worker sudah men-cache aset ✅.
+   - Ukuran unduhan pertama perlu diukur.
+   - Saat rilis, tulis "main offline" di halaman toko seperti KR.
+3. **Lepas stres.** EASY (R17) dan retry malam 3 (R14) lebih penting di pasar ini.
+4. **Sesi panjang.** Sesi 44 mnt cukup untuk 6–8 run. Tanpa alasan main lagi, sesi berhenti setelah 1–2 run. Fitur meta (R3, R7, R8) bernilai lebih besar di Indonesia.
+5. **"3 bintang tanpa beli item"** adalah bentuk adil yang paling dihargai → R2 + R7, tanpa jalur bayar.
+6. **Markas yang berevolusi.**
+   - DUSKHOLD sudah punya ini *di dalam run*: bangunan membesar per level (`world3d.js`: skala 1,3 + 0,18 per level) dan keep menunjukkan levelnya.
+   - Tapi semuanya hilang saat run berakhir. Lihat R9.
+7. **Landscape vs satu tangan.**
+   - Duck Survival menjual format portrait satu tangan.
+   - Landscape adalah keputusan proyek dan **tidak** dibuka ulang. Mitigasinya sudah ada: malam cukup dimainkan dengan jempol kiri.
+   - Amati di playtest apakah fase hari (tombol di kanan) terasa repot.
+8. **Bahasa UI.** UI berbahasa Inggris adalah keputusan proyek. Uji 3 pertanyaan di playtest Indonesia akan menunjukkan apakah kata kunci (KEEP, GATE, BALLISTA) dipahami pemain kasual.
 
 ---
 
@@ -288,6 +378,7 @@ Dugaan berbasis review dan probe, bukan hasil wawancara. Diverifikasi dengan pro
 
 - Loop sekarang paling cocok untuk pemain kasual yang **kalah**.
 - Persona strategi dan kolektor tidak punya alasan untuk run berikutnya setelah menang. Padahal justru persona inilah yang di review Kingdom Rush dan BTD6 paling memuji bintang dan tantangan.
+- Di pasar Indonesia, persona kasual adalah mayoritas: 55 % gamer mobile, dan 68 % di antaranya perempuan (Jakpat 2023, §2.3). Sesinya juga panjang, jadi bila ada alasan, satu sesi bisa berisi banyak run.
 
 ### 3.6 Peta perjalanan pemain (sesi pertama → hari berikutnya)
 
@@ -313,6 +404,36 @@ Dugaan berbasis review dan probe, bukan hasil wawancara. Diverifikasi dengan pro
 ▲ intro → ● jalan → ▲ akhir malam 1 → ▲ fajar → ● hari 2 (menunggu) → ▼ pembuka malam 2 → ▲ breaker → ● hari 3 → ▲ malam 3 → ▲▲ bala bantuan → ▼ panel datar → ● run kedua identik
 
 Puncak terbesar (bala bantuan) langsung disusul lembah (panel). Momen paling emosional di run berakhir tanpa "hadiah" dan tanpa "berikutnya". Karena itu R1–R3 dan R19 diletakkan di P0.
+
+### 3.7 Analisis loop 3 lapis (v3)
+
+| Lapisan | Durasi | Loop DUSKHOLD | Hadiah | Status |
+|---|---|---|---|---|
+| **Inti** (detik) | 5–15 s | gerak → tembak otomatis → kill → angka damage; FLARE saat musuh menumpuk | ledakan kill, guncangan layar, angka | ✅ kuat saat gelombang datang; ⚠️ 28–52 % detik malam tanpa target |
+| **Sesi** (menit) | ±5,3 mnt | malam → fajar (COLLECT) → bangun/upgrade (bangunan membesar) → malam berikutnya → bala bantuan | gold/wood, bangunan tumbuh, sinematik akhir | ✅ jelas; ⚠️ menunggu builder; ❌ berakhir tanpa hadiah |
+| **Meta** (hari) | — | tidak ada | — | ❌ |
+
+**Rujukan:**
+
+- Loop VS: "Survive → Unlock → Retry stronger" (Tono). Loop meta adalah yang mengikat tujuan jangka panjang ke loop inti.
+- "Without an effective Retention game… the Core Loop will seem insignificant and fade out" (Mystic Media).
+- Tentang Tetris: "every time you start up a new run, it's a whole new set of problems to solve" (r/gamedesign). Variasi sistemik bisa menggantikan konten.
+
+**Bacaan:**
+
+- **Setelah kalah,** yang mendorong main lagi adalah loop sesi: run pendek dan rasa ingin membalas.
+- **Setelah menang,** loop sesi sudah tuntas dan tidak ada loop meta, jadi pemain berhenti.
+- Dua penyebab uninstall terbesar adalah **bosan** dan **frustrasi** (Mystic Media). Di DUSKHOLD:
+  - bosan = udara mati di malam dan run yang identik;
+  - frustrasi = salah ketuk NIGHT, dan kalah tanpa tahu sebabnya.
+
+**Lensa motivasi: Self-Determination Theory.** Empat studi Ryan, Rigby & Przybylski (2006) menemukan bahwa kebutuhan akan **kompetensi**, **otonomi**, dan **keterhubungan** masing-masing memprediksi kesenangan dan main lagi di masa depan.
+
+| Kebutuhan | DUSKHOLD sekarang | Yang menaikkan |
+|---|---|---|
+| Kompetensi | ✅ feedback tembakan jelas; kurva sulit sehat (idle kalah malam 1, active kalah malam 2, builder menang). ⚠️ Penguasaan tidak tercatat | R1–R4 |
+| Otonomi | ⚠️ 12–16 pilihan per hari, tapi hanya 2 hari; tidak ada pilihan sebelum run | R7, R11, R17 |
+| Keterhubungan | ❌ tidak ada berbagi atau perbandingan | R20 (tanpa server) |
 
 ---
 
@@ -408,6 +529,7 @@ Semua rekomendasi menghormati keputusan sebelumnya:
 | R14 | "TRY NIGHT 3 AGAIN" (checkpoint dawn terakhir, bintang maksimal −1) | kalah di malam 3 = mengulang ±3,5–4 mnt yang identik |
 | R15 | Kamera malam sedikit melebar saat horde berkumpul di gerbang (cek perf) | U6: tontonan horde |
 | R16 | Batal build terakhir hari itu (refund penuh) | K2C: "you cannot go back on any mistakes when building" |
+| R20 | **Kartu hasil untuk dibagikan** (v3): gambar berisi malam, kill, bintang, dan MVP, dikirim lewat menu share ponsel (WhatsApp/IG). Tanpa server, tanpa akun, tanpa leaderboard online | SDT: keterhubungan (§3.7). MOBA genre teratas di Indonesia (43 %, Jakpat 2025) karena memadukan kerja sama dan persaingan. Thronefall dipuji karena "friendly leaderboard" (MGT); pemain Duck Survival minta bisa "party up with friends" (App Store) |
 
 ### Anti-pola yang harus dihindari (dari review)
 
@@ -504,6 +626,28 @@ Angka ini hanya pembanding, bukan janji.
 - Balas review, terutama yang menyebut bug atau kebingungan. Duck Survival dipuji karena "devs are actually replying" (P9).
 - Bandingkan bahasa ulasan imajiner dari playtest (§6.3 no. 5) dengan ulasan nyata. Bila kata-katanya sama, temuan playtest kemungkinan besar mewakili pemain sungguhan.
 
+### 6.6 Uji HP kelas bawah & diary 7 hari (v3)
+
+- **HP kelas bawah** (§2.3):
+  - Perangkat: satu HP RAM 3 GB kelas < Rp2 juta, lewat Chrome/TWA, kecerahan 50 %.
+  - Main 15 menit, ±3 run.
+  - Catat:
+    - apakah gerakan terasa patah;
+    - suhu (dingin / hangat / panas);
+    - baterai turun berapa %;
+    - waktu load pertama di 4G;
+    - besar data yang terunduh;
+    - apakah game bisa dibuka lagi dalam mode pesawat.
+- **Diary 7 hari** (pola FoxData: sesi pertama, hari 3, hari 7):
+  - 3–5 penguji memasang game dan bebas memainkannya.
+  - Di hari 1, 3, dan 7, catat: dibuka tanpa diingatkan atau tidak? Berapa run? Kenapa berhenti?
+- **Keputusan** (usulan):
+
+  | Hasil | Keputusan |
+  |---|---|
+  | HP 3 GB terasa panas atau patah dalam 15 menit | performa jadi P0, sebelum fitur replay |
+  | Di hari 3 tidak ada penguji yang membuka game sendiri | loop meta (R3, R7, R9) jadi P0 |
+
 ---
 
 ## 7. Sumber
@@ -585,6 +729,32 @@ Angka ini hanya pembanding, bukan janji.
 - NN/g, *Dangerous UX: Consequential Options Close to Benign Options* — https://www.nngroup.com/articles/proximity-consequential-options/
 - Unity Discussions (joystick virtual vs mengambang) — https://forum.unity.com/threads/opinions-wanted-why-are-joystick-controls-so-terrible-on-mobile.431413/
 - r/gamedev (jenis joystick di layar) — https://www.reddit.com/r/gamedev/comments/1gmlemv/mobile_whats_the_best_type_of_virtual_onscreen/
+
+**Pemain Indonesia (v3):**
+- Kingdom Rush, Google Play versi Indonesia (4,8★ / 853 rb; ulasan "gak berat di hp", "3 bintang di kesulitan paling tinggi") — https://play.google.com/store/apps/details?id=com.ironhidegames.android.kingdomrush&hl=id&gl=ID
+- Bloons TD 6, Google Play versi Indonesia (4,8★ / 342 rb; "offline", "tenang maupun kompetitif") — https://play.google.com/store/apps/details?id=com.ninjakiwi.bloonstd6&hl=id&gl=ID
+- Duck Survival, Google Play versi Indonesia (deskripsi: hadiah login, markas berevolusi) — https://play.google.com/store/apps/details?id=com.mrtgd2us.google&hl=id&gl=ID
+- Duck Survival, Google Play (balasan developer: vertikal satu tangan) — https://play.google.com/store/apps/details?id=com.mrtgd2us.google&hl=en
+- Duck Survival di TapTap (ulasan belum cukup untuk ringkasan) — https://www.taptap.io/app/34004203/review
+- Jakpat, *Indonesian Gaming Behavior 2025*, via Selular.id (82 % / 60 %) — https://selular.id/2025/11/survei-ungkap-82-publik-ri-main-game-untuk-isi-waktu-luang-2025/
+- Jakpat 2025 via GoodStats (1.203 responden, 3–4 Sep 2025) — https://goodstats.id/publication/indonesian-gaming-behavior-2025-mgMC3
+- Jakpat 2025, genre (MOBA 43 %) — https://ipad-os.net/genre-game-yang-paling-banyak-diminati-para-gamer-indonesia/
+- Jakpat 2023 via ESQNews (55 % gamer mobile kasual; 68 % gamer kasual perempuan) — https://www.esqnews.id/berita/93-responden-milenial-dan-gen-z-merupakan-mobile-gamer-tengok-hasil-survei-jakpat
+- Adjust *Gaming App Insights 2025* via adobo Magazine (Indonesia 44,31 mnt per sesi) — https://www.adobomagazine.com/insight/adjust-report-apac-powers-global-gaming-app-growth-amid-shifting-trends/
+- Adjust 2025 via BYYD (global 30,75 mnt; per genre) — https://www.byyd.me/en/blog/2025/04/mobile-gaming-market-key-insights/
+- IDC via Heaptalk (HP < US$200 = 76 %, Q1 2023) — https://heaptalk.com/news/idc-report-indonesias-smartphone-market-plummets-in-q1-2023/
+- IDC via TelecomLead (Q4 2024, segmen < US$100) — https://telecomlead.com/broadband/idc-views-on-smartphone-buying-trends-indonesia-119965
+- Gameyplay (RAM 3 GB) — https://www.gameyplay.com/2026/10/penyebab-game-patah-patah-di-hp-ram-3gb.html
+- Uzone (HP panas) — https://uzone.id/hanya-5-menit-begini-cara-ampuh-mengatasi-hp-panas-saat-main-game
+- IDN Times (game ringan offline) — https://www.idntimes.com/tech/games/game-ringan-untuk-hp-kentang-go25q3-00-7vt1s-nk7sc6
+- MyRepublic (hemat kuota, tanpa iklan pop-up) — https://www.myrepublic.co.id/blog/10-game-aksi-offline-terbaik-untuk-android-di-2025-bisa-main-tanpa-kuota
+
+**Loop & motivasi (v3):**
+- Tono Game Consultants (core vs meta loop) — https://tonogameconsultants.com/gameloop/
+- Mystic Media (retention game; bosan & frustrasi) — https://blog.mysticmediasoft.com/tag/core-loop/
+- r/gamedesign (core loop vs meta loop; Tetris) — https://www.reddit.com/r/gamedesign/comments/1uuoynt/i_have_a_fun_core_mechanic_but_i_do_not_know_how/
+- FoxData (main di sesi pertama, hari 3, hari 7) — https://foxdata.com/en/blogs/how-to-analyze-competitor-mobile-games-core-loops-meta-revenue/
+- Ryan, Rigby & Przybylski (2006), *The Motivational Pull of Video Games: A Self-Determination Theory Approach*, Motivation and Emotion 30(4), doi:10.1007/s11031-006-9051-8 — https://articles.researchsolutions.com/the-motivational-pull-of-video-games-a-self-determination-theory-approach/doi/10.1007/s11031-006-9051-8
 
 **Desain layar kalah & roguelite:**
 - r/gamedev — https://www.reddit.com/r/gamedev/comments/1is8ag2/were_working_on_our_death_screen_and_really/
