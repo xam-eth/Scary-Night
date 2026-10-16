@@ -1,0 +1,2242 @@
+[
+ {
+  "kind": "builder",
+  "seed": 20261012,
+  "result": "complete",
+  "nights": [
+   {
+    "day": 1,
+    "firstTarget": 9,
+    "longestQuiet": 11.1,
+    "lastKillAt": 69.1,
+    "kills": 66,
+    "bins": [
+     0,
+     2,
+     6,
+     8,
+     5,
+     0,
+     5,
+     14,
+     2,
+     0,
+     7,
+     17
+    ],
+    "keepMin": 100,
+    "flares": 2,
+    "hurtMin": 100,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 55,
+    "deadTail": 2.9
+   },
+   {
+    "day": 2,
+    "firstTarget": 13.9,
+    "longestQuiet": 13.9,
+    "lastKillAt": 62.4,
+    "kills": 78,
+    "bins": [
+     0,
+     0,
+     4,
+     7,
+     13,
+     2,
+     7,
+     5,
+     13,
+     5,
+     22,
+     0
+    ],
+    "keepMin": 100,
+    "flares": 3,
+    "hurtMin": 87,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 63,
+    "deadTail": 9.6
+   },
+   {
+    "day": 3,
+    "firstTarget": 14.4,
+    "longestQuiet": 14.4,
+    "lastKillAt": 69.4,
+    "kills": 93,
+    "bins": [
+     0,
+     0,
+     7,
+     18,
+     5,
+     0,
+     10,
+     16,
+     4,
+     32,
+     0,
+     1
+    ],
+    "keepMin": 100,
+    "flares": 1,
+    "hurtMin": 100,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 48,
+    "deadTail": 2.6
+   }
+  ],
+  "days": [
+   {
+    "day": 2,
+    "gold": 63,
+    "wood": 56,
+    "options": 12,
+    "kinds": [
+     "keep",
+     "armory",
+     "gate",
+     "tower",
+     "barracks",
+     "sawmill",
+     "mine"
+    ],
+    "buys": [
+     {
+      "type": "keep",
+      "walk": 1.5,
+      "job": 5
+     },
+     {
+      "type": "mine",
+      "walk": 6.1,
+      "job": 7
+     },
+     {
+      "type": "gate",
+      "walk": 8.8,
+      "job": 9
+     },
+     {
+      "type": "sawmill",
+      "walk": 2.8,
+      "job": 7
+     },
+     {
+      "type": "keep",
+      "walk": 4,
+      "job": 6
+     }
+    ],
+    "humanSeconds": 50
+   },
+   {
+    "day": 3,
+    "gold": 60,
+    "wood": 42,
+    "options": 16,
+    "kinds": [
+     "armory",
+     "tower",
+     "barracks",
+     "up:sawmill",
+     "up:mine",
+     "sawmill",
+     "mine"
+    ],
+    "buys": [
+     {
+      "type": "hunter",
+      "walk": 3,
+      "job": 5
+     },
+     {
+      "type": "up:mine",
+      "walk": 3.5,
+      "job": 6
+     },
+     {
+      "type": "barracks",
+      "walk": 6.7,
+      "job": 9
+     }
+    ],
+    "humanSeconds": 31
+   }
+  ]
+ },
+ {
+  "kind": "builder",
+  "seed": 20268931,
+  "result": "complete",
+  "nights": [
+   {
+    "day": 1,
+    "firstTarget": 9.5,
+    "longestQuiet": 9.5,
+    "lastKillAt": 70.9,
+    "kills": 66,
+    "bins": [
+     0,
+     1,
+     7,
+     8,
+     4,
+     0,
+     3,
+     5,
+     14,
+     0,
+     6,
+     18
+    ],
+    "keepMin": 96,
+    "flares": 2,
+    "hurtMin": 100,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 62,
+    "deadTail": 1.1
+   },
+   {
+    "day": 2,
+    "firstTarget": 14.1,
+    "longestQuiet": 14,
+    "lastKillAt": 63,
+    "kills": 78,
+    "bins": [
+     0,
+     0,
+     3,
+     7,
+     14,
+     3,
+     7,
+     7,
+     11,
+     6,
+     20,
+     0
+    ],
+    "keepMin": 95,
+    "flares": 3,
+    "hurtMin": 87,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 64,
+    "deadTail": 9
+   },
+   {
+    "day": 3,
+    "firstTarget": 14.5,
+    "longestQuiet": 14.5,
+    "lastKillAt": 69.4,
+    "kills": 93,
+    "bins": [
+     0,
+     0,
+     5,
+     19,
+     6,
+     0,
+     11,
+     13,
+     6,
+     32,
+     0,
+     1
+    ],
+    "keepMin": 97,
+    "flares": 1,
+    "hurtMin": 100,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 50,
+    "deadTail": 2.6
+   }
+  ],
+  "days": [
+   {
+    "day": 2,
+    "gold": 63,
+    "wood": 56,
+    "options": 12,
+    "kinds": [
+     "keep",
+     "armory",
+     "gate",
+     "tower",
+     "barracks",
+     "sawmill",
+     "mine"
+    ],
+    "buys": [
+     {
+      "type": "keep",
+      "walk": 1.5,
+      "job": 5
+     },
+     {
+      "type": "mine",
+      "walk": 6.1,
+      "job": 7
+     },
+     {
+      "type": "gate",
+      "walk": 8.8,
+      "job": 9
+     },
+     {
+      "type": "sawmill",
+      "walk": 2.8,
+      "job": 7
+     },
+     {
+      "type": "keep",
+      "walk": 4,
+      "job": 6
+     }
+    ],
+    "humanSeconds": 50
+   },
+   {
+    "day": 3,
+    "gold": 60,
+    "wood": 42,
+    "options": 16,
+    "kinds": [
+     "armory",
+     "tower",
+     "barracks",
+     "up:sawmill",
+     "up:mine",
+     "sawmill",
+     "mine"
+    ],
+    "buys": [
+     {
+      "type": "hunter",
+      "walk": 3,
+      "job": 5
+     },
+     {
+      "type": "up:mine",
+      "walk": 3.5,
+      "job": 6
+     },
+     {
+      "type": "barracks",
+      "walk": 6.7,
+      "job": 9
+     }
+    ],
+    "humanSeconds": 31
+   }
+  ]
+ },
+ {
+  "kind": "builder",
+  "seed": 20276850,
+  "result": "complete",
+  "nights": [
+   {
+    "day": 1,
+    "firstTarget": 9.2,
+    "longestQuiet": 9.2,
+    "lastKillAt": 70.3,
+    "kills": 66,
+    "bins": [
+     0,
+     2,
+     7,
+     8,
+     4,
+     0,
+     4,
+     9,
+     8,
+     0,
+     6,
+     18
+    ],
+    "keepMin": 100,
+    "flares": 1,
+    "hurtMin": 100,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 60,
+    "deadTail": 1.7
+   },
+   {
+    "day": 2,
+    "firstTarget": 14.1,
+    "longestQuiet": 14,
+    "lastKillAt": 62,
+    "kills": 78,
+    "bins": [
+     0,
+     0,
+     4,
+     7,
+     9,
+     4,
+     7,
+     4,
+     14,
+     4,
+     25,
+     0
+    ],
+    "keepMin": 100,
+    "flares": 3,
+    "hurtMin": 74,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 64,
+    "deadTail": 10
+   },
+   {
+    "day": 3,
+    "firstTarget": 14.6,
+    "longestQuiet": 14.6,
+    "lastKillAt": 70.5,
+    "kills": 93,
+    "bins": [
+     0,
+     0,
+     5,
+     21,
+     4,
+     0,
+     10,
+     15,
+     5,
+     29,
+     3,
+     1
+    ],
+    "keepMin": 100,
+    "flares": 1,
+    "hurtMin": 75,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 52,
+    "deadTail": 1.5
+   }
+  ],
+  "days": [
+   {
+    "day": 2,
+    "gold": 63,
+    "wood": 56,
+    "options": 12,
+    "kinds": [
+     "keep",
+     "armory",
+     "gate",
+     "tower",
+     "barracks",
+     "sawmill",
+     "mine"
+    ],
+    "buys": [
+     {
+      "type": "keep",
+      "walk": 1.5,
+      "job": 5
+     },
+     {
+      "type": "mine",
+      "walk": 6.1,
+      "job": 7
+     },
+     {
+      "type": "gate",
+      "walk": 8.8,
+      "job": 9
+     },
+     {
+      "type": "sawmill",
+      "walk": 2.8,
+      "job": 7
+     },
+     {
+      "type": "keep",
+      "walk": 4,
+      "job": 6
+     }
+    ],
+    "humanSeconds": 50
+   },
+   {
+    "day": 3,
+    "gold": 60,
+    "wood": 42,
+    "options": 16,
+    "kinds": [
+     "armory",
+     "tower",
+     "barracks",
+     "up:sawmill",
+     "up:mine",
+     "sawmill",
+     "mine"
+    ],
+    "buys": [
+     {
+      "type": "hunter",
+      "walk": 3,
+      "job": 5
+     },
+     {
+      "type": "up:mine",
+      "walk": 3.5,
+      "job": 6
+     },
+     {
+      "type": "barracks",
+      "walk": 6.7,
+      "job": 9
+     }
+    ],
+    "humanSeconds": 31
+   }
+  ]
+ },
+ {
+  "kind": "builder",
+  "seed": 20261013,
+  "result": "complete",
+  "nights": [
+   {
+    "day": 1,
+    "firstTarget": 9.1,
+    "longestQuiet": 10.1,
+    "lastKillAt": 71.1,
+    "kills": 66,
+    "bins": [
+     0,
+     1,
+     8,
+     7,
+     4,
+     0,
+     4,
+     17,
+     1,
+     0,
+     3,
+     21
+    ],
+    "keepMin": 98,
+    "flares": 2,
+    "hurtMin": 100,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 54,
+    "deadTail": 0.9
+   },
+   {
+    "day": 2,
+    "firstTarget": 14,
+    "longestQuiet": 14,
+    "lastKillAt": 62.4,
+    "kills": 78,
+    "bins": [
+     0,
+     0,
+     4,
+     7,
+     12,
+     3,
+     7,
+     4,
+     14,
+     3,
+     24,
+     0
+    ],
+    "keepMin": 99,
+    "flares": 3,
+    "hurtMin": 87,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 63,
+    "deadTail": 9.6
+   },
+   {
+    "day": 3,
+    "firstTarget": 14.7,
+    "longestQuiet": 14.7,
+    "lastKillAt": 70.1,
+    "kills": 93,
+    "bins": [
+     0,
+     0,
+     3,
+     20,
+     7,
+     0,
+     9,
+     14,
+     7,
+     28,
+     4,
+     1
+    ],
+    "keepMin": 93,
+    "flares": 2,
+    "hurtMin": 88,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 52,
+    "deadTail": 1.9
+   }
+  ],
+  "days": [
+   {
+    "day": 2,
+    "gold": 63,
+    "wood": 56,
+    "options": 12,
+    "kinds": [
+     "keep",
+     "armory",
+     "gate",
+     "tower",
+     "barracks",
+     "sawmill",
+     "mine"
+    ],
+    "buys": [
+     {
+      "type": "keep",
+      "walk": 1.5,
+      "job": 5
+     },
+     {
+      "type": "mine",
+      "walk": 6.1,
+      "job": 7
+     },
+     {
+      "type": "gate",
+      "walk": 8.8,
+      "job": 9
+     },
+     {
+      "type": "sawmill",
+      "walk": 2.8,
+      "job": 7
+     },
+     {
+      "type": "keep",
+      "walk": 4,
+      "job": 6
+     }
+    ],
+    "humanSeconds": 50
+   },
+   {
+    "day": 3,
+    "gold": 60,
+    "wood": 42,
+    "options": 16,
+    "kinds": [
+     "armory",
+     "tower",
+     "barracks",
+     "up:sawmill",
+     "up:mine",
+     "sawmill",
+     "mine"
+    ],
+    "buys": [
+     {
+      "type": "hunter",
+      "walk": 3,
+      "job": 5
+     },
+     {
+      "type": "up:mine",
+      "walk": 3.5,
+      "job": 6
+     },
+     {
+      "type": "barracks",
+      "walk": 6.7,
+      "job": 9
+     }
+    ],
+    "humanSeconds": 31
+   }
+  ]
+ },
+ {
+  "kind": "builder",
+  "seed": 20261014,
+  "result": "complete",
+  "nights": [
+   {
+    "day": 1,
+    "firstTarget": 9.2,
+    "longestQuiet": 9.2,
+    "lastKillAt": 71.9,
+    "kills": 65,
+    "bins": [
+     0,
+     1,
+     7,
+     8,
+     4,
+     0,
+     4,
+     7,
+     4,
+     7,
+     1,
+     22
+    ],
+    "keepMin": 94,
+    "flares": 2,
+    "hurtMin": 100,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 70,
+    "deadTail": 0.1
+   },
+   {
+    "day": 2,
+    "firstTarget": 14,
+    "longestQuiet": 13.9,
+    "lastKillAt": 61.8,
+    "kills": 78,
+    "bins": [
+     0,
+     0,
+     4,
+     7,
+     11,
+     3,
+     5,
+     9,
+     8,
+     8,
+     23,
+     0
+    ],
+    "keepMin": 97,
+    "flares": 3,
+    "hurtMin": 74,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 65,
+    "deadTail": 10.2
+   },
+   {
+    "day": 3,
+    "firstTarget": 14.6,
+    "longestQuiet": 14.5,
+    "lastKillAt": 68.9,
+    "kills": 93,
+    "bins": [
+     0,
+     0,
+     4,
+     24,
+     2,
+     0,
+     10,
+     16,
+     4,
+     30,
+     2,
+     1
+    ],
+    "keepMin": 91,
+    "flares": 1,
+    "hurtMin": 100,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 51,
+    "deadTail": 3.1
+   }
+  ],
+  "days": [
+   {
+    "day": 2,
+    "gold": 62,
+    "wood": 56,
+    "options": 12,
+    "kinds": [
+     "keep",
+     "armory",
+     "gate",
+     "tower",
+     "barracks",
+     "sawmill",
+     "mine"
+    ],
+    "buys": [
+     {
+      "type": "keep",
+      "walk": 1.5,
+      "job": 5
+     },
+     {
+      "type": "mine",
+      "walk": 6.1,
+      "job": 7
+     },
+     {
+      "type": "gate",
+      "walk": 8.8,
+      "job": 9
+     },
+     {
+      "type": "sawmill",
+      "walk": 2.8,
+      "job": 7
+     },
+     {
+      "type": "keep",
+      "walk": 4,
+      "job": 6
+     }
+    ],
+    "humanSeconds": 50
+   },
+   {
+    "day": 3,
+    "gold": 59,
+    "wood": 42,
+    "options": 16,
+    "kinds": [
+     "armory",
+     "tower",
+     "barracks",
+     "up:sawmill",
+     "up:mine",
+     "sawmill",
+     "mine"
+    ],
+    "buys": [
+     {
+      "type": "hunter",
+      "walk": 3,
+      "job": 5
+     },
+     {
+      "type": "up:mine",
+      "walk": 3.5,
+      "job": 6
+     },
+     {
+      "type": "barracks",
+      "walk": 6.7,
+      "job": 9
+     }
+    ],
+    "humanSeconds": 31
+   }
+  ]
+ },
+ {
+  "kind": "tower",
+  "seed": 20261012,
+  "result": "complete",
+  "nights": [
+   {
+    "day": 1,
+    "firstTarget": 9,
+    "longestQuiet": 11.1,
+    "lastKillAt": 69.1,
+    "kills": 66,
+    "bins": [
+     0,
+     2,
+     6,
+     8,
+     5,
+     0,
+     5,
+     14,
+     2,
+     0,
+     7,
+     17
+    ],
+    "keepMin": 100,
+    "flares": 2,
+    "hurtMin": 100,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 55,
+    "deadTail": 2.9
+   },
+   {
+    "day": 2,
+    "firstTarget": 14,
+    "longestQuiet": 14,
+    "lastKillAt": 60.7,
+    "kills": 79,
+    "bins": [
+     0,
+     0,
+     4,
+     6,
+     14,
+     4,
+     5,
+     13,
+     10,
+     10,
+     13,
+     0
+    ],
+    "keepMin": 100,
+    "flares": 3,
+    "hurtMin": 87,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 59,
+    "deadTail": 11.3
+   },
+   {
+    "day": 3,
+    "firstTarget": 14.8,
+    "longestQuiet": 14.7,
+    "lastKillAt": 66.1,
+    "kills": 93,
+    "bins": [
+     0,
+     0,
+     2,
+     9,
+     21,
+     4,
+     10,
+     10,
+     8,
+     13,
+     15,
+     1
+    ],
+    "keepMin": 9,
+    "flares": 3,
+    "hurtMin": 85,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 52,
+    "deadTail": 5.9
+   }
+  ],
+  "days": [
+   {
+    "day": 2,
+    "gold": 63,
+    "wood": 56,
+    "options": 12,
+    "kinds": [
+     "keep",
+     "armory",
+     "gate",
+     "tower",
+     "barracks",
+     "sawmill",
+     "mine"
+    ],
+    "buys": [
+     {
+      "type": "keep",
+      "walk": 1.5,
+      "job": 5
+     },
+     {
+      "type": "mine",
+      "walk": 6.1,
+      "job": 7
+     },
+     {
+      "type": "tower",
+      "walk": 8.9,
+      "job": 8
+     },
+     {
+      "type": "tower",
+      "walk": 9.4,
+      "job": 8
+     }
+    ],
+    "humanSeconds": 43
+   },
+   {
+    "day": 3,
+    "gold": 76,
+    "wood": 41,
+    "options": 16,
+    "kinds": [
+     "keep",
+     "armory",
+     "gate",
+     "up:tower",
+     "barracks",
+     "sawmill",
+     "up:mine",
+     "tower",
+     "mine"
+    ],
+    "buys": [
+     {
+      "type": "tower",
+      "walk": 7.5,
+      "job": 8
+     },
+     {
+      "type": "tower",
+      "walk": 13.4,
+      "job": 8
+     }
+    ],
+    "humanSeconds": 34
+   }
+  ]
+ },
+ {
+  "kind": "tower",
+  "seed": 20268931,
+  "result": "complete",
+  "nights": [
+   {
+    "day": 1,
+    "firstTarget": 9.5,
+    "longestQuiet": 9.5,
+    "lastKillAt": 70.9,
+    "kills": 66,
+    "bins": [
+     0,
+     1,
+     7,
+     8,
+     4,
+     0,
+     3,
+     5,
+     14,
+     0,
+     6,
+     18
+    ],
+    "keepMin": 96,
+    "flares": 2,
+    "hurtMin": 100,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 62,
+    "deadTail": 1.1
+   },
+   {
+    "day": 2,
+    "firstTarget": 13.8,
+    "longestQuiet": 13.8,
+    "lastKillAt": 61,
+    "kills": 79,
+    "bins": [
+     0,
+     0,
+     3,
+     8,
+     13,
+     5,
+     9,
+     10,
+     7,
+     7,
+     17,
+     0
+    ],
+    "keepMin": 98,
+    "flares": 3,
+    "hurtMin": 100,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 58,
+    "deadTail": 11
+   },
+   {
+    "day": 3,
+    "firstTarget": 14.5,
+    "longestQuiet": 14.5,
+    "lastKillAt": 66.5,
+    "kills": 93,
+    "bins": [
+     0,
+     0,
+     4,
+     9,
+     19,
+     5,
+     8,
+     11,
+     13,
+     13,
+     10,
+     1
+    ],
+    "keepMin": 12,
+    "flares": 2,
+    "hurtMin": 22,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 59,
+    "deadTail": 5.5
+   }
+  ],
+  "days": [
+   {
+    "day": 2,
+    "gold": 63,
+    "wood": 56,
+    "options": 12,
+    "kinds": [
+     "keep",
+     "armory",
+     "gate",
+     "tower",
+     "barracks",
+     "sawmill",
+     "mine"
+    ],
+    "buys": [
+     {
+      "type": "keep",
+      "walk": 1.5,
+      "job": 5
+     },
+     {
+      "type": "mine",
+      "walk": 6.1,
+      "job": 7
+     },
+     {
+      "type": "tower",
+      "walk": 8.9,
+      "job": 8
+     },
+     {
+      "type": "tower",
+      "walk": 9.4,
+      "job": 8
+     }
+    ],
+    "humanSeconds": 43
+   },
+   {
+    "day": 3,
+    "gold": 76,
+    "wood": 41,
+    "options": 16,
+    "kinds": [
+     "keep",
+     "armory",
+     "gate",
+     "up:tower",
+     "barracks",
+     "sawmill",
+     "up:mine",
+     "tower",
+     "mine"
+    ],
+    "buys": [
+     {
+      "type": "tower",
+      "walk": 7.5,
+      "job": 8
+     },
+     {
+      "type": "tower",
+      "walk": 13.4,
+      "job": 8
+     }
+    ],
+    "humanSeconds": 34
+   }
+  ]
+ },
+ {
+  "kind": "tower",
+  "seed": 20276850,
+  "result": "complete",
+  "nights": [
+   {
+    "day": 1,
+    "firstTarget": 9.2,
+    "longestQuiet": 9.2,
+    "lastKillAt": 70.3,
+    "kills": 66,
+    "bins": [
+     0,
+     2,
+     7,
+     8,
+     4,
+     0,
+     4,
+     9,
+     8,
+     0,
+     6,
+     18
+    ],
+    "keepMin": 100,
+    "flares": 1,
+    "hurtMin": 100,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 60,
+    "deadTail": 1.7
+   },
+   {
+    "day": 2,
+    "firstTarget": 13.9,
+    "longestQuiet": 13.9,
+    "lastKillAt": 60.6,
+    "kills": 79,
+    "bins": [
+     0,
+     0,
+     3,
+     8,
+     13,
+     5,
+     5,
+     10,
+     11,
+     7,
+     17,
+     0
+    ],
+    "keepMin": 100,
+    "flares": 3,
+    "hurtMin": 100,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 60,
+    "deadTail": 11.4
+   },
+   {
+    "day": 3,
+    "firstTarget": 14.7,
+    "longestQuiet": 14.7,
+    "lastKillAt": 64.6,
+    "kills": 93,
+    "bins": [
+     0,
+     0,
+     2,
+     10,
+     21,
+     4,
+     9,
+     10,
+     19,
+     10,
+     8,
+     0
+    ],
+    "keepMin": 45,
+    "flares": 2,
+    "hurtMin": 70,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 56,
+    "deadTail": 7.4
+   }
+  ],
+  "days": [
+   {
+    "day": 2,
+    "gold": 63,
+    "wood": 56,
+    "options": 12,
+    "kinds": [
+     "keep",
+     "armory",
+     "gate",
+     "tower",
+     "barracks",
+     "sawmill",
+     "mine"
+    ],
+    "buys": [
+     {
+      "type": "keep",
+      "walk": 1.5,
+      "job": 5
+     },
+     {
+      "type": "mine",
+      "walk": 6.1,
+      "job": 7
+     },
+     {
+      "type": "tower",
+      "walk": 8.9,
+      "job": 8
+     },
+     {
+      "type": "tower",
+      "walk": 9.4,
+      "job": 8
+     }
+    ],
+    "humanSeconds": 43
+   },
+   {
+    "day": 3,
+    "gold": 76,
+    "wood": 41,
+    "options": 16,
+    "kinds": [
+     "keep",
+     "armory",
+     "gate",
+     "up:tower",
+     "barracks",
+     "sawmill",
+     "up:mine",
+     "tower",
+     "mine"
+    ],
+    "buys": [
+     {
+      "type": "tower",
+      "walk": 7.5,
+      "job": 8
+     },
+     {
+      "type": "tower",
+      "walk": 13.4,
+      "job": 8
+     }
+    ],
+    "humanSeconds": 34
+   }
+  ]
+ },
+ {
+  "kind": "tower",
+  "seed": 20261013,
+  "result": "complete",
+  "nights": [
+   {
+    "day": 1,
+    "firstTarget": 9.1,
+    "longestQuiet": 10.1,
+    "lastKillAt": 71.1,
+    "kills": 66,
+    "bins": [
+     0,
+     1,
+     8,
+     7,
+     4,
+     0,
+     4,
+     17,
+     1,
+     0,
+     3,
+     21
+    ],
+    "keepMin": 98,
+    "flares": 2,
+    "hurtMin": 100,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 54,
+    "deadTail": 0.9
+   },
+   {
+    "day": 2,
+    "firstTarget": 14,
+    "longestQuiet": 13.9,
+    "lastKillAt": 60.3,
+    "kills": 79,
+    "bins": [
+     0,
+     0,
+     3,
+     7,
+     14,
+     4,
+     6,
+     11,
+     11,
+     7,
+     16,
+     0
+    ],
+    "keepMin": 99,
+    "flares": 3,
+    "hurtMin": 100,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 59,
+    "deadTail": 11.7
+   },
+   {
+    "day": 3,
+    "firstTarget": 14.5,
+    "longestQuiet": 14.5,
+    "lastKillAt": 64.3,
+    "kills": 93,
+    "bins": [
+     0,
+     0,
+     2,
+     10,
+     20,
+     4,
+     9,
+     17,
+     7,
+     11,
+     13,
+     0
+    ],
+    "keepMin": 35,
+    "flares": 3,
+    "hurtMin": 85,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 51,
+    "deadTail": 7.7
+   }
+  ],
+  "days": [
+   {
+    "day": 2,
+    "gold": 63,
+    "wood": 56,
+    "options": 12,
+    "kinds": [
+     "keep",
+     "armory",
+     "gate",
+     "tower",
+     "barracks",
+     "sawmill",
+     "mine"
+    ],
+    "buys": [
+     {
+      "type": "keep",
+      "walk": 1.5,
+      "job": 5
+     },
+     {
+      "type": "mine",
+      "walk": 6.1,
+      "job": 7
+     },
+     {
+      "type": "tower",
+      "walk": 8.9,
+      "job": 8
+     },
+     {
+      "type": "tower",
+      "walk": 9.4,
+      "job": 8
+     }
+    ],
+    "humanSeconds": 43
+   },
+   {
+    "day": 3,
+    "gold": 76,
+    "wood": 41,
+    "options": 16,
+    "kinds": [
+     "keep",
+     "armory",
+     "gate",
+     "up:tower",
+     "barracks",
+     "sawmill",
+     "up:mine",
+     "tower",
+     "mine"
+    ],
+    "buys": [
+     {
+      "type": "tower",
+      "walk": 7.5,
+      "job": 8
+     },
+     {
+      "type": "tower",
+      "walk": 13.4,
+      "job": 8
+     }
+    ],
+    "humanSeconds": 34
+   }
+  ]
+ },
+ {
+  "kind": "tower",
+  "seed": 20261014,
+  "result": "failed",
+  "nights": [
+   {
+    "day": 1,
+    "firstTarget": 9.2,
+    "longestQuiet": 9.2,
+    "lastKillAt": 71.9,
+    "kills": 65,
+    "bins": [
+     0,
+     1,
+     7,
+     8,
+     4,
+     0,
+     4,
+     7,
+     4,
+     7,
+     1,
+     22
+    ],
+    "keepMin": 94,
+    "flares": 2,
+    "hurtMin": 100,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 70,
+    "deadTail": 0.1
+   },
+   {
+    "day": 2,
+    "firstTarget": 13.9,
+    "longestQuiet": 13.9,
+    "lastKillAt": 61.2,
+    "kills": 79,
+    "bins": [
+     0,
+     0,
+     4,
+     7,
+     13,
+     6,
+     7,
+     11,
+     7,
+     8,
+     16,
+     0
+    ],
+    "keepMin": 97,
+    "flares": 3,
+    "hurtMin": 100,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 59,
+    "deadTail": 10.8
+   },
+   {
+    "day": 3,
+    "firstTarget": 14.6,
+    "longestQuiet": 14.6,
+    "lastKillAt": 63.2,
+    "kills": 85,
+    "bins": [
+     0,
+     0,
+     3,
+     9,
+     20,
+     5,
+     9,
+     11,
+     6,
+     17,
+     5,
+     0
+    ],
+    "keepMin": 1,
+    "flares": 2,
+    "hurtMin": 85,
+    "result": "FAIL",
+    "endAt": 63.5,
+    "targetPct": 58,
+    "deadTail": 0.3
+   }
+  ],
+  "days": [
+   {
+    "day": 2,
+    "gold": 62,
+    "wood": 56,
+    "options": 12,
+    "kinds": [
+     "keep",
+     "armory",
+     "gate",
+     "tower",
+     "barracks",
+     "sawmill",
+     "mine"
+    ],
+    "buys": [
+     {
+      "type": "keep",
+      "walk": 1.5,
+      "job": 5
+     },
+     {
+      "type": "mine",
+      "walk": 6.1,
+      "job": 7
+     },
+     {
+      "type": "tower",
+      "walk": 8.9,
+      "job": 8
+     },
+     {
+      "type": "tower",
+      "walk": 9.4,
+      "job": 8
+     }
+    ],
+    "humanSeconds": 43
+   },
+   {
+    "day": 3,
+    "gold": 75,
+    "wood": 41,
+    "options": 16,
+    "kinds": [
+     "keep",
+     "armory",
+     "gate",
+     "up:tower",
+     "barracks",
+     "sawmill",
+     "up:mine",
+     "tower",
+     "mine"
+    ],
+    "buys": [
+     {
+      "type": "tower",
+      "walk": 7.5,
+      "job": 8
+     },
+     {
+      "type": "tower",
+      "walk": 13.4,
+      "job": 8
+     }
+    ],
+    "humanSeconds": 34
+   }
+  ]
+ },
+ {
+  "kind": "active",
+  "seed": 20261012,
+  "result": "failed",
+  "nights": [
+   {
+    "day": 1,
+    "firstTarget": 9,
+    "longestQuiet": 11.1,
+    "lastKillAt": 69.1,
+    "kills": 66,
+    "bins": [
+     0,
+     2,
+     6,
+     8,
+     5,
+     0,
+     5,
+     14,
+     2,
+     0,
+     7,
+     17
+    ],
+    "keepMin": 100,
+    "flares": 2,
+    "hurtMin": 100,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 55,
+    "deadTail": 2.9
+   },
+   {
+    "day": 2,
+    "firstTarget": 14.1,
+    "longestQuiet": 14.1,
+    "lastKillAt": 55.3,
+    "kills": 48,
+    "bins": [
+     0,
+     0,
+     4,
+     7,
+     13,
+     3,
+     2,
+     9,
+     7,
+     3,
+     0,
+     0
+    ],
+    "keepMin": 2,
+    "flares": 2,
+    "hurtMin": 87,
+    "result": "FAIL",
+    "endAt": 55.5,
+    "targetPct": 71,
+    "deadTail": 0.2
+   }
+  ],
+  "days": [
+   {
+    "day": 2,
+    "gold": 63,
+    "wood": 56,
+    "options": 12,
+    "kinds": [
+     "keep",
+     "armory",
+     "gate",
+     "tower",
+     "barracks",
+     "sawmill",
+     "mine"
+    ],
+    "buys": [],
+    "humanSeconds": 2
+   }
+  ]
+ },
+ {
+  "kind": "active",
+  "seed": 20268931,
+  "result": "failed",
+  "nights": [
+   {
+    "day": 1,
+    "firstTarget": 9.5,
+    "longestQuiet": 9.5,
+    "lastKillAt": 70.9,
+    "kills": 66,
+    "bins": [
+     0,
+     1,
+     7,
+     8,
+     4,
+     0,
+     3,
+     5,
+     14,
+     0,
+     6,
+     18
+    ],
+    "keepMin": 96,
+    "flares": 2,
+    "hurtMin": 100,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 62,
+    "deadTail": 1.1
+   },
+   {
+    "day": 2,
+    "firstTarget": 14,
+    "longestQuiet": 14,
+    "lastKillAt": 55.2,
+    "kills": 48,
+    "bins": [
+     0,
+     0,
+     4,
+     6,
+     14,
+     3,
+     4,
+     10,
+     4,
+     3,
+     0,
+     0
+    ],
+    "keepMin": 1,
+    "flares": 2,
+    "hurtMin": 100,
+    "result": "FAIL",
+    "endAt": 55.3,
+    "targetPct": 72,
+    "deadTail": 0.1
+   }
+  ],
+  "days": [
+   {
+    "day": 2,
+    "gold": 63,
+    "wood": 56,
+    "options": 12,
+    "kinds": [
+     "keep",
+     "armory",
+     "gate",
+     "tower",
+     "barracks",
+     "sawmill",
+     "mine"
+    ],
+    "buys": [],
+    "humanSeconds": 2
+   }
+  ]
+ },
+ {
+  "kind": "active",
+  "seed": 20276850,
+  "result": "failed",
+  "nights": [
+   {
+    "day": 1,
+    "firstTarget": 9.2,
+    "longestQuiet": 9.2,
+    "lastKillAt": 70.3,
+    "kills": 66,
+    "bins": [
+     0,
+     2,
+     7,
+     8,
+     4,
+     0,
+     4,
+     9,
+     8,
+     0,
+     6,
+     18
+    ],
+    "keepMin": 100,
+    "flares": 1,
+    "hurtMin": 100,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 60,
+    "deadTail": 1.7
+   },
+   {
+    "day": 2,
+    "firstTarget": 14.1,
+    "longestQuiet": 14.1,
+    "lastKillAt": 55.4,
+    "kills": 50,
+    "bins": [
+     0,
+     0,
+     3,
+     7,
+     14,
+     3,
+     3,
+     11,
+     7,
+     2,
+     0,
+     0
+    ],
+    "keepMin": 2,
+    "flares": 2,
+    "hurtMin": 100,
+    "result": "FAIL",
+    "endAt": 55.7,
+    "targetPct": 71,
+    "deadTail": 0.3
+   }
+  ],
+  "days": [
+   {
+    "day": 2,
+    "gold": 63,
+    "wood": 56,
+    "options": 12,
+    "kinds": [
+     "keep",
+     "armory",
+     "gate",
+     "tower",
+     "barracks",
+     "sawmill",
+     "mine"
+    ],
+    "buys": [],
+    "humanSeconds": 2
+   }
+  ]
+ },
+ {
+  "kind": "active",
+  "seed": 20261013,
+  "result": "failed",
+  "nights": [
+   {
+    "day": 1,
+    "firstTarget": 9.1,
+    "longestQuiet": 10.1,
+    "lastKillAt": 71.1,
+    "kills": 66,
+    "bins": [
+     0,
+     1,
+     8,
+     7,
+     4,
+     0,
+     4,
+     17,
+     1,
+     0,
+     3,
+     21
+    ],
+    "keepMin": 98,
+    "flares": 2,
+    "hurtMin": 100,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 54,
+    "deadTail": 0.9
+   },
+   {
+    "day": 2,
+    "firstTarget": 13.9,
+    "longestQuiet": 13.8,
+    "lastKillAt": 55.1,
+    "kills": 49,
+    "bins": [
+     0,
+     0,
+     4,
+     7,
+     13,
+     3,
+     5,
+     10,
+     4,
+     3,
+     0,
+     0
+    ],
+    "keepMin": 1,
+    "flares": 2,
+    "hurtMin": 100,
+    "result": "FAIL",
+    "endAt": 55.3,
+    "targetPct": 71,
+    "deadTail": 0.2
+   }
+  ],
+  "days": [
+   {
+    "day": 2,
+    "gold": 63,
+    "wood": 56,
+    "options": 12,
+    "kinds": [
+     "keep",
+     "armory",
+     "gate",
+     "tower",
+     "barracks",
+     "sawmill",
+     "mine"
+    ],
+    "buys": [],
+    "humanSeconds": 2
+   }
+  ]
+ },
+ {
+  "kind": "active",
+  "seed": 20261014,
+  "result": "failed",
+  "nights": [
+   {
+    "day": 1,
+    "firstTarget": 9.2,
+    "longestQuiet": 9.2,
+    "lastKillAt": 71.9,
+    "kills": 65,
+    "bins": [
+     0,
+     1,
+     7,
+     8,
+     4,
+     0,
+     4,
+     7,
+     4,
+     7,
+     1,
+     22
+    ],
+    "keepMin": 94,
+    "flares": 2,
+    "hurtMin": 100,
+    "result": "OK",
+    "endAt": 72,
+    "targetPct": 70,
+    "deadTail": 0.1
+   },
+   {
+    "day": 2,
+    "firstTarget": 13.7,
+    "longestQuiet": 13.7,
+    "lastKillAt": 54.6,
+    "kills": 46,
+    "bins": [
+     0,
+     0,
+     4,
+     7,
+     12,
+     2,
+     3,
+     13,
+     3,
+     2,
+     0,
+     0
+    ],
+    "keepMin": 0,
+    "flares": 2,
+    "hurtMin": 100,
+    "result": "FAIL",
+    "endAt": 55,
+    "targetPct": 69,
+    "deadTail": 0.4
+   }
+  ],
+  "days": [
+   {
+    "day": 2,
+    "gold": 62,
+    "wood": 56,
+    "options": 12,
+    "kinds": [
+     "keep",
+     "armory",
+     "gate",
+     "tower",
+     "barracks",
+     "sawmill",
+     "mine"
+    ],
+    "buys": [],
+    "humanSeconds": 2
+   }
+  ]
+ },
+ {
+  "kind": "idle",
+  "seed": 20261012,
+  "result": "failed",
+  "nights": [
+   {
+    "day": 1,
+    "firstTarget": 31.9,
+    "longestQuiet": 31.9,
+    "lastKillAt": 24.4,
+    "kills": 4,
+    "bins": [
+     0,
+     0,
+     2,
+     1,
+     1,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "keepMin": 10,
+    "flares": 0,
+    "hurtMin": 100,
+    "result": "FAIL",
+    "endAt": 40.3,
+    "targetPct": 11,
+    "deadTail": 15.9
+   }
+  ],
+  "days": []
+ },
+ {
+  "kind": "idle",
+  "seed": 20268931,
+  "result": "failed",
+  "nights": [
+   {
+    "day": 1,
+    "firstTarget": 31.8,
+    "longestQuiet": 31.8,
+    "lastKillAt": 24.4,
+    "kills": 3,
+    "bins": [
+     0,
+     0,
+     2,
+     0,
+     1,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "keepMin": 8,
+    "flares": 0,
+    "hurtMin": 100,
+    "result": "FAIL",
+    "endAt": 40.4,
+    "targetPct": 11,
+    "deadTail": 16
+   }
+  ],
+  "days": []
+ },
+ {
+  "kind": "idle",
+  "seed": 20276850,
+  "result": "failed",
+  "nights": [
+   {
+    "day": 1,
+    "firstTarget": 29.8,
+    "longestQuiet": 29.8,
+    "lastKillAt": 35,
+    "kills": 5,
+    "bins": [
+     0,
+     0,
+     2,
+     1,
+     1,
+     1,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "keepMin": 2,
+    "flares": 0,
+    "hurtMin": 100,
+    "result": "FAIL",
+    "endAt": 39.3,
+    "targetPct": 12,
+    "deadTail": 4.3
+   }
+  ],
+  "days": []
+ },
+ {
+  "kind": "idle",
+  "seed": 20261013,
+  "result": "failed",
+  "nights": [
+   {
+    "day": 1,
+    "firstTarget": 30.3,
+    "longestQuiet": 30.3,
+    "lastKillAt": 24.2,
+    "kills": 4,
+    "bins": [
+     0,
+     0,
+     2,
+     1,
+     1,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "keepMin": 2,
+    "flares": 0,
+    "hurtMin": 100,
+    "result": "FAIL",
+    "endAt": 38.6,
+    "targetPct": 11,
+    "deadTail": 14.4
+   }
+  ],
+  "days": []
+ },
+ {
+  "kind": "idle",
+  "seed": 20261014,
+  "result": "failed",
+  "nights": [
+   {
+    "day": 1,
+    "firstTarget": 30.7,
+    "longestQuiet": 30.7,
+    "lastKillAt": 24.1,
+    "kills": 4,
+    "bins": [
+     0,
+     0,
+     2,
+     1,
+     1,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "keepMin": 6,
+    "flares": 0,
+    "hurtMin": 100,
+    "result": "FAIL",
+    "endAt": 38.9,
+    "targetPct": 11,
+    "deadTail": 14.8
+   }
+  ],
+  "days": []
+ }
+]

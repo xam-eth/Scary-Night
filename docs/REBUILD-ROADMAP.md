@@ -1,7 +1,49 @@
 # Status Rebuild 3D & Survival Milestone 1
 
 **Pembaruan:** 2026-10-16 (Asia/Makassar)
-**Status keseluruhan: MASIH TERBUKA — bukan klaim siap rilis.** Inti rebuild dunia 3D dan loop Survival Milestone 1 sudah terimplementasi. Pada 2026-10-12 arah UI/UX dan threat model dikoreksi mengikuti feedback user; pada 2026-10-15 dilakukan pass analisis gap & bug (lihat bagian "Gap & bug pass 2026-10-15"), lalu pass progres Hunter + level bangunan (lihat "Progres Hunter & level bangunan"), lalu pass menara crossbow (lihat "Menara crossbow"), lalu pass guard yang bisa jatuh (lihat "Guard bisa jatuh"; termasuk perbaikan bug gelombang yang muncul di dalam rumah), dan seluruh gate otomatis dijalankan ulang. Setelah itu user memutuskan **game landscape only** dan meminta brainstorming + design system plan sebelum koding lagi (lihat "Arah desain & orientasi" dan `docs/DESIGN-SYSTEM-PLAN.md`; belum ada perubahan kode game untuk arah ini). Revisi 1 desain (konsep api) ditolak user. Di revisi 2 user memilih konsep **K1 "Benteng Terakhir"**, pola build **jalan ke lingkaran + BUILD**, dan nada **dark stylized**, lalu menyetujui semua rekomendasi aturan dan meminta "pastikan dunianya 3D". K1 kini **terimplementasi sebagai vertical slice** (lihat "K1 Benteng Terakhir — implementasi"); acceptance manusia/perangkat untuk K1 belum ada. Atas feedback user berikutnya, Survival kini dimainkan di **dunia benteng (bailey)** baru, bukan di dalam ruangan mansion (lihat "Dunia benteng untuk Survival"). Setelah itu kedua bookend cerita K1 dibuat: **intro sinematik** di malam pertama dan **adegan bala bantuan tiba** di fajar ke-3 (lihat "Bookend K1"); pemahaman pemain atas keduanya belum diuji. Acceptance visual/manual di perangkat, playtest manusia, dan packaging Play masih terbuka. Hasil tiap skrip hanya berlaku untuk cakupan yang benar-benar diuji.
+**Status keseluruhan: MASIH TERBUKA — bukan klaim siap rilis.** Inti rebuild dunia 3D dan loop Survival Milestone 1 sudah terimplementasi. Pada 2026-10-12 arah UI/UX dan threat model dikoreksi mengikuti feedback user; pada 2026-10-15 dilakukan pass analisis gap & bug (lihat bagian "Gap & bug pass 2026-10-15"), lalu pass progres Hunter + level bangunan (lihat "Progres Hunter & level bangunan"), lalu pass menara crossbow (lihat "Menara crossbow"), lalu pass guard yang bisa jatuh (lihat "Guard bisa jatuh"; termasuk perbaikan bug gelombang yang muncul di dalam rumah), dan seluruh gate otomatis dijalankan ulang. Setelah itu user memutuskan **game landscape only** dan meminta brainstorming + design system plan sebelum koding lagi (lihat "Arah desain & orientasi" dan `docs/DESIGN-SYSTEM-PLAN.md`; belum ada perubahan kode game untuk arah ini). Revisi 1 desain (konsep api) ditolak user. Di revisi 2 user memilih konsep **K1 "Benteng Terakhir"**, pola build **jalan ke lingkaran + BUILD**, dan nada **dark stylized**, lalu menyetujui semua rekomendasi aturan dan meminta "pastikan dunianya 3D". K1 kini **terimplementasi sebagai vertical slice** (lihat "K1 Benteng Terakhir — implementasi"); acceptance manusia/perangkat untuk K1 belum ada. Atas feedback user berikutnya, Survival kini dimainkan di **dunia benteng (bailey)** baru, bukan di dalam ruangan mansion (lihat "Dunia benteng untuk Survival"). Setelah itu kedua bookend cerita K1 dibuat: **intro sinematik** di malam pertama dan **adegan bala bantuan tiba** di fajar ke-3 (lihat "Bookend K1"); pemahaman pemain atas keduanya belum diuji. Lalu dibuat **riset UX & replay** dari review pemain (Play Store, Steam, Reddit, dan platform review lain) plus playtest bot "sebagai gamer" (lihat "Riset UX & replay" dan `docs/UX-REPLAY-RESEARCH.md`); belum ada perubahan kode game dari riset itu. Acceptance visual/manual di perangkat, playtest manusia, dan packaging Play masih terbuka. Hasil tiap skrip hanya berlaku untuk cakupan yang benar-benar diuji.
+
+## Riset UX & replay — "mau main sekali lagi?" (2026-10-16)
+
+**Konteks:** user meminta dua hal:
+- riset review dan testimoni pemain (Play Store, forum, Steam, platform review lain) tentang UX yang mendapat review positif;
+- memeriksa loop Survival "sebagai gamer": apakah pemain mau main sekali lagi.
+
+**Hasil:** berupa dokumen, bukan kode game, di `docs/UX-REPLAY-RESEARCH.md`. Isinya:
+- 12 pola UX dari review, masing-masing dengan kutipan + sumber;
+- log satu run;
+- scorecard 15 faktor replay;
+- rekomendasi P0–P2 (R1–R16) dengan ukuran berhasil;
+- daftar sumber.
+
+**Verdict (desain + bot, belum playtest manusia):**
+- Sesi pertama kuat:
+  - ±5,3 menit per run;
+  - tujuan jelas, retry instan;
+  - tanpa energi, iklan, atau chores;
+  - run tersimpan saat aplikasi ditutup.
+- Setelah kalah: kemungkinan main lagi.
+- Setelah menang: hampir tidak ada alasan main lagi. Tidak ada rekor, bintang, unlock, atau tingkat sulit, dan run berikutnya identik (`NIGHT_DOORS` tetap, dompet hari sama di semua seed).
+- Scorecard 16/30.
+
+**Bug yang ditemukan (belum diperbaiki):** panel menang menampilkan `nightStats.kills`, yang di-reset di setiap `startNight()`. Akibatnya panel hanya menghitung kill malam 3 (`land-complete.png` menunjukkan "💀 2").
+
+**Alat ukur baru:** `tools/survival-uxprobe.mjs`. Ini alat ukur yang hanya mencetak hasil, bukan gate. Hasilnya untuk 4 persona × 5 seed:
+
+| Ukuran | Hasil |
+|---|---|
+| Target pertama per malam | 9–14,7 dtk jam malam |
+| Porsi malam dengan target | 48–72 % (bot yang bertahan) |
+| Jeda kosong terlama | 9–15 dtk |
+| Ekor kosong sebelum fajar | sampai ±12 dtk |
+| Aksi terjangkau | 12 (hari 2) / 16 (hari 3) |
+| Waktu hari versi manusia | ±50 / ±31 dtk |
+
+Bukti ada di `qa-evidence/ux-replay/uxprobe.txt` dan `uxprobe.json`.
+
+**Belum / terbuka:**
+- Belum ada rekomendasi yang dibangun; menunggu pilihan user.
+- Playtest manusia (PLAY AGAIN tanpa diminta, skor "mau main lagi?") belum dilakukan.
 
 ## Bookend K1: intro sinematik + bala bantuan tiba (2026-10-16)
 
@@ -479,6 +521,7 @@ Ini screenshot checkpoint, bukan rekaman, dan bukan review di perangkat fisik.
 5. **Visual pass:** sweep 17 stop per ruang/wing, state low-health/blackout, dan overlap staircase–stairRail belum selesai. Pohon siang tampak agak pucat (palet dinaikkan untuk readability) — kandidat polish.
 6. **Perangkat/performa:** hidden-tab pause, context-loss freeze/restore, reload tengah malam, dan framing landscape kini diassert di Chromium headless (devqa). Belum: frame time 66–90 musuh + guard/bolt di perangkat low-end, DPR nyata. **Orientasi diputuskan user (2026-10-16): landscape only.** Layout siang landscape kini tanpa kolom kiri (K1, P1: tombol kontekstual di zona jempol). Frame time menara + lingkaran + crowd di perangkat belum diukur.
 7. **Release bundle:** fingerprint signing SHA-256, token origin-trial, validasi Bubblewrap/AAB, uji TWA/Play tetap menunggu konfigurasi release. IAP tidak diubah.
+8. **Replay / "mau main lagi?" (2026-10-16):** riset review + playtest bot ada di `docs/UX-REPLAY-RESEARCH.md`. Scorecard 16/30: kuat di sesi pendek, retry, dan tanpa energi/iklan; lemah di alasan untuk kembali setelah menang. Bug panel menang (kill hanya malam 3) belum diperbaiki. Belum: rekomendasi R1–R16 (menunggu pilihan user), playtest manusia (PLAY AGAIN tanpa diminta, skor 1–5).
 
 ## Aturan laporan
 
