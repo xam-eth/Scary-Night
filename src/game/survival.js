@@ -25,68 +25,127 @@ const WAVE_COUNTS = Object.freeze([
   Object.freeze([30, 30, 30]),
 ]);
 const SWARM_CAP = 30;
-// Doors per night: waves 1-3, then the two Individuals.
+// Doors per night: waves 1-3, then the two Individuals. K1: the front door
+// opens straight into the keep's hall, so Night 1 opens on the far side of
+// the house (chapel, then cellar) and reaches the front gate last — the first
+// contact is a door the Hunter has time to walk to.
 const NIGHT_DOORS = Object.freeze([
-  Object.freeze(['frontDoor', 'chapelDoor', 'cellarDoor', 'cellarDoor', 'diningDoor']),
+  Object.freeze(['chapelDoor', 'cellarDoor', 'frontDoor', 'cellarDoor', 'diningDoor']),
   Object.freeze(['cellarDoor', 'diningDoor', 'palisade', 'palisade', 'kitchenDoor']),
   Object.freeze(['chapelDoor', 'palisade', 'frontDoor', 'kitchenDoor', 'cellarDoor']),
 ]);
-const RESERVE_SLACK = 8;
-// A hotter Perapian scorches whatever claws at it (damage per second by level).
-// (no knock-back: the burn thins a crowd at the hearth, it is not a wall)
-const HEARTH_BURN = Object.freeze({ 1: 0, 2: 8, 3: 14 });
-const HEARTH_BURN_RADIUS = 250;
+/**
+ * The keep (K1 "Benteng Terakhir"): the stone tower in the middle of the Main
+ * Hall, with the townsfolk on its battlements. Bodies that reach its wall claw
+ * it; at 0 HP the run is lost. From Lv2 a ballista on its roof shoots back.
+ */
+export const KEEP = Object.freeze({
+  reach: 40,             // px past the keep's wall (and the body's radius) a claw lands from
+  hitEvery: 1.5,         // s between one body's claws
+  // tuned on the balance bots: idle still loses Night 1; a keep-only or
+  // ballista-only plan can hold Night 3 when it also shoots back
+  damage: Object.freeze({ swarm: 12, individual: 36, breaker: 72 }),
+  alarmRange: 460,       // a body this close (and inside) threatens the keep
+  attackedFor: 1.6,      // s the keep reads "under attack" after a claw
+  ballista: Object.freeze({
+    2: Object.freeze({ damage: 12, every: 1.2, range: 360 }),
+    3: Object.freeze({ damage: 18, every: 1.0, range: 400 }),
+  }),
+});
+
+/**
+ * The keep's banner: the rooms you may build in, by keep level (the hall is
+ * the keep's own). Inside them the garrison hits harder
+ * (SURVIVAL_TUNING.territoryDamageTakenMul) — the banner never slows a body.
+ */
+export const TERRITORY = Object.freeze({
+  1: Object.freeze([ROOM.HALL, ROOM.DINING, ROOM.LIBRARY, ROOM.STUDY, ROOM.BASEMENT]),
+  2: Object.freeze([ROOM.HALL, ROOM.DINING, ROOM.LIBRARY, ROOM.STUDY, ROOM.BASEMENT,
+    ROOM.KITCHEN, ROOM.GATEHOUSE, ROOM.CHAPEL]),
+  3: Object.freeze([ROOM.HALL, ROOM.DINING, ROOM.LIBRARY, ROOM.STUDY, ROOM.BASEMENT,
+    ROOM.KITCHEN, ROOM.GATEHOUSE, ROOM.CHAPEL, ROOM.CONSERV, ROOM.ORATORY, ROOM.GALLERY]),
+});
+
+/**
+ * Typed build circles (P1, "walk into a circle, tap BUILD"). Every circle is
+ * one building type, drawn on the floor as that building's ghost, so what and
+ * where read without text. A room has one economy circle and, when it has an
+ * outer door, a ballista circle beside that door. Ids: the room id for the
+ * economy circle (old saves keep their key), `<room>:tower` for the ballista.
+ */
+export const SURVIVAL_SLOTS = Object.freeze([
+  Object.freeze({ id: 'hall:tower', room: ROOM.HALL, type: 'tower' }),
+  Object.freeze({ id: ROOM.DINING, room: ROOM.DINING, type: 'sawmill' }),
+  Object.freeze({ id: 'dining:tower', room: ROOM.DINING, type: 'tower' }),
+  Object.freeze({ id: ROOM.BASEMENT, room: ROOM.BASEMENT, type: 'mine' }),
+  Object.freeze({ id: 'basement:tower', room: ROOM.BASEMENT, type: 'tower' }),
+  Object.freeze({ id: ROOM.LIBRARY, room: ROOM.LIBRARY, type: 'barracks' }),
+  Object.freeze({ id: ROOM.STUDY, room: ROOM.STUDY, type: 'mine' }),
+  Object.freeze({ id: ROOM.KITCHEN, room: ROOM.KITCHEN, type: 'sawmill' }),
+  Object.freeze({ id: 'kitchen:tower', room: ROOM.KITCHEN, type: 'tower' }),
+  Object.freeze({ id: ROOM.GATEHOUSE, room: ROOM.GATEHOUSE, type: 'barracks' }),
+  Object.freeze({ id: 'gatehouse:tower', room: ROOM.GATEHOUSE, type: 'tower' }),
+  Object.freeze({ id: ROOM.CHAPEL, room: ROOM.CHAPEL, type: 'mine' }),
+  Object.freeze({ id: 'chapel:tower', room: ROOM.CHAPEL, type: 'tower' }),
+  Object.freeze({ id: ROOM.CONSERV, room: ROOM.CONSERV, type: 'sawmill' }),
+  Object.freeze({ id: ROOM.ORATORY, room: ROOM.ORATORY, type: 'barracks' }),
+  Object.freeze({ id: ROOM.GALLERY, room: ROOM.GALLERY, type: 'mine' }),
+]);
+const SLOT_BY_ID = new Map(SURVIVAL_SLOTS.map((slot) => [slot.id, slot]));
+export function survivalSlot(id) { return SLOT_BY_ID.get(id) || null; }
+/** Pre-K1 saves: the old building ids. */
+const TYPE_MIGRATE = Object.freeze({ extractor: 'mine', shelter: 'barracks' });
+/** How close the Hunter stands to a circle (or the keep) to act on it. */
+export const CIRCLE = Object.freeze({ radius: 58, reach: 70, keepReach: 96 });
 const NIGHT_PHASE = { id: 'survival-night', label: 'NIGHT', danger: 0.24, ambient: [108, 114, 132] };
 const DAY_PHASE = { id: 'survival-day', label: 'DAY', danger: 0.02, ambient: [186, 174, 150] };
 
-// Lv1 build cost/label. `produces` only mirrors the Lv1 row of
-// SURVIVAL_BUILDING_LEVELS for old readers; the level table drives the economy.
+// Lv1 build cost/label. The level table below drives the economy.
 export const SURVIVAL_BUILDINGS = Object.freeze({
-  extractor: Object.freeze({ id: 'extractor', label: 'OIL EXTRACTOR', oil: 2, wood: 10, seconds: 7, produces: { oil: 6 } }),
-  sawmill: Object.freeze({ id: 'sawmill', label: 'SAWMILL', oil: 2, wood: 10, seconds: 7, produces: { wood: 7 } }),
-  shelter: Object.freeze({ id: 'shelter', label: 'SURVIVOR SHELTER', oil: 4, wood: 14, seconds: 9, produces: { survivors: 1 } }),
-  tower: Object.freeze({ id: 'tower', label: 'CROSSBOW TOWER', oil: 4, wood: 16, seconds: 8, produces: {} }),
+  mine: Object.freeze({ id: 'mine', label: 'GOLD MINE', gold: 2, wood: 10, seconds: 7 }),
+  sawmill: Object.freeze({ id: 'sawmill', label: 'SAWMILL', gold: 2, wood: 10, seconds: 7 }),
+  barracks: Object.freeze({ id: 'barracks', label: 'BARRACKS', gold: 4, wood: 14, seconds: 9 }),
+  tower: Object.freeze({ id: 'tower', label: 'BALLISTA', gold: 4, wood: 16, seconds: 8 }),
 });
 
 /**
  * Building levels (Lv1 is the build itself). Every level pays off in the
  * coming night, so an upgrade bought on the last day still counts:
- *   extractor  pumps its oil into the stock DURING the night (fire fuel + purse)
- *   sawmill    wood every dawn, and planks: every outer door gets +% max HP
- *   shelter    houses survivors; a build or level moves one in at once
- *              (one more door guard tonight)
- *   tower      a crossbow tower by the room's outer door: harder bolts,
- *              further reach (see TOWER)
+ *   mine      digs gold into the purse DURING the night (`yield` per night)
+ *   sawmill   wood every dawn, and planks: every outer door gets +% max HP
+ *   barracks  houses soldiers; a build or level moves one in at once
+ *             (one more door guard tonight)
+ *   tower     a ballista by the room's outer door: harder bolts, further
+ *             reach (see TOWER)
  */
 export const BUILDING_MAX_LEVEL = 3;
 export const SURVIVAL_BUILDING_LEVELS = Object.freeze({
-  extractor: Object.freeze({
-    1: Object.freeze({ oil: 2, wood: 10, seconds: 7, pump: 6 }),
-    2: Object.freeze({ oil: 4, wood: 12, seconds: 6, pump: 10 }),
-    3: Object.freeze({ oil: 6, wood: 16, seconds: 7, pump: 14 }),
+  mine: Object.freeze({
+    1: Object.freeze({ gold: 2, wood: 10, seconds: 7, yield: 6 }),
+    2: Object.freeze({ gold: 4, wood: 12, seconds: 6, yield: 10 }),
+    3: Object.freeze({ gold: 6, wood: 16, seconds: 7, yield: 14 }),
   }),
   sawmill: Object.freeze({
-    1: Object.freeze({ oil: 2, wood: 10, seconds: 7, dawnWood: 7, doorBonus: 0.1 }),
-    2: Object.freeze({ oil: 4, wood: 12, seconds: 6, dawnWood: 11, doorBonus: 0.2 }),
-    3: Object.freeze({ oil: 6, wood: 16, seconds: 7, dawnWood: 15, doorBonus: 0.3 }),
+    1: Object.freeze({ gold: 2, wood: 10, seconds: 7, dawnWood: 7, doorBonus: 0.1 }),
+    2: Object.freeze({ gold: 4, wood: 12, seconds: 6, dawnWood: 11, doorBonus: 0.2 }),
+    3: Object.freeze({ gold: 6, wood: 16, seconds: 7, dawnWood: 15, doorBonus: 0.3 }),
   }),
-  shelter: Object.freeze({
-    1: Object.freeze({ oil: 4, wood: 14, seconds: 9, houses: 1 }),
-    2: Object.freeze({ oil: 6, wood: 16, seconds: 8, houses: 2 }),
-    3: Object.freeze({ oil: 8, wood: 20, seconds: 9, houses: 3 }),
+  barracks: Object.freeze({
+    1: Object.freeze({ gold: 4, wood: 14, seconds: 9, houses: 1 }),
+    2: Object.freeze({ gold: 6, wood: 16, seconds: 8, houses: 2 }),
+    3: Object.freeze({ gold: 8, wood: 20, seconds: 9, houses: 3 }),
   }),
   tower: Object.freeze({
-    1: Object.freeze({ oil: 4, wood: 16, seconds: 8, damage: 16, range: 520 }),
-    2: Object.freeze({ oil: 6, wood: 18, seconds: 7, damage: 22, range: 580 }),
-    3: Object.freeze({ oil: 8, wood: 22, seconds: 8, damage: 30, range: 640 }),
+    1: Object.freeze({ gold: 4, wood: 16, seconds: 8, damage: 16, range: 520 }),
+    2: Object.freeze({ gold: 6, wood: 18, seconds: 7, damage: 22, range: 580 }),
+    3: Object.freeze({ gold: 8, wood: 22, seconds: 8, damage: 30, range: 640 }),
   }),
 });
 const DOOR_BONUS_CAP = 0.6;
 
 /**
- * A crossbow tower is the house fighting back on its own. It is built in a
- * lit room like any building, but it stands just inside that room's outer
- * door (the middle of a room without one) and, by night, shoots a heavy bolt
+ * A ballista is the house fighting back on its own. It is built on its own
+ * circle just inside a room's outer door and, by night, shoots a heavy bolt
  * through the door slit that runs on through a second body. It never walks
  * to the pressed door like a guard does: where it stands is the choice.
  */
@@ -102,23 +161,18 @@ export const TOWER = Object.freeze({
   doors: Object.freeze(['frontDoor', 'cellarDoor', 'chapelDoor', 'diningDoor', 'palisade', 'kitchenDoor', 'postern']),
 });
 
-/** The Hunter's own track, bought by day like a building (no skill cards). */
+/**
+ * The Hunter's own track, bought by day at the armory rack (no skill cards).
+ * Shots are meant to feel heavy: a swarm body (48/54/60 HP) drops in two
+ * bolts at Lv1 and one inside the banner's rooms. Every level adds something
+ * you can SEE: Lv2 bolts run on through a body, Lv3 fires a fan of three.
+ */
 export const HUNTER_MAX_LEVEL = 3;
 export const SURVIVAL_HUNTER = Object.freeze({
-  1: Object.freeze({ damage: 26, hp: 100 }),
-  2: Object.freeze({ oil: 14, wood: 8, seconds: 5, damage: 32, hp: 120 }),
-  3: Object.freeze({ oil: 20, wood: 12, seconds: 6, damage: 40, hp: 140 }),
+  1: Object.freeze({ damage: 32, hp: 100, pierce: 0, fan: 1 }),
+  2: Object.freeze({ gold: 14, wood: 8, seconds: 5, damage: 40, hp: 120, pierce: 1, fan: 1 }),
+  3: Object.freeze({ gold: 20, wood: 12, seconds: 6, damage: 48, hp: 140, pierce: 1, fan: 3 }),
 });
-
-/**
- * A phone held sideways is too short for the day sheet under the world, so
- * the sheet and the NIGHT row move into a left column (ui/survival.js) and
- * the day camera frames the build target in the world view beside it.
- */
-export function daySideColumn(w, h) {
-  if (!(w > h && h < 560)) return null;
-  return { x: 10, width: Math.min(380, Math.round(w * 0.45)) };
-}
 
 function freshProgress(duration = SURVIVAL_TUNING.nightSeconds) {
   return {
@@ -127,10 +181,11 @@ function freshProgress(duration = SURVIVAL_TUNING.nightSeconds) {
     phase: 'night',
     elapsed: 0,
     nightDuration: duration,
-    oil: SURVIVAL_TUNING.startOil,
+    gold: SURVIVAL_TUNING.startGold,
     wood: SURVIVAL_TUNING.startWood,
     survivors: SURVIVAL_TUNING.startSurvivors,
-    perapianLevel: 1,
+    keepLevel: 1,
+    keepHp: SURVIVAL_TUNING.keepHp[1],
     buildings: {},
     buildingLevels: {},
     hunterLevel: 1,
@@ -142,9 +197,8 @@ function freshProgress(duration = SURVIVAL_TUNING.nightSeconds) {
     waveIndex: 0,
     breakerIndex: 0,
     individualIndex: 0,
-    oilBurned: 0,
     siegeTimers: {},
-    nightStats: { kills: 0, hits: 0, damageToWalls: 0, drained: 0, pumped: 0 },
+    nightStats: { kills: 0, hits: 0, damageToWalls: 0, keepDamage: 0, mined: 0 },
     lastRewards: null,
     rewardAck: 0,
     hints: {},
@@ -164,10 +218,7 @@ function clampDuration(value) {
 /* shared survival locomotion                                          */
 /* ------------------------------------------------------------------ */
 
-const HEARTH_REACH = 132;
 const SIEGE_REACH = 250;       // px from a door the pressing ranks still claw it
-const FEED_EVERY = 1.5;
-const FEED_OIL = Object.freeze({ swarm: 1, individual: 3, breaker: 6 });
 
 function stepToward(enemy, dt, game, tx, ty, speed, accel) {
   const a = Math.atan2(ty - enemy.y, tx - enemy.x);
@@ -239,18 +290,18 @@ export function survivalSpot(e, index, ring = 72) {
 }
 
 /**
- * Inside the walls: follow the flow field to the Perapian (or the Hunter when
- * he stands in the dark) and claw the fire once in reach. Light only slows.
+ * Inside the walls: follow the flow field to the keep (or the Hunter when he
+ * stands outside the banner's rooms) and claw the keep's wall once in reach.
+ * The banner never slows or blunts a body; it only makes the garrison's shots
+ * hit harder (SurvivalMode.enemyDamageTaken).
  */
 function invade(enemy, dt, game, mode, speed, accel, preferHunter, fallback = null) {
-  const fire = mode.hearth();
+  const keep = mode.keep();
   const p = game.player;
-  const lit = mode.isLit(enemy.x, enemy.y);
+  const held = mode.inTerritory(enemy.x, enemy.y);
   const pd = dist(enemy.x, enemy.y, p.x, p.y);
-  enemy.feeding = false;
-  // Firelight never makes a body harmless: in the light it will not hunt the
-  // Hunter, but one standing in its way still gets clawed (weaker, see
-  // SurvivalMode.enemyAttackMul).
+  enemy.attackingKeep = false;
+  // One standing in its way still gets clawed, inside the banner or not.
   if (pd < enemy.radius + p.radius + 12 && p.state !== 'death' && p.state !== 'dead') {
     settle(enemy, dt);
     enemy.state = 'strike';
@@ -275,31 +326,31 @@ function invade(enemy, dt, game, mode, speed, accel, preferHunter, fallback = nu
     }
     return 'press';
   }
-  // In the dark it also goes for a guard close by, as it would for the Hunter.
-  const prey = lit ? null : mode.guardToHunt(enemy);
+  // Outside the banner it also goes for a guard close by, as it would for the Hunter.
+  const prey = held ? null : mode.guardToHunt(enemy);
   if (prey) {
     stepToward(enemy, dt, game, prey.x, prey.y, speed, accel);
     enemy.state = 'march';
     return 'march';
   }
   if (enemy._prey) enemy._prey = null;
-  if (fire && dist(enemy.x, enemy.y, fire.x, fire.y) <= HEARTH_REACH) {
+  if (keep && mode.keepHp > 0 && dist(enemy.x, enemy.y, keep.x, keep.y) <= keep.r + (enemy.radius || 13) + KEEP.reach) {
     settle(enemy, dt);
-    enemy.feeding = true;
+    enemy.attackingKeep = true;
     enemy.state = 'strike';
-    enemy.angle = Math.atan2(fire.y - enemy.y, fire.x - enemy.x);
-    enemy.feedCd = (enemy.feedCd == null ? FEED_EVERY * 0.5 : enemy.feedCd) - dt;
-    if (enemy.feedCd <= 0) { enemy.feedCd = FEED_EVERY; mode.feedHearth(enemy); }
-    return 'feed';
+    enemy.angle = Math.atan2(keep.y - enemy.y, keep.x - enemy.x);
+    enemy.keepCd = (enemy.keepCd == null ? KEEP.hitEvery * 0.5 : enemy.keepCd) - dt;
+    if (enemy.keepCd <= 0) { enemy.keepCd = KEEP.hitEvery; mode.hitKeep(enemy); }
+    return 'keep';
   }
-  const hunterInDark = !mode.isLit(p.x, p.y);
-  const chase = (preferHunter && hunterInDark) || (!lit && pd < 170);
-  let dir = mode.flowDir(chase ? 'hunter' : 'hearth', enemy.x, enemy.y);
-  if (!dir && chase) dir = mode.flowDir('hearth', enemy.x, enemy.y);
+  const hunterOut = !mode.inTerritory(p.x, p.y);
+  const chase = (preferHunter && hunterOut) || (!held && pd < 170);
+  let dir = mode.flowDir(chase ? 'hunter' : 'keep', enemy.x, enemy.y);
+  if (!dir && chase) dir = mode.flowDir('keep', enemy.x, enemy.y);
   if (dir) stepDir(enemy, dt, game, dir, speed, accel);
   else if (!enemy._inHouse && fallback) stepToward(enemy, dt, game, fallback.x, fallback.y, speed, accel);
   else if (chase) stepToward(enemy, dt, game, p.x, p.y, speed, accel);
-  else if (fire) stepToward(enemy, dt, game, fire.x, fire.y, speed, accel);
+  else if (keep) stepToward(enemy, dt, game, keep.x, keep.y, speed, accel);
   enemy.state = 'march';
   return 'march';
 }
@@ -307,7 +358,7 @@ function invade(enemy, dt, game, mode, speed, accel, preferHunter, fallback = nu
 /** Death/hit-stun handling shared by all three survival enemy types. */
 function commonPreamble(enemy, dt, game) {
   if (enemy.dead) {
-    enemy.feeding = false;
+    enemy.attackingKeep = false;
     enemy.deathT += dt;
     settle(enemy, dt, 7);
     if (enemy.deathT > 1.45) enemy.removeMe = true;
@@ -315,8 +366,8 @@ function commonPreamble(enemy, dt, game) {
   }
   enemy.staggerT = Math.max(0, (enemy.staggerT || 0) - dt);
   if (enemy.staggerT > 0) {
-    // Flare knock-back / hit flinch: short and never caused by light alone.
-    enemy.feeding = false;
+    // Flare knock-back / hit flinch: short and never caused by the banner.
+    enemy.attackingKeep = false;
     enemy.state = 'stagger';
     settle(enemy, dt, 5.5);
     enemy.moveColliding(game, enemy.vx * dt, enemy.vy * dt);
@@ -344,8 +395,8 @@ class SurvivalCrowdZombie extends CrowdBody {
     this.hitEvery = 1.6;
     this.hitDamage = 9 + day * 2;
     this.hitKind = 'swarm';
-    this.feedCd = null;
-    this.feeding = false;
+    this.keepCd = null;
+    this.attackingKeep = false;
   }
 
   hurt(amount, game, fromX, fromY) {
@@ -354,8 +405,10 @@ class SurvivalCrowdZombie extends CrowdBody {
     this.hp -= incoming;
     this.hurtFlash = 1;
     if (fromX != null && fromY != null) {
+      // a heavy bolt shoves the body back: the hit reads as weight
       const a = Math.atan2(this.y - fromY, this.x - fromX);
-      this.vx += Math.cos(a) * 42; this.vy += Math.sin(a) * 42;
+      const shove = this.hp <= 0 ? 260 : 120;
+      this.vx += Math.cos(a) * shove; this.vy += Math.sin(a) * shove;
     }
     if (this.hp <= 0) this.die(game);
   }
@@ -363,7 +416,7 @@ class SurvivalCrowdZombie extends CrowdBody {
   die(game) {
     if (this.dead) return;
     this.dead = true;
-    this.feeding = false;
+    this.attackingKeep = false;
     this.state = ESTATE.DYING;
     this.deathT = 0;
     if (game && game.onEnemyKilled) game.onEnemyKilled(this);
@@ -377,15 +430,13 @@ class SurvivalCrowdZombie extends CrowdBody {
     const entrance = mode.entranceById(this.entranceId) || this.entrance;
     this.entrance = entrance;
     const inside = trackInside(this, game);
-    const lit = mode.isLit(this.x, this.y);
-    const slow = lit ? mode.tuning.lightMoveMul : 1;
     const broken = !!(entrance && entrance.broken);
     this.alpha = Math.min(1, this.alpha + dt * 0.8);
 
     if (broken || inside) {
-      // The hearth field routes through whichever gap is open.
+      // The keep's field routes through whichever gap is open.
       this.press = damp(this.press || 0, 0, 5, dt);
-      invade(this, dt, game, mode, mode.swarmSpeed(true) * slow, 5.2, false, entrance && (entrance.outside || entrance));
+      invade(this, dt, game, mode, mode.swarmSpeed(true), 5.2, false, entrance && (entrance.outside || entrance));
       return;
     }
 
@@ -394,7 +445,7 @@ class SurvivalCrowdZombie extends CrowdBody {
     const targetX = spot.x + this.jx * 0.25;
     const targetY = spot.y + this.jy * 0.25;
     const d = dist(this.x, this.y, targetX, targetY);
-    const speed = mode.swarmSpeed(false) * this.gait * slow;
+    const speed = mode.swarmSpeed(false) * this.gait;
     if (d > 10) {
       this.state = CROWD.MARCH;
       if (d > 120) approachDoor(this, dt, game, mode, entrance, { x: targetX, y: targetY }, speed, 4.8);
@@ -414,7 +465,7 @@ class SurvivalCrowdZombie extends CrowdBody {
   }
 }
 
-/** Individual, durable zombie: hunts the Hunter in the dark, else the fire. */
+/** Individual, durable zombie: hunts the Hunter outside the banner, else the keep. */
 class SurvivalIndividualZombie extends Zombie {
   constructor(x, y, entrance, day, index = 0) {
     super(x, y, { entranceId: entrance && entrance.id });
@@ -431,14 +482,14 @@ class SurvivalIndividualZombie extends Zombie {
     this.hitEvery = 1.55;
     this.hitDamage = this.type.contactDamage;
     this.hitKind = 'bite';
-    this.feedCd = null;
-    this.feeding = false;
+    this.keepCd = null;
+    this.attackingKeep = false;
   }
 
   die(game) {
     if (this.dead) return;
     this.dead = true;
-    this.feeding = false;
+    this.attackingKeep = false;
     this.state = ESTATE.DYING;
     this.deathT = 0;
     if (game && game.onEnemyKilled) game.onEnemyKilled(this);
@@ -451,11 +502,10 @@ class SurvivalIndividualZombie extends Zombie {
     const mode = game.survival;
     let entrance = mode.entranceById(this.entranceId);
     const inside = trackInside(this, game);
-    const lit = mode.isLit(this.x, this.y);
-    const slow = lit ? mode.tuning.lightMoveMul : 1;
+    const slow = 1;
     this.attackCd -= dt;
-    // Outside: the assigned door; if it is intact, batter it (halved in light);
-    // once any door is open, the flow field routes through the nearest gap.
+    // Outside: the assigned door; if it is intact, batter it; once any door
+    // is open, the flow field routes through the nearest gap.
     const open = mode.nearestBrokenDoor(this.x, this.y);
     if (open) { entrance = open; this.entranceId = open.id; }
     if (!entrance) entrance = mode.chooseTargetEntrance(this.x, this.y);
@@ -487,7 +537,7 @@ class SurvivalIndividualZombie extends Zombie {
   }
 }
 
-/** Day-2 wall specialist: doors first (next intact one after a breach), then the fire. */
+/** Day-2 wall specialist: doors first (next intact one after a breach), then the keep. */
 class SurvivalBreaker extends Zombie {
   constructor(x, y, entrance, day, index = 0) {
     super(x, y, { entranceId: entrance && entrance.id });
@@ -508,14 +558,14 @@ class SurvivalBreaker extends Zombie {
     this.hitEvery = 1.9;
     this.hitDamage = 18 + day * 2;
     this.hitKind = 'slam';
-    this.feedCd = null;
-    this.feeding = false;
+    this.keepCd = null;
+    this.attackingKeep = false;
   }
 
   die(game) {
     if (this.dead) return;
     this.dead = true;
-    this.feeding = false;
+    this.attackingKeep = false;
     this.state = ESTATE.DYING;
     this.deathT = 0;
     if (game && game.onEnemyKilled) game.onEnemyKilled(this);
@@ -527,16 +577,15 @@ class SurvivalBreaker extends Zombie {
     if (commonPreamble(this, dt, game)) return;
     const mode = game.survival;
     const inside = trackInside(this, game);
-    const lit = mode.isLit(this.x, this.y);
-    const speed = this.type.speed * (lit ? mode.tuning.lightMoveMul : 1);
+    const speed = this.type.speed;
     // Deliberately do not inspect player LOS/visibility: the objective is a
     // structure. A broken target hands over to the next intact door; with no
-    // door left standing it walks in and goes for the Perapian.
+    // door left standing it walks in and goes for the keep.
     let target = mode.entranceById(this.targetEntranceId);
     if (!target || target.broken) {
       const next = mode.nextIntactDoor(this.x, this.y);
       if (next) { target = next; this.targetKind = 'wall'; }
-      else { target = null; this.targetKind = 'perapian'; }
+      else { target = null; this.targetKind = 'keep'; }
       this.targetEntranceId = target && target.id;
       this.entranceId = this.targetEntranceId || this.entranceId;
     }
@@ -565,9 +614,11 @@ class SurvivalBreaker extends Zombie {
 }
 
 /**
- * BFS distance field on the Mansion nav grid. One field per goal (Perapian,
- * Hunter, each door lane); enemies read a direction in O(1) instead of each
- * running its own path search, which keeps a 30-body wave cheap on phones.
+ * BFS distance field on the Mansion nav grid. One field per goal (the keep,
+ * the Hunter, each door lane); enemies read a direction in O(1) instead of
+ * each running its own path search, which keeps a 30-body wave cheap on
+ * phones. The keep's field has many goals (a ring around its wall), so every
+ * body walks to the nearest side of the tower instead of queueing at one.
  */
 class FlowField {
   constructor(mansion) {
@@ -581,7 +632,9 @@ class FlowField {
     this.out = { x: 0, y: 0 };
   }
 
-  build(x, y, version) {
+  build(x, y, version) { return this.buildMulti([{ x, y }], version); }
+
+  buildMulti(points, version) {
     const m = this.m;
     const size = m.navW * m.navH;
     if (size !== this.size) {
@@ -592,14 +645,19 @@ class FlowField {
     this.version = version;
     const d = this.dist;
     d.fill(-1);
-    const goal = m.navNearest(x, y, 6);
-    if (!goal) { this.goalCell = -1; return false; }
     const w = m.navW, h = m.navH, nav = m.nav, q = this.queue;
-    const start = goal.gy * w + goal.gx;
-    this.goalCell = start;
     let head = 0, tail = 0;
-    q[tail++] = start;
-    d[start] = 0;
+    this.goalCell = -1;
+    for (const point of points) {
+      const goal = m.navNearest(point.x, point.y, 6);
+      if (!goal) continue;
+      const cell = goal.gy * w + goal.gx;
+      if (d[cell] === 0) continue;
+      d[cell] = 0;
+      q[tail++] = cell;
+      if (this.goalCell < 0) this.goalCell = cell;
+    }
+    if (this.goalCell < 0) return false;
     while (head < tail) {
       const cur = q[head++];
       const cx = cur % w, cy = (cur - cx) / w;
@@ -657,37 +715,37 @@ class FlowField {
 }
 
 /**
- * Survivors are the house's garrison. By day they stand around the Perapian
- * (the count the HUD shows is people you can see); by night each one walks to
- * the door under the most pressure and shoots through its slit.
+ * Soldiers (survivors) are the keep's garrison. By day they stand around the
+ * keep (the count the HUD shows is people you can see); by night each one
+ * walks to the door under the most pressure and shoots through its slit.
  *
  * They can be hurt, by the same rules as the Hunter: a body that gets inside
- * (a breach) claws a guard standing in its way (halved in firelight), and in
- * the dark it also goes for a guard close by — a few per guard, the rest keep
- * walking to the fire. So a guard holding a lit door is fairly safe and one
- * holding a dark door is not. A badly hurt guard falls back to the fire; one
- * that drops stays down where it fell and stops shooting. The Hunter helps a fallen guard up by standing beside it;
- * one left alone for `bleedOut` seconds is lost (one survivor fewer, for
- * good). Dawn gets everyone still down back up. Losing the house is still
- * only the fire or the Hunter.
+ * (a breach) claws a guard standing in its way, and outside the banner's
+ * rooms it also goes for a guard close by — a few per guard, the rest keep
+ * walking to the keep. So a guard holding a door inside the banner is fairly
+ * safe and one holding a door beyond it is not. A badly hurt guard falls back
+ * to the keep; one that drops stays down where it fell and stops shooting.
+ * The Hunter helps a fallen guard up by standing beside it; one left alone
+ * for `bleedOut` seconds is lost (one soldier fewer, for good). Dawn gets
+ * everyone still down back up. Losing the run is only the keep or the Hunter.
  */
 export const GUARD = Object.freeze({
   speed: 210,          // px/s walking between posts
   range: 420,          // px a guard will shoot at
   every: 1.6,          // s between shots
-  damage: 10,          // per bolt (x1.75 on lit enemies, like the Hunter's)
+  damage: 10,          // per bolt (x1.5 inside the banner's rooms, like the Hunter's)
   boltSpeed: 640,
   perDoor: 2,          // most guards one door takes before the next door gets one
   cap: 8,              // most guards on the map (== maxSurvivors)
   hp: 40,              // a survivor is no Hunter (100+): 3-4 claws in the dark
   reach: 12,           // px past both bodies' radii a claw lands from
-  woundedAt: 0.35,     // at or below this share of HP a guard falls back to the fire
+  woundedAt: 0.35,     // at or below this share of HP a guard falls back to the keep
   rescueRange: 70,     // px from a fallen guard the Hunter stands to help him up
   rescueTime: 1.5,     // s he stays there
   rescueHp: 0.5,       // share of HP a guard gets up with
   bleedOut: 20,        // s a fallen guard holds on alone (the clock stops while helped)
   iframes: 0.5,        // s after a claw before the next one lands (the Hunter has 0.75)
-  huntRange: 110,      // px: in the dark a body this close goes for a guard (Hunter: 170)
+  huntRange: 110,      // px: beyond the banner a body this close goes for a guard (Hunter: 170)
   maxHunters: 3,       // bodies going for one guard at once
 });
 
@@ -726,10 +784,11 @@ export class SurvivalMode {
     this.day = 1;
     this.elapsed = 0;
     this.nightDuration = clampDuration(options.nightDuration || (game.save.survival && game.save.survival.nightDuration));
-    this.oil = this.tuning.startOil;
+    this.gold = this.tuning.startGold;
     this.wood = this.tuning.startWood;
     this.survivors = this.tuning.startSurvivors;
-    this.perapianLevel = 1;
+    this.keepLevel = 1;
+    this.keepHp = this.tuning.keepHp[1];
     this.buildings = {};
     this.buildingLevels = {};
     this.hunterLevel = 1;
@@ -741,15 +800,13 @@ export class SurvivalMode {
     this.waveIndex = 0;
     this.breakerIndex = 0;
     this.individualIndex = 0;
-    this.oilBurned = 0;
     this.siegeTimers = Object.create(null);
-    this.nightStats = { kills: 0, hits: 0, damageToWalls: 0 };
+    this.nightStats = { kills: 0, hits: 0, damageToWalls: 0, keepDamage: 0, mined: 0 };
     this.lastRewards = null;
     this.skillCooldown = 0;
     this.skillCooldownMax = this.tuning.skillCooldown;
     this.skillFlash = 0;
     this._saveT = 0;
-    this._bakeRadius = -1;
     this._lastGateOpen = null;
     this._savedDurationOverride = options.nightDuration || null;
     this.uiClock = 0;
@@ -758,23 +815,28 @@ export class SurvivalMode {
     this.floaters = [];
     this.bannerQueue = [];
     this.banner = null;
-    this.hearthFeeders = 0;
+    this.keepAttackers = 0;
+    this.keepBallista = { cd: 0.6, aim: Math.PI / 2, angle: Math.PI / 2, shotT: 0, target: null, shots: 0 };
     this.rewardAck = 0;
     this.dayFocus = null;
+    this.walkPath = null;          // day: tap a far circle and the Hunter walks there
+    this.hitStop = 0;              // s the night holds still on a heavy kill
     this._doorPressure = new Map();
     this._breachAt = Object.create(null);
     this._fields = new Map();
     this._movedSinceStart = 0;
     this._lastPlayerPos = null;
-    this._fireLowWarned = false;
-    this._hearthWarnAt = -99;
+    this._keepHitAt = -99;
+    this._keepWarnAt = -99;
+    this._keepLowWarned = false;
     this._restore(game.save.survival || freshProgress(this.nightDuration));
     this.applyHunterStats(false);
     this._configureMansion();
     this._applyEntranceState();
     this.applyBuildingEffects(false);
     this.game.mansion.buildNav();
-    this.refreshFireplace(true);
+    this._syncTerritory();
+    this.game.survivalBakeDirty = true;
     this._syncGuardRoster(true);
     this._applyGuardState();
     this._syncTowers();
@@ -789,33 +851,52 @@ export class SurvivalMode {
     this.phase = ['night', 'day', 'complete', 'failed'].includes(s.phase) ? s.phase : 'night';
     this.elapsed = clamp(Number(s.elapsed) || 0, 0, this.nightDuration);
     this.nightDuration = clampDuration(s.nightDuration || this.nightDuration);
-    this.oil = clamp(Math.floor(Number(s.oil) || 0), 0, RESOURCE_CAP);
+    // pre-K1 saves: Oil was the purse, the Perapian the heart
+    const gold = saved && saved.gold == null && saved.oil != null ? saved.oil : s.gold;
+    this.gold = clamp(Math.floor(Number(gold) || 0), 0, RESOURCE_CAP);
     this.wood = clamp(Math.floor(Number(s.wood) || 0), 0, RESOURCE_CAP);
     this.survivors = clamp(Math.floor(Number(s.survivors) || 0), 0, 99);
-    this.perapianLevel = clamp(Math.round(Number(s.perapianLevel) || 1), 1, 3);
+    const level = saved && saved.keepLevel == null && saved.perapianLevel != null ? saved.perapianLevel : s.keepLevel;
+    this.keepLevel = clamp(Math.round(Number(level) || 1), 1, 3);
+    const hp = saved && saved.keepHp != null ? Number(saved.keepHp) : NaN;
+    this.keepHp = Number.isFinite(hp) ? clamp(hp, 0, this.keepHpMax()) : this.keepHpMax();
     this.buildings = {};
-    if (s.buildings && typeof s.buildings === 'object') {
-      for (const [roomId, type] of Object.entries(s.buildings)) if (SURVIVAL_BUILDINGS[type]) this.buildings[roomId] = type;
-    }
-    // saves from before building levels have no table: every building is Lv1
-    const levels = s.buildingLevels && typeof s.buildingLevels === 'object' ? s.buildingLevels : {};
     this.buildingLevels = {};
-    for (const roomId of Object.keys(this.buildings)) {
-      this.buildingLevels[roomId] = clamp(Math.round(Number(levels[roomId]) || 1), 1, BUILDING_MAX_LEVEL);
+    // Typed circles: a building lives on the circle of its own type. Old
+    // free-choice saves move onto their room's circle when the type matches.
+    const levels = s.buildingLevels && typeof s.buildingLevels === 'object' ? s.buildingLevels : {};
+    if (s.buildings && typeof s.buildings === 'object') {
+      for (const [key, raw] of Object.entries(s.buildings)) {
+        const type = TYPE_MIGRATE[raw] || raw;
+        if (!SURVIVAL_BUILDINGS[type]) continue;
+        const id = type === 'tower' && !String(key).endsWith(':tower') ? `${key}:tower` : key;
+        const slot = SLOT_BY_ID.get(id);
+        if (!slot || slot.type !== type) continue;
+        this.buildings[id] = type;
+        this.buildingLevels[id] = clamp(Math.round(Number(levels[key]) || 1), 1, BUILDING_MAX_LEVEL);
+      }
     }
     this.hunterLevel = clamp(Math.round(Number(s.hunterLevel) || 1), 1, HUNTER_MAX_LEVEL);
     this.gateBuilt = !!s.gateBuilt;
     this.gateHp = Math.max(0, Number(s.gateHp) || 0);
-    this.builderJob = s.builderJob && typeof s.builderJob === 'object' ? { ...s.builderJob } : null;
+    let job = s.builderJob && typeof s.builderJob === 'object' ? { ...s.builderJob } : null;
+    if (job) {
+      if (job.kind === 'perapian') { job.kind = 'keep'; job.type = 'keep'; }
+      if (TYPE_MIGRATE[job.type]) job.type = TYPE_MIGRATE[job.type];
+      if ((job.kind === 'building' || job.kind === 'upgrade') && !job.slotId) {
+        job.slotId = job.type === 'tower' && job.roomId ? `${job.roomId}:tower` : job.roomId;
+      }
+      if ((job.kind === 'building' || job.kind === 'upgrade') && !SLOT_BY_ID.has(job.slotId)) job = null;
+    }
+    this.builderJob = job;
     this.selectedRoom = s.selectedRoom || null;
     this.nightsCompleted = clamp(Math.floor(Number(s.nightsCompleted) || 0), 0, 3);
     this.waveIndex = Math.max(0, Math.floor(Number(s.waveIndex) || 0));
     this.breakerIndex = Math.max(0, Math.floor(Number(s.breakerIndex) || 0));
     this.individualIndex = Math.max(0, Math.floor(Number(s.individualIndex) || 0));
-    this.oilBurned = Math.max(0, Number(s.oilBurned) || 0);
-    this.nightOilStart = Number.isFinite(Number(s.nightOilStart)) && s.nightOilStart != null ? Number(s.nightOilStart) : null;
+    this.nightKeepStart = Number.isFinite(Number(s.nightKeepStart)) && s.nightKeepStart != null ? Number(s.nightKeepStart) : null;
     this.siegeTimers = s.siegeTimers && typeof s.siegeTimers === 'object' ? { ...s.siegeTimers } : {};
-    this.nightStats = { kills: 0, hits: 0, damageToWalls: 0, drained: 0, pumped: 0, ...(s.nightStats || {}) };
+    this.nightStats = { kills: 0, hits: 0, damageToWalls: 0, keepDamage: 0, mined: 0, ...(s.nightStats || {}) };
     this.lastRewards = s.lastRewards || null;
     this.rewardAck = Math.max(0, Math.floor(Number(s.rewardAck) || 0));
 
@@ -829,8 +910,8 @@ export class SurvivalMode {
       if (Number.isFinite(pos.blood)) g.player.blood = clamp(pos.blood, 1, g.player.bloodMax);
       if (Number.isFinite(pos.angle)) g.player.angle = pos.angle;
     } else {
-      const hearth = g.mansion.fireplaceLight || g.mansion.roomCenter(ROOM.LIBRARY);
-      g.player.x = hearth.x + 70; g.player.y = hearth.y + 210;
+      const home = this.hunterHome();
+      g.player.x = home.x; g.player.y = home.y;
       g.player.angle = -Math.PI / 2;
     }
     g.player.weapon = 'shot';
@@ -880,11 +961,12 @@ export class SurvivalMode {
         if (row[key] != null) e[key] = row[key];
       }
       if (row.targetEntranceId) e.targetEntranceId = row.targetEntranceId;
-      if (row.targetKind) e.targetKind = row.targetKind;
-      // a body that already crossed a doorway keeps walking to the fire
+      if (row.targetKind) e.targetKind = row.targetKind === 'perapian' ? 'keep' : row.targetKind;
+      // a body that already crossed a doorway keeps walking to the keep
       // instead of turning back toward its door after a reload
       if (row.inHouse) e._inHouse = true;
-      if (Number.isFinite(row.feedCd)) e.feedCd = row.feedCd;
+      const keepCd = row.keepCd != null ? row.keepCd : row.feedCd;
+      if (Number.isFinite(keepCd)) e.keepCd = keepCd;
       if (Number.isFinite(row.staggerT)) e.staggerT = row.staggerT;
       if (e._crowd) e.index = Number(row.index) || 0;
       g.enemies.push(e);
@@ -901,20 +983,38 @@ export class SurvivalMode {
     }
   }
 
+  /**
+   * K1: the Main Hall's middle belongs to the keep. Its rug and candelabras
+   * step aside, the old library hearth goes dark (just furniture now), a
+   * warm lamp marks the keep's lit window, and the tower is solid: bodies,
+   * bolts and the Hunter walk around it.
+   */
   _configureMansion() {
     const m = this.game.mansion;
     m.survivalLighting = true;
     this._syncBakePhase();
+    m.props = (m.props || []).filter((prop) => !(prop.room === ROOM.HALL && (prop.type === 'candelabra' || prop.type === 'carpet')));
     for (const prop of m.props || []) {
       if (prop.type === 'carpet' && (prop.color === 'dark' || prop.color === 'crimson')) prop.color = 'rose';
       else if (prop.type === 'carpet' && prop.color === 'purple') prop.color = 'violet';
     }
-    for (const light of m.lights) {
-      if (light !== m.fireplaceLight) { light.i = 0; light.curI = 0; }
+    for (const light of m.lights) { light.i = 0; light.curI = 0; }
+    const keep = this.keep();
+    let lamp = m.lights.find((light) => light.id === 'keep');
+    if (!lamp) {
+      lamp = { id: 'keep', on: true, flicker: 0, seed: 1, x: keep.x, y: keep.y + 30, r: 560, color: [255, 220, 170], flick: 0, room: ROOM.HALL, type: 'lamp' };
+      m.lights.push(lamp);
     }
-    if (m.fireplaceLight) {
-      m.fireplaceLight.i = this.oil > 0 ? 0.92 : 0;
-      m.fireplaceLight.type = 'fire';
+    lamp.i = 0.62; lamp.curI = 0.62; lamp.f = 1;
+    if (!m.solids.some((solid) => solid.type === 'keep')) {
+      // a plus and a square: the round tower's footprint within ~20 px
+      const r = keep.r;
+      const rects = [
+        { x: keep.x - r, y: keep.y - 70, w: r * 2, h: 140 },
+        { x: keep.x - 70, y: keep.y - r, w: 140, h: r * 2 },
+        { x: keep.x - 95, y: keep.y - 95, w: 190, h: 190 },
+      ];
+      for (const rect of rects) m._indexSolid({ ...rect, type: 'keep', solid: true });
     }
   }
 
@@ -940,7 +1040,7 @@ export class SurvivalMode {
     g.player.state = 'idle';
     if (g.renderer.setZoomMul) g.renderer.setZoomMul(this.frameMul(this.phase !== 'day'));
     g.renderer.snapCamera(g.player.x, g.player.y);
-    g.input.gameplay = this.phase === 'night';
+    g.input.gameplay = this.phase === 'night' || this.phase === 'day';
     g.mansion.update(0, g);
     this._persist(true);
     return true;
@@ -949,15 +1049,16 @@ export class SurvivalMode {
   startNight() {
     if (this.phase !== 'day' || this.builderJob) return false;
     const g = this.game;
+    g._survivalHint = null;   // nor a day's into the night
     this.phase = 'night';
     this.elapsed = 0;
-    this.oilBurned = 0;
-    this.nightOilStart = this.oil;
+    this.nightKeepStart = this.keepHp;
+    this.walkPath = null;
     this.waveIndex = 0;
     this.breakerIndex = 0;
     this.individualIndex = 0;
     this.siegeTimers = Object.create(null);
-    this.nightStats = { kills: 0, hits: 0, damageToWalls: 0, drained: 0, pumped: 0 };
+    this.nightStats = { kills: 0, hits: 0, damageToWalls: 0, keepDamage: 0, mined: 0 };
     this._resetNightFx();
     g.time = 0;
     g.timeLeft = this.nightDuration;
@@ -979,7 +1080,7 @@ export class SurvivalMode {
     this.applyBuildingEffects(true);
     g.mansion.buildNav();
     this._fields.clear();
-    this.refreshFireplace(true);
+    this._syncBakePhase();
     this._syncGuardRoster(true);
     this._syncTowers();
     this._guardAssignT = 0;
@@ -994,17 +1095,24 @@ export class SurvivalMode {
     this.floaters.length = 0;
     this.bannerQueue.length = 0;
     this.banner = null;
-    this.hearthFeeders = 0;
+    this.keepAttackers = 0;
+    this.hitStop = 0;
+    this.keepBallista.target = null;
+    this.keepBallista.shotT = 0;
     this._doorPressure.clear();
     this._breachAt = Object.create(null);
     this._movedSinceStart = 0;
     this._lastPlayerPos = null;
-    this._fireLowWarned = false;
-    this._hearthWarnAt = -99;
+    this._keepHitAt = -99;
+    this._keepWarnAt = -99;
+    this._keepLowWarned = false;
   }
 
   _nightIntro() {
-    this.pushEvent('night', 'moon', `NIGHT ${this.day}`, { sub: 'SURVIVE UNTIL DAWN', life: 2.4 });
+    const left = 3 - this.nightsCompleted;
+    // the first night says who you are and what you hold (shown once a run)
+    if (this.day === 1) this.pushEvent('night', 'keep', 'HOLD THE KEEP', { sub: 'REINFORCEMENTS IN 3 NIGHTS', life: 3.2 });
+    else this.pushEvent('night', 'moon', `NIGHT ${this.day}`, { sub: left > 1 ? `REINFORCEMENTS IN ${left} NIGHTS` : 'REINFORCEMENTS AT DAWN', life: 2.6 });
   }
 
   update(dt) {
@@ -1017,6 +1125,12 @@ export class SurvivalMode {
       this._updateFx(dt);
       this.skillCooldown = Math.max(0, this.skillCooldown - dt);
       this.skillFlash = Math.max(0, this.skillFlash - dt);
+    }
+    // a heavy kill holds the night still for a few frames (hit-stop)
+    if (this.hitStop > 0 && this.phase === 'night' && g.screen === 'playing') {
+      this.hitStop = Math.max(0, this.hitStop - dt);
+      g.player.anim(0);
+      return;
     }
     if (this.phase === 'night' && g.screen === 'playing' && !g.uiPanel) this.updateNight(dt);
     else if (this.phase === 'day' && g.screen === 'playing') this.updateDay(dt);
@@ -1040,9 +1154,8 @@ export class SurvivalMode {
 
     if (g.player.bloodMax !== this.hunterStats().hp) this.applyHunterStats(false);
     this.updateWaves();
-    this.updateLightFuel(dt);
+    this.updateMines(dt);
     g.mansion.update(dt, g);
-    this.refreshFireplace(false);
 
     this.currentTarget = this.autoTarget();
     if (this.currentTarget) {
@@ -1056,23 +1169,23 @@ export class SurvivalMode {
     g.player.update(dt, g);
     g.player.anim(dt);
 
-    let feeders = 0;
+    let attackers = 0;
     for (let i = g.enemies.length - 1; i >= 0; i--) {
       const e = g.enemies[i];
       e.update(dt, g);
-      if (e.feeding && !e.dead) feeders++;
+      if (e.attackingKeep && !e.dead) attackers++;
       if (e.removeMe) g.enemies.splice(i, 1);
     }
-    this.hearthFeeders = feeders;
-    this.updateHearthBurn(dt);
+    this.keepAttackers = attackers;
+    this.updateKeepBallista(dt);
     this.updateGuards(dt);
     this.updateTowers(dt);
     const p = g.player;
     if (this._lastPlayerPos) this._movedSinceStart += Math.hypot(p.x - this._lastPlayerPos.x, p.y - this._lastPlayerPos.y);
     this._lastPlayerPos = { x: p.x, y: p.y };
-    if (!this._fireLowWarned && this.oil > 0 && this.oil < 6) {
-      this._fireLowWarned = true;
-      this.pushEvent('fireLow', 'oil', 'FIRE LOW!');
+    if (!this._keepLowWarned && this.keepHp > 0 && this.keepHp < this.keepHpMax() * 0.25) {
+      this._keepLowWarned = true;
+      this.pushEvent('keepLow', 'keep', 'KEEP CRITICAL!');
     }
     for (let i = g.bolts.length - 1; i >= 0; i--) {
       const b = g.bolts[i];
@@ -1087,12 +1200,17 @@ export class SurvivalMode {
     for (const e of g.mansion.entrances) if (e.flash > 0) e.flash = Math.max(0, e.flash - dt * 1.6);
     this.followPlayer(dt);
     if (this.phase !== 'night') return;
-    if (this.oil <= 0) this.fail('THE FIRE WENT OUT');
+    if (this.keepHp <= 0) this.fail('THE KEEP FELL');
     else if (g.player.blood <= 0 && g.player.state !== 'death') g.killPlayer('Hunter lost');
     else if (g.player.state === 'death' || g.player.state === 'dead') this.fail('Hunter lost');
     else if (this.elapsed >= this.nightDuration) this.completeNight();
   }
 
+  /**
+   * The day is a walk between build circles (P1): the Hunter moves with the
+   * stick (a little faster than at night), or walks himself to a circle that
+   * was tapped. Nothing attacks; the clock does not run.
+   */
   updateDay(dt) {
     const g = this.game;
     this.elapsed += dt;
@@ -1102,8 +1220,22 @@ export class SurvivalMode {
     g.danger = 0.02;
     g.bloodMoon = 0; g.duelDark = 0; g.blackoutT = 0; g.powerOut = false;
     g.mansion.update(dt, g);
-    this.refreshFireplace(false);
-    g.player.anim(dt);
+    const p = g.player;
+    const input = g.input;
+    this.currentTarget = null;
+    input.attackDown = false;
+    input.attackPressed = false;
+    input.interactPressed = false;
+    const steering = !this.rewardPending() && input.moving;
+    if (steering) this.walkPath = null;
+    if (this.walkPath && !this.rewardPending()) this._walkAlong(dt);
+    else if (!this.rewardPending()) {
+      const mul = p.speedMul;
+      p.speedMul = (mul || 1) * this.tuning.dayWalkMul;
+      p.update(dt, g);
+      p.speedMul = mul;
+    }
+    p.anim(dt);
     this.updateGuards(dt);
     this.updateTowers(dt);
     if (this.builderJob) {
@@ -1111,6 +1243,41 @@ export class SurvivalMode {
       if (this.builderJob.remaining <= 0) this.finishBuilderJob();
     }
     this.followPlayer(dt);
+  }
+
+  /** Walk the Hunter to a point by day (a tapped circle), around furniture. */
+  walkTo(x, y) {
+    if (this.phase !== 'day') return false;
+    const p = this.game.player;
+    const path = this.game.mansion.navPath(p.x, p.y, x, y) || [{ x, y }];
+    this.walkPath = { points: path.concat([{ x, y }]), i: 0, t: 0 };
+    return true;
+  }
+
+  _walkAlong(dt) {
+    const g = this.game;
+    const p = g.player;
+    const path = this.walkPath;
+    path.t += dt;
+    const speed = 210 * this.tuning.dayWalkMul;
+    let budget = speed * dt;
+    let vx = 0, vy = 0;
+    while (budget > 0 && path.i < path.points.length) {
+      const wp = path.points[path.i];
+      const dx = wp.x - p.x, dy = wp.y - p.y;
+      const d = Math.hypot(dx, dy);
+      if (d < 6) { path.i++; continue; }
+      const step = Math.min(d, budget);
+      const res = g.mansion.resolve(p.x + dx / d * step, p.y + dy / d * step, p.radius, true);
+      vx = dx / d * speed; vy = dy / d * speed;
+      const moved = Math.hypot(res.x - p.x, res.y - p.y);
+      p.x = res.x; p.y = res.y;
+      budget -= step;
+      if (moved < step * 0.2) { path.i++; break; }   // blocked: try the next point
+    }
+    p.vx = vx; p.vy = vy;
+    if (vx || vy) p.angle = approachAngle(p.angle, Math.atan2(vy, vx), dt * 14);
+    if (path.i >= path.points.length || path.t > 12) { this.walkPath = null; p.vx = 0; p.vy = 0; }
   }
 
   updateWaves() {
@@ -1314,7 +1481,7 @@ export class SurvivalMode {
     for (const e of g.enemies) {
       if (e.dead || !e._survivalType || e._survivalType === 'swarm') continue;
       if (e.state !== 'press' && e.state !== 'strike') continue;
-      if (e._inHouse || e.feeding) continue;
+      if (e._inHouse || e.attackingKeep) continue;
       const id = e._survivalType === 'breaker' ? e.targetEntranceId : e.entranceId;
       if (id) this._doorPressure.set(id, (this._doorPressure.get(id) || 0) + 1);
     }
@@ -1322,7 +1489,6 @@ export class SurvivalMode {
       const entrance = this.entranceById(id);
       if (!entrance || entrance.broken) continue;
       this._doorPressure.set(id, (this._doorPressure.get(id) || 0) + row.count);
-      // Firelight weakens a siege (damageEntrance halves it); it never cancels it.
       this.siegeTimers[id] = Math.max(0, (this.siegeTimers[id] || 0) - dt);
       if (this.siegeTimers[id] <= 0) {
         const amount = Math.min(18, 2 + row.count * 1.3);
@@ -1345,9 +1511,7 @@ export class SurvivalMode {
   damageEntrance(entrance, amount, source = null) {
     if (!entrance || entrance.broken || !(amount > 0)) return;
     const before = entrance.hp;
-    const lit = source && this.isLit(source.x, source.y);
-    const weakened = lit ? 0.5 : 1;
-    this.game.mansion.damageEntrance(entrance, amount * weakened, this.game, source && source.x, source && source.y);
+    this.game.mansion.damageEntrance(entrance, amount, this.game, source && source.x, source && source.y);
     this.nightStats.damageToWalls += Math.max(0, before - entrance.hp);
     this.gateHp = Math.max(0, this.mainGate() ? this.mainGate().hp : 0);
     if (entrance.broken) this.onBreach(entrance);
@@ -1358,21 +1522,28 @@ export class SurvivalMode {
     this._breachAt[entrance.id] = this.uiClock;
     this.game.mansion.refreshNavAround(entrance);
     this.pushEvent('breach', 'doorBroken', 'BREACH!');
+    this.game.renderer.shake(0.22);
   }
 
+  /**
+   * Inside the banner's rooms the garrison hits harder (gold numbers). The
+   * number pops bigger on the bolt that kills, so a heavy shot reads.
+   */
   enemyDamageTaken(enemy, amount) {
-    const lit = this.isLit(enemy.x, enemy.y);
-    const dealt = amount * (lit ? this.tuning.lightDamageTakenMul : 1);
+    const held = this.inTerritory(enemy.x, enemy.y);
+    const dealt = amount * (held ? this.tuning.territoryDamageTakenMul : 1);
     if (dealt > 0.5) {
       const h = enemy._survivalType === 'breaker' ? 96 : enemy._survivalType === 'individual' ? 78 : 60;
-      this.pushFloater(enemy.x + rand(-10, 10), enemy.y, `${Math.round(dealt)}`, lit ? '#ffd24a' : '#ffffff', { h, size: lit ? 20 : 16 });
+      const kill = (enemy.hp || 0) - dealt <= 0;
+      this.pushFloater(enemy.x + rand(-10, 10), enemy.y, `${Math.round(dealt)}`, held ? '#ffd24a' : '#ffffff',
+        { h, size: kill ? 30 : held ? 24 : 18, pop: kill ? 1.5 : 1.35 });
     }
     return dealt;
   }
 
-  /** Light weakens claws; it never makes a body harmless (Hunter can still die). */
+  /** Claws are never blunted or blocked: the banner only strengthens the garrison. */
   enemyCanAttack() { return true; }
-  enemyAttackMul(enemy) { return enemy && this.isLit(enemy.x, enemy.y) ? this.tuning.litAttackMul : 1; }
+  enemyAttackMul() { return 1; }
 
   autoTarget() {
     const p = this.game.player;
@@ -1385,33 +1556,33 @@ export class SurvivalMode {
     return candidates[0] || null;
   }
 
-  /** Lower is shot first: whatever is eating the fire, then what is already inside. */
+  /** Lower is shot first: whatever claws the keep, then what is already inside. */
   targetScore(from, e) {
     let s = dist(from.x, from.y, e.x, e.y);
     if (e._survivalType === 'breaker') s -= 70;
     else if (e._survivalType === 'individual') s -= 20;
-    if (e.feeding) s -= 160;
+    if (e.attackingKeep) s -= 160;
     else if (e._inHouse) s -= 60;
     return s;
   }
 
   /* ---------------- guards (survivors) ---------------- */
 
-  /** One pawn per survivor (capped). New ones step out by the fire. */
+  /** One pawn per soldier (capped). New ones step out by the keep. */
   _syncGuardRoster(snap = false) {
     const want = clamp(Math.floor(this.survivors || 0), 0, GUARD.cap);
     while (this.guards.length > want) this.guards.pop();
     while (this.guards.length < want) {
       const i = this.guards.length;
-      const post = this._hearthPost(i);
+      const post = this._keepPost(i);
       const guard = new SurvivalGuard(i, post.x, post.y);
       guard.post = post;
       this.guards.push(guard);
     }
     if (snap) {
-      // a new phase (dawn, dusk, a fresh run): everyone stands, healed, by the fire
+      // a new phase (dawn, dusk, a fresh run): everyone stands, healed, by the keep
       for (const guard of this.guards) {
-        const post = this._hearthPost(guard.index);
+        const post = this._keepPost(guard.index);
         guard.x = post.x; guard.y = post.y; guard.post = post;
         guard.path = null; guard.moving = false; guard.target = null; guard.shotT = 0;
         guard.hp = guard.hpMax; guard.down = false; guard.downT = 0; guard.rescueT = 0; guard.hurtFlash = 0; guard.iframes = 0;
@@ -1453,7 +1624,7 @@ export class SurvivalMode {
     return best;
   }
 
-  /** A claw lands on a guard (already scaled for firelight). */
+  /** A claw lands on a guard. */
   hurtGuard(guard, amount, from = null) {
     if (!guard || guard.down || this.phase !== 'night' || !(amount > 0)) return false;
     // like the Hunter, a guard is not shredded by a crowd landing every claw
@@ -1521,13 +1692,14 @@ export class SurvivalMode {
     this._persist(true);
   }
 
-  /** A loose arc in front of the fire (day camp / spare guards at night). */
-  _hearthPost(i) {
-    const fire = this.hearth() || { x: 0, y: 0 };
+  /** A loose ring around the keep's foot (day camp / spare guards at night). */
+  _keepPost(i) {
+    const keep = this.keep();
     const t = (i + 0.5) / GUARD.cap;
-    const a = Math.PI * (0.12 + 0.76 * t);
-    const r = 205 + (i % 2) * 34;
-    return this._freePost(fire.x + Math.cos(a) * r, fire.y + 60 + Math.sin(a) * r, 'hearth', null);
+    // south-east round to north-west: the Hunter's own spot is on the east
+    const a = Math.PI * (0.35 + 0.8 * t);
+    const r = keep.r + 54 + (i % 2) * 30;
+    return this._freePost(keep.x + Math.cos(a) * r, keep.y + Math.sin(a) * r, 'keep', null);
   }
 
   /** Just inside a door, beside its frame: slot 0/1 left and right of the slit. */
@@ -1559,21 +1731,21 @@ export class SurvivalMode {
   /**
    * Who stands where tonight: doors ranked by how many bodies lean on them
    * (outside crowds + anything coming through a breach), up to GUARD.perDoor
-   * each; the rest hold the fire. A guard keeps its post while that door is
+   * each; the rest hold the keep. A guard keeps its post while that door is
    * still in the ranking, so they do not ping-pong across the house.
    */
   assignGuards() {
     const g = this.game;
     if (!this.guards.length) return;
     if (this.phase !== 'night') {
-      for (const guard of this.guards) this._setGuardPost(guard, this._hearthPost(guard.index));
+      for (const guard of this.guards) this._setGuardPost(guard, this._keepPost(guard.index));
       return;
     }
-    // a fallen guard stays where it fell; a badly hurt one holds the fire
+    // a fallen guard stays where it fell; a badly hurt one holds the keep
     const able = [];
     for (const guard of this.guards) {
       if (guard.down) continue;
-      if (guard.hp <= guard.hpMax * GUARD.woundedAt) this._setGuardPost(guard, this._hearthPost(guard.index));
+      if (guard.hp <= guard.hpMax * GUARD.woundedAt) this._setGuardPost(guard, this._keepPost(guard.index));
       else able.push(guard);
     }
     const threat = new Map();
@@ -1609,7 +1781,7 @@ export class SurvivalMode {
     for (const guard of pending) {
       const free = slots.find((s) => !taken.has(`${s.door.id}:${s.slot}`));
       if (free) { taken.add(`${free.door.id}:${free.slot}`); this._setGuardPost(guard, this._doorPost(free.door, free.slot)); }
-      else this._setGuardPost(guard, this._hearthPost(guard.index));
+      else this._setGuardPost(guard, this._keepPost(guard.index));
     }
   }
 
@@ -1710,25 +1882,33 @@ export class SurvivalMode {
   }
 
   /**
-   * Where a building stands (its model, and the day bubble over it): an
-   * economy building near the middle of its room, a tower beside the room's
-   * outer door, a little off the doorway so the slit stays in its sights.
-   * Either way on clear floor, never on a table; fixed per room and type.
+   * Where a circle's building stands (its model, its ghost and the circle on
+   * the floor): an economy building near the middle of its room, a ballista
+   * beside the room's outer door, a little off the doorway so the slit stays
+   * in its sights. Either way on clear floor, never on a table or inside the
+   * keep, and a room's two circles keep apart. Fixed per circle.
    */
-  buildingSpot(roomId, type = this.buildings[roomId]) {
-    const key = `${roomId}:${type === 'tower' ? 'tower' : 'building'}`;
+  buildingSpot(slotId) {
     if (!this._spots) this._spots = new Map();
-    if (this._spots.has(key)) return this._spots.get(key);
-    const room = this.game.mansion.room(roomId);
+    if (this._spots.has(slotId)) return this._spots.get(slotId);
+    const slot = SLOT_BY_ID.get(slotId);
+    const room = slot && this.game.mansion.room(slot.room);
     if (!room) return null;
-    const spot = this._findSpot(room, type === 'tower' ? this.towerDoor(room) : null);
-    this._spots.set(key, spot);
+    const door = slot.type === 'tower' ? this.towerDoor(room) : null;
+    const avoid = [];
+    for (const other of SURVIVAL_SLOTS) {
+      if (other === slot || other.room !== slot.room || !this._spots.has(other.id)) continue;
+      avoid.push(this._spots.get(other.id));
+    }
+    const spot = this._findSpot(room, door, avoid);
+    this._spots.set(slotId, spot);
     return spot;
   }
 
-  _findSpot(room, door) {
+  _findSpot(room, door, avoid = []) {
     const m = this.game.mansion;
     const pad = 46;
+    const keep = this.keep();
     let ideal;
     if (door) {
       let nx = door.inside.x - door.x, ny = door.inside.y - door.y;
@@ -1745,6 +1925,8 @@ export class SurvivalMode {
     const clear = (x, y) => {
       if (x < room.x + pad || x > room.x + room.w - pad || y < room.y + pad || y > room.y + room.h - pad) return false;
       if (m.solidAt(x, y)) return false;
+      if (keep && dist(x, y, keep.x, keep.y) < keep.r + CIRCLE.radius + 40) return false;
+      for (const q of avoid) if (q && dist(x, y, q.x, q.y) < CIRCLE.radius * 2 + 40) return false;
       for (const r of [26, 42]) {
         for (let k = 0; k < 8; k++) {
           const a = k * Math.PI / 4;
@@ -1780,23 +1962,24 @@ export class SurvivalMode {
     return true;
   }
 
-  towerStats(roomId) { return this.buildingStats('tower', this.buildingLevel(roomId)); }
+  towerStats(slotId) { return this.buildingStats('tower', this.buildingLevel(slotId)); }
 
-  /** Towers mirror `buildings`: one per room holding a tower, any level. */
+  /** Towers mirror `buildings`: one per ballista circle built, any level. */
   _syncTowers() {
     const ids = Object.keys(this.buildings).filter((id) => this.buildings[id] === 'tower');
-    if (ids.length === this.towers.length && ids.every((id, i) => this.towers[i].roomId === id)) return;
-    const old = new Map(this.towers.map((t) => [t.roomId, t]));
-    this.towers = ids.map((roomId, i) => old.get(roomId) || this._makeTower(roomId, i)).filter(Boolean);
+    if (ids.length === this.towers.length && ids.every((id, i) => this.towers[i].slotId === id)) return;
+    const old = new Map(this.towers.map((t) => [t.slotId, t]));
+    this.towers = ids.map((slotId, i) => old.get(slotId) || this._makeTower(slotId, i)).filter(Boolean);
   }
 
-  _makeTower(roomId, index) {
-    const spot = this.buildingSpot(roomId, 'tower');
-    if (!spot) return null;
+  _makeTower(slotId, index) {
+    const spot = this.buildingSpot(slotId);
+    const slot = SLOT_BY_ID.get(slotId);
+    if (!spot || !slot) return null;
     const door = spot.doorId ? this.entranceById(spot.doorId) : null;
     const angle = door ? Math.atan2(door.y - spot.y, door.x - spot.x) : Math.PI / 2;
     return {
-      id: 6000000 + index, key: 'tower', roomId, doorId: spot.doorId,
+      id: 6000000 + index, key: 'tower', slotId, roomId: slot.room, doorId: spot.doorId,
       x: spot.x, y: spot.y, radius: 18,
       angle, aim: angle,                // shot bearing / the ballista's swing
       cd: 0.4 + index * 0.27, shotT: 0, target: null, shots: 0,
@@ -1831,7 +2014,7 @@ export class SurvivalMode {
         if (t.target && !t.target.dead) t.angle = Math.atan2(t.target.y - t.y, t.target.x - t.x);
         continue;
       }
-      const st = this.towerStats(t.roomId);
+      const st = this.towerStats(t.slotId);
       const target = this.towerTarget(t, st.range || 0);
       t.target = target;
       if (!target) { t.cd = 0.25; continue; }
@@ -1859,92 +2042,262 @@ export class SurvivalMode {
     this.skillFlash = 0.65;
     g.audio.play('chandelier', { vol: 0.72 });
     g.particles.burst('spark', p.x, p.y, 26, {
-      color: 'rgba(255,194,98,0.95)', sizeMin: 2, sizeMax: 6, speedMin: 55, speedMax: 240,
+      color: 'rgba(255,214,140,0.95)', sizeMin: 2, sizeMax: 6, speedMin: 55, speedMax: 240,
       lifeMin: 0.18, lifeMax: 0.68, glow: true,
     });
+    let hit = 0;
     for (const e of g.enemies) {
       if (e.dead || dist(p.x, p.y, e.x, e.y) > this.tuning.skillRadius) continue;
       e.hurt(this.tuning.skillDamage, g, p.x, p.y);
       e.staggerT = Math.max(e.staggerT || 0, 0.85);
       const a = Math.atan2(e.y - p.y, e.x - p.x);
-      e.vx = (e.vx || 0) + Math.cos(a) * 110; e.vy = (e.vy || 0) + Math.sin(a) * 110;
+      e.vx = (e.vx || 0) + Math.cos(a) * 170; e.vy = (e.vy || 0) + Math.sin(a) * 170;
+      hit++;
     }
+    // the big blast lands: a short hold and a hard shake
+    g.renderer.shake(0.42);
+    if (hit) this.hitStop = Math.max(this.hitStop, 0.06);
     return true;
   }
 
-  updateLightFuel(dt) {
-    if (this.oil <= 0) {
-      this.oil = 0;
-      return;
-    }
-    // Oil pumps feed the stock all night long (the fire's fuel is the purse).
-    const pump = this.pumpRate() * dt;
-    if (pump > 0) {
-      this.oil = Math.min(RESOURCE_CAP, this.oil + pump);
-      this.nightStats.pumped = (this.nightStats.pumped || 0) + pump;
-    }
-    if (this.hearthFeeders > 0 && Math.random() < dt * 2) this.game.renderer.shake(0.04);
-    const burn = Math.min(this.oil, this.tuning.oilBurnPerSecond * dt);
-    this.oil = Math.max(0, this.oil - burn);
-    this.oilBurned += burn;
-  }
-
-  getFireRadius() {
-    if (this.oil <= 0 || this.phase === 'failed') return 0;
-    const base = this.tuning.perapianRadius[this.perapianLevel] || 0;
-    const target = this.tuning.oilBurnTargetPerNight + (this.perapianLevel - 1) * 2.5;
-    const spent = clamp(this.oilBurned / Math.max(1, target), 0, 1);
-    const fuelFactor = 1 - spent * this.tuning.oilRadiusShrink;
-    return Math.max(0, base * fuelFactor);
-  }
-
-  isLit(x, y) {
-    if (this.oil <= 0 || this.phase === 'failed') return false;
-    const light = this.game.mansion.fireplaceLight;
-    return !!light && dist(x, y, light.x, light.y) <= this.getFireRadius();
-  }
-
-  refreshFireplace(force = false) {
-    this._syncBakePhase();
-    const light = this.game.mansion.fireplaceLight;
-    if (!light) return;
-    const radius = this.getFireRadius();
-    const intensity = this.oil > 0 ? 0.88 : 0;
-    if (Math.abs((light.r || 0) - radius) > 0.5) light.r = Math.max(1, radius);
-    light.i = intensity;
-    light.curI = intensity * (light.f == null ? 1 : light.f);
-    const crossedBakeStep = Math.abs(radius - this._bakeRadius) >= 105 || (this._bakeRadius > 0) !== (radius > 0);
-    if (force || crossedBakeStep) {
-      this._bakeRadius = radius;
-      this.game.survivalBakeDirty = true;
+  /** Mines dig gold into the purse all night long (it never burns). */
+  updateMines(dt) {
+    const dig = this.goldRate() * dt;
+    if (dig > 0) {
+      this.gold = Math.min(RESOURCE_CAP, this.gold + dig);
+      this.nightStats.mined = (this.nightStats.mined || 0) + dig;
     }
   }
 
-  litRooms() {
-    const fire = this.game.mansion.fireplaceLight;
-    if (!fire || this.getFireRadius() <= 0) return [];
-    return this.game.mansion.roomList.filter((room) => this.isLit(room.x + room.w / 2, room.y + room.h / 2));
+  /* ---------------- the keep and its banner ---------------- */
+
+  /** The keep: a round stone tower in the middle of the Main Hall. */
+  keep() {
+    if (!this._keep) {
+      const hall = this.game.mansion.room(ROOM.HALL);
+      this._keep = hall
+        ? { x: Math.round(hall.x + hall.w / 2), y: Math.round(hall.y + hall.h / 2), r: this.tuning.keepRadius }
+        : { x: 0, y: 0, r: this.tuning.keepRadius };
+    }
+    return this._keep;
   }
 
-  buildableRooms() {
-    const occupied = this.buildings;
-    return this.litRooms().filter((room) => room.id !== ROOM.LIBRARY && !occupied[room.id]);
+  keepHpMax(level = this.keepLevel) { return this.tuning.keepHp[clamp(Math.round(level) || 1, 1, 3)] || 600; }
+
+  /**
+   * What the keep shows (tower, townsfolk, HUD), most urgent first:
+   * fallen · critical (< 25%) · attacked (a claw in the last moment) ·
+   * threat (bodies inside and close) · safe.
+   */
+  keepState() {
+    if (this.keepHp <= 0) return 'fallen';
+    if (this.phase === 'night') {
+      if (this.uiClock - this._keepHitAt < KEEP.attackedFor) return this.keepHp < this.keepHpMax() * 0.25 ? 'critical' : 'attacked';
+      if (this.keepHp < this.keepHpMax() * 0.25) return 'critical';
+      const keep = this.keep();
+      for (const e of this.game.enemies) {
+        if (!e._survivalType || e.dead || e.removeMe || !e._inHouse) continue;
+        if (dist(e.x, e.y, keep.x, keep.y) < KEEP.alarmRange) return 'threat';
+      }
+      return 'safe';
+    }
+    return this.keepHp < this.keepHpMax() * 0.25 ? 'critical' : 'safe';
   }
 
-  startBuild(type, roomId = null) {
+  /** A body at the keep's wall claws it. At 0 HP the run is lost. */
+  hitKeep(enemy) {
+    if (this.phase !== 'night' || this.keepHp <= 0) return;
+    const amount = KEEP.damage[enemy._survivalType] || KEEP.damage.swarm;
+    const before = this.keepHp;
+    this.keepHp = Math.max(0, this.keepHp - amount);
+    const lost = before - this.keepHp;
+    this.nightStats.keepDamage = (this.nightStats.keepDamage || 0) + lost;
+    this._keepHitAt = this.uiClock;
+    const keep = this.keep();
+    const a = Math.atan2(enemy.y - keep.y, enemy.x - keep.x);
+    const wx = keep.x + Math.cos(a) * keep.r, wy = keep.y + Math.sin(a) * keep.r;
+    this.pushFloater(wx, wy, `-${Math.round(lost)}`, '#ff6b5e', { h: 120, size: 20, icon: 'keep' });
+    if (this.uiClock - this._keepWarnAt > 7) {
+      this._keepWarnAt = this.uiClock;
+      this.pushEvent('keep', 'keep', 'KEEP UNDER ATTACK!');
+    }
+    const g = this.game;
+    g.audio.play('impact', { vol: 0.34 });
+    g.renderer.shake(0.08);
+    g.particles.burst('spark', wx, wy, 8, {
+      color: 'rgba(196,188,176,0.95)', sizeMin: 2, sizeMax: 5, speedMin: 40, speedMax: 150, lifeMin: 0.25, lifeMax: 0.6,
+    });
+    if (this.keepHp <= 0) this.fail('THE KEEP FELL');
+  }
+
+  /** From Lv2 a ballista on the keep's roof shoots what comes for the keep. */
+  updateKeepBallista(dt) {
+    const b = this.keepBallista;
+    b.shotT = Math.max(0, b.shotT - dt);
+    b.aim = approachAngle(b.aim, b.angle, TOWER.turn * dt);
+    const spec = KEEP.ballista[this.keepLevel];
+    if (!spec || this.phase !== 'night' || this.keepHp <= 0) { b.target = null; return; }
+    b.cd -= dt;
+    if (b.cd > 0) return;
+    const keep = this.keep();
+    let best = null, bestS = Infinity;
+    for (const e of this.game.enemies) {
+      if (e.dead || e.removeMe || !(e.hp > 0) || !e._survivalType) continue;
+      const d = dist(keep.x, keep.y, e.x, e.y);
+      if (d > spec.range) continue;
+      const s = d - (e.attackingKeep ? 200 : 0);
+      if (s < bestS) { best = e; bestS = s; }
+    }
+    b.target = best;
+    if (!best) { b.cd = 0.25; return; }
+    b.angle = Math.atan2(best.y - keep.y, best.x - keep.x);
+    // the bolt drops from the roof: it ignores the keep's own wall
+    const shooter = { x: keep.x + Math.cos(b.angle) * (keep.r + 14), y: keep.y + Math.sin(b.angle) * (keep.r + 14), type: { boltSpeed: TOWER.boltSpeed, boltDamage: 1 }, key: 'keep' };
+    const bolt = this.game.spawnBolt(shooter, b.angle, {
+      offset: 0, boltSpeed: TOWER.boltSpeed, damage: spec.damage, friendly: true, boltRange: spec.range + 60,
+    });
+    if (bolt) { bolt.tower = true; bolt.keepBolt = true; bolt.aimDist = Math.max(30, dist(shooter.x, shooter.y, best.x, best.y)); }
+    b.cd = spec.every;
+    b.shotT = 0.26;
+    b.shots++;
+    this.game.audio.play('crossbow', { x: keep.x, y: keep.y, cam: this.game.renderer.cam, vol: 0.36 });
+  }
+
+  /** Rooms under the keep's banner (by keep level). */
+  territoryRooms() {
+    const ids = TERRITORY[this.keepLevel] || TERRITORY[1];
+    return this.game.mansion.roomList.filter((room) => ids.includes(room.id));
+  }
+
+  _syncTerritory() {
+    this._territoryLevel = this.keepLevel;
+    this._territory = new Set(TERRITORY[this.keepLevel] || TERRITORY[1]);
+  }
+
+  inTerritory(x, y) {
+    if (this._territoryLevel !== this.keepLevel) this._syncTerritory();
+    return this._territory.has(this.game.mansion.findRoom(x, y));
+  }
+
+  /**
+   * Where the Hunter stands at the start of a run and every dawn: beside the
+   * keep (east), so the tower stands next to him on screen instead of under
+   * the top of the HUD.
+   */
+  hunterHome() {
+    const keep = this.keep();
+    return { x: keep.x + keep.r + 86, y: keep.y + 34 };
+  }
+
+  /** The armory rack beside the keep: the Hunter's own upgrades. */
+  armorySpot() {
+    if (!this._armory) {
+      const keep = this.keep();
+      const m = this.game.mansion;
+      let best = { x: keep.x - keep.r - 120, y: keep.y + 20 };
+      for (let r = 0; r <= 120; r += 12) {
+        let found = null;
+        for (let k = 0; k < 12 && !found; k++) {
+          const a = (k / 12) * Math.PI * 2;
+          const x = keep.x - keep.r - 120 + Math.cos(a) * r, y = keep.y + 20 + Math.sin(a) * r;
+          const free = !m.solidAt(x, y) && [0, 1, 2, 3, 4, 5, 6, 7].every((i) => !m.solidAt(x + Math.cos(i * Math.PI / 4) * 40, y + Math.sin(i * Math.PI / 4) * 40));
+          if (free && dist(x, y, keep.x, keep.y) > keep.r + CIRCLE.radius + 30) found = { x, y };
+        }
+        if (found) { best = found; break; }
+      }
+      this._armory = { x: Math.round(best.x), y: Math.round(best.y) };
+    }
+    return this._armory;
+  }
+
+  /** Inside the front door: where the barricade circle sits. */
+  gateSpot() {
+    const gate = this.mainGate();
+    if (!gate) return null;
+    const out = outwardOf(gate);
+    const base = gate.inside || gate;
+    return { x: Math.round(base.x - out.x * 24), y: Math.round(base.y - out.y * 24) };
+  }
+
+  /** Circles the banner reaches (built or not), and the ones still locked. */
+  slotsInTerritory() {
+    const ids = TERRITORY[this.keepLevel] || TERRITORY[1];
+    return SURVIVAL_SLOTS.filter((slot) => ids.includes(slot.room));
+  }
+
+  lockedSlots() {
+    const ids = TERRITORY[this.keepLevel] || TERRITORY[1];
+    return SURVIVAL_SLOTS.filter((slot) => !ids.includes(slot.room));
+  }
+
+  /** The keep level whose banner first reaches this circle (1-3). */
+  slotUnlockLevel(slotId) {
+    const slot = SLOT_BY_ID.get(slotId);
+    if (!slot) return 3;
+    for (let level = 1; level <= 3; level++) if (TERRITORY[level].includes(slot.room)) return level;
+    return 3;
+  }
+
+  /** Empty circles the Hunter can build on now. */
+  buildableSlots() {
+    return this.slotsInTerritory().filter((slot) => !this.buildings[slot.id]);
+  }
+
+  /**
+   * Every place the Hunter can act on by day, with where it is: the build
+   * circles (built or not, locked or not), the keep, the armory and the
+   * barricade. The UI and the 3D world both read this list.
+   */
+  dayPoints() {
+    const out = [];
+    const keep = this.keep();
+    out.push({ id: 'keep', kind: 'keep', x: keep.x, y: keep.y, reach: keep.r + CIRCLE.keepReach });
+    const armory = this.armorySpot();
+    out.push({ id: 'armory', kind: 'armory', x: armory.x, y: armory.y, reach: CIRCLE.reach });
+    const gate = this.gateSpot();
+    if (gate) out.push({ id: 'gate', kind: 'gate', x: gate.x, y: gate.y, reach: CIRCLE.reach });
+    const ids = TERRITORY[this.keepLevel] || TERRITORY[1];
+    for (const slot of SURVIVAL_SLOTS) {
+      const spot = this.buildingSpot(slot.id);
+      if (!spot) continue;
+      out.push({
+        id: slot.id, kind: 'slot', slot, type: slot.type, x: spot.x, y: spot.y, reach: CIRCLE.reach,
+        built: this.buildings[slot.id] || null, level: this.buildingLevel(slot.id), locked: !ids.includes(slot.room),
+      });
+    }
+    return out;
+  }
+
+  /** The day point the Hunter stands at (nearest within reach), or null. */
+  dayContext() {
+    if (this.phase !== 'day') return null;
+    const p = this.game.player;
+    let best = null, bestD = Infinity;
+    for (const point of this.dayPoints()) {
+      const d = dist(p.x, p.y, point.x, point.y);
+      if (d <= point.reach && d < bestD) { best = point; bestD = d; }
+    }
+    return best;
+  }
+
+  /* ---------------- building ---------------- */
+
+  startBuild(type, slotId = null) {
     if (this.phase !== 'day' || this.builderJob) return false;
     const g = this.game;
-    if (type === 'perapian') return this.startPerapianUpgrade();
+    if (type === 'keep') return this.startKeepUpgrade();
+    if (type === 'repair') return this.startKeepRepair();
     if (type === 'gate') return this.startGateBuild();
     if (type === 'hunter') return this.startHunterUpgrade();
-    if (type === 'upgrade') return this.startUpgrade(roomId);
+    if (type === 'upgrade') return this.startUpgrade(slotId);
     const spec = SURVIVAL_BUILDINGS[type];
-    if (!spec || !roomId) return false;
-    if (!this.buildableRooms().some((room) => room.id === roomId)) return false;
+    const slot = SLOT_BY_ID.get(slotId);
+    if (!spec || !slot || slot.type !== type) return false;
+    if (!this.buildableSlots().some((item) => item.id === slotId)) return false;
     if (!this.canAfford(spec)) return false;
-    this.oil -= spec.oil; this.wood -= spec.wood;
-    this.selectedRoom = roomId;
-    this.builderJob = { kind: 'building', type, roomId, remaining: spec.seconds, duration: spec.seconds };
+    this.gold -= spec.gold; this.wood -= spec.wood;
+    this.selectedRoom = slotId;
+    this.builderJob = { kind: 'building', type, slotId, roomId: slot.room, remaining: spec.seconds, duration: spec.seconds };
     g.audio.play('woodPickup', { vol: 0.45 });
     this._persist(true);
     return true;
@@ -1954,30 +2307,50 @@ export class SurvivalMode {
     if (this.gateBuilt || this.builderJob || this.phase !== 'day') return false;
     const cost = this.tuning.gateCost;
     if (!this.canAfford(cost)) return false;
-    this.oil -= cost.oil; this.wood -= cost.wood;
+    this.gold -= cost.gold; this.wood -= cost.wood;
     this.builderJob = { kind: 'gate', type: 'gate', remaining: cost.seconds, duration: cost.seconds };
     this.game.audio.play('woodPickup', { vol: 0.45 });
     this._persist(true);
     return true;
   }
 
-  startPerapianUpgrade() {
-    if (this.perapianLevel >= 3 || this.builderJob || this.phase !== 'day') return false;
-    const target = this.perapianLevel + 1;
-    const cost = this.tuning.perapianUpgrade[target];
+  keepUpgradeCost() { return this.keepLevel >= 3 ? null : this.tuning.keepUpgrade[this.keepLevel + 1] || null; }
+
+  /** Raise the keep a level: more HP, a wider banner (new rooms), a roof ballista. */
+  startKeepUpgrade() {
+    if (this.keepLevel >= 3 || this.builderJob || this.phase !== 'day') return false;
+    const target = this.keepLevel + 1;
+    const cost = this.tuning.keepUpgrade[target];
     if (!cost || !this.canAfford(cost)) return false;
-    this.oil -= cost.oil; this.wood -= cost.wood;
-    this.builderJob = { kind: 'perapian', type: 'perapian', targetLevel: target, remaining: cost.seconds, duration: cost.seconds };
+    this.gold -= cost.gold; this.wood -= cost.wood;
+    this.builderJob = { kind: 'keep', type: 'keep', targetLevel: target, remaining: cost.seconds, duration: cost.seconds };
     this.game.audio.play('uiConfirm', { vol: 0.55 });
+    this._persist(true);
+    return true;
+  }
+
+  keepRepairCost() {
+    const r = this.tuning.keepRepair;
+    return this.keepHp >= this.keepHpMax() - 0.5 ? null : { gold: 0, wood: r.wood, seconds: r.seconds };
+  }
+
+  /** Patch the keep by day: wood for stone (the free dawn patch is not enough). */
+  startKeepRepair() {
+    if (this.builderJob || this.phase !== 'day') return false;
+    const cost = this.keepRepairCost();
+    if (!cost || !this.canAfford(cost)) return false;
+    this.wood -= cost.wood;
+    this.builderJob = { kind: 'repair', type: 'repair', remaining: cost.seconds, duration: cost.seconds };
+    this.game.audio.play('woodPickup', { vol: 0.45 });
     this._persist(true);
     return true;
   }
 
   /* ---------------- building levels + the Hunter's track ---------------- */
 
-  buildingLevel(roomId) {
-    if (!this.buildings[roomId]) return 0;
-    return clamp(Math.round(Number(this.buildingLevels[roomId]) || 1), 1, BUILDING_MAX_LEVEL);
+  buildingLevel(slotId) {
+    if (!this.buildings[slotId]) return 0;
+    return clamp(Math.round(Number(this.buildingLevels[slotId]) || 1), 1, BUILDING_MAX_LEVEL);
   }
 
   /** Stats of one building type at one level ({} for unknown types). */
@@ -1986,45 +2359,46 @@ export class SurvivalMode {
     return (table && table[clamp(Math.round(level) || 1, 1, BUILDING_MAX_LEVEL)]) || {};
   }
 
-  /** Cost of the next level of the building in a room (null at max / empty). */
-  upgradeCost(roomId) {
-    const type = this.buildings[roomId];
-    const level = this.buildingLevel(roomId);
+  /** Cost of the next level of the building on a circle (null at max / empty). */
+  upgradeCost(slotId) {
+    const type = this.buildings[slotId];
+    const level = this.buildingLevel(slotId);
     if (!type || level >= BUILDING_MAX_LEVEL) return null;
     const next = this.buildingStats(type, level + 1);
-    return next.wood != null ? { oil: next.oil || 0, wood: next.wood || 0, seconds: next.seconds || 6 } : null;
+    return next.wood != null ? { gold: next.gold || 0, wood: next.wood || 0, seconds: next.seconds || 6 } : null;
   }
 
-  startUpgrade(roomId) {
+  startUpgrade(slotId) {
     if (this.phase !== 'day' || this.builderJob) return false;
-    const type = this.buildings[roomId];
-    const cost = this.upgradeCost(roomId);
+    const type = this.buildings[slotId];
+    const cost = this.upgradeCost(slotId);
     if (!type || !cost || !this.canAfford(cost)) return false;
-    this.oil -= cost.oil; this.wood -= cost.wood;
-    this.selectedRoom = roomId;
-    const targetLevel = this.buildingLevel(roomId) + 1;
-    this.builderJob = { kind: 'upgrade', type, roomId, targetLevel, remaining: cost.seconds, duration: cost.seconds };
+    this.gold -= cost.gold; this.wood -= cost.wood;
+    this.selectedRoom = slotId;
+    const targetLevel = this.buildingLevel(slotId) + 1;
+    const slot = SLOT_BY_ID.get(slotId);
+    this.builderJob = { kind: 'upgrade', type, slotId, roomId: slot ? slot.room : null, targetLevel, remaining: cost.seconds, duration: cost.seconds };
     this.game.audio.play('woodPickup', { vol: 0.45 });
     this._persist(true);
     return true;
   }
 
-  /** Oil every pump moves into the stock over one night. */
-  pumpPerNight() {
+  /** Gold every mine digs into the purse over one night. */
+  goldPerNight() {
     let total = 0;
-    for (const [roomId, type] of Object.entries(this.buildings)) {
-      if (type === 'extractor') total += this.buildingStats(type, this.buildingLevel(roomId)).pump || 0;
+    for (const [slotId, type] of Object.entries(this.buildings)) {
+      if (type === 'mine') total += this.buildingStats(type, this.buildingLevel(slotId)).yield || 0;
     }
     return total;
   }
 
-  pumpRate() { return this.pumpPerNight() / Math.max(1, this.nightDuration); }
+  goldRate() { return this.goldPerNight() / Math.max(1, this.nightDuration); }
 
   /** Sawmill planks: +% max HP on every outer door (summed, capped). */
   doorHpBonus() {
     let bonus = 0;
-    for (const [roomId, type] of Object.entries(this.buildings)) {
-      if (type === 'sawmill') bonus += this.buildingStats(type, this.buildingLevel(roomId)).doorBonus || 0;
+    for (const [slotId, type] of Object.entries(this.buildings)) {
+      if (type === 'sawmill') bonus += this.buildingStats(type, this.buildingLevel(slotId)).doorBonus || 0;
     }
     return Math.min(DOOR_BONUS_CAP, Math.round(bonus * 100) / 100);
   }
@@ -2038,14 +2412,14 @@ export class SurvivalMode {
   hunterUpgradeCost() {
     if (this.hunterLevel >= HUNTER_MAX_LEVEL) return null;
     const next = this.hunterStats(this.hunterLevel + 1);
-    return { oil: next.oil || 0, wood: next.wood || 0, seconds: next.seconds || 5 };
+    return { gold: next.gold || 0, wood: next.wood || 0, seconds: next.seconds || 5 };
   }
 
   startHunterUpgrade() {
     if (this.phase !== 'day' || this.builderJob) return false;
     const cost = this.hunterUpgradeCost();
     if (!cost || !this.canAfford(cost)) return false;
-    this.oil -= cost.oil; this.wood -= cost.wood;
+    this.gold -= cost.gold; this.wood -= cost.wood;
     this.builderJob = { kind: 'hunter', type: 'hunter', targetLevel: this.hunterLevel + 1, remaining: cost.seconds, duration: cost.seconds };
     this.game.audio.play('uiConfirm', { vol: 0.55 });
     this._persist(true);
@@ -2061,14 +2435,32 @@ export class SurvivalMode {
     p.blood = heal ? hp : clamp(Number(p.blood) || hp, 1, hp);
   }
 
+  /** Where the builder works (and the celebration pops). */
+  jobSpot(job = this.builderJob) {
+    if (!job) return null;
+    if (job.kind === 'keep' || job.kind === 'repair') { const keep = this.keep(); return { x: keep.x, y: keep.y + keep.r }; }
+    if (job.kind === 'gate') return this.gateSpot();
+    if (job.kind === 'hunter') return this.armorySpot();
+    return job.slotId ? this.buildingSpot(job.slotId) : null;
+  }
+
   finishBuilderJob() {
     const job = this.builderJob;
     if (!job) return;
     let text = 'BUILT!';
-    let icon = SURVIVAL_BUILDINGS[job.type] ? job.type : 'shelter';
-    if (job.kind === 'perapian') {
-      this.perapianLevel = clamp(job.targetLevel, 1, 3);
-      icon = 'perapian'; text = `PERAPIAN Lv${this.perapianLevel}`;
+    let icon = SURVIVAL_BUILDINGS[job.type] ? job.type : 'hammer';
+    const at = this.jobSpot(job);
+    if (job.kind === 'keep') {
+      this.keepLevel = clamp(job.targetLevel, 1, 3);
+      // the new storey comes with its stone: the new HP share is added
+      const before = this.tuning.keepHp[this.keepLevel - 1] || this.keepHpMax();
+      this.keepHp = Math.min(this.keepHpMax(), this.keepHp + (this.keepHpMax() - before));
+      this._syncTerritory();
+      icon = 'keep'; text = `KEEP Lv${this.keepLevel}`;
+    } else if (job.kind === 'repair') {
+      const heal = Math.min(this.tuning.keepRepair.hp, this.keepHpMax() - this.keepHp);
+      this.keepHp = Math.min(this.keepHpMax(), this.keepHp + heal);
+      icon = 'keep'; text = `+${Math.round(heal)}`;
     } else if (job.kind === 'gate') {
       this.gateBuilt = true;
       this.applyBuildingEffects(true);
@@ -2078,13 +2470,13 @@ export class SurvivalMode {
       this.applyHunterStats(true);
       icon = 'hunter'; text = `HUNTER Lv${this.hunterLevel}`;
     } else if (job.kind === 'building' || job.kind === 'upgrade') {
-      const before = job.kind === 'upgrade' ? this.buildingLevel(job.roomId) : 0;
+      const before = job.kind === 'upgrade' ? this.buildingLevel(job.slotId) : 0;
       const level = job.kind === 'upgrade' ? clamp(job.targetLevel, 1, BUILDING_MAX_LEVEL) : 1;
-      this.buildings[job.roomId] = job.type;
-      this.buildingLevels[job.roomId] = level;
-      if (job.type === 'shelter') {
-        // a shelter houses its survivors at once: tonight's door guards
-        const moved = (this.buildingStats('shelter', level).houses || 0) - (before ? this.buildingStats('shelter', before).houses || 0 : 0);
+      this.buildings[job.slotId] = job.type;
+      this.buildingLevels[job.slotId] = level;
+      if (job.type === 'barracks') {
+        // a barracks houses its soldiers at once: tonight's door guards
+        const moved = (this.buildingStats('barracks', level).houses || 0) - (before ? this.buildingStats('barracks', before).houses || 0 : 0);
         this.survivors = Math.min(this.tuning.maxSurvivors, this.survivors + Math.max(0, moved));
         this._syncGuardRoster(false);
       }
@@ -2092,16 +2484,23 @@ export class SurvivalMode {
       if (job.kind === 'upgrade') text = `Lv${level}!`;
     }
     this.builderJob = null;
+    this.lastBuilt = { kind: job.kind, type: job.type, slotId: job.slotId || null, x: at ? at.x : 0, y: at ? at.y : 0, t: this.uiClock };
     if (job.kind === 'gate') this.game.mansion.buildNav();
-    this.refreshFireplace(true);
+    this._syncTowers();
+    this.game.survivalBakeDirty = true;
     this.game.audio.play('uiConfirm', { vol: 0.62 });
+    if (at) {
+      this.game.particles.burst('spark', at.x, at.y, 18, {
+        color: 'rgba(255,226,140,0.95)', sizeMin: 2, sizeMax: 5, speedMin: 40, speedMax: 170, lifeMin: 0.3, lifeMax: 0.8, glow: true,
+      });
+    }
     this.pushEvent('build', icon, text, { life: 1.6 });
     this._persist(true);
   }
 
   /**
    * Door max HP from what stands in the house: sawmill planks on every outer
-   * door, the reinforced gate on the front door. By day the doors are whole,
+   * door, the barricade on the front door. By day the doors are whole,
    * so a new bonus is filled at once; a mid-night reload never mends a door.
    */
   applyBuildingEffects(repairGate = false) {
@@ -2124,35 +2523,37 @@ export class SurvivalMode {
   completeNight() {
     if (this.phase !== 'night') return;
     const g = this.game;
+    g._survivalHint = null;   // a night's hint chip never runs on into the day
     const dayIndex = clamp(this.day - 1, 0, 2);
-    let oil = this.tuning.nightRewards.oil[dayIndex];
+    let gold = this.tuning.nightRewards.gold[dayIndex];
     let wood = this.tuning.nightRewards.wood[dayIndex];
     // guards lost during the night are already gone from the roster; anyone
     // still down gets up at dawn (the snap below heals the garrison)
     const lost = this.nightStats.lost || 0;
     const survivorsBefore = this.survivors;
-    // Dawn pays the sawmills; the pumps already poured their oil in during
-    // the night, and shelters house their survivors as soon as they stand.
-    for (const [roomId, type] of Object.entries(this.buildings)) {
-      if (type === 'sawmill') wood += this.buildingStats(type, this.buildingLevel(roomId)).dawnWood || 0;
+    // Dawn pays the sawmills; the mines already dug their gold in during
+    // the night, and barracks house their soldiers as soon as they stand.
+    for (const [slotId, type] of Object.entries(this.buildings)) {
+      if (type === 'sawmill') wood += this.buildingStats(type, this.buildingLevel(slotId)).dawnWood || 0;
     }
-    const pumped = Math.round(this.nightStats.pumped || 0);
+    const mined = Math.round(this.nightStats.mined || 0);
     // kills pay a little (guards shoot too, so this stays a trickle)
-    const killOil = Math.floor(this.nightStats.kills / 6);
+    const killGold = Math.floor(this.nightStats.kills / 6);
     const killWood = Math.floor(this.nightStats.kills / 4);
-    oil += killOil; wood += killWood;
-    this.oil = clamp(this.oil + oil, 0, RESOURCE_CAP);
+    gold += killGold; wood += killWood;
+    this.gold = clamp(this.gold + gold, 0, RESOURCE_CAP);
     this.wood = clamp(this.wood + wood, 0, RESOURCE_CAP);
     this.nightsCompleted = Math.min(3, this.nightsCompleted + 1);
-    // Dawn tops the fire back up to its full radius: the day plans with the
-    // radius the sheet shows (lit rooms = buildable rooms), not the embers
-    // of the night before.
-    this.oilBurned = 0;
+    // the townsfolk patch part of the keep for free; the rest is wood by day
+    const missing = this.keepHpMax() - this.keepHp;
+    const patched = Math.round(missing * this.tuning.keepDawnHeal);
+    this.keepHp = Math.min(this.keepHpMax(), this.keepHp + patched);
     this.repairDoors();
     this.lastRewards = {
-      oil, wood, kills: this.nightStats.kills, walls: this.nightStats.damageToWalls,
-      survivors: this.survivors - survivorsBefore, drained: Math.round(this.nightStats.drained || 0),
-      pumped, lost, rescued: this.nightStats.rescued || 0,
+      gold, wood, kills: this.nightStats.kills, walls: this.nightStats.damageToWalls,
+      survivors: this.survivors - survivorsBefore, keepDamage: Math.round(this.nightStats.keepDamage || 0),
+      keepPatched: patched, mined, lost, rescued: this.nightStats.rescued || 0,
+      reinforcements: Math.max(0, 3 - this.nightsCompleted),
     };
     this._resetNightFx();
     g.enemies.length = 0;
@@ -2163,6 +2564,11 @@ export class SurvivalMode {
     g.player.attackCd = 0;
     this.applyHunterStats(true);
     this.elapsed = 0;
+    this.walkPath = null;
+    // dawn: the captain is back at the keep (the day starts on the base)
+    const home = this.hunterHome();
+    g.player.x = home.x; g.player.y = home.y; g.player.vx = 0; g.player.vy = 0;
+    g.renderer.snapCamera(home.x, home.y);
     if (this.nightsCompleted >= 3) {
       this.day = 3;
       this.phase = 'complete';
@@ -2175,9 +2581,9 @@ export class SurvivalMode {
     g.screen = 'playing';
     g.phase = DAY_PHASE;
     g.time = 0; g.timeLeft = 0;
-    g.input.gameplay = false;
+    g.input.gameplay = this.phase === 'day';
     this.applyBuildingEffects(false);
-    this.refreshFireplace(true);
+    this._syncBakePhase();
     this._syncGuardRoster(true);
     this._syncTowers();
     this._persist(true);
@@ -2197,13 +2603,15 @@ export class SurvivalMode {
     const g = this.game;
     const duration = this.nightDuration;
     Object.assign(this, {
-      phase: 'night', day: 1, elapsed: 0, oil: this.tuning.startOil, wood: this.tuning.startWood,
-      survivors: this.tuning.startSurvivors, perapianLevel: 1, buildings: {}, buildingLevels: {}, hunterLevel: 1, gateBuilt: false,
+      phase: 'night', day: 1, elapsed: 0, gold: this.tuning.startGold, wood: this.tuning.startWood,
+      survivors: this.tuning.startSurvivors, keepLevel: 1, keepHp: this.tuning.keepHp[1],
+      buildings: {}, buildingLevels: {}, hunterLevel: 1, gateBuilt: false,
       gateHp: 0, builderJob: null, selectedRoom: null, nightsCompleted: 0, waveIndex: 0,
-      breakerIndex: 0, individualIndex: 0, oilBurned: 0, siegeTimers: Object.create(null),
-      nightStats: { kills: 0, hits: 0, damageToWalls: 0, drained: 0, pumped: 0 }, lastRewards: null, skillCooldown: 0,
-      rewardAck: 0, dayFocus: null, nightOilStart: this.tuning.startOil,
+      breakerIndex: 0, individualIndex: 0, siegeTimers: Object.create(null),
+      nightStats: { kills: 0, hits: 0, damageToWalls: 0, keepDamage: 0, mined: 0 }, lastRewards: null, skillCooldown: 0,
+      rewardAck: 0, dayFocus: null, nightKeepStart: this.tuning.keepHp[1], walkPath: null, lastBuilt: null,
     });
+    this._syncTerritory();
     this._resetNightFx();
     this._fields.clear();
     for (const e of g.mansion.entrances) {
@@ -2211,14 +2619,14 @@ export class SurvivalMode {
       e.flash = 0; e.attackers = 0;
     }
     g.enemies.length = 0; g.bolts.length = 0;
-    const fire = g.mansion.fireplaceLight;
-    g.player.x = fire.x + 70; g.player.y = fire.y + 210;
+    const home = this.hunterHome();
+    g.player.x = home.x; g.player.y = home.y;
     this.applyHunterStats(true);
     g.player.weapon = 'shot'; g.player.state = 'idle';
     this.nightDuration = duration;
     this.phase = 'night';
     g.mansion.buildNav();
-    this.refreshFireplace(true);
+    this.game.survivalBakeDirty = true;
     this.guards.length = 0;
     this._syncGuardRoster(true);
     this._syncTowers();
@@ -2226,18 +2634,19 @@ export class SurvivalMode {
     this._nightIntro();
   }
 
-  useBuilding(roomId) { return this.buildings[roomId] || null; }
+  useBuilding(slotId) { return this.buildings[slotId] || null; }
 
   buildingCost(type) {
-    if (type === 'perapian') return this.tuning.perapianUpgrade[this.perapianLevel + 1] || null;
+    if (type === 'keep') return this.keepUpgradeCost();
+    if (type === 'repair') return this.keepRepairCost();
     if (type === 'gate') return this.tuning.gateCost;
     if (type === 'hunter') return this.hunterUpgradeCost();
     return SURVIVAL_BUILDINGS[type] || null;
   }
 
   buildingName(type) {
-    if (type === 'perapian') return `PERAPIAN LV${this.perapianLevel}`;
-    if (type === 'gate') return 'REINFORCED GATE';
+    if (type === 'keep') return `KEEP LV${this.keepLevel}`;
+    if (type === 'gate') return 'BARRICADE';
     if (type === 'hunter') return `HUNTER LV${this.hunterLevel}`;
     return SURVIVAL_BUILDINGS[type] ? SURVIVAL_BUILDINGS[type].label : 'EMPTY';
   }
@@ -2247,7 +2656,19 @@ export class SurvivalMode {
     enemy._survivalRewarded = true;
     this.nightStats.kills++;
     this.game.stats.kills = (this.game.stats.kills || 0) + 1;
-    this.game.audio.play('hitFlesh', { vol: 0.42, weight: 0.8 });
+    const g = this.game;
+    const big = enemy._survivalType === 'breaker' || enemy._survivalType === 'individual';
+    g.audio.play('hitFlesh', { vol: big ? 0.6 : 0.42, weight: big ? 1 : 0.8 });
+    // the kill pops: dust and grit thrown off the body
+    g.particles.burst('spark', enemy.x, enemy.y, big ? 16 : 7, {
+      color: big ? 'rgba(255,214,120,0.95)' : 'rgba(214,230,190,0.9)', sizeMin: 2, sizeMax: big ? 6 : 4,
+      speedMin: 40, speedMax: big ? 220 : 150, lifeMin: 0.2, lifeMax: 0.55, glow: big,
+    });
+    // a streak of kills shakes a little; a big one holds the frame
+    this._streak = (this.uiClock - (this._lastKillAt || -9) < 0.6) ? (this._streak || 0) + 1 : 1;
+    this._lastKillAt = this.uiClock;
+    if (big) { this.hitStop = Math.max(this.hitStop, 0.05); g.renderer.shake(0.16); }
+    else if (this._streak >= 3) g.renderer.shake(0.05);
   }
 
   onPlayerHurt(amount) {
@@ -2259,34 +2680,30 @@ export class SurvivalMode {
     });
   }
 
+  /**
+   * The camera follows the Hunter day and night. By day it pulls back a
+   * little and leans toward the circle he stands in, so its ghost and the
+   * contextual button never cover each other.
+   */
   followPlayer(dt) {
     const g = this.game;
     const p = g.player;
     const r = g.renderer;
-    if (this.phase === 'day') {
-      // Day is a base view: zoom out and frame the selected build target
-      // above the bottom sheet.
-      if (r.setZoomMul) r.setZoomMul(this.frameMul(false), dt);
-      const focus = this.dayFocusPoint();
-      // where the target should land on screen: above the bottom sheet, or
-      // (sideways) a little below the middle of the world view so its bubble
-      // sits in the middle
-      const side = daySideColumn(r.w, r.h);
-      const sx = side ? (side.x + side.width + r.w) / 2 : r.w / 2;
-      const sy = side ? (74 + r.h - 34) / 2 + 30 : r.h / 2 - Math.min(150, r.h * 0.17);
-      const a = r.screenToWorld(r.w / 2, r.h / 2);
-      const b = r.screenToWorld(sx, sy);
-      r.followCamera(focus.x + (a.x - b.x), focus.y + (a.y - b.y), dt, 0, 0, g.mansion.camBounds);
-      return;
-    }
-    if (r.setZoomMul) r.setZoomMul(this.frameMul(true), dt);
+    const night = this.phase !== 'day';
+    if (r.setZoomMul) r.setZoomMul(this.frameMul(night), dt);
     let lookX = clamp(p.vx * 0.18, -56, 56);
-    let lookY = clamp(p.vy * 0.18, -56, 56);
+    // a phone held sideways is short and its top band is HUD: frame a little
+    // north of the Hunter so what stands above him is not under the HUD
+    let lookY = clamp(p.vy * 0.18, -56, 56) - ((r.h || 720) < 560 ? (night ? 90 : 70) : 0);
     // lean toward what the Hunter is shooting so a crowd at a door is on screen
     const t = this.currentTarget;
-    if (t && !t.dead) {
+    if (night && t && !t.dead) {
       lookX += clamp((t.x - p.x) * 0.3, -130, 130);
       lookY += clamp((t.y - p.y) * 0.3, -130, 130);
+    }
+    if (!night) {
+      const here = this.dayContext();
+      if (here) { lookX += clamp((here.x - p.x) * 0.5, -80, 80); lookY += clamp((here.y - p.y) * 0.5, -80, 80); }
     }
     r.followCamera(p.x, p.y, dt, lookX, lookY, g.mansion.camBounds);
   }
@@ -2300,22 +2717,8 @@ export class SurvivalMode {
   frameMul(night) {
     const r = this.game.renderer;
     const short = Math.min(r.w || 390, r.h || 844);
-    const target = clamp(short / 720, 0.5, 0.82) * (night ? 0.86 : 0.74);
+    const target = clamp(short / 720, 0.5, 0.82) * (night ? 0.86 : 0.8);
     return target / (r.baseZoom || 1);
-  }
-
-  dayFocusPoint() {
-    const key = this.dayFocus || 'perapian';
-    if (key === 'gate') { const gate = this.mainGate(); if (gate) return { x: gate.x, y: gate.y }; }
-    if (key === 'hunter') return { x: this.game.player.x, y: this.game.player.y };
-    if (key !== 'perapian') {
-      // a tower stands by its door: frame the tower and its reach
-      if (this.buildings[key] === 'tower') { const spot = this.buildingSpot(key, 'tower'); if (spot) return { x: spot.x, y: spot.y }; }
-      const room = this.game.mansion.room(key);
-      if (room) return { x: room.x + room.w / 2, y: room.y + room.h / 2 };
-    }
-    const fire = this.hearth();
-    return fire ? { x: fire.x, y: fire.y + 120 } : { x: this.game.player.x, y: this.game.player.y };
   }
 
   /* ---------------- threat model helpers ---------------- */
@@ -2327,8 +2730,6 @@ export class SurvivalMode {
     // Inside the walls they rush; outside they shamble in ranks.
     return breached ? 92 * (1 + (this.day - 1) * 0.08) : base;
   }
-
-  hearth() { return this.game.mansion.fireplaceLight || null; }
 
   _field(key) {
     const m = this.game.mansion;
@@ -2347,9 +2748,15 @@ export class SurvivalMode {
       return field;
     }
     if (field.version !== version) {
-      if (key === 'hearth') {
-        const fire = this.hearth();
-        if (fire) field.build(fire.x, fire.y + 70, version);
+      if (key === 'keep') {
+        // a ring of goals around the tower's wall: every side is a target
+        const keep = this.keep();
+        const ring = [];
+        for (let k = 0; k < 16; k++) {
+          const a = (k / 16) * Math.PI * 2;
+          ring.push({ x: keep.x + Math.cos(a) * (keep.r + 34), y: keep.y + Math.sin(a) * (keep.r + 34) });
+        }
+        field.buildMulti(ring, version);
       } else if (key.startsWith('door:')) {
         const door = this.entranceById(key.slice(5));
         const point = door && (door.outside || door);
@@ -2363,47 +2770,6 @@ export class SurvivalMode {
   flowDir(kind, x, y) {
     const field = this._field(kind);
     return field ? field.dirAt(x, y) : null;
-  }
-
-  /** An enemy at the Perapian claws fuel out of it. Fire out = night lost. */
-  feedHearth(enemy) {
-    if (this.phase !== 'night') return;
-    const amount = FEED_OIL[enemy._survivalType] || 1;
-    const before = this.oil;
-    this.oil = Math.max(0, this.oil - amount);
-    const lost = before - this.oil;
-    this.nightStats.drained = (this.nightStats.drained || 0) + lost;
-    const fire = this.hearth();
-    if (fire) this.pushFloater(fire.x + rand(-30, 30), fire.y + 40, `-${Math.round(lost)}`, '#ff6b5e', { h: 90, size: 20, icon: 'oil' });
-    if (this.uiClock - this._hearthWarnAt > 7) {
-      this._hearthWarnAt = this.uiClock;
-      this.pushEvent('hearth', 'fire', 'PROTECT THE FIRE!');
-    }
-    const g = this.game;
-    g.audio.play('impact', { vol: 0.32 });
-    g.renderer.shake(0.08);
-    if (fire) g.particles.burst('spark', fire.x, fire.y + 30, 8, {
-      color: 'rgba(255,150,60,0.95)', sizeMin: 1.5, sizeMax: 4, speedMin: 40, speedMax: 150, lifeMin: 0.2, lifeMax: 0.5, glow: true,
-    });
-    if (this.oil <= 0) this.fail('THE FIRE WENT OUT');
-  }
-
-  hearthBurnDps(level = this.perapianLevel) { return HEARTH_BURN[level] || 0; }
-
-  updateHearthBurn(dt) {
-    const dps = this.hearthBurnDps();
-    const fire = this.hearth();
-    if (!dps || !fire || this.oil <= 0) return;
-    const g = this.game;
-    for (const e of g.enemies) {
-      if (!e._survivalType || e.dead || e.removeMe) continue;
-      if (dist(e.x, e.y, fire.x, fire.y) > HEARTH_BURN_RADIUS) { e._burnT = 0; continue; }
-      e._burnT = (e._burnT || 0) + dt;
-      if (e._burnT >= 0.5) {
-        e._burnT -= 0.5;
-        if (typeof e.hurt === 'function') e.hurt(dps * 0.5, g);
-      }
-    }
   }
 
   nearestBrokenDoor(x, y) {
@@ -2454,25 +2820,11 @@ export class SurvivalMode {
     return n;
   }
 
-  roomsLitAt(radius) {
-    const fire = this.hearth();
-    if (!fire) return 0;
-    return this.game.mansion.roomList.filter((room) => dist(room.x + room.w / 2, room.y + room.h / 2, fire.x, fire.y) <= radius).length;
-  }
-
-  /** Fuel the day may not spend: tonight's burn plus a few claws of slack. */
-  oilReserveForNight() { return Math.ceil(this.tuning.oilBurnPerSecond * this.nightDuration) + RESERVE_SLACK; }
-
-  /**
-   * Day spending may not dip into tonight's fuel: the Perapian burns
-   * oilReserveForNight() before dawn and an empty hearth loses the run.
-   * Returns false, 'wood', 'oil' (not enough at all) or 'reserve'.
-   */
+  /** Returns false, 'wood' or 'gold' (not enough). Gold never burns: no reserve. */
   affordReason(cost) {
     if (!cost) return 'none';
     if (this.wood < (cost.wood || 0)) return 'wood';
-    if (this.oil < (cost.oil || 0)) return 'oil';
-    if ((cost.oil || 0) > 0 && this.oil - cost.oil < this.oilReserveForNight()) return 'reserve';
+    if (this.gold < (cost.gold || 0)) return 'gold';
     return null;
   }
 
@@ -2493,13 +2845,13 @@ export class SurvivalMode {
 
   pushEvent(kind, icon, text, opts = {}) {
     const ev = { kind, icon, text, sub: opts.sub || null, life: opts.life || 1.9, age: 0 };
-    const urgent = kind === 'breach' || kind === 'hearth' || kind === 'breaker';
+    const urgent = kind === 'breach' || kind === 'keep' || kind === 'breaker' || kind === 'keepLow';
     // a guard alarm is next in line (its clock is running), once per kind:
     // two guards falling together raise one banner, the HUD counts them
     const guardAlarm = kind === 'guardDown' || kind === 'guardLost';
     if (guardAlarm && ((this.banner && this.banner.kind === kind) || this.bannerQueue.some((q) => q.kind === kind))) return;
     if (!this.banner) this.banner = ev;
-    else if (urgent && this.banner.kind !== 'breach' && this.banner.kind !== 'hearth') {
+    else if (urgent && this.banner.kind !== 'breach' && this.banner.kind !== 'keep') {
       this.banner = ev;
     } else if (guardAlarm) {
       this.bannerQueue.unshift(ev);
@@ -2511,7 +2863,7 @@ export class SurvivalMode {
 
   pushFloater(x, y, text, color, opts = {}) {
     if (this.floaters.length > 48) this.floaters.shift();
-    this.floaters.push({ x, y, text, color, h: opts.h || 60, size: opts.size || 16, icon: opts.icon || null, t: 0, life: opts.life || 0.9 });
+    this.floaters.push({ x, y, text, color, h: opts.h || 60, size: opts.size || 16, icon: opts.icon || null, pop: opts.pop || 1.2, t: 0, life: opts.life || 0.9 });
   }
 
   _updateFx(dt) {
@@ -2529,17 +2881,19 @@ export class SurvivalMode {
   getNightSnapshot() {
     return {
       phase: this.phase, day: this.day, elapsed: +this.elapsed.toFixed(2),
-      duration: this.nightDuration, oil: +this.oil.toFixed(1), wood: this.wood,
-      survivors: this.survivors, perapianLevel: this.perapianLevel, hunterLevel: this.hunterLevel,
-      buildingLevels: { ...this.buildingLevels },
-      radius: Math.round(this.getFireRadius()), litRooms: this.litRooms().map((r) => r.id),
+      duration: this.nightDuration, gold: +this.gold.toFixed(1), wood: this.wood,
+      survivors: this.survivors, keepLevel: this.keepLevel, keepHp: Math.round(this.keepHp), keepHpMax: this.keepHpMax(),
+      keepState: this.keepState(), hunterLevel: this.hunterLevel,
+      buildings: { ...this.buildings }, buildingLevels: { ...this.buildingLevels },
+      territory: this.territoryRooms().map((r) => r.id),
       enemies: this.game.enemies.filter((e) => !e.dead).length,
       breakers: this.game.enemies.filter((e) => e._survivalType === 'breaker' && !e.dead).length,
       kills: this.nightStats.kills, gateHp: Math.round(this.gateHp),
-      feeders: this.hearthFeeders, drained: Math.round(this.nightStats.drained || 0),
+      keepAttackers: this.keepAttackers, keepDamage: Math.round(this.nightStats.keepDamage || 0),
       guards: this.guards.length, guardsDown: this.guards.filter((guard) => guard.down).length,
       gateBroken: !!(this.mainGate() && this.mainGate().broken),
       job: this.builderJob ? { ...this.builderJob } : null,
+      context: this.phase === 'day' && this.dayContext() ? this.dayContext().id : null,
     };
   }
 
@@ -2558,7 +2912,7 @@ export class SurvivalMode {
       alpha: e.alpha, dead: e.dead, deathT: e.deathT, attackCd: e.attackCd,
       press: e.press, t: e.t, index: e.index || e.waveIndex || e.breakerIndex || 0,
       entranceId: e.entranceId, targetEntranceId: e.targetEntranceId,
-      inHouse: !!e._inHouse, feedCd: e.feedCd, staggerT: e.staggerT || 0, targetKind: e.targetKind || null,
+      inHouse: !!e._inHouse, keepCd: e.keepCd, staggerT: e.staggerT || 0, targetKind: e.targetKind || null,
     }));
   }
 
@@ -2568,15 +2922,16 @@ export class SurvivalMode {
     s.initialized = true;
     s.day = this.day; s.phase = this.phase; s.elapsed = +this.elapsed.toFixed(2);
     s.nightDuration = this.nightDuration;
-    s.oil = Math.round(this.oil * 100) / 100; s.wood = Math.round(this.wood);
-    s.survivors = this.survivors; s.perapianLevel = this.perapianLevel;
+    s.gold = Math.round(this.gold * 100) / 100; s.wood = Math.round(this.wood);
+    delete s.oil; delete s.perapianLevel; delete s.oilBurned; delete s.nightOilStart;
+    s.survivors = this.survivors; s.keepLevel = this.keepLevel; s.keepHp = Math.round(this.keepHp * 10) / 10;
     s.buildings = { ...this.buildings }; s.buildingLevels = { ...this.buildingLevels };
     s.hunterLevel = this.hunterLevel; s.gateBuilt = this.gateBuilt;
     s.gateHp = Math.round(this.gateHp); s.builderJob = this.builderJob ? { ...this.builderJob } : null;
     s.selectedRoom = this.selectedRoom; s.nightsCompleted = this.nightsCompleted;
     s.waveIndex = this.waveIndex; s.breakerIndex = this.breakerIndex; s.individualIndex = this.individualIndex;
-    s.oilBurned = +this.oilBurned.toFixed(2); s.siegeTimers = { ...this.siegeTimers };
-    s.nightOilStart = this.nightOilStart == null ? null : +Number(this.nightOilStart).toFixed(2);
+    s.siegeTimers = { ...this.siegeTimers };
+    s.nightKeepStart = this.nightKeepStart == null ? null : Math.round(Number(this.nightKeepStart));
     s.nightStats = { ...this.nightStats }; s.lastRewards = this.lastRewards ? { ...this.lastRewards } : null;
     s.rewardAck = this.rewardAck;
     s.player = { x: g.player.x, y: g.player.y, angle: g.player.angle, blood: g.player.blood };

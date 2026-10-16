@@ -13,6 +13,10 @@
  *   guards    one 3D guard pawn per survivor at night; a fallen one lies
  *             flat on a red ring and stands again once the Hunter helps
  *   pooling   bolt meshes are pooled (the scene does not grow per shot)
+ *   keep      K1: the 3D keep stands in the Main Hall (banner, townsfolk)
+ *   day       P1: by day the stick walks the Hunter; standing in a circle
+ *             shows ONE contextual BUILD button (no side panel, no "+"),
+ *             and a real tap on it starts the builder
  *   reload    a mid-night reload resumes the clock and the enemies
  *   health    0 page errors, 0 console errors, 0 failed requests
  *
@@ -195,11 +199,11 @@ try {
   const shots0 = await page.evaluate(() => {
     const g = window.__LN;
     g.survival.restart();
-    // the Hunter stands behind the front door that wave 1 claws, so he and
-    // the guards shoot through its slit: enough shots to exercise the pool.
-    // (Until 2026-10-15 part of that wave spawned inside the basement and
-    // walked past him, which is what kept this count above 20.)
-    const door = g.survival.entranceById('frontDoor');
+    // the Hunter stands behind the door wave 1 claws (K1: Night 1 opens at the
+    // chapel door, far from the keep), so he and the guards shoot through its
+    // slit: enough shots to exercise the pool. (Until 2026-10-15 part of that
+    // wave spawned inside the basement and walked past him.)
+    const door = g.survival.entranceById('chapelDoor');
     const ix = door.inside.x - door.x, iy = door.inside.y - door.y, il = Math.hypot(ix, iy) || 1;
     g.player.x = door.inside.x + ix / il * 60; g.player.y = door.inside.y + iy / il * 60;
     return g.stats.shotsFired || 0;
@@ -252,28 +256,30 @@ try {
     const m = g.survival;
     m.restart();
     m.phase = 'night'; m.completeNight(); m.ackRewards();
-    m.oil = 200; m.wood = 200;
-    const queued = m.startBuild('tower', 'hall');
+    m.gold = 200; m.wood = 200;
+    const queued = m.startBuild('tower', 'hall:tower');
     let n = 0;
     while (m.builderJob && n++ < 3000) window.__orig.call(g, 1 / 60);
-    m.dayFocus = 'hall'; m.selectedRoom = 'hall';
+    // the Hunter stands on the ballista's circle: its reach ring shows
+    const spot = m.buildingSpot('hall:tower');
+    g.player.x = spot.x; g.player.y = spot.y;
     window.__step(5);
     const W = window.__W;
-    const mesh = W.survivalBuildingMeshes.get('hall');
-    const spot = m.buildingSpot('hall');
+    const mesh = W.survivalBuildingMeshes.get('hall:tower');
     return {
-      queued, built: m.buildings.hall, model: !!(mesh && mesh.visible && mesh.userData.yaw),
+      queued, built: m.buildings['hall:tower'], model: !!(mesh && mesh.visible && mesh.userData.yaw),
       at: mesh ? [Math.round(mesh.position.x), Math.round(mesh.position.z)] : null, spot: [spot.x, spot.y],
       ring: !!(W.survivalTowerRing && W.survivalTowerRing.visible), ringR: W.survivalTowerRing ? W.survivalTowerRing.scale.x : 0,
     };
   });
-  check('tower: model on its spot by the front door, red reach ring when selected by day',
+  check('tower: model on its circle by the front door, red reach ring while the Hunter stands at it by day',
     towerDay.queued && towerDay.built === 'tower' && towerDay.model && towerDay.at && towerDay.at[0] === towerDay.spot[0]
       && towerDay.at[1] === towerDay.spot[1] && towerDay.ring && towerDay.ringR === 520, towerDay);
   await page.evaluate(() => {
     const g = window.__LN;
     const m = g.survival;
-    m.dayFocus = 'perapian';
+    const home = m.hunterHome();
+    g.player.x = home.x; g.player.y = home.y;
     m.startNight();
     m.waveIndex = 99; m.breakerIndex = 99; m.individualIndex = 99;
     g.enemies.length = 0; g.bolts.length = 0;
@@ -287,7 +293,7 @@ try {
     const m = g.survival;
     const W = window.__W;
     const t = m.towers[0];
-    const mesh = W.survivalBuildingMeshes.get('hall');
+    const mesh = W.survivalBuildingMeshes.get('hall:tower');
     let towerBolts = 0;
     W.root.traverse((o) => { if (o.name === 'tower-bolt-3d') towerBolts++; });
     const yaw = mesh && mesh.userData.yaw ? mesh.userData.yaw.rotation.y : null;
@@ -303,7 +309,7 @@ try {
     towerNight);
 
   // ---------------- end panel: no pause ----------------
-  await page.evaluate(() => { const g = window.__LN; g.survival.fail('THE FIRE WENT OUT'); window.__step(3); });
+  await page.evaluate(() => { const g = window.__LN; g.survival.fail('THE KEEP FELL'); window.__step(3); });
   await page.touchscreen.tap(30, 30);
   await page.evaluate(() => window.__step(3));
   const endTap = await page.evaluate(() => ({ screen: window.__LN.screen, phase: window.__LN.survival.phase }));
@@ -322,9 +328,65 @@ try {
   check('framing: landscape night zoom matches portrait (short-side framing)',
     Math.abs(land.zoom - portraitZoom) / portraitZoom < 0.12 && flareInside,
     { portrait: +portraitZoom.toFixed(3), landscape: +land.zoom.toFixed(3), flare: land.flare });
+
+  // ---------------- K1: the keep, and the day's walk-to-a-circle builder (landscape) ----------------
+  const keep3d = await page.evaluate(() => {
+    const g = window.__LN;
+    const W = window.__W;
+    const m = g.survival;
+    const k = m.keep();
+    const hall = g.mansion.room('hall');
+    const mesh = W.survivalKeep;
+    const ud = mesh ? mesh.userData : {};
+    return {
+      visible: !!(mesh && mesh.visible), at: mesh ? [Math.round(mesh.position.x), Math.round(mesh.position.z)] : null,
+      hallCentre: [Math.round(hall.x + hall.w / 2), Math.round(hall.y + hall.h / 2)], keep: [k.x, k.y],
+      villagers: ud.villagers ? ud.villagers.filter((v) => v.person.visible).length : 0, banner: !!(ud.flag && ud.flag.visible),
+      solid: !!g.mansion.solidAt(k.x, k.y), diag: W.diagnostics().survivalKeepVisible,
+    };
+  });
+  check('keep: the 3D keep stands in the middle of the Main Hall (solid), banner up, three townsfolk on top',
+    keep3d.visible && keep3d.diag && keep3d.at && keep3d.at[0] === keep3d.hallCentre[0] && keep3d.at[1] === keep3d.hallCentre[1]
+      && keep3d.villagers === 3 && keep3d.banner && keep3d.solid, keep3d);
+  await page.evaluate(() => {
+    const g = window.__LN;
+    const m = g.survival;
+    m.restart();
+    m.completeNight(); m.ackRewards();
+    m.gold = 200; m.wood = 200;
+    window.__step(10);
+  });
+  const dayWalk = await drag(330, 250, 60, 0);
+  const dayAt = await page.evaluate(() => {
+    const g = window.__LN;
+    const m = g.survival;
+    const spot = m.buildingSpot('hall:tower');
+    m.walkTo(spot.x, spot.y);
+    let n = 0;
+    while (m.walkPath && n++ < 900) window.__orig.call(g, 1 / 60);
+    window.__step(20);
+    const labels = g.ui.map((u) => u.label);
+    const build = g.ui.find((u) => u.label === 'survival:BUILD tower');
+    const W = window.__W;
+    return {
+      context: m.dayContext() && m.dayContext().id, gameplay: g.input.gameplay, build: build ? { x: build.x, y: build.y, w: build.w, h: build.h, disabled: build.disabled } : null,
+      oldLabels: labels.filter((l) => /survival:(slot|select):/.test(l)), circles: W.diagnostics().visibleSurvivalBuildSlots, ghosts: W.diagnostics().visibleSurvivalGhosts,
+      tallPanels: g.ui.filter((u) => u.h > 150).length,
+    };
+  });
+  if (dayAt.build) {
+    await page.touchscreen.tap(dayAt.build.x + dayAt.build.w / 2, dayAt.build.y + dayAt.build.h / 2);
+    await page.evaluate(() => window.__step(3));
+  }
+  const dayJob = await page.evaluate(() => { const m = window.__LN.survival; return m.builderJob ? { kind: m.builderJob.kind, slot: m.builderJob.slotId } : null; });
+  check('day (P1): the stick walks the Hunter by day; in a circle ONE contextual BUILD button shows (no side panel, no "+"); a real tap on it starts the builder',
+    dayWalk > 40 && dayAt.gameplay && dayAt.context === 'hall:tower' && dayAt.build && !dayAt.build.disabled
+      && dayAt.oldLabels.length === 0 && dayAt.tallPanels === 0 && dayAt.circles >= 3 && dayAt.ghosts >= 3
+      && dayJob && dayJob.kind === 'building' && dayJob.slot === 'hall:tower',
+    { stickMoved: Math.round(dayWalk), ...dayAt, job: dayJob });
   await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   await new Promise((r) => setTimeout(r, 400));
-  await page.evaluate(() => window.__step(5));
+  await page.evaluate(() => { window.__LN.survival.restart(); window.__step(5); });
 
   // ---------------- reload mid-night ----------------
   const pre = await page.evaluate(() => { const g = window.__LN; window.__step(60 * 15); g.survival._persist(true); return { t: +g.survival.elapsed.toFixed(2), alive: g.survival.aliveEnemies() }; });

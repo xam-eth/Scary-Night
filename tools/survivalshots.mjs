@@ -3,7 +3,8 @@
  * Captures the phone viewport (390×844 @2x) at fixed simulation times and
  * measures what is actually on the pixels: mean luma of the playfield and
  * the share of near-black pixels. Use it for before/after comparisons when
- * the lighting or HUD changes.
+ * the lighting or HUD changes. K1 "Benteng Terakhir": the keep in the Main
+ * Hall, the day's walk-to-a-circle builder (P1) and its contextual button.
  *
  *   node tools/survivalshots.mjs                    # writes tools/shots-browser/survival/*.png
  *   node tools/survivalshots.mjs --out=qa-evidence  # write elsewhere
@@ -15,8 +16,8 @@
  * The adaptive quality ladder reacts to wall-clock frame time, which in a
  * software-WebGL browser depends on machine load; captures therefore pin the
  * top tier (override with --quality=N) so two runs are comparable.
- * --no-progression skips the building-level / Hunter captures, --no-towers
- * the crossbow-tower ones, --no-guards the fallen-guard ones; --towers-only /
+ * --no-progression skips the keep-level / Hunter captures, --no-towers the
+ * ballista ones, --no-guards the fallen-guard ones; --towers-only /
  * --guards-only capture just those. */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -122,7 +123,7 @@ const advanceTo = (target) => {
   g.render();
   return {
     t: +g.survival.elapsed.toFixed(1), alive: g.enemies.filter((e) => !e.dead).length,
-    oil: Math.floor(g.survival.oil), hp: Math.round(g.player.blood), phase: g.survival.phase,
+    gold: Math.floor(g.survival.gold), keep: Math.round(g.survival.keepHp), hp: Math.round(g.player.blood), phase: g.survival.phase,
     ui: g.ui.length,
   };
 };
@@ -134,6 +135,27 @@ const stepFrames = (n) => {
 // --towers-only: just the tower captures (each starts its own run)
 const TOWERS_ONLY = !!args['towers-only'];
 const GUARDS_ONLY = !!args['guards-only'];
+const finishJob = () => {
+  const g = window.__LN;
+  let n = 0;
+  while (g.survival.builderJob && n++ < 3000) window.__origUpdate.call(g, 1 / 60);
+};
+// walk the Hunter (the real day walk) to a day point by id, then settle
+const walkTo = (id) => {
+  const g = window.__LN;
+  const m = g.survival;
+  const point = m.dayPoints().find((q) => q.id === id);
+  if (!point) return null;
+  m.walkTo(point.x, point.y);
+  let n = 0;
+  while (m.walkPath && n++ < 900) window.__origUpdate.call(g, 1 / 60);
+  for (let i = 0; i < 40; i++) window.__origUpdate.call(g, 1 / 60);
+  g.render();
+  const here = m.dayContext();
+  return here ? here.id : null;
+};
+// a capture that is about the UI keeps the keep standing (not the balance)
+const holdKeep = () => { const m = window.__LN.survival; m.keepHp = Math.max(m.keepHp, m.keepHpMax() * 0.55); };
 if (!TOWERS_ONLY && !GUARDS_ONLY) {
 await shot('night-00s', `(${advanceTo})(0.2)`);
 await shot('night-20s', `(${advanceTo})(20)`);
@@ -142,217 +164,170 @@ await shot('day-reward', `(() => {
   const g = window.__LN;
   g.survival.completeNight();
   (${stepFrames})(30);
-  return { phase: g.survival.phase, day: g.survival.day, ui: g.ui.map((b) => b.label).slice(0, 14) };
+  return { phase: g.survival.phase, day: g.survival.day, rewards: g.survival.lastRewards, ui: g.ui.map((b) => b.label).slice(0, 14) };
 })()`);
-await shot('day-panel', `(() => {
+await shot('day-keep', `(() => {
   const g = window.__LN;
   const collect = g.ui.find((b) => b.label === 'survival:COLLECT');
   if (collect) collect.onClick();
-  (${stepFrames})(90);
-  return { collected: !!collect, ui: g.ui.map((b) => b.label).slice(0, 16) };
+  (${stepFrames})(60);
+  const m = g.survival;
+  return { collected: !!collect, context: m.dayContext() && m.dayContext().id, ui: g.ui.map((b) => b.label).filter((l) => !/walk:/.test(l)) };
 })()`);
-await shot('day-select', `(() => {
+await shot('day-circle', `(() => {
   const g = window.__LN;
-  const slot = g.ui.find((b) => /survival:slot:/i.test(b.label) && !b.disabled);
-  if (slot && slot.onClick) slot.onClick();
-  (${stepFrames})(90);
-  return { clicked: slot ? slot.label : null, ui: g.ui.map((b) => b.label).slice(0, 16) };
+  const at = (${walkTo})('hall:tower');
+  const w = window.__survWorld;
+  return { at, ring: !!(w.survivalTowerRing && w.survivalTowerRing.visible), ui: g.ui.map((b) => b.label).filter((l) => !/walk:/.test(l)) };
 })()`);
 await shot('day-build', `(() => {
   const g = window.__LN;
-  const card = g.ui.find((b) => /survival:BUILD extractor/i.test(b.label) && !b.disabled);
-  if (card && card.onClick) card.onClick();
-  (${stepFrames})(120);
-  return { built: card ? card.label : null, job: g.survival.builderJob, ui: g.ui.map((b) => b.label).slice(0, 16) };
+  const m = g.survival;
+  const btn = g.ui.find((b) => b.label === 'survival:BUILD tower' && !b.disabled);
+  if (btn) btn.onClick();
+  (${stepFrames})(150);
+  return { clicked: btn ? btn.label : null, job: m.builderJob && { kind: m.builderJob.kind, slot: m.builderJob.slotId, left: +m.builderJob.remaining.toFixed(1) } };
+})()`);
+await shot('day-built', `(() => {
+  const g = window.__LN;
+  const m = g.survival;
+  (${finishJob})();
+  const at = (${walkTo})('dining');
+  return { at, buildings: { ...m.buildings }, chips: g.ui.filter((b) => /walk:/.test(b.label)).length, ui: g.ui.map((b) => b.label).filter((l) => !/walk:/.test(l)) };
 })()`);
 await shot('night2-flare', `(() => {
   const g = window.__LN;
   const m = g.survival;
-  while (m.builderJob) window.__origUpdate.call(g, 1 / 60);
-  const collect = g.ui.find((b) => b.label === 'survival:COLLECT');
-  if (collect) collect.onClick();
+  (${finishJob})();
   m.startNight();
   let steps = 0;
-  while (m.elapsed < 34 && m.phase === 'night' && steps++ < 4000) window.__origUpdate.call(g, 1 / 60);
-  // walk the Hunter toward the nearest enemy inside the firelight and flare
-  const p = g.player;
-  const near = g.enemies.filter((e) => !e.dead && e._survivalType).sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))[0];
+  while (m.elapsed < 34 && m.phase === 'night' && steps++ < 4000) { (${holdKeep})(); window.__origUpdate.call(g, 1 / 60); }
   m.skillCooldown = 0;
   m.useSkill();
   for (let i = 0; i < 12; i++) window.__origUpdate.call(g, 1 / 60);
   g.render();
-  return { t: +m.elapsed.toFixed(1), day: m.day, alive: m.aliveEnemies(), feeders: m.hearthFeeders, oil: Math.floor(m.oil), nearest: near ? Math.round(Math.hypot(near.x - p.x, near.y - p.y)) : null, floaters: m.floaters.length };
+  return { t: +m.elapsed.toFixed(1), day: m.day, alive: m.aliveEnemies(), keep: Math.round(m.keepHp), attackers: m.keepAttackers, state: m.keepState(), floaters: m.floaters.length };
 })()`);
 await shot('failed', `(() => {
   const g = window.__LN;
   g.survival.startNight();
   for (let i = 0; i < 60; i++) window.__origUpdate.call(g, 1 / 60);
-  g.survival.fail('THE FIRE WENT OUT');
+  g.survival.fail('THE KEEP FELL');
   g.render();
   return { phase: g.survival.phase, ui: g.ui.map((b) => b.label) };
 })()`);
 
-// Door-slit defence: the Hunter steps up behind the front door while wave 1
-// claws it; guards post beside him; the camera leans toward the crowd.
+// Door-slit defence: the Hunter steps up behind the door wave 1 claws (K1:
+// the chapel door — Night 1 opens on the far side of the house); guards post
+// beside him; the camera leans toward the crowd.
 await shot('night-door', `(() => {
   const g = window.__LN;
   const m = g.survival;
   m.restart();
   let steps = 0;
   while (m.elapsed < 9 && m.phase === 'night' && steps++ < 2000) window.__origUpdate.call(g, 1 / 60);
-  const door = m.entranceById('frontDoor');
+  const door = m.entranceById('chapelDoor');
   const ix = door.inside.x - door.x, iy = door.inside.y - door.y, il = Math.hypot(ix, iy) || 1;
   g.player.x = door.inside.x + ix / il * 60; g.player.y = door.inside.y + iy / il * 60;
   g.renderer.snapCamera(g.player.x, g.player.y);
   steps = 0;
   while (m.elapsed < 13 && m.phase === 'night' && steps++ < 2000) window.__origUpdate.call(g, 1 / 60);
   g.render();
-  return { t: +m.elapsed.toFixed(1), doorHp: Math.round(door.hp), target: !!m.currentTarget, guardsAtDoor: m.guards.filter((gd) => gd.post && gd.post.doorId === 'frontDoor').length, kills: m.nightStats.kills, zoom: +g.renderer.cam.zoom.toFixed(3) };
+  return { t: +m.elapsed.toFixed(1), door: door.id, doorHp: Math.round(door.hp), target: !!m.currentTarget, guardsAtDoor: m.guards.filter((gd) => gd.post && gd.post.doorId === door.id).length, kills: m.nightStats.kills, zoom: +g.renderer.cam.zoom.toFixed(3) };
 })()`);
-
 }
 
-// Progression: building levels + the Hunter's track. A real Night 2 with a
-// pump, a sawmill and a shelter standing (hearth kept fed so the capture is
-// about the UI, not the balance), then the dawn reward, sheets and pennants.
-const finishJob = () => {
-  const g = window.__LN;
-  let n = 0;
-  while (g.survival.builderJob && n++ < 3000) window.__origUpdate.call(g, 1 / 60);
-};
+// Progression: the keep's levels (Lv3: two banners and a roof ballista),
+// the armory rack (the Hunter's track), then a real night with both.
 if (!args['no-progression'] && !TOWERS_ONLY && !GUARDS_ONLY) {
-  await shot('prog-reward', `(() => {
+  await shot('prog-keep', `(() => {
     const g = window.__LN;
     const m = g.survival;
     m.restart();
-    let steps = 0;
-    while (m.phase === 'night' && steps++ < 6000) { m.oil = Math.max(m.oil, 40); window.__origUpdate.call(g, 1 / 60); }
-    const collect0 = g.ui.find((b) => b.label === 'survival:COLLECT');
-    if (collect0) collect0.onClick(); else m.ackRewards();
-    m.perapianLevel = 3; m.refreshFireplace(true);
-    m.oil = 160; m.wood = 160;
-    const rooms = m.buildableRooms();
-    const plan = [['extractor', rooms[0]], ['sawmill', rooms[1]], ['shelter', rooms[2]]];
-    for (const [type, room] of plan) { if (room && m.startBuild(type, room.id)) (${finishJob})(); }
-    m.startNight();
-    steps = 0;
-    while (m.phase === 'night' && steps++ < 6000) { m.oil = Math.max(m.oil, 60); window.__origUpdate.call(g, 1 / 60); }
-    (${stepFrames})(30);
-    return { phase: m.phase, day: m.day, rewards: m.lastRewards, buildings: { ...m.buildings }, ui: g.ui.map((b) => b.label).slice(0, 8) };
-  })()`);
-  await shot('prog-built', `(() => {
-    const g = window.__LN;
-    const m = g.survival;
-    const collect = g.ui.find((b) => b.label === 'survival:COLLECT');
-    if (collect) collect.onClick();
-    m.oil = 120; m.wood = 120;
-    (${stepFrames})(20);
-    const pump = Object.keys(m.buildings).find((r) => m.buildings[r] === 'extractor');
-    const bubble = g.ui.find((b) => b.label === 'survival:select:' + pump);
-    if (bubble) bubble.onClick();
-    (${stepFrames})(30);
-    return { pump, selected: m.dayFocus, ui: g.ui.map((b) => b.label).filter((l) => /UPGRADE|select:/.test(l)) };
-  })()`);
-  await shot('prog-upgrading', `(() => {
-    const g = window.__LN;
-    const m = g.survival;
-    const btn = g.ui.find((b) => /^survival:UPGRADE extractor LV2$/.test(b.label) && !b.disabled);
-    if (btn) btn.onClick();
-    (${stepFrames})(150);
-    return { clicked: btn ? btn.label : null, job: m.builderJob };
+    m.completeNight();
+    m.ackRewards();
+    m.gold = 160; m.wood = 160;
+    for (const lv of [2, 3]) { if (m.startBuild('keep')) (${finishJob})(); }
+    for (const [type, id] of [['mine', 'basement'], ['sawmill', 'dining'], ['barracks', 'library'], ['tower', 'hall:tower']]) { if (m.startBuild(type, id)) (${finishJob})(); }
+    m.keepHp = m.keepHpMax() * 0.45;   // hurt: the cracks and the REPAIR button show
+    const k = m.keep();
+    g.player.x = k.x + 30; g.player.y = k.y + k.r + 70;
+    (${stepFrames})(60);
+    return { keepLevel: m.keepLevel, hp: Math.round(m.keepHp) + '/' + m.keepHpMax(), territory: m.territoryRooms().length, context: m.dayContext() && m.dayContext().id, ui: g.ui.map((b) => b.label).filter((l) => !/walk:/.test(l)) };
   })()`);
   await shot('prog-hunter', `(() => {
     const g = window.__LN;
     const m = g.survival;
-    (${finishJob})();
-    (${stepFrames})(5);
-    const bubble = g.ui.find((b) => b.label === 'survival:select:hunter');
-    if (bubble) bubble.onClick();
-    (${stepFrames})(30);
-    return { selected: m.dayFocus, levels: { ...m.buildingLevels }, ui: g.ui.map((b) => b.label).filter((l) => /UPGRADE|hunter/.test(l)) };
-  })()`);
-  await shot('prog-levels', `(() => {
-    const g = window.__LN;
-    const m = g.survival;
-    const btn = g.ui.find((b) => /^survival:UPGRADE HUNTER LV2$/.test(b.label) && !b.disabled);
-    if (btn) btn.onClick();
-    (${finishJob})();
-    const pump = Object.keys(m.buildings).find((r) => m.buildings[r] === 'extractor');
-    const mill = Object.keys(m.buildings).find((r) => m.buildings[r] === 'sawmill');
-    m.oil = 120; m.wood = 120;
-    if (m.startBuild('upgrade', pump)) (${finishJob})();
-    if (m.startBuild('upgrade', mill)) (${finishJob})();
-    // look at the Lv3 pump: bigger model + two gold pennants
-    m.dayFocus = pump; m.selectedRoom = pump;
-    (${stepFrames})(60);
-    return { hunter: m.hunterLevel, levels: { ...m.buildingLevels }, hp: g.player.blood + '/' + g.player.bloodMax, door: m.doorHpBonus(), focus: m.dayFocus };
+    const at = (${walkTo})('armory');
+    return { at, hunter: m.hunterLevel, ui: g.ui.map((b) => b.label).filter((l) => !/walk:/.test(l)) };
   })()`);
   await shot('prog-night', `(() => {
     const g = window.__LN;
     const m = g.survival;
+    m.gold = Math.max(m.gold, 60); m.wood = Math.max(m.wood, 60);
+    for (let i = 0; i < 2; i++) { if (m.startBuild('hunter')) (${finishJob})(); }
     m.startNight();
     let steps = 0;
-    while (m.elapsed < 14 && m.phase === 'night' && steps++ < 3000) window.__origUpdate.call(g, 1 / 60);
+    while (m.elapsed < 24 && m.phase === 'night' && steps++ < 3000) { (${holdKeep})(); window.__origUpdate.call(g, 1 / 60); }
     g.render();
-    return { t: +m.elapsed.toFixed(1), hunter: m.hunterLevel, hp: Math.round(g.player.blood) + '/' + g.player.bloodMax, pumped: +(m.nightStats.pumped || 0).toFixed(2), kills: m.nightStats.kills };
+    return { t: +m.elapsed.toFixed(1), keep: m.keepLevel, roofShots: m.keepBallista.shots, hunter: m.hunterLevel, hp: Math.round(g.player.blood) + '/' + g.player.bloodMax, mined: +(m.nightStats.mined || 0).toFixed(2), kills: m.nightStats.kills };
+  })()`);
+  await shot('complete', `(() => {
+    const g = window.__LN;
+    const m = g.survival;
+    m.nightsCompleted = 2; m.day = 3;
+    m.completeNight();
+    g.render();
+    return { phase: m.phase, ui: g.ui.map((b) => b.label) };
   })()`);
 }
 
-// Towers: a crossbow tower built by the front door through the real UI (slot
-// → TOWER card), its sheet with the red reach ring, then Lv2 firing on a
-// real Night 2 (Hunter parked by the front door so the camera holds the
-// tower, the door slit and the crowd).
+// Towers: a ballista built on the front-door circle through the real day
+// walk + BUILD button, then Lv2 firing on a real Night 2 (Hunter parked by
+// the front door so the camera holds the tower, the door slit and the crowd).
 if (!args['no-towers'] && !GUARDS_ONLY) {
   await shot('tower-day', `(() => {
     const g = window.__LN;
     const m = g.survival;
     m.restart();
-    let steps = 0;
-    while (m.phase === 'night' && steps++ < 6000) { m.oil = Math.max(m.oil, 40); window.__origUpdate.call(g, 1 / 60); }
+    m.completeNight();
     const collect = g.ui.find((b) => b.label === 'survival:COLLECT');
     if (collect) collect.onClick(); else m.ackRewards();
-    m.oil = Math.max(m.oil, 60); m.wood = Math.max(m.wood, 60);
-    (${stepFrames})(20);
-    const slot = g.ui.find((b) => b.label === 'survival:slot:hall');
-    if (slot) slot.onClick();
+    m.gold = Math.max(m.gold, 60); m.wood = Math.max(m.wood, 60);
     (${stepFrames})(10);
+    const at = (${walkTo})('hall:tower');
     const card = g.ui.find((b) => b.label === 'survival:BUILD tower' && !b.disabled);
     if (card) card.onClick();
     (${finishJob})();
-    (${stepFrames})(10);
-    const bubble = g.ui.find((b) => b.label === 'survival:select:hall');
-    if (bubble) bubble.onClick();
-    (${stepFrames})(60);
+    (${stepFrames})(30);
     const w = window.__survWorld;
-    return { slot: !!slot, card: !!card, built: m.buildings.hall, spot: m.buildingSpot('hall'), ring: !!(w.survivalTowerRing && w.survivalTowerRing.visible), ui: g.ui.map((b) => b.label).filter((l) => /UPGRADE|select:hall/.test(l)) };
+    return { at, built: m.buildings['hall:tower'] || null, spot: m.buildingSpot('hall:tower'), ring: !!(w.survivalTowerRing && w.survivalTowerRing.visible), ui: g.ui.map((b) => b.label).filter((l) => /UPGRADE|BUILD/.test(l)) };
   })()`);
   await shot('tower-night', `(() => {
     const g = window.__LN;
     const m = g.survival;
-    m.oil = Math.max(m.oil, 60); m.wood = Math.max(m.wood, 60);
+    m.gold = Math.max(m.gold, 60); m.wood = Math.max(m.wood, 60);
     (${stepFrames})(5);
     const up = g.ui.find((b) => b.label === 'survival:UPGRADE tower LV2' && !b.disabled);
     if (up) up.onClick();
     (${finishJob})();
     m.startNight();
-    // the Hunter stands between the tower and the front door: the camera
-    // holds the tower, the door slit and the crowd outside it
     const park = () => { g.player.x = 236; g.player.y = 610; };
     park();
     g.renderer.snapCamera(g.player.x, g.player.y);
-    const flying = () => g.bolts.some((b) => b.tower && Math.hypot(b.x - b.ox, b.y - b.oy) > 50);
+    const flying = () => g.bolts.some((b) => b.tower && !b.keepBolt && Math.hypot(b.x - b.ox, b.y - b.oy) > 50);
     let steps = 0;
     while (m.phase === 'night' && steps++ < 4800 && !((m.nightStats.towerShots || 0) >= 3 && flying())) {
-      m.oil = Math.max(m.oil, 40); park();
+      (${holdKeep})(); park();
       window.__origUpdate.call(g, 1 / 60);
     }
     g.render();
     const t = m.towers[0];
-    return { t: +m.elapsed.toFixed(1), day: m.day, level: m.buildingLevel('hall'), upgraded: !!up, shots: m.nightStats.towerShots || 0, kills: m.nightStats.kills, flying: flying(), aim: t && +t.aim.toFixed(2) };
+    return { t: +m.elapsed.toFixed(1), day: m.day, level: m.buildingLevel('hall:tower'), upgraded: !!up, shots: m.nightStats.towerShots || 0, kills: m.nightStats.kills, flying: flying(), aim: t && +t.aim.toFixed(2) };
   })()`);
 }
 
-// Guards can fall: a real Night 1 until the front door gives way; just
+// Guards can fall: a real Night 1 until the chapel door (wave 1) gives way; just
 // inside it one guard down with the Hunter beside it (green ring = his help),
 // one down alone (red ring = time it has left), one hurt (HP bar). Then the
 // lone one's clock runs out (GUARD LOST), and dawn shows the loss.
@@ -363,11 +338,11 @@ if (!args['no-guards'] && !TOWERS_ONLY) {
     m.restart();
     m.survivors = 3;
     let steps = 0;
-    while (m.elapsed < 8 && m.phase === 'night' && steps++ < 2000) { m.oil = Math.max(m.oil, 40); window.__origUpdate.call(g, 1 / 60); }
-    const door = m.entranceById('frontDoor');
+    while (m.elapsed < 8 && m.phase === 'night' && steps++ < 2000) { (${holdKeep})(); window.__origUpdate.call(g, 1 / 60); }
+    const door = m.entranceById('chapelDoor');
     door.hp = Math.min(door.hp, 1);
     steps = 0;
-    while (!door.broken && m.phase === 'night' && steps++ < 1200) { m.oil = Math.max(m.oil, 40); window.__origUpdate.call(g, 1 / 60); }
+    while (!door.broken && m.phase === 'night' && steps++ < 1200) { (${holdKeep})(); window.__origUpdate.call(g, 1 / 60); }
     const [a, b, c] = m.guards;
     const pa = m._doorPost(door, 0), pb = m._doorPost(door, 1);
     const place = (gd, x, y) => { gd.x = x; gd.y = y; gd.post = { key: 'shot', x, y, doorId: null }; gd.path = null; };
@@ -380,7 +355,7 @@ if (!args['no-guards'] && !TOWERS_ONLY) {
     const park = () => { g.player.x = a.x + 34; g.player.y = a.y - 24; g.player.blood = Math.max(g.player.blood, 70); };
     park();
     g.renderer.snapCamera(g.player.x, g.player.y);
-    for (let i = 0; i < 10; i++) { m._guardAssignT = 99; park(); window.__origUpdate.call(g, 1 / 60); }
+    for (let i = 0; i < 10; i++) { m._guardAssignT = 99; park(); (${holdKeep})(); window.__origUpdate.call(g, 1 / 60); }
     g.render();
     return { t: +m.elapsed.toFixed(1), broken: door.broken, helped: +a.rescueT.toFixed(2), aloneLeft: +(20 - b.downT).toFixed(1), hurt: c.hp, hud: m.standingGuards() + '/' + m.guards.length, banner: m.banner && m.banner.kind, alive: m.aliveEnemies() };
   })()`);
@@ -388,15 +363,12 @@ if (!args['no-guards'] && !TOWERS_ONLY) {
     const g = window.__LN;
     const m = g.survival;
     const [a, b] = m.guards;
-    // the Hunter finishes helping the first one up, the lone one runs out
     let steps = 0;
-    while (a.down && steps++ < 120) { m._guardAssignT = 99; g.player.x = a.x + 34; g.player.y = a.y - 24; window.__origUpdate.call(g, 1 / 60); }
+    while (a.down && steps++ < 120) { m._guardAssignT = 99; g.player.x = a.x + 34; g.player.y = a.y - 24; (${holdKeep})(); window.__origUpdate.call(g, 1 / 60); }
     b.downT = Math.max(b.downT, 19.9);
-    // let this banner show now rather than behind the breach (the capture
-    // is about how it looks)
     m.banner = null; m.bannerQueue.length = 0;
     steps = 0;
-    while (m.guards.includes(b) && steps++ < 60) { m._guardAssignT = 99; window.__origUpdate.call(g, 1 / 60); }
+    while (m.guards.includes(b) && steps++ < 60) { m._guardAssignT = 99; (${holdKeep})(); window.__origUpdate.call(g, 1 / 60); }
     for (let i = 0; i < 8; i++) window.__origUpdate.call(g, 1 / 60);
     g.render();
     return { t: +m.elapsed.toFixed(1), survivors: m.survivors, guards: m.guards.length, lost: m.nightStats.lost || 0, rescued: m.nightStats.rescued || 0, banner: m.banner && m.banner.kind, queue: m.bannerQueue.map((ev) => ev.kind) };
@@ -404,7 +376,8 @@ if (!args['no-guards'] && !TOWERS_ONLY) {
   await shot('guard-reward', `(() => {
     const g = window.__LN;
     const m = g.survival;
-    g.player.x = m.hearth().x + 70; g.player.y = m.hearth().y + 210;
+    const home = m.hunterHome();
+    g.player.x = home.x; g.player.y = home.y;
     m.completeNight();
     (${stepFrames})(30);
     return { phase: m.phase, survivors: m.survivors, lost: m.lastRewards && m.lastRewards.lost, rescued: m.lastRewards && m.lastRewards.rescued, guards: m.guards.map((gd) => gd.hp) };

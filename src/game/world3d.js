@@ -77,11 +77,11 @@ class World3DRuntime {
     this.proxies = new Map();
     this.survivalCrowdProxies = new Map();
     this.survivalBuildingMeshes = new Map();
-    this.survivalSlotRings = new Map();
-    this.survivalRadiusRing = null;
+    this.survivalCircles = new Map();      // K1 build circles: id -> { ring, ghost }
+    this.survivalTerritory = new Map();    // room id -> banner floor tint
+    this.survivalKeep = null;
     this.survivalGateMesh = null;
     this.survivalCrowdInstances = null;
-    this.survivalFireDisc = null;
     this.survivalYard = null;
     this.variantRings = new Map();
     this.foodCues = new Map();
@@ -711,7 +711,6 @@ class World3DRuntime {
     const wood = new THREE.MeshStandardMaterial({ color: 0x60452a, roughness: 0.96, flatShading: true });
     const woodLight = new THREE.MeshStandardMaterial({ color: 0x917044, roughness: 0.9, flatShading: true });
     const iron = new THREE.MeshStandardMaterial({ color: 0x554a3b, metalness: 0.58, roughness: 0.56, flatShading: true });
-    const oil = new THREE.MeshStandardMaterial({ color: 0x583719, roughness: 0.6, metalness: 0.18 });
     const add = (geometry, material, x, y, z, rx = 0, ry = 0, rz = 0) => {
       const mesh = new THREE.Mesh(geometry, material);
       mesh.position.set(x, y, z);
@@ -721,12 +720,20 @@ class World3DRuntime {
       group.add(mesh);
       return mesh;
     };
-    if (type === 'extractor') {
-      add(new THREE.CylinderGeometry(18, 20, 32, 10), oil, 0, 18, 0);
-      add(new THREE.CylinderGeometry(15, 15, 3, 10), iron, 0, 35, 0);
-      add(new THREE.CylinderGeometry(3, 3, 38, 7), iron, 20, 30, 0, 0, 0, Math.PI / 2);
-      add(new THREE.BoxGeometry(30, 5, 6), woodLight, 0, 5, 0);
-      add(new THREE.BoxGeometry(8, 24, 8), iron, -21, 12, 0);
+    if (type === 'mine') {
+      // a gold mine: a timber headframe over the shaft, a pulley wheel and a
+      // cart heaped with gold
+      const goldMat = new THREE.MeshStandardMaterial({ color: 0xffcc3a, emissive: 0x6a4a00, emissiveIntensity: 0.35, metalness: 0.5, roughness: 0.4, flatShading: true });
+      add(new THREE.BoxGeometry(46, 6, 46), wood, 0, 3, 0);
+      add(new THREE.BoxGeometry(30, 3, 30), new THREE.MeshStandardMaterial({ color: 0x1c1712, roughness: 1 }), 0, 6.5, 0);
+      for (const x of [-18, 18]) {
+        add(new THREE.BoxGeometry(5, 58, 5), woodLight, x, 32, -8, 0, 0, x < 0 ? -0.12 : 0.12);
+      }
+      add(new THREE.BoxGeometry(44, 5, 6), woodLight, 0, 60, -8);
+      add(new THREE.TorusGeometry(9, 2, 5, 14), iron, 0, 60, -2);
+      add(new THREE.BoxGeometry(26, 14, 18), iron, 26, 10, 18);
+      for (let i = 0; i < 5; i++) add(new THREE.DodecahedronGeometry(5.5, 0), goldMat, 20 + (i % 3) * 6, 19 + Math.floor(i / 3) * 4, 14 + (i % 2) * 7);
+      for (const x of [18, 34]) add(new THREE.CylinderGeometry(4, 4, 3, 8), iron, x, 4, 28, Math.PI / 2, 0, 0);
     } else if (type === 'sawmill') {
       for (let i = 0; i < 3; i++) {
         add(new THREE.CylinderGeometry(8, 8, 56, 8), i === 1 ? woodLight : wood, -20 + i * 20, 8 + i * 1.5, 0, 0, 0, Math.PI / 2);
@@ -784,13 +791,68 @@ class World3DRuntime {
       group.userData.stock = stock;
       group.userData.loaded = loaded;
     } else {
-      add(new THREE.BoxGeometry(70, 4, 54), wood, 0, 3, 0);
-      for (const x of [-27, 27]) for (const z of [-20, 20]) add(new THREE.BoxGeometry(5, 40, 5), woodLight, x, 23, z);
-      add(new THREE.ConeGeometry(46, 28, 4), wood, 0, 52, 0, 0, Math.PI / 4, 0);
-      add(new THREE.BoxGeometry(15, 25, 2), iron, 0, 15, 27);
+      // barracks: a canvas tent in the garrison's blue, a weapon rack and a
+      // pennant pole (soldiers live here)
+      const canvasMat = new THREE.MeshStandardMaterial({ color: 0xd9ccb0, roughness: 0.95, flatShading: true });
+      const blueMat = new THREE.MeshStandardMaterial({ color: 0x3e6bff, emissive: 0x1a3aa8, emissiveIntensity: 0.3, roughness: 0.7, flatShading: true, side: THREE.DoubleSide });
+      add(new THREE.BoxGeometry(72, 4, 56), wood, 0, 2, 0);
+      add(new THREE.ConeGeometry(44, 52, 4), canvasMat, 0, 30, 0, 0, Math.PI / 4, 0);
+      add(new THREE.BoxGeometry(18, 30, 2), blueMat, 0, 16, 30);
+      add(new THREE.CylinderGeometry(1.8, 1.8, 76, 6), iron, 0, 56, 0);
+      add(new THREE.BoxGeometry(26, 14, 1.5), blueMat, 13, 86, 0);
+      add(new THREE.BoxGeometry(40, 4, 4), woodLight, -36, 22, 0, 0, Math.PI / 2, 0);
+      for (const z of [-12, 0, 12]) add(new THREE.BoxGeometry(3, 30, 3), iron, -36, 18, z);
     }
     group.traverse((item) => { if (item.isMesh) item.userData.survivalBuilding = type; });
     return group;
+  }
+
+  /** A see-through blue copy of a building: what a circle will build. */
+  _makeSurvivalGhost(type) {
+    const group = type === 'gate' ? this._makeSurvivalGateModel() : this._makeSurvivalBuilding(type);
+    group.name = `survival-ghost-3d-${type}`;
+    const material = new THREE.MeshBasicMaterial({ color: 0x8cc0ff, transparent: true, opacity: 0.4, depthWrite: false, toneMapped: false });
+    group.traverse((item) => { if (item.isMesh) { item.material = material; item.castShadow = false; item.receiveShadow = false; item.renderOrder = 6; } });
+    group.userData.ghostMaterial = material;
+    group.scale.setScalar(type === 'gate' ? 1 : 1.3);
+    group.visible = false;
+    this.root.add(group);
+    return group;
+  }
+
+  /** One shared dashed-ring texture for every build circle (white, tinted per state). */
+  _circleTexture() {
+    if (this._circleTex !== undefined) return this._circleTex;
+    this._circleTex = null;
+    if (typeof document === 'undefined') return null;
+    const size = 256;
+    const canvas = document.createElement('canvas');
+    canvas.width = size; canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.clearRect(0, 0, size, size);
+    ctx.fillStyle = 'rgba(255,255,255,0.16)';
+    ctx.beginPath(); ctx.arc(size / 2, size / 2, size * 0.44, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,1)';
+    ctx.lineWidth = size * 0.06;
+    ctx.setLineDash([size * 0.11, size * 0.075]);
+    ctx.beginPath(); ctx.arc(size / 2, size / 2, size * 0.44, 0, Math.PI * 2); ctx.stroke();
+    this._circleTex = new THREE.CanvasTexture(canvas);
+    this._circleTex.colorSpace = THREE.SRGBColorSpace;
+    return this._circleTex;
+  }
+
+  _makeSurvivalCircle(radius) {
+    const ring = new THREE.Mesh(
+      new THREE.PlaneGeometry(radius * 2, radius * 2),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, map: this._circleTexture(), transparent: true, opacity: 0.8, depthWrite: false, toneMapped: false }),
+    );
+    ring.name = 'survival-build-circle-3d';
+    ring.rotation.x = -Math.PI / 2;
+    ring.renderOrder = 4;
+    ring.visible = false;
+    this.root.add(ring);
+    return ring;
   }
 
   /**
@@ -835,17 +897,21 @@ class World3DRuntime {
     group.add(pennant);
   }
 
-  /** Height of the ballista on the deck of the tower that shot this bolt. */
+  /** Height of the ballista that shot this bolt (a tower's deck or the keep's roof). */
   _towerMuzzle(bolt) {
-    const roomId = bolt.owner && bolt.owner.roomId;
-    const mesh = roomId ? this.survivalBuildingMeshes.get(roomId) : null;
+    const owner = bolt.owner || {};
+    if (bolt.keepBolt || owner.key === 'keep') {
+      const keep = this.survivalKeep;
+      return keep ? keep.userData.roofY * keep.scale.y - 10 : 220;
+    }
+    const mesh = owner.slotId ? this.survivalBuildingMeshes.get(owner.slotId) : null;
     // deck swivel (86) + stock (12) + the loaded bolt (5), in model units
     return mesh ? 103 * mesh.scale.y - 18 : 0;
   }
 
   /** The ballista swings to its tower's bearing and kicks back on a shot. */
-  _syncSurvivalTower(mesh, mode, roomId) {
-    const tower = (mode.towers || []).find((item) => item.roomId === roomId);
+  _syncSurvivalTower(mesh, mode, slotId) {
+    const tower = (mode.towers || []).find((item) => item.slotId === slotId);
     const { yaw, stock, loaded } = mesh.userData;
     if (!yaw) return;
     const aim = tower ? tower.aim : Math.PI / 2;
@@ -856,18 +922,19 @@ class World3DRuntime {
   }
 
   /**
-   * By day the selected tower shows how far it reaches: a red ring on the
-   * floor (the genre's AoE circle), so where it stands reads as a choice.
+   * By day a ballista circle the Hunter stands at shows how far it reaches
+   * (built: its level; empty: what Lv1 would): a red ring on the floor, the
+   * genre's AoE circle, so where it stands reads as a choice.
    */
   _syncSurvivalTowerRing(game, mode) {
-    const roomId = mode.phase === 'day' && game.screen === 'playing' ? mode.dayFocus : null;
-    const show = !!(roomId && mode.buildings[roomId] === 'tower' && mode.buildingSpot);
+    const here = mode.phase === 'day' && game.screen === 'playing' && mode.dayContext ? mode.dayContext() : null;
+    const show = !!(here && here.kind === 'slot' && here.type === 'tower' && !here.locked);
     if (!show && !this.survivalTowerRing) return;
     if (!this.survivalTowerRing) {
       const group = new THREE.Group();
       group.name = 'survival-tower-range-3d';
       const fill = new THREE.Mesh(new THREE.CircleGeometry(1, 72), new THREE.MeshBasicMaterial({
-        color: 0xff4a3a, transparent: true, opacity: 0.2, side: THREE.DoubleSide, depthWrite: false, toneMapped: false,
+        color: 0xff4a3a, transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false, toneMapped: false,
       }));
       const edge = new THREE.Mesh(new THREE.RingGeometry(0.952, 1, 96), new THREE.MeshBasicMaterial({
         color: 0xff4433, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false, toneMapped: false,
@@ -880,59 +947,373 @@ class World3DRuntime {
     const ring = this.survivalTowerRing;
     ring.visible = show;
     if (!show) return;
-    const spot = mode.buildingSpot(roomId, 'tower');
-    const range = (mode.towerStats(roomId).range) || 0;
-    ring.position.set(spot.x, 3.8, spot.y);
+    const level = Math.max(1, here.level || 0);
+    const range = mode.buildingStats('tower', level).range || 0;
+    ring.position.set(here.x, 3.8, here.y);
     ring.scale.set(range, 1, range);
     ring.userData.edge.material.opacity = 0.78 + 0.2 * (0.5 + 0.5 * Math.sin(game.time * 3));
   }
 
-  _makeSurvivalRadiusRing() {
-    const geometry = new THREE.RingGeometry(0.984, 1, 128);
-    const material = new THREE.MeshBasicMaterial({
-      color: 0xffc14d, transparent: true, opacity: 0.7,
-      side: THREE.DoubleSide, depthWrite: false, toneMapped: false,
+  /**
+   * The keep (K1): a round dark-stone tower in the middle of the Main Hall
+   * with the townsfolk on its battlements and the garrison's banner on top.
+   * Its level shows from across the house: timber hoardings (Lv1), a big
+   * banner and a bell (Lv2), a second banner and a roof ballista (Lv3).
+   */
+  _makeSurvivalKeep(r) {
+    const group = new THREE.Group();
+    group.name = 'survival-keep-3d';
+    const mats = [];
+    const mat = (o) => { const m = new THREE.MeshStandardMaterial({ transparent: true, ...o }); mats.push(m); return m; };
+    const stone = mat({ color: 0x6f6a66, roughness: 0.96, flatShading: true });
+    const stoneDark = mat({ color: 0x4d4947, roughness: 0.98, flatShading: true });
+    const stoneLight = mat({ color: 0x8c867e, roughness: 0.94, flatShading: true });
+    const wood = mat({ color: 0x5e4128, roughness: 0.92, flatShading: true });
+    const iron = mat({ color: 0x4a4540, metalness: 0.55, roughness: 0.5, flatShading: true });
+    const glow = mat({ color: 0xffd38a, emissive: 0xffa640, emissiveIntensity: 1.3, roughness: 0.6 });
+    const blue = mat({ color: 0x3e6bff, emissive: 0x1a3aa8, emissiveIntensity: 0.4, roughness: 0.65, side: THREE.DoubleSide });
+    const gold = mat({ color: 0xffd24a, emissive: 0x8a6000, emissiveIntensity: 0.35, metalness: 0.4, roughness: 0.45, side: THREE.DoubleSide });
+    const crack = mat({ color: 0x17120f, roughness: 1 });
+    const H = 186;
+    const topY = 18 + H;
+    const add = (geo, m, x, y, z, ry = 0, parent = group) => {
+      const mesh = new THREE.Mesh(geo, m);
+      mesh.position.set(x, y, z);
+      mesh.rotation.y = ry;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
+    };
+    // positions around the tower use (sin a, cos a) so a box turned by `a`
+    // faces outward: a = 0 is the south face, toward the camera
+    const around = (a, rad) => [Math.sin(a) * rad, Math.cos(a) * rad];
+    add(new THREE.CylinderGeometry(r + 12, r + 16, 18, 14), stoneDark, 0, 9, 0);
+    add(new THREE.CylinderGeometry(r - 6, r, H, 14), stone, 0, 18 + H / 2, 0);
+    for (const y of [18 + H * 0.36, 18 + H * 0.7]) add(new THREE.CylinderGeometry(r + 1, r + 1, 7, 14), stoneLight, 0, y, 0);
+    add(new THREE.CylinderGeometry(r + 6, r - 3, 14, 14), stoneLight, 0, topY + 4, 0);
+    add(new THREE.CylinderGeometry(r - 10, r - 10, 6, 14), stoneDark, 0, topY + 10, 0);
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      const [x, z] = around(a, r - 1);
+      add(new THREE.BoxGeometry(28, 24, 14), stone, x, topY + 23, z, a);
+    }
+    add(new THREE.BoxGeometry(56, 88, 10), wood, 0, 18 + 44, r - 3);
+    add(new THREE.BoxGeometry(66, 9, 12), iron, 0, 18 + 92, r - 2);
+    add(new THREE.BoxGeometry(22, 32, 6), glow, 0, 18 + H * 0.6, r - 4);
+    for (const a of [Math.PI * 0.32, -Math.PI * 0.36, Math.PI * 0.8]) {
+      const [x, z] = around(a, r - 4);
+      add(new THREE.BoxGeometry(14, 24, 6), glow, x, 18 + H * 0.48, z, a);
+    }
+    // Lv1: timber hoardings round the top
+    const hoarding = new THREE.Group();
+    hoarding.name = 'survival-keep-hoarding';
+    group.add(hoarding);
+    for (let i = 0; i < 12; i++) {
+      const a = ((i + 0.5) / 12) * Math.PI * 2;
+      const [x, z] = around(a, r + 7);
+      add(new THREE.BoxGeometry(32, 18, 9), wood, x, topY - 10, z, a, hoarding);
+    }
+    // cracks on the camera-facing half (shown as the keep is hurt)
+    const cracks = [];
+    for (const [a, y, h, tilt] of [[-0.5, 0.42, 46, 0.4], [0.42, 0.62, 52, -0.35], [0.15, 0.3, 38, 0.2], [-0.2, 0.78, 34, -0.5]]) {
+      const [x, z] = around(a, r - 2);
+      const c = add(new THREE.BoxGeometry(5, h, 3), crack, x, 18 + H * y, z, a);
+      c.rotation.z = tilt;
+      c.visible = false;
+      cracks.push(c);
+    }
+    // the banner: a pole and a swallowtail flag that waves
+    add(new THREE.CylinderGeometry(2.6, 2.6, 100, 7), iron, 0, topY + 10 + 50, 0);
+    const flagShape = () => {
+      const shape = new THREE.Shape();
+      shape.moveTo(0, 0); shape.lineTo(74, 0); shape.lineTo(62, -21); shape.lineTo(74, -42); shape.lineTo(0, -42); shape.closePath();
+      return new THREE.ShapeGeometry(shape);
+    };
+    const makeFlag = (y) => {
+      const pivot = new THREE.Group();
+      pivot.position.set(0, y, 0);
+      const cloth = new THREE.Mesh(flagShape(), blue);
+      cloth.castShadow = true;
+      const trim = new THREE.Mesh(new THREE.BoxGeometry(74, 4, 1.2), gold);
+      trim.position.set(37, -21, 0.4);
+      pivot.add(cloth, trim);
+      group.add(pivot);
+      return pivot;
+    };
+    const flag = makeFlag(topY + 106);
+    const flag2 = makeFlag(topY + 62);
+    flag2.visible = false;
+    // Lv2: a bell under a little arch
+    const bell = new THREE.Group();
+    bell.position.set(0, topY + 14, -r * 0.45);
+    for (const x of [-12, 12]) add(new THREE.BoxGeometry(4, 34, 4), wood, x, 17, 0, 0, bell);
+    add(new THREE.BoxGeometry(30, 4, 6), wood, 0, 34, 0, 0, bell);
+    add(new THREE.ConeGeometry(8, 14, 10, 1, true), gold, 0, 24, 0, 0, bell);
+    bell.visible = false;
+    group.add(bell);
+    // Lv3: a ballista on the roof that swings to what it shoots
+    const yaw = new THREE.Group();
+    yaw.name = 'survival-keep-ballista';
+    yaw.position.set(0, topY + 13, r * 0.25);
+    const part = (geo, m, parent, x, y, z, ry = 0) => { const mesh = new THREE.Mesh(geo, m); mesh.position.set(x, y, z); mesh.rotation.y = ry; mesh.castShadow = true; parent.add(mesh); return mesh; };
+    part(new THREE.CylinderGeometry(7, 9, 10, 8), iron, yaw, 0, 5, 0);
+    const stock = new THREE.Group();
+    stock.position.set(0, 13, 0);
+    yaw.add(stock);
+    part(new THREE.BoxGeometry(10, 8, 50), wood, stock, 0, 0, 4);
+    part(new THREE.BoxGeometry(30, 4, 5), iron, stock, -13, 1, 24, 0.42);
+    part(new THREE.BoxGeometry(30, 4, 5), iron, stock, 13, 1, 24, -0.42);
+    yaw.visible = false;
+    group.add(yaw);
+    // the townsfolk on the battlements
+    const skin = mat({ color: 0xf2c9a0, roughness: 0.8 });
+    const tunics = [0xd9c7a0, 0x8a5a3a, 0x5a7a4a].map((color) => mat({ color, roughness: 0.85, flatShading: true }));
+    const villagers = [];
+    [-0.55, 0, 0.55].forEach((a, i) => {
+      const person = new THREE.Group();
+      const [x, z] = around(a, r - 30);
+      person.position.set(x, topY + 13, z);
+      person.rotation.y = a;
+      add(new THREE.CylinderGeometry(6, 8, 20, 8), tunics[i], 0, 10, 0, 0, person);
+      add(new THREE.SphereGeometry(6.5, 10, 8), skin, 0, 26, 0, 0, person);
+      const arms = [];
+      for (const side of [-1, 1]) {
+        const shoulder = new THREE.Group();
+        shoulder.position.set(side * 8, 18, 0);
+        add(new THREE.BoxGeometry(3.5, 13, 3.5), tunics[i], 0, 6, 0, 0, shoulder);
+        person.add(shoulder);
+        arms.push(shoulder);
+      }
+      group.add(person);
+      villagers.push({ person, arms, seed: i * 1.7 });
     });
-    const ring = new THREE.Mesh(geometry, material);
-    ring.name = 'survival-perapian-radius-3d';
-    ring.rotation.x = -Math.PI / 2;
-    ring.renderOrder = 3;
-    ring.frustumCulled = false;
-    this.root.add(ring);
-    return ring;
+    group.userData = { mats, hoarding, cracks, flag, flag2, bell, yaw, stock, villagers, roofY: topY + 24, height: topY + 34, level: 0, fade: 1 };
+    this.root.add(group);
+    return group;
   }
 
-  /** The warm safe zone: a soft additive pool inside the Perapian radius. */
-  _makeSurvivalFireDisc() {
-    const size = 128;
-    const canvas = typeof document !== 'undefined' ? document.createElement('canvas') : null;
-    let texture = null;
-    if (canvas) {
-      canvas.width = size; canvas.height = size;
-      const ctx = canvas.getContext('2d');
-      const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
-      g.addColorStop(0, 'rgba(255,190,90,1)');
-      g.addColorStop(0.55, 'rgba(255,160,70,0.55)');
-      g.addColorStop(0.9, 'rgba(255,140,60,0.28)');
-      g.addColorStop(1, 'rgba(255,140,60,0)');
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, size, size);
-      texture = new THREE.CanvasTexture(canvas);
-      texture.colorSpace = THREE.SRGBColorSpace;
+  _syncSurvivalKeep(game, mode) {
+    const keep = mode.keep();
+    if (!this.survivalKeep) this.survivalKeep = this._makeSurvivalKeep(keep.r);
+    const group = this.survivalKeep;
+    const ud = group.userData;
+    const t = game.now || 0;
+    const state = mode.keepState();
+    group.visible = true;
+    if (ud.level !== mode.keepLevel) {
+      ud.level = mode.keepLevel;
+      group.scale.setScalar(1 + (mode.keepLevel - 1) * 0.06);
+      ud.hoarding.visible = mode.keepLevel === 1;
+      ud.bell.visible = mode.keepLevel >= 2;
+      ud.flag2.visible = mode.keepLevel >= 3;
+      ud.yaw.visible = mode.keepLevel >= 2;
+      ud.flag.scale.setScalar(mode.keepLevel === 1 ? 0.75 : 1.1);
     }
-    const disc = new THREE.Mesh(
-      new THREE.CircleGeometry(1, 64),
-      new THREE.MeshBasicMaterial({
-        color: 0xffffff, map: texture, transparent: true, opacity: 0.22,
-        blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
-      }),
-    );
-    disc.name = 'survival-perapian-safe-zone-3d';
-    disc.rotation.x = -Math.PI / 2;
-    disc.renderOrder = 2;
-    disc.frustumCulled = false;
-    this.root.add(disc);
-    return disc;
+    // a claw on the wall shakes the tower for a moment; a fallen keep sinks
+    const hitAge = mode.uiClock - (mode._keepHitAt == null ? -99 : mode._keepHitAt);
+    const shake = hitAge < 0.25 ? (1 - hitAge / 0.25) * 3.2 : 0;
+    const fallen = state === 'fallen';
+    group.position.set(keep.x + Math.sin(t * 61) * shake, fallen ? -46 : 0, keep.y + Math.cos(t * 53) * shake);
+    group.rotation.z = fallen ? 0.12 : 0;
+    const pct = mode.keepHp / Math.max(1, mode.keepHpMax());
+    ud.cracks.forEach((c, i) => { c.visible = pct < (i < 2 ? 0.6 : 0.3); });
+    const critical = state === 'critical' || fallen;
+    ud.flag.rotation.y = Math.sin(t * 2.1) * 0.28 + (critical ? 0.5 : 0);
+    ud.flag.rotation.z = critical ? -0.35 : 0;
+    ud.flag.scale.x = (mode.keepLevel === 1 ? 0.75 : 1.1) * (critical ? 0.6 : 1);
+    ud.flag2.rotation.y = Math.sin(t * 2.3 + 1) * 0.3;
+    // the roof ballista swings and kicks like a tower's
+    const b = mode.keepBallista;
+    if (b && ud.yaw.visible) {
+      ud.yaw.rotation.y = Math.PI / 2 - b.aim;
+      ud.stock.position.z = -b.shotT * 34;
+    }
+    // the townsfolk: wave (safe), point (threat), jump (attacked), huddle (critical)
+    for (const v of ud.villagers) {
+      v.person.visible = !fallen;
+      const k = t * 6 + v.seed;
+      let lift = 0, armA = 0.2, armB = 0.2, squash = 1;
+      if (state === 'safe') { armA = 2.6 + Math.sin(k) * 0.5; armB = 0.25; }
+      else if (state === 'threat') { armA = 1.6; armB = 1.6; }
+      else if (state === 'attacked') { lift = Math.abs(Math.sin(k * 1.6)) * 6; armA = 2.9; armB = 2.9; }
+      else if (state === 'critical') { squash = 0.82; armA = 0.9; armB = 0.9; }
+      v.person.position.y = ud.roofY - 11 + lift;
+      v.person.scale.set(1, squash, 1);
+      v.arms[0].rotation.x = -armA; v.arms[1].rotation.x = -armB;
+    }
+    // the Hunter walking behind the tower: it fades so he stays visible
+    const p = game.player;
+    const behind = p && p.y < keep.y - 20 && Math.abs(p.x - keep.x) < keep.r + 70 && keep.y - p.y < 360;
+    ud.fade += ((behind ? 0.3 : 1) - ud.fade) * 0.18;
+    for (const m of ud.mats) { m.opacity = ud.fade; m.depthWrite = ud.fade > 0.95; }
+  }
+
+  /** The banner's rooms: a faint garrison-blue wash on their floors. */
+  _syncSurvivalTerritory(game, mode) {
+    const night = mode.phase === 'night';
+    const want = new Set(mode.territoryRooms().map((room) => room.id));
+    if (!this._territoryMat) {
+      this._territoryMat = new THREE.MeshBasicMaterial({ color: 0x3e6bff, transparent: true, opacity: 0.08, depthWrite: false, toneMapped: false });
+    }
+    this._territoryMat.opacity = night ? 0.15 : 0.1;
+    for (const room of game.mansion.roomList) {
+      let plane = this.survivalTerritory.get(room.id);
+      if (!want.has(room.id)) { if (plane) plane.visible = false; continue; }
+      if (!plane) {
+        plane = new THREE.Mesh(new THREE.PlaneGeometry(room.w, room.h), this._territoryMat);
+        plane.name = 'survival-banner-territory-3d';
+        plane.rotation.x = -Math.PI / 2;
+        plane.position.set(room.x + room.w / 2, 1.6, room.y + room.h / 2);
+        plane.renderOrder = 1;
+        this.root.add(plane);
+        this.survivalTerritory.set(room.id, plane);
+      }
+      plane.visible = true;
+    }
+  }
+
+  /** The armory rack beside the keep (the Hunter's own upgrades). */
+  _makeSurvivalArmory() {
+    const group = new THREE.Group();
+    group.name = 'survival-armory-3d';
+    const wood = new THREE.MeshStandardMaterial({ color: 0x6a4a2c, roughness: 0.9, flatShading: true });
+    const iron = new THREE.MeshStandardMaterial({ color: 0x55504a, metalness: 0.6, roughness: 0.45, flatShading: true });
+    const add = (geo, m, x, y, z, rz = 0) => { const mesh = new THREE.Mesh(geo, m); mesh.position.set(x, y, z); mesh.rotation.z = rz; mesh.castShadow = true; group.add(mesh); return mesh; };
+    add(new THREE.BoxGeometry(70, 5, 26), wood, 0, 2.5, 0);
+    for (const x of [-30, 30]) add(new THREE.BoxGeometry(5, 54, 5), wood, x, 29, 0);
+    add(new THREE.BoxGeometry(66, 5, 6), wood, 0, 50, 0);
+    add(new THREE.BoxGeometry(66, 4, 6), wood, 0, 24, 0);
+    for (const x of [-18, 0, 18]) {
+      add(new THREE.BoxGeometry(4, 36, 4), wood, x, 34, 4, 0.08);
+      add(new THREE.BoxGeometry(22, 3, 3), iron, x, 46, 6);
+    }
+    this.root.add(group);
+    return group;
+  }
+
+  /** Scaffold + a builder with a hammer where a job is under way. */
+  _makeSurvivalScaffold() {
+    const group = new THREE.Group();
+    group.name = 'survival-scaffold-3d';
+    const wood = new THREE.MeshStandardMaterial({ color: 0x9a7448, roughness: 0.9, flatShading: true });
+    for (const x of [-34, 34]) for (const z of [-34, 34]) {
+      const pole = new THREE.Mesh(new THREE.BoxGeometry(4, 86, 4), wood);
+      pole.position.set(x, 43, z); pole.castShadow = true; group.add(pole);
+    }
+    for (const y of [30, 66]) for (const z of [-34, 34]) {
+      const plank = new THREE.Mesh(new THREE.BoxGeometry(76, 4, 8), wood);
+      plank.position.set(0, y, z); plank.castShadow = true; group.add(plank);
+    }
+    const builder = new THREE.Group();
+    const tunic = new THREE.MeshStandardMaterial({ color: 0xb07a3a, roughness: 0.85, flatShading: true });
+    const skin = new THREE.MeshStandardMaterial({ color: 0xf2c9a0, roughness: 0.8 });
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(7, 9, 22, 8), tunic); body.position.y = 22;
+    const head = new THREE.Mesh(new THREE.SphereGeometry(7, 10, 8), skin); head.position.y = 40;
+    const arm = new THREE.Group(); arm.position.set(9, 30, 0);
+    const hammer = new THREE.Mesh(new THREE.BoxGeometry(3, 18, 3), wood); hammer.position.y = 8;
+    const headH = new THREE.Mesh(new THREE.BoxGeometry(10, 5, 5), new THREE.MeshStandardMaterial({ color: 0x55504a, metalness: 0.6, roughness: 0.4 }));
+    headH.position.y = 17;
+    arm.add(hammer, headH);
+    builder.add(body, head, arm);
+    for (const m of [body, head]) m.castShadow = true;
+    builder.position.set(46, 0, 46);
+    group.add(builder);
+    group.userData = { builder, arm };
+    group.visible = false;
+    this.root.add(group);
+    return group;
+  }
+
+  /**
+   * Every build circle on the floor, with the ghost of what it builds; the
+   * keep, the armory and the barricade get a ring while the Hunter is at
+   * them. Circles show by day only; beyond the banner they are grey.
+   */
+  _syncSurvivalCircles(game, mode) {
+    const day = mode.phase === 'day' && game.screen === 'playing' && !mode.rewardPending();
+    const here = day ? mode.dayContext() : null;
+    const t = game.now || 0;
+    const points = mode.dayPoints();
+    const seen = new Set();
+    for (const point of points) {
+      if (point.kind === 'keep') continue;
+      seen.add(point.id);
+      let rec = this.survivalCircles.get(point.id);
+      if (!rec) {
+        rec = { ring: this._makeSurvivalCircle(point.kind === 'slot' ? 58 : 50), ghost: null };
+        this.survivalCircles.set(point.id, rec);
+      }
+      const near = here && here.id === point.id;
+      const built = point.kind === 'slot' ? !!point.built : point.kind === 'gate' ? mode.gateBuilt : point.kind === 'armory';
+      const working = mode.builderJob && ((mode.builderJob.slotId && mode.builderJob.slotId === point.id)
+        || (point.kind === 'gate' && mode.builderJob.kind === 'gate') || (point.kind === 'armory' && mode.builderJob.kind === 'hunter'));
+      const ring = rec.ring;
+      ring.visible = day && (!built || near) && !working;
+      if (ring.visible) {
+        ring.position.set(point.x, 2.4, point.y);
+        const pulse = near ? 1 + 0.06 * Math.sin(t * 6) : 1;
+        ring.scale.set(pulse, pulse, 1);
+        ring.material.color.setHex(point.locked ? 0x9097a6 : built ? 0xffd24a : near ? 0xfff2b0 : 0xffffff);
+        ring.material.opacity = point.locked ? 0.42 : near ? 1 : 0.78;
+      }
+      if (point.kind === 'armory') continue;
+      const ghostType = point.kind === 'gate' ? 'gate' : point.type;
+      if (!rec.ghost && ghostType) rec.ghost = this._makeSurvivalGhost(ghostType);
+      if (!rec.ghost) continue;
+      const showGhost = day && !built && !working;
+      rec.ghost.visible = showGhost;
+      if (showGhost) {
+        if (point.kind === 'gate') {
+          const gate = mode.mainGate();
+          rec.ghost.position.set(gate.x, 0, gate.y);
+          rec.ghost.rotation.y = gate.axis === 'v' ? Math.PI / 2 : 0;
+        } else {
+          rec.ghost.position.set(point.x, 0, point.y);
+        }
+        const m = rec.ghost.userData.ghostMaterial;
+        m.color.setHex(point.locked ? 0x8a8f9c : 0x8cc0ff);
+        m.opacity = point.locked ? 0.16 : near ? 0.62 + 0.08 * Math.sin(t * 5) : 0.36;
+      }
+    }
+    for (const [id, rec] of this.survivalCircles) {
+      if (seen.has(id)) continue;
+      rec.ring.visible = false;
+      if (rec.ghost) rec.ghost.visible = false;
+    }
+    // the keep's own ring while the Hunter stands at it
+    if (!this.survivalKeepRing) {
+      this.survivalKeepRing = new THREE.Mesh(new THREE.RingGeometry(1, 1.06, 72), new THREE.MeshBasicMaterial({
+        color: 0xffd24a, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false, toneMapped: false,
+      }));
+      this.survivalKeepRing.rotation.x = -Math.PI / 2;
+      this.survivalKeepRing.renderOrder = 4;
+      this.root.add(this.survivalKeepRing);
+    }
+    const atKeep = here && here.kind === 'keep';
+    this.survivalKeepRing.visible = !!atKeep;
+    if (atKeep) {
+      const keep = mode.keep();
+      const r = keep.r + 34;
+      this.survivalKeepRing.position.set(keep.x, 2.6, keep.y);
+      this.survivalKeepRing.scale.set(r, r, 1);
+      this.survivalKeepRing.material.opacity = 0.7 + 0.25 * Math.sin(t * 5);
+    }
+    // the armory rack always stands (it is furniture of the hall)
+    if (!this.survivalArmory) this.survivalArmory = this._makeSurvivalArmory();
+    const armory = mode.armorySpot();
+    this.survivalArmory.visible = true;
+    this.survivalArmory.position.set(armory.x, 0, armory.y);
+    // scaffold + builder at a job
+    if (!this.survivalScaffold) this.survivalScaffold = this._makeSurvivalScaffold();
+    const job = mode.builderJob;
+    const spot = job ? mode.jobSpot(job) : null;
+    this.survivalScaffold.visible = !!spot && mode.phase === 'day';
+    if (spot && this.survivalScaffold.visible) {
+      const keepJob = job.kind === 'keep' || job.kind === 'repair';
+      this.survivalScaffold.position.set(spot.x, 0, spot.y + (keepJob ? 30 : 0));
+      this.survivalScaffold.userData.arm.rotation.x = -1.2 + Math.sin(t * 12) * 0.9;
+    }
   }
 
   /** Yard ground: the house sits on readable terrain instead of a void. */
@@ -1007,20 +1388,15 @@ class World3DRuntime {
     }
   }
 
-  _makeSurvivalSlotRing() {
-    const ring = new THREE.Mesh(
-      new THREE.RingGeometry(37, 42, 40),
-      new THREE.MeshBasicMaterial({ color: 0xe6c77e, transparent: true, opacity: 0.72, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }),
-    );
-    ring.name = 'survival-lit-build-slot-3d';
-    ring.rotation.x = -Math.PI / 2;
-    ring.position.y = 3;
-    ring.renderOrder = 4;
-    this.root.add(ring);
-    return ring;
+  _makeSurvivalGate() {
+    const group = this._makeSurvivalGateModel();
+    group.visible = false;
+    this.root.add(group);
+    return group;
   }
 
-  _makeSurvivalGate() {
+  /** The front door's barricade: posts and beams with sharpened stakes. */
+  _makeSurvivalGateModel() {
     const group = new THREE.Group();
     group.name = 'survival-reinforced-gate-3d';
     const timber = new THREE.MeshStandardMaterial({ color: 0x64482c, roughness: 0.9, flatShading: true });
@@ -1038,104 +1414,15 @@ class World3DRuntime {
       beam.castShadow = true;
       group.add(beam);
     }
-    group.visible = false;
-    this.root.add(group);
-    return group;
-  }
-
-  /**
-   * The Perapian as the base's visual anchor: a real campfire in front of the
-   * hearth (logs + layered additive flames) and a hot glow pool on the floor,
-   * so "the thing to protect" reads at a glance from the phone camera.
-   */
-  _makeSurvivalHearth() {
-    const group = new THREE.Group();
-    group.name = 'survival-perapian-campfire-3d';
-    const flame = (r, h, color, opacity) => {
-      const mesh = new THREE.Mesh(
-        new THREE.ConeGeometry(r, h, 10, 1, true),
-        new THREE.MeshBasicMaterial({
-          color, transparent: true, opacity, depthWrite: false, toneMapped: false,
-          blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
-        }),
-      );
-      mesh.geometry.translate(0, h / 2, 0);
-      mesh.renderOrder = 6;
-      return mesh;
-    };
-    const outer = flame(25, 74, 0xff5a12, 0.8);
-    const mid = flame(16, 56, 0xffa22e, 0.9);
-    const core = flame(8.5, 34, 0xfff0b0, 0.95);
-    outer.position.y = mid.position.y = core.position.y = 6;
-    const logMat = new THREE.MeshStandardMaterial({ color: 0x6a4428, roughness: 0.92, flatShading: true });
-    const emberMat = new THREE.MeshBasicMaterial({ color: 0xff7a2a, toneMapped: false });
-    const stoneMat = new THREE.MeshStandardMaterial({ color: 0x8d8a86, roughness: 0.95, flatShading: true });
-    for (const a of [0.45, -0.45, Math.PI / 2]) {
-      const log = new THREE.Mesh(new THREE.CylinderGeometry(4.5, 4.5, 50, 6), logMat);
-      log.rotation.set(0, a, Math.PI / 2);
-      log.position.y = 6;
-      log.castShadow = true;
-      group.add(log);
+    // sharpened stakes leaning out, like the barricades in the key art
+    for (let i = 0; i < 6; i++) {
+      const stake = new THREE.Mesh(new THREE.ConeGeometry(4, 64, 5), timber);
+      stake.position.set(-70 + i * 28, 30, 16);
+      stake.rotation.x = 0.9;
+      stake.castShadow = true;
+      group.add(stake);
     }
-    const embers = new THREE.Mesh(new THREE.CircleGeometry(20, 16), emberMat);
-    embers.rotation.x = -Math.PI / 2;
-    embers.position.y = 2.6;
-    group.add(embers);
-    for (let i = 0; i < 9; i++) {
-      const a = (i / 9) * Math.PI * 2;
-      const stone = new THREE.Mesh(new THREE.DodecahedronGeometry(6.5, 0), stoneMat);
-      stone.position.set(Math.cos(a) * 31, 4, Math.sin(a) * 31);
-      stone.rotation.set(a, a * 2, 0);
-      stone.castShadow = true;
-      group.add(stone);
-    }
-    let texture = null;
-    if (this.survivalFireDisc && this.survivalFireDisc.material.map) texture = this.survivalFireDisc.material.map;
-    const glow = new THREE.Mesh(
-      new THREE.CircleGeometry(1, 40),
-      new THREE.MeshBasicMaterial({
-        color: 0xffb04a, map: texture, transparent: true, opacity: 0.55,
-        blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
-      }),
-    );
-    glow.rotation.x = -Math.PI / 2;
-    glow.position.y = 3.2;
-    glow.renderOrder = 3;
-    glow.frustumCulled = false;
-    group.add(outer, mid, core, glow);
-    group.userData = { outer, mid, core, glow, embers };
-    this.root.add(group);
     return group;
-  }
-
-  _syncSurvivalHearth(game, mode, fire) {
-    if (!this.survivalHearth) this.survivalHearth = this._makeSurvivalHearth();
-    const hearth = this.survivalHearth;
-    const lit = !!fire && mode.oil > 0 && mode.phase !== 'failed';
-    hearth.visible = !!fire;
-    if (!fire) return;
-    // in front of the fireplace mouth, where the enemies' hearth goal is
-    hearth.position.set(fire.x, 0, fire.y + 48);
-    const { outer, mid, core, glow, embers } = hearth.userData;
-    for (const f of [outer, mid, core]) f.visible = lit;
-    glow.visible = lit;
-    embers.material.color.setHex(lit ? 0xff7a2a : 0x3a2a22);
-    if (!lit) return;
-    const t = game.now || 0;
-    const base = mode.tuning.perapianRadius[mode.perapianLevel] || 1;
-    const fuel = Math.max(0, Math.min(1, mode.getFireRadius() / base));
-    const size = (1.25 + (mode.perapianLevel - 1) * 0.22) * (0.72 + 0.28 * fuel);
-    const flick = 1 + Math.sin(t * 13.1) * 0.07 + Math.sin(t * 7.3 + 1.2) * 0.05;
-    outer.scale.set(size, size * flick, size);
-    mid.scale.set(size, size * (2 - flick) * 1.02, size);
-    core.scale.set(size, size * (1 + Math.sin(t * 19) * 0.08), size);
-    outer.rotation.y = t * 0.6;
-    mid.rotation.y = -t * 0.9;
-    const night = mode.phase !== 'day';
-    const feeders = mode.hearthFeeders > 0;
-    glow.scale.setScalar(175 + (mode.perapianLevel - 1) * 30);
-    glow.material.opacity = (night ? 0.62 : 0.32) + Math.sin(t * 9.7) * 0.05 + (feeders ? Math.sin(t * 20) * 0.12 : 0);
-    glow.material.color.setHex(feeders ? 0xff6a3a : 0xffb04a);
   }
 
   /** Survivors as small readable pawns: blue tunic, crossbow, ally ring. */
@@ -1230,63 +1517,43 @@ class World3DRuntime {
   _syncSurvivalObjects(game) {
     const mode = game.survival;
     if (!mode) return;
-    const fire = game.mansion.fireplaceLight;
-    if (!this.survivalRadiusRing) this.survivalRadiusRing = this._makeSurvivalRadiusRing();
-    const radius = mode.getFireRadius();
-    this.survivalRadiusRing.visible = radius > 0;
-    if (fire) {
-      this.survivalRadiusRing.position.set(fire.x, 3.4, fire.y);
-      this.survivalRadiusRing.scale.set(radius, radius, radius);
-      this.survivalRadiusRing.material.opacity = 0.62 + (0.16 * (0.5 + 0.5 * Math.sin(game.time * 2.1)));
-    }
-    if (!this.survivalFireDisc) this.survivalFireDisc = this._makeSurvivalFireDisc();
-    this.survivalFireDisc.visible = radius > 0;
-    if (fire && radius > 0) {
-      this.survivalFireDisc.position.set(fire.x, 2.6, fire.y);
-      this.survivalFireDisc.scale.set(radius, radius, radius);
-      const flick = 0.5 + 0.5 * Math.sin(game.time * 3.3) * Math.sin(game.time * 1.7);
-      this.survivalFireDisc.material.opacity = (mode.phase === 'day' ? 0.08 : 0.2) + flick * 0.04;
-    }
     if (!this.survivalYard) this.survivalYard = this._makeSurvivalYard();
     this.survivalYard.visible = true;
     this.survivalYard.material.color.setHex(mode.phase === 'day' ? 0x7c9a55 : 0x3f5a46);
 
-    const visibleSlots = game.screen === 'playing' && mode.phase === 'day' ? new Set(mode.buildableRooms().map((room) => room.id)) : new Set();
-    for (const roomId of visibleSlots) {
-      let ring = this.survivalSlotRings.get(roomId);
-      if (!ring) { ring = this._makeSurvivalSlotRing(); this.survivalSlotRings.set(roomId, ring); }
-      const room = game.mansion.roomList.find((item) => item.id === roomId);
-      if (!room) continue;
-      ring.visible = true;
-      ring.position.set(room.x + room.w / 2, 3, room.y + room.h / 2);
-      const selected = mode.selectedRoom === roomId;
-      ring.material.color.setHex(selected ? 0xffdf89 : 0xb99759);
-      ring.material.opacity = selected ? 0.94 : 0.56;
-    }
-    for (const [roomId, ring] of this.survivalSlotRings) if (!visibleSlots.has(roomId)) ring.visible = false;
+    this._syncSurvivalKeep(game, mode);
+    this._syncSurvivalTerritory(game, mode);
+    this._syncSurvivalCircles(game, mode);
 
+    // buildings stand on their circles (keyed by circle id)
     const activeBuildings = new Set();
-    for (const [roomId, type] of Object.entries(mode.buildings)) {
-      const room = game.mansion.roomList.find((item) => item.id === roomId);
-      if (!room) continue;
-      activeBuildings.add(roomId);
-      let mesh = this.survivalBuildingMeshes.get(roomId);
+    const pop = mode.lastBuilt && mode.uiClock - mode.lastBuilt.t < 0.35 ? mode.lastBuilt : null;
+    for (const [slotId, type] of Object.entries(mode.buildings)) {
+      const spot = mode.buildingSpot ? mode.buildingSpot(slotId) : null;
+      if (!spot) continue;
+      activeBuildings.add(slotId);
+      let mesh = this.survivalBuildingMeshes.get(slotId);
       if (!mesh || mesh.userData.type !== type) {
-        if (mesh) { this.root.remove(mesh); this.survivalBuildingMeshes.delete(roomId); }
+        if (mesh) { this.root.remove(mesh); this.survivalBuildingMeshes.delete(slotId); }
         mesh = this._makeSurvivalBuilding(type);
         mesh.userData.type = type;
-        this.survivalBuildingMeshes.set(roomId, mesh);
+        this.survivalBuildingMeshes.set(slotId, mesh);
         this.root.add(mesh);
       }
       mesh.visible = true;
-      const spot = mode.buildingSpot ? mode.buildingSpot(roomId, type) : null;
-      if (spot) mesh.position.set(spot.x, 0, spot.y);
-      else mesh.position.set(room.x + room.w / 2 + 48, 0, room.y + room.h / 2 + 24);
-      const level = mode.buildingLevel ? mode.buildingLevel(roomId) : 1;
+      mesh.position.set(spot.x, 0, spot.y);
+      const level = mode.buildingLevel ? mode.buildingLevel(slotId) : 1;
       if (mesh.userData.level !== level) this._setSurvivalBuildingLevel(mesh, level);
-      if (type === 'tower') this._syncSurvivalTower(mesh, mode, roomId);
+      // a finished build pops: 0.85 → 1.08 → 1.0 over a quarter second
+      const base = 1.3 + 0.18 * (level - 1);
+      if (pop && pop.slotId === slotId) {
+        const k = (mode.uiClock - pop.t) / 0.35;
+        const s = k < 0.5 ? 0.85 + (1.08 - 0.85) * (k / 0.5) : 1.08 - 0.08 * ((k - 0.5) / 0.5);
+        mesh.scale.setScalar(base * s);
+      } else if (Math.abs(mesh.scale.x - base) > 1e-3) mesh.scale.setScalar(base);
+      if (type === 'tower') this._syncSurvivalTower(mesh, mode, slotId);
     }
-    for (const [roomId, mesh] of this.survivalBuildingMeshes) if (!activeBuildings.has(roomId)) mesh.visible = false;
+    for (const [slotId, mesh] of this.survivalBuildingMeshes) if (!activeBuildings.has(slotId)) mesh.visible = false;
     this._syncSurvivalTowerRing(game, mode);
 
     if (!this.survivalGateMesh) this.survivalGateMesh = this._makeSurvivalGate();
@@ -1300,13 +1567,12 @@ class World3DRuntime {
       this.survivalGateMesh.scale.set(scale, 1, 1);
     }
 
-    this._syncSurvivalHearth(game, mode, fire);
     this._syncSurvivalGuards(game, mode);
 
     this._syncExteriorPalette(true);
     if (!this.survivalPlayerRing) this.survivalPlayerRing = this._makeSurvivalPlayerRing();
     const p = game.player;
-    const showRing = mode.phase === 'night' && game.screen === 'playing' && !!p;
+    const showRing = (mode.phase === 'night' || mode.phase === 'day') && game.screen === 'playing' && !!p;
     this.survivalPlayerRing.visible = showRing;
     if (showRing) {
       this.survivalPlayerRing.position.set(p.x, 2.2, p.y);
@@ -2266,9 +2532,11 @@ class World3DRuntime {
       proxyActors: [...this.proxies.values()].filter((object) => object.visible).length,
       visibleSurvivalCrowdProxies: [...this.survivalCrowdProxies.values()].filter((object) => object.visible).length,
       survivalCrowdProxyPool: this.survivalCrowdProxies.size,
-      survivalRadiusVisible: !!(this.survivalRadiusRing && this.survivalRadiusRing.visible),
-      survivalRadiusPixels: this.survivalRadiusRing ? this.survivalRadiusRing.scale.x : 0,
-      visibleSurvivalBuildSlots: [...this.survivalSlotRings.values()].filter((object) => object.visible).length,
+      survivalKeepVisible: !!(this.survivalKeep && this.survivalKeep.visible),
+      survivalKeepLevel: this.survivalKeep ? this.survivalKeep.userData.level : 0,
+      survivalTerritoryRooms: [...this.survivalTerritory.values()].filter((object) => object.visible).length,
+      visibleSurvivalBuildSlots: [...this.survivalCircles.values()].filter((rec) => rec.ring.visible).length,
+      visibleSurvivalGhosts: [...this.survivalCircles.values()].filter((rec) => rec.ghost && rec.ghost.visible).length,
       visibleSurvivalBuildings: [...this.survivalBuildingMeshes.values()].filter((object) => object.visible).length,
       survivalGateVisible: !!(this.survivalGateMesh && this.survivalGateMesh.visible),
       visibleVariants3D: [...this.variantRings.values()].filter((object) => object.visible).length,

@@ -1,7 +1,76 @@
 # Status Rebuild 3D & Survival Milestone 1
 
 **Pembaruan:** 2026-10-16 (Asia/Makassar)
-**Status keseluruhan: MASIH TERBUKA — bukan klaim siap rilis.** Inti rebuild dunia 3D dan loop Survival Milestone 1 sudah terimplementasi. Pada 2026-10-12 arah UI/UX dan threat model dikoreksi mengikuti feedback user; pada 2026-10-15 dilakukan pass analisis gap & bug (lihat bagian "Gap & bug pass 2026-10-15"), lalu pass progres Hunter + level bangunan (lihat "Progres Hunter & level bangunan"), lalu pass menara crossbow (lihat "Menara crossbow"), lalu pass guard yang bisa jatuh (lihat "Guard bisa jatuh"; termasuk perbaikan bug gelombang yang muncul di dalam rumah), dan seluruh gate otomatis dijalankan ulang. Setelah itu user memutuskan **game landscape only** dan meminta brainstorming + design system plan sebelum koding lagi (lihat "Arah desain & orientasi" dan `docs/DESIGN-SYSTEM-PLAN.md`; belum ada perubahan kode game untuk arah ini). Revisi 1 desain (konsep api) ditolak user. Di revisi 2 user memilih konsep **K1 "Benteng Terakhir"**, pola build **jalan ke lingkaran + BUILD**, dan nada **dark stylized**; aturan pengganti masih menunggu konfirmasi. Acceptance visual/manual di perangkat, playtest manusia, dan packaging Play masih terbuka. Hasil tiap skrip hanya berlaku untuk cakupan yang benar-benar diuji.
+**Status keseluruhan: MASIH TERBUKA — bukan klaim siap rilis.** Inti rebuild dunia 3D dan loop Survival Milestone 1 sudah terimplementasi. Pada 2026-10-12 arah UI/UX dan threat model dikoreksi mengikuti feedback user; pada 2026-10-15 dilakukan pass analisis gap & bug (lihat bagian "Gap & bug pass 2026-10-15"), lalu pass progres Hunter + level bangunan (lihat "Progres Hunter & level bangunan"), lalu pass menara crossbow (lihat "Menara crossbow"), lalu pass guard yang bisa jatuh (lihat "Guard bisa jatuh"; termasuk perbaikan bug gelombang yang muncul di dalam rumah), dan seluruh gate otomatis dijalankan ulang. Setelah itu user memutuskan **game landscape only** dan meminta brainstorming + design system plan sebelum koding lagi (lihat "Arah desain & orientasi" dan `docs/DESIGN-SYSTEM-PLAN.md`; belum ada perubahan kode game untuk arah ini). Revisi 1 desain (konsep api) ditolak user. Di revisi 2 user memilih konsep **K1 "Benteng Terakhir"**, pola build **jalan ke lingkaran + BUILD**, dan nada **dark stylized**, lalu menyetujui semua rekomendasi aturan dan meminta "pastikan dunianya 3D". K1 kini **terimplementasi sebagai vertical slice** (lihat "K1 Benteng Terakhir — implementasi"); acceptance manusia/perangkat untuk K1 belum ada. Acceptance visual/manual di perangkat, playtest manusia, dan packaging Play masih terbuka. Hasil tiap skrip hanya berlaku untuk cakupan yang benar-benar diuji.
+
+## K1 "Benteng Terakhir" — implementasi vertical slice (2026-10-16)
+
+**Permintaan user:** "ya saya setuju dan pastikan dunia nya 3d".
+- Ke-8 rekomendasi di `docs/DESIGN-SYSTEM-PLAN.md` §13 disetujui.
+- Semua objek baru (Menara Utama, lingkaran bangun, bangunan hantu, wilayah panji, rak senjata, perancah, tukang, barikade) adalah **mesh 3D** di pipeline WebGL yang sama (`src/game/world3d.js`, Three.js). Canvas tetap hanya untuk HUD.
+- Pipeline WebGL dan byte aset berlisensi tidak diubah (semua mesh baru prosedural). Tidak menyentuh IAP, `src/shop`, atau server. Route `?legacy=1` tetap.
+
+**Implementasi** (yang ada di kode):
+
+| Area | Isi | File |
+|---|---|---|
+| Jantung base | **Menara Utama** (Keep) di tengah Main Hall (440, 310), r 112, collision 3 kotak; HP 600 / 900 / 1200 per level. Kalah bila HP 0 (`THE KEEP FELL`) atau Kapten tumbang. 5 status `safe / threat / attacked / critical / fallen` (`keepState()`) | `src/game/survival.js` |
+| Musuh | Flow field multi-target (cincin 16 titik di dinding menara); musuh yang sampai mencakar menara (`KEEP.damage` swarm 12 / individual 36 / breaker 72 per 1,5 dtk). Breaker: pintu → menara | `survival.js` |
+| Wilayah panji | Menggantikan cahaya: ruangan per level menara (Lv1 5, Lv2 8, Lv3 11 ruangan). Di dalamnya musuh menerima damage ×1,5. **Tidak ada** perlambatan, pelemahan cakaran, atau potongan damage pintu lagi | `survival.js`, `enemies.js`, `config.js` |
+| Ekonomi | Oil → **emas** (tidak terbakar). Tambang menggali emas selama malam (+6/10/14). Sawmill: kayu saat fajar + papan pintu. Barak: +1/2/3 prajurit. Fajar menambal 35% HP menara yang hilang; sisanya **REPAIR** (6 kayu → +150 HP) | `survival.js`, `config.js` |
+| Build P1 | 16 **lingkaran bertipe** (1 lingkaran bangunan per ruangan + 1 lingkaran ballista di ruangan berpintu luar), plus titik menara, rak senjata (upgrade Hunter), dan barikade pintu depan. Siang: Hunter berjalan dengan stick (×1,35) atau tap chip → berjalan sendiri. Tombol kontekstual BUILD / UPGRADE / REPAIR / MAX + kartu mini 2 stat di zona jempol kanan; NIGHT di sebelahnya. Kolom kiri, bubble "+", dan pill READY dihapus | `survival.js`, `src/ui/survival.js`, `game.js`, `input.js` |
+| Dunia 3D | Menara prosedural: 3 level (hoarding kayu → lonceng + panji besar → 2 panji + ballista atap yang menembak dari Lv2), 3 warga yang bereaksi per status, retakan, panji robek, guncangan saat dipukul, memudar saat Hunter di belakangnya. Tint lantai biru untuk wilayah panji. Lingkaran putus-putus + bangunan hantu biru (abu-abu bila terkunci). Model tambang emas dan barak baru. Perancah + tukang berpalu. Pop 0.85 → 1.08 → 1.0 saat bangunan jadi. Cincin jangkauan ballista saat berdiri di lingkarannya | `world3d.js` |
+| HUD | Malam: bar Menara Utama (landscape: di samping pause; portrait: di bawah pill), alarm merah di kaki menara / pointer tepi, banner di bawah pada layar pendek. Siang: track 3 malam + panji bala bantuan, chip bangunan di atas lingkaran, pointer ke lingkaran terdekat, cincin progres di atas perancah. Kartu fajar: emas/kayu/tambang/kerusakan menara/tambalan + "REINFORCEMENTS IN N". Layar akhir: `REINFORCEMENTS ARRIVED!` / `THE KEEP FELL`. Ikon baru: gold, keep, mine, barracks, banner, instant | `src/ui/survival.js`, `survivalIcons.js` |
+| Tembakan | Damage Hunter 32 / 40 / 48. Lv2: bolt tembus 1 tubuh. Lv3: kipas 3 bolt. Angka damage 18 / 24 (wilayah) / 30 (kill) dengan pop. Knockback 120 (kill 260). Partikel kill. Muzzle flash + hentakan mundur. Hit-stop 50–60 ms untuk kill besar dan Flare. Shake bertingkat (beruntun 0,05 · besar 0,16 · breach 0,22 · Flare 0,42) | `survival.js`, `game.js` |
+| Pembuka & FTUE | Banner Malam 1 `HOLD THE KEEP / REINFORCEMENTS IN 3 NIGHTS`. Chip: move, auto, banner ("BLUE ROOMS: YOU HIT HARDER"), keep, flare, build ("WALK INTO A CIRCLE TO BUILD"), level, guard, door, rescue. Chip direset tiap ganti fase dan teksnya mengecil agar muat | `survival.js`, `src/ui/survival.js` |
+| Save | `save.survival` memakai `gold`, `keepLevel`, `keepHp`, id lingkaran. Save pra-K1 dimigrasi (oil → emas, perapianLevel → keepLevel, extractor → mine, shelter → barracks, menara bebas → lingkaran `<room>:tower`; bangunan yang tak punya lingkaran bertipe sama dibuang) | `survival.js`, `util.js` |
+
+**Tuning yang berubah dari usulan dokumen** (diukur dengan bot, perlu playtest manusia):
+- Damage cakaran ke menara diturunkan 25% (16/45/90 → 12/36/72) agar rencana menara-saja/Hunter-saja bisa menahan Night 3.
+- Urutan pintu Night 1 kini `chapel → cellar → front`. Alasannya: pintu depan langsung membuka ke hall menara, sehingga pemain diam kehilangan menara di detik 27; kini detik ~51, dan 30 detik FTUE pertama tetap utuh.
+- Lantai cahaya malam survival 0,8 → 0,9 (pool perapian hilang).
+- Hunter pulang ke sisi timur menara setiap fajar.
+
+**QA yang benar-benar dijalankan (implementasi, bukan acceptance):**
+
+| Perintah | Hasil |
+|---|---|
+| `node tools/harness.mjs` | **44 PASS**, exit 0. Battery survival ditulis ulang untuk K1: wilayah panji ×1,5 tanpa slow, pintu tanpa diskon, breach → menara → kalah, migrasi save, lingkaran bertipe, level menara/bangunan/Hunter, ballista, guard, loop 3 hari |
+| `node tools/survival-devqa.mjs` | **18/18 PASS**. +2 cek K1: menara 3D di tengah Main Hall (solid, panji, 3 warga); P1: stick menggerakkan Hunter di siang hari, satu tombol BUILD di lingkaran, tap sungguhan memulai tukang |
+| `node tools/envqa.mjs --mode=3d-smoke` | **PASS**. Luma malam 72/255 (11,2% hampir hitam; sebelumnya 79,6 dengan api). Upgrade menara lewat tombol UI menaikkan level 3D dan tint wilayah 5 → 8 |
+| `node tools/layoutqa.mjs` · `node tools/glbtest.mjs` | **PASS** (9 gate) · **PASS** |
+| `node --check` (72 file) · `npm audit --prefix tools` | **PASS** · **0** kerentanan |
+| `node tools/bundle.mjs check` | **FAIL 1**: token origin trial Digital Goods (kredensial user; tidak berubah) |
+| `node tools/survivalshots.mjs --landscape --tag=land` | 20 shot, 0 page error |
+
+Balance bot (3 seed × 8 bot, 72 dtk/malam):
+
+| Bot | Menang |
+|---|---|
+| idle | 0/3 (N1, menara runtuh ±51 dtk) |
+| flare | 0/3 |
+| passive-builder | 0/3 |
+| active | 0/3 (kalah N3, Hunter tumbang) |
+| builder | **3/3** (menara Lv3 ±840–880/1200 di akhir N3) |
+| hunter-builder | **3/3** |
+| keep-builder | 1/3 |
+| tower-builder | 0/3 (menara Lv2 runtuh di N3) |
+
+Rencana spesialis lebih lemah dibanding aturan api lama (dulu semua builder 3/3). Ballista menjaga pintu, bukan menara.
+
+**Bukti:** `qa-evidence/survival-k1/`.
+- Landscape 844×390, diperkecil 50%: `land-*.png`, termasuk `land-day-keep.png` (tombol UPGRADE/REPAIR menara), `land-day-circle.png` (lingkaran ballista + cincin jangkauan + hantu), `land-day-build.png` (perancah + progres), `land-prog-keep.png` (menara Lv3), `land-prog-hunter.png` (rak senjata), `land-night2-flare.png` (menara diserang), `land-complete.png`, `land-failed.png`.
+- Data: `land-metrics.json`, `harness-survival.txt`, `balance.txt`, `devqa.json`.
+- FTUE portrait diperbarui: `qa-evidence/survival-ftue-*.png`.
+
+**Belum ada / masih terbuka:**
+- intro sinematik (kamera di puncak menara) — yang ada baru banner pembuka;
+- adegan bala bantuan tiba di fajar ke-3 — yang ada baru panel menang;
+- audio baru dan variasi pitch;
+- art pass production (material, prop, kehidupan);
+- playtest manusia: pemahaman "siapa/melindungi apa/tujuan", rasa tembakan, rasa wilayah panji, keterbacaan lingkaran;
+- performa perangkat (menara + lingkaran + crowd);
+- rencana menara-saja/ballista-saja yang kalah di N3 (keputusan balance butuh playtest).
 
 ## Arah desain & orientasi (2026-10-16)
 
@@ -298,10 +367,10 @@ Ini screenshot checkpoint, bukan rekaman, dan bukan review di perangkat fisik.
 
 1. **FTUE/readability:** dunia kini terang dan terbaca di screenshot headless (luma diassert di envqa), UI berbasis ikon, chip hint kontekstual ada. Belum: review di perangkat nyata, uji pemahaman pemain baru, rekaman 30 detik.
 2. **Combat Survival manual:** bot menggerakkan stick virtual dan Flare melalui Input; devqa kini mengetes stick mengambang, hit tombol Flare, dan pause lewat touch emulasi. Walkthrough manusia (gerak, bertahan di pintu, Flare, mempertahankan Perapian, **menolong guard yang jatuh**) belum dilakukan; apakah badge/ring waktu guard terbaca saat ramai belum dinilai pemain.
-3. **Light weakness:** damage musuh ×1.5, perlambatan ×0.8 (tanpa freeze), cakaran lit ×0.5 (tidak lagi diblokir) dan damage pintu lit 50% diassert. Rasa/feel di perangkat belum dinilai.
-4. **Balance/progression:** target bot terpenuhi (idle/flare/active-tanpa-build kalah; upgrade Perapian saja sudah cukup menang 3/3; builder 3/3). **Pass guard:** perbaikan bug spawn (body muncul di basement/gallery) membuat permainan builder *lebih mudah* — Night 3 builder kini 0–1 musuh mencapai api (dulu 7–8) dan `hunter-builder` naik dari 1/3 ke 3/3, sehingga kesimpulan trade-off Hunter Lv3 di bawah sebagian berasal dari bug itu. Guard yang bisa jatuh menambah risiko terutama untuk permainan pasif; bot builder hampir tidak pernah kehilangan guard. Kesulitan untuk pemain yang membangun masih rendah dan kini makin jelas perlu playtest manusia sebelum mengubah biaya/ancaman. Progres kini ada (level bangunan Lv1–3 + jalur Hunter Lv1–3, diassert harness) dan bot `hunter-builder` menunjukkan trade-off nyata (Hunter Lv3 dengan Perapian Lv2 kalah 2/3 karena api padam di detik ±71). Menara (pass menara) menambah strategi menang ketiga: `tower-builder` 3/3 dengan Night 3 paling bersih (puncak 61 musuh, 0 mencapai api) — kuat, tetapi tidak mengubah peta menang/kalah. Masih terbuka: bot builder yang memeluk api tetap tidak kehilangan HP (100/100) dan tidak tercakar di Night 3; cadangan Oil 19 membuat pilihan Day 3 sangat ketat (Perapian Lv3 18 + Hunter Lv2 14 = 32 kurang 1 Oil) — biaya sengaja tidak diubah tanpa playtest manusia; rasa progres (apakah upgrade terasa) belum dinilai di perangkat.
+3. **Light weakness → wilayah panji (K1, 2026-10-16):** aturan cahaya diganti user (konsep api ditolak). Kini musuh di ruangan wilayah panji menerima damage ×1,5, tanpa perlambatan, tanpa pelemahan cakaran, dan pintu tanpa diskon (diassert harness). Rasa/feel dan keterbacaan tint biru di perangkat belum dinilai.
+4. **Balance/progression:** *(K1 2026-10-16: builder 3/3, hunter-builder 3/3, keep-builder 1/3, tower-builder 0/3, idle/flare/active/passive 0/3 — lihat bagian K1; catatan di bawah ini dari aturan api lama)* target bot terpenuhi (idle/flare/active-tanpa-build kalah; upgrade Perapian saja sudah cukup menang 3/3; builder 3/3). **Pass guard:** perbaikan bug spawn (body muncul di basement/gallery) membuat permainan builder *lebih mudah* — Night 3 builder kini 0–1 musuh mencapai api (dulu 7–8) dan `hunter-builder` naik dari 1/3 ke 3/3, sehingga kesimpulan trade-off Hunter Lv3 di bawah sebagian berasal dari bug itu. Guard yang bisa jatuh menambah risiko terutama untuk permainan pasif; bot builder hampir tidak pernah kehilangan guard. Kesulitan untuk pemain yang membangun masih rendah dan kini makin jelas perlu playtest manusia sebelum mengubah biaya/ancaman. Progres kini ada (level bangunan Lv1–3 + jalur Hunter Lv1–3, diassert harness) dan bot `hunter-builder` menunjukkan trade-off nyata (Hunter Lv3 dengan Perapian Lv2 kalah 2/3 karena api padam di detik ±71). Menara (pass menara) menambah strategi menang ketiga: `tower-builder` 3/3 dengan Night 3 paling bersih (puncak 61 musuh, 0 mencapai api) — kuat, tetapi tidak mengubah peta menang/kalah. Masih terbuka: bot builder yang memeluk api tetap tidak kehilangan HP (100/100) dan tidak tercakar di Night 3; cadangan Oil 19 membuat pilihan Day 3 sangat ketat (Perapian Lv3 18 + Hunter Lv2 14 = 32 kurang 1 Oil) — biaya sengaja tidak diubah tanpa playtest manusia; rasa progres (apakah upgrade terasa) belum dinilai di perangkat.
 5. **Visual pass:** sweep 17 stop per ruang/wing, state low-health/blackout, dan overlap staircase–stairRail belum selesai. Pohon siang tampak agak pucat (palet dinaikkan untuk readability) — kandidat polish.
-6. **Perangkat/performa:** hidden-tab pause, context-loss freeze/restore, reload tengah malam, dan framing landscape kini diassert di Chromium headless (devqa). Belum: frame time 66–90 musuh + guard/bolt di perangkat low-end, DPR nyata. **Orientasi diputuskan user (2026-10-16): landscape only** — layout siang landscape yang sekarang (kolom kiri) dinilai terlalu besar dan akan didesain ulang mengikuti `docs/DESIGN-SYSTEM-PLAN.md` setelah disetujui; layout portrait tidak lagi menjadi target.
+6. **Perangkat/performa:** hidden-tab pause, context-loss freeze/restore, reload tengah malam, dan framing landscape kini diassert di Chromium headless (devqa). Belum: frame time 66–90 musuh + guard/bolt di perangkat low-end, DPR nyata. **Orientasi diputuskan user (2026-10-16): landscape only.** Layout siang landscape kini tanpa kolom kiri (K1, P1: tombol kontekstual di zona jempol). Frame time menara + lingkaran + crowd di perangkat belum diukur.
 7. **Release bundle:** fingerprint signing SHA-256, token origin-trial, validasi Bubblewrap/AAB, uji TWA/Play tetap menunggu konfigurasi release. IAP tidak diubah.
 
 ## Aturan laporan

@@ -382,32 +382,37 @@ export const TUNING = {
 /* ---------------- Milestone 1: survival-building route ----------------
  * Kept separate from the legacy 300-second/night tuning above. `nightSeconds`
  * may be overridden with ?night=60..90; the old NIGHT_DURATION remains intact.
+ *
+ * K1 "Benteng Terakhir" (docs/DESIGN-SYSTEM-PLAN.md §3.4): the Hunter is the
+ * captain of Duskhold and the base's heart is the KEEP, a stone tower in the
+ * middle of the Main Hall with the townsfolk on its battlements. Gold is the
+ * purse (it no longer burns), the keep's banner marks the rooms you may build
+ * in, and the run is lost when the keep falls or the captain does.
  */
 export const SURVIVAL_TUNING = Object.freeze({
   nightSeconds: 72,
   minNightSeconds: 60,
   maxNightSeconds: 90,
-  startOil: 38,
+  startGold: 38,
   startWood: 26,
   startSurvivors: 2,
   maxSurvivors: 8,
-  oilBurnPerSecond: 0.14,
-  oilBurnTargetPerNight: 11,
-  oilRadiusShrink: 0.34,
-  perapianRadius: Object.freeze({ 1: 980, 2: 1560, 3: 2000 }),
-  perapianUpgrade: Object.freeze({
-    2: Object.freeze({ oil: 12, wood: 8, seconds: 5 }),
-    3: Object.freeze({ oil: 18, wood: 12, seconds: 6 }),
+  keepRadius: 112,
+  keepHp: Object.freeze({ 1: 600, 2: 900, 3: 1200 }),
+  keepUpgrade: Object.freeze({
+    2: Object.freeze({ gold: 12, wood: 8, seconds: 5 }),
+    3: Object.freeze({ gold: 18, wood: 12, seconds: 6 }),
   }),
+  keepDawnHeal: 0.35,  // share of the missing HP the townsfolk patch for free at dawn
+  keepRepair: Object.freeze({ wood: 6, hp: 150, seconds: 3 }),
   nightRewards: Object.freeze({
-    oil: Object.freeze([14, 16, 18]),
+    gold: Object.freeze([14, 16, 18]),
     wood: Object.freeze([14, 16, 18]),
   }),
-  gateCost: Object.freeze({ oil: 4, wood: 16, seconds: 9 }),
+  gateCost: Object.freeze({ gold: 4, wood: 16, seconds: 9 }),
   gateHpBonus: 220,
-  lightDamageTakenMul: 1.5,
-  lightMoveMul: 0.8,   // firelight slows; it never freezes
-  litAttackMul: 0.5,   // ...and blunts claws; it never makes a body harmless
+  territoryDamageTakenMul: 1.5,   // the banner's rooms: the garrison hits harder
+  dayWalkMul: 1.35,               // the day is a walk between build circles
   autoAttackRange: 620,
   skillCooldown: 14,
   skillRadius: 235,

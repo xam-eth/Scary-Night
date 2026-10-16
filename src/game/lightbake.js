@@ -43,7 +43,8 @@ const LIT_FLOOR = 0.30;
  * black. Day is a neutral warm daylight. The legacy route keeps LIT_FLOOR.
  */
 export const SURVIVAL_BAKE = Object.freeze({
-  night: Object.freeze({ floor: 0.8, cold: Object.freeze([0.78, 0.86, 1.04]), warm: Object.freeze([1.1, 0.9, 0.66]) }),
+  // K1: no hearth pool any more — the night floor carries readability itself
+  night: Object.freeze({ floor: 0.9, cold: Object.freeze([0.8, 0.88, 1.04]), warm: Object.freeze([1.1, 0.9, 0.66]) }),
   day: Object.freeze({ floor: 1.0, cold: Object.freeze([1.02, 0.98, 0.9]), warm: Object.freeze([1.08, 0.95, 0.78]) }),
 });
 

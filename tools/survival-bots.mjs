@@ -3,7 +3,7 @@
  * Interact key for Flare); nothing here reaches into enemy internals.
  *
  *   botNight(game, state, { ROOM, ISO_CAMERA })  active defender, one frame
- *   botDay(game, plan)                           'idle' | 'fire' | 'hunter' | 'builder' | 'tower' day turn
+ *   botDay(game, plan)                           'idle' | 'keep' | 'hunter' | 'builder' | 'tower' day turn
  */
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -28,39 +28,42 @@ export function releaseControls(game) {
 }
 
 /**
- * Engaged defender: hold the firelight between the hearth and the nearest
- * intruder, fall back to the Perapian when it is being clawed, Flare clusters.
- * When a guard is down (and the fire is not being fed, and he is not hurt) he
- * goes and stands beside it until it is back up; state.rescue === false turns
- * that off (measurement only).
+ * Engaged defender (K1): hold a spot beside the keep between it and the
+ * nearest intruder, fall back to the keep when it is being clawed, Flare
+ * clusters. When a guard is down (and the keep is not being clawed, and he is
+ * not hurt) he goes and stands beside it until it is back up; state.rescue
+ * === false turns that off (measurement only).
  */
 export function botNight(game, state, { ROOM, ISO_CAMERA }) {
   const mode = game.survival;
   const p = game.player;
-  const fire = mode.hearth();
+  const keep = mode.keep();
   game.input.keys.interact = false;
-  if (!fire) return;
+  if (!keep) return;
   const live = game.enemies.filter((e) => e._survivalType && !e.dead && !e.removeMe);
   const inside = live.filter((e) => e._inHouse || (e.roomId && e.roomId !== ROOM.OUTSIDE));
-  const radius = mode.getFireRadius();
-  let goal = { x: fire.x + 60, y: fire.y + 190 };
-  const nearFire = inside.filter((e) => dist(e, fire) < 520);
+  const home = mode.hunterHome();
+  let goal = { x: home.x, y: home.y };
+  const nearKeep = inside.filter((e) => dist(e, keep) < 520);
   const hurt = p.blood < p.bloodMax * 0.45;
   const fallen = state.rescue === false ? [] : (mode.guards || []).filter((gd) => gd.down);
-  if (mode.hearthFeeders > 0 || nearFire.length || hurt) {
-    goal = { x: fire.x + 30, y: fire.y + 170 };
+  if (mode.keepAttackers > 0 || nearKeep.length || hurt) {
+    // stand at the keep's wall on the side the trouble is on
+    const t = nearKeep.sort((a, b) => dist(a, keep) - dist(b, keep))[0];
+    const a = t ? Math.atan2(t.y - keep.y, t.x - keep.x) : 0;
+    goal = { x: keep.x + Math.cos(a) * (keep.r + 70), y: keep.y + Math.sin(a) * (keep.r + 70) };
   } else if (fallen.length) {
     fallen.sort((a, b) => dist(a, p) - dist(b, p));
     goal = { x: fallen[0].x, y: fallen[0].y };
     state.rescueTrips = (state.rescueTrips || 0) + (state.lastRescue === fallen[0] ? 0 : 1);
     state.lastRescue = fallen[0];
   } else if (inside.length) {
-    inside.sort((a, b) => dist(a, fire) - dist(b, fire));
+    inside.sort((a, b) => dist(a, keep) - dist(b, keep));
     const t = inside[0];
-    const d = dist(t, fire) || 1;
-    // Never stray far from the hearth: intercept inside ~600 px of the fire.
-    const reach = Math.min(d * 0.6, radius * 0.72, 600);
-    goal = { x: fire.x + (t.x - fire.x) / d * reach, y: fire.y + (t.y - fire.y) / d * reach };
+    const d = dist(t, keep) || 1;
+    // never stray far from the keep: intercept inside ~600 px of it
+    const reach = Math.min(d * 0.6, 600);
+    goal = { x: keep.x + (t.x - keep.x) / d * reach, y: keep.y + (t.y - keep.y) / d * reach };
   } else if (state.doors !== false && mode.besiegedDoors) {
     // Nothing inside: go and shoot the crowd through the door it is clawing
     // (door slits), standing a step back from the wood.
@@ -86,62 +89,61 @@ export function botNight(game, state, { ROOM, ISO_CAMERA }) {
   } else state.flareHeld = false;
 }
 
-/** One day decision. Returns true when the night was started. */
+/**
+ * One day decision. Returns true when the night was started. Bots buy on
+ * the typed circles directly (the walk between circles costs no clock).
+ *   keep     only ever raises the keep
+ *   hunter   the Hunter's track first, then the keep
+ *   tower    a mine, then a ballista on every ballista circle under the
+ *            banner, the keep, and ballista levels
+ *   builder  the balanced queue (keep, mine, barricade, sawmill, ...)
+ * Every builder patches a badly hurt keep first (wood).
+ */
 export function botDay(game, plan) {
   const mode = game.survival;
   if (mode.rewardPending()) mode.ackRewards();
-  if (plan === 'fire') {
-    // light builder: only ever upgrades the Perapian
-    if (mode.builderJob) return false;
-    if (mode.perapianLevel < 3 && mode.startBuild('perapian')) return false;
+  if (mode.builderJob) return false;
+  const free = (type) => mode.buildableSlots().find((slot) => slot.type === type);
+  const tryBuild = (type) => { const slot = free(type); return !!slot && mode.startBuild(type, slot.id); };
+  const repair = () => mode.keepHp < mode.keepHpMax() * 0.6 && mode.startBuild('repair');
+  if (plan === 'keep' || plan === 'fire') {
+    if (mode.keepLevel < 3 && mode.startBuild('keep')) return false;
     return mode.startNight();
   }
   if (plan === 'hunter') {
-    // fighter: the Hunter's own track first, then the Perapian, no rooms
-    if (mode.builderJob) return false;
     if (mode.hunterLevel < 3 && mode.startBuild('hunter')) return false;
-    if (mode.perapianLevel < 3 && mode.startBuild('perapian')) return false;
+    if (mode.keepLevel < 3 && mode.startBuild('keep')) return false;
     return mode.startNight();
   }
+  const built = Object.entries(mode.buildings);
   if (plan === 'tower') {
-    // defender: one pump for fuel, then a crossbow tower by every outer door
-    // the fire lights (hall → front door; Lv2 adds cellar + chapel), then
-    // the Perapian and tower levels
-    if (mode.builderJob) return false;
-    const rooms = mode.buildableRooms();
-    const built = Object.entries(mode.buildings);
-    if (mode.perapianLevel < 2 && mode.startBuild('perapian')) return false;
-    if (!built.some(([, t]) => t === 'extractor')) {
-      const back = rooms.find((room) => !mode.towerDoor(room));
-      if (back && mode.startBuild('extractor', back.id)) return false;
-    }
-    for (const room of rooms) if (mode.towerDoor(room) && mode.startBuild('tower', room.id)) return false;
-    if (mode.perapianLevel < 3 && mode.startBuild('perapian')) return false;
-    for (const [roomId, t] of built) if (t === 'tower' && mode.buildingLevel(roomId) < 2 && mode.startBuild('upgrade', roomId)) return false;
+    if (repair()) return false;
+    if (mode.keepLevel < 2 && mode.startBuild('keep')) return false;
+    if (!built.some(([, t]) => t === 'mine') && tryBuild('mine')) return false;
+    if (tryBuild('tower')) return false;
+    if (mode.keepLevel < 3 && mode.startBuild('keep')) return false;
+    for (const [slotId, t] of built) if (t === 'tower' && mode.buildingLevel(slotId) < 2 && mode.startBuild('upgrade', slotId)) return false;
     return mode.startNight();
   }
   if (plan !== 'builder') return mode.startNight();
-  if (mode.builderJob) return false;
-  const rooms = mode.buildableRooms();
-  const built = Object.entries(mode.buildings);
   const counts = built.reduce((m, [, t]) => { m[t] = (m[t] || 0) + 1; return m; }, {});
   const lastDay = mode.day >= 3;
-  const tryBuild = (type, roomId) => mode.startBuild(type, roomId);
   // raise the first building of a type to Lv2 (the builder's one queue)
   const tryLevel = (type) => {
-    const row = built.find(([roomId, t]) => t === type && mode.buildingLevel(roomId) < 2);
+    const row = built.find(([slotId, t]) => t === type && mode.buildingLevel(slotId) < 2);
     return !!row && mode.startBuild('upgrade', row[0]);
   };
-  if (mode.perapianLevel < 2 && tryBuild('perapian')) return false;
-  // the pump pours oil in every night, so it pays back even when bought late
-  if (!counts.extractor && rooms[0] && tryBuild('extractor', rooms[0].id)) return false;
-  if (!mode.gateBuilt && tryBuild('gate')) return false;
+  if (repair()) return false;
+  if (mode.keepLevel < 2 && mode.startBuild('keep')) return false;
+  // the mine digs gold every night, so it pays back even when bought late
+  if (!counts.mine && tryBuild('mine')) return false;
+  if (!mode.gateBuilt && mode.startBuild('gate')) return false;
   // a sawmill pays at dawn: never worth buying on the last day
-  if (!counts.sawmill && !lastDay && rooms[0] && tryBuild('sawmill', rooms[0].id)) return false;
-  if (mode.perapianLevel < 3 && tryBuild('perapian')) return false;
-  if (mode.hunterLevel < 2 && tryBuild('hunter')) return false;
-  if (tryLevel('extractor')) return false;
-  if (!counts.shelter && rooms[0] && tryBuild('shelter', rooms[0].id)) return false;
-  if ((counts.extractor || 0) < 2 && rooms[0] && tryBuild('extractor', rooms[0].id)) return false;
+  if (!counts.sawmill && !lastDay && tryBuild('sawmill')) return false;
+  if (mode.keepLevel < 3 && mode.startBuild('keep')) return false;
+  if (mode.hunterLevel < 2 && mode.startBuild('hunter')) return false;
+  if (tryLevel('mine')) return false;
+  if (!counts.barracks && tryBuild('barracks')) return false;
+  if ((counts.mine || 0) < 2 && tryBuild('mine')) return false;
   return mode.startNight();
 }

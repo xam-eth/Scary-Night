@@ -1,0 +1,345 @@
+{
+  "capturedAt": "2026-10-15T23:52:15.926Z",
+  "results": [
+    {
+      "name": "night-00s",
+      "file": "qa-evidence/survival-k1/land-night-00s.png",
+      "meanLuma": 70.1,
+      "darkPct": 15.3,
+      "quality": 3,
+      "state": {
+        "t": 0.2,
+        "alive": 0,
+        "gold": 38,
+        "keep": 600,
+        "hp": 100,
+        "phase": "night",
+        "ui": 1
+      }
+    },
+    {
+      "name": "night-20s",
+      "file": "qa-evidence/survival-k1/land-night-20s.png",
+      "meanLuma": 66.8,
+      "darkPct": 15.1,
+      "quality": 3,
+      "state": {
+        "t": 20,
+        "alive": 19,
+        "gold": 38,
+        "keep": 600,
+        "hp": 100,
+        "phase": "night",
+        "ui": 1
+      }
+    },
+    {
+      "name": "night-40s",
+      "file": "qa-evidence/survival-k1/land-night-40s.png",
+      "meanLuma": 66.9,
+      "darkPct": 15.3,
+      "quality": 3,
+      "state": {
+        "t": 40,
+        "alive": 22,
+        "gold": 38,
+        "keep": 396,
+        "hp": 100,
+        "phase": "night",
+        "ui": 1
+      }
+    },
+    {
+      "name": "day-reward",
+      "file": "qa-evidence/survival-k1/land-day-reward.png",
+      "meanLuma": 130.8,
+      "darkPct": 8,
+      "quality": 3,
+      "state": {
+        "phase": "day",
+        "day": 2,
+        "rewards": {
+          "gold": 17,
+          "wood": 19,
+          "kills": 21,
+          "walls": 260,
+          "survivors": 0,
+          "keepDamage": 204,
+          "keepPatched": 71,
+          "mined": 0,
+          "lost": 0,
+          "rescued": 0,
+          "reinforcements": 2
+        },
+        "ui": [
+          "survival:COLLECT"
+        ]
+      }
+    },
+    {
+      "name": "day-keep",
+      "file": "qa-evidence/survival-k1/land-day-keep.png",
+      "meanLuma": 108.1,
+      "darkPct": 5.5,
+      "quality": 3,
+      "state": {
+        "collected": true,
+        "context": "keep",
+        "ui": [
+          "PAUSE",
+          "survival:UPGRADE KEEP LV2",
+          "survival:REPAIR KEEP",
+          "survival:START NIGHT"
+        ]
+      }
+    },
+    {
+      "name": "day-circle",
+      "file": "qa-evidence/survival-k1/land-day-circle.png",
+      "meanLuma": 106.4,
+      "darkPct": 4.2,
+      "quality": 3,
+      "state": {
+        "at": "hall:tower",
+        "ring": true,
+        "ui": [
+          "PAUSE",
+          "survival:BUILD tower",
+          "survival:START NIGHT"
+        ]
+      }
+    },
+    {
+      "name": "day-build",
+      "file": "qa-evidence/survival-k1/land-day-build.png",
+      "meanLuma": 104.9,
+      "darkPct": 4.5,
+      "quality": 3,
+      "state": {
+        "clicked": "survival:BUILD tower",
+        "job": {
+          "kind": "building",
+          "slot": "hall:tower",
+          "left": 5.5
+        }
+      }
+    },
+    {
+      "name": "day-built",
+      "file": "qa-evidence/survival-k1/land-day-built.png",
+      "meanLuma": 110.2,
+      "darkPct": 4.8,
+      "quality": 3,
+      "state": {
+        "at": "dining",
+        "buildings": {
+          "hall:tower": "tower"
+        },
+        "chips": 4,
+        "ui": [
+          "PAUSE",
+          "survival:BUILD sawmill",
+          "survival:START NIGHT"
+        ]
+      }
+    },
+    {
+      "name": "night2-flare",
+      "file": "qa-evidence/survival-k1/land-night2-flare.png",
+      "meanLuma": 60.8,
+      "darkPct": 11.2,
+      "quality": 3,
+      "state": {
+        "t": 34.2,
+        "day": 2,
+        "alive": 45,
+        "keep": 330,
+        "attackers": 16,
+        "state": "attacked",
+        "floaters": 12
+      }
+    },
+    {
+      "name": "failed",
+      "file": "qa-evidence/survival-k1/land-failed.png",
+      "meanLuma": 47.7,
+      "darkPct": 42.9,
+      "quality": 3,
+      "state": {
+        "phase": "failed",
+        "ui": [
+          "survival:PLAY AGAIN"
+        ]
+      }
+    },
+    {
+      "name": "night-door",
+      "file": "qa-evidence/survival-k1/land-night-door.png",
+      "meanLuma": 64.5,
+      "darkPct": 7.6,
+      "quality": 3,
+      "state": {
+        "t": 13,
+        "door": "chapelDoor",
+        "doorHp": 53,
+        "target": true,
+        "guardsAtDoor": 2,
+        "kills": 4,
+        "zoom": 0.466
+      }
+    },
+    {
+      "name": "prog-keep",
+      "file": "qa-evidence/survival-k1/land-prog-keep.png",
+      "meanLuma": 107.1,
+      "darkPct": 5.4,
+      "quality": 3,
+      "state": {
+        "keepLevel": 3,
+        "hp": "540/1200",
+        "territory": 11,
+        "context": "keep",
+        "ui": [
+          "PAUSE",
+          "survival:UPGRADE MAX",
+          "survival:REPAIR KEEP",
+          "survival:START NIGHT"
+        ]
+      }
+    },
+    {
+      "name": "prog-hunter",
+      "file": "qa-evidence/survival-k1/land-prog-hunter.png",
+      "meanLuma": 105.7,
+      "darkPct": 5.2,
+      "quality": 3,
+      "state": {
+        "at": "armory",
+        "hunter": 1,
+        "ui": [
+          "PAUSE",
+          "survival:UPGRADE HUNTER LV2",
+          "survival:START NIGHT"
+        ]
+      }
+    },
+    {
+      "name": "prog-night",
+      "file": "qa-evidence/survival-k1/land-prog-night.png",
+      "meanLuma": 60.2,
+      "darkPct": 14.6,
+      "quality": 3,
+      "state": {
+        "t": 24,
+        "keep": 3,
+        "roofShots": 0,
+        "hunter": 3,
+        "hp": "140/140",
+        "mined": 2,
+        "kills": 2
+      }
+    },
+    {
+      "name": "complete",
+      "file": "qa-evidence/survival-k1/land-complete.png",
+      "meanLuma": 98.6,
+      "darkPct": 28.4,
+      "quality": 3,
+      "state": {
+        "phase": "complete",
+        "ui": [
+          "survival:PLAY AGAIN"
+        ]
+      }
+    },
+    {
+      "name": "tower-day",
+      "file": "qa-evidence/survival-k1/land-tower-day.png",
+      "meanLuma": 104.7,
+      "darkPct": 4.5,
+      "quality": 3,
+      "state": {
+        "at": "hall:tower",
+        "built": "tower",
+        "spot": {
+          "x": 212,
+          "y": 483,
+          "doorId": "frontDoor"
+        },
+        "ring": true,
+        "ui": [
+          "survival:UPGRADE tower LV2"
+        ]
+      }
+    },
+    {
+      "name": "tower-night",
+      "file": "qa-evidence/survival-k1/land-tower-night.png",
+      "meanLuma": 64.8,
+      "darkPct": 14.3,
+      "quality": 3,
+      "state": {
+        "t": 21.2,
+        "day": 2,
+        "level": 2,
+        "upgraded": true,
+        "shots": 3,
+        "kills": 1,
+        "flying": true,
+        "aim": 1.94
+      }
+    },
+    {
+      "name": "guard-down",
+      "file": "qa-evidence/survival-k1/land-guard-down.png",
+      "meanLuma": 67.2,
+      "darkPct": 7.8,
+      "quality": 3,
+      "state": {
+        "t": 8.7,
+        "broken": true,
+        "helped": 0.92,
+        "aloneLeft": 10.8,
+        "hurt": 16,
+        "hud": "1/3",
+        "banner": "breach",
+        "alive": 21
+      }
+    },
+    {
+      "name": "guard-lost",
+      "file": "qa-evidence/survival-k1/land-guard-lost.png",
+      "meanLuma": 66,
+      "darkPct": 7.6,
+      "quality": 3,
+      "state": {
+        "t": 9.6,
+        "survivors": 2,
+        "guards": 2,
+        "lost": 1,
+        "rescued": 1,
+        "banner": "guardLost",
+        "queue": []
+      }
+    },
+    {
+      "name": "guard-reward",
+      "file": "qa-evidence/survival-k1/land-guard-reward.png",
+      "meanLuma": 131.9,
+      "darkPct": 7.7,
+      "quality": 3,
+      "state": {
+        "phase": "day",
+        "survivors": 2,
+        "lost": 1,
+        "rescued": 1,
+        "guards": [
+          40,
+          40
+        ]
+      }
+    }
+  ],
+  "pageErrors": [],
+  "note": "Landscape 844x390 @2x captures (tools/survivalshots.mjs --landscape --tag=land), stored at 50% scale."
+}

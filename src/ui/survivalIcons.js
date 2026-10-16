@@ -14,6 +14,7 @@ export const UI_FONT = '"Trebuchet MS", "Arial Rounded MT Bold", "Segoe UI", sys
 export const INK = '#1c1424';
 
 export const COLORS = Object.freeze({
+  keep: '#3e6bff',
   oil: '#ffb22e',
   oilDeep: '#f07a12',
   wood: '#c07a3c',
@@ -534,6 +535,84 @@ const ICONS = {
     ctx.moveTo(-0.15, -0.8); ctx.lineTo(0.12, -0.25); ctx.lineTo(-0.1, 0.2); ctx.lineTo(0.18, 0.85);
     ctx.stroke();
     ctx.restore();
+  },
+  /** Gold coin: the purse (K1). */
+  gold(ctx) {
+    ctx.beginPath(); ctx.ellipse(0, 0.08, 0.82, 0.82, 0, 0, Math.PI * 2);
+    fillStroke(ctx, '#e0a21a');
+    ctx.beginPath(); ctx.ellipse(0, -0.04, 0.82, 0.8, 0, 0, Math.PI * 2);
+    const g = ctx.createLinearGradient(0, -0.9, 0, 0.8);
+    g.addColorStop(0, '#ffe680'); g.addColorStop(1, '#f2b21e');
+    fillStroke(ctx, g);
+    ctx.save();
+    ctx.lineWidth *= 0.8;
+    ctx.beginPath(); ctx.ellipse(0, -0.04, 0.52, 0.5, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+    rr(ctx, -0.12, -0.36, 0.24, 0.64, 0.08);
+    fillStroke(ctx, '#ffd24a');
+    shine(ctx, -0.36, -0.4, 0.16, 0.08, 0.8);
+  },
+  /** The keep: a round stone tower with its blue banner (K1's heart). */
+  keep(ctx) {
+    ctx.beginPath(); ctx.moveTo(0.02, -0.64); ctx.lineTo(0.02, -1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0.02, -1); ctx.lineTo(0.62, -0.88); ctx.lineTo(0.02, -0.72); ctx.closePath();
+    fillStroke(ctx, '#3e6bff');
+    rr(ctx, -0.56, -0.5, 1.12, 1.42, 0.06);
+    fillStroke(ctx, '#8c867e');
+    for (const x of [-0.56, -0.18, 0.2]) { rr(ctx, x, -0.72, 0.3, 0.26, 0.04); fillStroke(ctx, '#8c867e'); }
+    rr(ctx, -0.2, 0.42, 0.4, 0.5, 0.18);
+    fillStroke(ctx, '#5e4128');
+    rr(ctx, -0.12, -0.18, 0.24, 0.32, 0.06);
+    fillStroke(ctx, '#ffc24a');
+    shine(ctx, -0.36, -0.22, 0.08, 0.28, 0.45);
+  },
+  /** Gold mine: a pick over a coin. */
+  mine(ctx) {
+    ctx.save();
+    ctx.translate(0.3, 0.34);
+    ctx.scale(0.62, 0.62);
+    ICONS.gold(ctx);
+    ctx.restore();
+    ctx.save();
+    ctx.lineWidth *= 2.4;
+    ctx.beginPath(); ctx.moveTo(-0.7, 0.62); ctx.lineTo(0.18, -0.36); ctx.stroke();
+    ctx.lineWidth /= 2;
+    ctx.strokeStyle = '#b07a3a';
+    ctx.stroke();
+    ctx.restore();
+    ctx.beginPath();
+    ctx.moveTo(-0.46, -0.66); ctx.quadraticCurveTo(0.12, -0.92, 0.64, -0.28);
+    ctx.quadraticCurveTo(0.12, -0.62, -0.38, -0.5); ctx.closePath();
+    fillStroke(ctx, '#aab6c8');
+  },
+  /** Barracks: a garrison tent with its pennant. */
+  barracks(ctx) {
+    ctx.beginPath(); ctx.moveTo(0, -0.78); ctx.lineTo(0, -1.0); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, -1.0); ctx.lineTo(0.5, -0.9); ctx.lineTo(0, -0.8); ctx.closePath();
+    fillStroke(ctx, '#3e6bff');
+    ctx.beginPath(); ctx.moveTo(-0.92, 0.82); ctx.lineTo(0, -0.78); ctx.lineTo(0.92, 0.82); ctx.closePath();
+    fillStroke(ctx, '#e8dcc0');
+    ctx.beginPath(); ctx.moveTo(-0.26, 0.82); ctx.lineTo(0, 0.1); ctx.lineTo(0.26, 0.82); ctx.closePath();
+    fillStroke(ctx, '#3e6bff');
+  },
+  /** The reinforcements' banner (the goal track). */
+  banner(ctx) {
+    ctx.save();
+    ctx.lineWidth *= 1.8;
+    ctx.beginPath(); ctx.moveTo(-0.62, 0.95); ctx.lineTo(-0.62, -0.95); ctx.stroke();
+    ctx.restore();
+    ctx.beginPath();
+    ctx.moveTo(-0.58, -0.86); ctx.lineTo(0.86, -0.86); ctx.lineTo(0.6, -0.36); ctx.lineTo(0.86, 0.14); ctx.lineTo(-0.58, 0.14); ctx.closePath();
+    fillStroke(ctx, '#3e6bff');
+    rr(ctx, -0.58, -0.42, 1.3, 0.14, 0.04);
+    fillStroke(ctx, '#ffd24a');
+    circle(ctx, -0.62, -0.95, 0.12, '#ffd24a');
+  },
+  /** "Right away" (a lightning bolt) — the third time-unit icon beside moon/sun. */
+  instant(ctx) {
+    ctx.beginPath();
+    ctx.moveTo(0.18, -0.95); ctx.lineTo(-0.52, 0.12); ctx.lineTo(-0.04, 0.12); ctx.lineTo(-0.2, 0.95); ctx.lineTo(0.56, -0.18); ctx.lineTo(0.06, -0.18); ctx.closePath();
+    fillStroke(ctx, '#ffd24a');
   },
   perapian(ctx) {
     rr(ctx, -0.9, -0.2, 1.8, 1.1, 0.14);

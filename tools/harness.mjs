@@ -239,26 +239,25 @@ async function runSurvivalMilestone() {
       && row.spawnedSwarms === row.swarms.reduce((sum, wave) => sum + wave.count, 0));
   console.log(`  ${waveSchedulePass ? 'PASS' : 'FAIL'}  Night 1–3 waves: requested ${waveSchedule.map((row) => row.swarms.map((wave) => wave.count).join('/')).join(' → ')}; actual Swarm ${waveSchedule.map((row) => row.spawnedSwarms).join('/')} (no clamp, HP ${waveSchedule.map((row) => row.swarmHp).join('→')}), Breaker ${waveSchedule.map((row) => row.spawnedBreakers).join('/')}`);
 
-  // Compare real enemy update paths on either side of the Perapian boundary.
-  // Two breached Swarm bodies walk the real flow field for one second: the
-  // lit one is slower (light slows, it never freezes) and takes more damage.
+  // K1: the keep's banner. Inside its rooms the garrison hits harder (x1.5);
+  // it never slows or blunts a body. The walk is compared on the SAME spot at
+  // keep Lv1 (conservatory beyond the banner) and Lv3 (under it), so only the
+  // banner differs, never the geometry.
   survivalGame.survival.restart();
   const lightMode = survivalGame.survival;
-  const fire = survivalGame.mansion.fireplaceLight;
-  const lightRadius = lightMode.getFireRadius();
-  const litPoint = { x: fire.x, y: fire.y };
-  const unlitPoint = { x: fire.x + lightRadius + 100, y: fire.y };
-  const litProbe = { x: litPoint.x, y: litPoint.y };
-  const unlitProbe = { x: unlitPoint.x, y: unlitPoint.y };
+  const heldPoint = survivalGame.mansion.roomCenter(ROOM.DINING);     // under the Lv1 banner
+  const wildPoint = survivalGame.mansion.roomCenter(ROOM.CONSERV);    // beyond it at Lv1
+  const litProbe = { x: heldPoint.x, y: heldPoint.y, hp: 1e9 };
+  const unlitProbe = { x: wildPoint.x, y: wildPoint.y, hp: 1e9 };
   const lightDoor = lightMode.mainGate();
   lightDoor.hp = 0; lightDoor.broken = true; lightDoor.open = true;
   survivalGame.mansion.refreshNavAround(lightDoor);
-  const hallSpot = survivalGame.mansion.roomCenter(ROOM.HALL);
-  const diningSpot = survivalGame.mansion.roomCenter(ROOM.DINING);
   const { SurvivalCrowdZombie } = await import('../src/game/survival.js');
   const walkSpeed = (spot) => {
     const body = new SurvivalCrowdZombie(spot.x, spot.y, lightDoor, 0, 1);
-    survivalGame.player.x = fire.x + 70; survivalGame.player.y = fire.y + 210;
+    body._inHouse = true;
+    const home = lightMode.hunterHome();
+    survivalGame.player.x = home.x; survivalGame.player.y = home.y;
     let travelled = 0;
     let px = body.x, py = body.y;
     for (let i = 0; i < 60; i++) {
@@ -266,21 +265,22 @@ async function runSurvivalMilestone() {
       travelled += Math.hypot(body.x - px, body.y - py);
       px = body.x; py = body.y;
     }
-    return { speed: travelled, lit: lightMode.isLit(spot.x, spot.y), state: body.state };
+    return { speed: travelled, held: lightMode.inTerritory(spot.x, spot.y), state: body.state };
   };
-  const litWalk = walkSpeed(hallSpot);
-  const darkWalk = walkSpeed(diningSpot);
-  const lightDamage = lightMode.enemyDamageTaken(litProbe, 10);
-  const darkDamage = lightMode.enemyDamageTaken(unlitProbe, 10);
-  const lightEffectsPass = lightMode.isLit(litPoint.x, litPoint.y)
-    && !lightMode.isLit(unlitPoint.x, unlitPoint.y)
-    && lightDamage > darkDamage
-    && lightMode.enemyCanAttack(litProbe) && lightMode.enemyCanAttack(unlitProbe)
-    && lightMode.enemyAttackMul(litProbe) < lightMode.enemyAttackMul(unlitProbe) && lightMode.enemyAttackMul(litProbe) > 0
-    && litWalk.lit && !darkWalk.lit
-    && litWalk.speed < darkWalk.speed && litWalk.speed > darkWalk.speed * 0.45
-    && litWalk.state !== 'stagger';
-  console.log(`  ${lightEffectsPass ? 'PASS' : 'FAIL'}  Perapian light weakens but never freezes enemies (damage ${lightDamage.toFixed(1)} vs ${darkDamage.toFixed(1)}, breached walk ${litWalk.speed.toFixed(1)} vs ${darkWalk.speed.toFixed(1)} px/s, lit claws ×${lightMode.enemyAttackMul(litProbe)} — weakened, never blocked)`);
+  const wildWalk = walkSpeed(wildPoint);
+  lightMode.keepLevel = 3;
+  const heldWalk = walkSpeed(wildPoint);
+  lightMode.keepLevel = 1;
+  const heldDamage = lightMode.enemyDamageTaken(litProbe, 10);
+  const wildDamage = lightMode.enemyDamageTaken(unlitProbe, 10);
+  const lightEffectsPass = lightMode.inTerritory(heldPoint.x, heldPoint.y)
+    && !lightMode.inTerritory(wildPoint.x, wildPoint.y)
+    && Math.abs(heldDamage - 15) < 1e-6 && Math.abs(wildDamage - 10) < 1e-6
+    && lightMode.enemyCanAttack(litProbe) && lightMode.enemyAttackMul(litProbe) === 1 && lightMode.enemyAttackMul(unlitProbe) === 1
+    && heldWalk.held && !wildWalk.held
+    && Math.abs(heldWalk.speed - wildWalk.speed) < 1e-6 && heldWalk.state !== 'stagger'
+    && !('lightMoveMul' in lightMode.tuning) && !('litAttackMul' in lightMode.tuning);
+  console.log(`  ${lightEffectsPass ? 'PASS' : 'FAIL'}  the keep's banner: x1.5 damage inside its rooms (${heldDamage.toFixed(1)} vs ${wildDamage.toFixed(1)}); it never slows or blunts a body (same walk ${heldWalk.speed.toFixed(1)} vs ${wildWalk.speed.toFixed(1)} px/s under / beyond it, claws x${lightMode.enemyAttackMul(litProbe)})`);
 
   // Closed doors are solid across their whole width (entrances are authored by
   // their center; the old resolve() treated x/y as a corner).
@@ -296,7 +296,7 @@ async function runSurvivalMilestone() {
   const doorSolidPass = doorSamples.every((row) => !row.crossed);
   console.log(`  ${doorSolidPass ? 'PASS' : 'FAIL'}  a closed door blocks bodies across its full width (${doorSamples.map((row) => `${row.frac}:${row.crossed ? 'through' : 'blocked'}`).join(' ')})`);
 
-  // Siege damage on a door is halved by firelight, never cancelled.
+  // K1 has no light rule: a siege is never halved, inside or beyond the banner.
   survivalGame.survival.restart();
   const siegeMode = survivalGame.survival;
   const siegeDoor = siegeMode.entranceById('chapelDoor');
@@ -306,11 +306,11 @@ async function runSurvivalMilestone() {
   const litBefore = siegeDoor.hp;
   siegeMode.damageEntrance(siegeDoor, 20, litProbe);
   const litLoss = litBefore - siegeDoor.hp;
-  const siegeLightPass = darkLoss === 20 && Math.abs(litLoss - 10) < 1e-6;
-  console.log(`  ${siegeLightPass ? 'PASS' : 'FAIL'}  door damage in firelight is 50% of dark damage (${darkLoss} dark vs ${litLoss} lit)`);
+  const siegeLightPass = darkLoss === 20 && litLoss === 20;
+  console.log(`  ${siegeLightPass ? 'PASS' : 'FAIL'}  door damage is the same under and beyond the banner (${darkLoss} vs ${litLoss}; no firelight halving)`);
 
-  // A breach refreshes the nav grid; a breached body walks to the Perapian,
-  // claws Oil out of it, and an empty hearth loses the night.
+  // A breach refreshes the nav grid; a breached body walks the keep's flow
+  // field to its wall and claws it, and a keep at 0 HP loses the run.
   survivalGame.survival.restart();
   const feedMode = survivalGame.survival;
   const feedDoor = feedMode.mainGate();
@@ -322,22 +322,23 @@ async function runSurvivalMilestone() {
   survivalGame.enemies.push(feeder);
   survivalGame.player.x = -2000; survivalGame.player.y = -2000;
   feeder.hp = feeder.hpMax = 1e9;
-  const oilBeforeFeed = feedMode.oil;
+  const keepBeforeClaws = feedMode.keepHp;
   let reachedAt = null;
   for (let i = 0; i < 60 * 60 && reachedAt === null; i++) {
     feeder.update(step, survivalGame);
-    if (feeder.feeding) reachedAt = i / 60;
+    if (feeder.attackingKeep) reachedAt = i / 60;
   }
   for (let i = 0; i < 60 * 4; i++) feeder.update(step, survivalGame);
-  const drained = oilBeforeFeed - feedMode.oil;
-  feedMode.oil = 2;
+  const drained = keepBeforeClaws - feedMode.keepHp;
+  const keepAtWall = Math.hypot(feeder.x - feedMode.keep().x, feeder.y - feedMode.keep().y);
+  feedMode.keepHp = 20;
   for (let i = 0; i < 60 * 4 && feedMode.phase === 'night'; i++) feeder.update(step, survivalGame);
-  const fireOutPass = navRefreshed && reachedAt !== null && drained >= 2
-    && feedMode.phase === 'failed' && /FIRE/.test(feedMode.failureReason || '');
-  console.log(`  ${fireOutPass ? 'PASS' : 'FAIL'}  breach → flow field → Perapian: body reached the hearth in ${reachedAt === null ? 'never' : reachedAt.toFixed(1) + 's'}, clawed ${drained.toFixed(0)} Oil, empty hearth → ${feedMode.phase} (${feedMode.failureReason || '-'})`);
+  const fireOutPass = navRefreshed && reachedAt !== null && drained >= 24
+    && keepAtWall > feedMode.keep().r && feedMode.phase === 'failed' && /KEEP/.test(feedMode.failureReason || '');
+  console.log(`  ${fireOutPass ? 'PASS' : 'FAIL'}  breach → flow field → keep: body reached the keep's wall in ${reachedAt === null ? 'never' : reachedAt.toFixed(1) + 's'} (${keepAtWall.toFixed(0)} px from its centre), clawed ${drained.toFixed(0)} HP, keep at 0 → ${feedMode.phase} (${feedMode.failureReason || '-'})`);
   survivalGame.enemies.length = 0;
 
-  // Breaker hands over to the next intact door, then (none left) the Perapian.
+  // Breaker hands over to the next intact door, then (none left) the keep.
   survivalGame.survival.restart();
   const retargetMode = survivalGame.survival;
   retargetMode.day = 2;
@@ -352,7 +353,7 @@ async function runSurvivalMilestone() {
   }
   retargeter.update(step, survivalGame);
   const breakerRetargetPass = !!secondTarget && secondTarget !== firstDoor.id
-    && retargeter.targetKind === 'perapian' && !retargeter.targetEntranceId;
+    && retargeter.targetKind === 'keep' && !retargeter.targetEntranceId;
   console.log(`  ${breakerRetargetPass ? 'PASS' : 'FAIL'}  Breaker retargets ${firstDoor.id} → ${secondTarget || 'none'} → ${retargeter.targetKind}`);
   survivalGame.enemies.length = 0;
 
@@ -510,7 +511,7 @@ async function runSurvivalMilestone() {
     // freeze the scheduled spawners so a probe controls every body
     mode.waveIndex = 99; mode.breakerIndex = 99; mode.individualIndex = 99;
     survivalGame.enemies.length = 0; survivalGame.bolts.length = 0;
-    mode.oil = 200;
+    mode.keepHp = 1e6;      // the keep stands through a probe
   };
 
   // 1) A 30-body wave reaches its own ranks and claws the door (the old
@@ -519,7 +520,7 @@ async function runSurvivalMilestone() {
   const rankMode = survivalGame.survival;
   quietNight(rankMode);
   rankMode.day = 3;
-  survivalGame.player.x = rankMode.hearth().x + 70; survivalGame.player.y = rankMode.hearth().y + 210;
+  survivalGame.player.x = rankMode.hunterHome().x; survivalGame.player.y = rankMode.hunterHome().y;
   rankMode.guards.length = 0; rankMode.survivors = 0;
   const posternDoor = rankMode.entranceById('postern');
   const posternHp = posternDoor.hp;
@@ -585,7 +586,7 @@ async function runSurvivalMilestone() {
   const guardMode = survivalGame.survival;
   quietNight(guardMode);
   guardMode.tuning = { ...guardMode.tuning, autoAttackRange: 0 };
-  survivalGame.player.x = guardMode.hearth().x + 70; survivalGame.player.y = guardMode.hearth().y + 210;
+  survivalGame.player.x = guardMode.hunterHome().x; survivalGame.player.y = guardMode.hunterHome().y;
   const guardDoor = guardMode.entranceById('frontDoor');
   guardDoor.hp = guardDoor.hpMax = 99999;
   guardMode.spawnSwarm(21, 0, guardDoor);
@@ -629,7 +630,7 @@ async function runSurvivalMilestone() {
   survivalGame.resumeSurvival();
   tick(60);
   const resumedCd = pauseMode.skillCooldown;
-  pauseMode.fail('THE FIRE WENT OUT');
+  pauseMode.fail('THE KEEP FELL');
   const canPauseOnEnd = survivalGame.survivalCanPause();
   sInput.keys.pause = true; tick(); sInput.keys.pause = false; tick();
   const endScreen = survivalGame.screen;
@@ -637,23 +638,27 @@ async function runSurvivalMilestone() {
   const dawnMode = survivalGame.survival;
   quietNight(dawnMode);
   dawnMode.elapsed = dawnMode.nightDuration - 0.01;
-  dawnMode.oilBurned = 9;
+  dawnMode.keepHp = 300;
+  survivalGame.player.x = -900; survivalGame.player.y = 300;
   tick(2);
-  const dayRadius = dawnMode.getFireRadius();
-  const fullRadius = dawnMode.tuning.perapianRadius[dawnMode.perapianLevel];
+  // dawn: the townsfolk patch 35% of the missing HP for free; the captain is home
+  const dayRadius = dawnMode.keepHp;
+  const fullRadius = 300 + Math.round((dawnMode.keepHpMax() - 300) * dawnMode.tuning.keepDawnHeal);
+  const homeAtDawn = Math.hypot(survivalGame.player.x - dawnMode.hunterHome().x, survivalGame.player.y - dawnMode.hunterHome().y) < 4;
   const canPauseOnReward = survivalGame.survivalCanPause();
   if (dawnMode.rewardPending()) dawnMode.ackRewards();
   const canPauseOnDay = survivalGame.survivalCanPause();
   const pausePass = pausedCd === 10 && pausedElapsed === elapsedBefore && resumedCd < 10
     && !canPauseOnEnd && endScreen === 'playing' && !canPauseOnReward && canPauseOnDay
-    && dawnMode.phase === 'day' && Math.abs(dayRadius - fullRadius) < 1;
-  console.log(`  ${pausePass ? 'PASS' : 'FAIL'}  pause freezes Flare cooldown (${pausedCd} while paused → ${resumedCd.toFixed(2)} after 1s) and the clock; no pause on the end panel (${endScreen}) or the dawn reward (${canPauseOnReward}), pause on the build day (${canPauseOnDay}); dawn radius ${Math.round(dayRadius)}/${fullRadius}`);
+    && dawnMode.phase === 'day' && Math.abs(dayRadius - fullRadius) < 1 && homeAtDawn
+    && dawnMode.lastRewards && dawnMode.lastRewards.keepPatched === fullRadius - 300;
+  console.log(`  ${pausePass ? 'PASS' : 'FAIL'}  pause freezes Flare cooldown (${pausedCd} while paused → ${resumedCd.toFixed(2)} after 1s) and the clock; no pause on the end panel (${endScreen}) or the dawn reward (${canPauseOnReward}), pause on the build day (${canPauseOnDay}); dawn patches the keep ${300} → ${Math.round(dayRadius)} (want ${fullRadius}), captain home=${homeAtDawn}`);
 
   // 7) A body that already crossed a doorway keeps that through a reload.
   survivalGame.survival.restart();
   const reloadMode = survivalGame.survival;
   quietNight(reloadMode);
-  const hall = survivalGame.mansion.roomCenter(ROOM.HALL);
+  const hall = survivalGame.mansion.roomCenter(ROOM.DINING);   // (the hall's middle is the keep now)
   const insideBody = new SurvivalCrowdZombie(hall.x, hall.y, reloadMode.mainGate(), 0, 1);
   insideBody._inHouse = true;
   survivalGame.enemies.push(insideBody);
@@ -677,12 +682,9 @@ async function runSurvivalMilestone() {
     resetControls();
     const mode = survivalGame.survival;
     const botState = { flareHeld: false, flares: 0 };
-    const upgrades = [{ level: 1, radius: Math.round(mode.getFireRadius()) }];
+    const upgrades = [{ level: 1, rooms: mode.territoryRooms().length }];
     const workResults = [];
     let queueLockVerified = false;
-    let sawmillBuilt = false;
-    let gateBuilt = false;
-    let shelterBuilt = false;
     let failure = null;
     const nightThree = { peakEnemies: 0, peakBreakers: 0, kills: 0, wallDamage: 0, gateHp: 0, playerHp: 0 };
 
@@ -712,33 +714,22 @@ async function runSurvivalMilestone() {
       if (mode.rewardPending()) mode.ackRewards();
 
       if (builderBot) {
-        const beforeLevel = mode.perapianLevel;
-        const beforeRadius = Math.round(mode.getFireRadius());
-        const targetLevel = day + 1;
-        const upgradeQueued = mode.startBuild('perapian');
-        if (upgradeQueued && !queueLockVerified) queueLockVerified = !mode.startBuild('gate');
-        const upgradeFinished = waitForBuilder();
-        const afterRadius = Math.round(mode.getFireRadius());
-        upgrades.push({ level: mode.perapianLevel, beforeRadius, radius: afterRadius });
-        workResults.push({ day: day + 1, upgradeQueued, upgradeFinished, targetLevel, beforeLevel, level: mode.perapianLevel });
-        if (mode.perapianLevel !== targetLevel) { failure = `Perapian level ${targetLevel} not reached`; break; }
-
-        const freeRoom = mode.buildableRooms()[0];
-        if (day === 1 && freeRoom) {
-          const queued = mode.startBuild('sawmill', freeRoom.id);
-          const finished = queued && waitForBuilder();
-          sawmillBuilt = !!(finished && mode.buildings[freeRoom.id] === 'sawmill');
-          workResults.push({ day: 2, building: 'sawmill', room: freeRoom.id, queued, finished });
-          const gateQueued = mode.startBuild('gate');
-          const gateFinished = gateQueued && waitForBuilder();
-          gateBuilt = !!(gateFinished && mode.gateBuilt);
-          workResults.push({ day: 2, building: 'gate', queued: gateQueued, finished: gateFinished, hp: mode.gateHp });
-        } else if (day === 2 && freeRoom) {
-          const queued = mode.startBuild('shelter', freeRoom.id);
-          const finished = queued && waitForBuilder();
-          shelterBuilt = !!(finished && mode.buildings[freeRoom.id] === 'shelter');
-          workResults.push({ day: 3, building: 'shelter', room: freeRoom.id, queued, finished });
+        // the balanced K1 day queue from survival-bots (keep, mine, barricade,
+        // sawmill, keep Lv3, Hunter, ...), one job at a time
+        let decisions = 0;
+        let started = false;
+        while (mode.phase === 'day' && decisions++ < 40) {
+          started = botDay(survivalGame, 'builder');
+          if (started) break;
+          if (!mode.builderJob) break;
+          // the one builder: nothing else can be queued while a job runs
+          if (!queueLockVerified) queueLockVerified = !mode.startBuild('gate') && !mode.startBuild('keep') && !mode.startBuild('hunter');
+          workResults.push({ day: day + 1, job: mode.builderJob.kind, type: mode.builderJob.type, slot: mode.builderJob.slotId || null });
+          waitForBuilder();
         }
+        upgrades.push({ level: mode.keepLevel, rooms: mode.territoryRooms().length });
+        if (!started || mode.phase !== 'night') { failure = `Night ${day + 1} could not start`; break; }
+        continue;
       }
       if (!mode.startNight()) { failure = `Night ${day + 1} could not start`; break; }
     }
@@ -747,10 +738,11 @@ async function runSurvivalMilestone() {
     return {
       type: builderBot ? 'builder' : 'idle', complete, failure,
       day: mode.day, phase: mode.phase, nightsCompleted: mode.nightsCompleted,
-      perapianLevel: mode.perapianLevel, survivors: mode.survivors,
+      keepLevel: mode.keepLevel, keepHp: Math.round(mode.keepHp), survivors: mode.survivors,
       buildings: Object.values(mode.buildings), workResults, upgrades, queueLockVerified,
-      sawmillBuilt, gateBuilt, shelterBuilt, nightThree, flares: botState.flares,
-      oil: +mode.oil.toFixed(1), wood: mode.wood,
+      sawmillBuilt: Object.values(mode.buildings).includes('sawmill'), gateBuilt: mode.gateBuilt,
+      barracksBuilt: Object.values(mode.buildings).includes('barracks'), nightThree, flares: botState.flares,
+      gold: +mode.gold.toFixed(1), wood: mode.wood,
     };
   };
 
@@ -762,9 +754,9 @@ async function runSurvivalMilestone() {
   survivalGame.survival.restart();
   resetControls();
   let saveGuard = 0;
-  // Isolate persistence from balance: keep the hearth fed so Night 1 reaches dawn.
+  // Isolate persistence from balance: keep the keep standing so Night 1 reaches dawn.
   while (survivalGame.survival.phase === 'night' && saveGuard++ < 60 * survivalGame.survival.nightDuration + 120) {
-    survivalGame.survival.oil = Math.max(survivalGame.survival.oil, 30);
+    survivalGame.survival.keepHp = Math.max(survivalGame.survival.keepHp, 300);
     tick();
   }
   const storedSave = JSON.parse(window.localStorage.getItem('lastnight.save.v1') || 'null');
@@ -775,44 +767,41 @@ async function runSurvivalMilestone() {
     && resumedGame.survival.nightsCompleted === 1 && resumedGame.survival.elapsed === 0);
   console.log(`  ${saveProgressPass ? 'PASS' : 'FAIL'}  save/reload resumes Day ${resumedGame.survival.day} ${resumedGame.survival.phase} (${resumedGame.survival.nightsCompleted}/3 nights, ${resumedGame.survival.nightDuration}s)`);
 
-  // Isolated economy check: each listed room building completes one queued
-  // job, and its defined production is credited at the next dawn.
+  // Isolated economy check (K1): one mine, one sawmill and one barracks on
+  // their own circles each complete one queued job; the mine digs gold during
+  // the night (gold never burns), the sawmill pays at dawn, the barracks
+  // houses its soldier at once.
   survivalGame.survival.restart();
   resetControls();
   const economyMode = survivalGame.survival;
   economyMode.phase = 'day';
-  economyMode.perapianLevel = 3;
-  economyMode.oil = 100; economyMode.wood = 100; economyMode.survivors = 2;
+  economyMode.keepLevel = 3;
+  economyMode.gold = 100; economyMode.wood = 100; economyMode.survivors = 2;
   survivalGame.screen = 'playing'; survivalGame.uiPanel = 'survival-day';
-  economyMode.refreshFireplace(true);
-  const economyRooms = economyMode.buildableRooms();
   const economyBuilt = [];
-  for (const [i, type] of ['extractor', 'sawmill', 'shelter'].entries()) {
-    const room = economyRooms.find((candidate) => !economyMode.buildings[candidate.id] && !economyBuilt.some((row) => row.room === candidate.id));
-    const queued = !!(room && economyMode.startBuild(type, room.id));
+  for (const [type, slotId] of [['mine', 'basement'], ['sawmill', 'dining'], ['barracks', 'library']]) {
+    const queued = economyMode.startBuild(type, slotId);
     const finished = queued && waitForBuilder();
-    economyBuilt.push({ type, room: room && room.id, queued, finished });
+    economyBuilt.push({ type, slot: slotId, queued, finished: !!(finished && economyMode.buildings[slotId] === type) });
   }
-  // the shelter houses its survivor as soon as it stands (tonight's guard)
+  // a mismatched circle never takes another type (typed circles)
+  const wrongType = economyMode.startBuild('tower', 'study');
   const survivorsAtBuild = economyMode.survivors;
   economyMode.phase = 'night';
   economyMode.day = 1;
   economyMode.elapsed = 0;
-  economyMode.oilBurned = 0;
-  economyMode.nightStats = { kills: 0, hits: 0, damageToWalls: 0, drained: 0, pumped: 0 };
-  // the pump pours its oil into the stock during the night, not at dawn
-  const oilBeforeNight = economyMode.oil;
-  for (let t = 0; t < economyMode.nightDuration * 60; t++) economyMode.updateLightFuel(step);
-  const pumpedOvernight = economyMode.nightStats.pumped;
-  const burnedOvernight = economyMode.oilBurned;
-  const purseDelta = economyMode.oil - oilBeforeNight;
+  economyMode.nightStats = { kills: 0, hits: 0, damageToWalls: 0, keepDamage: 0, mined: 0 };
+  const oilBeforeNight = economyMode.gold;
+  for (let t = 0; t < economyMode.nightDuration * 60; t++) economyMode.updateMines(step);
+  const pumpedOvernight = economyMode.nightStats.mined;
+  const purseDelta = economyMode.gold - oilBeforeNight;
   economyMode.completeNight();
-  const economyPass = economyBuilt.length === 3 && economyBuilt.every((row) => row.queued && row.finished)
+  const economyPass = economyBuilt.length === 3 && economyBuilt.every((row) => row.queued && row.finished) && wrongType === false
     && survivorsAtBuild === 3 && economyMode.survivors === 3
-    && Math.abs(pumpedOvernight - 6) < 0.01 && Math.abs(purseDelta - (pumpedOvernight - burnedOvernight)) < 0.01
-    && economyMode.lastRewards.pumped === 6 && economyMode.lastRewards.survivors === 0
-    && economyMode.lastRewards.oil === 14 && economyMode.lastRewards.wood === 21;
-  console.log(`  economy: ${JSON.stringify(economyBuilt)} → survivors ${survivorsAtBuild} at build, pumped ${pumpedOvernight.toFixed(2)} Oil overnight (purse ${purseDelta >= 0 ? '+' : ''}${purseDelta.toFixed(2)} after burn ${burnedOvernight.toFixed(2)}), dawn +${economyMode.lastRewards.oil} Oil, +${economyMode.lastRewards.wood} Wood, Survivors ${economyMode.survivors} (${economyPass ? 'PASS' : 'FAIL'})`);
+    && Math.abs(pumpedOvernight - 6) < 0.01 && Math.abs(purseDelta - pumpedOvernight) < 0.01
+    && economyMode.lastRewards.mined === 6 && economyMode.lastRewards.survivors === 0
+    && economyMode.lastRewards.gold === 14 && economyMode.lastRewards.wood === 21;
+  console.log(`  economy: ${JSON.stringify(economyBuilt)} → soldiers ${survivorsAtBuild} at build, mined ${pumpedOvernight.toFixed(2)} gold overnight (purse +${purseDelta.toFixed(2)}, nothing burns), wrong-type circle refused=${wrongType === false}, dawn +${economyMode.lastRewards.gold} gold, +${economyMode.lastRewards.wood} wood, soldiers ${economyMode.survivors} (${economyPass ? 'PASS' : 'FAIL'})`);
 
   // ---- progression: building levels + the Hunter's track (no skill cards) ----
   const progressionChecks = [];
@@ -826,19 +815,17 @@ async function runSurvivalMilestone() {
     resetControls();
     mode.phase = 'day'; mode.day = 2;
     survivalGame.screen = 'playing'; survivalGame.uiPanel = 'survival-day';
-    mode.perapianLevel = 3;
-    mode.refreshFireplace(true);
-    mode.oil = 150; mode.wood = 150;
-    const rooms = mode.buildableRooms();
-    const [pumpRoom, millRoom, shelterRoom] = rooms;
-    mode.startBuild('extractor', pumpRoom.id); waitForBuilder();
+    mode.keepLevel = 3;
+    mode.gold = 150; mode.wood = 150;
+    const pumpRoom = { id: 'basement' }, millRoom = { id: 'dining' }, shelterRoom = { id: 'library' };
+    mode.startBuild('mine', pumpRoom.id); waitForBuilder();
     const lv1 = mode.buildingLevel(pumpRoom.id);
     const cost2 = mode.upgradeCost(pumpRoom.id);
-    const purse = { oil: mode.oil, wood: mode.wood };
+    const purse = { gold: mode.gold, wood: mode.wood };
     const queued = mode.startBuild('upgrade', pumpRoom.id);
-    const paid = purse.oil - mode.oil === 4 && purse.wood - mode.wood === 12;
+    const paid = purse.gold - mode.gold === 4 && purse.wood - mode.wood === 12;
     const job = mode.builderJob ? { ...mode.builderJob } : null;
-    // one builder: nothing else starts while the pump is being raised
+    // one builder: nothing else starts while the mine is being raised
     const lockBuild = mode.startBuild('sawmill', millRoom.id);
     const lockHunter = mode.startBuild('hunter');
     const lockOther = mode.startUpgrade(pumpRoom.id);
@@ -849,34 +836,34 @@ async function runSurvivalMilestone() {
     const lv3 = mode.buildingLevel(pumpRoom.id);
     const atMax = mode.upgradeCost(pumpRoom.id) === null && mode.startUpgrade(pumpRoom.id) === false;
     progCheck('building levels: queued, paid and finished through the one builder; Lv3 is the cap',
-      lv1 === 1 && queued && paid && job && job.kind === 'upgrade' && job.targetLevel === 2
+      lv1 === 1 && queued && paid && job && job.kind === 'upgrade' && job.targetLevel === 2 && job.slotId === 'basement'
         && !lockBuild && !lockHunter && !lockOther && done2 && lv2 === 2 && lv3 === 3 && atMax
-        && cost2 && cost2.oil === 4 && cost2.wood === 12 && cost3 && cost3.oil === 6 && cost3.wood === 16,
-      `pump Lv${lv1}→${lv2}→${lv3}, cost Lv2 ${cost2 && `${cost2.oil}/${cost2.wood}`}, Lv3 ${cost3 && `${cost3.oil}/${cost3.wood}`}, queue lock build=${lockBuild} hunter=${lockHunter} upgrade=${lockOther}, max locked=${atMax}`);
+        && cost2 && cost2.gold === 4 && cost2.wood === 12 && cost3 && cost3.gold === 6 && cost3.wood === 16,
+      `mine Lv${lv1}→${lv2}→${lv3}, cost Lv2 ${cost2 && `${cost2.gold}/${cost2.wood}`}, Lv3 ${cost3 && `${cost3.gold}/${cost3.wood}`}, queue lock build=${lockBuild} hunter=${lockHunter} upgrade=${lockOther}, max locked=${atMax}`);
 
-    // the pump's level sets the oil poured in overnight
-    const pumpNight = mode.pumpPerNight();
+    // the mine's level sets the gold dug in overnight
+    const pumpNight = mode.goldPerNight();
     mode.phase = 'night';
-    const nightUpgrade = mode.startBuild('upgrade', pumpRoom.id) || mode.startBuild('hunter') || mode.startUpgrade(pumpRoom.id);
-    mode.nightStats.pumped = 0;
-    for (let t = 0; t < mode.nightDuration * 60; t++) mode.updateLightFuel(step);
-    const pumpedLv3 = mode.nightStats.pumped;
-    progCheck('Lv3 pump pours 14 Oil over one night; nothing is bought at night',
+    const nightUpgrade = mode.startBuild('upgrade', pumpRoom.id) || mode.startBuild('hunter') || mode.startUpgrade(pumpRoom.id) || mode.startBuild('keep') || mode.startBuild('repair');
+    mode.nightStats.mined = 0;
+    for (let t = 0; t < mode.nightDuration * 60; t++) mode.updateMines(step);
+    const pumpedLv3 = mode.nightStats.mined;
+    progCheck('Lv3 mine digs 14 gold over one night; nothing is bought at night',
       pumpNight === 14 && Math.abs(pumpedLv3 - 14) < 0.01 && nightUpgrade === false,
-      `pumpPerNight ${pumpNight}, pumped ${pumpedLv3.toFixed(2)}, night purchase=${nightUpgrade}`);
+      `goldPerNight ${pumpNight}, mined ${pumpedLv3.toFixed(2)}, night purchase=${nightUpgrade}`);
     mode.phase = 'day';
 
-    // shelters house survivors at once: Lv1 1, Lv2 2, Lv3 3 → guards
+    // barracks house soldiers at once: Lv1 1, Lv2 2, Lv3 3 → guards
     const s0 = mode.survivors;
-    mode.startBuild('shelter', shelterRoom.id); waitForBuilder();
+    mode.startBuild('barracks', shelterRoom.id); waitForBuilder();
     const s1 = mode.survivors;
     mode.startBuild('upgrade', shelterRoom.id); waitForBuilder();
     const s2 = mode.survivors;
     mode.startBuild('upgrade', shelterRoom.id); waitForBuilder();
     const s3 = mode.survivors;
-    progCheck('shelter levels house 1 / 2 / 3 survivors as soon as they stand; each one guards',
+    progCheck('barracks levels house 1 / 2 / 3 soldiers as soon as they stand; each one guards',
       s1 - s0 === 1 && s2 - s0 === 2 && s3 - s0 === 3 && mode.guards.length === Math.min(8, s3),
-      `survivors ${s0} → ${s1} → ${s2} → ${s3}, guards ${mode.guards.length}`);
+      `soldiers ${s0} → ${s1} → ${s2} → ${s3}, guards ${mode.guards.length}`);
 
     // sawmill planks: every outer door +10% (Lv1) → +20% (Lv2), full by day
     const doors = survivalGame.mansion.entrances.filter((e) => e.exterior && e.kind === 'door');
@@ -893,41 +880,54 @@ async function runSurvivalMilestone() {
       doors.length > 0 && mill1 && mill2 && mode.doorHpBonus() === 0.2,
       `door max HP ${base} → ${after1} → ${after2}`);
 
-    // the Hunter's own track: Lv2 = 32 bolt damage / 120 HP, healed on completion
+    // the Hunter's own track: Lv2 = 40 bolt damage / 120 HP and a bolt that
+    // runs on through a body; Lv3 = 48 and a fan of three (heavy, visible)
     survivalGame.player.blood = 40;
     const hunterCost = mode.hunterUpgradeCost();
-    const hPurse = { oil: mode.oil, wood: mode.wood };
+    const hPurse = { gold: mode.gold, wood: mode.wood };
     const hQueued = mode.startBuild('hunter');
-    const hPaid = hPurse.oil - mode.oil === 14 && hPurse.wood - mode.wood === 8;
+    const hPaid = hPurse.gold - mode.gold === 14 && hPurse.wood - mode.wood === 8;
     const hDone = waitForBuilder();
     survivalGame.player.weapon = 'shot';
     survivalGame.player.swingAngle = 0;
-    const boltsBefore = survivalGame.bolts.length;
-    survivalGame.playerAttackHit(survivalGame.player);
-    const bolt = survivalGame.bolts[survivalGame.bolts.length - 1];
-    const boltDamage = survivalGame.bolts.length > boltsBefore && bolt ? bolt.damage : null;
-    survivalGame.bolts.length = 0;
-    progCheck('Hunter Lv2: bolt damage 26 → 32, health 100 → 120, healed when the training ends',
-      hunterCost && hQueued && hPaid && hDone && mode.hunterLevel === 2 && boltDamage === 32
-        && survivalGame.player.bloodMax === 120 && survivalGame.player.blood === 120,
-      `cost ${hunterCost && `${hunterCost.oil}/${hunterCost.wood}`}, Lv${mode.hunterLevel}, bolt ${boltDamage}, HP ${survivalGame.player.blood}/${survivalGame.player.bloodMax}`);
+    const shoot = () => {
+      survivalGame.bolts.length = 0;
+      survivalGame.playerAttackHit(survivalGame.player);
+      const out = survivalGame.bolts.map((b) => ({ damage: b.damage, pierce: b.pierce || 0 }));
+      survivalGame.bolts.length = 0;
+      return out;
+    };
+    const lv2Shot = shoot();
+    const lv2Ok = lv2Shot.length === 1 && lv2Shot[0].damage === 40 && lv2Shot[0].pierce === 1;
+    const hpAfterLv2 = `${survivalGame.player.blood}/${survivalGame.player.bloodMax}`;
+    mode.startBuild('hunter'); waitForBuilder();
+    const lv3Shot = shoot();
+    const lv3Ok = lv3Shot.length === 3 && lv3Shot.every((b) => b.damage === 48);
+    progCheck('Hunter Lv2: bolt 32 → 40 that runs through a body, health 100 → 120 (healed); Lv3: a fan of three 48-damage bolts',
+      hunterCost && hQueued && hPaid && hDone && lv2Ok && hpAfterLv2 === '120/120' && lv3Ok && mode.hunterLevel === 3,
+      `cost ${hunterCost && `${hunterCost.gold}/${hunterCost.wood}`}, Lv2 shot ${JSON.stringify(lv2Shot)} HP ${hpAfterLv2}, Lv3 shot ${JSON.stringify(lv3Shot)}`);
 
-    // persistence: levels survive a reload; an old save without levels is Lv1
+    // persistence: levels survive a reload; a pre-K1 save (Oil, Perapian,
+    // extractor/shelter, one free building per room) moves onto the circles
     mode._persist(true);
     const saved = JSON.parse(window.localStorage.getItem('lastnight.save.v1') || 'null');
     const reloaded = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
     const rs = reloaded.survival;
     const levelsKept = rs.buildingLevel(pumpRoom.id) === 3 && rs.buildingLevel(shelterRoom.id) === 3
-      && rs.buildingLevel(millRoom.id) === 2 && rs.hunterLevel === 2 && reloaded.player.bloodMax === 120
-      && rs.doorHpBonus() === 0.2;
+      && rs.buildingLevel(millRoom.id) === 2 && rs.hunterLevel === 3 && reloaded.player.bloodMax === 140
+      && rs.doorHpBonus() === 0.2 && rs.keepLevel === 3 && saved.survival.gold != null && saved.survival.oil === undefined;
     const legacySave = JSON.parse(JSON.stringify(saved));
+    Object.assign(legacySave.survival, { oil: 77, perapianLevel: 2, buildings: { basement: 'extractor', library: 'shelter', dining: 'sawmill', hall: 'tower', study: 'sawmill' } });
+    delete legacySave.survival.gold; delete legacySave.survival.keepLevel; delete legacySave.survival.keepHp;
     delete legacySave.survival.buildingLevels;
     delete legacySave.survival.hunterLevel;
     window.localStorage.setItem('lastnight.save.v1', JSON.stringify(legacySave));
     const oldGame = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
     const os = oldGame.survival;
-    const oldDefaults = Object.keys(os.buildings).length === 3
-      && Object.keys(os.buildings).every((roomId) => os.buildingLevel(roomId) === 1)
+    const oldDefaults = os.gold === 77 && os.keepLevel === 2 && os.keepHp === os.keepHpMax()
+      && os.buildings.basement === 'mine' && os.buildings.library === 'barracks' && os.buildings.dining === 'sawmill'
+      && os.buildings['hall:tower'] === 'tower' && !os.buildings.study && !os.buildings.hall
+      && Object.keys(os.buildings).every((slotId) => os.buildingLevel(slotId) === 1)
       && os.hunterLevel === 1 && oldGame.player.bloodMax === 100;
     // a mid-night reload keeps the Hunter's absolute health on his own bar
     window.localStorage.setItem('lastnight.save.v1', JSON.stringify(saved));
@@ -939,56 +939,61 @@ async function runSurvivalMilestone() {
     ns._persist(true);
     const nightReload = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
     const midNightHp = `${Math.round(nightReload.player.blood)}/${nightReload.player.bloodMax}`;
-    progCheck('save/reload keeps building levels + Hunter level; old saves load as Lv1; a mid-night reload keeps 60/120 HP',
-      saved && saved.survival && saved.survival.hunterLevel === 2 && saved.survival.buildingLevels
-        && levelsKept && oldDefaults && nightReload.survival.phase === 'night' && midNightHp === '60/120',
-      `saved levels ${JSON.stringify(saved && saved.survival && saved.survival.buildingLevels)}, hunter ${saved && saved.survival && saved.survival.hunterLevel}; old save → ${Object.keys(os.buildings).map((r) => `${os.buildings[r]} Lv${os.buildingLevel(r)}`).join(', ')}, Hunter Lv${os.hunterLevel}; mid-night ${midNightHp}`);
+    progCheck('save/reload keeps building + Hunter + keep levels (gold, no oil); a pre-K1 save migrates onto the typed circles; a mid-night reload keeps 60/140 HP',
+      saved && saved.survival && saved.survival.hunterLevel === 3 && saved.survival.buildingLevels
+        && levelsKept && oldDefaults && nightReload.survival.phase === 'night' && midNightHp === '60/140',
+      `saved levels ${JSON.stringify(saved && saved.survival && saved.survival.buildingLevels)}, hunter ${saved && saved.survival && saved.survival.hunterLevel}; old save → gold ${os.gold}, keep Lv${os.keepLevel}, ${Object.keys(os.buildings).map((r) => `${r}:${os.buildings[r]} Lv${os.buildingLevel(r)}`).join(', ')}, Hunter Lv${os.hunterLevel}; mid-night ${midNightHp}`);
     window.localStorage.removeItem('lastnight.save.v1');
   }
   const progressionPass = progressionChecks.length === 6 && progressionChecks.every(Boolean);
 
-  // ---- towers: a building that fights, by its room's outer door ----
+  // ---- ballistas: a building that fights, on its circle by a room's outer door ----
   const towerChecks = [];
   const towerCheck = (name, ok, detail) => {
     towerChecks.push(!!ok);
     console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} (${detail})`);
   };
   {
-    const { TOWER } = await import('../src/game/survival.js');
+    const { TOWER, SURVIVAL_SLOTS } = await import('../src/game/survival.js');
     const mode = survivalGame.survival;
     const m = survivalGame.mansion;
     mode.restart();
     resetControls();
     mode.phase = 'day'; mode.day = 2;
     survivalGame.screen = 'playing'; survivalGame.uiPanel = 'survival-day';
-    mode.perapianLevel = 1;
-    mode.refreshFireplace(true);
-    mode.oil = 150; mode.wood = 150;
-    const hallSlot = mode.buildableRooms().some((room) => room.id === 'hall');
-    const purse = { oil: mode.oil, wood: mode.wood };
-    const queued = mode.startBuild('tower', 'hall');
-    const paid = purse.oil - mode.oil === 4 && purse.wood - mode.wood === 16;
+    mode.keepLevel = 1;
+    mode.gold = 150; mode.wood = 150;
+    const hallSlot = mode.buildableSlots().some((slot) => slot.id === 'hall:tower');
+    const refused = mode.startBuild('tower', 'hall') === false && mode.startBuild('mine', 'hall:tower') === false;
+    const purse = { gold: mode.gold, wood: mode.wood };
+    const queued = mode.startBuild('tower', 'hall:tower');
+    const paid = purse.gold - mode.gold === 4 && purse.wood - mode.wood === 16;
     const done = waitForBuilder();
     tick();
-    const spot = mode.buildingSpot('hall');
+    const spot = mode.buildingSpot('hall:tower');
     const door = mode.entranceById('frontDoor');
     const hall = m.room('hall');
     const inHall = spot.x > hall.x && spot.x < hall.x + hall.w && spot.y > hall.y && spot.y < hall.y + hall.h;
     const doorDist = Math.hypot(spot.x - door.x, spot.y - door.y);
-    const cons = m.room('conservatory');
-    const consSpot = mode.buildingSpot('conservatory', 'tower');
-    const middle = !!consSpot && consSpot.doorId === null && m.findRoom(consSpot.x, consSpot.y) === 'conservatory'
-      && Math.hypot(consSpot.x - (cons.x + cons.w / 2), consSpot.y - (cons.y + cons.h / 2)) < 220;
-    // every spot stands on clear floor (no table under a model, nothing at the bolt's start)
-    const clearFloor = [spot, consSpot].every((p) => p && !m.solidAt(p.x, p.y)
+    // a ballista circle only where a room has an outer door, by that door;
+    // a room's two circles keep apart; every spot is on clear floor
+    const towerRooms = SURVIVAL_SLOTS.filter((slot) => slot.type === 'tower').map((slot) => slot.room);
+    const doorless = ['library', 'study', 'conservatory', 'oratory', 'gallery'].every((room) => !towerRooms.includes(room));
+    const everyDoor = SURVIVAL_SLOTS.filter((slot) => slot.type === 'tower').every((slot) => !!mode.buildingSpot(slot.id).doorId);
+    const pairs = SURVIVAL_SLOTS.filter((slot) => slot.type === 'tower').map((slot) => {
+      const econ = SURVIVAL_SLOTS.find((other) => other.room === slot.room && other.type !== 'tower');
+      return econ ? Math.hypot(mode.buildingSpot(slot.id).x - mode.buildingSpot(econ.id).x, mode.buildingSpot(slot.id).y - mode.buildingSpot(econ.id).y) : 999;
+    });
+    const apart = pairs.every((d) => d >= 150);
+    const clearFloor = SURVIVAL_SLOTS.map((slot) => mode.buildingSpot(slot.id)).every((p) => p && !m.solidAt(p.x, p.y)
       && [0, 1, 2, 3, 4, 5, 6, 7].every((k) => !m.solidAt(p.x + Math.cos(k * Math.PI / 4) * 26, p.y + Math.sin(k * Math.PI / 4) * 26)));
     const tower = mode.towers[0];
-    towerCheck('tower: built in a lit room through the one builder; it stands just inside that room\'s outer door (a doorless room: its middle)',
-      hallSlot && queued && paid && done && mode.buildings.hall === 'tower' && mode.buildingLevel('hall') === 1
-        && spot.doorId === 'frontDoor' && inHall && doorDist > 100 && doorDist < 320 && middle && clearFloor
+    towerCheck('ballista: built on its own circle under the banner through the one builder, just inside the room\'s outer door; other circles refuse it; doorless rooms have none; circles keep apart on clear floor',
+      hallSlot && refused && queued && paid && done && mode.buildings['hall:tower'] === 'tower' && mode.buildingLevel('hall:tower') === 1
+        && spot.doorId === 'frontDoor' && inHall && doorDist > 100 && doorDist < 320 && doorless && everyDoor && apart && clearFloor
         && mode.boltPath(spot.x, spot.y, door.outside.x, door.outside.y)
-        && mode.towers.length === 1 && tower.x === spot.x && tower.y === spot.y,
-      `hall slot=${hallSlot}, paid 4/16=${paid}, spot (${spot.x}, ${spot.y}) ${Math.round(doorDist)}px from ${spot.doorId}, conservatory (${consSpot && consSpot.x}, ${consSpot && consSpot.y}) doorless=${middle}, clear floor=${clearFloor}, towers ${mode.towers.length}`);
+        && mode.towers.length === 1 && tower.x === spot.x && tower.y === spot.y && tower.slotId === 'hall:tower',
+      `hall:tower circle=${hallSlot}, wrong circles refused=${refused}, paid 4/16=${paid}, spot (${spot.x}, ${spot.y}) ${Math.round(doorDist)}px from ${spot.doorId}, doorless rooms without=${doorless}, every ballista by a door=${everyDoor}, pair gaps ${pairs.map((d) => Math.round(d)).join('/')}, clear floor=${clearFloor}, towers ${mode.towers.length}`);
 
     // a body on the line from the tower through the door centre, `past` px outside
     const lineDir = { x: door.x - tower.x, y: door.y - tower.y };
@@ -1085,13 +1090,13 @@ async function runSurvivalMilestone() {
     // levels: Lv2 22 dmg / 580, Lv3 30 dmg / 640; a Lv3 bolt lands for 30
     mode.phase = 'day'; survivalGame.screen = 'playing'; survivalGame.uiPanel = 'survival-day';
     survivalGame.enemies.length = 0; survivalGame.bolts.length = 0;
-    mode.oil = 150; mode.wood = 150;
-    const cost2 = mode.upgradeCost('hall');
-    mode.startBuild('upgrade', 'hall'); waitForBuilder();
-    const st2 = { ...mode.towerStats('hall') };
-    const cost3 = mode.upgradeCost('hall');
-    mode.startBuild('upgrade', 'hall'); waitForBuilder();
-    const st3 = { ...mode.towerStats('hall') };
+    mode.gold = 150; mode.wood = 150;
+    const cost2 = mode.upgradeCost('hall:tower');
+    mode.startBuild('upgrade', 'hall:tower'); waitForBuilder();
+    const st2 = { ...mode.towerStats('hall:tower') };
+    const cost3 = mode.upgradeCost('hall:tower');
+    mode.startBuild('upgrade', 'hall:tower'); waitForBuilder();
+    const st3 = { ...mode.towerStats('hall:tower') };
     mode.startNight();
     quietNight(mode);
     mode.guards.length = 0; mode.survivors = 0;
@@ -1102,10 +1107,10 @@ async function runSurvivalMilestone() {
     for (let i = 0; i < 30 && (mode.nightStats.towerShots || 0) === lv3Shots; i++) tick();
     resolveShot();
     towerCheck('tower levels: Lv2 22 dmg / 580 range, Lv3 30 / 640 (costs 6/18, 8/22); a Lv3 bolt lands for 30',
-      cost2 && cost2.oil === 6 && cost2.wood === 18 && cost3 && cost3.oil === 8 && cost3.wood === 22
+      cost2 && cost2.gold === 6 && cost2.wood === 18 && cost3 && cost3.gold === 8 && cost3.wood === 22
         && st2.damage === 22 && st2.range === 580 && st3.damage === 30 && st3.range === 640
-        && mode.buildingLevel('hall') === 3 && Math.round(lv3Body.hp) === 969,
-      `cost Lv2 ${cost2 && `${cost2.oil}/${cost2.wood}`}, Lv3 ${cost3 && `${cost3.oil}/${cost3.wood}`}; Lv2 ${st2.damage}/${st2.range}, Lv3 ${st3.damage}/${st3.range}; body 999 → ${Math.round(lv3Body.hp)}`);
+        && mode.buildingLevel('hall:tower') === 3 && Math.round(lv3Body.hp) === 969,
+      `cost Lv2 ${cost2 && `${cost2.gold}/${cost2.wood}`}, Lv3 ${cost3 && `${cost3.gold}/${cost3.wood}`}; Lv2 ${st2.damage}/${st2.range}, Lv3 ${st3.damage}/${st3.range}; body 999 → ${Math.round(lv3Body.hp)}`);
     mode.tuning = SURVIVAL_TUNING;
 
     // persistence: the tower and its level survive a reload, on the same spot
@@ -1116,10 +1121,10 @@ async function runSurvivalMilestone() {
     reloaded.update(step);
     const rs = reloaded.survival;
     const rt = rs.towers[0];
-    towerCheck('save/reload keeps the tower at Lv3 on the same spot',
-      rs.buildings.hall === 'tower' && rs.buildingLevel('hall') === 3 && rs.towers.length === 1
-        && rt && rt.x === spot.x && rt.y === spot.y && rt.doorId === 'frontDoor',
-      `reloaded ${rs.buildings.hall} Lv${rs.buildingLevel('hall')}, towers ${rs.towers.length} at (${rt && Math.round(rt.x)}, ${rt && Math.round(rt.y)})`);
+    towerCheck('save/reload keeps the ballista at Lv3 on the same circle',
+      rs.buildings['hall:tower'] === 'tower' && rs.buildingLevel('hall:tower') === 3 && rs.towers.length === 1
+        && rt && rt.x === spot.x && rt.y === spot.y && rt.doorId === 'frontDoor' && rt.slotId === 'hall:tower',
+      `reloaded ${rs.buildings['hall:tower']} Lv${rs.buildingLevel('hall:tower')}, towers ${rs.towers.length} at (${rt && Math.round(rt.x)}, ${rt && Math.round(rt.y)})`);
     window.localStorage.removeItem('lastnight.save.v1');
   }
   const towerPass = towerChecks.length === 7 && towerChecks.every(Boolean);
@@ -1139,7 +1144,7 @@ async function runSurvivalMilestone() {
     mode.startNight();
     quietNight(mode);
     mode.tuning = { ...mode.tuning, autoAttackRange: 0 };   // the Hunter's own shot off
-    const hallC = m.roomCenter(ROOM.HALL);
+    const hallC = mode.hunterHome();    // (the hall's middle is the keep now)
     const parkHunter = () => { p.x = hallC.x; p.y = hallC.y; p.blood = p.bloodMax; };
     parkHunter();
     mode.survivors = 2;
@@ -1149,9 +1154,11 @@ async function runSurvivalMilestone() {
       guard.x = at.x; guard.y = at.y; guard.path = null; guard.moving = false;
       guard.post = { key: 'test', x: at.x, y: at.y, doorId: null };
     };
+    // "dark" = beyond the keep's banner (kitchen at keep Lv1), "lit" = under it (dining)
     const kc = m.roomCenter(ROOM.KITCHEN);
     const dark = mode._freePost(kc.x, kc.y, 'test', null);
-    const lit = mode._hearthPost(0);
+    const dc = m.roomCenter(ROOM.DINING);
+    const lit = mode._freePost(dc.x + 60, dc.y - 60, 'test', null);
     const clawOnce = (guard, frames = 40) => {
       // one live invader right beside the guard: count only its first claw
       const before = guard.hp;
@@ -1164,12 +1171,12 @@ async function runSurvivalMilestone() {
       return { dealt: before - guard.hp, hit: z.hitDamage };
     };
 
-    // 1) a claw in the dark lands full; in the firelight at half (like the Hunter's)
+    // 1) a claw lands full, under the banner or beyond it (nothing blunts a claw)
     mode._guardAssignT = 1e9;
     pin(ga, dark); pin(gb, lit);
     const darkClaw = clawOnce(ga);
     const litClaw = clawOnce(gb);
-    const darkSpot = !mode.isLit(dark.x, dark.y), litSpot = mode.isLit(lit.x, lit.y);
+    const darkSpot = !mode.inTerritory(dark.x, dark.y), litSpot = mode.inTerritory(lit.x, lit.y);
     // a crowd of 8 landing in the same frame: the guard's i-frames take one claw
     const burstHp = ga.hp;
     ga.iframes = 0;
@@ -1184,15 +1191,15 @@ async function runSurvivalMilestone() {
     const burstDealt = burstHp - ga.hp;
     survivalGame.enemies.length = 0; survivalGame.bolts.length = 0;
     ga.hp = burstHp; ga.iframes = 0;
-    fallCheck('guards take claws from invaders: full in the dark, x0.5 in the firelight; 8 claws in one frame land once',
+    fallCheck('guards take full claws from invaders under the banner and beyond it; 8 claws in one frame land once',
       darkSpot && litSpot && Math.abs(darkClaw.dealt - darkClaw.hit) < 0.01
-        && Math.abs(litClaw.dealt - litClaw.hit * mode.tuning.litAttackMul) < 0.01
+        && Math.abs(litClaw.dealt - litClaw.hit) < 0.01
         && ga.hp === GUARD.hp - darkClaw.hit && !ga.down && (mode.nightStats.guardDamage || 0) > 0
         && Math.abs(burstDealt - darkClaw.hit) < 0.01,
-      `dark spot ${darkSpot}: ${GUARD.hp} → ${GUARD.hp - darkClaw.dealt} (claw ${darkClaw.hit}); lit spot ${litSpot}: ${GUARD.hp} → ${gb.hp}; 8 bodies at once → ${burstDealt} damage (${GUARD.iframes} s i-frames)`);
+      `beyond the banner ${darkSpot}: ${GUARD.hp} → ${GUARD.hp - darkClaw.dealt} (claw ${darkClaw.hit}); under it ${litSpot}: ${GUARD.hp} → ${gb.hp}; 8 bodies at once → ${burstDealt} damage (${GUARD.iframes} s i-frames)`);
 
-    // 1b) in the dark bodies close by go for a guard (3 at most); in the
-    //     firelight they walk past one that is not in their way
+    // 1b) beyond the banner bodies close by go for a guard (3 at most); under
+    //     it they walk past one that is not in their way (on to the keep)
     const huntProbe = (guard, offsets) => {
       const before = guard.hp;
       guard.iframes = 0;
@@ -1215,9 +1222,9 @@ async function runSurvivalMilestone() {
     pin(ga, dark); pin(gb, lit);
     const darkHunt = huntProbe(ga, [[95, 0], [-95, 0], [0, 95], [0, -95], [70, 70]]);
     const litHunt = huntProbe(gb, [[-85, 0], [-85, 30], [-85, -30]]);
-    fallCheck('in the dark bodies within 110 px go for a guard (3 at most, the rest walk on); in the firelight they pass one not in their way',
+    fallCheck('beyond the banner bodies within 110 px go for a guard (3 at most, the rest walk on); under it they pass one not in their way',
       darkHunt.maxOn === GUARD.maxHunters && darkHunt.dealt > 0 && litHunt.maxOn === 0 && litHunt.dealt === 0,
-      `dark: ${darkHunt.maxOn}/5 bodies on the guard, ${darkHunt.dealt} damage in 2.5 s; lit: ${litHunt.maxOn}/3 on it, ${litHunt.dealt} damage`);
+      `beyond: ${darkHunt.maxOn}/5 bodies on the guard, ${darkHunt.dealt} damage in 2.5 s; under: ${litHunt.maxOn}/3 on it, ${litHunt.dealt} damage`);
 
     // 2) at 0 HP it drops: no more shots, claws pass it by
     ga.hp = 3;
@@ -1257,7 +1264,7 @@ async function runSurvivalMilestone() {
       `0.8 s beside → ${partial.toFixed(2)} s (still down=${stillDown}); after stepping away ${decayed.toFixed(2)}; back → up after ${upAt && upAt.toFixed(2)} s with ${ga.hp} HP, rescued ${mode.nightStats.rescued}`);
     parkHunter();
 
-    // 4) a badly hurt guard leaves its door for the fire; a healthy one stays
+    // 4) a badly hurt guard leaves its door for the keep; a healthy one stays
     mode._syncGuardRoster(true);
     const fd = mode.entranceById('frontDoor');
     fd.hp = fd.hpMax = 99999;
@@ -1268,7 +1275,7 @@ async function runSurvivalMilestone() {
       tick();
       posted = mode.guards.every((gd) => gd.post && gd.post.doorId === 'frontDoor');
     }
-    // let them walk the ~1400 px from the fire and hold the door while the
+    // let them walk from the keep and hold the door while the
     // crowd claws the wood
     for (let i = 0; i < 60 * 14; i++) tick();
     const atPosts = mode.guards.every((gd) => !gd.moving && Math.hypot(gd.x - gd.post.x, gd.y - gd.post.y) < 30);
@@ -1276,8 +1283,8 @@ async function runSurvivalMilestone() {
     ga.hp = Math.floor(GUARD.hp * GUARD.woundedAt) - 1;
     mode._guardAssignT = 0;
     tick();
-    fallCheck('a guard at or below 35% HP falls back to a post by the fire; the healthy one keeps the door; no claws through an intact door',
-      posted && throughWood && ga.post.key === 'hearth' && gb.post.doorId === 'frontDoor',
+    fallCheck('a guard at or below 35% HP falls back to a post by the keep; the healthy one keeps the door; no claws through an intact door',
+      posted && throughWood && ga.post.key === 'keep' && gb.post.doorId === 'frontDoor',
       `both posted at frontDoor=${posted} (standing at their posts=${atPosts}), door ${Math.round(fd.hpMax - fd.hp)} damage taken, guard HP after 14 s ${mode.guards.map((gd) => gd.hp).join('/')}, wounded ${ga.hp} HP → ${ga.post.key}, healthy → ${gb.post.doorId}`);
 
     // 5) a mid-night reload keeps the wounds, and the fallen guard where it
@@ -1311,7 +1318,7 @@ async function runSurvivalMilestone() {
       lostAt != null && afterLoss.survivors === 1 && afterLoss.guards === 1 && afterLoss.lost === 1 && afterLoss.left && lostBanner
         && mode.phase === 'day' && mode.survivors === 1 && reward.lost === 1 && reward.survivors === 0
         && mode.guards.length === 1 && mode.guards[0].hp === GUARD.hp && !mode.guards[0].down
-        && mode.guards[0].post && mode.guards[0].post.key === 'hearth',
+        && mode.guards[0].post && mode.guards[0].post.key === 'keep',
       `lost after ${GUARD.bleedOut} s alone (banner=${lostBanner}): survivors ${afterLoss.survivors}, guards ${afterLoss.guards}; dawn: phase ${mode.phase}, survivors ${mode.survivors}, reward lost ${reward.lost} / rescued ${reward.rescued}, guards ${mode.guards.map((gd) => `${gd.hp}${gd.down ? 'X' : ''}`).join('/')}`);
     mode.tuning = SURVIVAL_TUNING;
     if (mode.rewardPending && mode.rewardPending()) mode.ackRewards();
@@ -1345,19 +1352,22 @@ async function runSurvivalMilestone() {
   const guardFallPass = fallChecks.length === 8 && fallChecks.every(Boolean);
 
   console.log(`  idle Night 3: ${idle.nightThree.peakEnemies} peak enemies / ${idle.nightThree.peakBreakers} Breakers, ${idle.nightThree.kills} kills, ${idle.nightThree.wallDamage} wall damage, gate ${idle.nightThree.gateHp} HP, Hunter ${idle.nightThree.playerHp} HP; ${idle.phase}`);
-  console.log(`  builder Night 3: ${builder.nightThree.peakEnemies} peak enemies / ${builder.nightThree.peakBreakers} Breakers, ${builder.nightThree.kills} kills, ${builder.nightThree.wallDamage} wall damage, gate ${builder.nightThree.gateHp} HP, Hunter ${builder.nightThree.playerHp} HP; Perapian Lv${builder.perapianLevel}, survivors ${builder.survivors}, buildings ${builder.buildings.join(',') || 'none'}, gateBuilt=${builder.gateBuilt}; ${builder.phase}`);
-  // Balance target (M1 rebuild): doing nothing must not win; an engaged
-  // builder must. idle loses because the Perapian goes out.
-  const idleLoses = !idle.complete && /FIRE/.test(idle.failure || '');
+  console.log(`  builder Night 3: ${builder.nightThree.peakEnemies} peak enemies / ${builder.nightThree.peakBreakers} Breakers, ${builder.nightThree.kills} kills, ${builder.nightThree.wallDamage} wall damage, gate ${builder.nightThree.gateHp} HP, Hunter ${builder.nightThree.playerHp} HP; keep Lv${builder.keepLevel} ${builder.keepHp} HP, soldiers ${builder.survivors}, buildings ${builder.buildings.join(',') || 'none'}, gateBuilt=${builder.gateBuilt}; ${builder.phase}`);
+  // Balance target (M1 rebuild, K1): doing nothing must not win; an engaged
+  // builder must. idle loses because the keep falls.
+  const idleLoses = !idle.complete && /KEEP/.test(idle.failure || '');
   console.log(`  ${idleLoses ? 'PASS' : 'FAIL'}  idle (no input, no builds) does not survive: ${idle.phase} on Night ${idle.day} (${idle.failure || 'no failure'})`);
-  console.log(`  ${builder.complete ? 'PASS' : 'FAIL'}  engaged builder survives Night 3 (Flare ×${builder.flares}, Perapian Lv${builder.perapianLevel}, oil ${builder.oil})`);
+  console.log(`  ${builder.complete ? 'PASS' : 'FAIL'}  engaged builder survives Night 3 (Flare ×${builder.flares}, keep Lv${builder.keepLevel} at ${builder.keepHp} HP, gold ${builder.gold})`);
   const pass = waveSchedulePass && lightEffectsPass && survivalMovementPass && breakerTargetsWall && gapRegressionPass
     && doorSolidPass && siegeLightPass && fireOutPass && breakerRetargetPass
     && hunterAutoShot && hunterRealLos && hunterSkill
-    && idleLoses && builder.complete && builder.perapianLevel === 3
-    && builder.queueLockVerified && builder.sawmillBuilt && builder.gateBuilt && builder.shelterBuilt
-    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && builder.upgrades.map((item) => item.level).join(',') === '1,2,3';
-  console.log(`  ${pass ? 'PASS' : 'FAIL'}  three-day loop, Perapian Lv1→Lv3, one builder queue, idle loses / engaged builder wins`);
+    && idleLoses && builder.complete && builder.keepLevel === 3
+    && builder.queueLockVerified && builder.sawmillBuilt && builder.gateBuilt && builder.barracksBuilt
+    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass
+    && builder.upgrades[0].level === 1 && builder.upgrades[0].rooms === 5
+    && builder.upgrades[builder.upgrades.length - 1].level === 3 && builder.upgrades[builder.upgrades.length - 1].rooms === 11
+    && builder.upgrades.every((item, i, all) => i === 0 || item.level >= all[i - 1].level);
+  console.log(`  ${pass ? 'PASS' : 'FAIL'}  three-day loop, keep Lv${builder.upgrades.map((item) => item.level).join('→')} (banner ${builder.upgrades.map((item) => item.rooms).join('→')} rooms), one builder queue, idle loses / engaged builder wins`);
   if (!pass) process.exitCode = 1;
   window.localStorage.removeItem('lastnight.save.v1');
 }

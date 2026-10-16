@@ -155,9 +155,7 @@ export class Enemy {
       const wd = Math.hypot(this.x - ward.x, this.y - ward.y);
       if (wd < ward.r) speed *= lerp(0.5, 1, clamp(wd / ward.r, 0, 1));
     }
-    if (game.mode === 'survival' && game.survival && game.survival.isLit(this.x, this.y)) {
-      speed *= game.survival.tuning.lightMoveMul;
-    }
+    // (Survival K1: the keep's banner never slows a body — see survival.js)
     // gentle wall-following: nudge the desired angle if the last frame was blocked
     let ang = a;
     if (this.stuckT > 0.25) ang += Math.sin(game.time * 2.2 + this.id) * 0.9 * clamp(this.stuckT, 0, 1);

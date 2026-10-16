@@ -184,14 +184,17 @@ export const defaultSave = () => ({
   fortressLevel: 0,         // the house's visible state, derived from the track
   // The new route owns a parallel save namespace; legacy hunt/IAP fields are
   // retained untouched and remain available through ?legacy=1.
+  // The purse (gold), the keep's level/HP and the starting wood/soldiers come
+  // from SurvivalMode's own fresh progress: they are deliberately NOT
+  // defaulted here, so a pre-K1 save's `oil` / `perapianLevel` can still be
+  // told apart and migrated (deepMerge lays these defaults under the save).
   survival: {
     initialized: false, day: 1, phase: 'night', elapsed: 0, nightDuration: 72,
-    oil: 38, wood: 26, survivors: 2, perapianLevel: 1,
     buildings: {}, gateBuilt: false, gateHp: 0, builderJob: null,
     selectedRoom: null, nightsCompleted: 0, waveIndex: 0, breakerIndex: 0,
-    individualIndex: 0, oilBurned: 0, siegeTimers: {}, nightStats: { kills: 0, hits: 0, damageToWalls: 0, drained: 0 },
+    individualIndex: 0, siegeTimers: {}, nightStats: { kills: 0, hits: 0, damageToWalls: 0, keepDamage: 0, mined: 0 },
     lastRewards: null, rewardAck: 0, player: null, entrances: null, enemies: [],
-    hints: {}, // FTUE chips already shown (move, auto, light, fire, flare, build)
+    hints: {}, // FTUE chips already shown (move, auto, banner, keep, flare, build, ...)
   },
 });
 

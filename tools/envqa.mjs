@@ -189,17 +189,18 @@ async function survivalFtueSection() {
       return {
         mode: g.mode, screen: g.screen, day: g.survival.day, phase: g.survival.phase,
         elapsed: +g.survival.elapsed.toFixed(2), duration: g.survival.nightDuration,
-        resources: { oil: Math.floor(g.survival.oil), wood: Math.floor(g.survival.wood) },
+        resources: { gold: Math.floor(g.survival.gold), wood: Math.floor(g.survival.wood) },
         ui: g.ui.map((item) => item.label), coach: !!g.coach, narration: !!g.narration,
         swarm: g.enemies.filter((item) => item._survivalType === 'swarm' && !item.dead).length,
         riggedCrowd, proxyCrowd: [...world.survivalCrowdProxies.values()].filter((item) => item.visible).length,
-        fireRadius: Math.round(g.survival.getFireRadius()),
-        radiusMesh: world.survivalRadiusRing ? Math.round(world.survivalRadiusRing.scale.x) : 0,
+        keepHp: Math.round(g.survival.keepHp),
+        keepMesh: !!(world.survivalKeep && world.survivalKeep.visible),
+        territoryPlanes: world.diagnostics().survivalTerritoryRooms,
         renderMode: world.diagnostics().mode,
       };
     });
     checkpoints.push({ seconds, file: path.relative(ROOT, file), advance, state });
-    console.log(`  CAPTURE ${seconds}s (sim ${state.elapsed}s, ${advance.steps} fixed steps) — ${file}; swarm=${state.swarm}, rendered crowd=${state.riggedCrowd + state.proxyCrowd}, radius=${state.fireRadius}`);
+    console.log(`  CAPTURE ${seconds}s (sim ${state.elapsed}s, ${advance.steps} fixed steps) — ${file}; swarm=${state.swarm}, rendered crowd=${state.riggedCrowd + state.proxyCrowd}, keep=${state.keepHp} HP (3D ${state.keepMesh}), banner rooms=${state.territoryPlanes}`);
   };
   await capture(0.2, 'survival-ftue-00s.png');
   await capture(15, 'survival-ftue-15s.png');
@@ -208,7 +209,7 @@ async function survivalFtueSection() {
   check(final.mode === 'survival' && final.screen === 'playing' && final.day === 1 && final.phase === 'night',
     'the default route reaches playable Night 1 directly (no menu, intro or narration)');
   check(final.ui.length === 1 && final.ui[0] === 'PAUSE' && !final.coach && !final.narration,
-    `Night-1 icon HUD registers only PAUSE as a tap target (oil/guard/enemy counters, night clock, Perapian badge and fuel bar are read-only; legacy coach/narration hidden; UI=${final.ui.join(',')})`);
+    `Night-1 icon HUD registers only PAUSE as a tap target (gold/guard/enemy counters, night clock and the keep's bar are read-only; legacy coach/narration hidden; UI=${final.ui.join(',')})`);
   const readable = await playfieldLuma(path.join(evidenceDir, 'survival-ftue-15s.png'));
   checkpoints.find((row) => row.seconds === 15).luma = readable;
   check(readable.meanLuma >= 40 && readable.darkPct <= 45,
@@ -216,33 +217,39 @@ async function survivalFtueSection() {
   check(final.elapsed >= 30 && final.duration >= 60 && final.duration <= 90,
     `the first 30 playable seconds stay in the configurable ${final.duration}s night`);
   check(final.swarm > 0 && final.renderMode === 'webgl-3d'
-    && final.radiusMesh > 0 && final.riggedCrowd + final.proxyCrowd > 0,
-  `the full 3D house, Perapian radius and crowd are visible (${final.riggedCrowd} GLB + ${final.proxyCrowd} silhouette actors)`);
+    && final.keepMesh && final.territoryPlanes === 5 && final.riggedCrowd + final.proxyCrowd > 0,
+  `the full 3D house, the 3D keep, its banner's 5 rooms and the crowd are visible (${final.riggedCrowd} GLB + ${final.proxyCrowd} silhouette actors)`);
 
   const radiusTest = await page.evaluate(() => {
     const g = window.__LN, world = window.__survWorld;
+    const m = g.survival;
     g.screen = 'playing';
     g.uiPanel = 'survival-day';
-    g.survival.phase = 'day';
-    g.survival.elapsed = 0;
-    g.survival.oil = 50; g.survival.wood = 50; g.survival.oilBurned = 0;
-    g.survival.refreshFireplace(true);
-    const litBefore = g.survival.litRooms().length;
+    m.phase = 'day';
+    m.elapsed = 0;
+    m.lastRewards = null;
+    m.gold = 50; m.wood = 50;
+    // the Hunter stands at the keep: its contextual UPGRADE button shows
+    const home = m.hunterHome();
+    g.player.x = home.x; g.player.y = home.y;
+    const roomsBefore = m.territoryRooms().length;
     g.render();
-    const before = world.survivalRadiusRing ? world.survivalRadiusRing.scale.x : 0;
-    const button = g.ui.find((item) => item.label.startsWith('survival:UPGRADE'));
-    const clicked = !!(button && button.onClick && button.onClick());
-    const queued = g.survival.builderJob && g.survival.builderJob.targetLevel;
-    g.survival.updateDay(6);
+    const before = world.survivalKeep ? world.survivalKeep.userData.level : 0;
+    const planesBefore = world.diagnostics().survivalTerritoryRooms;
+    const button = g.ui.find((item) => item.label === 'survival:UPGRADE KEEP LV2');
+    const clicked = !!(button && button.onClick && (button.onClick(), true));
+    const queued = m.builderJob && m.builderJob.targetLevel;
+    m.updateDay(6);
     g.render();
     return {
-      clicked, queued, level: g.survival.perapianLevel,
-      before, after: world.survivalRadiusRing ? world.survivalRadiusRing.scale.x : 0,
-      litBefore, litAfter: g.survival.litRooms().length,
+      clicked, queued, level: m.keepLevel, hp: `${m.keepHp}/${m.keepHpMax()}`,
+      before, after: world.survivalKeep ? world.survivalKeep.userData.level : 0,
+      roomsBefore, roomsAfter: m.territoryRooms().length, planesBefore, planesAfter: world.diagnostics().survivalTerritoryRooms,
     };
   });
-  check(radiusTest.clicked && radiusTest.queued === 2 && radiusTest.level === 2 && radiusTest.after > radiusTest.before,
-    `a Perapian UI upgrade grows the visible 3D radius (${Math.round(radiusTest.before)} → ${Math.round(radiusTest.after)})`);
+  check(radiusTest.clicked && radiusTest.queued === 2 && radiusTest.level === 2 && radiusTest.after === 2 && radiusTest.before === 1
+    && radiusTest.roomsAfter > radiusTest.roomsBefore && radiusTest.planesAfter === radiusTest.roomsAfter,
+    `a keep upgrade through its UI button raises the 3D keep Lv${radiusTest.before} → Lv${radiusTest.after} (${radiusTest.hp}) and widens the banner ${radiusTest.roomsBefore} → ${radiusTest.roomsAfter} rooms (floor tint ${radiusTest.planesBefore} → ${radiusTest.planesAfter})`);
   const evidence = {
     title: 'Survival FTUE — first 30 playable seconds',
     capturedAt: new Date().toISOString(),

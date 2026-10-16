@@ -4,16 +4,16 @@
  * Plays the real SurvivalMode (Night 1 → Night 3) with three deterministic
  * bots and prints what happened each night:
  *   idle     no input at all; Hunter only auto-shoots; skips building
- *   active   defends (positions in the firelight, uses Flare), never builds
+ *   active   defends (holds beside the keep, uses Flare), never builds
  *   builder  active defence + spends every day on the builder queue
  *   passive-builder  builds every day but never moves or uses Flare
  *   flare    never moves, never builds, taps Flare on clusters
- *   fire-builder  active defence, but only ever upgrades the Perapian
- *   tower-builder active defence; one pump, then crossbow towers by the lit
- *                 outer doors, the Perapian and tower levels
+ *   keep-builder  active defence, but only ever raises the keep
+ *   tower-builder active defence; one mine, then a ballista on every ballista
+ *                 circle under the banner, the keep and ballista levels
  *
  *   node tools/survival-balance.mjs [--seeds=3] [--duration=72] [--bots=idle,active,builder] [--json=out.json] [--economy]
- *   bots: idle, active, flare, builder, passive-builder, fire-builder, hunter-builder, tower-builder
+ *   bots: idle, active, flare, builder, passive-builder, keep-builder, hunter-builder, tower-builder
  *
  * --economy prints every day decision with the purse before/after.
  * --no-rescue: the defending bots never help a fallen guard up.
@@ -23,9 +23,9 @@
  *   2026-10-15 this printed the count after the dawn repair, so every won
  *   night read br0); gd fallen guards, gr helped up, gl lost.
  * Diagnostics (print and exit): --debug (6 s snapshots of enemy states/doors),
- * --layout (rooms + entrances), --navprobe (hearth flow-field distances per
+ * --layout (rooms + entrances), --navprobe (keep flow-field distances per
  * door/room), --cellprobe=x,y (nav cells/solids around a point),
- * --walkprobe=x,y (one breached Swarm body walking to the hearth).
+ * --walkprobe=x,y (one breached Swarm body walking to the keep).
  *
  * This is a measurement tool, not a gate: the balance target (idle should not
  * reliably win three nights, an engaged player should) is reported, and the
@@ -111,15 +111,15 @@ function debugDump(game) {
   }
   const doors = game.mansion.entrances.filter((e) => e.exterior && e.kind === 'door').map((e) => `${e.id}:${e.broken ? 'X' : Math.round(e.hp)}`).join(' ');
   const sample = live.filter((e) => e.roomId !== ROOM.OUTSIDE).slice(0, 4).map((e) => {
-    const d = mode.flowDir('hearth', e.x, e.y);
+    const d = mode.flowDir('keep', e.x, e.y);
     return `(${Math.round(e.x)},${Math.round(e.y)} v${Math.round(Math.hypot(e.vx, e.vy))} dir${d ? d.x.toFixed(2) + ',' + d.y.toFixed(2) : 'null'})`;
   }).join(' ');
-  console.log(`  t=${mode.elapsed.toFixed(1)} oil=${mode.oil.toFixed(1)} ${doors}\n    ${JSON.stringify(rows)}\n    ${sample}`);
+  console.log(`  t=${mode.elapsed.toFixed(1)} keep=${Math.round(mode.keepHp)} ${doors}\n    ${JSON.stringify(rows)}\n    ${sample}`);
 }
 
 /** --economy: print every day decision with the purse before and after. */
 function traceEconomy(mode, kind, seed) {
-  const purse = () => `oil=${Math.floor(mode.oil)} wood=${Math.floor(mode.wood)} surv=${mode.survivors}`;
+  const purse = () => `gold=${Math.floor(mode.gold)} wood=${Math.floor(mode.wood)} surv=${mode.survivors} keep=${Math.round(mode.keepHp)}/${mode.keepHpMax()}`;
   const wrap = (name, label) => {
     const orig = mode[name].bind(mode);
     mode[name] = (...a) => {
@@ -155,7 +155,7 @@ function runOne(kind, seed) {
   while (guard++ < 60 * 60 * 30) {
     if (mode.phase === 'night' && !game.uiPanel) {
       if (!night) night = { day: mode.day, spawned: 0, peakAlive: 0, peakFeeders: 0, minHp: game.player.bloodMax, hpMax: game.player.bloodMax, hunter: mode.hunterLevel || 1, seen: new Set() };
-      if (kind === 'active' || kind === 'builder' || kind === 'fire-builder' || kind === 'hunter-builder' || kind === 'tower-builder') botNight(game, state, { ROOM, ISO_CAMERA });
+      if (kind === 'active' || kind === 'builder' || kind === 'keep-builder' || kind === 'hunter-builder' || kind === 'tower-builder') botNight(game, state, { ROOM, ISO_CAMERA });
       else if (kind === 'flare') {
         // stands still, only taps Flare when three or more are in reach
         release(game);
@@ -166,21 +166,21 @@ function runOne(kind, seed) {
       game.update(step);
       for (const e of game.enemies) if (e._survivalType && !night.seen.has(e)) { night.seen.add(e); night.spawned++; }
       night.peakAlive = Math.max(night.peakAlive, mode.aliveEnemies());
-      night.peakFeeders = Math.max(night.peakFeeders, mode.hearthFeeders);
+      night.peakFeeders = Math.max(night.peakFeeders, mode.keepAttackers);
       night.minHp = Math.min(night.minHp, Math.round(game.player.blood));
       night.kills = mode.nightStats.kills;
       night.towerShots = mode.nightStats.towerShots || 0;
       night.guardsDown = mode.nightStats.guardsDown || 0;
       night.rescued = mode.nightStats.rescued || 0;
       night.lostSoFar = mode.nightStats.lost || 0;
-      night.drained = Math.round(mode.nightStats.drained || 0);
-      night.oil = Math.round(mode.oil * 10) / 10;
+      night.drained = Math.round(mode.nightStats.keepDamage || 0);
+      night.oil = Math.round(mode.keepHp);
       night.elapsed = Math.round(mode.elapsed * 10) / 10;
       if (mode.phase === 'night') night.breaches = Math.max(night.breaches || 0, game.mansion.entrances.filter((e) => e.exterior && e.kind === 'door' && e.broken).length);
       if (args.debug && Math.floor(mode.elapsed / 6) !== state.lastDump) { state.lastDump = Math.floor(mode.elapsed / 6); debugDump(game); }
-      if (args.oiltrace && mode.elapsed < 9 && Math.floor(mode.elapsed) !== state.lastOil) {
+      if ((args.keeptrace || args.oiltrace) && mode.elapsed < 9 && Math.floor(mode.elapsed) !== state.lastOil) {
         state.lastOil = Math.floor(mode.elapsed);
-        console.log(`  N${mode.day} t=${mode.elapsed.toFixed(2)} oil=${mode.oil.toFixed(2)} feeders=${mode.hearthFeeders} drained=${(mode.nightStats.drained || 0).toFixed(1)}`);
+        console.log(`  N${mode.day} t=${mode.elapsed.toFixed(2)} keep=${mode.keepHp.toFixed(1)} attackers=${mode.keepAttackers} damage=${(mode.nightStats.keepDamage || 0).toFixed(1)}`);
       }
       continue;
     }
@@ -194,7 +194,7 @@ function runOne(kind, seed) {
       release(game);
     }
     if (mode.phase === 'day') {
-      botDay(game, kind === 'builder' || kind === 'passive-builder' ? 'builder' : kind === 'fire-builder' ? 'fire' : kind === 'hunter-builder' ? 'hunter' : kind === 'tower-builder' ? 'tower' : 'idle');
+      botDay(game, kind === 'builder' || kind === 'passive-builder' ? 'builder' : kind === 'keep-builder' ? 'keep' : kind === 'hunter-builder' ? 'hunter' : kind === 'tower-builder' ? 'tower' : 'idle');
       game.update(step);
       continue;
     }
@@ -203,7 +203,7 @@ function runOne(kind, seed) {
   return {
     kind, seed, complete: mode.phase === 'complete', phase: mode.phase,
     failure: mode.phase === 'failed' ? mode.failureReason : null,
-    perapian: mode.perapianLevel, hunter: mode.hunterLevel || 1, survivors: mode.survivors,
+    perapian: mode.keepLevel, hunter: mode.hunterLevel || 1, survivors: mode.survivors,
     buildings: { ...mode.buildings }, buildingLevels: { ...(mode.buildingLevels || {}) }, gate: mode.gateBuilt,
     nights, ms: Math.round(performance.now() - t0),
   };
@@ -226,8 +226,8 @@ if (args.walkprobe) {
   for (let i = 0; i < 60 * 30; i++) {
     body.update(1 / 60, game);
     if (i % 30 === 0) {
-      const d = mode.flowDir('hearth', body.x, body.y);
-      console.log((i / 60).toFixed(1), Math.round(body.x), Math.round(body.y), m.findRoom(body.x, body.y), body.state, 'v', Math.round(Math.hypot(body.vx, body.vy)), 'dir', d ? d.x.toFixed(2) + ',' + d.y.toFixed(2) : null, 'lit', mode.isLit(body.x, body.y));
+      const d = mode.flowDir('keep', body.x, body.y);
+      console.log((i / 60).toFixed(1), Math.round(body.x), Math.round(body.y), m.findRoom(body.x, body.y), body.state, 'v', Math.round(Math.hypot(body.vx, body.vy)), 'dir', d ? d.x.toFixed(2) + ',' + d.y.toFixed(2) : null, 'banner', mode.inTerritory(body.x, body.y));
     }
   }
   process.exit(0);
@@ -252,7 +252,7 @@ if (args.cellprobe) {
     e.broken = true; e.open = true; m.refreshNavAround(e);
   }
   mode._fields.clear();
-  const f = mode._field('hearth');
+  const f = mode._field('keep');
   const [px, py] = String(args.cellprobe).split(',').map(Number);
   const gx0 = Math.floor((px - m.navX0) / m.navCell), gy0 = Math.floor((py - m.navY0) / m.navCell);
   console.log('room at point', m.findRoom(px, py));
@@ -277,8 +277,8 @@ if (args.navprobe) {
   const game = new Game(makeCanvas(), { mode: 'survival', nightDuration: DURATION });
   const mode = game.survival;
   const m = game.mansion;
-  const fire = mode.hearth();
-  const field = mode._field('hearth');
+  const fire = mode.keep();
+  const field = mode._field('keep');
   const cellD = (x, y) => {
     const gx = Math.floor((x - m.navX0) / m.navCell), gy = Math.floor((y - m.navY0) / m.navCell);
     if (gx < 0 || gy < 0 || gx >= m.navW || gy >= m.navH) return 'off';
@@ -290,7 +290,7 @@ if (args.navprobe) {
     e.broken = true; e.open = true; m.refreshNavAround(e);
   }
   mode._fields.clear();
-  const f2 = mode._field('hearth');
+  const f2 = mode._field('keep');
   for (const e of m.entrances.filter((d) => d.exterior && d.kind === 'door')) {
     const ins = e.inside || e, out = e.outside || e;
     const gx = Math.floor((ins.x - m.navX0) / m.navCell), gy = Math.floor((ins.y - m.navY0) / m.navCell);
@@ -310,9 +310,9 @@ for (const kind of BOTS) {
   for (let i = 0; i < SEEDS; i++) {
     const r = runOne(kind, 20261012 + i * 7919);
     results.push(r);
-    const line = r.nights.map((n) => `N${n.day}:${n.result === 'OK' ? 'ok' : 'FAIL'} H${n.hunter} sp${n.spawned} pk${n.peakAlive} k${n.kills} feed${n.peakFeeders} drain${n.drained} oil${n.oil} hp${n.minHp}/${n.hpMax} br${n.breaches}${n.towerShots ? ` tw${n.towerShots}` : ''}${n.guardsDown ? ` gd${n.guardsDown} gr${n.rescued} gl${n.lost}` : ''}${n.result === 'OK' ? '' : ' @' + n.elapsed + 's ' + n.result.slice(5)}`).join(' | ');
+    const line = r.nights.map((n) => `N${n.day}:${n.result === 'OK' ? 'ok' : 'FAIL'} H${n.hunter} sp${n.spawned} pk${n.peakAlive} k${n.kills} atk${n.peakFeeders} kd${n.drained} keep${n.oil} hp${n.minHp}/${n.hpMax} br${n.breaches}${n.towerShots ? ` tw${n.towerShots}` : ''}${n.guardsDown ? ` gd${n.guardsDown} gr${n.rescued} gl${n.lost}` : ''}${n.result === 'OK' ? '' : ' @' + n.elapsed + 's ' + n.result.slice(5)}`).join(' | ');
     const levels = Object.entries(r.buildings).map(([roomId, type]) => `${type}${r.buildingLevels[roomId] || 1}`).join(',') || '-';
-    console.log(`${kind.padEnd(8)} seed${i} ${r.complete ? 'WIN ' : 'LOSS'} Lv${r.perapian} H${r.hunter} S${r.survivors} [${levels}${r.gate ? ',gate' : ''}] ${line} (${r.ms}ms)`);
+    console.log(`${kind.padEnd(8)} seed${i} ${r.complete ? 'WIN ' : 'LOSS'} K${r.perapian} H${r.hunter} S${r.survivors} [${levels}${r.gate ? ',gate' : ''}] ${line} (${r.ms}ms)`);
   }
 }
 const summary = {};

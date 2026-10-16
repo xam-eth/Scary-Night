@@ -41,6 +41,7 @@ export class Input {
     };
     this.touchSeen = false;
     this.gameplay = false;   // set by Game — stick must not swallow menu clicks
+    this.stickBlock = null;  // (p) => true over a HUD button: a tap there never grabs the stick
     // Survival: a floating stick that starts wherever the thumb lands (except
     // the top HUD band and the buttons). Legacy keeps its left-half zone.
     this.stickAnywhere = false;
@@ -161,7 +162,7 @@ export class Input {
       }
       // Left thumb zone moves. The right half aims and claws, so a drag never
       // swings and a keyboard player can still point with the mouse.
-      const moveZone = this._stickZone(p, c, 0.46, 0.2);
+      const moveZone = this._stickZone(p, c, 0.46, 0.2) && !(this.stickBlock && this.stickBlock(p));
       if (this.gameplay && moveZone && !this.stick.active) {
         this.stick.active = true;
         this.stick.pointer = true;
@@ -194,7 +195,7 @@ export class Input {
         if (!this.gameplay) continue;
         const b = this._hitButton(p);
         if (b) { this.buttons[b].down = true; this.buttons[b].pulse = 1; this.buttons[b].id = t.identifier; continue; }
-        if (!this.stick.active && this._stickZone(p, c, 0.5, 0.18)) {
+        if (!this.stick.active && this._stickZone(p, c, 0.5, 0.18) && !(this.stickBlock && this.stickBlock(p))) {
           this.stick.active = true; this.stick.pointer = false; this.stick.id = t.identifier;
           this.stick.ox = p.x; this.stick.oy = p.y;
           this.stick.x = p.x; this.stick.y = p.y;

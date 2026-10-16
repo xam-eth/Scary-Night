@@ -768,12 +768,19 @@ export class Game {
     // (survivalWorldReady is only ever set by a real render; node harnesses
     // that never render are unaffected.)
     const worldHeld = this.survivalWorldReady === false && this.screen === 'playing';
-    this.input.gameplay = !worldHeld && this.screen === 'playing' && this.survival.phase === 'night' && !this.uiPanel;
+    // Day (K1, P1): the Hunter walks between build circles, so the stick is
+    // live by day too — except under the dawn reward card.
+    const mode = this.survival;
+    const night = mode.phase === 'night' && !this.uiPanel;
+    const day = mode.phase === 'day' && !mode.rewardPending();
+    this.input.gameplay = !worldHeld && this.screen === 'playing' && (night || day);
+    // a thumb that lands on a HUD button presses it; it does not grab the stick
+    if (!this.input.stickBlock) this.input.stickBlock = (p) => this.ui.some((item) => !item.passive && p.x > item.x && p.x < item.x + item.w && p.y > item.y && p.y < item.y + item.h);
     const b = this.input.buttons;
     // Survival shoots automatically; the red attack button was a second,
     // redundant thumb target (keyboard F still forces a shot).
     b.attack.hidden = true;
-    b.interact.hidden = !this.input.gameplay;
+    b.interact.hidden = !(this.input.gameplay && night);
     b.run.hidden = true;
     b.dash.hidden = true;
     b.repair.hidden = true;
@@ -1743,9 +1750,23 @@ export class Game {
     if (this.mode === 'survival') {
       this.spawnWeaponFx(player, tool);
       if (tool.kind === 'ranged') {
-        // the Hunter's level sets the bolt (Survival's own track, bought by day)
-        const damage = this.survival && this.survival.hunterDamage ? this.survival.hunterDamage() : tool.damage;
-        this.spawnBolt(player, player.swingAngle || player.angle || 0, { ...tool, damage });
+        // the Hunter's level sets the bolt (Survival's own track, bought by
+        // day): Lv2 runs on through a body, Lv3 fires a fan of three
+        const st = this.survival && this.survival.hunterStats ? this.survival.hunterStats() : null;
+        const damage = st ? st.damage : tool.damage;
+        const fan = st ? Math.max(1, st.fan || 1) : 1;
+        const base = player.swingAngle || player.angle || 0;
+        for (let i = 0; i < fan; i++) {
+          const spread = fan > 1 ? (i - (fan - 1) / 2) * 0.17 : 0;
+          const bolt = this.spawnBolt(player, base + spread, { ...tool, damage, boltPierce: st ? st.pierce || 0 : 0 });
+          if (bolt) bolt.hunter = true;
+        }
+        // muzzle flash + a kick back: the shot has weight
+        const mx = player.x + Math.cos(base) * 26, my = player.y + Math.sin(base) * 26;
+        this.particles.burst('spark', mx, my, 5, {
+          color: 'rgba(255,236,170,0.95)', sizeMin: 1.5, sizeMax: 4, speedMin: 60, speedMax: 170, lifeMin: 0.06, lifeMax: 0.16, glow: true,
+        });
+        player.vx -= Math.cos(base) * 40; player.vy -= Math.sin(base) * 40;
         this.stats.shotsFired = (this.stats.shotsFired || 0) + 1;
       }
       return;
@@ -2803,7 +2824,8 @@ export class Game {
     this.uiPanel = this.survival.phase === 'day' ? 'survival-day'
       : this.survival.phase === 'complete' ? 'survival-complete'
         : this.survival.phase === 'failed' ? 'survival-failed' : null;
-    this.input.gameplay = this.survival.phase === 'night' && !this.uiPanel;
+    this.input.gameplay = (this.survival.phase === 'night' && !this.uiPanel)
+      || (this.survival.phase === 'day' && !this.survival.rewardPending());
   }
 
   /** Pause exists during play: a night, or a day with no reward modal up.

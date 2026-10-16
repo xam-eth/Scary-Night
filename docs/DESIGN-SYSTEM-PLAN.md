@@ -2,7 +2,7 @@
 
 **Tanggal:** 2026-10-16 (Asia/Makassar) · **Revisi 2**
 
-**Status:** DRAFT untuk diskusi. **Belum ada perubahan kode game.** Permintaan user: brainstorming dan design system plan dulu, koding setelah disetujui.
+**Status:** arah disetujui. **K1 terimplementasi sebagai vertical slice (2026-10-16)** setelah user menyetujui semua rekomendasi dan meminta "pastikan dunianya 3D". Detail implementasi, QA, tuning yang berbeda dari dokumen ini, dan hal yang belum ada ada di `docs/REBUILD-ROADMAP.md` (bagian "K1 Benteng Terakhir — implementasi"). Acceptance manusia/perangkat belum ada.
 
 **Yang sudah diputuskan user:**
 - Game **landscape only**. `manifest.webmanifest` sudah `orientation: landscape`; layout portrait tidak lagi menjadi target desain.
@@ -12,7 +12,7 @@
   - konsep **K1 "Benteng Terakhir"**;
   - pola build **P1: jalan ke lingkaran + `BUILD`** (Duck Survival);
   - nada visual **dark stylized, seperti sekarang**.
-  - Spesifikasi awal K1 ada di §3.4. Aturan pengganti di §3.4.5 masih **usulan** dan perlu konfirmasi sebelum koding.
+  - Spesifikasi awal K1 ada di §3.4. Aturan pengganti di §3.4.5 dan 8 keputusan di §13 **disetujui user (2026-10-16)**, dengan syarat tambahan: dunia harus 3D.
 
 **Gambar konsep:** `docs/concepts/` berisi moodboard yang dibuat AI (generate image) untuk brainstorming.
 - Gambar ini **bukan aset game** dan tidak masuk build.
@@ -224,7 +224,7 @@ Perubahan ini menyentuh aturan inti, save (`save.survival`), harness, bot balanc
 
 **Dipilih user (2026-10-16):** K1 + pola build P1 + nada dark stylized seperti sekarang.
 - Angka di bawah adalah **titik awal**; semuanya diuji ulang di balance pass.
-- Aturan pengganti (§3.4.5) adalah **usulan** sampai dikonfirmasi user.
+- Aturan pengganti (§3.4.5) **disetujui user** dan terimplementasi. Yang berubah setelah balance bot: damage cakaran ke menara 12/36/72 (−25%) dan urutan pintu Night 1 `chapel → cellar → front`.
 
 ![Mockup K1 — siang, dark stylized](concepts/k1-mockup-dark-day.jpg)
 
@@ -316,7 +316,7 @@ HP per level ditentukan di balance pass. Angka awal untuk diuji: 600 / 900 / 120
 
 #### 3.4.6 Lingkaran bangun per ruangan
 
-Data model sekarang: setiap ruangan punya **1 slot bangunan + 1 slot menara** (dekat pintu luar ruangan). P1 memetakannya menjadi:
+Data model lama: **1 slot bebas per ruangan** (jenis apa pun, termasuk menara). K1 (terimplementasi) memetakannya menjadi:
 - **lingkaran bangunan** (ekonomi/pasukan);
 - **lingkaran menara** (hanya di ruangan yang punya pintu luar, dekat pintu tersebut).
 
@@ -871,7 +871,7 @@ Target usulan, arah **"horde power fantasy"**:
 |---|---|---|---|
 | 0. Keputusan | Konsep, pola build, nada visual | Tidak | **Selesai 2026-10-16:** K1 + P1 + dark stylized |
 | 1. Artefak desain | Konfirmasi aturan §3.4.5 + keputusan §13; mockup K1 siang (sudah: `k1-mockup-dark-day.jpg`) + malam + pratinjau + upgrade + fajar; sketsa Menara Utama 3 level × 5 status; sheet ikon (emas, menara utama, lingkaran, chevron, bulan/matahari/petir, panji bantuan); storyboard intro K1 | Tidak | User menyetujui mockup + aturan |
-| 2. Vertical slice | Menara Utama di Main Hall + HP + 5 status; Hunter berjalan di siang hari + lingkaran menara (P1) end-to-end; layout landscape; juice tembakan; intro K1 | Ya, setelah disetujui | Tes 3 pertanyaan ≥ 4/5; tes lingkaran ≥ 4/5; harness/devqa/layoutqa hijau; tombol kontekstual di zona jempol, tanpa panel di 844×390 |
+| 2. Vertical slice | Menara Utama di Main Hall + HP + 5 status; Hunter berjalan di siang hari + lingkaran bertipe (P1) end-to-end; layout landscape; juice tembakan; intro K1. **Terimplementasi 2026-10-16** (semua lingkaran, bukan hanya menara; intro baru berupa banner) | Ya | Tes 3 pertanyaan ≥ 4/5; tes lingkaran ≥ 4/5; harness/devqa/layoutqa hijau; tombol kontekstual di zona jempol, tanpa panel di 844×390 |
 | 3. Roll-out | Semua bangunan & upgrade; kredit fajar; level jantung; TTK + balance pass; migrasi save | Ya | Bot + playtest manusia; 0 regresi QA |
 | 4. Produksi | Art pass dunia, audio, performa perangkat | Ya | Target 60 fps / minimum 30 fps di perangkat mid-range; review visual di perangkat |
 
@@ -893,7 +893,7 @@ Status acceptance di roadmap tetap berlaku. Dokumen ini tidak mengklaim apa pun 
 4. Pola build **P1: jalan ke lingkaran + `BUILD`** (2026-10-16).
 5. Nada visual **dark stylized seperti sekarang** (2026-10-16).
 
-**Perlu konfirmasi sebelum koding** (rekomendasi di dalam kurung):
+**Dikonfirmasi user (2026-10-16): semua rekomendasi** (yang dipilih ada di dalam kurung; semuanya sudah ada di kode):
 
 1. **Posisi Menara Utama:** tengah Main Hall (rekomendasi) / halaman luar dengan level baru (§3.4.2).
 2. **Pengganti aturan cahaya:** wilayah panji ×1.5 tanpa perlambatan (rekomendasi) / hapus total / pertahankan ketiga efek sebagai "moral" (§3.4.5).

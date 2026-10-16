@@ -1,6 +1,6 @@
 {
   "title": "Survival FTUE — first 30 playable seconds",
-  "capturedAt": "2026-10-15T07:21:43.565Z",
+  "capturedAt": "2026-10-16T00:15:03.660Z",
   "viewport": {
     "width": 390,
     "height": 844,
@@ -24,7 +24,7 @@
         "elapsed": 0.2,
         "duration": 72,
         "resources": {
-          "oil": 37,
+          "gold": 38,
           "wood": 26
         },
         "ui": [
@@ -35,8 +35,9 @@
         "swarm": 0,
         "riggedCrowd": 0,
         "proxyCrowd": 0,
-        "fireRadius": 979,
-        "radiusMesh": 979,
+        "keepHp": 600,
+        "keepMesh": true,
+        "territoryPlanes": 5,
         "renderMode": "webgl-3d"
       }
     },
@@ -55,7 +56,7 @@
         "elapsed": 15,
         "duration": 72,
         "resources": {
-          "oil": 35,
+          "gold": 38,
           "wood": 26
         },
         "ui": [
@@ -66,13 +67,14 @@
         "swarm": 21,
         "riggedCrowd": 14,
         "proxyCrowd": 7,
-        "fireRadius": 916,
-        "radiusMesh": 916,
+        "keepHp": 600,
+        "keepMesh": true,
+        "territoryPlanes": 5,
         "renderMode": "webgl-3d"
       },
       "luma": {
-        "meanLuma": 79.6,
-        "darkPct": 7.4
+        "meanLuma": 72,
+        "darkPct": 11.2
       }
     },
     {
@@ -90,7 +92,7 @@
         "elapsed": 30,
         "duration": 72,
         "resources": {
-          "oil": 33,
+          "gold": 38,
           "wood": 26
         },
         "ui": [
@@ -101,8 +103,9 @@
         "swarm": 40,
         "riggedCrowd": 14,
         "proxyCrowd": 26,
-        "fireRadius": 853,
-        "radiusMesh": 853,
+        "keepHp": 600,
+        "keepMesh": true,
+        "territoryPlanes": 5,
         "renderMode": "webgl-3d"
       }
     }
@@ -111,9 +114,12 @@
     "clicked": true,
     "queued": 2,
     "level": 2,
-    "before": 980,
-    "after": 1560,
-    "litBefore": 5,
-    "litAfter": 7
+    "hp": "900/900",
+    "before": 1,
+    "after": 2,
+    "roomsBefore": 5,
+    "roomsAfter": 8,
+    "planesBefore": 5,
+    "planesAfter": 8
   }
 }
