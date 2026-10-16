@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-10-16T09:12:04.183Z",
+  "capturedAt": "2026-10-16T12:56:33.786Z",
   "results": [
     {
       "name": "boot: the night clock waits for the 3D house",
@@ -76,19 +76,19 @@
         "guards": 2,
         "visibleGuardMeshes": 2,
         "boltObjects": 3,
-        "shots": 51
+        "shots": 53
       }
     },
     {
       "name": "pooling: bolt meshes do not grow with every shot",
       "pass": true,
       "detail": {
-        "shots": 51,
+        "shots": 53,
         "boltObjectsInScene": 3
       }
     },
     {
-      "name": "guards: a fallen pawn lies flat on a red ring; helped up it stands on its blue ring",
+      "name": "guards: a fallen guard lies down on a red ring; helped up it stands on its blue ring",
       "pass": true,
       "detail": {
         "down": {
@@ -97,14 +97,22 @@
           "figureY": 9,
           "ring": "ff4a3d",
           "xray": "ff4a3d",
-          "hud": "1/2"
+          "hud": "1/2",
+          "troop": {
+            "state": "down",
+            "visible": true
+          }
         },
         "up": {
           "down": false,
           "hp": 20,
           "figureRotX": 0,
-          "ring": "5ab8ff"
-        }
+          "ring": "5ab8ff",
+          "troop": {
+            "state": "up"
+          }
+        },
+        "glb": true
       }
     },
     {
@@ -116,11 +124,11 @@
         "model": true,
         "at": [
           64,
-          813
+          528
         ],
         "spot": [
           64,
-          813
+          528
         ],
         "ring": true,
         "ringR": 520
@@ -149,8 +157,8 @@
       "name": "framing: landscape night zoom matches portrait (short-side framing)",
       "pass": true,
       "detail": {
-        "portrait": 0.466,
-        "landscape": 0.466,
+        "portrait": 0.596,
+        "landscape": 0.596,
         "flare": [
           794,
           330,
@@ -211,11 +219,11 @@
       "detail": {
         "before": {
           "t": 15.08,
-          "alive": 20
+          "alive": 19
         },
         "after": {
           "t": 15.16,
-          "alive": 20,
+          "alive": 19,
           "phase": "night"
         }
       }
@@ -226,16 +234,16 @@
       "detail": {
         "cine": {
           "kind": "intro",
-          "t": 0.25
+          "t": 0.43
         },
-        "t": 1.15,
+        "t": 1.33,
         "elapsed": [
           2.88,
           2.88
         ],
         "horde": 21,
         "still": true,
-        "closeUp": 2.24,
+        "closeUp": 2.2,
         "caption": "PROTECT THE KEEP",
         "labels": [
           "survival:SKIP"
@@ -268,7 +276,7 @@
         "cine": false,
         "phase": "night",
         "panel": null,
-        "elapsed": 4.38
+        "elapsed": 4.6
       }
     },
     {

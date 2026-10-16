@@ -6,14 +6,17 @@
  */
 import * as THREE from '../vendor/three/three.module.min.js';
 import { ISO_CAMERA, clamp, visualAngle } from '../core/util.js';
-import { EnvKit, PIECE_METRES, PX_PER_METRE, VALEN_METRES } from './envkit.js';
+import { EnvKit, PIECE_METRES, PX_PER_METRE, SURVIVAL_ACTOR_SCALE, VALEN_METRES } from './envkit.js';
 import { Valen3D } from './valen3d.js';
 import { Enemy3D, ENEMY_HEIGHT } from './enemy3d.js';
+import { Troop3D } from './troop3d.js';
 import { ROOM_MARKS } from './narrative.js';
 import { ROOM } from './mansion.js';
 import { weaponById } from './weapons.js';
 
 const VERTICAL_PROJECTION = Math.sqrt(1 - ISO_CAMERA.tilt * ISO_CAMERA.tilt);
+/** A GLB guard's standing height, world px before SURVIVAL_ACTOR_SCALE (the captain is 1.7 m = ~88). */
+const GUARD_TROOP_HEIGHT = 84;
 const PARTICLE_VERTEX_SHADER = `
   attribute vec3 aColor;
   attribute float aAlpha;
@@ -672,7 +675,7 @@ class World3DRuntime {
       this.playerProxy.visible = true;
       this.playerProxy.position.set(player.x, 0, player.y);
       this.playerProxy.rotation.y = Math.PI / 2 - player.angle;
-      const height = VALEN_METRES * PX_PER_METRE;
+      const height = VALEN_METRES * PX_PER_METRE * (game.mode === 'survival' ? SURVIVAL_ACTOR_SCALE : 1);
       this.playerProxy.scale.set(height, height, height);
       active.add('player');
     }
@@ -681,6 +684,7 @@ class World3DRuntime {
     Enemy3D.assign(enemies, player, {
       full3D: true,
       includeCrowd: game.mode === 'survival',
+      actorScale: game.mode === 'survival' ? SURVIVAL_ACTOR_SCALE : 1,
       verticalProjection: VERTICAL_PROJECTION,
       host: { stage: this.root, scene: this.scene, renderer: EnvKit.renderer, camera: EnvKit.camera, canvas: EnvKit.canvas },
     });
@@ -733,6 +737,14 @@ class World3DRuntime {
       matrix: new THREE.Matrix4(),
     };
     this.survivalCrowdInstances.eyes.castShadow = false;
+    // a per-body colour so a hit body flashes bright (set before the first
+    // draw, so the instancing-colour program is compiled from the start)
+    const white = new THREE.Color(1, 1, 1);
+    for (let i = 0; i < cap; i++) {
+      this.survivalCrowdInstances.torso.setColorAt(i, white);
+      this.survivalCrowdInstances.head.setColorAt(i, white);
+    }
+    this.survivalCrowdInstances.flash = new THREE.Color();
     return this.survivalCrowdInstances;
   }
 
@@ -751,13 +763,17 @@ class World3DRuntime {
       record.visible = shown;
       record.index = shown ? n : -1;
       if (!shown) continue;
-      const scale = (enemy.sizeMul || 1) * (enemy.hurtFlash > 0 ? 1.08 : 1);
+      const scale = SURVIVAL_ACTOR_SCALE * (enemy.sizeMul || 1) * (enemy.hurtFlash > 0 ? 1.08 : 1);
       base.position.set(enemy.x, 0, enemy.y);
       base.rotation.set(0, Math.PI / 2 - (enemy.angle || 0), 0);
       base.scale.setScalar(scale);
       base.updateMatrix();
       inst.torso.setMatrixAt(n, base.matrix);
       inst.head.setMatrixAt(n, base.matrix);
+      const hurt = Math.max(0, Math.min(1, enemy.hurtFlash || 0));
+      inst.flash.setRGB(1 + 1.9 * hurt, 1 + 1.4 * hurt, 1 + 1.3 * hurt);
+      inst.torso.setColorAt(n, inst.flash);
+      inst.head.setColorAt(n, inst.flash);
       const swing = Math.sin((enemy.t || 0) * 6 + (id || 0)) * 0.16;
       for (let side = 0; side < 2; side++) {
         const sign = side === 0 ? -1 : 1;
@@ -777,6 +793,8 @@ class World3DRuntime {
     }
     inst.torso.count = n; inst.head.count = n;
     inst.arms.count = n * 2; inst.eyes.count = n * 2;
+    if (inst.torso.instanceColor) inst.torso.instanceColor.needsUpdate = true;
+    if (inst.head.instanceColor) inst.head.instanceColor.needsUpdate = true;
     for (const mesh of [inst.torso, inst.head, inst.arms, inst.eyes]) {
       mesh.visible = n > 0;
       mesh.instanceMatrix.needsUpdate = true;
@@ -819,7 +837,18 @@ class World3DRuntime {
         add(new THREE.BoxGeometry(5, 58, 5), woodLight, x, 32, -8, 0, 0, x < 0 ? -0.12 : 0.12);
       }
       add(new THREE.BoxGeometry(44, 5, 6), woodLight, 0, 60, -8);
-      add(new THREE.TorusGeometry(9, 2, 5, 14), iron, 0, 60, -2);
+      // the pulley wheel turns while the mine digs (spokes so the turn shows)
+      const wheel = new THREE.Group();
+      wheel.name = 'survival-mine-wheel';
+      wheel.position.set(0, 60, -2);
+      group.add(wheel);
+      for (const [geometry, rz] of [[new THREE.TorusGeometry(9, 2, 5, 14), 0], [new THREE.BoxGeometry(17, 2, 2), 0], [new THREE.BoxGeometry(17, 2, 2), Math.PI / 2]]) {
+        const mesh = new THREE.Mesh(geometry, iron);
+        mesh.rotation.z = rz;
+        mesh.castShadow = true;
+        wheel.add(mesh);
+      }
+      group.userData.wheel = wheel;
       add(new THREE.BoxGeometry(26, 14, 18), iron, 26, 10, 18);
       for (let i = 0; i < 5; i++) add(new THREE.DodecahedronGeometry(5.5, 0), goldMat, 20 + (i % 3) * 6, 19 + Math.floor(i / 3) * 4, 14 + (i % 2) * 7);
       for (const x of [18, 34]) add(new THREE.CylinderGeometry(4, 4, 3, 8), iron, x, 4, 28, Math.PI / 2, 0, 0);
@@ -828,7 +857,27 @@ class World3DRuntime {
         add(new THREE.CylinderGeometry(8, 8, 56, 8), i === 1 ? woodLight : wood, -20 + i * 20, 8 + i * 1.5, 0, 0, 0, Math.PI / 2);
       }
       add(new THREE.BoxGeometry(65, 5, 9), iron, 0, 23, 0);
-      add(new THREE.TorusGeometry(14, 2, 5, 16), iron, 0, 27, 8, Math.PI / 2, 0, 0);
+      // a toothed blade standing on the bench, spinning while the mill works
+      const saw = new THREE.Group();
+      saw.name = 'survival-sawmill-blade';
+      saw.position.set(0, 38, 6);
+      group.add(saw);
+      const steel = new THREE.MeshStandardMaterial({ color: 0xc8ccd4, metalness: 0.75, roughness: 0.3, flatShading: true });
+      const disc = new THREE.Mesh(new THREE.CylinderGeometry(15, 15, 1.8, 18), steel);
+      disc.rotation.x = Math.PI / 2;
+      disc.castShadow = true;
+      saw.add(disc);
+      for (let i = 0; i < 10; i++) {
+        const a = (i / 10) * Math.PI * 2;
+        const tooth = new THREE.Mesh(new THREE.BoxGeometry(4, 4, 1.8), steel);
+        tooth.position.set(Math.cos(a) * 16, Math.sin(a) * 16, 0);
+        tooth.rotation.z = a + Math.PI / 4;
+        saw.add(tooth);
+      }
+      const hub = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 3.5, 3, 8), iron);
+      hub.rotation.x = Math.PI / 2;
+      saw.add(hub);
+      group.userData.saw = saw;
       add(new THREE.BoxGeometry(8, 26, 8), woodLight, -25, 13, -10);
       add(new THREE.BoxGeometry(8, 26, 8), woodLight, 25, 13, -10);
     } else if (type === 'tower') {
@@ -880,13 +929,16 @@ class World3DRuntime {
       group.userData.stock = stock;
       group.userData.loaded = loaded;
     } else {
-      // barracks: a canvas tent in the garrison's blue, a weapon rack and a
-      // pennant pole (soldiers live here)
-      const canvasMat = new THREE.MeshStandardMaterial({ color: 0xd9ccb0, roughness: 0.95, flatShading: true });
+      // barracks: a tent in the garrison's royal blue (a beige canvas
+      // vanished into the bailey's sandstone floor — playtest 2026-10-16),
+      // a cream door flap, a weapon rack and a pennant pole
+      const canvasMat = new THREE.MeshStandardMaterial({ color: 0x3f6ee6, emissive: 0x14307a, emissiveIntensity: 0.25, roughness: 0.85, flatShading: true });
+      const trimMat = new THREE.MeshStandardMaterial({ color: 0xf2e6c8, roughness: 0.9, flatShading: true, side: THREE.DoubleSide });
       const blueMat = new THREE.MeshStandardMaterial({ color: 0x3e6bff, emissive: 0x1a3aa8, emissiveIntensity: 0.3, roughness: 0.7, flatShading: true, side: THREE.DoubleSide });
       add(new THREE.BoxGeometry(72, 4, 56), wood, 0, 2, 0);
       add(new THREE.ConeGeometry(44, 52, 4), canvasMat, 0, 30, 0, 0, Math.PI / 4, 0);
-      add(new THREE.BoxGeometry(18, 30, 2), blueMat, 0, 16, 30);
+      add(new THREE.ConeGeometry(46, 6, 4, 1, true), trimMat, 0, 7, 0, 0, Math.PI / 4, 0);
+      add(new THREE.BoxGeometry(18, 30, 2), trimMat, 0, 16, 30);
       add(new THREE.CylinderGeometry(1.8, 1.8, 76, 6), iron, 0, 56, 0);
       add(new THREE.BoxGeometry(26, 14, 1.5), blueMat, 13, 86, 0);
       add(new THREE.BoxGeometry(40, 4, 4), woodLight, -36, 22, 0, 0, Math.PI / 2, 0);
@@ -996,6 +1048,19 @@ class World3DRuntime {
     const mesh = owner.slotId ? this.survivalBuildingMeshes.get(owner.slotId) : null;
     // deck swivel (86) + stock (12) + the loaded bolt (5), in model units
     return mesh ? 103 * mesh.scale.y - 18 : 0;
+  }
+
+  /**
+   * A mine's pulley and a sawmill's blade turn — fast through the night,
+   * when they work, slowly by day — so a building reads as doing something.
+   */
+  _syncSurvivalWorkshop(mesh, mode, game) {
+    const { wheel, saw } = mesh.userData;
+    if (!wheel && !saw) return;
+    const dt = this._troopDt(game, `shop:${mesh.uuid}`);
+    const night = mode.phase === 'night';
+    if (wheel) wheel.rotation.z -= dt * (night ? 3.2 : 0.9);
+    if (saw) saw.rotation.z -= dt * (night ? 9 : 2.4);
   }
 
   /** The ballista swings to its tower's bearing and kicks back on a shot. */
@@ -1723,15 +1788,45 @@ class World3DRuntime {
     const figure = new THREE.Group();
     figure.name = 'survival-guard-figure';
     figure.add(legL, legR, body, head, hair, bow);
+    figure.scale.setScalar(SURVIVAL_ACTOR_SCALE);
+    ring.scale.setScalar(SURVIVAL_ACTOR_SCALE);
+    xray.scale.setScalar(SURVIVAL_ACTOR_SCALE);
     group.add(figure, ring, xray);
-    group.userData = { legL, legR, bow, figure, ring, xray, down: false };
+    group.userData = { legL, legR, bow, figure, ring, xray, down: false, troop: null, shotT: 0, hurt: 0 };
     this.root.add(group);
     return group;
+  }
+
+  /**
+   * The GLB garrison (src/game/troop3d.js): once the Knight has loaded, a
+   * guard's primitive figure is swapped for a crossbowman. Called every
+   * frame; it costs one flag check after the swap.
+   */
+  _dressSurvivalGuard(mesh) {
+    const ud = mesh.userData;
+    if (ud.troop || !Troop3D.ready) return ud.troop;
+    const troop = Troop3D.make('guard', GUARD_TROOP_HEIGHT * SURVIVAL_ACTOR_SCALE);
+    if (!troop) return null;
+    ud.troop = troop;
+    mesh.add(troop.model);
+    ud.figure.visible = false;
+    return troop;
+  }
+
+  /** Seconds of game time since this group's last troop update (0 while paused). */
+  _troopDt(game, key = 'guards') {
+    const clocks = this._troopClocks || (this._troopClocks = {});
+    const now = game.now || 0;
+    const last = clocks[key] == null ? now : clocks[key];
+    clocks[key] = now;
+    return clamp(now - last, 0, 0.1);
   }
 
   _syncSurvivalGuards(game, mode) {
     const list = (mode && mode.guards) || [];
     if (!this.survivalGuardMeshes) this.survivalGuardMeshes = [];
+    if (list.length) Troop3D.init();
+    const dt = this._troopDt(game, 'guards');
     const show = (game.screen === 'playing' || game.screen === 'paused') && (mode.phase === 'night' || mode.phase === 'day');
     for (let i = 0; i < list.length; i++) {
       let mesh = this.survivalGuardMeshes[i];
@@ -1740,26 +1835,46 @@ class World3DRuntime {
       mesh.visible = show;
       if (!show) continue;
       const ud = mesh.userData;
+      const troop = this._dressSurvivalGuard(mesh);
       const down = !!guard.down;
       if (ud.down !== down) {
-        // fallen: flat on its back across the ring, which turns red
+        // fallen: on its back across the ring, which turns red (the GLB
+        // guard plays Lie_Down and stays down; helped up, Lie_StandUp)
         ud.down = down;
         ud.figure.rotation.x = down ? -Math.PI / 2 : 0;
         ud.figure.position.set(0, down ? 9 : 0, down ? 24 : 0);
         ud.ring.material = down ? this._guardMats.ringDown : this._guardMats.ring;
         ud.xray.material = down ? this._guardMats.xrayDown : this._guardMats.xray;
+        if (troop) {
+          if (down) troop.play('down', { then: 'lie', fade: 0.1 });
+          else troop.play('up', { fade: 0.1, timeScale: 1.4 });
+        }
+      }
+      if (troop) {
+        // a red flash when a claw lands; a shot plays the crossbow's kick
+        troop.flash((guard.hurtFlash || 0) * 0.85);
+        if (!down && (guard.hurtFlash || 0) > ud.hurt + 0.4 && !troop.playing('up')) troop.play('hit', { fade: 0.05, timeScale: 1.3 });
+        if (!down && (guard.shotT || 0) > ud.shotT + 0.05) troop.play('shoot', { fade: 0.04, timeScale: 1.6 });
+        ud.hurt = guard.hurtFlash || 0;
+        ud.shotT = guard.shotT || 0;
+        if (!down) {
+          const night = mode.phase === 'night';
+          if (guard.moving) troop.loop(night ? 'run' : 'walk', 0.15, night ? 1.05 : 1.25);
+          else troop.loop(night && guard.target && !guard.target.dead ? 'aim' : 'idle', 0.2);
+        }
+        troop.update(dt);
       }
       if (down) {
         // a slow pulse on the ring while it waits for the Hunter
-        const k = 1 + 0.12 * Math.sin(game.time * 6 + i);
+        const k = SURVIVAL_ACTOR_SCALE * (1 + 0.12 * Math.sin(game.time * 6 + i));
         ud.ring.scale.set(k, k, k);
         mesh.position.set(guard.x, 0, guard.y);
         mesh.rotation.y = Math.PI / 2 - guard.angle;
         continue;
       }
-      if (ud.ring.scale.x !== 1) ud.ring.scale.set(1, 1, 1);
+      if (ud.ring.scale.x !== SURVIVAL_ACTOR_SCALE) ud.ring.scale.setScalar(SURVIVAL_ACTOR_SCALE);
       const stride = guard.moving ? Math.sin(guard.walkT * 11) : 0;
-      mesh.position.set(guard.x, guard.moving ? Math.abs(stride) * 2.4 : 0, guard.y);
+      mesh.position.set(guard.x, guard.moving && !troop ? Math.abs(stride) * 2.4 : 0, guard.y);
       mesh.rotation.y = Math.PI / 2 - guard.angle;
       mesh.userData.legL.rotation.x = stride * 0.6;
       mesh.userData.legR.rotation.x = -stride * 0.6;
@@ -1844,14 +1959,90 @@ class World3DRuntime {
     };
   }
 
+  /**
+   * The relief column as GLB knights (src/game/troop3d.js): sword and badge
+   * shield, the bearer with the keep's swallowtail on a pole. They march
+   * (Walking_A), stand in their lines (Idle) and cheer once each, staggered.
+   */
+  _makeReliefTroop(role) {
+    const group = new THREE.Group();
+    group.name = `survival-relief-troop-${role}`;
+    const troop = Troop3D.make(role === 'banner' ? 'bearer' : 'soldier', GUARD_TROOP_HEIGHT * SURVIVAL_ACTOR_SCALE);
+    if (!troop) return null;
+    group.add(troop.model);
+    let flag = null;
+    if (role === 'banner') {
+      const wood = new THREE.MeshStandardMaterial({ color: 0x8a5a30, roughness: 0.85, flatShading: true });
+      const gold = new THREE.MeshStandardMaterial({ color: 0xffd24a, emissive: 0x8a6000, emissiveIntensity: 0.35, metalness: 0.4, roughness: 0.45 });
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.2, 176, 6), wood);
+      pole.position.set(-20, 88, 6);
+      pole.castShadow = true;
+      const knob = new THREE.Mesh(new THREE.SphereGeometry(4.2, 8, 6), gold);
+      knob.position.set(-20, 178, 6);
+      const shape = new THREE.Shape();
+      shape.moveTo(0, 0); shape.lineTo(70, 0); shape.lineTo(58, -20); shape.lineTo(70, -40); shape.lineTo(0, -40); shape.closePath();
+      flag = new THREE.Group();
+      const cloth = new THREE.Mesh(new THREE.ShapeGeometry(shape), new THREE.MeshStandardMaterial({ color: 0x3e6bff, emissive: 0x1a3aa8, emissiveIntensity: 0.4, roughness: 0.65, side: THREE.DoubleSide }));
+      const trim = new THREE.Mesh(new THREE.BoxGeometry(70, 4, 1.2), gold);
+      trim.position.set(35, -20, 0.5);
+      flag.add(cloth, trim);
+      flag.position.set(-20, 172, 6);
+      group.add(pole, knob, flag);
+    }
+    this.root.add(group);
+    return { group, troop, flag, role, lineT: 0, cheered: false };
+  }
+
+  _syncReliefTroops(game, list) {
+    const r = this.relief;
+    if (r) { r.bodies.count = 0; r.legs.count = 0; r.blobs.count = 0; r.bodies.visible = r.legs.visible = r.blobs.visible = false; r.bearer.visible = false; }
+    if (!this.reliefTroops) this.reliefTroops = [];
+    const dt = this._troopDt(game, 'relief');
+    const t = game.now || 0;
+    for (let i = 0; i < list.length; i++) {
+      const s = list[i];
+      let rec = this.reliefTroops[i];
+      if (rec && rec.role !== s.role) { this.root.remove(rec.group); rec = null; }
+      if (!rec) { rec = this._makeReliefTroop(s.role); if (!rec) return false; this.reliefTroops[i] = rec; }
+      rec.group.visible = true;
+      rec.group.position.set(s.x, 0, s.y);
+      rec.group.rotation.y = Math.PI / 2 - s.angle;
+      if (s.moving) {
+        rec.lineT = 0;
+        rec.troop.loop('walk', 0.2, 1.15);
+      } else {
+        rec.lineT += dt;
+        rec.troop.loop('idle', 0.25);
+        if (!rec.cheered && rec.lineT > 0.35 + i * 0.09) { rec.cheered = true; rec.troop.play('cheer', { fade: 0.15 }); }
+      }
+      if (rec.flag) rec.flag.rotation.y = Math.sin(t * 2.4 + 0.6) * 0.32 - (s.moving ? 0.25 : 0);
+      rec.troop.update(dt);
+    }
+    for (let i = list.length; i < this.reliefTroops.length; i++) if (this.reliefTroops[i]) this.reliefTroops[i].group.visible = false;
+    return true;
+  }
+
+  _hideReliefTroops() {
+    if (!this.reliefTroops) return;
+    for (const rec of this.reliefTroops) {
+      if (!rec) continue;
+      rec.group.visible = false;
+      rec.cheered = false;
+      rec.lineT = 0;
+    }
+  }
+
   _syncRelief(game, mode) {
     const list = mode && mode.reinforcements;
     const show = !!(list && list.length) && mode.phase === 'complete' && (game.screen === 'playing' || game.screen === 'paused');
     if (!show) {
       const r = this.relief;
       if (r) { r.bodies.count = 0; r.legs.count = 0; r.blobs.count = 0; r.bodies.visible = r.legs.visible = r.blobs.visible = false; r.bearer.visible = false; }
+      this._hideReliefTroops();
       return;
     }
+    Troop3D.init();
+    if (Troop3D.ready && this._syncReliefTroops(game, list)) return;
     if (!this.relief) this.relief = this._makeRelief();
     const r = this.relief;
     const { base, part, matrix } = r;
@@ -1928,6 +2119,7 @@ class World3DRuntime {
         mesh.scale.setScalar(base * s);
       } else if (Math.abs(mesh.scale.x - base) > 1e-3) mesh.scale.setScalar(base);
       if (type === 'tower') this._syncSurvivalTower(mesh, mode, slotId);
+      else this._syncSurvivalWorkshop(mesh, mode, game);
     }
     for (const [slotId, mesh] of this.survivalBuildingMeshes) if (!activeBuildings.has(slotId)) mesh.visible = false;
     this._syncSurvivalTowerRing(game, mode);
@@ -2176,16 +2368,42 @@ class World3DRuntime {
       return mesh;
     }
     if (look === 'tracer' || look === 'guard' || look === 'tower') {
-      // Survival reads at phone zoom: a thick, unlit tracer instead of a
-      // 1px wooden shaft. Warm for the Hunter, cool blue for the guards, a
-      // fat red-orange ballista bolt for a tower.
-      const mesh = new THREE.Mesh(this.boltGeometry, new THREE.MeshBasicMaterial({
-        color: look === 'guard' ? 0xa8ecff : look === 'tower' ? 0xff7a3a : 0xffe08a, toneMapped: false,
+      // Survival reads at phone zoom: a thick, unlit tracer with a glowing
+      // head and an additive streak behind it, instead of a 1px wooden
+      // shaft and a 1px line (playtest 2026-10-16: "demege animasi shot
+      // juga kurang effect nya"). Warm for the Hunter, cool blue for the
+      // guards, a fat red-orange ballista bolt for a tower. The group is
+      // aligned so +Y is the flight direction.
+      const color = look === 'guard' ? 0xa8ecff : look === 'tower' ? 0xff7a3a : 0xffe08a;
+      const glowColor = look === 'guard' ? 0x6fd6ff : look === 'tower' ? 0xff6a1a : 0xffc04a;
+      const group = new THREE.Group();
+      const shaft = new THREE.Mesh(this.boltGeometry, new THREE.MeshBasicMaterial({ color, toneMapped: false }));
+      const sx = look === 'tower' ? 5 : look === 'guard' ? 3 : 3.3;
+      const sy = look === 'tower' ? 2.5 : 1.6;
+      shaft.scale.set(sx, sy, sx);
+      shaft.name = 'bolt-shaft';
+      const head = 13 * sy;                       // the shaft's tip, local +Y
+      const length = look === 'tower' ? 150 : look === 'guard' ? 92 : 108;
+      const radius = look === 'tower' ? 7 : 4.6;
+      const streak = new THREE.Mesh(this._boltStreakGeometry(), new THREE.MeshBasicMaterial({
+        color: glowColor, transparent: true, opacity: look === 'tower' ? 0.7 : 0.6, blending: THREE.AdditiveBlending,
+        depthWrite: false, toneMapped: false,
       }));
-      if (look === 'tower') mesh.scale.set(4, 2.1, 4);
-      else mesh.scale.set(2.6, 1.5, 2.6);
-      mesh.name = look === 'guard' ? 'guard-bolt-3d' : look === 'tower' ? 'tower-bolt-3d' : 'crossbow-bolt-3d';
-      return mesh;
+      streak.scale.set(radius, length, radius);
+      streak.position.y = head;
+      streak.name = 'bolt-streak';
+      const kit = this._ensureFxKit();
+      const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: kit.glowTex, color: glowColor, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
+      }));
+      const g = look === 'tower' ? 58 : look === 'guard' ? 34 : 40;
+      glow.scale.set(g, g, 1);
+      glow.position.y = head;
+      glow.name = 'bolt-glow';
+      group.add(streak, shaft, glow);
+      group.renderOrder = 6;
+      group.name = look === 'guard' ? 'guard-bolt-3d' : look === 'tower' ? 'tower-bolt-3d' : 'crossbow-bolt-3d';
+      return group;
     }
     const blessed = look === 'blessed';
     const mesh = new THREE.Mesh(this.boltGeometry, new THREE.MeshStandardMaterial({
@@ -2196,6 +2414,233 @@ class World3DRuntime {
     }));
     mesh.name = 'crossbow-bolt-3d';
     return mesh;
+  }
+
+  /** A unit cone, wide at y = 0 and closing to a point at y = -1 (the streak behind a bolt). */
+  _boltStreakGeometry() {
+    if (this._streakGeo) return this._streakGeo;
+    const geo = new THREE.ConeGeometry(1, 1, 8, 1, true);
+    geo.rotateX(Math.PI);          // apex down: wide end at +0.5, point at -0.5
+    geo.translate(0, -0.5, 0);     // wide end at 0, point at -1
+    this._streakGeo = geo;
+    return geo;
+  }
+
+  /** Shared bits for the one-shot effects: a soft glow, a floor ring, a coin, a log. */
+  _ensureFxKit() {
+    if (this.fxKit) return this.fxKit;
+    let glowTex = null;
+    if (typeof document !== 'undefined') {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 64;
+      const ctx = canvas.getContext('2d');
+      const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+      grad.addColorStop(0, 'rgba(255,255,255,1)');
+      grad.addColorStop(0.22, 'rgba(255,255,255,0.85)');
+      grad.addColorStop(0.5, 'rgba(255,255,255,0.28)');
+      grad.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 64, 64);
+      glowTex = new THREE.CanvasTexture(canvas);
+      glowTex.colorSpace = THREE.SRGBColorSpace;
+    }
+    // a four-point hit star: two thin crossed streaks over a small core
+    let starTex = null;
+    if (typeof document !== 'undefined') {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 64;
+      const ctx = canvas.getContext('2d');
+      ctx.translate(32, 32);
+      for (const angle of [0, Math.PI / 2]) {
+        ctx.save();
+        ctx.rotate(angle);
+        ctx.scale(1, 0.13);
+        const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 32);
+        grad.addColorStop(0, 'rgba(255,255,255,1)');
+        grad.addColorStop(0.45, 'rgba(255,255,255,0.55)');
+        grad.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath(); ctx.arc(0, 0, 32, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+      const core = ctx.createRadialGradient(0, 0, 0, 0, 0, 10);
+      core.addColorStop(0, 'rgba(255,255,255,1)');
+      core.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = core;
+      ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill();
+      starTex = new THREE.CanvasTexture(canvas);
+      starTex.colorSpace = THREE.SRGBColorSpace;
+    }
+    const ringGeo = new THREE.RingGeometry(0.72, 1, 40);
+    ringGeo.rotateX(-Math.PI / 2);
+    const coinGeo = new THREE.CylinderGeometry(10, 10, 3, 18);
+    coinGeo.rotateX(Math.PI / 2);
+    const logGeo = new THREE.CylinderGeometry(5.5, 5.5, 34, 8);
+    logGeo.rotateZ(Math.PI / 2);
+    this.fxKit = {
+      glowTex, starTex, ringGeo, coinGeo, logGeo,
+      coinMat: new THREE.MeshStandardMaterial({ color: 0xffd24a, emissive: 0x9a6a00, emissiveIntensity: 0.75, metalness: 0.55, roughness: 0.32, transparent: true }),
+      logMat: new THREE.MeshStandardMaterial({ color: 0xa8743e, emissive: 0x2a1606, emissiveIntensity: 0.4, roughness: 0.85, flatShading: true, transparent: true }),
+      live: [], spare: { sprite: [], star: [], ring: [], coin: [], log: [] },
+      played: { impact: 0, kill: 0, muzzle: 0, coin: 0, log: 0, rally: 0 },
+    };
+    return this.fxKit;
+  }
+
+  _fxObject(type) {
+    const kit = this._ensureFxKit();
+    let obj = kit.spare[type].pop();
+    if (!obj) {
+      if (type === 'sprite' || type === 'star') {
+        obj = new THREE.Sprite(new THREE.SpriteMaterial({
+          map: type === 'star' ? kit.starTex : kit.glowTex, transparent: true, blending: THREE.AdditiveBlending,
+          depthWrite: false, depthTest: false, toneMapped: false,
+        }));
+        obj.renderOrder = type === 'star' ? 23 : 22;
+      } else if (type === 'ring') {
+        obj = new THREE.Mesh(kit.ringGeo, new THREE.MeshBasicMaterial({
+          transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false,
+        }));
+        obj.renderOrder = 5;
+      } else if (type === 'coin') {
+        obj = new THREE.Mesh(kit.coinGeo, kit.coinMat.clone());
+        obj.castShadow = false;
+        obj.renderOrder = 7;
+      } else {
+        obj = new THREE.Mesh(kit.logGeo, kit.logMat.clone());
+        obj.renderOrder = 7;
+      }
+      obj.name = `fx-${type}`;
+      obj.frustumCulled = false;
+      this.root.add(obj);
+    }
+    obj.visible = true;
+    return obj;
+  }
+
+  /** Start one pooled effect object. `anim`: flash | ring | coin | log. */
+  _fx(type, anim, x, h, y, opts = {}) {
+    const kit = this._ensureFxKit();
+    if (kit.live.length >= 72) {
+      const old = kit.live.shift();
+      old.obj.visible = false;
+      kit.spare[old.type].push(old.obj);
+    }
+    const obj = this._fxObject(type);
+    if (opts.color != null && obj.material.color) obj.material.color.set(opts.color);
+    obj.position.set(x, h, y);
+    obj.rotation.set(0, opts.spin0 || 0, 0);
+    if (obj.isSprite) obj.material.rotation = opts.rot || 0;
+    const fx = { obj, type, anim, t: -(opts.delay || 0), life: opts.life || 0.2, x, y, h, s0: opts.s0 || 1, s1: opts.s1 || 1,
+      a0: opts.alpha == null ? 1 : opts.alpha, vx: opts.vx || 0, vy: opts.vy || 0, rise: opts.rise || 0, spin: opts.spin || 0 };
+    obj.visible = fx.t >= 0;
+    this._animateFx(fx, 0);
+    kit.live.push(fx);
+    return fx;
+  }
+
+  _animateFx(fx, dt) {
+    const obj = fx.obj;
+    const k = clamp(fx.t / fx.life, 0, 1);
+    const out = 1 - (1 - k) * (1 - k);
+    if (fx.anim === 'flash') {
+      const s = fx.s0 + (fx.s1 - fx.s0) * out;
+      obj.scale.set(s, s, 1);
+      obj.material.opacity = fx.a0 * (1 - k) * (1 - k * 0.4);
+    } else if (fx.anim === 'ring') {
+      const s = fx.s0 + (fx.s1 - fx.s0) * out;
+      obj.scale.set(s, 1, s);
+      obj.material.opacity = fx.a0 * (1 - k);
+    } else {
+      // a coin / a log hops up out of the building, spins, and fades
+      const hop = Math.sin(Math.min(1, k * 1.15) * Math.PI) * fx.rise;
+      obj.position.set(fx.x + fx.vx * k, fx.h + hop + k * fx.rise * 0.35, fx.y + fx.vy * k);
+      obj.rotation.y += fx.spin * dt;
+      const s = fx.s0 * (k < 0.15 ? 0.6 + k / 0.15 * 0.4 : 1);
+      obj.scale.set(s, s, s);
+      obj.material.opacity = k > 0.72 ? Math.max(0, 1 - (k - 0.72) / 0.28) : 1;
+    }
+  }
+
+  /** Play the events SurvivalMode queued this frame (pushFx), then age the live ones. */
+  _syncCombatFx(game) {
+    const kit = this._ensureFxKit();
+    const dt = this._troopDt(game, 'fx');
+    const mode = game.mode === 'survival' ? game.survival : null;
+    if (mode && mode.fx && mode.fx.length) {
+      // an event plays from the moment it happened: a frame that renders
+      // after a long simulated stretch (a QA fast-forward) shows only what
+      // is still in flight, part-way through, instead of every old flash
+      const now = game.now || 0;
+      for (const ev of mode.fx) {
+        const age = Math.max(0, now - (ev.t0 == null ? now : ev.t0));
+        if (age < 1.2) this._playFx(ev, age);
+      }
+      mode.fx.length = 0;
+    }
+    for (let i = kit.live.length - 1; i >= 0; i--) {
+      const fx = kit.live[i];
+      fx.t += dt;
+      if (fx.t < 0) { fx.obj.visible = false; continue; }
+      if (fx.t >= fx.life) {
+        fx.obj.visible = false;
+        kit.spare[fx.type].push(fx.obj);
+        kit.live.splice(i, 1);
+        continue;
+      }
+      fx.obj.visible = true;
+      this._animateFx(fx, dt);
+    }
+  }
+
+  _playFx(ev, age = 0) {
+    const kit = this._ensureFxKit();
+    const S = SURVIVAL_ACTOR_SCALE;
+    const start = kit.live.length;
+    if (ev.kind === 'impact') {
+      kit.played.impact++;
+      const heavy = !!ev.heavy;
+      this._fx('sprite', 'flash', ev.x, ev.h || 50, ev.y, { color: ev.color, s0: (heavy ? 36 : 26) * S, s1: (heavy ? 100 : 66) * S, life: heavy ? 0.24 : 0.18 });
+      this._fx('star', 'flash', ev.x, ev.h || 50, ev.y, { color: 0xffffff, s0: (heavy ? 30 : 20) * S, s1: (heavy ? 84 : 54) * S, life: heavy ? 0.16 : 0.12, rot: Math.random() * Math.PI });
+      this._fx('ring', 'ring', ev.x, 2.5, ev.y, { color: ev.color, s0: 10 * S, s1: (heavy ? 64 : 40) * S, life: heavy ? 0.3 : 0.22, alpha: 0.85 });
+    } else if (ev.kind === 'kill') {
+      kit.played.kill++;
+      const big = !!ev.big;
+      this._fx('sprite', 'flash', ev.x, ev.h || 50, ev.y, { color: ev.color, s0: (big ? 50 : 34) * S, s1: (big ? 170 : 110) * S, life: big ? 0.32 : 0.24 });
+      this._fx('star', 'flash', ev.x, ev.h || 50, ev.y, { color: 0xffffff, s0: 30 * S, s1: (big ? 150 : 100) * S, life: big ? 0.22 : 0.16, rot: Math.random() * Math.PI });
+      this._fx('sprite', 'flash', ev.x, (ev.h || 50) * 0.7, ev.y, { color: 0xb070ff, s0: 20 * S, s1: (big ? 120 : 76) * S, life: big ? 0.5 : 0.38, alpha: 0.55, delay: 0.03 });
+      this._fx('ring', 'ring', ev.x, 2.5, ev.y, { color: ev.color, s0: 14 * S, s1: (big ? 130 : 84) * S, life: big ? 0.45 : 0.34, alpha: 0.9 });
+      if (big) this._fx('ring', 'ring', ev.x, 2.5, ev.y, { color: 0xffffff, s0: 10 * S, s1: 70 * S, life: 0.28, alpha: 0.7, delay: 0.06 });
+    } else if (ev.kind === 'muzzle') {
+      kit.played.muzzle++;
+      this._fx('sprite', 'flash', ev.x, ev.h || 22, ev.y, { color: ev.color, s0: (ev.size || 30) * 0.55, s1: ev.size || 30, life: ev.life || 0.09 });
+    } else if (ev.kind === 'coin') {
+      kit.played.coin++;
+      // a coin hops out of the shaft and a glint flashes on the roof
+      const a = Math.random() * Math.PI * 2;
+      this._fx('coin', 'coin', ev.x, 46, ev.y, { s0: 1.2, life: 1.0, rise: 74, vx: Math.cos(a) * 18, vy: Math.sin(a) * 10, spin: 11 });
+      this._fx('sprite', 'flash', ev.x, 70, ev.y, { color: 0xffd24a, s0: 30, s1: 90, life: 0.3, alpha: 0.85 });
+    } else if (ev.kind === 'log') {
+      kit.played.log++;
+      const n = Math.max(2, Math.min(5, Math.round((ev.n || 6) / 3)));
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2 + Math.random() * 0.5;
+        this._fx('log', 'coin', ev.x, 40, ev.y, { s0: 1.1, life: 1.2, rise: 66 + i * 8, vx: Math.cos(a) * 34, vy: Math.sin(a) * 20, spin: 6, delay: i * 0.09, spin0: a });
+      }
+      this._fx('ring', 'ring', ev.x, 3, ev.y, { color: 0xffcf8a, s0: 30, s1: 120, life: 0.5, alpha: 0.8 });
+    } else if (ev.kind === 'rally') {
+      kit.played.rally++;
+      this._fx('ring', 'ring', ev.x, 3, ev.y, { color: 0x6fc8ff, s0: 20, s1: 150, life: 0.6, alpha: 0.95 });
+      this._fx('ring', 'ring', ev.x, 3, ev.y, { color: 0xffffff, s0: 14, s1: 90, life: 0.4, alpha: 0.8, delay: 0.12 });
+      this._fx('sprite', 'flash', ev.x, 60, ev.y, { color: 0x6fc8ff, s0: 40, s1: 150, life: 0.45, alpha: 0.85 });
+    }
+    if (age > 0) {
+      for (let i = start; i < kit.live.length; i++) {
+        const fx = kit.live[i];
+        fx.t += age;
+        if (fx.t >= 0) { fx.obj.visible = fx.t < fx.life; this._animateFx(fx, 0); }
+      }
+    }
   }
 
   _makeBoltTrail(look) {
@@ -2244,6 +2689,15 @@ class World3DRuntime {
         }
         this.bolts.set(id, mesh);
         this.boltTrails.set(id, trail);
+        // a new shot: a muzzle flash where it left the string (Survival)
+        const flown = Math.hypot(bolt.x - (bolt.ox == null ? bolt.x : bolt.ox), bolt.y - (bolt.oy == null ? bolt.y : bolt.oy));
+        const boltAge = flown / Math.max(1, Math.hypot(bolt.vx || 0, bolt.vy || 0));
+        if (game.mode === 'survival' && boltAge < 0.12) {
+          const look = mesh.userData.boltLook;
+          const muzzle0 = bolt.tower ? this._towerMuzzle(bolt) : 0;
+          const color = look === 'guard' ? 0x8fe3ff : look === 'tower' ? 0xff8a3a : 0xffd36a;
+          this._playFx({ kind: 'muzzle', x: bolt.ox, y: bolt.oy, h: 18 + muzzle0, color, size: look === 'tower' ? 86 : look === 'guard' ? 48 : 56, life: look === 'tower' ? 0.14 : 0.09 });
+        }
       }
       // a tower's bolt leaves the ballista on the deck and drops to body
       // height where it was aimed; everything else flies at 18
@@ -2869,6 +3323,7 @@ class World3DRuntime {
     this._syncPlayerSwing(game);
     this._syncPickups(game);
     this._syncBolts(game);
+    if (game.mode === 'survival' || this.fxKit) this._syncCombatFx(game);
     this._syncParticles(game);
     this._syncDecals(game);
 
@@ -2919,7 +3374,12 @@ class World3DRuntime {
       visibleSurvivalGhosts: [...this.survivalCircles.values()].filter((rec) => rec.ghost && rec.ghost.visible).length,
       visibleSurvivalBuildings: [...this.survivalBuildingMeshes.values()].filter((object) => object.visible).length,
       survivalGateVisible: !!(this.survivalGateMesh && this.survivalGateMesh.visible),
-      visibleReliefTroops: this.relief ? (this.relief.bodies.visible ? this.relief.bodies.count : 0) + (this.relief.bearer.visible ? 1 : 0) : 0,
+      visibleReliefTroops: (this.relief ? (this.relief.bodies.visible ? this.relief.bodies.count : 0) + (this.relief.bearer.visible ? 1 : 0) : 0)
+        + (this.reliefTroops ? this.reliefTroops.filter((rec) => rec && rec.group.visible).length : 0),
+      glbReliefTroops: this.reliefTroops ? this.reliefTroops.filter((rec) => rec && rec.group.visible).length : 0,
+      glbGuards: (this.survivalGuardMeshes || []).filter((mesh) => mesh.visible && mesh.userData.troop).length,
+      troop3d: { ready: Troop3D.ready, failed: Troop3D.failed, error: Troop3D.error, made: Troop3D.made, livery: Troop3D.livery },
+      fx: this.fxKit ? { live: this.fxKit.live.length, played: { ...this.fxKit.played } } : null,
       visibleVariants3D: [...this.variantRings.values()].filter((object) => object.visible).length,
       visibleFoodCues3D: [...this.foodCues.values()].filter((cue) => cue.group.visible).length,
       visibleDrinkTrails3D: [...this.drinkTrails.values()].filter((trail) => trail.group.visible).length,

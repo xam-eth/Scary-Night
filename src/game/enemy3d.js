@@ -264,7 +264,7 @@ export function enemyClipForState(key, enemy) {
   return 'idle';
 }
 
-function cloneRig(root) {
+export function cloneRig(root) {
   const clone = root.clone(true);
   // Skeleton instances share vertex buffers, but variant tint/material changes
   // must remain per enemy. Clone each source material once for this rig.
@@ -760,7 +760,7 @@ class EnemyStage {
     const size = this._size || (this._size = new THREE.Vector3());
     box.setFromObject(slot.model);
     box.getSize(size);
-    const projected = (ENEMY_HEIGHT[enemy.key] || 74) * (enemy.sizeMul || 1);
+    const projected = (ENEMY_HEIGHT[enemy.key] || 74) * (enemy.sizeMul || 1) * (options.actorScale || 1);
     const verticalProjection = options.verticalProjection || Math.sqrt(2 / 3);
     const targetWorldHeight = projected / verticalProjection;
     const scale = targetWorldHeight / Math.max(0.001, size.y);

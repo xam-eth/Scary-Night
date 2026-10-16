@@ -12,6 +12,7 @@ import {
   ENEMY_GLB_CAP, ENEMY_MODELS, ENEMY_CLIP_CONTRACT, FORBIDDEN_STANDINS,
   SlotBook, behaviorReady, enemyClipForState, requiredClips, selectGlbSlots, standinViolation,
 } from '../src/game/enemy3d.js';
+import { TROOP_ASSETS, TROOP_CLIPS, TROOP_LOADOUTS } from '../src/game/troop3d.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE_NAME = 'hunter_run_walk_claw_sword_shot.glb';
@@ -447,5 +448,43 @@ ok('the reach is measured as the room is drawn, not on the floor',
   /swingDist\(/.test(gameCode) && /swingDist\(/.test(coachCode) && /tilt/.test(weaponsCode));
 ok('a swing dead to the right keeps its aim', /swingAngle \?\? player\.angle/.test(gameCode));
 
-console.log(failures === 0 ? '\nGLB registry + environment kit: all PASS' : `\n${failures} FAILURE(S)`);
+/* Survival's garrison (src/game/troop3d.js): the KayKit Knight and the
+ * one-handed crossbow, vendored byte-for-byte from a CC0 pack. The hashes in
+ * CREDITS.txt are the provenance record; the clips and nodes are the runtime
+ * contract troop3d.js dresses and animates the guards with. */
+console.log('\ngarrison troops (KayKit, CC0):');
+{
+  const TROOP_DIR = path.join(ROOT, 'assets', 'troops', 'kaykit');
+  const credits = fs.readFileSync(path.join(TROOP_DIR, 'CREDITS.txt'), 'utf8');
+  const listed = [...credits.matchAll(/^\s{2}(\S+)\s.*\n\s+sha256 ([0-9a-f]{64})$/gm)].map((m) => ({ file: m[1], sha: m[2] }));
+  const drift = listed.filter(({ file, sha }) => !fs.existsSync(path.join(TROOP_DIR, file))
+    || createHash('sha256').update(fs.readFileSync(path.join(TROOP_DIR, file))).digest('hex') !== sha).map((row) => row.file);
+  const shipped = fs.readdirSync(TROOP_DIR).filter((file) => file !== 'CREDITS.txt');
+  const unlisted = shipped.filter((file) => !listed.some((row) => row.file === file));
+  ok('every vendored troop file matches the SHA-256 in CREDITS.txt, and nothing ships unlisted',
+    listed.length >= 5 && drift.length === 0 && unlisted.length === 0,
+    `${listed.length} listed${drift.length ? `; changed: ${drift.join(', ')}` : ''}${unlisted.length ? `; unlisted: ${unlisted.join(', ')}` : ''}`);
+  ok('the pack ships its CC0 licence and the credits name the source commit',
+    /Creative Commons Zero, CC0/.test(fs.readFileSync(path.join(TROOP_DIR, 'LICENSE.txt'), 'utf8'))
+      && /commit 672074b73ba276876a19e8816ecdc5241817ab47/.test(credits));
+  const knight = readGlb(path.join(ROOT, TROOP_ASSETS.knight));
+  const clipNames = new Set((knight?.json.animations || []).map((clip) => clip.name));
+  const nodeNames = new Set((knight?.json.nodes || []).map((node) => node.name));
+  const missingClips = Object.values(TROOP_CLIPS).filter((name) => !clipNames.has(name));
+  ok('Knight.glb is a valid GLB with every clip the garrison plays',
+    !!knight && knight.json.skins?.length > 0 && missingClips.length === 0,
+    `${clipNames.size} clips${missingClips.length ? `; missing ${missingClips.join(', ')}` : ''}`);
+  const wanted = [...new Set(Object.values(TROOP_LOADOUTS).flatMap((loadout) => loadout.show)), 'handslot.r'];
+  const missingNodes = wanted.filter((name) => !nodeNames.has(name));
+  ok('Knight.glb has every loadout piece and the right hand slot the crossbow mounts on',
+    missingNodes.length === 0, missingNodes.length ? `missing ${missingNodes.join(', ')}` : wanted.join(', '));
+  const bow = JSON.parse(fs.readFileSync(path.join(ROOT, TROOP_ASSETS.crossbow), 'utf8'));
+  const bowFiles = [...(bow.buffers || []), ...(bow.images || [])].map((item) => item.uri).filter(Boolean);
+  ok('the crossbow glTF has a mesh and its buffer and atlas sit next to it',
+    (bow.meshes || []).length > 0 && bowFiles.length >= 2
+      && bowFiles.every((uri) => !/^(data:|https?:)/.test(uri) && fs.existsSync(path.join(path.dirname(path.join(ROOT, TROOP_ASSETS.crossbow)), decodeURIComponent(uri)))),
+    bowFiles.join(', '));
+}
+
+console.log(failures === 0 ? '\nGLB registry + environment kit + garrison troops: all PASS' : `\n${failures} FAILURE(S)`);
 process.exit(failures === 0 ? 0 : 1);

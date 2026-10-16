@@ -1,6 +1,6 @@
 {
   "title": "Survival FTUE — first 30 playable seconds",
-  "capturedAt": "2026-10-16T09:27:45.954Z",
+  "capturedAt": "2026-10-16T12:34:15.525Z",
   "viewport": {
     "width": 390,
     "height": 844,
@@ -40,7 +40,9 @@
         "territoryPlanes": 5,
         "fortressTowers": 12,
         "fortressMeshes": 13,
-        "fortressMerlons": 146,
+        "fortressMerlons": 88,
+        "curtainRun": 5414,
+        "curtainSlots": 112,
         "renderMode": "webgl-3d"
       }
     },
@@ -67,20 +69,22 @@
         ],
         "coach": false,
         "narration": false,
-        "swarm": 21,
+        "swarm": 19,
         "riggedCrowd": 14,
-        "proxyCrowd": 7,
+        "proxyCrowd": 5,
         "keepHp": 600,
         "keepMesh": true,
         "territoryPlanes": 5,
         "fortressTowers": 12,
         "fortressMeshes": 13,
-        "fortressMerlons": 146,
+        "fortressMerlons": 88,
+        "curtainRun": 5414,
+        "curtainSlots": 112,
         "renderMode": "webgl-3d"
       },
       "luma": {
-        "meanLuma": 98.9,
-        "darkPct": 4.2
+        "meanLuma": 92.6,
+        "darkPct": 8
       }
     },
     {
@@ -114,7 +118,9 @@
         "territoryPlanes": 5,
         "fortressTowers": 12,
         "fortressMeshes": 13,
-        "fortressMerlons": 146,
+        "fortressMerlons": 88,
+        "curtainRun": 5414,
+        "curtainSlots": 112,
         "renderMode": "webgl-3d"
       }
     }

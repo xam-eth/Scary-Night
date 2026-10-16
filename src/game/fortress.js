@@ -39,22 +39,32 @@ export const FORT = Object.freeze({
   OUTSIDE: ROOM.OUTSIDE,
 });
 
-/** The courtyard inside the curtain wall: 2600 x 1900 px (~50 x 37 m). */
-export const BAILEY = Object.freeze({ x: -1300, y: -950, w: 2600, h: 1900 });
-const COLS = Object.freeze([-1300, -450, 450, 1300]);
-const ROWS = Object.freeze([-950, -320, 320, 950]);
+/**
+ * The bailey's scale. The first fortress (scale 1: 2600 x 1900 px, ~50 x 37 m)
+ * read as a huge empty courtyard with small pieces in it (playtest
+ * 2026-10-16: "benteng awal terlalu besar luas sedangkan component game nya
+ * kecil"). 0.7 makes it 1820 x 1330 px (~35 x 26 m): the yards, roads and
+ * gate positions keep their proportions, gate widths and props keep their
+ * size, and the camera frames closer (SurvivalMode.frameMul).
+ */
+export const FORT_SCALE = 0.7;
+const S = (v) => Math.round(v * FORT_SCALE);
+/** The courtyard inside the curtain wall: 1820 x 1330 px at FORT_SCALE 0.7. */
+export const BAILEY = Object.freeze({ x: S(-1300), y: S(-950), w: S(2600), h: S(1900) });
+const COLS = Object.freeze([-1300, -450, 450, 1300].map(S));
+const ROWS = Object.freeze([-950, -320, 320, 950].map(S));
 
 /** The gates, clockwise from the main gate that faces the camera. */
 export const GATES = Object.freeze([
   Object.freeze({ id: 'southGate', name: 'MAIN GATE', room: FORT.SOUTH, side: 'south', at: 0, width: 170, hp: 260, big: true }),
   Object.freeze({ id: 'westGate', name: 'WEST GATE', room: FORT.WEST, side: 'west', at: 0, width: 160, hp: 200, big: true }),
-  Object.freeze({ id: 'posternNW', name: 'NORTHWEST POSTERN', room: FORT.NW, side: 'west', at: -640, width: 118, hp: 110, big: false }),
+  Object.freeze({ id: 'posternNW', name: 'NORTHWEST POSTERN', room: FORT.NW, side: 'west', at: S(-640), width: 118, hp: 110, big: false }),
   Object.freeze({ id: 'northGate', name: 'NORTH GATE', room: FORT.NORTH, side: 'north', at: 0, width: 160, hp: 200, big: true }),
   Object.freeze({ id: 'eastGate', name: 'EAST GATE', room: FORT.EAST, side: 'east', at: 0, width: 160, hp: 200, big: true }),
-  Object.freeze({ id: 'posternSE', name: 'SOUTHEAST POSTERN', room: FORT.SE, side: 'east', at: 640, width: 118, hp: 110, big: false }),
+  Object.freeze({ id: 'posternSE', name: 'SOUTHEAST POSTERN', room: FORT.SE, side: 'east', at: S(640), width: 118, hp: 110, big: false }),
 ]);
 
-const CORNER_TOWER = 150;   // footprint of a corner tower, px
+const CORNER_TOWER = 130;   // footprint of a corner tower, px
 const GATE_TOWER = 84;      // footprint of a gatehouse tower, px
 
 export class Fortress extends Mansion {
@@ -191,26 +201,31 @@ export class Fortress extends Mansion {
     this.buildRing();
   }
 
-  /** The bailey's life: stores by the gates, a well, a market table. */
+  /**
+   * The bailey's life: stores by the gates, a well, a market table. Laid out
+   * for the compact bailey (FORT_SCALE 0.7; the inner face of the wall is at
+   * x = +-910, y = +-665): clusters keep their own spacing, so nothing
+   * overlaps, and every prop stays clear of the build circles and the roads.
+   */
   furnish() {
     const F = (cx, cy, w, h, type, o = {}) => this.addF(cx - w / 2, cy - h / 2, w, h, type, { room: this.findRoom(cx, cy), ...o });
     const barrel = (x, y) => F(x, y, 32, 32, 'barrel');
     const crates = (x, y) => F(x, y, 60, 50, 'crates');
     // gate road: supplies stacked either side of the main gate
-    barrel(-212, 905); barrel(-250, 912); crates(-330, 900);
-    barrel(214, 905); crates(330, 900);
+    barrel(-200, 626); barrel(-238, 632); crates(-306, 622);
+    barrel(202, 626); crates(306, 622);
     // north road
-    crates(-330, -905); barrel(214, -905); barrel(252, -900);
+    crates(-300, -622); barrel(200, -626); barrel(238, -620);
     // west and east roads, against the curtain wall
-    crates(-1250, -230); barrel(-1252, 212); barrel(-1250, 250);
-    crates(1250, 230); barrel(1252, -212); barrel(1250, -250);
+    crates(-872, -160); barrel(-876, 150); barrel(-874, 188);
+    crates(872, 160); barrel(876, -150); barrel(874, -188);
     // the yards
-    F(1080, -760, 96, 96, 'fountain');                     // the well
-    barrel(1230, -560);
-    crates(-800, -900); crates(-730, -905); barrel(-1240, -470);
-    F(-900, 905, 150, 56, 'longTable');                    // market table
-    crates(-1240, 560); barrel(-1236, 620);
-    crates(1180, 860); barrel(760, 915); crates(900, 900);
+    F(756, -532, 96, 96, 'fountain');                      // the well
+    barrel(866, -392);
+    crates(-560, -626); crates(-490, -630); barrel(-868, -300);
+    F(-640, 625, 150, 56, 'longTable');                    // market table
+    crates(-866, 392); barrel(-866, 440);
+    crates(830, 606); barrel(536, 640); crates(632, 628);
   }
 
   /** Lighting is the survival mode's (the keep's lamp); no house fixtures. */

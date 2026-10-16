@@ -1,0 +1,31 @@
+KayKit : Adventurers Character Pack 1.0
+Created by Kay Lousberg (KayKit) — www.kaylousberg.com
+License: CC0 1.0 Universal — https://creativecommons.org/publicdomain/zero/1.0/
+(the pack's own LICENSE.txt is copied next to this file)
+
+Source: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0
+        commit 672074b73ba276876a19e8816ecdc5241817ab47 (2023-09-16)
+        path   addons/kaykit_character_pack_adventures/
+
+The files in this directory are vendored byte-for-byte for runtime use (not
+re-exported or modified). Survival dresses the garrison with them at runtime
+(src/game/troop3d.js): the Knight's door guards keep the round shield and get
+the one-handed crossbow on the right hand slot; the relief column keeps the
+one-handed sword and the badge shield. The other weapon meshes in Knight.glb
+are hidden, never deleted from the file. The garrison wears the keep's royal
+blue: at load, a canvas COPY of the Knight's embedded atlas has its saturated
+reds (the cape and tabard) shifted to blue (troop3d.js, blueLivery); the GLB's
+bytes and its embedded texture stay as shipped.
+
+  Knight.glb                Characters/gltf/Knight.glb
+    sha256 60428e3abc09ba83e595d256e3af8c5c976b46cdae599f0802fc82b4a3445168
+  crossbow_1handed.gltf     Assets/gltf/crossbow_1handed.gltf
+    sha256 04fb009d03becf748614610ab21c52cf3a68f4cb21fc0b9544309c498f404136
+  crossbow_1handed.bin      Assets/gltf/crossbow_1handed.bin
+    sha256 0401a7f6a6264d60d17fee260518715161aac96f7b4e8e541fd562b1815f9a2a
+  rogue_texture.png         Assets/gltf/rogue_texture.png (the crossbow's atlas)
+    sha256 a4032e877c3b91939f5cdbb630349c1998fdbc3211bbd587c111125500fe4cc5
+  LICENSE.txt               LICENSE.txt
+    sha256 ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629
+
+Attribution is appreciated but not required by CC0.

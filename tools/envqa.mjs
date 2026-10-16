@@ -200,6 +200,12 @@ async function survivalFtueSection() {
         fortressTowers: world.diagnostics().fortressTowers,
         fortressMeshes: world.diagnostics().fortressMeshes,
         fortressMerlons: world.diagnostics().fortressMerlons,
+        // merlon slots the curtain wall offers (one per 46 px of run, as in
+        // world3d._makeFortressDressing) so the check scales with FORT_SCALE
+        curtainRun: (g.mansion.solids || []).filter((s) => s.type === 'wall')
+          .reduce((sum, s) => sum + Math.max(s.w, s.h), 0),
+        curtainSlots: (g.mansion.solids || []).filter((s) => s.type === 'wall')
+          .reduce((sum, s) => sum + Math.max(1, Math.floor(Math.max(s.w, s.h) / 46)), 0),
         renderMode: world.diagnostics().mode,
       };
     });
@@ -222,8 +228,11 @@ async function survivalFtueSection() {
     `the first 30 playable seconds stay in the configurable ${final.duration}s night`);
   check(final.swarm > 0 && final.renderMode === 'webgl-3d'
     && final.keepMesh && final.territoryPlanes === 5 && final.riggedCrowd + final.proxyCrowd > 0
-    && final.fortressTowers === 12 && final.fortressMerlons > 100 && final.fortressMeshes > 0 && final.fortressMeshes <= 16,
-  `the full 3D bailey (curtain wall, towers, gates), the 3D keep, its banner's 5 yards and the crowd are visible (${final.fortressTowers} towers, ${final.fortressMerlons} merlons in ${final.fortressMeshes} meshes; ${final.riggedCrowd} GLB + ${final.proxyCrowd} silhouette actors)`);
+    && final.fortressTowers === 12 && final.fortressMeshes > 0 && final.fortressMeshes <= 16
+    // every run crenellated: towers may cover up to a third of the slots
+    // (scale 1: 146/170 slots on 8114 px; compact FORT_SCALE 0.7: 88/112 on 5414 px)
+    && final.curtainSlots >= 80 && final.fortressMerlons >= Math.ceil(final.curtainSlots * 2 / 3),
+  `the full 3D bailey (curtain wall, towers, gates), the 3D keep, its banner's 5 yards and the crowd are visible (${final.fortressTowers} towers, ${final.fortressMerlons}/${final.curtainSlots} merlon slots on ${final.curtainRun}px of curtain wall in ${final.fortressMeshes} meshes; ${final.riggedCrowd} GLB + ${final.proxyCrowd} silhouette actors)`);
 
   const radiusTest = await page.evaluate(() => {
     const g = window.__LN, world = window.__survWorld;

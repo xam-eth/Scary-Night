@@ -244,16 +244,27 @@ try {
     const down = {
       visible: W.survivalGuardMeshes[0].visible, figureRotX: +ud.figure.rotation.x.toFixed(3), figureY: ud.figure.position.y,
       ring: ud.ring.material.color.getHexString(), xray: ud.xray.material.color.getHexString(), hud: m.standingGuards() + '/' + m.guards.length,
+      // the GLB crossbowman (KayKit Knight) when it has loaded: Lie_Down / Lie_Idle
+      troop: ud.troop ? { state: ud.troop.state, visible: ud.troop.model.visible } : null,
     };
     g.player.x = guard.x + 30; g.player.y = guard.y;
     for (let i = 0; i < 110 && guard.down; i++) { g.player.x = guard.x + 30; g.player.y = guard.y; window.__orig.call(g, 1 / 60); }
     window.__step(1);
-    const up = { down: guard.down, hp: guard.hp, figureRotX: +ud.figure.rotation.x.toFixed(3), ring: ud.ring.material.color.getHexString() };
-    return { down, up };
+    const up = {
+      down: guard.down, hp: guard.hp, figureRotX: +ud.figure.rotation.x.toFixed(3), ring: ud.ring.material.color.getHexString(),
+      troop: ud.troop ? { state: ud.troop.state } : null,
+    };
+    return { down, up, glb: !!ud.troop };
   });
-  check('guards: a fallen pawn lies flat on a red ring; helped up it stands on its blue ring',
+  // with the GLB guard the body itself lies down (Lie_Down / Lie_Idle) and
+  // gets back up (Lie_StandUp, then its standing loop); the primitive pawn
+  // (hidden behind it, or the fallback when the GLB fails) still tips over
+  const troopOk = !fallen.glb || (fallen.down.troop && /^(down|lie)$/.test(fallen.down.troop.state)
+    && fallen.up.troop && !/^(down|lie)$/.test(fallen.up.troop.state));
+  check('guards: a fallen guard lies down on a red ring; helped up it stands on its blue ring',
     !fallen.skipped && fallen.down.visible && Math.abs(fallen.down.figureRotX + Math.PI / 2) < 0.01 && fallen.down.ring === 'ff4a3d'
-      && fallen.down.xray === 'ff4a3d' && !fallen.up.down && fallen.up.hp === 20 && fallen.up.figureRotX === 0 && fallen.up.ring === '5ab8ff', fallen);
+      && fallen.down.xray === 'ff4a3d' && !fallen.up.down && fallen.up.hp === 20 && fallen.up.figureRotX === 0 && fallen.up.ring === '5ab8ff'
+      && troopOk, fallen);
 
   // ---------------- towers: ring by day, swivel + pooled bolts by night ----------------
   const towerDay = await page.evaluate(() => {
@@ -396,7 +407,7 @@ try {
   // ---------------- reload mid-night ----------------
   const pre = await page.evaluate(() => { const g = window.__LN; window.__step(60 * 15); g.survival._persist(true); return { t: +g.survival.elapsed.toFixed(2), alive: g.survival.aliveEnemies() }; });
   await page.evaluate(() => sessionStorage.setItem('devqaKeep', '1'));
-  await withTimeout(page.reload({ waitUntil: 'domcontentloaded' }), 130000, 'reload');
+  await withTimeout(page.reload({ waitUntil: 'domcontentloaded', timeout: 120000 }), 130000, 'reload');
   await page.waitForFunction(() => window.__LN && window.__LN.survival && window.__LN.screen === 'playing', { timeout: 120000 });
   const post = await page.evaluate(() => { const g = window.__LN; return { t: +g.survival.elapsed.toFixed(2), alive: g.survival.aliveEnemies(), phase: g.survival.phase }; });
   check('reload: a mid-night reload resumes the clock and the enemies',
@@ -463,7 +474,7 @@ try {
     !handover.cine && handover.panel === null && handover.banner === 'HOLD THE KEEP' && handover.gameplay && handover.labels.includes('PAUSE')
       && !handover.labels.includes('survival:SKIP') && handover.ran > 0.9 && Math.abs(handover.zoom - 1) < 0.08, handover);
   await cine.evaluate(() => { window.__LN.survival._persist(true); sessionStorage.setItem('devqaKeep', '1'); });
-  await withTimeout(cine.reload({ waitUntil: 'domcontentloaded' }), 130000, 'reload cine');
+  await withTimeout(cine.reload({ waitUntil: 'domcontentloaded', timeout: 120000 }), 130000, 'reload cine');
   await freeze();
   const replay = await cine.evaluate(() => { const g = window.__LN; const m = g.survival; window.__step(5); return { cine: !!m.cine, phase: m.phase, panel: g.uiPanel, elapsed: +m.elapsed.toFixed(2) }; });
   check('cine: the intro is told once (a reload plays straight on)', !replay.cine && replay.phase === 'night' && replay.panel === null, replay);

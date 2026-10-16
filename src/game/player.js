@@ -13,7 +13,7 @@
 import { clamp, lerp, damp, TAU, angDiff, approachAngle, chance, visualAngle, screenDirToWorld } from '../core/util.js';
 import { PLAYER, TUNING } from '../core/config.js';
 import { Valen3D } from './valen3d.js';
-import { PX_PER_METRE, VALEN_METRES } from './envkit.js';
+import { PX_PER_METRE, SURVIVAL_ACTOR_SCALE, VALEN_METRES } from './envkit.js';
 import { IAP } from '../shop/iap.js';
 import { drainPerSecond, laneStats } from './economy.js';
 import { weaponById, swingDist, swingBearing, swingBearingToWorld } from './weapons.js';
@@ -456,7 +456,7 @@ export class Player {
       weapon: this.weapon || 'claw',
       world: {
         x: this.x, y: this.y, full3D: true,
-        heightPx: VALEN_METRES * PX_PER_METRE,
+        heightPx: VALEN_METRES * PX_PER_METRE * (game.mode === 'survival' ? SURVIVAL_ACTOR_SCALE : 1),
         light: game.renderer.keyLightAt(this.x, this.y),
       },
     });

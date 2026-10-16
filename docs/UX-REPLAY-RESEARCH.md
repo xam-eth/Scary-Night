@@ -39,6 +39,7 @@ penilaian desain + bot, **bukan** hasil uji pemain.
   - Tidak ada yang baru: tingkat sulit atau variasi.
   - Run berikutnya identik: gerbang per gelombang tetap (`NIGHT_DOORS`), dan dompet hari ke-2 selalu 62–63 gold / 56 wood.
   - Panel kemenangan malah menampilkan jumlah kill **malam terakhir saja**. Di tangkapan layar terlihat "💀 2" setelah 3 malam (bug, §3.3).
+    - *Status 2026-10-16: bug kodenya diperbaiki (panel memakai `runStats`, lihat §3.3).*
 - **Di dalam malam ada "udara mati".**
   - Bot yang bertahan aktif hanya punya target 48–72 % dari durasi malam.
   - Malam 2–3 dibuka dengan ±14 detik tanpa musuh dalam jangkauan.
@@ -319,6 +320,7 @@ Sampel: review positif di halaman toko dan forum. Game-game ini ratingnya tinggi
    - `drawEndPanel` menampilkan `mode.nightStats.kills`.
    - `startNight()` me-reset `nightStats` setiap malam, jadi panel menang hanya menghitung kill malam 3.
    - Di `land-complete.png` terlihat "💀 2".
+   - *Status 2026-10-16:* bug kode diperbaiki. Panel akhir kini memakai `runStats` (total 3 malam + kill per sumber, tersimpan di `save.survival`). Koreksi atas bukti: angka "2" di `land-complete.png` juga artefak skrip. `survivalshots` men-set `nightsCompleted = 2; day = 3` lalu memanggil `completeNight()` tanpa memainkan malam 1–2, jadi screenshot itu tetap menunjukkan 2 setelah perbaikan. Bukti panel dengan kill hasil simulasi ada di `qa-evidence/survival-fixes/fx-end.png`.
 2. **Panel akhir** (`src/ui/survival.js` `drawEndPanel`):
    - hanya 3 sel (malam, kill, Lv keep) + PLAY AGAIN;
    - tidak ada "terbaik", bintang, durasi, penduduk selamat, atau tip.
@@ -360,7 +362,7 @@ Sampel: review positif di halaman toko dan forum. Game-game ini ratingnya tinggi
    - Di disk: `assets/` 8,2 MB + `src/` 2,3 MB. Ini batas atas, karena tidak semua dimuat.
    - Veil punya progress bar ✅.
    - Waktu load pertama perlu diukur di 4G Indonesia.
-7. **Kill dihitung di satu tempat tanpa sumbernya** (`survival.js`: `nightStats.kills++`). Untuk ringkasan "bangunan mana yang bekerja" (R19), kill perlu dicatat per sumber. Ini catatan kelayakan, belum dikerjakan.
+7. **Kill dihitung di satu tempat tanpa sumbernya** (`survival.js`: `nightStats.kills++`). Untuk ringkasan "bangunan mana yang bekerja" (R19), kill perlu dicatat per sumber. Ini catatan kelayakan, belum dikerjakan. *(Status 2026-10-16: sudah dikerjakan. `killSource()` mencatat kill per Kapten / guard / ballista / keep / Flare; hasilnya dipakai panel fajar (R19) dan panel akhir.)*
 
 ### 3.5 Persona gamer: apakah mereka main lagi?
 

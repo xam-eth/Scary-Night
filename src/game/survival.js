@@ -230,7 +230,7 @@ function freshProgress(duration = SURVIVAL_TUNING.nightSeconds) {
     breakerIndex: 0,
     individualIndex: 0,
     siegeTimers: {},
-    nightStats: { kills: 0, hits: 0, damageToWalls: 0, keepDamage: 0, mined: 0 },
+    nightStats: freshNightStats(), runStats: freshRunStats(),
     lastRewards: null,
     rewardAck: 0,
     hints: {},
@@ -761,6 +761,28 @@ class FlowField {
  * for `bleedOut` seconds is lost (one soldier fewer, for good). Dawn gets
  * everyone still down back up. Losing the run is only the keep or the Hunter.
  */
+/** Who landed the killing blow (R19 "the building MVP", R1 run summary). */
+export const KILL_SOURCES = Object.freeze(['captain', 'guard', 'tower', 'keep', 'flare']);
+const freshKillsBy = () => ({ captain: 0, guard: 0, tower: 0, keep: 0, flare: 0 });
+function freshNightStats() {
+  return { kills: 0, hits: 0, damageToWalls: 0, keepDamage: 0, mined: 0, by: freshKillsBy() };
+}
+/** The whole run (three nights): the end panel's numbers. */
+function freshRunStats() {
+  return { kills: 0, by: freshKillsBy(), mined: 0, sawn: 0, recruited: 0, nights: 0 };
+}
+/** A kill's source from the bolt owner (or 'flare') that hit the body last. */
+function killSource(game, by) {
+  if (by === 'flare') return 'flare';
+  if (!by || by === game.player) return 'captain';
+  if (by.key === 'guard') return 'guard';
+  if (by.key === 'tower') return 'tower';
+  if (by.key === 'keep') return 'keep';
+  return 'captain';
+}
+/** The colour of a hit by source: warm for the captain, cool for guards, hot for ballistas. */
+const HIT_COLOR = Object.freeze({ captain: '#ffd36a', guard: '#8fe3ff', tower: '#ff8a3a', keep: '#ff8a3a', flare: '#fff2b0' });
+
 export const GUARD = Object.freeze({
   speed: 210,          // px/s walking between posts
   range: 420,          // px a guard will shoot at
@@ -833,7 +855,7 @@ export class SurvivalMode {
     this.breakerIndex = 0;
     this.individualIndex = 0;
     this.siegeTimers = Object.create(null);
-    this.nightStats = { kills: 0, hits: 0, damageToWalls: 0, keepDamage: 0, mined: 0 };
+    this.nightStats = freshNightStats();
     this.lastRewards = null;
     this.skillCooldown = 0;
     this.skillCooldownMax = this.tuning.skillCooldown;
@@ -845,6 +867,9 @@ export class SurvivalMode {
     this.guards = [];
     this.towers = [];
     this.floaters = [];
+    this.fx = [];                  // one-shot 3D effects for world3d (pushFx)
+    this.runStats = freshRunStats();
+    this._mineBank = Object.create(null);
     this.bannerQueue = [];
     this.banner = null;
     this.keepAttackers = 0;
@@ -947,7 +972,10 @@ export class SurvivalMode {
     this.individualIndex = Math.max(0, Math.floor(Number(s.individualIndex) || 0));
     this.nightKeepStart = Number.isFinite(Number(s.nightKeepStart)) && s.nightKeepStart != null ? Number(s.nightKeepStart) : null;
     this.siegeTimers = s.siegeTimers && typeof s.siegeTimers === 'object' ? { ...s.siegeTimers } : {};
-    this.nightStats = { kills: 0, hits: 0, damageToWalls: 0, keepDamage: 0, mined: 0, ...(s.nightStats || {}) };
+    this.nightStats = { ...freshNightStats(), ...(s.nightStats || {}) };
+    this.nightStats.by = { ...freshKillsBy(), ...((s.nightStats && s.nightStats.by) || {}) };
+    this.runStats = { ...freshRunStats(), ...(s.runStats || {}) };
+    this.runStats.by = { ...freshKillsBy(), ...((s.runStats && s.runStats.by) || {}) };
     this.lastRewards = s.lastRewards || null;
     this.rewardAck = Math.max(0, Math.floor(Number(s.rewardAck) || 0));
 
@@ -1295,13 +1323,15 @@ export class SurvivalMode {
         // two lines of four behind the banner: ranks 1–2 in front, 3–4 behind
         const line = rank <= 2 ? 0 : 1;
         const col = (rank % 2 === 1 ? 0.5 : 1.5) * file;
-        troops.push({ role: 'spear', rank, file, slot: at(keep, front + 66 + line * 60, col * 62) });
+        // spacing for the GLB knights (shoulder pads and shields, x1.25):
+        // 84 apart each way, so no two bodies overlap in the lines
+        troops.push({ role: 'spear', rank, file, slot: at(keep, front + 80 + line * 84, col * 84) });
       }
     }
     const gatePt = { x: gx, y: gy };
     return troops.map((tr, i) => {
-      const start = at(gatePt, 130 + tr.rank * 56, tr.file * 27);
-      const inside = at(gatePt, -90, tr.file * 27);
+      const start = at(gatePt, 130 + tr.rank * 68, tr.file * 34);
+      const inside = at(gatePt, -90, tr.file * 34);
       const s = {
         id: i, role: tr.role, x: start.x, y: start.y, angle: face, face,
         path: [inside, tr.slot], i: 0, delay: tr.rank * 0.1 + 0.25, walkT: rand(0, 1), moving: false,
@@ -1375,7 +1405,7 @@ export class SurvivalMode {
     this.breakerIndex = 0;
     this.individualIndex = 0;
     this.siegeTimers = Object.create(null);
-    this.nightStats = { kills: 0, hits: 0, damageToWalls: 0, keepDamage: 0, mined: 0 };
+    this.nightStats = freshNightStats();
     this._resetNightFx();
     g.time = 0;
     g.timeLeft = this.nightDuration;
@@ -1410,6 +1440,8 @@ export class SurvivalMode {
 
   _resetNightFx() {
     this.floaters.length = 0;
+    this.fx.length = 0;
+    this._mineBank = Object.create(null);
     this.bannerQueue.length = 0;
     this.banner = null;
     this.keepAttackers = 0;
@@ -1861,10 +1893,26 @@ export class SurvivalMode {
     const held = this.inTerritory(enemy.x, enemy.y);
     const dealt = amount * (held ? this.tuning.territoryDamageTakenMul : 1);
     if (dealt > 0.5) {
-      const h = enemy._survivalType === 'breaker' ? 96 : enemy._survivalType === 'individual' ? 78 : 60;
+      // bodies read 1.25x bigger in Survival (SURVIVAL_ACTOR_SCALE): the
+      // number and the flash sit at their chest, not at their knees
+      const h = (enemy._survivalType === 'breaker' ? 96 : enemy._survivalType === 'individual' ? 78 : 60) * 1.25;
       const kill = (enemy.hp || 0) - dealt <= 0;
-      this.pushFloater(enemy.x + rand(-10, 10), enemy.y, `${Math.round(dealt)}`, held ? '#ffd24a' : '#ffffff',
-        { h, size: kill ? 30 : held ? 24 : 18, pop: kill ? 1.5 : 1.35 });
+      const src = killSource(this.game, enemy._lastHitBy);
+      const heavy = src === 'tower' || src === 'keep' || src === 'flare' || dealt >= 28;
+      this.pushFloater(enemy.x + rand(-12, 12), enemy.y, `${Math.round(dealt)}`, kill ? '#ff9a3c' : held ? '#ffd24a' : '#ffffff',
+        { h, size: kill ? 32 : heavy ? 26 : held ? 24 : 19, pop: kill ? 1.6 : heavy ? 1.5 : 1.38, drift: rand(-26, 26), kind: kill ? 'kill' : heavy ? 'heavy' : 'hit' });
+      // the hit lands: a flash and a ring at the body (world3d) and sparks
+      // thrown back along the shot
+      const color = HIT_COLOR[src] || '#ffffff';
+      this.pushFx('impact', enemy.x, enemy.y, { h: h * 0.62, color, heavy, kill });
+      const g = this.game;
+      if (g.particles) {
+        g.particles.burst('spark', enemy.x, enemy.y, heavy ? 10 : 6, {
+          color: heavy ? 'rgba(255,170,90,0.95)' : src === 'guard' ? 'rgba(170,236,255,0.95)' : 'rgba(255,226,150,0.95)',
+          sizeMin: heavy ? 2.4 : 1.8, sizeMax: heavy ? 5.5 : 4, speedMin: 50, speedMax: heavy ? 260 : 190,
+          lifeMin: 0.12, lifeMax: heavy ? 0.42 : 0.32, glow: true,
+        });
+      }
     }
     return dealt;
   }
@@ -1897,16 +1945,22 @@ export class SurvivalMode {
   /* ---------------- guards (survivors) ---------------- */
 
   /** One pawn per soldier (capped). New ones step out by the keep. */
-  _syncGuardRoster(snap = false) {
+  _syncGuardRoster(snap = false, from = null) {
     const want = clamp(Math.floor(this.survivors || 0), 0, GUARD.cap);
     while (this.guards.length > want) this.guards.pop();
+    let fresh = 0;
     while (this.guards.length < want) {
       const i = this.guards.length;
       const post = this._keepPost(i);
-      const guard = new SurvivalGuard(i, post.x, post.y);
-      guard.post = post;
+      // a soldier a barracks just housed starts at its door (fanned out so
+      // two do not stand in one spot) and walks to the post
+      const start = from && !snap ? { x: from.x + (fresh % 2 ? 26 : -26) * Math.ceil(fresh / 2), y: from.y + 40 } : post;
+      const guard = new SurvivalGuard(i, start.x, start.y);
+      guard.post = start === post ? post : null;
       this.guards.push(guard);
+      fresh++;
     }
+    if (fresh && from && !snap) this._guardAssignT = 0;
     if (snap) {
       // a new phase (dawn, dusk, a fresh run): everyone stands, healed, by the keep
       for (const guard of this.guards) {
@@ -2378,6 +2432,7 @@ export class SurvivalMode {
     let hit = 0;
     for (const e of g.enemies) {
       if (e.dead || dist(p.x, p.y, e.x, e.y) > this.tuning.skillRadius) continue;
+      e._lastHitBy = 'flare';
       e.hurt(this.tuning.skillDamage, g, p.x, p.y);
       e.staggerT = Math.max(e.staggerT || 0, 0.85);
       const a = Math.atan2(e.y - p.y, e.x - p.x);
@@ -2390,12 +2445,34 @@ export class SurvivalMode {
     return true;
   }
 
-  /** Mines dig gold into the purse all night long (it never burns). */
+  /**
+   * Mines dig gold into the purse all night long (it never burns). Each mine
+   * shows its work: every whole coin it digs pops out of its shaft as a 3D
+   * coin with a "+1" over it, so a mine reads as working, not as a number
+   * that changes somewhere in the HUD (playtest 2026-10-16: "bangunan yg di
+   * build juga tidak berfungsi"). The banks are visual only — the purse
+   * still grows by goldRate() * dt.
+   */
   updateMines(dt) {
     const dig = this.goldRate() * dt;
     if (dig > 0) {
       this.gold = Math.min(RESOURCE_CAP, this.gold + dig);
       this.nightStats.mined = (this.nightStats.mined || 0) + dig;
+      this.runStats.mined = (this.runStats.mined || 0) + dig;
+    }
+    if (this.phase !== 'night') return;
+    for (const [slotId, type] of Object.entries(this.buildings)) {
+      if (type !== 'mine') continue;
+      const rate = (this.buildingStats(type, this.buildingLevel(slotId)).yield || 0) / Math.max(1, this.nightDuration);
+      const bank = (this._mineBank[slotId] || 0) + rate * dt;
+      if (bank >= 1) {
+        const spot = this.buildingSpot(slotId);
+        if (spot) {
+          this.pushFx('coin', spot.x, spot.y, { slotId });
+          this.pushFloater(spot.x, spot.y, '+1', '#ffd24a', { h: 118, size: 20, icon: 'gold', life: 1.15, pop: 1.3, kind: 'income' });
+        }
+        this._mineBank[slotId] = bank - 1;
+      } else this._mineBank[slotId] = bank;
     }
   }
 
@@ -2806,10 +2883,20 @@ export class SurvivalMode {
       this.buildings[job.slotId] = job.type;
       this.buildingLevels[job.slotId] = level;
       if (job.type === 'barracks') {
-        // a barracks houses its soldiers at once: tonight's door guards
+        // a barracks houses its soldiers at once: tonight's door guards. They
+        // step out of its door and march to their post by the keep, so the
+        // building is seen to work (a "+1" soldier pops over it).
         const moved = (this.buildingStats('barracks', level).houses || 0) - (before ? this.buildingStats('barracks', before).houses || 0 : 0);
+        const was = this.survivors;
         this.survivors = Math.min(this.tuning.maxSurvivors, this.survivors + Math.max(0, moved));
-        this._syncGuardRoster(false);
+        const spot = this.buildingSpot(job.slotId);
+        this._syncGuardRoster(false, spot);
+        const added = this.survivors - was;
+        if (added > 0 && spot) {
+          this.runStats.recruited = (this.runStats.recruited || 0) + added;
+          this.pushFx('rally', spot.x, spot.y, { n: added });
+          this.pushFloater(spot.x, spot.y, `+${added}`, '#7fd0ff', { h: 150, size: 24, icon: 'guard', life: 1.6, pop: 1.4, kind: 'income' });
+        }
       }
       if (job.type === 'sawmill') this.applyBuildingEffects(false);
       if (job.kind === 'upgrade') text = `Lv${level}!`;
@@ -2864,9 +2951,18 @@ export class SurvivalMode {
     const survivorsBefore = this.survivors;
     // Dawn pays the sawmills; the mines already dug their gold in during
     // the night, and barracks house their soldiers as soon as they stand.
+    let sawn = 0;
+    const sawmills = [];
     for (const [slotId, type] of Object.entries(this.buildings)) {
-      if (type === 'sawmill') wood += this.buildingStats(type, this.buildingLevel(slotId)).dawnWood || 0;
+      if (type !== 'sawmill') continue;
+      const planks = this.buildingStats(type, this.buildingLevel(slotId)).dawnWood || 0;
+      sawn += planks;
+      sawmills.push({ slotId, wood: planks });
     }
+    wood += sawn;
+    this.runStats.sawn = (this.runStats.sawn || 0) + sawn;
+    this.runStats.nights = Math.min(3, (this.runStats.nights || 0) + 1);
+    this._sawmillPayout = sawmills;
     const mined = Math.round(this.nightStats.mined || 0);
     // kills pay a little (guards shoot too, so this stays a trickle)
     const killGold = Math.floor(this.nightStats.kills / 6);
@@ -2885,6 +2981,8 @@ export class SurvivalMode {
       survivors: this.survivors - survivorsBefore, keepDamage: Math.round(this.nightStats.keepDamage || 0),
       keepPatched: patched, mined, lost, rescued: this.nightStats.rescued || 0,
       reinforcements: Math.max(0, 3 - this.nightsCompleted),
+      sawn, killsBy: { ...freshKillsBy(), ...(this.nightStats.by || {}) },
+      towerKills: (this.nightStats.by && this.nightStats.by.tower) || 0,
     };
     this._resetNightFx();
     g.enemies.length = 0;
@@ -2947,7 +3045,7 @@ export class SurvivalMode {
       buildings: {}, buildingLevels: {}, hunterLevel: 1, gateBuilt: false,
       gateHp: 0, builderJob: null, selectedRoom: null, nightsCompleted: 0, waveIndex: 0,
       breakerIndex: 0, individualIndex: 0, siegeTimers: Object.create(null),
-      nightStats: { kills: 0, hits: 0, damageToWalls: 0, keepDamage: 0, mined: 0 }, lastRewards: null, skillCooldown: 0,
+      nightStats: freshNightStats(), runStats: freshRunStats(), lastRewards: null, skillCooldown: 0,
       rewardAck: 0, dayFocus: null, nightKeepStart: this.tuning.keepHp[1], walkPath: null, lastBuilt: null,
       cine: null, reinforcements: null,
     });
@@ -2997,12 +3095,24 @@ export class SurvivalMode {
     this.nightStats.kills++;
     this.game.stats.kills = (this.game.stats.kills || 0) + 1;
     const g = this.game;
+    // who got it: per night (the dawn panel) and per run (the end panel)
+    const src = killSource(g, enemy._lastHitBy);
+    if (!this.nightStats.by) this.nightStats.by = freshKillsBy();
+    this.nightStats.by[src] = (this.nightStats.by[src] || 0) + 1;
+    this.runStats.kills++;
+    this.runStats.by[src] = (this.runStats.by[src] || 0) + 1;
+    if (src === 'tower' && enemy._lastHitBy) enemy._lastHitBy.kills = (enemy._lastHitBy.kills || 0) + 1;
     const big = enemy._survivalType === 'breaker' || enemy._survivalType === 'individual';
     g.audio.play('hitFlesh', { vol: big ? 0.6 : 0.42, weight: big ? 1 : 0.8 });
-    // the kill pops: dust and grit thrown off the body
-    g.particles.burst('spark', enemy.x, enemy.y, big ? 16 : 7, {
-      color: big ? 'rgba(255,214,120,0.95)' : 'rgba(214,230,190,0.9)', sizeMin: 2, sizeMax: big ? 6 : 4,
-      speedMin: 40, speedMax: big ? 220 : 150, lifeMin: 0.2, lifeMax: 0.55, glow: big,
+    // the kill pops: a burst and a shock ring on the floor (world3d), then
+    // dust, grit and a wisp of the thing rising off the body
+    this.pushFx('kill', enemy.x, enemy.y, { h: (big ? 70 : 46) * 1.25, color: HIT_COLOR[src] || '#ffffff', big });
+    g.particles.burst('spark', enemy.x, enemy.y, big ? 22 : 11, {
+      color: big ? 'rgba(255,214,120,0.95)' : 'rgba(226,236,200,0.92)', sizeMin: 2.4, sizeMax: big ? 7 : 5,
+      speedMin: 60, speedMax: big ? 300 : 210, lifeMin: 0.22, lifeMax: 0.6, glow: true,
+    });
+    g.particles.burst('glow', enemy.x, enemy.y, big ? 6 : 3, {
+      color: 'rgba(150,90,210,0.7)', sizeMin: 5, sizeMax: big ? 12 : 8, speedMin: 10, speedMax: 50, lifeMin: 0.45, lifeMax: 0.9,
     });
     // a streak of kills shakes a little; a big one holds the frame
     this._streak = (this.uiClock - (this._lastKillAt || -9) < 0.6) ? (this._streak || 0) + 1 : 1;
@@ -3053,11 +3163,14 @@ export class SurvivalMode {
    * same phone turned sideways see the same depth of house around the Hunter
    * (landscape used to clamp to a much tighter zoom). Night pulls back far
    * enough that a crowd at the nearest door is in frame; day shows the base.
+   * The compact bailey (FORT_SCALE 0.7) lets the camera sit ~1.28x closer
+   * than the first fortress did (0.86 / 0.8), so the captain, his guards and
+   * the horde read as the pieces of the game rather than specks in a yard.
    */
   frameMul(night) {
     const r = this.game.renderer;
     const short = Math.min(r.w || 390, r.h || 844);
-    const target = clamp(short / 720, 0.5, 0.82) * (night ? 0.86 : 0.8);
+    const target = clamp(short / 720, 0.5, 0.82) * (night ? 1.1 : 1.02);
     return target / (r.baseZoom || 1);
   }
 
@@ -3177,6 +3290,14 @@ export class SurvivalMode {
   ackRewards() {
     this.rewardAck = this.nightsCompleted;
     this.game.audio.play('uiConfirm', { vol: 0.6 });
+    // the dawn's planks come off the sawmills you built, where you can see them
+    for (const pay of this._sawmillPayout || []) {
+      const spot = this.buildingSpot(pay.slotId);
+      if (!spot || !(pay.wood > 0)) continue;
+      this.pushFx('log', spot.x, spot.y, { n: pay.wood });
+      this.pushFloater(spot.x, spot.y, `+${pay.wood}`, '#ffcf8a', { h: 130, size: 24, icon: 'wood', life: 1.8, pop: 1.4, kind: 'income' });
+    }
+    this._sawmillPayout = null;
     this._persist(true);
     return true;
   }
@@ -3203,7 +3324,21 @@ export class SurvivalMode {
 
   pushFloater(x, y, text, color, opts = {}) {
     if (this.floaters.length > 48) this.floaters.shift();
-    this.floaters.push({ x, y, text, color, h: opts.h || 60, size: opts.size || 16, icon: opts.icon || null, pop: opts.pop || 1.2, t: 0, life: opts.life || 0.9 });
+    this.floaters.push({
+      x, y, text, color, h: opts.h || 60, size: opts.size || 16, icon: opts.icon || null, pop: opts.pop || 1.2, t: 0, life: opts.life || 0.9,
+      drift: opts.drift != null ? opts.drift : 0, kind: opts.kind || null,
+    });
+  }
+
+  /**
+   * A one-shot 3D effect for world3d to play and forget (impact flashes and
+   * rings, kill bursts, coins out of a mine, logs off a sawmill, a soldier
+   * stepping out of a barracks). Drained every frame by the renderer; a
+   * headless run just lets the queue roll over.
+   */
+  pushFx(kind, x, y, opts = {}) {
+    if (this.fx.length >= 96) this.fx.shift();
+    this.fx.push({ kind, x, y, t0: this.game.now || 0, ...opts });
   }
 
   _updateFx(dt) {
@@ -3279,7 +3414,8 @@ export class SurvivalMode {
     s.waveIndex = this.waveIndex; s.breakerIndex = this.breakerIndex; s.individualIndex = this.individualIndex;
     s.siegeTimers = { ...this.siegeTimers };
     s.nightKeepStart = this.nightKeepStart == null ? null : Math.round(Number(this.nightKeepStart));
-    s.nightStats = { ...this.nightStats }; s.lastRewards = this.lastRewards ? { ...this.lastRewards } : null;
+    s.nightStats = { ...this.nightStats, by: { ...this.nightStats.by } }; s.lastRewards = this.lastRewards ? { ...this.lastRewards } : null;
+    s.runStats = { ...this.runStats, by: { ...this.runStats.by } };
     s.rewardAck = this.rewardAck;
     s.player = { x: g.player.x, y: g.player.y, angle: g.player.angle, blood: g.player.blood };
     s.entrances = g.mansion.entrances.map((e) => ({ id: e.id, hp: e.hp, hpMax: e.hpMax, broken: e.broken, open: e.open, barricade: e.barricade }));

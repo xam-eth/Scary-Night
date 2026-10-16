@@ -1550,6 +1550,8 @@ export class Bolt {
         const hunterBolt = this.owner && this.owner.key === 'hunter';
         if (o !== this.owner && !o.dead && dist(this.x, this.y, o.x, o.y) < o.radius + 4 && !(hunterBolt && o.key === 'hunter')) {
           if (this.hitSet && this.hitSet.has(o)) continue;
+          // who hit it last (Survival credits the kill: captain, guard, ballista)
+          o._lastHitBy = this.owner || null;
           o.hurt((hunterBolt ? this.damage * 0.5 : this.damage) * kitDamage(this.kit, o), game, this.x, this.y);
           if (this.pierce > 0) {
             // runs on: one body per sub-step, never the same body twice

@@ -166,6 +166,9 @@ function affordable(mode, cost) {
   return !!cost && mode.canAfford(cost);
 }
 
+/** SURVIVAL_ACTOR_SCALE (envkit.js): bars and badges sit over the taller bodies. */
+const ACTOR = 1.25;
+
 /* ------------------------------------------------------------------ */
 /* FTUE hint chips (once each, persisted in save.survival.hints)       */
 /* ------------------------------------------------------------------ */
@@ -416,16 +419,55 @@ function drawEdgeMarker(ctx, w, h, p, icon, color, top = 128, bottom = 150) {
   drawSurvivalIcon(ctx, icon, x, y, 22);
 }
 
+/**
+ * Floating numbers. A hit pops in with an overshoot, drifts aside as it
+ * rises and fades; a heavy hit (ballista, Flare) is orange and bigger; the
+ * killing blow is bigger still with a hot outline and a little wobble; an
+ * income pop (a mine's coin, a sawmill's planks, a barracks' soldier) sits
+ * on a dark pill with its icon so it reads over any floor.
+ */
 function drawFloaters(game, ctx) {
   const mode = game.survival;
   for (const f of mode.floaters) {
     const life = clamp(f.t / f.life, 0, 1);
-    const at = project(game, f.x, f.y, f.h + life * 46);
+    const rise = f.kind === 'income' ? 34 : 52;
+    const at = project(game, f.x, f.y, f.h + (1 - (1 - life) * (1 - life)) * rise);
+    at.x += (f.drift || 0) * Math.min(1, life * 1.6);
     const peak = f.pop || 1.2;
-    const pop = life < 0.15 ? 0.7 + life / 0.15 * (peak - 0.7) : peak - Math.min(peak - 1, (life - 0.15) * 0.9);
-    const alpha = life > 0.7 ? 1 - (life - 0.7) / 0.3 : 1;
+    // overshoot to the peak in the first 12%, settle back to 1 by 40%
+    const pop = life < 0.12 ? 0.55 + life / 0.12 * (peak - 0.55)
+      : life < 0.4 ? peak - (life - 0.12) / 0.28 * (peak - 1) : 1;
+    const alpha = life > 0.72 ? 1 - (life - 0.72) / 0.28 : 1;
+    const size = Math.round(f.size * pop);
+    if (f.kind === 'income') {
+      const tw = measureLabel(ctx, f.text, size) + (f.icon ? size * 1.15 : 0) + 18;
+      ctx.save();
+      ctx.globalAlpha = alpha * 0.82;
+      ctx.fillStyle = 'rgba(20,16,40,0.78)';
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(at.x - tw / 2, at.y - size * 0.72, tw, size * 1.44, size * 0.72);
+      else ctx.rect(at.x - tw / 2, at.y - size * 0.72, tw, size * 1.44);
+      ctx.fill();
+      ctx.restore();
+      if (f.icon) drawSurvivalIcon(ctx, f.icon, at.x - tw / 2 + 9 + size * 0.55, at.y, size * 1.1, { alpha });
+      drawLabel(ctx, f.text, at.x + (f.icon ? size * 0.55 : 0), at.y + 1, size, f.color, { alpha, outline: Math.max(2, size * 0.16) });
+      continue;
+    }
     if (f.icon) drawSurvivalIcon(ctx, f.icon, at.x - measureLabel(ctx, f.text, f.size) / 2 - 10, at.y, f.size * 1.1, { alpha });
-    drawLabel(ctx, f.text, at.x + (f.icon ? 6 : 0), at.y, Math.round(f.size * pop), f.color, { alpha });
+    const kill = f.kind === 'kill';
+    const heavy = f.kind === 'heavy';
+    ctx.save();
+    if (kill) {
+      ctx.translate(at.x, at.y);
+      ctx.rotate(Math.sin(f.t * 30) * 0.08 * (1 - life));
+      ctx.translate(-at.x, -at.y);
+    }
+    // a soft drop shadow first, so the number stands off the floor
+    drawLabel(ctx, f.text, at.x + (f.icon ? 6 : 0) + 2, at.y + 3, size, 'rgba(10,6,20,0.55)', { alpha: alpha * 0.7, outline: 0 });
+    drawLabel(ctx, f.text, at.x + (f.icon ? 6 : 0), at.y, size, f.color, {
+      alpha, outline: Math.max(3, size * (kill ? 0.26 : heavy ? 0.24 : 0.21)), stroke: kill ? '#5a1200' : heavy ? '#4a1a00' : undefined,
+    });
+    ctx.restore();
   }
 }
 
@@ -479,7 +521,8 @@ function drawNightWorldLayer(game, ctx, w, h) {
     if (!e || e.dead || e.removeMe || !e._survivalType) continue;
     const big = e._survivalType !== 'swarm';
     if (!big && !(e.hp < e.hpMax)) continue;
-    const height = e._survivalType === 'breaker' ? 104 : big ? 84 : 66;
+    // bodies stand 1.25x taller in Survival (SURVIVAL_ACTOR_SCALE, envkit.js)
+    const height = (e._survivalType === 'breaker' ? 104 : big ? 84 : 66) * ACTOR;
     const at = project(game, e.x, e.y, height);
     if (!onScreen(at, w, h, -10)) continue;
     const bw = e._survivalType === 'breaker' ? 44 : big ? 34 : 24;
@@ -493,7 +536,7 @@ function drawNightWorldLayer(game, ctx, w, h) {
   // while the Hunter stands beside it, his help (green, filling)
   for (const guard of mode.guards || []) {
     if (guard.down) {
-      const at = project(game, guard.x, guard.y, 84);
+      const at = project(game, guard.x, guard.y, 84 * ACTOR);
       if (!onScreen(at, w, h, 16)) { drawEdgeMarker(ctx, w, h, at, 'medic', '#ff5a4d'); continue; }
       const help = clamp(guard.rescueT / GUARD.rescueTime, 0, 1);
       const left = clamp(1 - guard.downT / GUARD.bleedOut, 0, 1);
@@ -527,7 +570,8 @@ function drawNightWorldLayer(game, ctx, w, h) {
       continue;
     }
     if (!(guard.hp < guard.hpMax)) continue;
-    const at = project(game, guard.x, guard.y, 70);
+    // over the GLB crossbowman's helmet (84 px x 1.25)
+    const at = project(game, guard.x, guard.y, 112);
     if (!onScreen(at, w, h, -10)) continue;
     const pct = clamp(guard.hp / Math.max(1, guard.hpMax), 0, 1);
     const flash = guard.hurtFlash > 0.5 ? '#ffffff' : pct > 0.5 ? '#5ab8ff' : pct > GUARD.woundedAt ? '#ffcc33' : '#ff4d4d';
@@ -541,7 +585,7 @@ function drawNightWorldLayer(game, ctx, w, h) {
 /** Hunter HP over his hat, with his level on a gold chip. */
 function drawHunterBar(game, ctx, p) {
   const mode = game.survival;
-  const head = project(game, p.x, p.y, 98);
+  const head = project(game, p.x, p.y, 98 * ACTOR - 10);
   drawHpBar(ctx, head.x, head.y, 50, 9, clamp(p.blood / Math.max(1, p.bloodMax), 0, 1));
   ctx.save();
   ctx.beginPath();
@@ -791,6 +835,37 @@ function drawMiniCard(game, ctx, box, action) {
  * a lock with the keep level (beyond the banner), a gold chevron over a
  * building whose next level you can pay for. Tap one: the Hunter walks there.
  */
+/** A built building's function as icon + number (null: nothing to say). */
+function buildingStatus(mode, point) {
+  const level = point.level || mode.buildingLevel(point.id) || 1;
+  const stats = mode.buildingStats(point.type, level) || {};
+  if (point.type === 'mine') return { icon: 'gold', text: `+${stats.yield || 0}`, tail: 'moon', color: '#ffd24a' };
+  if (point.type === 'sawmill') return { icon: 'wood', text: `+${stats.dawnWood || 0}`, tail: 'sun', color: '#ffcf8a' };
+  if (point.type === 'barracks') return { icon: 'guard', text: `${stats.houses || 0}`, color: '#8fd4ff' };
+  if (point.type === 'tower') {
+    const tower = (mode.towers || []).find((t) => t.slotId === point.id);
+    const kills = tower ? tower.kills || 0 : 0;
+    return kills > 0 ? { icon: 'skull', text: `${kills}`, color: '#ffb36a' } : { icon: 'target', text: `${stats.damage || 0}`, color: '#ffb36a' };
+  }
+  return null;
+}
+
+function statusPillWidth(ctx, status) {
+  return measureLabel(ctx, status.text, 13) + 24 + (status.tail ? 16 : 0);
+}
+
+function drawStatusPill(ctx, x, y, status, alpha = 1) {
+  const size = 13;
+  const tw = statusPillWidth(ctx, status);
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  drawPanel(ctx, x - tw / 2, y - 11, tw, 22, { radius: 11, top: '#3b3570', bottom: '#211c45', lineWidth: 1.8, highlight: false, shadow: false });
+  ctx.restore();
+  drawSurvivalIcon(ctx, status.icon, x - tw / 2 + 12, y, 16, { alpha });
+  drawLabel(ctx, status.text, x - tw / 2 + 22, y + 1, size, status.color, { align: 'left', outline: 0, alpha });
+  if (status.tail) drawSurvivalIcon(ctx, status.tail, x + tw / 2 - 11, y, 13, { alpha });
+}
+
 function drawDayWorldLayer(game, ctx, w, h, view) {
   const mode = game.survival;
   const t = clock(game);
@@ -832,6 +907,21 @@ function drawDayWorldLayer(game, ctx, w, h, view) {
     }
     addHit(game, { x: at.x - 24, y: at.y + bob - 24, w: 48, h: 48 }, `walk:${point.id}`, () => mode.walkTo(point.x, point.y), false, true);
   }
+  // what every built building does, at a glance (R19; playtest 2026-10-16:
+  // "bangunan yg di build juga tidak berfungsi"): a mine's gold a night, a
+  // sawmill's planks at dawn, the soldiers a barracks houses, a ballista's
+  // kills — icon + number, no words
+  for (const point of mode.dayPoints()) {
+    if (point.kind !== 'slot' || !point.built) continue;
+    const status = buildingStatus(mode, point);
+    if (!status) continue;
+    // at the bubble's height; beside the upgrade arrow when one is showing
+    const at = project(game, point.x, point.y, point.type === 'tower' ? 150 : 100);
+    if (!(at.x > view.x0 && at.x < view.x1 && at.y > view.y0 && at.y < view.y1)) continue;
+    const arrow = !(here && here.id === point.id) && point.level < BUILDING_MAX_LEVEL && affordable(mode, mode.upgradeCost(point.id));
+    const pw = statusPillWidth(ctx, status);
+    drawStatusPill(ctx, arrow ? at.x + 22 + pw / 2 : at.x, at.y + (arrow ? 0 : 2), status, here && here.id === point.id ? 1 : 0.94);
+  }
   // nothing to build in view: one pointer to the nearest empty circle
   if (nearestOff && !here) {
     drawEdgeMarker(ctx, w, h, nearestOff.at, nearestOff.icon, '#ffffff', view.y0 + 10, h - view.y1 + 10);
@@ -839,7 +929,10 @@ function drawDayWorldLayer(game, ctx, w, h, view) {
   // the keep shows its life by day too once it is hurt
   const keep = mode.keep();
   if (mode.keepHp < mode.keepHpMax()) {
-    const at = project(game, keep.x, keep.y, 300);
+    // over the battlements, but never up under the DAY pill (the closer
+    // camera puts the keep's top in the HUD band)
+    const at = project(game, keep.x, keep.y, 250);
+    at.y = Math.max(at.y, view.y0 + 16);
     if (onScreen(at, w, h, 30)) {
       const pct = clamp(mode.keepHp / Math.max(1, mode.keepHpMax()), 0, 1);
       drawSurvivalIcon(ctx, 'keep', at.x - 44, at.y, 24);
@@ -879,6 +972,10 @@ function drawRewardModal(game, ctx, w, h) {
     { icon: 'wood', value: `+${reward.wood || 0}`, color: '#1f8a3a' },
   ];
   if (reward.mined) rows.push({ icon: 'mine', value: `+${reward.mined}`, color: '#1f8a3a' });   // dug overnight
+  if (reward.sawn) rows.push({ icon: 'sawmill', value: `+${reward.sawn}`, color: '#1f8a3a' });  // the sawmills' planks
+  // what the ballistas and the guards brought down tonight (the building MVP)
+  if (reward.towerKills) rows.push({ icon: 'tower', value: `${reward.towerKills}`, color: '#3a2a50', badge: 'skull' });
+  if (reward.killsBy && reward.killsBy.guard) rows.push({ icon: 'guard', value: `${reward.killsBy.guard}`, color: '#3a2a50', badge: 'skull' });
   if (reward.survivors > 0) rows.push({ icon: 'guard', value: `+${reward.survivors}`, color: '#1f8a3a' });
   if (reward.keepDamage) rows.push({ icon: 'keep', value: `-${reward.keepDamage}`, color: '#d23a2a' });
   if (reward.keepPatched) rows.push({ icon: 'hammer', value: `+${reward.keepPatched}`, color: '#1f8a3a' });
@@ -912,6 +1009,7 @@ function drawRewardModal(game, ctx, w, h) {
     const cy = top + Math.floor(i / cols2) * (cellH + gap);
     drawPanel(ctx, cx + 4, cy, cellW - 8, cellH, { radius: 14, top: '#ffffff', bottom: '#f3ead8', lineWidth: 2, highlight: false, shadow: false });
     drawSurvivalIcon(ctx, row.icon, cx + 26, cy + cellH / 2, short ? 24 : 30);
+    if (row.badge) drawSurvivalIcon(ctx, row.badge, cx + 36, cy + cellH / 2 + 8, short ? 13 : 15);
     drawLabel(ctx, row.value, cx + 46, cy + cellH / 2 + 1, short ? 17 : 20, row.color, { align: 'left', outline: 0 });
   });
   // the goal, one night closer
@@ -928,13 +1026,13 @@ function drawDayScreen(game, ctx, w, h) {
   const reward = mode.rewardPending();
   const short = h < 560;
   const pad = 12;
-  // the thumb corner: the contextual button, NIGHT beside it, the card above
+  // the thumb corner: the contextual button(s) with the card above; NIGHT
+  // sits apart, top-left under PAUSE (R18a)
   const btnH = short ? 56 : 62;
   const btnW = Math.min(short ? 210 : 230, Math.round(w * 0.42));
   const btnX = w - pad - btnW;
   const btnY = h - pad - btnH;
   const nightW = Math.min(short ? 148 : 160, Math.round(w * 0.3));
-  const nightX = btnX - 10 - nightW;
   const view = { x0: 30, x1: w - 30, y0: short ? 70 : 128, y1: btnY - 10 };
 
   if (!reward) drawDayWorldLayer(game, ctx, w, h, view);
@@ -963,6 +1061,7 @@ function drawDayScreen(game, ctx, w, h) {
 
   const here = mode.dayContext();
   const action = dayAction(mode, here);
+  let secondW = 0;
   if (action) {
     const card = { w: Math.min(btnW, 232), h: action.tag ? 108 : 100 };
     card.x = w - pad - card.w;
@@ -970,18 +1069,26 @@ function drawDayScreen(game, ctx, w, h) {
     drawMiniCard(game, ctx, card, action);
     drawActionButton(game, ctx, { x: btnX, y: btnY, w: btnW, h: btnH }, action.main);
     if (action.second) {
+      // the second everyday action (REPAIR beside UPGRADE) takes the bottom
+      // row's other seat now that NIGHT lives top-left
       const sw = Math.min(150, nightW);
-      drawActionButton(game, ctx, { x: nightX, y: btnY - btnH - 10, w: sw, h: btnH }, action.second);
+      drawActionButton(game, ctx, { x: btnX - 10 - sw, y: btnY, w: sw, h: btnH }, action.second);
+      secondW = sw + 10;
     }
   }
-  drawButton(game, ctx, { x: nightX, y: btnY + (btnH - 50), w: nightW, h: 50 }, `NIGHT ${mode.day}`,
+  // NIGHT stands apart from BUILD / UPGRADE (R18a, NN/g: keep the action you
+  // cannot take back away from the everyday one): top-left, under PAUSE,
+  // across the screen from the thumb's build corner
+  const nightBtn = { x: pad, y: pad + (short ? 62 : 70), w: nightW, h: 50 };
+  drawButton(game, ctx, nightBtn, `NIGHT ${mode.day}`,
     () => mode.startNight(), { id: 'START NIGHT', icon: 'moon', color: 'purple', disabled: !!job });
 
   // FTUE chip: a sideways phone puts it at the foot of the screen between the
-  // stick and NIGHT (the top band shows the keep); a tall screen under the pill
+  // stick and the build corner (the top band shows the keep); a tall screen
+  // under the pill
   if (short) {
-    const left = 150, right = nightX - 10;
-    drawHint(game, ctx, w, h - pad - 44, (left + right) / 2, right - left, 13);
+    const left = 150, right = btnX - secondW - 12;
+    drawHint(game, ctx, w, h - pad - 44, (left + right) / 2, Math.min(right - left, 460), 13);
   } else drawHint(game, ctx, w, 136, w / 2, Math.min(w - 24, 420));
 }
 
@@ -1011,8 +1118,11 @@ function drawEndPanel(game, ctx, w, h, failed) {
   ctx.fillStyle = 'rgba(12,10,30,0.66)';
   ctx.fillRect(0, 0, w, h);
   ctx.restore();
-  const bw = Math.min(330, w - 32), bh = 262;
-  const x = (w - bw) / 2, y = (h - bh) / 2 + 12;
+  const run = mode.runStats || { kills: 0, by: {} };
+  const by = run.by || {};
+  const short = h < 560;
+  const bw = Math.min(short ? 420 : 340, w - 32), bh = short ? 300 : 334;
+  const x = (w - bw) / 2, y = Math.max(34, (h - bh) / 2 + 12);
   drawPanel(ctx, x, y, bw, bh, failed
     ? { radius: 22, top: '#4a3a6a', bottom: '#241a3a', lineWidth: 3 }
     : { radius: 22, top: '#fff6e0', bottom: '#ffd890', lineWidth: 3 });
@@ -1022,18 +1132,34 @@ function drawEndPanel(game, ctx, w, h, failed) {
   drawSurvivalIcon(ctx, icon, w / 2, y + 4, 78, { gray: failed && keepFell });
   const title = failed ? (keepFell ? 'THE KEEP FELL' : 'THE HUNTER FELL') : 'REINFORCEMENTS ARRIVED!';
   drawLabel(ctx, title, w / 2, y + 66, 21, '#ffffff', { stroke: failed ? INK : '#7a3a00' });
+  // the run, not the last night: nights held, every kill of the three
+  // nights, the keep (R1 — the panel used to show only the final night's kills)
   const stats = [
-    { icon: 'moon', value: failed ? `${mode.day}` : '3' },
-    { icon: 'skull', value: `${(mode.nightStats && mode.nightStats.kills) || 0}` },
+    { icon: 'moon', value: failed ? `${Math.max(0, mode.day - 1)}/3` : '3/3' },
+    { icon: 'skull', value: `${run.kills || 0}` },
     { icon: 'keep', value: `Lv${mode.keepLevel}` },
   ];
   const cellW = (bw - 40) / 3;
+  const cellH = short ? 58 : 64;
   stats.forEach((row, i) => {
     const cx = x + 20 + i * cellW;
-    const cy = y + 96;
-    drawPanel(ctx, cx + 4, cy, cellW - 8, 64, { radius: 14, top: failed ? '#5a4a80' : '#ffffff', bottom: failed ? '#3a2d5a' : '#f3ead8', lineWidth: 2, highlight: false, shadow: false });
-    drawSurvivalIcon(ctx, row.icon, cx + cellW / 2, cy + 22, 28);
-    drawLabel(ctx, row.value, cx + cellW / 2, cy + 48, 16, failed ? '#ffffff' : '#3a2a50', { outline: failed ? 3 : 0 });
+    const cy = y + 92;
+    drawPanel(ctx, cx + 4, cy, cellW - 8, cellH, { radius: 14, top: failed ? '#5a4a80' : '#ffffff', bottom: failed ? '#3a2d5a' : '#f3ead8', lineWidth: 2, highlight: false, shadow: false });
+    drawSurvivalIcon(ctx, row.icon, cx + cellW / 2, cy + 21, 28);
+    drawLabel(ctx, row.value, cx + cellW / 2, cy + cellH - 16, 16, failed ? '#ffffff' : '#3a2a50', { outline: failed ? 3 : 0 });
+  });
+  // who held the walls: the captain, the guards, the ballistas (+ keep roof)
+  const crew = [
+    { icon: 'hunter', value: (by.captain || 0) + (by.flare || 0) },
+    { icon: 'guard', value: by.guard || 0 },
+    { icon: 'tower', value: (by.tower || 0) + (by.keep || 0) },
+  ];
+  const ry = y + 92 + cellH + 10;
+  crew.forEach((row, i) => {
+    const cx = x + 20 + i * cellW + cellW / 2;
+    drawSurvivalIcon(ctx, row.icon, cx - 20, ry + 14, 24);
+    drawSurvivalIcon(ctx, 'skull', cx - 8, ry + 22, 12);
+    drawLabel(ctx, `${row.value}`, cx + 4, ry + 15, 17, failed ? '#ffffff' : '#3a2a50', { align: 'left', outline: failed ? 3 : 0 });
   });
   drawButton(game, ctx, { x: x + 30, y: y + bh - 76, w: bw - 60, h: 54 }, 'PLAY AGAIN',
     () => mode.restart(), { id: 'PLAY AGAIN', icon: 'restart', color: 'green' });
@@ -1117,7 +1243,7 @@ function drawCineTrack(game, ctx, x, y, width) {
 function drawCaptainMarker(game, ctx, cap) {
   const p = game.player;
   if (!p) return;
-  const at = project(game, p.x, p.y, 92);
+  const at = project(game, p.x, p.y, 92 * ACTOR);
   const bob = Math.abs(Math.sin(clock(game) * 4.2)) * 7;
   const alpha = clamp(cap.age / 0.3, 0, 1) * clamp(cap.left / 0.4, 0, 1);
   const s = 13;

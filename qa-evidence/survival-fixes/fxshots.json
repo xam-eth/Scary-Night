@@ -1,0 +1,365 @@
+{
+  "capturedAt": "2026-10-16T13:01:55.588Z",
+  "view": {
+    "width": 844,
+    "height": 390,
+    "dpr": 1
+  },
+  "checks": [
+    {
+      "name": "troops: the guards are GLB knights in the keep's blue livery",
+      "ok": true,
+      "detail": {
+        "t": 11.2,
+        "guards": 2,
+        "troop3d": {
+          "ready": true,
+          "failed": false,
+          "error": null,
+          "made": 2,
+          "livery": 1
+        },
+        "glbGuards": 2,
+        "fx": {
+          "live": 2,
+          "played": {
+            "impact": 5,
+            "kill": 2,
+            "muzzle": 1,
+            "coin": 0,
+            "log": 0,
+            "rally": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "fx: hits flash, kills burst and shots flash at the muzzle",
+      "ok": true,
+      "detail": {
+        "live": 6,
+        "played": {
+          "impact": 6,
+          "kill": 3,
+          "muzzle": 3,
+          "coin": 0,
+          "log": 0,
+          "rally": 0
+        }
+      }
+    },
+    {
+      "name": "kills: every kill is credited to a source (captain / guard / ballista / keep / flare)",
+      "ok": true,
+      "detail": {
+        "kills": 9,
+        "by": {
+          "captain": 8,
+          "guard": 1,
+          "tower": 0,
+          "keep": 0,
+          "flare": 0
+        }
+      }
+    },
+    {
+      "name": "mine: a dug coin pops out of the mine with \"+1\"",
+      "ok": true,
+      "detail": {
+        "coins": 1,
+        "income": [
+          "+1:gold"
+        ]
+      }
+    },
+    {
+      "name": "dawn: the reward counts the sawmill's planks and the kills by source",
+      "ok": true,
+      "detail": {
+        "sawn": 7,
+        "killsBy": {
+          "captain": 17,
+          "guard": 4,
+          "tower": 0,
+          "keep": 0,
+          "flare": 0
+        },
+        "runKills": 21
+      }
+    },
+    {
+      "name": "sawmill: COLLECT throws its planks off the sawmill with \"+N\"",
+      "ok": true,
+      "detail": {
+        "logs": 1,
+        "income": [
+          "+7:wood"
+        ]
+      }
+    },
+    {
+      "name": "ui: NIGHT sits top-left, far from the build corner (R18a)",
+      "ok": true,
+      "detail": {
+        "night": {
+          "x": 12,
+          "y": 74,
+          "w": 148,
+          "h": 50,
+          "label": "survival:START NIGHT"
+        },
+        "action": {
+          "x": 622,
+          "y": 322,
+          "w": 210,
+          "h": 56,
+          "label": "survival:UPGRADE KEEP LV2"
+        },
+        "view": {
+          "w": 844,
+          "h": 390
+        },
+        "dist": 688
+      }
+    },
+    {
+      "name": "barracks: the housed soldier steps out of its door, a blue rally ring pops, and it walks to its post",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "survivors": 3,
+        "start": {
+          "x": 189,
+          "y": 174
+        },
+        "fromSpot": 40,
+        "rally": 1,
+        "walked": {
+          "at": [
+            -51,
+            158
+          ],
+          "post": [
+            -51,
+            158
+          ]
+        }
+      }
+    },
+    {
+      "name": "end: the panel counts every kill of the run and who made it (R1)",
+      "ok": true,
+      "detail": {
+        "kills": 21,
+        "by": {
+          "captain": 17,
+          "guard": 4,
+          "tower": 0,
+          "keep": 0,
+          "flare": 0
+        }
+      }
+    },
+    {
+      "name": "health: 0 page errors, 0 console errors",
+      "ok": true,
+      "detail": {
+        "pageErrors": [],
+        "consoleErrors": []
+      }
+    }
+  ],
+  "results": [
+    {
+      "name": "fx-gate",
+      "file": "qa-evidence/survival-fixes/fx-gate.png",
+      "state": {
+        "t": 11.2,
+        "guards": 2,
+        "troop3d": {
+          "ready": true,
+          "failed": false,
+          "error": null,
+          "made": 2,
+          "livery": 1
+        },
+        "glbGuards": 2,
+        "fx": {
+          "live": 2,
+          "played": {
+            "impact": 5,
+            "kill": 2,
+            "muzzle": 1,
+            "coin": 0,
+            "log": 0,
+            "rally": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "fx-gate-b",
+      "file": "qa-evidence/survival-fixes/fx-gate-b.png",
+      "state": {
+        "kills": 9,
+        "by": {
+          "captain": 8,
+          "guard": 1,
+          "tower": 0,
+          "keep": 0,
+          "flare": 0
+        },
+        "troop3d": {
+          "ready": true,
+          "failed": false,
+          "error": null,
+          "made": 2,
+          "livery": 1
+        },
+        "glbGuards": 2,
+        "fx": {
+          "live": 6,
+          "played": {
+            "impact": 6,
+            "kill": 3,
+            "muzzle": 3,
+            "coin": 0,
+            "log": 0,
+            "rally": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "fx-mine",
+      "file": "qa-evidence/survival-fixes/fx-mine.png",
+      "state": {
+        "coins": 1,
+        "income": [
+          "+1:gold"
+        ]
+      }
+    },
+    {
+      "name": "fx-dawn",
+      "file": "qa-evidence/survival-fixes/fx-dawn.png",
+      "state": {
+        "phase": "day",
+        "rewards": {
+          "gold": 17,
+          "wood": 26,
+          "kills": 21,
+          "walls": 177.3,
+          "survivors": 0,
+          "keepDamage": 0,
+          "keepPatched": 0,
+          "mined": 2,
+          "lost": 0,
+          "rescued": 0,
+          "reinforcements": 2,
+          "sawn": 7,
+          "killsBy": {
+            "captain": 17,
+            "guard": 4,
+            "tower": 0,
+            "keep": 0,
+            "flare": 0
+          },
+          "towerKills": 0
+        },
+        "run": {
+          "kills": 21,
+          "by": {
+            "captain": 17,
+            "guard": 4,
+            "tower": 0,
+            "keep": 0,
+            "flare": 0
+          },
+          "mined": 1.5513888888888838,
+          "sawn": 7,
+          "recruited": 0,
+          "nights": 1
+        },
+        "ui": [
+          "survival:COLLECT"
+        ]
+      }
+    },
+    {
+      "name": "fx-sawmill",
+      "file": "qa-evidence/survival-fixes/fx-sawmill.png",
+      "state": {
+        "logs": 1,
+        "income": [
+          "+7:wood"
+        ]
+      }
+    },
+    {
+      "name": "fx-day",
+      "file": "qa-evidence/survival-fixes/fx-day.png",
+      "state": {
+        "night": {
+          "x": 12,
+          "y": 74,
+          "w": 148,
+          "h": 50,
+          "label": "survival:START NIGHT"
+        },
+        "action": {
+          "x": 622,
+          "y": 322,
+          "w": 210,
+          "h": 56,
+          "label": "survival:UPGRADE KEEP LV2"
+        },
+        "view": {
+          "w": 844,
+          "h": 390
+        }
+      }
+    },
+    {
+      "name": "fx-barracks",
+      "file": "qa-evidence/survival-fixes/fx-barracks.png",
+      "state": {
+        "ok": true,
+        "survivors": 3,
+        "start": {
+          "x": 189,
+          "y": 174
+        },
+        "fromSpot": 40,
+        "rally": 1
+      }
+    },
+    {
+      "name": "fx-end",
+      "file": "qa-evidence/survival-fixes/fx-end.png",
+      "state": {
+        "phase": "failed",
+        "run": {
+          "kills": 21,
+          "by": {
+            "captain": 17,
+            "guard": 4,
+            "tower": 0,
+            "keep": 0,
+            "flare": 0
+          },
+          "mined": 1.5513888888888838,
+          "sawn": 7,
+          "recruited": 1,
+          "nights": 1
+        },
+        "sum": 21,
+        "ui": [
+          "survival:PLAY AGAIN"
+        ]
+      }
+    }
+  ],
+  "pageErrors": [],
+  "consoleErrors": []
+}

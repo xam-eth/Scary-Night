@@ -66,6 +66,14 @@ export function pxPerMetre(tilt = ISO_CAMERA.tilt) {
 export const PX_PER_METRE = pxPerMetre(ISO_CAMERA.tilt);
 
 /**
+ * Survival's actors read bigger than the house's: in the fortress the
+ * captain, his guards and the horde were small pieces in a big courtyard
+ * (playtest 2026-10-16). A visual multiplier only — collision radii, reach
+ * and ranges are unchanged.
+ */
+export const SURVIVAL_ACTOR_SCALE = 1.25;
+
+/**
  * WHAT EVERYTHING IS, IN METRES.
  *
  * This is the answer to "the sizes are still wrong". The kit's own units are
