@@ -834,11 +834,12 @@ export function drawCounter(ctx, x, y, w, h, icon, value, opts = {}) {
   rr(ctx, x, y, w, h, h / 2);
   ctx.fillStyle = opts.fill || 'rgba(20,18,40,0.78)';
   ctx.fill();
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = opts.flash ? '#ff4d4d' : INK;
+  ctx.lineWidth = opts.glow ? 3 : 2;
+  ctx.strokeStyle = opts.flash ? '#ff4d4d' : opts.glow ? '#ffd24a' : INK;
+  if (opts.glow) { ctx.shadowColor = 'rgba(255,210,74,0.9)'; ctx.shadowBlur = 10; }
   ctx.stroke();
   ctx.restore();
-  drawSurvivalIcon(ctx, icon, x + h * 0.5, y + h / 2, h * 1.05);
+  drawSurvivalIcon(ctx, icon, x + h * 0.5, y + h / 2, h * 1.05 * (opts.glow ? 1.12 : 1));
   drawLabel(ctx, value, x + h + (w - h) / 2 - 2, y + h / 2 + 1, Math.round(h * 0.56), opts.color || '#ffffff');
 }
 

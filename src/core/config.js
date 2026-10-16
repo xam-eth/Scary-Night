@@ -389,6 +389,16 @@ export const TUNING = {
  * purse (it no longer burns), the keep's banner marks the rooms you may build
  * in, and the run is lost when the keep falls or the captain does.
  */
+/**
+ * Survival's actors read bigger than the house's. Playtest 2026-10-16: the
+ * fortress was too big for its small pieces; ×1.25 was not enough to change
+ * that on a phone (2026-10-17: "tidak ada perubahan"), so the captain, his
+ * guards and the horde stand ×1.6 and the bailey is half its first size
+ * (fortress.js FORT_SCALE). A visual multiplier: collision radii and ranges
+ * are unchanged. Shared by the sim (floater heights), the HUD and the world.
+ */
+export const SURVIVAL_ACTOR_SCALE = 1.6;
+
 export const SURVIVAL_TUNING = Object.freeze({
   nightSeconds: 72,
   minNightSeconds: 60,
@@ -397,7 +407,7 @@ export const SURVIVAL_TUNING = Object.freeze({
   startWood: 26,
   startSurvivors: 2,
   maxSurvivors: 8,
-  keepRadius: 112,
+  keepRadius: 100,
   keepHp: Object.freeze({ 1: 600, 2: 900, 3: 1200 }),
   keepUpgrade: Object.freeze({
     2: Object.freeze({ gold: 12, wood: 8, seconds: 5 }),

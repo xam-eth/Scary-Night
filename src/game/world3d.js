@@ -10,6 +10,7 @@ import { EnvKit, PIECE_METRES, PX_PER_METRE, SURVIVAL_ACTOR_SCALE, VALEN_METRES 
 import { Valen3D } from './valen3d.js';
 import { Enemy3D, ENEMY_HEIGHT } from './enemy3d.js';
 import { Troop3D } from './troop3d.js';
+import { Crowd3D } from './crowd3d.js';
 import { ROOM_MARKS } from './narrative.js';
 import { ROOM } from './mansion.js';
 import { weaponById } from './weapons.js';
@@ -681,18 +682,38 @@ class World3DRuntime {
     }
 
     const enemies = game.enemies || [];
+    // Survival's horde is drawn by Crowd3D (every swarm body an animated GLB
+    // monster, instanced); the 14 skinned rigs then go to the bodies that
+    // fight one by one (Individuals, Breakers). Until the horde's textures
+    // are baked the rigs take the nearest swarm bodies, as before.
+    const horde = game.mode === 'survival' && Crowd3D.prepare();
     Enemy3D.assign(enemies, player, {
       full3D: true,
-      includeCrowd: game.mode === 'survival',
+      includeCrowd: game.mode === 'survival' && !horde,
       actorScale: game.mode === 'survival' ? SURVIVAL_ACTOR_SCALE : 1,
       verticalProjection: VERTICAL_PROJECTION,
       host: { stage: this.root, scene: this.scene, renderer: EnvKit.renderer, camera: EnvKit.camera, canvas: EnvKit.canvas },
     });
-    if (game.mode === 'survival') this._syncSurvivalCrowdProxies(enemies);
-    else this._hideSurvivalCrowd();
-    // The legacy route remains GLB-only. Survival crowd units beyond the 14
-    // authored rigs use a lightweight 3D silhouette so all 20–30 bodies read.
+    if (game.mode === 'survival' && horde) this._syncSurvivalHorde(enemies, !!(game.survival && game.survival.phase === 'night'));
+    else if (game.mode === 'survival') this._syncSurvivalCrowdProxies(enemies);
+    else { this._hideSurvivalCrowd(); Crowd3D.hide(); }
     for (const [id, object] of this.proxies) if (!active.has(id)) object.visible = false;
+  }
+
+  /**
+   * Every swarm body as a GLB monster (src/game/crowd3d.js). The primitive
+   * silhouettes below stay only as the fallback for a horde whose textures
+   * are not baked (a rig that failed to load); they are hidden here. The id
+   * map keeps its QA contract: one record per drawn body.
+   */
+  _syncSurvivalHorde(enemies, night) {
+    Crowd3D.setLook(night);
+    const records = this.survivalCrowdProxies;
+    for (const rec of records.values()) rec._seen = false;
+    Crowd3D.sync(enemies, { root: this.root, actorScale: SURVIVAL_ACTOR_SCALE, verticalProjection: VERTICAL_PROJECTION, records });
+    for (const [id, rec] of records) if (!rec._seen) records.delete(id);
+    const inst = this.survivalCrowdInstances;
+    if (inst) for (const mesh of [inst.torso, inst.head, inst.arms, inst.eyes]) { mesh.count = 0; mesh.visible = false; }
   }
 
   /**
@@ -955,7 +976,7 @@ class World3DRuntime {
     const material = new THREE.MeshBasicMaterial({ color: 0x8cc0ff, transparent: true, opacity: 0.4, depthWrite: false, toneMapped: false });
     group.traverse((item) => { if (item.isMesh) { item.material = material; item.castShadow = false; item.receiveShadow = false; item.renderOrder = 6; } });
     group.userData.ghostMaterial = material;
-    group.scale.setScalar(type === 'gate' ? 1 : 1.3);
+    group.scale.setScalar(type === 'gate' ? 1 : 1.6);
     group.visible = false;
     this.root.add(group);
     return group;
@@ -1002,8 +1023,9 @@ class World3DRuntime {
    */
   _setSurvivalBuildingLevel(group, level) {
     group.userData.level = level;
-    // ×1.3 at Lv1 so a building reads at the day camera's zoom; +0.18 a level
-    group.scale.setScalar(1.3 + 0.18 * (level - 1));
+    // ×1.6 at Lv1 so a building stands bigger than the x1.6 actors beside
+    // it; +0.2 a level, so a level reads from across the bailey
+    group.scale.setScalar(1.6 + 0.2 * (level - 1));
     const old = group.getObjectByName('survival-building-pennant');
     if (old) {
       group.remove(old);
@@ -1128,7 +1150,8 @@ class World3DRuntime {
     const blue = mat({ color: 0x3e6bff, emissive: 0x1a3aa8, emissiveIntensity: 0.4, roughness: 0.65, side: THREE.DoubleSide });
     const gold = mat({ color: 0xffd24a, emissive: 0x8a6000, emissiveIntensity: 0.35, metalness: 0.4, roughness: 0.45, side: THREE.DoubleSide });
     const crack = mat({ color: 0x17120f, roughness: 1 });
-    const H = 186;
+    // tall enough to stand over the x1.6 actors as the heart of the bailey
+    const H = 230;
     const topY = 18 + H;
     const add = (geo, m, x, y, z, ry = 0, parent = group) => {
       const mesh = new THREE.Mesh(geo, m);
@@ -1498,7 +1521,11 @@ class World3DRuntime {
     const blue = mat({ color: 0x3e6bff, emissive: 0x1a3aa8, emissiveIntensity: 0.35, roughness: 0.65, side: THREE.DoubleSide, flatShading: false });
     const gold = mat({ color: 0xffd24a, emissive: 0x8a6000, emissiveIntensity: 0.3, metalness: 0.4, roughness: 0.45 });
     const yardMat = new THREE.MeshStandardMaterial({ color: 0x86a35a, roughness: 1, metalness: 0 });
-    const wallTop = PIECE_METRES.wall * PX_PER_METRE;
+    // the curtain wall is low (fortress.js FORT_WALL_METRES) so the horde
+    // shows over it; the towers and gatehouses stand tall above it, and the
+    // bridge over a gate clears the gate's frame
+    const wallTop = (m.wallMetres || PIECE_METRES.wall) * PX_PER_METRE;
+    const gateTop = Math.max(wallTop, PIECE_METRES.doorway * PX_PER_METRE + 6);
     const WALL_T = 26;
     const add = (geo, material, x, y, z, ry = 0, parent = group) => {
       const mesh = new THREE.Mesh(geo, material);
@@ -1558,7 +1585,7 @@ class World3DRuntime {
     for (const t of towers) {
       if (t.kind === 'corner') {
         const r = t.size / 2;
-        const h = wallTop + 70;
+        const h = wallTop + 108;
         add(new THREE.CylinderGeometry(r + 8, r + 12, 16, 16), stoneDark, t.x, 8, t.y);
         add(new THREE.CylinderGeometry(r - 4, r, h, 16), stone, t.x, h / 2, t.y);
         add(new THREE.CylinderGeometry(r + 1, r + 1, 7, 16), stoneLight, t.x, h * 0.55, t.y);
@@ -1576,7 +1603,7 @@ class World3DRuntime {
         flagSpots.push({ x: t.x, y: h + 86, z: t.y });
       } else {
         const sz = t.size;
-        const h = wallTop + 52;
+        const h = wallTop + 88;
         add(new THREE.BoxGeometry(sz + 10, 14, sz + 10), stoneDark, t.x, 7, t.y);
         add(new THREE.BoxGeometry(sz, h, sz), stone, t.x, h / 2, t.y);
         add(new THREE.BoxGeometry(sz + 10, 10, sz + 10), stoneLight, t.x, h + 3, t.y);
@@ -1600,11 +1627,11 @@ class World3DRuntime {
       if (!e.gate || !e.big) continue;
       const horiz = e.axis === 'h';
       const span = (horiz ? e.w : e.h) + 20;
-      add(new THREE.BoxGeometry(horiz ? span : WALL_T + 16, 24, horiz ? WALL_T + 16 : span), stoneLight, e.x, wallTop + 8, e.y);
+      add(new THREE.BoxGeometry(horiz ? span : WALL_T + 16, 24, horiz ? WALL_T + 16 : span), stoneLight, e.x, gateTop + 8, e.y);
       for (let i = 0; i < 3; i++) {
         const a = -span / 2 + (i + 0.5) * (span / 3);
         add(new THREE.BoxGeometry(horiz ? 24 : WALL_T + 8, 20, horiz ? WALL_T + 8 : 24), stone,
-          e.x + (horiz ? a : 0), wallTop + 30, e.y + (horiz ? 0 : a));
+          e.x + (horiz ? a : 0), gateTop + 30, e.y + (horiz ? 0 : a));
       }
     }
 
@@ -2145,7 +2172,8 @@ class World3DRuntime {
     this.survivalPlayerRing.visible = showRing;
     if (showRing) {
       this.survivalPlayerRing.position.set(p.x, 2.2, p.y);
-      const pulse = 1 + 0.06 * Math.sin(game.time * 5);
+      // the ring grows with the actor (SURVIVAL_ACTOR_SCALE: authored at x1.25)
+      const pulse = (1 + 0.06 * Math.sin(game.time * 5)) * (SURVIVAL_ACTOR_SCALE / 1.25);
       this.survivalPlayerRing.scale.set(pulse, 1, pulse);
     }
   }
@@ -2378,13 +2406,14 @@ class World3DRuntime {
       const glowColor = look === 'guard' ? 0x6fd6ff : look === 'tower' ? 0xff6a1a : 0xffc04a;
       const group = new THREE.Group();
       const shaft = new THREE.Mesh(this.boltGeometry, new THREE.MeshBasicMaterial({ color, toneMapped: false }));
-      const sx = look === 'tower' ? 5 : look === 'guard' ? 3 : 3.3;
-      const sy = look === 'tower' ? 2.5 : 1.6;
+      // sized for the x1.6 actors and the closer camera (2026-10-17)
+      const sx = look === 'tower' ? 6.5 : look === 'guard' ? 3.8 : 4.4;
+      const sy = look === 'tower' ? 3 : 2;
       shaft.scale.set(sx, sy, sx);
       shaft.name = 'bolt-shaft';
       const head = 13 * sy;                       // the shaft's tip, local +Y
-      const length = look === 'tower' ? 150 : look === 'guard' ? 92 : 108;
-      const radius = look === 'tower' ? 7 : 4.6;
+      const length = look === 'tower' ? 210 : look === 'guard' ? 120 : 150;
+      const radius = look === 'tower' ? 9.5 : 6;
       const streak = new THREE.Mesh(this._boltStreakGeometry(), new THREE.MeshBasicMaterial({
         color: glowColor, transparent: true, opacity: look === 'tower' ? 0.7 : 0.6, blending: THREE.AdditiveBlending,
         depthWrite: false, toneMapped: false,
@@ -2396,7 +2425,7 @@ class World3DRuntime {
       const glow = new THREE.Sprite(new THREE.SpriteMaterial({
         map: kit.glowTex, color: glowColor, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
       }));
-      const g = look === 'tower' ? 58 : look === 'guard' ? 34 : 40;
+      const g = look === 'tower' ? 84 : look === 'guard' ? 46 : 56;
       glow.scale.set(g, g, 1);
       glow.position.y = head;
       glow.name = 'bolt-glow';
@@ -2613,26 +2642,26 @@ class World3DRuntime {
       if (big) this._fx('ring', 'ring', ev.x, 2.5, ev.y, { color: 0xffffff, s0: 10 * S, s1: 70 * S, life: 0.28, alpha: 0.7, delay: 0.06 });
     } else if (ev.kind === 'muzzle') {
       kit.played.muzzle++;
-      this._fx('sprite', 'flash', ev.x, ev.h || 22, ev.y, { color: ev.color, s0: (ev.size || 30) * 0.55, s1: ev.size || 30, life: ev.life || 0.09 });
+      this._fx('sprite', 'flash', ev.x, ev.h || 22, ev.y, { color: ev.color, s0: (ev.size || 30) * 0.7 * S / 1.25, s1: (ev.size || 30) * 1.25 * S / 1.25, life: (ev.life || 0.09) * 1.2 });
     } else if (ev.kind === 'coin') {
       kit.played.coin++;
       // a coin hops out of the shaft and a glint flashes on the roof
       const a = Math.random() * Math.PI * 2;
-      this._fx('coin', 'coin', ev.x, 46, ev.y, { s0: 1.2, life: 1.0, rise: 74, vx: Math.cos(a) * 18, vy: Math.sin(a) * 10, spin: 11 });
-      this._fx('sprite', 'flash', ev.x, 70, ev.y, { color: 0xffd24a, s0: 30, s1: 90, life: 0.3, alpha: 0.85 });
+      this._fx('coin', 'coin', ev.x, 60, ev.y, { s0: 1.7, life: 1.0, rise: 100, vx: Math.cos(a) * 22, vy: Math.sin(a) * 12, spin: 11 });
+      this._fx('sprite', 'flash', ev.x, 92, ev.y, { color: 0xffd24a, s0: 40, s1: 130, life: 0.32, alpha: 0.9 });
     } else if (ev.kind === 'log') {
       kit.played.log++;
       const n = Math.max(2, Math.min(5, Math.round((ev.n || 6) / 3)));
       for (let i = 0; i < n; i++) {
         const a = (i / n) * Math.PI * 2 + Math.random() * 0.5;
-        this._fx('log', 'coin', ev.x, 40, ev.y, { s0: 1.1, life: 1.2, rise: 66 + i * 8, vx: Math.cos(a) * 34, vy: Math.sin(a) * 20, spin: 6, delay: i * 0.09, spin0: a });
+        this._fx('log', 'coin', ev.x, 52, ev.y, { s0: 1.5, life: 1.2, rise: 88 + i * 10, vx: Math.cos(a) * 44, vy: Math.sin(a) * 26, spin: 6, delay: i * 0.09, spin0: a });
       }
-      this._fx('ring', 'ring', ev.x, 3, ev.y, { color: 0xffcf8a, s0: 30, s1: 120, life: 0.5, alpha: 0.8 });
+      this._fx('ring', 'ring', ev.x, 3, ev.y, { color: 0xffcf8a, s0: 40, s1: 160, life: 0.5, alpha: 0.85 });
     } else if (ev.kind === 'rally') {
       kit.played.rally++;
-      this._fx('ring', 'ring', ev.x, 3, ev.y, { color: 0x6fc8ff, s0: 20, s1: 150, life: 0.6, alpha: 0.95 });
-      this._fx('ring', 'ring', ev.x, 3, ev.y, { color: 0xffffff, s0: 14, s1: 90, life: 0.4, alpha: 0.8, delay: 0.12 });
-      this._fx('sprite', 'flash', ev.x, 60, ev.y, { color: 0x6fc8ff, s0: 40, s1: 150, life: 0.45, alpha: 0.85 });
+      this._fx('ring', 'ring', ev.x, 3, ev.y, { color: 0x6fc8ff, s0: 28, s1: 200, life: 0.6, alpha: 0.95 });
+      this._fx('ring', 'ring', ev.x, 3, ev.y, { color: 0xffffff, s0: 18, s1: 120, life: 0.4, alpha: 0.8, delay: 0.12 });
+      this._fx('sprite', 'flash', ev.x, 80, ev.y, { color: 0x6fc8ff, s0: 50, s1: 200, life: 0.45, alpha: 0.85 });
     }
     if (age > 0) {
       for (let i = start; i < kit.live.length; i++) {
@@ -3262,7 +3291,13 @@ class World3DRuntime {
       this.decalMesh.renderOrder = 1;
       this.root.add(this.decalMesh);
     }
+    // Survival stains the ground on every kill; re-uploading a 2048 px
+    // canvas each time would cost a phone a frame per kill, so the upload is
+    // batched to at most one every 0.25 s of game time.
+    const now = game.now || 0;
+    if (game.mode === 'survival' && decals.dirty && !this.decalNeedsUpload && now >= (this._decalAt || 0) && now - (this._decalAt || 0) < 0.25) return;
     if (decals.dirty || this.decalNeedsUpload) {
+      this._decalAt = now;
       const context = this.decalUploadCanvas.getContext('2d');
       context.clearRect(0, 0, this.decalUploadCanvas.width, this.decalUploadCanvas.height);
       context.drawImage(decals.canvas, 0, 0, this.decalUploadCanvas.width, this.decalUploadCanvas.height);
@@ -3363,6 +3398,8 @@ class World3DRuntime {
       visibleRiggedEnemies: Enemy3D.slots.filter((slot) => slot.model.visible).length,
       proxyActors: [...this.proxies.values()].filter((object) => object.visible).length,
       visibleSurvivalCrowdProxies: [...this.survivalCrowdProxies.values()].filter((object) => object.visible).length,
+      horde: Crowd3D.diagnostics(),
+      primitiveCrowd: this.survivalCrowdInstances ? this.survivalCrowdInstances.torso.count : 0,
       survivalCrowdProxyPool: this.survivalCrowdProxies.size,
       survivalKeepVisible: !!(this.survivalKeep && this.survivalKeep.visible),
       fortressTowers: this.fortressDressing ? this.fortressDressing.userData.towers : 0,

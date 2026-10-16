@@ -28,6 +28,9 @@
 <link rel="preload" as="fetch" crossorigin="anonymous" href="./assets/monsters/ultimate/blue-demon.glb" />
 <link rel="preload" as="fetch" crossorigin="anonymous" href="./assets/monsters/ultimate/ghost-skull.glb" />
 <link rel="preload" as="fetch" crossorigin="anonymous" href="./assets/monsters/ultimate/yeti.glb" />
+<!-- The garrison (guards, the relief column) is KayKit's Knight: loaded with
+     the monsters, so no guard ever stands as a placeholder while it arrives. -->
+<link rel="preload" as="fetch" crossorigin="anonymous" href="./assets/troops/kaykit/Knight.glb" />
 <link rel="icon" href="./assets/brand/mark.svg" type="image/svg+xml" />
 <link rel="manifest" href="./manifest.webmanifest" />
 <!-- Play Billing in a Trusted Web Activity needs the Digital Goods API, and
@@ -66,16 +69,45 @@
     </div>
   </noscript>
 
-  <script type="module" src="./src/main.js"></script>
-  <!-- The service worker, only where it means something. On http (localhost,
-       the preview server) it is not registered at all: a cached module graph
-       would hide every edit during development. -->
+  <!-- The build this page boots. Bump it together with sw.js's VERSION; the
+       game prints it in the corner of the HUD and on the pause panel, so a
+       screenshot says which build it came from. -->
+  <script>window.DUSKHOLD_BUILD = '8';</script>
+  <!-- The service worker, only where it means something: the shipped site.
+       On http (localhost) it is never registered. On any other https host —
+       a preview link — an old one is removed together with its caches and
+       the page reloads once without it, because a cached module graph hides
+       every edit (playtest 2026-10-17: "tidak ada perubahan" — the build on
+       the screen was not the build in the branch). The game boots only
+       after that check, so stale code never starts. -->
   <script>
-    if ('serviceWorker' in navigator && location.protocol === 'https:') {
-      addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').catch(() => { /* a PWA is a bonus, never a requirement */ });
-      });
-    }
+    (function () {
+      var boot = function () {
+        var s = document.createElement('script');
+        s.type = 'module';
+        s.src = './src/main.js' + '?b=' + encodeURIComponent(window.DUSKHOLD_BUILD);
+        document.body.appendChild(s);
+      };
+      var shipped = /(^|\.)duskhold\.zyvrolabs\.com$/i.test(location.hostname);
+      if (!('serviceWorker' in navigator) || location.protocol === 'http:') { boot(); return; }
+      if (shipped && location.protocol === 'https:') {
+        boot();
+        addEventListener('load', function () {
+          navigator.serviceWorker.register('./sw.js').catch(function () { /* a PWA is a bonus, never a requirement */ });
+        });
+        return;
+      }
+      var sw = navigator.serviceWorker;
+      var stale = !!sw.controller;
+      var purge = Promise.all([
+        sw.getRegistrations().then(function (list) { return Promise.all(list.map(function (r) { return r.unregister(); })); }),
+        window.caches ? caches.keys().then(function (keys) { return Promise.all(keys.map(function (k) { return caches.delete(k); })); }) : null
+      ]).catch(function () {});
+      var once = false;
+      try { once = sessionStorage.getItem('duskhold-sw-purged') === '1'; sessionStorage.setItem('duskhold-sw-purged', '1'); } catch (e) { once = true; }
+      if (!stale || once) { boot(); return; }
+      purge.then(function () { location.reload(); });
+    })();
   </script>
 </body>
 </html>

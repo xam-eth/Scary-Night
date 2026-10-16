@@ -18,10 +18,15 @@
  * looked at.
  *
  * Bump VERSION when the deployed site changes in a way players must see
- * — the old cache is dropped on activate.
+ * — the old cache is dropped on activate. Code (.js/.css/.json) is fetched
+ * network-first, so a player online always runs the build that is deployed
+ * (playtest 2026-10-17: a cache-first module graph kept showing an old
+ * build after every update); the cached copy is only the offline fallback.
+ * Heavy, rarely changing files (models, images, fonts, audio) stay cache
+ * first. index.html registers this worker on the shipped host only.
  */
 
-const VERSION = 'duskhold-v7';
+const VERSION = 'duskhold-v8';
 const CACHE = VERSION;
 
 /* The shell: what has to be there for the first paint on a cold start.
@@ -61,7 +66,8 @@ self.addEventListener('activate', (event) => {
 });
 
 const sameOrigin = (url) => url.origin === self.location.origin;
-const isAsset = (url) => /\.(js|mjs|css|png|jpe?g|svg|webp|glb|gltf|bin|woff2?|json|mp3|ogg|wav)$/i.test(url.pathname);
+const isCode = (url) => /\.(js|mjs|css|json|webmanifest)$/i.test(url.pathname);
+const isAsset = (url) => /\.(png|jpe?g|svg|webp|glb|gltf|bin|woff2?|mp3|ogg|wav)$/i.test(url.pathname);
 
 self.addEventListener('fetch', (event) => {
   const req = event.request;
@@ -89,10 +95,27 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  /* Code: the network wins (a module that changed under the same name must
+   * not be served stale); the cache answers only when there is no network. */
+  if (isCode(url)) {
+    event.respondWith((async () => {
+      const cache = await caches.open(CACHE);
+      try {
+        const fresh = await fetch(req);
+        if (fresh && fresh.ok) cache.put(req, fresh.clone()).catch(() => {});
+        return fresh;
+      } catch (e) {
+        const cached = await cache.match(req);
+        return cached || new Response('', { status: 504 });
+      }
+    })());
+    return;
+  }
+
   if (!isAsset(url)) return;
 
-  /* Assets are immutable by name in this project: cache first, refresh in the
-   * background so the next boot has it. */
+  /* Models, images, fonts and audio: cache first, refresh in the background
+   * so the next boot has it. */
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
     const cached = await cache.match(req);

@@ -7,12 +7,14 @@
  */
 
 import { approachAngle, clamp, damp, dist, lerp, rand, writeSave } from '../core/util.js';
-import { SURVIVAL_TUNING } from '../core/config.js';
+import { SURVIVAL_TUNING, SURVIVAL_ACTOR_SCALE } from '../core/config.js';
 import { CrowdBody, Zombie, outwardOf, CROWD, ESTATE } from './enemies.js';
 import { ROOM } from './mansion.js';
 import { FORT } from './fortress.js';
 
 const RESOURCE_CAP = 999;
+/** The camera's extra closeness over the 0.7 bailey's framing (frameMul). */
+const FRAME_CLOSER = 1.3;
 const SAVE_EVERY = 2.5;
 // Night pacing: the first rank hits a door within seconds, so Night 1 has
 // action near the Hunter before the halfway mark.
@@ -77,9 +79,12 @@ export const KEEP = Object.freeze({
   damage: Object.freeze({ swarm: 12, individual: 36, breaker: 72 }),
   alarmRange: 460,       // a body this close (and inside) threatens the keep
   attackedFor: 1.6,      // s the keep reads "under attack" after a claw
+  // the roof ballista reaches the gate roads of the half-size bailey (the
+  // north and south gates stand 475 px from the keep): at 360 it only ever
+  // covered the inner ward and seldom fired
   ballista: Object.freeze({
-    2: Object.freeze({ damage: 12, every: 1.2, range: 360 }),
-    3: Object.freeze({ damage: 18, every: 1.0, range: 400 }),
+    2: Object.freeze({ damage: 18, every: 1.1, range: 440 }),
+    3: Object.freeze({ damage: 26, every: 0.9, range: 500 }),
   }),
 });
 
@@ -109,7 +114,8 @@ export const TERRITORY = Object.freeze({
 export const SURVIVAL_SLOTS = Object.freeze([
   Object.freeze({ id: 'south:tower', room: FORT.SOUTH, type: 'tower' }),
   Object.freeze({ id: FORT.WARD, room: FORT.WARD, type: 'barracks', at: Object.freeze([0.80, 0.80]) }),
-  Object.freeze({ id: FORT.SOUTH, room: FORT.SOUTH, type: 'sawmill', at: Object.freeze([0.80, 0.42]) }),
+  // west of the gate road: its ballista stands east of the road (TOWER.side)
+  Object.freeze({ id: FORT.SOUTH, room: FORT.SOUTH, type: 'sawmill', at: Object.freeze([0.20, 0.45]) }),
   Object.freeze({ id: FORT.NORTH, room: FORT.NORTH, type: 'mine', at: Object.freeze([0.22, 0.55]) }),
   Object.freeze({ id: 'north:tower', room: FORT.NORTH, type: 'tower' }),
   Object.freeze({ id: FORT.WEST, room: FORT.WEST, type: 'sawmill', at: Object.freeze([0.50, 0.78]) }),
@@ -128,7 +134,7 @@ export function survivalSlot(id) { return SLOT_BY_ID.get(id) || null; }
 /** Pre-K1 saves: the old building ids. */
 const TYPE_MIGRATE = Object.freeze({ extractor: 'mine', shelter: 'barracks' });
 /** How close the Hunter stands to a circle (or the keep) to act on it. */
-export const CIRCLE = Object.freeze({ radius: 58, reach: 70, keepReach: 96 });
+export const CIRCLE = Object.freeze({ radius: 68, reach: 80, keepReach: 100 });
 const NIGHT_PHASE = { id: 'survival-night', label: 'NIGHT', danger: 0.24, ambient: [108, 114, 132] };
 const DAY_PHASE = { id: 'survival-day', label: 'DAY', danger: 0.02, ambient: [186, 174, 150] };
 
@@ -167,10 +173,13 @@ export const SURVIVAL_BUILDING_LEVELS = Object.freeze({
     2: Object.freeze({ gold: 6, wood: 16, seconds: 8, houses: 2 }),
     3: Object.freeze({ gold: 8, wood: 20, seconds: 9, houses: 3 }),
   }),
+  // A bolt that kills: 24 at Lv1 drops a Night 1 body (48 HP) in two, and
+  // runs on through a second one (TOWER.pierce). At 16 a ballista fired 110
+  // bolts a run and landed 30 kills, so it read as decoration (2026-10-17).
   tower: Object.freeze({
-    1: Object.freeze({ gold: 4, wood: 16, seconds: 8, damage: 16, range: 520 }),
-    2: Object.freeze({ gold: 6, wood: 18, seconds: 7, damage: 22, range: 580 }),
-    3: Object.freeze({ gold: 8, wood: 22, seconds: 8, damage: 30, range: 640 }),
+    1: Object.freeze({ gold: 4, wood: 16, seconds: 8, damage: 24, range: 520 }),
+    2: Object.freeze({ gold: 6, wood: 18, seconds: 7, damage: 32, range: 580 }),
+    3: Object.freeze({ gold: 8, wood: 22, seconds: 8, damage: 42, range: 640 }),
   }),
 });
 const DOOR_BONUS_CAP = 0.6;
@@ -306,8 +315,9 @@ function approachDoor(enemy, dt, game, mode, door, point, speed, accel) {
  * are clawing are the ones the Hunter and the guards can see through the
  * door's slit; alternate ranks are staggered half a gap.
  */
-const RANK_GAP = 44;
-const RANK_ROW = 36;
+// spaced for bodies x1.6 (SURVIVAL_ACTOR_SCALE): a demon is ~60 px across
+const RANK_GAP = 54;
+const RANK_ROW = 44;
 export function survivalSpot(e, index, ring = 72) {
   const out = outwardOf(e);
   const along = { x: -out.y, y: out.x };
@@ -924,6 +934,7 @@ export class SurvivalMode {
     this.towers = [];
     this.floaters = [];
     this.fx = [];                  // one-shot 3D effects for world3d (pushFx)
+    this.hudPops = [];             // income beside the HUD counters (pushHudPop)
     this.runStats = freshRunStats();
     this._mineBank = Object.create(null);
     this.bannerQueue = [];
@@ -1150,10 +1161,11 @@ export class SurvivalMode {
     if (!m.solids.some((solid) => solid.type === 'keep')) {
       // a plus and a square: the round tower's footprint within ~20 px
       const r = keep.r;
+      const a = Math.round(r * 0.625), b = Math.round(r * 0.85);
       const rects = [
-        { x: keep.x - r, y: keep.y - 70, w: r * 2, h: 140 },
-        { x: keep.x - 70, y: keep.y - r, w: 140, h: r * 2 },
-        { x: keep.x - 95, y: keep.y - 95, w: 190, h: 190 },
+        { x: keep.x - r, y: keep.y - a, w: r * 2, h: a * 2 },
+        { x: keep.x - a, y: keep.y - r, w: a * 2, h: r * 2 },
+        { x: keep.x - b, y: keep.y - b, w: b * 2, h: b * 2 },
       ];
       for (const rect of rects) m._indexSolid({ ...rect, type: 'keep', solid: true });
     }
@@ -1386,9 +1398,9 @@ export class SurvivalMode {
         // two lines of four behind the banner: ranks 1–2 in front, 3–4 behind
         const line = rank <= 2 ? 0 : 1;
         const col = (rank % 2 === 1 ? 0.5 : 1.5) * file;
-        // spacing for the GLB knights (shoulder pads and shields, x1.25):
-        // 84 apart each way, so no two bodies overlap in the lines
-        troops.push({ role: 'spear', rank, file, slot: at(keep, front + 80 + line * 84, col * 84) });
+        // spacing for the GLB knights (shoulder pads and shields, x1.6):
+        // 104 apart each way, so no two bodies overlap in the lines
+        troops.push({ role: 'spear', rank, file, slot: at(keep, front + 96 + line * 104, col * 104) });
       }
     }
     const gatePt = { x: gx, y: gy };
@@ -1504,7 +1516,11 @@ export class SurvivalMode {
   _resetNightFx() {
     this.floaters.length = 0;
     this.fx.length = 0;
+    this.hudPops = [];
     this._mineBank = Object.create(null);
+    // tonight's tally over every ballista (the night HUD's kill pills)
+    for (const t of this.towers || []) t.nightKills = 0;
+    this.keepBallistaKills = 0;
     this.bannerQueue.length = 0;
     this.banner = null;
     this.keepAttackers = 0;
@@ -1742,8 +1758,8 @@ export class SurvivalMode {
     for (let i = 0; i < total; i++) {
       const row = Math.floor(i / 7);
       const col = i % 7;
-      const lateral = (col - 3) * 42 + rand(-8, 8);
-      const depth = 150 + row * 56 + rand(-16, 16);
+      const lateral = (col - 3) * 50 + rand(-8, 8);
+      const depth = 150 + row * 64 + rand(-16, 16);
       const { x, y } = this._outsideSpot(entrance, out, along, lateral, depth);
       // Ranks count from the front of *this* door's crowd: a wave that joins
       // an existing crowd queues behind it, a fresh door starts at rank 0.
@@ -1961,14 +1977,14 @@ export class SurvivalMode {
     const held = this.inTerritory(enemy.x, enemy.y);
     const dealt = amount * (held ? this.tuning.territoryDamageTakenMul : 1);
     if (dealt > 0.5) {
-      // bodies read 1.25x bigger in Survival (SURVIVAL_ACTOR_SCALE): the
-      // number and the flash sit at their chest, not at their knees
-      const h = (enemy._survivalType === 'breaker' ? 96 : enemy._survivalType === 'individual' ? 78 : 60) * 1.25;
+      // bodies read bigger in Survival (SURVIVAL_ACTOR_SCALE): the number
+      // and the flash sit at their chest, not at their knees
+      const h = (enemy._survivalType === 'breaker' ? 96 : enemy._survivalType === 'individual' ? 78 : 60) * SURVIVAL_ACTOR_SCALE;
       const kill = (enemy.hp || 0) - dealt <= 0;
       const src = killSource(this.game, enemy._lastHitBy);
       const heavy = src === 'tower' || src === 'keep' || src === 'flare' || dealt >= 28;
       this.pushFloater(enemy.x + rand(-12, 12), enemy.y, `${Math.round(dealt)}`, kill ? '#ff9a3c' : held ? '#ffd24a' : '#ffffff',
-        { h, size: kill ? 32 : heavy ? 26 : held ? 24 : 19, pop: kill ? 1.6 : heavy ? 1.5 : 1.38, drift: rand(-26, 26), kind: kill ? 'kill' : heavy ? 'heavy' : 'hit' });
+        { h, size: kill ? 40 : heavy ? 32 : held ? 28 : 23, pop: kill ? 1.7 : heavy ? 1.55 : 1.4, drift: rand(-30, 30), kind: kill ? 'kill' : heavy ? 'heavy' : 'hit' });
       // the hit lands: a flash and a ring at the body (world3d) and sparks
       // thrown back along the shot
       const color = HIT_COLOR[src] || '#ffffff';
@@ -2378,7 +2394,7 @@ export class SurvivalMode {
     const clear = (x, y) => {
       if (x < room.x + pad || x > room.x + room.w - pad || y < room.y + pad || y > room.y + room.h - pad) return false;
       if (m.solidAt(x, y)) return false;
-      if (keep && dist(x, y, keep.x, keep.y) < keep.r + CIRCLE.radius + 40) return false;
+      if (keep && dist(x, y, keep.x, keep.y) < keep.r + CIRCLE.radius + 28) return false;
       for (const q of avoid) if (q && dist(x, y, q.x, q.y) < CIRCLE.radius * 2 + 40) return false;
       for (const r of [26, 42]) {
         for (let k = 0; k < 8; k++) {
@@ -2539,8 +2555,11 @@ export class SurvivalMode {
         const spot = this.buildingSpot(slotId);
         if (spot) {
           this.pushFx('coin', spot.x, spot.y, { slotId });
-          this.pushFloater(spot.x, spot.y, '+1', '#ffd24a', { h: 118, size: 20, icon: 'gold', life: 1.15, pop: 1.3, kind: 'income' });
+          this.pushFloater(spot.x, spot.y, '+1', '#ffd24a', { h: 150, size: 22, icon: 'gold', life: 1.15, pop: 1.3, kind: 'income' });
         }
+        // and beside the purse in the HUD, wherever the captain stands: the
+        // mine at work is seen from the gate he is holding
+        this.pushHudPop('gold', '+1', 'mine');
         this._mineBank[slotId] = bank - 1;
       } else this._mineBank[slotId] = bank;
     }
@@ -3266,18 +3285,27 @@ export class SurvivalMode {
     this.runStats.kills++;
     this.runStats.by[src] = (this.runStats.by[src] || 0) + 1;
     if (src === 'tower' && enemy._lastHitBy) {
-      enemy._lastHitBy.kills = (enemy._lastHitBy.kills || 0) + 1;
-      const slotId = enemy._lastHitBy.slotId;
+      const tower = enemy._lastHitBy;
+      tower.kills = (tower.kills || 0) + 1;
+      tower.nightKills = (tower.nightKills || 0) + 1;
+      const slotId = tower.slotId;
       if (slotId) {
         if (!this.runStats.towers) this.runStats.towers = {};
         this.runStats.towers[slotId] = (this.runStats.towers[slotId] || 0) + 1;
       }
+      // the building that got it says so, over its own deck: a ballista
+      // reads as working (2026-10-17: "bangunan ... tidak berfungsi")
+      if (Number.isFinite(tower.x)) this.pushFloater(tower.x, tower.y, '+1', '#ffb36b', { h: 236, size: 22, icon: 'skull', life: 1.2, pop: 1.35, kind: 'income' });
+    } else if (src === 'keep') {
+      const keep = this.keep();
+      this.keepBallistaKills = (this.keepBallistaKills || 0) + 1;
+      this.pushFloater(keep.x, keep.y, '+1', '#ffb36b', { h: 330, size: 22, icon: 'skull', life: 1.2, pop: 1.35, kind: 'income' });
     }
     const big = enemy._survivalType === 'breaker' || enemy._survivalType === 'individual';
     g.audio.play('hitFlesh', { vol: big ? 0.6 : 0.42, weight: big ? 1 : 0.8 });
     // the kill pops: a burst and a shock ring on the floor (world3d), then
     // dust, grit and a wisp of the thing rising off the body
-    this.pushFx('kill', enemy.x, enemy.y, { h: (big ? 70 : 46) * 1.25, color: HIT_COLOR[src] || '#ffffff', big });
+    this.pushFx('kill', enemy.x, enemy.y, { h: (big ? 70 : 46) * SURVIVAL_ACTOR_SCALE, color: HIT_COLOR[src] || '#ffffff', big });
     g.particles.burst('spark', enemy.x, enemy.y, big ? 22 : 11, {
       color: big ? 'rgba(255,214,120,0.95)' : 'rgba(226,236,200,0.92)', sizeMin: 2.4, sizeMax: big ? 7 : 5,
       speedMin: 60, speedMax: big ? 300 : 210, lifeMin: 0.22, lifeMax: 0.6, glow: true,
@@ -3285,11 +3313,22 @@ export class SurvivalMode {
     g.particles.burst('glow', enemy.x, enemy.y, big ? 6 : 3, {
       color: 'rgba(150,90,210,0.7)', sizeMin: 5, sizeMax: big ? 12 : 8, speedMin: 10, speedMax: 50, lifeMin: 0.45, lifeMax: 0.9,
     });
+    // ichor chunks thrown off the body, and a stain left on the ground: a
+    // gate you held reads as a battlefield the next time you look at it
+    g.particles.burst('blood', enemy.x, enemy.y, big ? 16 : 9, {
+      color: 'rgba(92,40,128,0.95)', sizeMin: 2.4, sizeMax: big ? 6.5 : 4.8, speedMin: 70, speedMax: big ? 280 : 210, lifeMin: 0.25, lifeMax: 0.6,
+    });
+    if (g.decals && g.decals.splat) g.decals.splat(enemy.x, enemy.y + 4, big ? 26 : 17, 'rgba(46,18,64,0.42)', big ? 7 : 5);
     // a streak of kills shakes a little; a big one holds the frame
     this._streak = (this.uiClock - (this._lastKillAt || -9) < 0.6) ? (this._streak || 0) + 1 : 1;
     this._lastKillAt = this.uiClock;
     if (big) { this.hitStop = Math.max(this.hitStop, 0.05); g.renderer.shake(0.16); }
-    else if (this._streak >= 3) g.renderer.shake(0.05);
+    else if (src === 'captain') {
+      // the captain's own kill lands with weight: a nudge of the camera
+      // (the hit-stop stays for the big ones — on every swarm kill it made
+      // a busy gate stutter and stretched the night)
+      g.renderer.shake(this._streak >= 3 ? 0.08 : 0.05);
+    } else if (this._streak >= 3) g.renderer.shake(0.05);
   }
 
   onPlayerHurt(amount) {
@@ -3334,14 +3373,15 @@ export class SurvivalMode {
    * same phone turned sideways see the same depth of house around the Hunter
    * (landscape used to clamp to a much tighter zoom). Night pulls back far
    * enough that a crowd at the nearest door is in frame; day shows the base.
-   * The compact bailey (FORT_SCALE 0.7) lets the camera sit ~1.28x closer
-   * than the first fortress did (0.86 / 0.8), so the captain, his guards and
-   * the horde read as the pieces of the game rather than specks in a yard.
+   * The half-size bailey (FORT_SCALE 0.5) lets the camera sit 1.3x closer
+   * again (FRAME_CLOSER), so the captain, his guards and the horde read as
+   * the pieces of the game rather than specks in a yard: a body stands ~90
+   * px tall on a 390 px sideways phone (it was ~54).
    */
   frameMul(night) {
     const r = this.game.renderer;
     const short = Math.min(r.w || 390, r.h || 844);
-    const target = clamp(short / 720, 0.5, 0.82) * (night ? 1.1 : 1.02);
+    const target = clamp(short / 720, 0.5, 0.82) * (night ? 1.1 : 1.02) * FRAME_CLOSER;
     return target / (r.baseZoom || 1);
   }
 
@@ -3492,6 +3532,17 @@ export class SurvivalMode {
   }
 
   currentBanner() { return this.banner; }
+
+  /**
+   * Income shown beside a HUD counter (`icon`: the counter it lands in;
+   * `from`: the building icon it came from). Timestamped on the UI clock;
+   * the HUD draws and drops them (src/ui/survival.js drawHudPops).
+   */
+  pushHudPop(icon, text, from) {
+    if (!this.hudPops) this.hudPops = [];
+    if (this.hudPops.length > 6) this.hudPops.shift();
+    this.hudPops.push({ icon, text, from, t0: this.uiClock });
+  }
 
   pushFloater(x, y, text, color, opts = {}) {
     if (this.floaters.length > 48) this.floaters.shift();

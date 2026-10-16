@@ -1073,9 +1073,10 @@ async function runSurvivalMilestone() {
     for (let i = 0; i < 30 && (mode.nightStats.towerShots || 0) === shotsBefore; i++) tick();
     resolveShot();
     const pierceHp = [first, second, third].map((z) => Math.round(z.hp));
+    const lv1Damage = mode.towerStats('south:tower').damage;
     towerCheck('tower bolt runs through 2 bodies in a line and stops in the 2nd (pierce 1)',
-      (mode.nightStats.towerShots || 0) === shotsBefore + 1 && pierceHp.join('/') === '983/983/999',
-      `one shot, bodies ${pierceHp.join(' / ')}`);
+      (mode.nightStats.towerShots || 0) === shotsBefore + 1 && lv1Damage === 24 && pierceHp.join('/') === `${999 - lv1Damage}/${999 - lv1Damage}/999`,
+      `one shot of ${lv1Damage}, bodies ${pierceHp.join(' / ')}`);
 
     // masonry stops it: a body in range but out of sight behind a wall
     quietNight(mode);
@@ -1097,7 +1098,7 @@ async function runSurvivalMilestone() {
       !!hiddenAt && inRange && noLos && (mode.nightStats.towerShots || 0) === hiddenShots && hidden.hp === 999,
       `body at (${Math.round(hidden.x)}, ${Math.round(hidden.y)}) in ${m.findRoom(hidden.x, hidden.y)}, in range=${inRange}, no LOS=${noLos}, shots ${hiddenShots} → ${mode.nightStats.towerShots || 0}, body ${Math.round(hidden.hp)}`);
 
-    // levels: Lv2 22 dmg / 580, Lv3 30 dmg / 640; a Lv3 bolt lands for 30
+    // levels: Lv2 32 dmg / 580, Lv3 42 dmg / 640; a Lv3 bolt lands for 42
     mode.phase = 'day'; survivalGame.screen = 'playing'; survivalGame.uiPanel = 'survival-day';
     survivalGame.enemies.length = 0; survivalGame.bolts.length = 0;
     mode.gold = 150; mode.wood = 150;
@@ -1116,10 +1117,12 @@ async function runSurvivalMilestone() {
     tower.cd = 0; tower.target = null;
     for (let i = 0; i < 30 && (mode.nightStats.towerShots || 0) === lv3Shots; i++) tick();
     resolveShot();
-    towerCheck('tower levels: Lv2 22 dmg / 580 range, Lv3 30 / 640 (costs 6/18, 8/22); a Lv3 bolt lands for 30',
+    // (2026-10-17: 24 / 32 / 42 — a ballista's bolt kills, so a built
+    // ballista reads as working; was 16 / 22 / 30)
+    towerCheck('tower levels: Lv2 32 dmg / 580 range, Lv3 42 / 640 (costs 6/18, 8/22); a Lv3 bolt lands for 42',
       cost2 && cost2.gold === 6 && cost2.wood === 18 && cost3 && cost3.gold === 8 && cost3.wood === 22
-        && st2.damage === 22 && st2.range === 580 && st3.damage === 30 && st3.range === 640
-        && mode.buildingLevel('south:tower') === 3 && Math.round(lv3Body.hp) === 969,
+        && st2.damage === 32 && st2.range === 580 && st3.damage === 42 && st3.range === 640
+        && mode.buildingLevel('south:tower') === 3 && Math.round(lv3Body.hp) === 957,
       `cost Lv2 ${cost2 && `${cost2.gold}/${cost2.wood}`}, Lv3 ${cost3 && `${cost3.gold}/${cost3.wood}`}; Lv2 ${st2.damage}/${st2.range}, Lv3 ${st3.damage}/${st3.range}; body 999 → ${Math.round(lv3Body.hp)}`);
     mode.tuning = SURVIVAL_TUNING;
 
@@ -1538,6 +1541,80 @@ async function runSurvivalMilestone() {
   }
   const endPass = endChecks.length === 6 && endChecks.every(Boolean);
 
+  // ---- the 2026-10-17 visual pass ("tidak ada perubahan"): a half-size
+  // bailey for x1.6 actors, a low curtain wall, a ballista that kills and
+  // says so, a mine whose coins reach the HUD, a roof ballista that covers
+  // the gate roads ----
+  const passChecks = [];
+  const passCheck = (name, ok, detail) => {
+    passChecks.push(!!ok);
+    console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} (${detail})`);
+  };
+  {
+    const { FORT_SCALE, FORT_WALL_METRES, BAILEY } = await import('../src/game/fortress.js');
+    const { SURVIVAL_ACTOR_SCALE } = await import('../src/core/config.js');
+    const { KEEP, SURVIVAL_BUILDING_LEVELS } = await import('../src/game/survival.js');
+    window.localStorage.removeItem('lastnight.save.v1');
+    const vg = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+    const vm = vg.survival;
+    const vtick = (n = 1) => { for (let i = 0; i < n; i++) vg.update(step); };
+    const keep = vm.keep();
+    const north = vm.entranceById('northGate'), south = vm.entranceById('southGate');
+    const toGate = Math.min(Math.hypot((north.inside || north).x - keep.x, (north.inside || north).y - keep.y),
+      Math.hypot((south.inside || south).x - keep.x, (south.inside || south).y - keep.y));
+    passCheck('scale: the bailey is half its first size (1300 x 950 px) with the keep r100 and a 2 m curtain wall, for actors x1.6',
+      FORT_SCALE === 0.5 && BAILEY.w === 1300 && BAILEY.h === 950 && keep.r === 100 && vg.mansion.wallMetres === FORT_WALL_METRES
+        && FORT_WALL_METRES === 2 && SURVIVAL_ACTOR_SCALE === 1.6,
+      `FORT_SCALE ${FORT_SCALE}, bailey ${BAILEY.w}x${BAILEY.h}, keep r${keep.r}, wall ${vg.mansion.wallMetres} m, actors x${SURVIVAL_ACTOR_SCALE}`);
+    passCheck('roof ballista reaches the gate roads: Lv2 440 / Lv3 500 px against the N/S gate insides ~430 px from the keep (it used to cover only the inner ward)',
+      KEEP.ballista[2].range >= toGate && KEEP.ballista[3].range > KEEP.ballista[2].range && SURVIVAL_BUILDING_LEVELS.tower[1].damage === 24,
+      `gate insides ${Math.round(toGate)} px from the keep; ranges ${KEEP.ballista[2].range}/${KEEP.ballista[3].range}; ballista Lv1 bolt ${SURVIVAL_BUILDING_LEVELS.tower[1].damage}`);
+
+    // a ballista kill: the tower's night tally and a "+1" skull over its deck
+    vm.restart();
+    vm.phase = 'day'; vm.day = 2; vg.screen = 'playing'; vg.uiPanel = 'survival-day';
+    vm.gold = 150; vm.wood = 150;
+    vm.startBuild('tower', 'south:tower');
+    for (let i = 0; i < 1200 && vm.builderJob; i++) vtick();
+    vtick();
+    vm.startNight();
+    vm.waveIndex = 99; vm.breakerIndex = 99; vm.individualIndex = 99;
+    vg.enemies.length = 0; vg.bolts.length = 0;
+    vm.guards.length = 0; vm.survivors = 0;
+    vm.tuning = { ...vm.tuning, autoAttackRange: 0 };
+    south.hp = south.hpMax = 99999;
+    const tw = vm.towers[0];
+    const len = tw ? Math.hypot(south.x - tw.x, south.y - tw.y) : 1;
+    const victim = new SurvivalCrowdZombie(south.x + (south.x - (tw ? tw.x : 0)) / len * 110, south.y + (south.y - (tw ? tw.y : 0)) / len * 110, south, 0, 1);
+    victim.hp = 1; victim.vx = 0; victim.vy = 0; victim.update = () => {};
+    vg.enemies.push(victim);
+    if (tw) tw.cd = 0;
+    vm.floaters.length = 0;
+    for (let i = 0; i < 240 && !victim.dead; i++) vtick();
+    vm.tuning = SURVIVAL_TUNING;
+    const skull = vm.floaters.find((f) => f.kind === 'income' && f.icon === 'skull');
+    passCheck('ballista: its kill is counted on its deck tonight and pops "+1" with a skull over it',
+      victim.dead && tw && tw.nightKills === 1 && !!skull && Math.abs(skull.x - tw.x) < 1 && Math.abs(skull.y - tw.y) < 1,
+      `killed ${victim.dead}, tally ${tw && tw.nightKills}, pop ${skull ? `${skull.text} at the tower` : 'none'}`);
+
+    // a mine's coin reaches the HUD (wherever the captain stands)
+    vm.buildings.north = 'mine'; vm.buildingLevels.north = 1;
+    vm.hudPops = [];
+    vm._mineBank.north = 0.999;
+    vtick(6);
+    const pop = (vm.hudPops || []).find((p) => p.icon === 'gold' && p.from === 'mine');
+    // and the next night starts every tally at 0
+    vm.completeNight();
+    vm.phase = 'day';
+    if (vm.rewardPending && vm.rewardPending()) vm.ackRewards();
+    vm.startNight();
+    passCheck('mine: a dug coin pops "+1" beside the purse in the HUD (hudPops), and a new night resets the ballista tallies',
+      !!pop && pop.text === '+1' && vm.towers.every((t) => (t.nightKills || 0) === 0) && (vm.keepBallistaKills || 0) === 0,
+      `hud pop ${pop ? `${pop.text} ${pop.icon} from ${pop.from}` : 'none'}; tallies ${vm.towers.map((t) => t.nightKills || 0).join(',')}`);
+    window.localStorage.removeItem('lastnight.save.v1');
+  }
+  const passPass = passChecks.length === 4 && passChecks.every(Boolean);
+
   console.log(`  idle Night 3: ${idle.nightThree.peakEnemies} peak enemies / ${idle.nightThree.peakBreakers} Breakers, ${idle.nightThree.kills} kills, ${idle.nightThree.wallDamage} wall damage, gate ${idle.nightThree.gateHp} HP, Hunter ${idle.nightThree.playerHp} HP; ${idle.phase}`);
   console.log(`  builder Night 3: ${builder.nightThree.peakEnemies} peak enemies / ${builder.nightThree.peakBreakers} Breakers, ${builder.nightThree.kills} kills, ${builder.nightThree.wallDamage} wall damage, gate ${builder.nightThree.gateHp} HP, Hunter ${builder.nightThree.playerHp} HP; keep Lv${builder.keepLevel} ${builder.keepHp} HP, soldiers ${builder.survivors}, buildings ${builder.buildings.join(',') || 'none'}, gateBuilt=${builder.gateBuilt}; ${builder.phase}`);
   // Balance target (M1 rebuild, K1): doing nothing must not win; an engaged
@@ -1550,7 +1627,7 @@ async function runSurvivalMilestone() {
     && hunterAutoShot && hunterRealLos && hunterSkill
     && idleLoses && builder.complete && builder.keepLevel === 3
     && builder.queueLockVerified && builder.sawmillBuilt && builder.gateBuilt && builder.barracksBuilt
-    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass
+    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass
     && builder.upgrades[0].level === 1 && builder.upgrades[0].rooms === 5
     && builder.upgrades[builder.upgrades.length - 1].level === 3 && builder.upgrades[builder.upgrades.length - 1].rooms === 9
     && builder.upgrades.every((item, i, all) => i === 0 || item.level >= all[i - 1].level);

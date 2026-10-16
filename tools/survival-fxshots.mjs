@@ -8,6 +8,10 @@
  *
  *   fx-gate / fx-gate-b  GLB knights (royal-blue livery) at the north gate,
  *                        glowing bolts with streaks, hit flashes, numbers
+ *   fx-horde             (2026-10-17) the main gate's horde: every swarm body
+ *                        an animated GLB monster (instanced, crowd3d.js), a
+ *                        ballista's kills over its deck, blue crested helmets,
+ *                        the build stamp
  *   fx-mine              a mine digs: a 3D coin pops out of its shaft, "+1"
  *   fx-dawn              the dawn panel credits the sawmill and the guards
  *   fx-sawmill           COLLECT: the sawmill throws its planks, "+N"
@@ -150,9 +154,61 @@ const mine = await shot('fx-mine', () => {
   const before = window.__fxDiag().fx.played.coin;
   m._mineBank.north = 0.995;
   window.__fxRealtime(12);
-  return { coins: window.__fxDiag().fx.played.coin - before, income: m.floaters.filter((f) => f.kind === 'income').map((f) => `${f.text}:${f.icon}`) };
+  return { coins: window.__fxDiag().fx.played.coin - before, income: m.floaters.filter((f) => f.kind === 'income').map((f) => `${f.text}:${f.icon}`), hud: (m.hudPops || []).filter((q) => q.icon === 'gold' && q.from === 'mine').length };
 });
-check('mine: a dug coin pops out of the mine with "+1"', mine.coins >= 1 && mine.income.includes('+1:gold'), mine);
+check('mine: a dug coin pops out of the mine with "+1", and beside the purse in the HUD wherever the captain stands',
+  mine.coins >= 1 && mine.income.includes('+1:gold') && mine.hud >= 1, mine);
+
+// 2b. the horde at the main gate (2026-10-17 pass): every swarm body is an
+// animated GLB monster (instanced, no primitive figure left), a built
+// ballista credits its kills over its deck, the guards wear the keep's blue
+// helmet with a gold crest, and the page says which build it is
+const horde = await shot('fx-horde', () => {
+  const g = window.__LN; const m = g.survival;
+  m.buildings['south:tower'] = 'tower'; m.buildingLevels['south:tower'] = 1;
+  g.survivalBakeDirty = true;
+  const door = g.mansion.entrances.find((e) => e.id === 'southGate');
+  const inside = door.inside || door;
+  g.player.x = inside.x + 40; g.player.y = inside.y - 90;
+  g.renderer.snapCamera(g.player.x, g.player.y);
+  const keepHp = m.keepHp;
+  m.keepHp = 99999;                       // a capture: the keep may not fall first
+  // count the "+1" skulls the ballista pops while the night runs (a pop
+  // lives 1.2 s, so most are gone by the captured frame)
+  let skulls = 0;
+  const proto = Object.getPrototypeOf(m).pushFloater;
+  m.pushFloater = function (x, y, text, color, opts = {}) {
+    if (opts.kind === 'income' && opts.icon === 'skull') skulls++;
+    return proto.call(this, x, y, text, color, opts);
+  };
+  window.__fxFast(() => m.phase === 'night' && m.elapsed < 45);
+  window.__fxRealtime(12);
+  delete m.pushFloater;
+  m.keepHp = Math.min(keepHp, m.keepHpMax());
+  const d = window.__fxWorld.diagnostics();
+  const tower = (m.towers || []).find((t) => t.slotId === 'south:tower');
+  const knights = [];
+  d && window.__fxWorld.survivalGuardMeshes && window.__fxWorld.survivalGuardMeshes.forEach((mesh) => {
+    const troop = mesh.userData.troop;
+    if (!troop) return;
+    let crest = false, helmet = false;
+    troop.model.traverse((o) => { if (o.name === 'knight-crest') crest = true; if (o.material && o.material.name === 'knight-helmet-royal-blue') helmet = true; });
+    knights.push({ crest, helmet });
+  });
+  return {
+    t: +m.elapsed.toFixed(1), horde: d.horde, primitiveCrowd: d.primitiveCrowd, rigs: d.visibleRiggedEnemies,
+    towerKills: tower ? tower.nightKills || 0 : -1, skullPops: skulls,
+    knights, build: window.DUSKHOLD_BUILD || null,
+  };
+});
+check('horde: every swarm body is an animated GLB monster (instanced, 3 kinds), no primitive figure',
+  horde.horde && horde.horde.ready && horde.horde.drawn >= 10 && horde.primitiveCrowd === 0
+    && Object.values(horde.horde.byKind || {}).filter((n) => n > 0).length >= 2,
+  { drawn: horde.horde && horde.horde.drawn, byKind: horde.horde && horde.horde.byKind, primitive: horde.primitiveCrowd, rigs: horde.rigs });
+check('ballista: a built ballista kills and says so over its deck ("+1" skull, the night tally)',
+  horde.towerKills >= 1 && horde.skullPops >= horde.towerKills, { towerKills: horde.towerKills, skullPops: horde.skullPops });
+check('troops: every GLB guard wears the keep\'s blue helmet with a gold crest; the page names its build',
+  horde.knights.length >= 2 && horde.knights.every((k) => k.crest && k.helmet) && horde.build === '8', { knights: horde.knights, build: horde.build });
 
 // 3. dawn: the panel credits the sawmill and the guards
 const dawn = await shot('fx-dawn', () => {

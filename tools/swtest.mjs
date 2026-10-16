@@ -147,6 +147,24 @@ ok(res && (await res.text()) === 'glb-bytes', 'and the cached copy comes back fi
 await new Promise((r) => setTimeout(r, 20));
 ok(!!shell.get(glb), 'while the network copy refreshes in the background');
 
+/* ---------- code: the network first, the cache only offline ---------- */
+// A module that changed under the same name must never be served stale
+// (playtest 2026-10-17: a cache-first module graph kept an old build on
+// screen after every update).
+const mod = 'https://duskhold.example/src/game/survival.js';
+net.handler = async () => new Response('code-v1', { status: 200 });
+res = await fire('fetch', req(mod));
+ok(res && (await res.text()) === 'code-v1', 'a game module is answered from the network');
+await new Promise((r) => setTimeout(r, 20));
+ok(!!shell.get(mod), 'and kept for offline');
+net.handler = async () => new Response('code-v2', { status: 200 });
+res = await fire('fetch', req(mod));
+ok(res && (await res.text()) === 'code-v2', 'a changed module is the new one on the next load, not the cached one');
+net.handler = async () => { throw new Error('offline'); };
+res = await fire('fetch', req(mod));
+ok(res && (await res.text()) === 'code-v2', 'offline, the last module that loaded is served');
+net.handler = null;
+
 /* ---------- navigation, with the network gone ---------- */
 net.handler = async () => { throw new Error('offline'); };
 res = await fire('fetch', req('https://duskhold.example/index.html', { mode: 'navigate' }));

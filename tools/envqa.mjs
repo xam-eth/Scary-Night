@@ -207,6 +207,11 @@ async function survivalFtueSection() {
         curtainSlots: (g.mansion.solids || []).filter((s) => s.type === 'wall')
           .reduce((sum, s) => sum + Math.max(1, Math.floor(Math.max(s.w, s.h) / 46)), 0),
         renderMode: world.diagnostics().mode,
+        // the horde (src/game/crowd3d.js): GLB monsters drawn instanced, and
+        // the primitive figures it replaced (must stay at 0)
+        hordeDrawn: (world.diagnostics().horde || {}).drawn || 0,
+        hordeKinds: Object.keys(((world.diagnostics().horde || {}).kinds) || {}),
+        primitiveCrowd: world.diagnostics().primitiveCrowd || 0,
       };
     });
     checkpoints.push({ seconds, file: path.relative(ROOT, file), advance, state });
@@ -230,9 +235,12 @@ async function survivalFtueSection() {
     && final.keepMesh && final.territoryPlanes === 5 && final.riggedCrowd + final.proxyCrowd > 0
     && final.fortressTowers === 12 && final.fortressMeshes > 0 && final.fortressMeshes <= 16
     // every run crenellated: towers may cover up to a third of the slots
-    // (scale 1: 146/170 slots on 8114 px; compact FORT_SCALE 0.7: 88/112 on 5414 px)
-    && final.curtainSlots >= 80 && final.fortressMerlons >= Math.ceil(final.curtainSlots * 2 / 3),
-  `the full 3D bailey (curtain wall, towers, gates), the 3D keep, its banner's 5 yards and the crowd are visible (${final.fortressTowers} towers, ${final.fortressMerlons}/${final.curtainSlots} merlon slots on ${final.curtainRun}px of curtain wall in ${final.fortressMeshes} meshes; ${final.riggedCrowd} GLB + ${final.proxyCrowd} silhouette actors)`);
+    // (scale 1: 146/170 slots on 8114 px; FORT_SCALE 0.7: 88/112 on 5414 px;
+    // FORT_SCALE 0.5: 52/74 on 3614 px)
+    && final.curtainSlots >= 60 && final.fortressMerlons >= Math.ceil(final.curtainSlots * 2 / 3)
+    // the horde is GLB monsters (instanced, crowd3d.js): no primitive figure
+    && final.hordeDrawn > 0 && final.primitiveCrowd === 0,
+  `the full 3D bailey (curtain wall, towers, gates), the 3D keep, its banner's 5 yards and the crowd are visible (${final.fortressTowers} towers, ${final.fortressMerlons}/${final.curtainSlots} merlon slots on ${final.curtainRun}px of curtain wall in ${final.fortressMeshes} meshes; ${final.riggedCrowd} skinned rigs + ${final.proxyCrowd} horde bodies, ${final.hordeDrawn} drawn as GLB monsters (${final.hordeKinds.join('/')}), ${final.primitiveCrowd} primitive figures)`);
 
   const radiusTest = await page.evaluate(() => {
     const g = window.__LN, world = window.__survWorld;

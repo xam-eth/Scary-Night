@@ -43,13 +43,25 @@ export const FORT = Object.freeze({
  * The bailey's scale. The first fortress (scale 1: 2600 x 1900 px, ~50 x 37 m)
  * read as a huge empty courtyard with small pieces in it (playtest
  * 2026-10-16: "benteng awal terlalu besar luas sedangkan component game nya
- * kecil"). 0.7 makes it 1820 x 1330 px (~35 x 26 m): the yards, roads and
- * gate positions keep their proportions, gate widths and props keep their
- * size, and the camera frames closer (SurvivalMode.frameMul).
+ * kecil"). 0.7 was not enough to change that on a phone (2026-10-17: "tidak
+ * ada perubahan"), so it is now 0.5: 1300 x 950 px (~25 x 18 m), while the
+ * actors stand x1.6 (SURVIVAL_ACTOR_SCALE) and the camera frames 1.3x closer
+ * (SurvivalMode.frameMul) — the captain, a guard and a demon each fill about
+ * a quarter of a sideways phone's height, and from the keep most of the
+ * bailey is in one screen. The yards, roads and gate positions keep their
+ * proportions; gate widths and props keep their size.
  */
-export const FORT_SCALE = 0.7;
+export const FORT_SCALE = 0.5;
 const S = (v) => Math.round(v * FORT_SCALE);
-/** The courtyard inside the curtain wall: 1820 x 1330 px at FORT_SCALE 0.7. */
+/**
+ * The curtain wall is low, ~2 m (the house's walls are 2.6): with the actors
+ * x1.6 a 2.6 m wall hid the horde at the north and side gates from the
+ * camera — only heads showed over it, so the fight read as numbers popping
+ * behind masonry. At 2 m the front ranks show from the chest up between the
+ * merlons; the towers and the gatehouses stay tall.
+ */
+export const FORT_WALL_METRES = 2.0;
+/** The courtyard inside the curtain wall: 1300 x 950 px at FORT_SCALE 0.5. */
 export const BAILEY = Object.freeze({ x: S(-1300), y: S(-950), w: S(2600), h: S(1900) });
 const COLS = Object.freeze([-1300, -450, 450, 1300].map(S));
 const ROWS = Object.freeze([-950, -320, 320, 950].map(S));
@@ -75,6 +87,7 @@ export class Fortress extends Mansion {
    */
   build() {
     this.isFortress = true;
+    this.wallMetres = FORT_WALL_METRES;
     this.bailey = BAILEY;
     this.keepSpot = { x: BAILEY.x + BAILEY.w / 2, y: BAILEY.y + BAILEY.h / 2 };
 
@@ -203,29 +216,37 @@ export class Fortress extends Mansion {
 
   /**
    * The bailey's life: stores by the gates, a well, a market table. Laid out
-   * for the compact bailey (FORT_SCALE 0.7; the inner face of the wall is at
-   * x = +-910, y = +-665): clusters keep their own spacing, so nothing
-   * overlaps, and every prop stays clear of the build circles and the roads.
+   * on the 0.7 bailey (inner wall face at x = +-910, y = +-665) and scaled
+   * to the current one; anything that would end up in the wall is pulled
+   * back to stand 34 px clear of it. Clusters keep their own spacing, so
+   * nothing overlaps, and every prop stays clear of the build circles and
+   * the roads.
    */
   furnish() {
-    const F = (cx, cy, w, h, type, o = {}) => this.addF(cx - w / 2, cy - h / 2, w, h, type, { room: this.findRoom(cx, cy), ...o });
+    const k = FORT_SCALE / 0.7;
+    const inX = BAILEY.w / 2 - 34, inY = BAILEY.h / 2 - 34;
+    const F = (cx0, cy0, w, h, type, o = {}) => {
+      const cx = Math.max(-inX + w / 2, Math.min(inX - w / 2, Math.round(cx0 * k)));
+      const cy = Math.max(-inY + h / 2, Math.min(inY - h / 2, Math.round(cy0 * k)));
+      return this.addF(cx - w / 2, cy - h / 2, w, h, type, { room: this.findRoom(cx, cy), ...o });
+    };
     const barrel = (x, y) => F(x, y, 32, 32, 'barrel');
     const crates = (x, y) => F(x, y, 60, 50, 'crates');
     // gate road: supplies stacked either side of the main gate
-    barrel(-200, 626); barrel(-238, 632); crates(-306, 622);
-    barrel(202, 626); crates(306, 622);
+    barrel(-200, 626); barrel(-250, 632); crates(-330, 622);
+    barrel(202, 626); crates(330, 622);
     // north road
-    crates(-300, -622); barrel(200, -626); barrel(238, -620);
+    crates(-320, -622); barrel(200, -626); barrel(250, -620);
     // west and east roads, against the curtain wall
-    crates(-872, -160); barrel(-876, 150); barrel(-874, 188);
-    crates(872, 160); barrel(876, -150); barrel(874, -188);
+    crates(-872, -180); barrel(-876, 150); barrel(-874, 200);
+    crates(872, 180); barrel(876, -150); barrel(874, -200);
     // the yards
     F(756, -532, 96, 96, 'fountain');                      // the well
-    barrel(866, -392);
-    crates(-560, -626); crates(-490, -630); barrel(-868, -300);
+    barrel(866, -360);
+    crates(-600, -626); crates(-500, -630); barrel(-868, -320);
     F(-640, 625, 150, 56, 'longTable');                    // market table
-    crates(-866, 392); barrel(-866, 440);
-    crates(830, 606); barrel(536, 640); crates(632, 628);
+    crates(-866, 392); barrel(-866, 460);
+    crates(830, 606); barrel(536, 640); crates(650, 628);
   }
 
   /** Lighting is the survival mode's (the keep's lamp); no house fixtures. */

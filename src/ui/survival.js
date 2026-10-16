@@ -27,6 +27,7 @@
  */
 
 import { clamp, writeSave } from '../core/util.js';
+import { SURVIVAL_ACTOR_SCALE } from '../core/config.js';
 import { SURVIVAL_BUILDINGS, BUILDING_MAX_LEVEL, HUNTER_MAX_LEVEL, GUARD, CINE } from '../game/survival.js';
 import { pauseButtonBox } from '../game/hud.js';
 import {
@@ -166,8 +167,8 @@ function affordable(mode, cost) {
   return !!cost && mode.canAfford(cost);
 }
 
-/** SURVIVAL_ACTOR_SCALE (envkit.js): bars and badges sit over the taller bodies. */
-const ACTOR = 1.25;
+/** SURVIVAL_ACTOR_SCALE (config.js): bars and badges sit over the taller bodies. */
+const ACTOR = SURVIVAL_ACTOR_SCALE;
 
 /* ------------------------------------------------------------------ */
 /* FTUE hint chips (once each, persisted in save.survival.hints)       */
@@ -331,9 +332,48 @@ function drawGoalTrack(game, ctx, x, y, width) {
 function drawCounters(game, ctx, w, rows, gap = 36) {
   const cw = 88, ch = 30;
   const x = w - cw - 8;
+  const mode = game.survival;
+  const now = clock(game);
   rows.forEach((row, i) => {
-    drawCounter(ctx, x, 10 + i * gap, cw, ch, row.icon, row.value, { flash: row.flash, color: row.color });
+    // a counter that just took income pulses (a mine's coin, a sawmill's planks)
+    const fresh = (mode.hudPops || []).some((p) => p.icon === row.icon && now - p.t0 < 0.3);
+    drawCounter(ctx, x, 10 + i * gap, cw, ch, row.icon, row.value, { flash: row.flash, glow: fresh, color: row.color });
   });
+  drawHudPops(game, ctx, x, rows, gap, ch);
+}
+
+/**
+ * Income beside the counter it lands in: "+1" with the icon of the building
+ * that made it (a pickaxe-and-cart mine), sliding up and fading. The mine
+ * digs while the captain holds a gate on the far side of the bailey; this is
+ * how he sees it work.
+ */
+function drawHudPops(game, ctx, x, rows, gap, ch) {
+  const mode = game.survival;
+  const pops = mode.hudPops;
+  if (!pops || !pops.length) return;
+  const now = clock(game);
+  const life = 1.2;
+  for (let i = pops.length - 1; i >= 0; i--) if (now - pops[i].t0 > life || now < pops[i].t0) pops.splice(i, 1);
+  const stack = {};
+  for (const p of pops) {
+    const row = rows.findIndex((r) => r.icon === p.icon);
+    if (row < 0) continue;
+    const k = stack[row] = (stack[row] || 0) + 1;
+    const age = (now - p.t0) / life;
+    const alpha = age < 0.15 ? age / 0.15 : age > 0.7 ? 1 - (age - 0.7) / 0.3 : 1;
+    const cy = 10 + row * gap + ch / 2 - age * 16 - (k - 1) * 4;
+    const size = 15;
+    const tw = measureLabel(ctx, p.text, size);
+    const pw = tw + 44;
+    const px = x - pw - 6;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    drawPanel(ctx, px, cy - 13, pw, 26, { radius: 13, top: '#3a2f6e', bottom: '#241c4a', lineWidth: 2, highlight: false, shadow: false });
+    ctx.restore();
+    drawSurvivalIcon(ctx, p.from || p.icon, px + 15, cy, 20, { alpha });
+    drawLabel(ctx, p.text, px + 30 + tw / 2, cy + 1, size, p.icon === 'gold' ? '#ffd24a' : '#ffffff', { alpha, outline: 3 });
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -389,13 +429,23 @@ function onScreen(p, w, h, pad = 0) {
   return p.x >= pad && p.x <= w - pad && p.y >= pad && p.y <= h - pad;
 }
 
-function drawEdgeMarker(ctx, w, h, p, icon, color, top = 128, bottom = 150) {
+function drawEdgeMarker(ctx, w, h, p, icon, color, top = 128, bottom = 150, count = 0) {
   const cx = w / 2, cy = (top + (h - bottom)) / 2;
   const dx = p.x - cx, dy = p.y - cy;
   const hw = w / 2 - 28, hh = (h - bottom - top) / 2 - 10;
   const k = Math.min(hw / Math.max(1e-3, Math.abs(dx)), hh / Math.max(1e-3, Math.abs(dy)));
   const x = cx + dx * k, y = cy + dy * k;
   const a = Math.atan2(dy, dx);
+  if (count > 0) {
+    // how many are at that gate, on the screen-side of the pointer: the
+    // number that says "go there now" (the idle loss's tip, R4)
+    const label = `×${count}`;
+    const size = 15;
+    const bw = measureLabel(ctx, label, size) + 14;
+    const bx = x - Math.cos(a) * 38 - bw / 2, by = y - Math.sin(a) * 30 - 11;
+    drawPanel(ctx, bx, by, bw, 22, { radius: 11, top: '#ff6a52', bottom: '#b3261c', lineWidth: 2, highlight: false, shadow: false });
+    drawLabel(ctx, label, bx + bw / 2, by + 11.5, size, '#ffffff', { outline: 2.5 });
+  }
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(a);
@@ -477,24 +527,46 @@ function drawNightWorldLayer(game, ctx, w, h) {
   const p = game.player;
   const zoom = game.renderer.cam.zoom;
 
-  // Doors under siege and fresh breaches
+  // Gates: a wave marching on one (amber: where to go next — R6's marker),
+  // one under siege (its HP), a fresh breach. Off screen each becomes a
+  // pointer on the screen's edge with how many are there.
   for (const e of game.mansion.entrances) {
     if (!e.exterior || e.kind !== 'door') continue;
+    const crowd = mode.crowdAt(e.id).length;
     const besieged = mode.doorPressure(e.id) > 0 || (e.flash || 0) > 0.05;
     const freshBreak = e.broken && mode.breachAge(e.id) < 6;
-    if (!besieged && !freshBreak) continue;
+    const incoming = !besieged && !e.broken && crowd > 0;
+    if (!besieged && !freshBreak && !incoming) continue;
     const at = project(game, e.x, e.y, 120);
     if (onScreen(at, w, h, 20)) {
       if (freshBreak) {
         const s = 34 + Math.sin(t * 9) * 3;
         drawSurvivalIcon(ctx, 'doorBroken', at.x, at.y, s);
-      } else {
+      } else if (besieged) {
         drawSurvivalIcon(ctx, 'door', at.x - 26, at.y, 24);
         drawBar(ctx, at.x - 12, at.y - 6, 52, 12, e.hp / Math.max(1, e.hpMax), e.hp / Math.max(1, e.hpMax) > 0.35 ? '#ffb22e' : '#ff4d4d');
+      } else {
+        const bob = Math.sin(t * 6) * 3;
+        drawSurvivalIcon(ctx, 'swarm', at.x - 16, at.y + bob, 26);
+        drawLabel(ctx, `×${crowd}`, at.x + 14, at.y + bob + 1, 16, '#ffcf4a', { outline: 3 });
       }
-    } else if (freshBreak || mode.doorPressure(e.id) > 0) {
-      drawEdgeMarker(ctx, w, h, at, freshBreak ? 'doorBroken' : 'door', freshBreak ? '#ff5a4d' : '#ffb22e');
+    } else {
+      drawEdgeMarker(ctx, w, h, at, freshBreak ? 'doorBroken' : incoming ? 'swarm' : 'door',
+        freshBreak ? '#ff5a4d' : incoming ? '#ffcf4a' : '#ffb22e', 128, 150, crowd);
     }
+  }
+
+  // Every ballista says what it has done tonight: a skull and its kills over
+  // its deck (the keep's roof ballista too). A building that fights shows it.
+  for (const tower of mode.towers || []) {
+    const at = project(game, tower.x, tower.y, 236);
+    if (!onScreen(at, w, h, 10)) continue;
+    drawStatusPill(ctx, at.x, at.y, { icon: 'skull', text: `${tower.nightKills || 0}`, color: '#ffb36a' }, 0.92);
+  }
+  if (mode.keepLevel >= 2 && mode.keepBallista) {
+    const keepAt = mode.keep();
+    const at = project(game, keepAt.x, keepAt.y, 330);
+    if (onScreen(at, w, h, 10)) drawStatusPill(ctx, at.x + 44, at.y, { icon: 'skull', text: `${mode.keepBallistaKills || 0}`, color: '#ffb36a' }, 0.92);
   }
 
   // The keep under attack: a red ring at its foot, or an edge pointer to it
@@ -521,7 +593,7 @@ function drawNightWorldLayer(game, ctx, w, h) {
     if (!e || e.dead || e.removeMe || !e._survivalType) continue;
     const big = e._survivalType !== 'swarm';
     if (!big && !(e.hp < e.hpMax)) continue;
-    // bodies stand 1.25x taller in Survival (SURVIVAL_ACTOR_SCALE, envkit.js)
+    // bodies stand taller in Survival (SURVIVAL_ACTOR_SCALE, config.js)
     const height = (e._survivalType === 'breaker' ? 104 : big ? 84 : 66) * ACTOR;
     const at = project(game, e.x, e.y, height);
     if (!onScreen(at, w, h, -10)) continue;
@@ -570,8 +642,8 @@ function drawNightWorldLayer(game, ctx, w, h) {
       continue;
     }
     if (!(guard.hp < guard.hpMax)) continue;
-    // over the GLB crossbowman's helmet (84 px x 1.25)
-    const at = project(game, guard.x, guard.y, 112);
+    // over the GLB crossbowman's helmet (84 px x the actor scale)
+    const at = project(game, guard.x, guard.y, 90 * ACTOR);
     if (!onScreen(at, w, h, -10)) continue;
     const pct = clamp(guard.hp / Math.max(1, guard.hpMax), 0, 1);
     const flash = guard.hurtFlash > 0.5 ? '#ffffff' : pct > 0.5 ? '#5ab8ff' : pct > GUARD.woundedAt ? '#ffcc33' : '#ff4d4d';
@@ -1096,6 +1168,17 @@ function drawDayScreen(game, ctx, w, h) {
 /* overlays                                                            */
 /* ------------------------------------------------------------------ */
 
+/**
+ * The build this page runs (index.html's DUSKHOLD_BUILD): printed small in
+ * the HUD's corner and on the pause panel, so a screenshot from a phone says
+ * which build it came from (2026-10-17: the build on a playtester's screen
+ * was not the build in the branch).
+ */
+const BUILD = (typeof window !== 'undefined' && window.DUSKHOLD_BUILD) ? String(window.DUSKHOLD_BUILD) : 'dev';
+function drawBuildStamp(ctx, x, y, align = 'left', size = 9) {
+  drawLabel(ctx, `BUILD ${BUILD}`, x, y, size, 'rgba(255,255,255,0.72)', { align, outline: 2 });
+}
+
 function drawPausePanel(game, ctx, w, h) {
   ctx.save();
   ctx.fillStyle = 'rgba(12,10,30,0.62)';
@@ -1110,6 +1193,7 @@ function drawPausePanel(game, ctx, w, h) {
     () => game.resumeSurvival(), { id: 'RESUME', icon: 'play', color: 'green' });
   drawButton(game, ctx, { x: x + 28, y: y + 162, w: bw - 56, h: 44 }, 'RESTART',
     () => game.survival.restart(), { id: 'RESTART 3-DAY RUN', icon: 'restart', color: 'red' });
+  drawBuildStamp(ctx, w / 2, y + bh - 10, 'center', 10);
 }
 
 /** m:ss for the end panel's run clock. */
@@ -1530,10 +1614,11 @@ export function drawSurvivalScreen(game, ctx, w, h, worldReady = true) {
   }
   if (game.survival.cine) { drawCine(game, ctx, w, h); return; }
   const phase = game.survival.phase;
-  if (phase === 'day') { drawDayScreen(game, ctx, w, h); return; }
+  if (phase === 'day') { drawDayScreen(game, ctx, w, h); drawBuildStamp(ctx, 10, h - 8); return; }
   if (phase === 'complete') { drawEndPanel(game, ctx, w, h, false); return; }
   if (phase === 'failed') { drawEndPanel(game, ctx, w, h, true); return; }
   drawNightHud(game, ctx, w, h);
+  drawBuildStamp(ctx, 10, h - 8);
 }
 
 export { COLORS };

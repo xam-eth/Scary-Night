@@ -276,6 +276,48 @@ class TroopStage {
   }
 
   /**
+   * The Knight's bucket helmet is the biggest thing on him from this camera
+   * (it looks down at 35°): plain steel, the garrison read as grey eggs from
+   * across the bailey (2026-10-17). Each troop's helmet is tinted the keep's
+   * royal blue and gets a gold crest, so a guard reads as OUR soldier at a
+   * glance and never as a placeholder. A runtime material on the clone; the
+   * GLB's bytes are untouched.
+   */
+  _dressHelmet(model) {
+    const helmet = model.getObjectByName('Knight_Helmet');
+    if (!helmet || !helmet.isMesh) return;
+    const base = Array.isArray(helmet.material) ? helmet.material[0] : helmet.material;
+    if (base && base.clone) {
+      const steel = base.clone();
+      steel.color = new THREE.Color(0.42, 0.6, 1.0);
+      steel.name = 'knight-helmet-royal-blue';
+      helmet.material = steel;
+    }
+    const geo = helmet.geometry;
+    if (!geo) return;
+    if (!geo.boundingBox) geo.computeBoundingBox();
+    const box = geo.boundingBox;
+    const size = new THREE.Vector3();
+    const mid = new THREE.Vector3();
+    box.getSize(size);
+    box.getCenter(mid);
+    if (!this._crestMat) {
+      this._crestMat = new THREE.MeshStandardMaterial({ color: 0xffd24a, emissive: 0x8a5a00, emissiveIntensity: 0.45, roughness: 0.55, metalness: 0.2, flatShading: true });
+    }
+    // a half-disc fin from brow to nape (the helmet's +y is up, +z its
+    // front); its own material, so a hurt flash reddens this troop's crest
+    // and not every crest
+    const R = size.z * 0.34, T = size.x * 0.12;
+    const fin = new THREE.CylinderGeometry(R, R, T, 14, 1, false, 0, Math.PI);
+    fin.rotateZ(Math.PI / 2);
+    const crest = new THREE.Mesh(fin, this._crestMat.clone());
+    crest.name = 'knight-crest';
+    crest.position.set(mid.x, box.max.y - R * 0.3, mid.z - size.z * 0.05);
+    crest.castShadow = true;
+    helmet.add(crest);
+  }
+
+  /**
    * A new troop: `kind` is a TROOP_LOADOUTS key. Returns a TroopRig whose
    * `model` stands on y = 0 and is `heightPx` world px tall.
    */
@@ -296,6 +338,7 @@ class TroopStage {
         slot.add(bow);
       }
     }
+    this._dressHelmet(model);
     const scale = heightPx / Math.max(0.01, this.height);
     model.scale.setScalar(scale);
     this.made++;

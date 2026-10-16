@@ -66,12 +66,11 @@ export function pxPerMetre(tilt = ISO_CAMERA.tilt) {
 export const PX_PER_METRE = pxPerMetre(ISO_CAMERA.tilt);
 
 /**
- * Survival's actors read bigger than the house's: in the fortress the
- * captain, his guards and the horde were small pieces in a big courtyard
- * (playtest 2026-10-16). A visual multiplier only — collision radii, reach
- * and ranges are unchanged.
+ * Survival's actors read bigger than the house's (src/core/config.js: the
+ * captain, his guards and the horde stand ×1.6 in the half-size bailey).
+ * A visual multiplier only — collision radii, reach and ranges are unchanged.
  */
-export const SURVIVAL_ACTOR_SCALE = 1.25;
+export { SURVIVAL_ACTOR_SCALE } from '../core/config.js';
 
 /**
  * WHAT EVERYTHING IS, IN METRES.
@@ -728,6 +727,9 @@ class EnvKitRuntime {
    * space. The walls are built from the actual shared wall solids, gap by gap.
    */
   buildRoom(mansion) {
+    // the fortress' curtain wall stands lower than the house's walls
+    // (fortress.js FORT_WALL_METRES); the house keeps its 2.6 m
+    const wallMetres = (mansion && mansion.wallMetres) || PIECE_METRES.wall;
     if (!this.ready || !mansion || !mansion.solids || this.room === mansion) return;
     const s = KIT_SCALE;
     const cell = TILE * s;
@@ -885,7 +887,7 @@ class EnvKitRuntime {
             if (joined.has(spot)) continue;
             if (!legClear(he.x, he.z, he.into) || !legClear(he.x, he.z, ve.into)) continue;
             joined.add(spot);
-            corners.push({ x: he.x, y: 0, z: he.z, ry, sx: s, sy: this._rise('wallCorner', PIECE_METRES.wallCorner), sz: s });
+            corners.push({ x: he.x, y: 0, z: he.z, ry, sx: s, sy: this._rise('wallCorner', wallMetres), sz: s });
           }
         }
       }
@@ -953,8 +955,8 @@ class EnvKitRuntime {
           // one panel in nine is a tired one, so a long wall is not a ruler
           const tired = (((mid * 7 + r.line * 13) | 0) % 9) === 3;
           const cell2 = r.horiz
-            ? { x: mid, y: 0, z: r.line, ry: 0, sx: size / TILE, sy: this._rise('wall', PIECE_METRES.wall), sz: s }
-            : { x: r.line, y: 0, z: mid, ry: Math.PI / 2, sx: size / TILE, sy: this._rise('wall', PIECE_METRES.wall), sz: s };
+            ? { x: mid, y: 0, z: r.line, ry: 0, sx: size / TILE, sy: this._rise('wall', wallMetres), sz: s }
+            : { x: r.line, y: 0, z: mid, ry: Math.PI / 2, sx: size / TILE, sy: this._rise('wall', wallMetres), sz: s };
           if (inALeg(cell2)) continue;          // the corner already owns this ground
           (tired ? cracked : wallCells).push(cell2);
         }
