@@ -175,6 +175,10 @@ export class Input {
       const p = this._local(e);
       this.mouse.x = p.x; this.mouse.y = p.y;
       this.mouse.moved = true;
+      // the button came up outside the frame (an embedded preview): the
+      // mouseup never reached us, so the stick would steer on by itself
+      if (this.stick.active && this.stick.pointer && e.buttons === 0) this._releasePointerStick(p, false);
+      if (this.pan.active && this.pan.pointer && e.buttons === 0) this.pan.active = false;
       if (this.stick.active && this.stick.pointer) {
         this.stick.x = p.x; this.stick.y = p.y;
       }
@@ -194,6 +198,7 @@ export class Input {
     addEventListener('mousemove', (e) => {
       if (!this.stick.active || !this.stick.pointer) return;
       const p = this._local(e);
+      if (e.buttons === 0) { this._releasePointerStick(p, false); return; }
       this.stick.x = p.x; this.stick.y = p.y;
       this.mouse.x = p.x; this.mouse.y = p.y;
     });

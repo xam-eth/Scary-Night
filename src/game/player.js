@@ -182,8 +182,9 @@ export class Player {
     // Shift-hold / the boot toggle changes speed and the authored run clip.
     const wantRun = input.runDown && mag > 0.3;
 
-    // blood-instability: the weaker you are, the more you drift
-    if (this.lowBlood) {
+    // blood-instability: the weaker you are, the more you drift (the legacy
+    // house only: Survival's captain stands still when the stick does)
+    if (this.lowBlood && game.mode !== 'survival') {
       const wob = (1 - this.bloodPct) * (starving ? 26 : 12);
       mx += Math.sin(this.breathe * 3.1) * 0.06 * wob / 12;
       my += Math.cos(this.breathe * 2.7) * 0.06 * wob / 12;
@@ -400,7 +401,10 @@ export class Player {
     this.iframes = PLAYER.iframes;
     this.hurtT = 0.42;
     this.state = PSTATE.HURT;
-    if (fromX !== undefined) {
+    // a shove from the blow (the legacy house). Survival's captain is never
+    // moved by anything but the stick (BUILD 11: claws used to shove him
+    // through a gate he was not walking through)
+    if (fromX !== undefined && game.mode !== 'survival') {
       const a = Math.atan2(this.y - fromY, this.x - fromX);
       this.vx += Math.cos(a) * 150; this.vy += Math.sin(a) * 150;
     }

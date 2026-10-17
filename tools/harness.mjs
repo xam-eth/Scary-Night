@@ -1819,9 +1819,55 @@ async function runSurvivalMilestone() {
       climbStart != null && upAt != null && upAt - climbStart > G.climb * 0.8 && upAt - climbStart < G.climb * 1.3 && onTop
         && reach === null && hunt === null && overBolt && overBolt.over && overBolt.dropFrom === 'tower' && shotHome && downAtDawn,
       `climb ${climbStart == null ? '-' : climbStart.toFixed(2)} → up ${upAt == null ? '-' : upAt.toFixed(2)} s (${G.climb} s), on the tower ${onTop}, in reach ${!!reach}, hunted ${!!hunt}, bolt ${JSON.stringify(overBolt)}, body 999 → ${Math.round(target.hp)}, down at dawn ${downAtDawn}`);
+
+    // 5) BUILD 11 (playtest 2026-10-17: "character berjalan sendiri keluar
+    //    dari benteng ... tembus benteng bukan lewat gerbang"): with the stick
+    //    still, nothing moves the captain — not his own shots (they used to
+    //    kick him back 40 px/s each), not claws, not low HP
+    gm.restart(); quiet();
+    gm.guards.length = 0; gm.survivors = 0;
+    const home5 = gm.hunterHome();
+    p.x = home5.x; p.y = home5.y; p.vx = 0; p.vy = 0;
+    const westG = gm.entranceById('westGate');
+    westG.hp = westG.hpMax = 99999;
+    const shotAt = [];
+    for (let i = 0; i < 4; i++) {
+      const z = new SurvivalCrowdZombie(430 + i * 26, -60 + i * 30, westG, i, 1);
+      z.hp = z.hpMax = 9999; z.update = () => {};
+      gg.enemies.push(z); shotAt.push(z);
+    }
+    const shots0 = gg.stats.shotsFired || 0;
+    gtick(60 * 6);
+    const shots5 = (gg.stats.shotsFired || 0) - shots0;
+    const drift = Math.hypot(p.x - home5.x, p.y - home5.y);
+    p.iframes = 0;
+    gg.player.takeDamage(10, gg, p.x - 30, p.y);
+    gtick(30);
+    const shoved = Math.hypot(p.x - home5.x, p.y - home5.y);
+    p.blood = 12; gtick(60);
+    const lowDrift = Math.hypot(p.x - home5.x, p.y - home5.y);
+    gateCheck('with the stick still nothing moves the captain: 6 s of his own auto-shots, a claw, low HP',
+      shots5 >= 8 && drift < 0.5 && shoved < 0.5 && lowDrift < 0.5,
+      `${shots5} shots → moved ${drift.toFixed(2)} px; after a claw ${shoved.toFixed(2)} px; at 12 HP ${lowDrift.toFixed(2)} px`);
+
+    // 6) a shove never carries him through a shut gate: only walking at it
+    //    swings it open (the stick's heading, not the body's drift)
+    gm.restart(); quiet();
+    gm.guards.length = 0; gm.survivors = 0;
+    const southG = gm.entranceById('southGate');
+    const inG = { x: southG.inside.x, y: southG.inside.y };
+    p.x = inG.x; p.y = inG.y + 10; p.vx = 0; p.vy = 400;  // flung at the gate, stick still
+    for (let i = 0; i < 40; i++) { p.vy = Math.max(p.vy, 400); gtick(); }
+    const heldIn = p.y < southG.y - 13 && !southG.sortie && (southG.sortieT || 0) === 0;
+    let walkedOut = false;
+    for (let i = 0; i < 60 * 2 && !walkedOut; i++) { steerStick(gg, 0, 1, ISO); gtick(); walkedOut = p.y > southG.outside.y - 10; }
+    gg.input.stick.active = false;
+    gateCheck('a shove never carries the captain through a shut gate; walking at it (the stick) swings it open',
+      heldIn && walkedOut,
+      `flung at it: stopped at y ${Math.round(p.y)} vs gate ${southG.y} (held ${heldIn}); stick → out ${walkedOut}`);
     window.localStorage.removeItem('lastnight.save.v1');
   }
-  const gateRulePass = gateChecks.length === 4 && gateChecks.every(Boolean);
+  const gateRulePass = gateChecks.length === 6 && gateChecks.every(Boolean);
 
   console.log(`  idle Night 3: ${idle.nightThree.peakEnemies} peak enemies / ${idle.nightThree.peakBreakers} Breakers, ${idle.nightThree.kills} kills, ${idle.nightThree.wallDamage} wall damage, gate ${idle.nightThree.gateHp} HP, Hunter ${idle.nightThree.playerHp} HP; ${idle.phase}`);
   console.log(`  builder Night 3: ${builder.nightThree.peakEnemies} peak enemies / ${builder.nightThree.peakBreakers} Breakers, ${builder.nightThree.kills} kills, ${builder.nightThree.wallDamage} wall damage, gate ${builder.nightThree.gateHp} HP, Hunter ${builder.nightThree.playerHp} HP; keep Lv${builder.keepLevel} ${builder.keepHp} HP, soldiers ${builder.survivors}, buildings ${builder.buildings.join(',') || 'none'}, gateBuilt=${builder.gateBuilt}; ${builder.phase}`);

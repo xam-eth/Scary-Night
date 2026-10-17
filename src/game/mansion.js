@@ -752,9 +752,11 @@ export class Mansion {
     }
     for (const s of this.barriers()) {
       // The fortress's gates open for the captain (BUILD 10: he walks out to
-      // fight; survival.js swings the leaf as he passes). They never open for
-      // the horde: a body is held until the gate is broken.
-      if (isPlayer && s.gate && this.isFortress) continue;
+      // fight; survival.js swings the leaf when he walks at it). Only while it
+      // is swinging open or open (sortieT > 0): shut, it is a wall to him too
+      // (BUILD 11). They never open for the horde: a body is held until the
+      // gate is broken.
+      if (isPlayer && s.gate && this.isFortress && s.sortieT > 0) continue;
       // Entrances are authored by their CENTER (see makeDoor/makeWindow and
       // navBlocked). Treating x/y as a corner left the left/top half of every
       // closed door walkable.

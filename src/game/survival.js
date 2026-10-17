@@ -6,7 +6,7 @@
  * resources, builder queue, night waves, and rewards.
  */
 
-import { ISO_CAMERA, approachAngle, clamp, damp, dist, lerp, rand, writeSave } from '../core/util.js';
+import { ISO_CAMERA, approachAngle, clamp, damp, dist, lerp, rand, screenDirToWorld, writeSave } from '../core/util.js';
 import { SURVIVAL_TUNING, SURVIVAL_ACTOR_SCALE } from '../core/config.js';
 import { CrowdBody, Zombie, outwardOf, CROWD, ESTATE } from './enemies.js';
 import { ROOM } from './mansion.js';
@@ -1003,9 +1003,12 @@ export const GUARD = Object.freeze({
  * the keep's roof, a guard up on the wall — shoots over the wall.
  */
 export const SORTIE = Object.freeze({
-  band: 34,            // px either side of the wall line that counts as "in the gate"
+  // px either side of the wall line that counts as "in the gate": less than
+  // where a shut gate stops him (its half thickness 13 + his radius 13), so
+  // only walking through an opening gate gets him there (BUILD 11)
+  band: 24,
   near: 84,            // px from the wall line a walk toward the gate starts the swing
-  toward: 25,          // px/s toward the wall that counts as walking at it
+  toward: 0.35,        // share of the stick's heading toward the wall that counts as walking at it
   openTime: 0.35,      // s for the leaf to swing open
   holdTime: 0.4,       // s it stays open once he is clear
   closeTime: 0.5,      // s for it to swing shut
@@ -2191,10 +2194,12 @@ export class SurvivalMode {
     const m = g.mansion;
     const p = g.player;
     const alive = p.alive !== false && p.state !== 'death' && p.state !== 'dead';
-    const prev = this._sortiePrev;
-    const step = Math.max(dt, 1e-3);
-    const vx = prev ? (p.x - prev.x) / step : 0, vy = prev ? (p.y - prev.y) / step : 0;
-    this._sortiePrev = { x: p.x, y: p.y };
+    // what the player is asking for: the stick's (or the keys') heading in
+    // the world, not how the body happens to be moving (BUILD 11: a shove
+    // used to count as walking at the gate)
+    const move = g.input && g.input.move ? g.input.move : { x: 0, y: 0 };
+    const intent = screenDirToWorld(move.x || 0, move.y || 0, g.renderer);
+    const steer = intent.mag > 0.25 ? intent : null;
     this.captainInGate = null;
     if (!m.isFortress) { this.captainExposed = false; return; }
     for (const e of m.entrances) {
@@ -2206,8 +2211,9 @@ export class SurvivalMode {
       const half = (e.axis === 'v' ? e.h : e.w) / 2;
       const inSpan = alive && Math.abs(along) < half + 6;
       const inBand = inSpan && Math.abs(across) < SORTIE.band;
-      const vOut = vx * out.x + vy * out.y;           // px/s outward
-      const atIt = inSpan && Math.abs(across) < SORTIE.near && (across < 0 ? vOut > SORTIE.toward : vOut < -SORTIE.toward);
+      // steering at the wall from either side (the stick's heading, 0..1)
+      const toward = steer ? steer.x * out.x + steer.y * out.y : 0;
+      const atIt = inSpan && Math.abs(across) < SORTIE.near && (across < 0 ? toward > SORTIE.toward : toward < -SORTIE.toward);
       if (inBand && !this.captainInGate) this.captainInGate = e;
       const want = !e.broken && !e.open && (inBand || atIt);
       e.sortieHold = want ? SORTIE.holdTime : Math.max(0, (e.sortieHold || 0) - dt);

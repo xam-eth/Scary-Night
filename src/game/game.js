@@ -1768,12 +1768,15 @@ export class Game {
           const bolt = this.spawnBolt(player, base + spread, { ...tool, damage, boltPierce: st ? st.pierce || 0 : 0 });
           if (bolt) bolt.hunter = true;
         }
-        // muzzle flash + a kick back: the shot has weight
+        // muzzle flash: the shot has weight. No kick on the body any more
+        // (BUILD 11, playtest 2026-10-17: "character berjalan sendiri keluar
+        // dari benteng" — 40 px/s back on every auto-shot slid the captain
+        // away from his target by himself, into an open gate and out); the
+        // 3D captain still plays his shot clip
         const mx = player.x + Math.cos(base) * 26, my = player.y + Math.sin(base) * 26;
         this.particles.burst('spark', mx, my, 5, {
           color: 'rgba(255,236,170,0.95)', sizeMin: 1.5, sizeMax: 4, speedMin: 60, speedMax: 170, lifeMin: 0.06, lifeMax: 0.16, glow: true,
         });
-        player.vx -= Math.cos(base) * 40; player.vy -= Math.sin(base) * 40;
         this.stats.shotsFired = (this.stats.shotsFired || 0) + 1;
       }
       return;
