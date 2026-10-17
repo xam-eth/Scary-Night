@@ -1,6 +1,6 @@
 {
   "title": "Survival FTUE — first 30 playable seconds",
-  "capturedAt": "2026-10-16T12:34:15.525Z",
+  "capturedAt": "2026-10-17T00:42:01.680Z",
   "viewport": {
     "width": 390,
     "height": 844,
@@ -40,10 +40,17 @@
         "territoryPlanes": 5,
         "fortressTowers": 12,
         "fortressMeshes": 13,
-        "fortressMerlons": 88,
-        "curtainRun": 5414,
-        "curtainSlots": 112,
-        "renderMode": "webgl-3d"
+        "fortressMerlons": 52,
+        "curtainRun": 3614,
+        "curtainSlots": 74,
+        "renderMode": "webgl-3d",
+        "hordeDrawn": 0,
+        "hordeKinds": [
+          "zombie",
+          "crawler",
+          "ghoul"
+        ],
+        "primitiveCrowd": 0
       }
     },
     {
@@ -70,21 +77,28 @@
         "coach": false,
         "narration": false,
         "swarm": 19,
-        "riggedCrowd": 14,
-        "proxyCrowd": 5,
+        "riggedCrowd": 0,
+        "proxyCrowd": 19,
         "keepHp": 600,
         "keepMesh": true,
         "territoryPlanes": 5,
         "fortressTowers": 12,
         "fortressMeshes": 13,
-        "fortressMerlons": 88,
-        "curtainRun": 5414,
-        "curtainSlots": 112,
-        "renderMode": "webgl-3d"
+        "fortressMerlons": 52,
+        "curtainRun": 3614,
+        "curtainSlots": 74,
+        "renderMode": "webgl-3d",
+        "hordeDrawn": 21,
+        "hordeKinds": [
+          "zombie",
+          "crawler",
+          "ghoul"
+        ],
+        "primitiveCrowd": 0
       },
       "luma": {
-        "meanLuma": 92.6,
-        "darkPct": 8
+        "meanLuma": 86.6,
+        "darkPct": 12.8
       }
     },
     {
@@ -110,18 +124,25 @@
         ],
         "coach": false,
         "narration": false,
-        "swarm": 39,
-        "riggedCrowd": 14,
-        "proxyCrowd": 25,
-        "keepHp": 600,
+        "swarm": 33,
+        "riggedCrowd": 0,
+        "proxyCrowd": 33,
+        "keepHp": 456,
         "keepMesh": true,
         "territoryPlanes": 5,
         "fortressTowers": 12,
         "fortressMeshes": 13,
-        "fortressMerlons": 88,
-        "curtainRun": 5414,
-        "curtainSlots": 112,
-        "renderMode": "webgl-3d"
+        "fortressMerlons": 52,
+        "curtainRun": 3614,
+        "curtainSlots": 74,
+        "renderMode": "webgl-3d",
+        "hordeDrawn": 33,
+        "hordeKinds": [
+          "zombie",
+          "crawler",
+          "ghoul"
+        ],
+        "primitiveCrowd": 0
       }
     }
   ],
@@ -129,7 +150,7 @@
     "clicked": true,
     "queued": 2,
     "level": 2,
-    "hp": "900/900",
+    "hp": "756/900",
     "before": 1,
     "after": 2,
     "roomsBefore": 5,

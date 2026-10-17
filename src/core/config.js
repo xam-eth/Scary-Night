@@ -423,7 +423,10 @@ export const SURVIVAL_TUNING = Object.freeze({
   gateHpBonus: 220,
   territoryDamageTakenMul: 1.5,   // the banner's rooms: the garrison hits harder
   dayWalkMul: 1.35,               // the day is a walk between build circles
-  autoAttackRange: 620,
+  // the captain's reach shrank with the bailey (620 on the 0.7 bailey, ~0.87x):
+  // from the keep he no longer covers every gate, so holding a gate means
+  // walking to it, and the garrison and the ballistas get their share
+  autoAttackRange: 540,
   skillCooldown: 14,
   skillRadius: 235,
   skillDamage: 58,

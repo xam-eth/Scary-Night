@@ -1,11 +1,11 @@
 {
-  "capturedAt": "2026-10-16T15:13:18.397Z",
+  "capturedAt": "2026-10-17T00:37:45.407Z",
   "results": [
     {
       "name": "boot: the night clock waits for the 3D house",
       "pass": true,
       "detail": {
-        "nightArmedAt": 0,
+        "nightArmedAt": 0.08,
         "elapsedWhenWorldShown": 0.08
       }
     },
@@ -14,7 +14,7 @@
       "pass": true,
       "detail": {
         "leftHalf": 99,
-        "rightHalf": 81,
+        "rightHalf": 84,
         "hudBand": 2
       }
     },
@@ -124,11 +124,11 @@
         "model": true,
         "at": [
           64,
-          528
+          338
         ],
         "spot": [
           64,
-          528
+          338
         ],
         "ring": true,
         "ringR": 520
@@ -138,8 +138,8 @@
       "name": "tower: by night the ballista swivels to its aim and its bolts are pooled",
       "pass": true,
       "detail": {
-        "shots": 14,
-        "kills": 7,
+        "shots": 13,
+        "kills": 10,
         "ringHidden": true,
         "towerBolts": 1,
         "swivelDiff": 0
@@ -157,8 +157,8 @@
       "name": "framing: landscape night zoom matches portrait (short-side framing)",
       "pass": true,
       "detail": {
-        "portrait": 0.596,
-        "landscape": 0.596,
+        "portrait": 0.775,
+        "landscape": 0.775,
         "flare": [
           794,
           330,
@@ -219,27 +219,27 @@
       "detail": {
         "before": {
           "t": 15.08,
-          "alive": 20,
+          "alive": 19,
           "records": {
             "runs": 1,
             "wins": 0,
             "bestStars": 0,
             "bestNights": 1,
-            "bestKills": 7,
-            "totalKills": 7
+            "bestKills": 10,
+            "totalKills": 10
           }
         },
         "after": {
-          "t": 15.08,
-          "alive": 20,
+          "t": 15.16,
+          "alive": 19,
           "phase": "night",
           "records": {
             "runs": 1,
             "wins": 0,
             "bestStars": 0,
             "bestNights": 1,
-            "bestKills": 7,
-            "totalKills": 7
+            "bestKills": 10,
+            "totalKills": 10
           }
         }
       }
@@ -253,16 +253,16 @@
           "wins": 0,
           "bestStars": 0,
           "bestNights": 1,
-          "bestKills": 7,
-          "totalKills": 7
+          "bestKills": 10,
+          "totalKills": 10
         },
         "after": {
           "runs": 1,
           "wins": 0,
           "bestStars": 0,
           "bestNights": 1,
-          "bestKills": 7,
-          "totalKills": 7
+          "bestKills": 10,
+          "totalKills": 10
         }
       }
     },
@@ -272,16 +272,16 @@
       "detail": {
         "cine": {
           "kind": "intro",
-          "t": 0.38
+          "t": 0.2
         },
-        "t": 1.28,
+        "t": 1.1,
         "elapsed": [
           2.88,
           2.88
         ],
         "horde": 21,
         "still": true,
-        "closeUp": 2.21,
+        "closeUp": 2.25,
         "caption": "PROTECT THE KEEP",
         "labels": [
           "survival:SKIP"
@@ -314,7 +314,7 @@
         "cine": false,
         "phase": "night",
         "panel": null,
-        "elapsed": 4.55
+        "elapsed": 4.38
       }
     },
     {
@@ -325,8 +325,8 @@
         "gateOpen": true,
         "relief": {
           "troops": 9,
-          "marching": 9,
-          "inLine": 0
+          "marching": 6,
+          "inLine": 3
         },
         "troops3d": 9,
         "caption": "REINFORCEMENTS ARRIVED!",
