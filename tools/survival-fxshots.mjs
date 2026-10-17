@@ -122,20 +122,23 @@ async function shot(name, prepare) {
   return state;
 }
 
-// 1. the north gate at night: knights, bolts, hits, numbers
+// 1. the north gate at night: knights, bolts, hits, numbers. BUILD 10: a
+// shut gate stops every shot, so the captain holds it from its mouth (20 px
+// inside the wall line: the leaf swings open for him) and the guards shoot
+// from its towers
 const gate = await shot('fx-gate', () => {
   const g = window.__LN; const m = g.survival;
   const door = g.mansion.entrances.find((e) => e.id === 'northGate');
-  const inside = door.inside || door;
-  g.player.x = inside.x; g.player.y = inside.y + 60;
-  window.__fxFast(() => m.elapsed < 11);
-  window.__fxRealtime(10);
-  return { t: +m.elapsed.toFixed(1), guards: m.guards.length, ...window.__fxDiag() };
+  window.__fxMouth = () => { g.player.x = door.x; g.player.y = door.y + 20; };
+  window.__fxMouth();
+  window.__fxFast(() => { if (m.elapsed > 9) window.__fxMouth(); return m.elapsed < 11; });
+  for (let i = 0; i < 10; i++) { window.__fxMouth(); window.__fxRealtime(1); }
+  return { t: +m.elapsed.toFixed(1), guards: m.guards.length, open: !!door.sortie, ...window.__fxDiag() };
 });
 check('troops: the guards are GLB knights in the keep\'s blue livery',
   gate.troop3d && gate.troop3d.ready && !gate.troop3d.failed && gate.troop3d.livery >= 1 && gate.glbGuards === gate.guards && gate.guards > 0, gate);
 const gateB = await shot('fx-gate-b', () => {
-  window.__fxRealtime(14);
+  for (let i = 0; i < 14; i++) { window.__fxMouth(); window.__fxRealtime(1); }
   const m = window.__LN.survival;
   return { kills: m.nightStats.kills, by: m.nightStats.by, ...window.__fxDiag() };
 });

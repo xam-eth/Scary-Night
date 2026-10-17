@@ -79,7 +79,9 @@ export const GATES = Object.freeze([
 const CORNER_TOWER = 130;   // footprint of a corner tower, px
 const GATE_TOWER = 84;      // footprint of a gatehouse tower, px
 const POSTERN_POST = 22;    // px from a postern's frame to the middle of its guard deck
-const LADDER_FOOT = 18;     // px from the masonry's yard face to where a ladder stands
+const POSTERN_DECK = 40;    // px square: the plank platform behind the wall beside a postern
+const POSTERN_DECK_IN = 33; // px from the wall's line into the yard to the deck's middle
+const LADDER_FOOT = 18;     // px from the masonry's (or the deck's) yard edge to where a ladder stands
 
 export class Fortress extends Mansion {
   /*
@@ -211,11 +213,12 @@ export class Fortress extends Mansion {
     }
 
     // ---- the garrison's night posts up on the wall (BUILD 10) ----
-    // Two per gate: the tops of a big gate's two towers, or a wooden deck on
-    // the wall-walk either side of a postern. A guard walks to the foot of
-    // the ladder on the yard side and climbs; from up there he shoots over
-    // the merlons at whatever comes for the gate (playtest 2026-10-17: the
-    // gate is shut, so nobody shoots through it any more).
+    // Two per gate: the tops of a big gate's two towers, or a plank platform
+    // against the yard face of the wall either side of a postern (a guard's
+    // chest clears the merlons). A guard walks to the foot of the ladder on
+    // the yard side and climbs; from up there he shoots over the wall at
+    // whatever comes for the gate (playtest 2026-10-17: the gate is shut, so
+    // nobody shoots through it any more).
     this.wallPosts = [];
     const inwardOf = { north: { x: 0, y: 1 }, south: { x: 0, y: -1 }, west: { x: 1, y: 0 }, east: { x: -1, y: 0 } };
     for (const g of GATES) {
@@ -223,11 +226,13 @@ export class Fortress extends Mansion {
       const inward = inwardOf[g.side];
       for (const s of [-1, 1]) {
         const along = g.at + s * (g.width / 2 + (g.big ? GATE_TOWER / 2 : POSTERN_POST));
-        const x = axis === 'h' ? along : wallPos[g.side];
-        const y = axis === 'h' ? wallPos[g.side] : along;
-        const depth = (g.big ? GATE_TOWER / 2 : WALL_T / 2) + LADDER_FOOT;
+        const into = g.big ? 0 : POSTERN_DECK_IN;
+        const x = (axis === 'h' ? along : wallPos[g.side]) + inward.x * into;
+        const y = (axis === 'h' ? wallPos[g.side] : along) + inward.y * into;
+        const depth = (g.big ? GATE_TOWER / 2 : POSTERN_DECK / 2) + LADDER_FOOT;
         this.wallPosts.push(Object.freeze({
-          gate: g.id, slot: s < 0 ? 0 : 1, kind: g.big ? 'tower' : 'wall', side: g.side, towerSize: g.big ? GATE_TOWER : 0,
+          gate: g.id, slot: s < 0 ? 0 : 1, kind: g.big ? 'tower' : 'wall', side: g.side,
+          towerSize: g.big ? GATE_TOWER : 0, deck: g.big ? 0 : POSTERN_DECK,
           x, y, foot: Object.freeze({ x: x + inward.x * depth, y: y + inward.y * depth }), inward,
         }));
       }
@@ -259,7 +264,8 @@ export class Fortress extends Mansion {
       // the far corner of the same wall, short of the corner tower
       barrel(455 * s, 425 * s); crates(520 * s, 416 * s);
       // the west wall between the postern and the gate tower / the east wall
-      barrel(-600 * s, -215 * s);
+      // (clear of the postern's guard platform and its ladder, BUILD 10)
+      barrel(-600 * s, -192 * s);
       // the west wall below the gate tower / the east wall above it
       crates(-598 * s, 235 * s); barrel(-600 * s, 300 * s);
     }

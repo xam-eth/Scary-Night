@@ -30,13 +30,11 @@ const KIT_LEVEL_GROW = 0.07;
 /** World px across a plot's foundation pad (the pack's dirt hex). */
 const PLOT_PAD_ACROSS = 158;
 /**
- * BUILD 10, the guards' posts up on the wall: the plank deck beside a
- * postern (px square), the wall height when a mansion has none of its own,
- * where a guard holds his crossbow (px over his feet, x1.6), and the share of
- * a climb spent going up the ladder (survival.js GUARD.climbShare: the rest
- * is the step from the ladder onto the post).
+ * BUILD 10, the guards' posts up on the wall: the wall height when a mansion
+ * has none of its own, where a guard holds his crossbow (px over his feet,
+ * x1.6), and the share of a climb spent going up the ladder (survival.js
+ * GUARD.climbShare: the rest is the step from the ladder onto the post).
  */
-const WALL_DECK = 40;
 const FORT_WALL_FALLBACK = PIECE_METRES.wall;
 const GUARD_CHEST = 80;
 const GUARD_CLIMB_SHARE = 0.75;
@@ -1844,7 +1842,6 @@ class World3DRuntime {
     const inTower = (x, z, pad = 0) => towers.some((t) => Math.abs(x - t.x) < t.size / 2 + pad && Math.abs(z - t.y) < t.size / 2 + pad);
     // BUILD 10: the garrison's posts up on the wall (fortress.wallPosts)
     const posts = m.wallPosts || [];
-    const onDeck = (x, z) => posts.some((p) => p.kind === 'wall' && Math.hypot(x - p.x, z - p.y) < WALL_DECK / 2 + 14);
 
     // grass yards inside the wall: trodden earth, a shade off the forest floor
     for (const room of m.roomList) {
@@ -1869,7 +1866,7 @@ class World3DRuntime {
       for (let i = 0; i < n; i++) {
         const a = (horiz ? s.x : s.y) + (i + 0.5) * (len / n);
         const x = horiz ? a : cx, z = horiz ? cz : a;
-        if (inTower(x, z, 6) || onDeck(x, z)) continue;
+        if (inTower(x, z, 6)) continue;
         spots.push({ x, z, ry: horiz ? 0 : Math.PI / 2 });
       }
     }
@@ -1943,12 +1940,13 @@ class World3DRuntime {
     }
 
     // BUILD 10: the guards' night posts. A big gate's two towers carry them
-    // on top; a postern gets a plank deck on the wall-walk either side, with
-    // a breastwork on the forest side. Every post has a ladder on the yard
-    // face, where its guard climbs up (survival.js _climb).
+    // on top; a postern gets a plank platform on four legs against the yard
+    // face of the wall either side, high enough that a guard's chest clears
+    // the merlons. Every post has a ladder on its yard side, where its guard
+    // climbs up (survival.js _climb).
     const ladderAt = (post, top) => {
       const along = { x: -post.inward.y, y: post.inward.x };
-      const face = post.kind === 'tower' ? post.towerSize / 2 + 4 : WALL_DECK / 2 + 2;
+      const face = post.kind === 'tower' ? post.towerSize / 2 + 4 : post.deck / 2 + 2;
       const lx = post.x + post.inward.x * face, lz = post.y + post.inward.y * face;
       for (const sgn of [-1, 1]) {
         add(new THREE.BoxGeometry(4, top + 14, 4), wood, lx + along.x * 10 * sgn, (top + 14) / 2, lz + along.y * 10 * sgn);
@@ -1959,10 +1957,11 @@ class World3DRuntime {
     for (const post of posts) {
       const top = this._postTop(post.kind, m);
       if (post.kind === 'wall') {
-        const horiz = post.side === 'north' || post.side === 'south';
-        add(new THREE.BoxGeometry(WALL_DECK, 6, WALL_DECK), wood, post.x, top - 3, post.y);
-        const ox = -post.inward.x * (WALL_DECK / 2 - 2), oz = -post.inward.y * (WALL_DECK / 2 - 2);
-        add(new THREE.BoxGeometry(horiz ? WALL_DECK : 4, 18, horiz ? 4 : WALL_DECK), wood, post.x + ox, top + 9, post.y + oz);
+        const d = post.deck;
+        add(new THREE.BoxGeometry(d, 6, d), wood, post.x, top - 3, post.y);
+        for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+          add(new THREE.BoxGeometry(5, top - 6, 5), wood, post.x + a * (d / 2 - 4), (top - 6) / 2, post.y + b * (d / 2 - 4));
+        }
       }
       ladderAt(post, top);
     }
@@ -1992,7 +1991,7 @@ class World3DRuntime {
    */
   _postTop(kind, m = null) {
     const wallTop = ((m && m.wallMetres) || FORT_WALL_FALLBACK) * PX_PER_METRE;
-    return kind === 'tower' ? wallTop + 88 + 8 : wallTop + 14;
+    return kind === 'tower' ? wallTop + 88 + 8 : wallTop - 2;
   }
 
   _syncFortressDressing(game, mode) {
