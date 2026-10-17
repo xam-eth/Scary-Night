@@ -32,7 +32,9 @@ export function releaseControls(game) {
  * nearest intruder, fall back to the keep when it is being clawed, Flare
  * clusters. When a guard is down (and the keep is not being clawed, and he is
  * not hurt) he goes and stands beside it until it is back up; state.rescue
- * === false turns that off (measurement only).
+ * === false turns that off (measurement only). With nothing inside he holds
+ * the busiest gate from its mouth and steps back to rest (BUILD 10: a shut
+ * gate stops his bolts; see peekSpot).
  */
 export function botNight(game, state, { ROOM, ISO_CAMERA }) {
   const mode = game.survival;
@@ -72,15 +74,8 @@ export function botNight(game, state, { ROOM, ISO_CAMERA }) {
     const spot = peekSpot(game, state, p);
     if (spot) goal = spot;
   } else state.peek = null;
-  state.outside = game.mansion.findRoom(p.x, p.y) === ROOM.OUTSIDE;
   // in and out of the walls only by a gate (it opens for him)
   const leg = travel(game, p, goal, ROOM);
-  if (globalThis.process && process.env.BOT_TRACE && Math.floor(mode.elapsed * 2) !== state._tr) {
-    state._tr = Math.floor(mode.elapsed * 2);
-    const near = live.filter((e) => dist(e, p) < 170).length;
-    const on = live.filter((e) => e._onCaptain).length;
-    console.log(`D${mode.day} t${mode.elapsed.toFixed(1)} p(${Math.round(p.x)},${Math.round(p.y)}) ${game.mansion.findRoom(p.x, p.y)} hp${Math.round(p.blood)} goal(${Math.round(goal.x)},${Math.round(goal.y)}) leg(${Math.round(leg.goal.x)},${Math.round(leg.goal.y)}${leg.path ? '' : ' direct'}) near${near} on${on} exp${mode.captainExposed ? 1 : 0} gate${mode.captainInGate ? mode.captainInGate.id : '-'} inside${inside.length} keepAtk${mode.keepAttackers} tgt${mode.currentTarget ? 1 : 0} gates${game.mansion.entrances.filter((e) => e.gate).map((e) => e.broken ? "X" : Math.round(e.hp)).join("/")}`);
-  }
   const final = leg.goal === goal;
   if (dist(p, leg.goal) > (final ? (goal.tight ? 8 : 46) : 10)) {
     const path = leg.path ? game.mansion.navPath(p.x, p.y, leg.goal.x, leg.goal.y) : null;
@@ -151,9 +146,17 @@ function peekSpot(game, state, p) {
   const doors = mode.besiegedDoors().filter((e) => e.gate && e.outside);
   if (!doors.length) { state.peek = null; return null; }
   let pk = state.peek && doors.find((e) => e.id === state.peek.door) ? state.peek : null;
+  const share = (e) => e.hp / Math.max(1, e.hpMax);
+  if (pk) {
+    // only an emergency pulls him off his gate: another one about to give
+    // while his still holds
+    const held = doors.find((e) => e.id === pk.door);
+    const sos = doors.find((e) => e !== held && share(e) < 0.3 && mode.doorPressure(e.id) >= 3);
+    if (sos && share(held) > 0.5) pk = state.peek = { door: sos.id, phase: pk.phase };
+  }
   if (!pk) {
     // the busiest gate, the weakest first among equals
-    doors.sort((a, b) => (mode.doorPressure(b.id) - mode.doorPressure(a.id)) || (a.hp / a.hpMax - b.hp / b.hpMax));
+    doors.sort((a, b) => (mode.doorPressure(b.id) - mode.doorPressure(a.id)) || (share(a) - share(b)));
     pk = state.peek = { door: doors[0].id, phase: 'peek' };
   }
   const door = doors.find((e) => e.id === pk.door);

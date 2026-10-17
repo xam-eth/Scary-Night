@@ -559,29 +559,58 @@ async function runSurvivalMilestone() {
   const promotePass = Number.isFinite(frontAfter) && frontAfter < frontBefore + 30;
   console.log(`  ${promotePass ? 'PASS' : 'FAIL'}  ranks close up after the front row dies (nearest body ${frontBefore.toFixed(0)} px → ${frontAfter.toFixed(0)} px from the chapel door)`);
 
-  // 3) Door slits: from inside, the Hunter shoots a body clawing a closed
-  //    door; the bolt passes the wood and the door takes no bolt damage.
+  // 3) BUILD 10 (playtest 2026-10-17: "gerbang selalu tertutup tapi tembakan
+  //    tetap kena"): a shut gate stops the captain's shot like the wall does.
+  //    Stepping into its mouth swings it open for him: now he shoots, the body
+  //    still cannot come in and claws back through the opening; back inside,
+  //    the gate shuts behind him.
   survivalGame.survival.restart();
   resetControls();
   const slitMode = survivalGame.survival;
   quietNight(slitMode);
   slitMode.guards.length = 0; slitMode.survivors = 0;
   const slitDoor = slitMode.entranceById('southGate');
+  slitDoor.hp = slitDoor.hpMax = 99999;
   const inward = { x: slitDoor.inside.x - slitDoor.x, y: slitDoor.inside.y - slitDoor.y };
   const inLen = Math.hypot(inward.x, inward.y) || 1;
-  survivalGame.player.x = slitDoor.inside.x + inward.x / inLen * 60;
-  survivalGame.player.y = slitDoor.inside.y + inward.y / inLen * 60;
-  const { survivalSpot } = await import('../src/game/survival.js');
+  const parkInside = () => {
+    survivalGame.player.x = slitDoor.inside.x + inward.x / inLen * 60;
+    survivalGame.player.y = slitDoor.inside.y + inward.y / inLen * 60;
+    survivalGame.player.vx = 0; survivalGame.player.vy = 0;
+  };
+  parkInside();
+  const { survivalSpot, SORTIE } = await import('../src/game/survival.js');
   const slitSpot = survivalSpot(slitDoor, 0, 72);
   const slitBody = new SurvivalCrowdZombie(slitSpot.x, slitSpot.y, slitDoor, 0, 1);
   slitBody.hp = slitBody.hpMax = 400;
   survivalGame.enemies.push(slitBody);
-  const slitDoorHp = slitDoor.hp;
   const losBlocked = !survivalGame.mansion.hasLOS(survivalGame.player.x, survivalGame.player.y, slitBody.x, slitBody.y);
   tick(60 * 3);
-  const slitPass = losBlocked && slitBody.hp < 400 && !slitDoor.broken && !slitDoor.open
-    && slitDoor.hp >= slitDoorHp - 30;
-  console.log(`  ${slitPass ? 'PASS' : 'FAIL'}  Hunter shoots through a closed door's slit (plain LOS blocked=${losBlocked}; body 400 → ${Math.round(slitBody.hp)} HP; door ${slitDoorHp} → ${Math.round(slitDoor.hp)}, still closed)`);
+  const shutHp = slitBody.hp;
+  const shutStill = !slitDoor.sortie && !slitDoor.open && !slitDoor.broken;
+  // into the mouth: 20 px inside the wall line
+  survivalGame.player.x = slitDoor.x + inward.x / inLen * 20;
+  survivalGame.player.y = slitDoor.y + inward.y / inLen * 20;
+  survivalGame.player.iframes = 0;
+  const bloodBefore = survivalGame.player.blood;
+  let swung = false, exposed = false, onHim = false, deepest = Infinity;
+  for (let i = 0; i < 60 * 3; i++) {
+    tick();
+    swung = swung || slitDoor.sortie;
+    exposed = exposed || !!slitMode.captainExposed;
+    onHim = onHim || !!slitBody._onCaptain;
+    // how far out the body stays (> 0: outside the wall line)
+    deepest = Math.min(deepest, (slitBody.x - slitDoor.x) * -inward.x / inLen + (slitBody.y - slitDoor.y) * -inward.y / inLen);
+  }
+  const mouthHp = slitBody.hp;
+  const bloodAfter = survivalGame.player.blood;
+  const clawed = bloodAfter < bloodBefore;
+  parkInside();
+  tick(Math.round(60 * (SORTIE.holdTime + SORTIE.closeTime + 0.3)));
+  const shutAgain = !slitDoor.sortie && (slitDoor.sortieT || 0) === 0 && !slitMode.captainExposed && !slitBody._onCaptain;
+  const slitPass = losBlocked && shutHp === 400 && shutStill && swung && exposed && mouthHp < 400
+    && onHim && clawed && deepest > 14 && !slitBody._inHouse && !slitDoor.broken && !slitDoor.open && shutAgain;
+  console.log(`  ${slitPass ? 'PASS' : 'FAIL'}  a shut gate stops the captain's shot (body 400 → ${Math.round(shutHp)} HP from inside, gate shut=${shutStill}); in its mouth it swings open for him (open=${swung}, exposed=${exposed}): body → ${Math.round(mouthHp)} HP, it comes for him (${onHim}) and claws through the opening (HP ${Math.round(bloodBefore)} → ${Math.round(bloodAfter)}) yet never passes (≥ ${Math.round(deepest)} px outside); back inside the gate shuts (${shutAgain})`);
 
   // 4) Guards: one per survivor; they post at the clawed door and shoot.
   survivalGame.survival.restart();
@@ -1029,7 +1058,8 @@ async function runSurvivalMilestone() {
     const dayShots = mode.nightStats.towerShots || 0;
     const dayQuiet = dayShots === 0 && dayBody.hp === 999 && !survivalGame.bolts.some((b) => b.tower);
 
-    // by night it shoots the crowd at its door through the slit
+    // by night it shoots the crowd at its gate over the wall (BUILD 10: it
+    // stands high on its deck; nothing shoots through a shut gate)
     mode.startNight();
     quietNight(mode);
     mode.guards.length = 0; mode.survivors = 0;
@@ -1040,15 +1070,15 @@ async function runSurvivalMilestone() {
     for (let i = 0; i < 120; i++) {
       tick();
       const b = survivalGame.bolts.find((item) => item.tower);
-      if (b && !boltSeen) boltSeen = { pierce: b.pierce, range: b.range, friendly: !!b.friendly, slits: !!b.pierceDoors, damage: b.damage };
+      if (b && !boltSeen) boltSeen = { pierce: b.pierce, range: b.range, friendly: !!b.friendly, over: !!b.over, slits: !!b.pierceDoors, damage: b.damage };
     }
     const nightShots = mode.nightStats.towerShots || 0;
     const lost = 999 - target.hp;
     const plainBlocked = !m.hasLOS(tower.x, tower.y, target.x, target.y);
-    towerCheck('tower: watches by day; by night fires its heavy bolt through the door slit (Hunter shot + guards off)',
+    towerCheck('tower: watches by day; by night fires its heavy bolt over the wall at the crowd past its shut gate (Hunter shot + guards off)',
       dayQuiet && nightShots >= 1 && lost >= 16 && Math.abs(lost / 16 - Math.round(lost / 16)) < 0.01
-        && boltSeen && boltSeen.pierce === TOWER.pierce && boltSeen.range === 520 + TOWER.reach && boltSeen.friendly && boltSeen.slits
-        && plainBlocked && !door.open && !door.broken,
+        && boltSeen && boltSeen.pierce === TOWER.pierce && boltSeen.range === 520 + TOWER.reach && boltSeen.friendly && boltSeen.over && !boltSeen.slits
+        && plainBlocked && !door.open && !door.broken && !door.sortie,
       `day shots ${dayShots}; night ${nightShots} shots, body 999 → ${Math.round(target.hp)} (${Math.round(lost / 16)}×16), bolt ${JSON.stringify(boltSeen)}, plain LOS blocked=${plainBlocked}`);
 
     // the tower's keys never leak into the Hunter's or a guard's bolt: the
@@ -1078,7 +1108,8 @@ async function runSurvivalMilestone() {
       (mode.nightStats.towerShots || 0) === shotsBefore + 1 && lv1Damage === 24 && pierceHp.join('/') === `${999 - lv1Damage}/${999 - lv1Damage}/999`,
       `one shot of ${lv1Damage}, bodies ${pierceHp.join(' / ')}`);
 
-    // masonry stops it: a body in range but out of sight behind a wall
+    // BUILD 10: from its deck it shoots over masonry too — a body in range
+    // behind a wall is hit; one past its range is not
     quietNight(mode);
     let hiddenAt = null;
     for (let gy = tower.y - 500; gy <= tower.y + 500 && !hiddenAt; gy += 20) {
@@ -1094,9 +1125,17 @@ async function runSurvivalMilestone() {
     tick(90);
     const inRange = Math.hypot(hidden.x - tower.x, hidden.y - tower.y) <= 520;
     const noLos = !m.hasLOS(tower.x, tower.y, hidden.x, hidden.y, { throughDoors: true });
-    towerCheck('tower never shoots through a wall (a body in range behind masonry is ignored)',
-      !!hiddenAt && inRange && noLos && (mode.nightStats.towerShots || 0) === hiddenShots && hidden.hp === 999,
-      `body at (${Math.round(hidden.x)}, ${Math.round(hidden.y)}) in ${m.findRoom(hidden.x, hidden.y)}, in range=${inRange}, no LOS=${noLos}, shots ${hiddenShots} → ${mode.nightStats.towerShots || 0}, body ${Math.round(hidden.hp)}`);
+    const overShots = (mode.nightStats.towerShots || 0) - hiddenShots;
+    const overHp = hidden.hp;
+    survivalGame.enemies.length = 0; survivalGame.bolts.length = 0;
+    const far = body({ x: tower.x, y: tower.y + 520 + 90 });
+    const farShots = mode.nightStats.towerShots || 0;
+    tower.cd = 0;
+    tick(90);
+    const farQuiet = (mode.nightStats.towerShots || 0) === farShots && far.hp === 999;
+    towerCheck('tower shoots over the wall from its deck: a body in range behind masonry is hit; one past its range is not',
+      !!hiddenAt && inRange && noLos && overShots >= 1 && overHp < 999 && farQuiet,
+      `body at (${Math.round(hidden.x)}, ${Math.round(hidden.y)}) in ${m.findRoom(hidden.x, hidden.y)}, in range=${inRange}, no LOS=${noLos}, ${overShots} shots, body ${Math.round(overHp)}; past range: quiet=${farQuiet}`);
 
     // levels: Lv2 32 dmg / 580, Lv3 42 dmg / 640; a Lv3 bolt lands for 42
     mode.phase = 'day'; survivalGame.screen = 'playing'; survivalGame.uiPanel = 'survival-day';
@@ -1291,7 +1330,12 @@ async function runSurvivalMilestone() {
     // let them walk from the keep and hold the door while the
     // crowd claws the wood
     for (let i = 0; i < 60 * 14; i++) tick();
-    const atPosts = mode.guards.every((gd) => !gd.moving && Math.hypot(gd.x - gd.post.x, gd.y - gd.post.y) < 30);
+    // BUILD 10: a gate's posts are up on the wall (fortress.wallPosts): a
+    // guard stands on top once it has climbed its ladder
+    const onPost = (gd) => !gd.moving && (gd.post.wall
+      ? gd.lift === 1 && Math.hypot(gd.x - gd.post.wall.x, gd.y - gd.post.wall.y) < 2
+      : Math.hypot(gd.x - gd.post.x, gd.y - gd.post.y) < 30);
+    const atPosts = mode.guards.every(onPost);
     const throughWood = atPosts && mode.guards.every((gd) => gd.hp === GUARD.hp) && fd.attackers !== undefined;
     ga.hp = Math.floor(GUARD.hp * GUARD.woundedAt) - 1;
     mode._guardAssignT = 0;
@@ -1449,7 +1493,11 @@ async function runSurvivalMilestone() {
     const expectStars = survivalStars(true, builder.runStats);
     endCheck('R1/R2: a won run counts all three nights and earns its stars from the keep\'s lowest point and the guards lost',
       builder.complete && br.won === true && builder.nightKills.length === 3 && br.kills === nightSum && builder.runStats.kills === nightSum
-        && br.stars === expectStars && br.stars >= 2 && br.nights === 3 && br.keepMin === Math.round(100 * builder.runStats.keepMin)
+        // BUILD 10: R2's bookkeeping is what this checks; the stars a bot
+        // earns on the harness's 60 s nights swing with the seed (BUILD 9's
+        // builder: 0/1/0/3/3 stars over five seeds at 60 s). The balance
+        // probe holds the bar: 5/5 three-star wins on the game's 72 s nights.
+        && br.stars === expectStars && br.stars >= 1 && br.nights === 3 && br.keepMin === Math.round(100 * builder.runStats.keepMin)
         && br.built === builder.buildings.length && br.time >= 3 * 60 && br.keepLeft > 0 && br.keepLeft <= 100 && br.tip === null,
       `nights ${builder.nightKills.join('+')} = ${nightSum}, panel ${br.kills}; keep low ${br.keepMin}% (2 stars from ${RUN_STARS.keepMin * 100}%), guards lost ${builder.runStats.lost} → ${br.stars} stars; keep left ${br.keepLeft}%, built ${br.built}, time ${br.time}s`);
     const rule = [
@@ -1620,6 +1668,159 @@ async function runSurvivalMilestone() {
   }
   const passPass = passChecks.length === 4 && passChecks.every(Boolean);
 
+  // ---- BUILD 10, the gate rule (playtest 2026-10-17: "gerbang selalu
+  // tertutup tapi tembakan tetap kena ... untuk menghadapi musuh harus di
+  // luar benteng"): the gates open for the captain and never for the horde;
+  // out there the horde comes for him; behind the wall he gets his breath
+  // back; the guards hold the gates from up on the wall ----
+  const gateChecks = [];
+  const gateCheck = (name, ok, detail) => {
+    gateChecks.push(!!ok);
+    console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} (${detail})`);
+  };
+  {
+    const { SORTIE, GUARD: G, survivalSpot: spotOf, SurvivalBreaker } = await import('../src/game/survival.js');
+    const { steerStick } = await import('./survival-bots.mjs');
+    const { ISO_CAMERA: ISO } = await import('../src/core/util.js');
+    window.localStorage.removeItem('lastnight.save.v1');
+    const gg = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+    gg.input.touchSeen = true;
+    gg.input.layout(390, 844);
+    const gm = gg.survival;
+    const gtick = (n = 1) => { for (let i = 0; i < n; i++) gg.update(step); };
+    const quiet = () => {
+      gm.phase = 'night'; gg.screen = 'playing'; gg.uiPanel = null;
+      if (gm.cine) gm.cine = null;
+      gm.elapsed = 5; gm.waveIndex = 99; gm.breakerIndex = 99; gm.individualIndex = 99;
+      gg.enemies.length = 0; gg.bolts.length = 0;
+    };
+    const p = gg.player;
+    const m = gg.mansion;
+
+    // 1) through a shut gate: the captain walks out, a body is held
+    gm.restart(); quiet();
+    gm.guards.length = 0; gm.survivors = 0;
+    const west = gm.entranceById('westGate');
+    p.x = west.inside.x + 40; p.y = west.inside.y; p.vx = 0; p.vy = 0;
+    let crossedAt = null, swungOpen = false;
+    for (let i = 0; i < 60 * 3 && crossedAt == null; i++) {
+      steerStick(gg, -1, 0, ISO);
+      gtick();
+      swungOpen = swungOpen || !!west.sortie;
+      if (p.x < west.outside.x) crossedAt = i / 60;
+    }
+    gg.input.stick.active = false;
+    const heldFit = m.resolve(west.x, west.y, 13, false);
+    const passFit = m.resolve(west.x, west.y, 13, true);
+    const held = Math.hypot(heldFit.x - west.x, heldFit.y - west.y) > 10;
+    const passes = Math.hypot(passFit.x - west.x, passFit.y - west.y) < 1;
+    gateCheck('a shut gate opens for the captain as he walks through it, and holds a body (enemies stay blocked until it breaks)',
+      crossedAt != null && swungOpen && held && passes && !west.broken && !west.open,
+      `out after ${crossedAt == null ? 'never' : crossedAt.toFixed(2) + ' s'}, swung open ${swungOpen}, body pushed ${Math.round(Math.hypot(heldFit.x - west.x, heldFit.y - west.y))} px off the gate, captain not pushed ${passes}`);
+
+    // 2) out there they come for him: at most SORTIE.maxOnCaptain at once, a
+    //    Breaker keeps to its gate, and they give up once he is clear
+    gm.restart(); quiet();
+    gm.guards.length = 0; gm.survivors = 0;
+    gm.tuning = { ...gm.tuning, autoAttackRange: 0 };
+    const north = gm.entranceById('northGate');
+    north.hp = north.hpMax = 99999;
+    const crowd = [];
+    for (let i = 0; i < 10; i++) {
+      const at = spotOf(north, i, 72);
+      const z = new SurvivalCrowdZombie(at.x, at.y, north, i, 1);
+      z.hp = z.hpMax = 999;
+      gg.enemies.push(z); crowd.push(z);
+    }
+    const breaker = new SurvivalBreaker(north.outside.x + 60, north.outside.y - 40, north, 2, 0);
+    breaker.hp = breaker.hpMax = 9999;
+    gg.enemies.push(breaker);
+    // out in front of the gate, within SORTIE.aggro of all ten
+    p.x = north.x; p.y = north.y - 154; p.vx = 0; p.vy = 0; p.iframes = 0;
+    const hp0 = p.blood;
+    let mostOn = 0, breakerCame = false;
+    for (let i = 0; i < 60 * 2; i++) {
+      gtick();
+      mostOn = Math.max(mostOn, crowd.filter((z) => z._onCaptain).length);
+      breakerCame = breakerCame || !!breaker._onCaptain;
+    }
+    const clawedOut = p.blood < hp0;
+    const exposedOut = !!gm.captainExposed;
+    p.x = north.x + 700; p.y = north.y - 520; p.vx = 0; p.vy = 0;
+    gtick(30);
+    const gaveUp = crowd.every((z) => !z._onCaptain);
+    gm.tuning = SURVIVAL_TUNING;
+    gateCheck(`outside, the horde comes for the captain: at most ${SORTIE.maxOnCaptain} at once, a Breaker keeps to its gate, and they give up once he is ${SORTIE.aggro + SORTIE.leash}+ px clear`,
+      exposedOut && mostOn === SORTIE.maxOnCaptain && !breakerCame && clawedOut && gaveUp,
+      `exposed ${exposedOut}, most on him ${mostOn}/10, Breaker came ${breakerCame}, HP ${Math.round(hp0)} → ${Math.round(p.blood)}, gave up ${gaveUp}`);
+
+    // 3) behind the wall he gets his breath back (not out there)
+    gm.restart(); quiet();
+    gm.guards.length = 0; gm.survivors = 0;
+    const home = gm.hunterHome();
+    p.x = home.x; p.y = home.y; p.vx = 0; p.vy = 0;
+    p.blood = 50;
+    gtick(Math.round(60 * (SORTIE.restDelay - 0.5)));
+    const early = p.blood;
+    let heart = false;
+    for (let i = 0; i < Math.round(60 * 2.5); i++) { gtick(); heart = heart || gm.floaters.some((f) => f.icon === 'heart'); }
+    const later = p.blood;
+    const expect = 50 + SORTIE.rest * 2;
+    p.x = north.x; p.y = north.y - 200; p.blood = 50;
+    gtick(Math.round(60 * (SORTIE.restDelay + 2)));
+    const outsideRest = p.blood;
+    gateCheck(`behind the wall the captain heals ${SORTIE.rest} HP/s after ${SORTIE.restDelay} s without a claw, with a "+" over him; out there he does not`,
+      early === 50 && Math.abs(later - Math.min(p.bloodMax, expect)) < SORTIE.rest * 0.6 && heart && outsideRest === 50,
+      `50 → ${early.toFixed(1)} before ${SORTIE.restDelay} s → ${later.toFixed(1)} after ${(SORTIE.restDelay + 2).toFixed(1)} s (want ~${expect.toFixed(1)}), "+" shown ${heart}; outside 50 → ${outsideRest}`);
+
+    // 4) a guard holds a gate from up on the wall: it climbs the ladder by
+    //    its tower, no claw reaches it there, and it shoots over the merlons
+    gm.restart(); quiet();
+    gm.tuning = { ...gm.tuning, autoAttackRange: 0 };
+    const south = gm.entranceById('southGate');
+    south.hp = south.hpMax = 99999;
+    const guard = gm.guards[0];
+    gm.guards.length = 1; gm.survivors = 1;
+    const post = gm._doorPost(south, 0);
+    guard.x = post.x; guard.y = post.y + 6;
+    gm._setGuardPost(guard, post);
+    gm._guardAssignT = 99;
+    let climbStart = null, upAt = null;
+    for (let i = 0; i < 60 * 3 && upAt == null; i++) {
+      gm._guardAssignT = 99;
+      gtick();
+      if (climbStart == null && guard.lift > 0) climbStart = i / 60;
+      if (guard.lift === 1) upAt = i / 60;
+    }
+    const onTop = !!post.wall && post.wall.kind === 'tower' && Math.hypot(guard.x - post.wall.x, guard.y - post.wall.y) < 1;
+    const target = new SurvivalCrowdZombie(south.x - 60, south.y + 150, south, 0, 1);
+    target.hp = target.hpMax = 999; target.update = () => {};
+    gg.enemies.push(target);
+    const clawer = new SurvivalCrowdZombie(guard.x, guard.y + 20, south, 1, 1);
+    clawer.update = () => {};
+    const reach = gm.guardInReach(clawer);
+    const hunt = gm.guardToHunt(clawer);
+    let overBolt = null;
+    guard.cd = 0;
+    for (let i = 0; i < 60 * 2; i++) {
+      gm._guardAssignT = 99;
+      gtick();
+      const b = gg.bolts.find((x) => x.guard);
+      if (b && !overBolt) overBolt = { over: !!b.over, dropFrom: b.dropFrom };
+    }
+    const shotHome = target.hp < 999;
+    gm.tuning = SURVIVAL_TUNING;
+    gm.phase = 'day';
+    gm._syncGuardRoster(true);
+    const downAtDawn = guard.lift === 0 && !guard.liftPost;
+    gateCheck('a guard holds its gate from up on the tower: walks to the ladder, climbs it, stands out of every claw\'s reach and shoots over the wall',
+      climbStart != null && upAt != null && upAt - climbStart > G.climb * 0.8 && upAt - climbStart < G.climb * 1.3 && onTop
+        && reach === null && hunt === null && overBolt && overBolt.over && overBolt.dropFrom === 'tower' && shotHome && downAtDawn,
+      `climb ${climbStart == null ? '-' : climbStart.toFixed(2)} → up ${upAt == null ? '-' : upAt.toFixed(2)} s (${G.climb} s), on the tower ${onTop}, in reach ${!!reach}, hunted ${!!hunt}, bolt ${JSON.stringify(overBolt)}, body 999 → ${Math.round(target.hp)}, down at dawn ${downAtDawn}`);
+    window.localStorage.removeItem('lastnight.save.v1');
+  }
+  const gateRulePass = gateChecks.length === 4 && gateChecks.every(Boolean);
+
   console.log(`  idle Night 3: ${idle.nightThree.peakEnemies} peak enemies / ${idle.nightThree.peakBreakers} Breakers, ${idle.nightThree.kills} kills, ${idle.nightThree.wallDamage} wall damage, gate ${idle.nightThree.gateHp} HP, Hunter ${idle.nightThree.playerHp} HP; ${idle.phase}`);
   console.log(`  builder Night 3: ${builder.nightThree.peakEnemies} peak enemies / ${builder.nightThree.peakBreakers} Breakers, ${builder.nightThree.kills} kills, ${builder.nightThree.wallDamage} wall damage, gate ${builder.nightThree.gateHp} HP, Hunter ${builder.nightThree.playerHp} HP; keep Lv${builder.keepLevel} ${builder.keepHp} HP, soldiers ${builder.survivors}, buildings ${builder.buildings.join(',') || 'none'}, gateBuilt=${builder.gateBuilt}; ${builder.phase}`);
   // Balance target (M1 rebuild, K1): doing nothing must not win; an engaged
@@ -1632,7 +1833,7 @@ async function runSurvivalMilestone() {
     && hunterAutoShot && hunterRealLos && hunterSkill
     && idleLoses && builder.complete && builder.keepLevel === 3
     && builder.queueLockVerified && builder.sawmillBuilt && builder.gateBuilt && builder.barracksBuilt
-    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass
+    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass && gateRulePass
     && builder.upgrades[0].level === 1 && builder.upgrades[0].rooms === 5
     && builder.upgrades[builder.upgrades.length - 1].level === 3 && builder.upgrades[builder.upgrades.length - 1].rooms === 9
     && builder.upgrades.every((item, i, all) => i === 0 || item.level >= all[i - 1].level);

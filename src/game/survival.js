@@ -1014,8 +1014,8 @@ export const SORTIE = Object.freeze({
   maxOnCaptain: 6,     // bodies going for him at once
   gateReach: 28,       // px a claw reaches through the open gate (the barrier holds the body)
   chaseMul: 1.3,       // a swarm body's chase vs. its march outside (his run is 196 px/s)
-  restDelay: 2,        // s behind the wall without a claw before he gets his breath back
-  rest: 7,             // HP/s he gets back behind the wall (a sortie, then a breather)
+  restDelay: 1.5,      // s behind the wall without a claw before he gets his breath back
+  rest: 12,            // HP/s he gets back behind the wall (a sortie, then a breather)
 });
 
 class SurvivalGuard {
@@ -2213,7 +2213,7 @@ export class SurvivalMode {
       e.sortieHold = want ? SORTIE.holdTime : Math.max(0, (e.sortieHold || 0) - dt);
       const goal = want || e.sortieHold > 0 ? 1 : 0;
       const t = e.sortieT || 0;
-      e.sortieT = goal > t ? Math.min(1, t + dt / SORTIE.openTime) : Math.max(0, t - dt / SORTIE.closeTime);
+      e.sortieT = goal ? Math.min(1, t + dt / SORTIE.openTime) : Math.max(0, t - dt / SORTIE.closeTime);
       if (e.broken) e.sortieT = 0;
       e.sortie = e.sortieT > 0.5;
     }

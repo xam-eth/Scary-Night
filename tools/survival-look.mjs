@@ -8,7 +8,7 @@
  * each frame (horde kinds, GLB guards, effects).
  *
  * Usage: node tools/survival-look.mjs [--out=/tmp/look] [--dpr=2]
- *        [--port=8123] [--only=gate,wide,day,build,fight]
+ *        [--port=8123] [--only=gate,fight,outside,posts,wide,south,day,build]
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -100,17 +100,43 @@ await shot('gate', () => {
   m.buildings['north:tower'] = 'tower'; m.buildingLevels['north:tower'] = 1;
   m.buildings['south:tower'] = 'tower'; m.buildingLevels['south:tower'] = 1;
   g.survivalBakeDirty = true;
+  // BUILD 10: a shut gate stops his shot, so he holds it from its mouth
+  // (20 px inside the wall line): the leaf swings open for him, the crowd
+  // claws back through the opening, the guards shoot from the towers
   const door = g.mansion.entrances.find((e) => e.id === 'northGate');
-  const inside = door.inside || door;
-  g.player.x = inside.x; g.player.y = inside.y + 60;
-  window.__lkFast(() => m.elapsed < 11);
-  window.__lkReal(10);
-  return { t: +m.elapsed.toFixed(1), alive: m.aliveEnemies(), ...window.__lkDiag() };
+  const mouth = () => { g.player.x = door.x; g.player.y = door.y + 20; };
+  window.__lkFast(() => { if (m.elapsed > 9) mouth(); return m.elapsed < 11; });
+  mouth();
+  for (let i = 0; i < 10; i++) { mouth(); window.__lkReal(1); }
+  return { t: +m.elapsed.toFixed(1), alive: m.aliveEnemies(), open: !!door.sortie, exposed: !!m.captainExposed, guardsUp: m.guards.filter((gd) => gd.lift === 1).length, ...window.__lkDiag() };
 });
 await shot('fight', () => {
-  window.__lkReal(16);
-  const m = window.__LN.survival;
-  return { kills: m.nightStats.kills, ...window.__lkDiag() };
+  const g = window.__LN; const m = g.survival;
+  const door = g.mansion.entrances.find((e) => e.id === 'northGate');
+  for (let i = 0; i < 16; i++) { g.player.x = door.x; g.player.y = door.y + 20; window.__lkReal(1); }
+  return { kills: m.nightStats.kills, hp: Math.round(g.player.blood), open: !!door.sortie, ...window.__lkDiag() };
+});
+// BUILD 10: out in the field, past the wall — the crowd at the north gate
+// shot from the side; the nearest bodies leave the gate and come for him
+await shot('outside', () => {
+  const g = window.__LN; const m = g.survival;
+  const door = g.mansion.entrances.find((e) => e.id === 'northGate');
+  const park = () => { g.player.x = door.x + 280; g.player.y = door.y - 170; g.player.blood = Math.max(g.player.blood, 80); };
+  park();
+  g.renderer.snapCamera && g.renderer.snapCamera(g.player.x, g.player.y);
+  for (let i = 0; i < 40; i++) { park(); window.__lkReal(1); }
+  return { t: +m.elapsed.toFixed(1), exposed: !!m.captainExposed, onHim: g.enemies.filter((e) => e._onCaptain).length, target: !!m.currentTarget, ...window.__lkDiag() };
+});
+// BUILD 10: the guards' posts up on the wall — the north gate's towers seen
+// from the yard (their ladders face the camera) with a guard on each
+await shot('posts', () => {
+  const g = window.__LN; const m = g.survival;
+  const door = g.mansion.entrances.find((e) => e.id === 'northGate');
+  const park = () => { g.player.x = door.x + 70; g.player.y = door.y + 120; };
+  park();
+  g.renderer.snapCamera && g.renderer.snapCamera(g.player.x, g.player.y);
+  for (let i = 0; i < 30; i++) { park(); window.__lkReal(1); }
+  return { posts: m.guards.map((gd) => gd.post && gd.post.key), lift: m.guards.map((gd) => +gd.lift.toFixed(2)), ...window.__lkDiag() };
 });
 await shot('wide', () => {
   const g = window.__LN; const m = g.survival;

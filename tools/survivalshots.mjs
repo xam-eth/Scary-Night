@@ -230,9 +230,10 @@ await shot('failed', `(() => {
   return { phase: g.survival.phase, ui: g.ui.map((b) => b.label) };
 })()`);
 
-// Gate-slit defence: the Hunter steps up behind the gate wave 1 claws (the
-// north gate — Night 1 opens across the bailey); guards post beside him; the
-// camera leans toward the crowd.
+// Gate defence (BUILD 10: a shut gate stops every shot): the captain steps
+// into the mouth of the gate wave 1 claws (the north gate — Night 1 opens
+// across the bailey); the leaf swings open for him, the front rank claws
+// back through the opening, the guards shoot from the gate's towers.
 await shot('night-door', `(() => {
   const g = window.__LN;
   const m = g.survival;
@@ -241,12 +242,28 @@ await shot('night-door', `(() => {
   while (m.elapsed < 9 && m.phase === 'night' && steps++ < 2000) window.__origUpdate.call(g, 1 / 60);
   const door = m.entranceById('northGate');
   const ix = door.inside.x - door.x, iy = door.inside.y - door.y, il = Math.hypot(ix, iy) || 1;
-  g.player.x = door.inside.x + ix / il * 60; g.player.y = door.inside.y + iy / il * 60;
+  const mouth = () => { g.player.x = door.x + ix / il * 20; g.player.y = door.y + iy / il * 20; };
+  mouth();
   g.renderer.snapCamera(g.player.x, g.player.y);
   steps = 0;
-  while (m.elapsed < 13 && m.phase === 'night' && steps++ < 2000) window.__origUpdate.call(g, 1 / 60);
+  while (m.elapsed < 13 && m.phase === 'night' && steps++ < 2000) { mouth(); window.__origUpdate.call(g, 1 / 60); }
   g.render();
-  return { t: +m.elapsed.toFixed(1), door: door.id, doorHp: Math.round(door.hp), target: !!m.currentTarget, guardsAtDoor: m.guards.filter((gd) => gd.post && gd.post.doorId === door.id).length, kills: m.nightStats.kills, zoom: +g.renderer.cam.zoom.toFixed(3) };
+  return { t: +m.elapsed.toFixed(1), door: door.id, doorHp: Math.round(door.hp), open: !!door.sortie, exposed: !!m.captainExposed, target: !!m.currentTarget, guardsUp: m.guards.filter((gd) => gd.post && gd.post.doorId === door.id && gd.lift === 1).length, hp: Math.round(g.player.blood), kills: m.nightStats.kills, zoom: +g.renderer.cam.zoom.toFixed(3) };
+})()`);
+
+// Out in the field (BUILD 10): past the wall the captain shoots the crowd at
+// the north gate from the side; the nearest bodies leave it and come for him.
+await shot('night-out', `(() => {
+  const g = window.__LN;
+  const m = g.survival;
+  const door = m.entranceById('northGate');
+  const park = () => { g.player.x = door.x + 280; g.player.y = door.y - 170; g.player.blood = Math.max(g.player.blood, 80); };
+  park();
+  g.renderer.snapCamera(g.player.x, g.player.y);
+  let steps = 0;
+  while (steps++ < 90 && m.phase === 'night') { park(); window.__origUpdate.call(g, 1 / 60); }
+  g.render();
+  return { t: +m.elapsed.toFixed(1), exposed: !!m.captainExposed, onHim: g.enemies.filter((e) => e._onCaptain && !e.dead).length, target: !!m.currentTarget, kills: m.nightStats.kills };
 })()`);
 }
 
@@ -301,7 +318,8 @@ if (!args['no-progression'] && !TOWERS_ONLY && !GUARDS_ONLY && !CINE_ONLY) {
 
 // Towers: a ballista built on the main-gate circle through the real day
 // walk + BUILD button, then Lv2 firing on a real Night 2 (Hunter parked by
-// the main gate so the camera holds the tower, the gate slit and the crowd).
+// the main gate so the camera holds the tower, the shut gate and the crowd
+// its bolts arc down on over the wall).
 if (!args['no-towers'] && !GUARDS_ONLY && !CINE_ONLY) {
   await shot('tower-day', `(() => {
     const g = window.__LN;
