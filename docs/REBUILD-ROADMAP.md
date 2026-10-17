@@ -1,7 +1,96 @@
 # Status Rebuild 3D & Survival Milestone 1
 
 **Pembaruan:** 2026-10-17 (Asia/Makassar)
-**Status keseluruhan: MASIH TERBUKA — bukan klaim siap rilis.** Inti rebuild dunia 3D dan loop Survival Milestone 1 sudah terimplementasi. Pada 2026-10-12 arah UI/UX dan threat model dikoreksi mengikuti feedback user; pada 2026-10-15 dilakukan pass analisis gap & bug (lihat bagian "Gap & bug pass 2026-10-15"), lalu pass progres Hunter + level bangunan (lihat "Progres Hunter & level bangunan"), lalu pass menara crossbow (lihat "Menara crossbow"), lalu pass guard yang bisa jatuh (lihat "Guard bisa jatuh"; termasuk perbaikan bug gelombang yang muncul di dalam rumah), dan seluruh gate otomatis dijalankan ulang. Setelah itu user memutuskan **game landscape only** dan meminta brainstorming + design system plan sebelum koding lagi (lihat "Arah desain & orientasi" dan `docs/DESIGN-SYSTEM-PLAN.md`; belum ada perubahan kode game untuk arah ini). Revisi 1 desain (konsep api) ditolak user. Di revisi 2 user memilih konsep **K1 "Benteng Terakhir"**, pola build **jalan ke lingkaran + BUILD**, dan nada **dark stylized**, lalu menyetujui semua rekomendasi aturan dan meminta "pastikan dunianya 3D". K1 kini **terimplementasi sebagai vertical slice** (lihat "K1 Benteng Terakhir — implementasi"); acceptance manusia/perangkat untuk K1 belum ada. Atas feedback user berikutnya, Survival kini dimainkan di **dunia benteng (bailey)** baru, bukan di dalam ruangan mansion (lihat "Dunia benteng untuk Survival"). Setelah itu kedua bookend cerita K1 dibuat: **intro sinematik** di malam pertama dan **adegan bala bantuan tiba** di fajar ke-3 (lihat "Bookend K1"); pemahaman pemain atas keduanya belum diuji. Lalu dibuat **riset UX & replay** dari review pemain (Play Store, Steam, Reddit, dan platform review lain) plus playtest bot "sebagai gamer" (lihat "Riset UX & replay" dan `docs/UX-REPLAY-RESEARCH.md`). Riset itu lalu diperdalam atas permintaan user agar tidak ada coding: v2 menambah review bintang 5, persona, peta perjalanan, dan protokol playtest; v3 menambah pemain Indonesia, analisis loop 3 lapis, dan uji HP kelas bawah. Setelah itu, atas feedback user, dibuat pass perbaikan: benteng diperkecil dan aktor diperbesar, pasukan memakai GLB (KayKit Knight, CC0), efek tembakan/damage diperkuat, kerja bangunan dibuat terlihat, dan UI dirapikan (NIGHT dipisah dari BUILD, panel fajar/akhir menghitung kontribusi). Dari rekomendasi riset, yang terbangun baru R1 sebagian, R18a, dan R19 (lihat "Perbaikan dari feedback user"). Lalu pesan "next" berikutnya dikerjakan sebagai P0 riset **"Momen akhir run"**: bintang 1–3, rekor + NEW BEST!, panel kalah "Ns TO DAWN" + satu tip dari penyebab nyata, dan MVP bangunan (R1–R4, R19; lihat "Momen akhir run"). R5 dan R6 belum. Lalu user melapor "tidak ada perubahan" (2026-10-17): dibuat **pass visual besar** — build yang benar sampai ke layar (service worker hanya di host rilis, preview tanpa cache, stempel BUILD 8), bailey setengah ukuran dengan aktor ×1,6 dan kamera lebih dekat, seluruh horde monster GLB (vertex animation texture), knight dimuat saat boot dengan helm biru berjambul, efek tembakan/damage lebih besar, ballista yang membunuh dan menandai kill-nya, koin mine di HUD, dan penanda gerbang dengan jumlah musuh (lihat "Pass visual besar"). Lalu user meminta lima perbaikan lagi (2026-10-17, "ada beberapa masih perlu di fix"): kamera dijauhkan sedikit dan bisa digeser, plot bangunan ditata rapi, bangunan memakai aset gratis yang diunduh (bukan prototipe), kartu diperkecil, dan trailer pembuka dipertahankan. Kelimanya terimplementasi di **BUILD 9** (lihat "Pass perbaikan BUILD 9"). Acceptance visual/manual di perangkat, playtest manusia, dan packaging Play masih terbuka. Hasil tiap skrip hanya berlaku untuk cakupan yang benar-benar diuji.
+**Status keseluruhan: MASIH TERBUKA — bukan klaim siap rilis.** Inti rebuild dunia 3D dan loop Survival Milestone 1 sudah terimplementasi. Pada 2026-10-12 arah UI/UX dan threat model dikoreksi mengikuti feedback user; pada 2026-10-15 dilakukan pass analisis gap & bug (lihat bagian "Gap & bug pass 2026-10-15"), lalu pass progres Hunter + level bangunan (lihat "Progres Hunter & level bangunan"), lalu pass menara crossbow (lihat "Menara crossbow"), lalu pass guard yang bisa jatuh (lihat "Guard bisa jatuh"; termasuk perbaikan bug gelombang yang muncul di dalam rumah), dan seluruh gate otomatis dijalankan ulang. Setelah itu user memutuskan **game landscape only** dan meminta brainstorming + design system plan sebelum koding lagi (lihat "Arah desain & orientasi" dan `docs/DESIGN-SYSTEM-PLAN.md`; belum ada perubahan kode game untuk arah ini). Revisi 1 desain (konsep api) ditolak user. Di revisi 2 user memilih konsep **K1 "Benteng Terakhir"**, pola build **jalan ke lingkaran + BUILD**, dan nada **dark stylized**, lalu menyetujui semua rekomendasi aturan dan meminta "pastikan dunianya 3D". K1 kini **terimplementasi sebagai vertical slice** (lihat "K1 Benteng Terakhir — implementasi"); acceptance manusia/perangkat untuk K1 belum ada. Atas feedback user berikutnya, Survival kini dimainkan di **dunia benteng (bailey)** baru, bukan di dalam ruangan mansion (lihat "Dunia benteng untuk Survival"). Setelah itu kedua bookend cerita K1 dibuat: **intro sinematik** di malam pertama dan **adegan bala bantuan tiba** di fajar ke-3 (lihat "Bookend K1"); pemahaman pemain atas keduanya belum diuji. Lalu dibuat **riset UX & replay** dari review pemain (Play Store, Steam, Reddit, dan platform review lain) plus playtest bot "sebagai gamer" (lihat "Riset UX & replay" dan `docs/UX-REPLAY-RESEARCH.md`). Riset itu lalu diperdalam atas permintaan user agar tidak ada coding: v2 menambah review bintang 5, persona, peta perjalanan, dan protokol playtest; v3 menambah pemain Indonesia, analisis loop 3 lapis, dan uji HP kelas bawah. Setelah itu, atas feedback user, dibuat pass perbaikan: benteng diperkecil dan aktor diperbesar, pasukan memakai GLB (KayKit Knight, CC0), efek tembakan/damage diperkuat, kerja bangunan dibuat terlihat, dan UI dirapikan (NIGHT dipisah dari BUILD, panel fajar/akhir menghitung kontribusi). Dari rekomendasi riset, yang terbangun baru R1 sebagian, R18a, dan R19 (lihat "Perbaikan dari feedback user"). Lalu pesan "next" berikutnya dikerjakan sebagai P0 riset **"Momen akhir run"**: bintang 1–3, rekor + NEW BEST!, panel kalah "Ns TO DAWN" + satu tip dari penyebab nyata, dan MVP bangunan (R1–R4, R19; lihat "Momen akhir run"). R5 dan R6 belum. Lalu user melapor "tidak ada perubahan" (2026-10-17): dibuat **pass visual besar** — build yang benar sampai ke layar (service worker hanya di host rilis, preview tanpa cache, stempel BUILD 8), bailey setengah ukuran dengan aktor ×1,6 dan kamera lebih dekat, seluruh horde monster GLB (vertex animation texture), knight dimuat saat boot dengan helm biru berjambul, efek tembakan/damage lebih besar, ballista yang membunuh dan menandai kill-nya, koin mine di HUD, dan penanda gerbang dengan jumlah musuh (lihat "Pass visual besar"). Lalu user meminta lima perbaikan lagi (2026-10-17, "ada beberapa masih perlu di fix"): kamera dijauhkan sedikit dan bisa digeser, plot bangunan ditata rapi, bangunan memakai aset gratis yang diunduh (bukan prototipe), kartu diperkecil, dan trailer pembuka dipertahankan. Kelimanya terimplementasi di **BUILD 9** (lihat "Pass perbaikan BUILD 9"). Lalu user meminta gambar karakter manusia yang cerah dengan senjata terpisah (folder `ASSET_CHARACTER`, gambar konsep AI atas permintaan user) dan aturan gerbang yang benar. Di **BUILD 10** gerbang tertutup menahan tembakan, gerbang hanya terbuka untuk kapten, dan untuk melawan, kapten keluar ke mulut gerbang atau ke luar benteng (lihat "Pass BUILD 10"). Acceptance visual/manual di perangkat, playtest manusia, dan packaging Play masih terbuka. Hasil tiap skrip hanya berlaku untuk cakupan yang benar-benar diuji.
+
+## Pass BUILD 10 — gerbang tertutup, kapten keluar benteng, ASSET_CHARACTER (2026-10-17)
+
+**Pesan user (2026-10-17):**
+1. Karakter utama terasa tidak sinkron: "game nya cerah tapi karakter nya gelap". Minta gambar karakter, pasukan, musuh, dan boss dalam satu folder **ASSET_CHARACTER**. Karakter harus **manusia, bukan chibi**, dan sesuai tema serta warna game.
+2. **Senjata dibuat terpisah**, supaya bisa dianimasikan ke setiap karakter dan senjata pasukan bisa di-upgrade.
+3. **Gerbang:** "gerbang selalu tertutup tapi tembakan tetap kena". Untuk menghadapi musuh, pemain harus keluar benteng.
+
+Pilihan user lewat pertanyaan:
+- Gambar kapten: opsi 1.
+- Gerbang: **"Musuh tetap tertahan"**. Gerbang terbuka hanya untuk kapten dan pasukan; musuh harus menghancurkannya.
+- Guard di malam hari: **"Jaga di atas menara gerbang"** (kiri dan kanan gerbang, menembak dari atas tembok).
+
+### 1–2. ASSET_CHARACTER
+
+Folder `ASSET_CHARACTER/` ada di root repo (commit `28569a0`). Isinya dijelaskan lengkap di `ASSET_CHARACTER/README.md`:
+- 6 karakter dalam pose A, tangan kosong, menghadap depan: kapten, guard, ghoul, prajurit mayat, pendobrak, dan boss **Raja Malam**.
+- 5 senjata terpisah: crossbow kapten Lv1, pedang kapten, crossbow guard Lv1, perisai guard, golok ghoul.
+- Versi PNG transparan, lembar preview, palet warna, `prompts.json`, dan `SHA256SUMS.txt`.
+
+Gambar ini **gambar AI**, dibuat atas permintaan eksplisit user. Statusnya konsep/referensi untuk alur gambar → model 3D (Tripo, seperti Hunter sekarang):
+- **tidak** dimuat game;
+- tidak masuk daftar SHELL service worker;
+- tidak dicek bundlecheck.
+
+Aturan provenance tetap berlaku untuk aset game. Aset berlisensi (KayKit, Quaternius) tidak disentuh.
+
+**Belum:**
+- 7 senjata masih menyusul karena batas 10 gambar per turn: kapak prajurit mayat, palu pendobrak, pedang besar Raja Malam, serta crossbow kapten dan guard Lv2/Lv3. Prompt-nya sudah ada di `prompts.json` dengan status `planned`.
+- Konversi ke GLB dan pemasangan senjata ke tulang tangan (socket) belum dikerjakan. Kapten di game masih GLB Tripo lama yang gelap.
+
+### 3. Aturan gerbang (BUILD 10)
+
+Stempel di layar kini **BUILD 10**, service worker `duskhold-v10`.
+
+| Aturan | Perubahan | File |
+|---|---|---|
+| Gerbang tertutup menahan tembakan | Celah tembak ("door slits") dihapus. Baut kapten dan guard di tanah berhenti di gerbang tertutup seperti di dinding: ada percikan dan suara benturan, gerbang tidak rusak. Line of sight `autoTarget` tidak lagi menembus pintu. Hint lama "GO TO THE GATE: SHOOT THROUGH IT" diganti **"WALK OUT A GATE TO FIGHT THEM"** | `enemies.js` (`Bolt.update`), `game.js` (`spawnBolt`), `mansion.js` (`blocksSight`), `survival.js` (`autoTarget`), `ui/survival.js` |
+| Gerbang terbuka untuk kapten | Saat kapten berjalan masuk ke mulut gerbang, daun gerbang berayun terbuka ke dalam (0,35 dtk). Gerbang tetap terbuka selama kapten berdiri di bukaan, lalu menunggu 0,4 dtk dan menutup lagi (0,5 dtk). Kapten bisa berjalan menembus gerbang mana pun; musuh tetap tertahan sampai gerbang hancur. Selama gerbang terbuka, LOS dan baut lewat | `survival.js` (`updateSortieGates`, `SORTIE`), `mansion.js` (`resolve`), `envkit.js` (ayunan daun) |
+| Di luar, musuh mengejar kapten | Kapten dianggap terbuka kalau ia di luar tembok atau berdiri di mulut gerbang. Saat itu badan swarm dan musuh individual dalam radius 155 px meninggalkan gerbang dan mengejarnya. Paling banyak 6 sekaligus; mereka menyerah kalau kapten menjauh lebih dari 225 px. Di mulut gerbang, cakaran menjangkau lewat bukaan. Breaker tetap fokus ke gerbang. Lari kapten (196 px/dtk) lebih cepat dari kejaran (77–90), jadi menembak sambil menjauh bisa dilakukan. Chip sekali: **"OUT HERE THEY COME FOR YOU"** | `survival.js` (`goForCaptain`, `claimCaptain`) |
+| Istirahat di balik tembok | Kematian kapten berarti run kalah, jadi keluar benteng harus ada ongkosnya, tetapi juga ada pemulihan. Di dalam tembok, setelah 1,5 dtk tanpa cakaran, kapten pulih **12 HP/dtk** dengan "+" hijau di atasnya. Di luar tidak pulih | `survival.js` (`updateRest`) |
+| Guard di atas menara gerbang | Pos malam guard kini di atas: dua puncak menara gerbang besar, atau panggung kayu di balik tembok di kiri-kanan postern. Guard berjalan ke kaki **tangga kayu** di sisi halaman, memanjat (0,7 dtk), lalu menembak dari atas tembok dengan jangkauan 460 px. Di atas sana **tidak ada cakaran yang sampai**. Saat fajar mereka turun | `fortress.js` (`wallPosts`), `survival.js` (`_doorPost`, `_climb`, `guardTarget`), `world3d.js` (tangga, panggung, tinggi guard) |
+| Tembakan dari tempat tinggi melengkung lewat tembok | Ballista, ballista atap keep, dan guard di menara menembak **melewati** tembok. Baut terbang melengkung yang dihitung supaya melewati merlon atau menara, lalu turun ke musuh. Target ballista tidak lagi dibatasi garis lewat gerbang, cukup dalam jangkauan | `enemies.js` (flag `over`), `survival.js` (`towerTarget`), `world3d.js` (`_boltArc`) |
+
+**Balance** (`survival-balance.mjs`, 5 seed, malam 72 dtk). Bot `active`/`builder` kini menahan gerbang dari mulutnya, lalu mundur untuk istirahat saat HP < 50 % (`tools/survival-bots.mjs`, `peekSpot`). Mereka keluar-masuk hanya lewat gerbang (`travel`).
+
+| Bot | BUILD 10 | BUILD 9 |
+|---|---|---|
+| idle | 0/5 (kalah malam 1) | 0/5 |
+| active | 0/5 | 0/5 |
+| builder | 5/5, ★★★ ×4, ★ ×1 | 5/5 ★★★ |
+| tower-builder | 5/5 ★★★ ×5 | 5/5, ★★★ ×4 |
+| keep-builder | 0/5 | 0/5 |
+| hunter-builder | 5/5 ★★★ ×5 | 5/5 ★★★ |
+
+Kapten tidak pernah mati di 30 run itu. HP gerbang tidak diubah.
+
+Catatan:
+- Pada malam 60 dtk (setelan harness), builder BUILD 10 menang 3/5 dengan bintang 1/0/3/1/0. BUILD 9 di setelan yang sama: 3/5 dengan bintang 0/1/0/3/3. Malam pendek tetap lebih sulit, sama seperti sebelumnya.
+- Log balance: `qa-evidence/survival-gate10/balance-5seed-72s.txt` dan `balance-5seed-60s-builder.txt`.
+- Cek R1/R2 harness kini mensyaratkan ★ ≥ 1, bukan ≥ 2. Pembukuannya tetap dicek persis.
+- Guard di menara tidak bisa tercakar, jadi ★★★ (tidak ada guard hilang) jadi lebih mudah.
+
+**QA yang dijalankan di BUILD 10:**
+
+| Perintah | Hasil |
+|---|---|
+| `node tools/harness.mjs` | 63 PASS / 0 FAIL. Cek baru: gerbang tertutup menahan tembakan; gerbang terbuka untuk kapten dan menahan musuh; musuh mengejar di luar (maks 6, Breaker tidak, menyerah); istirahat 12 HP/dtk hanya di dalam; guard memanjat, kebal di atas, menembak lewat tembok, turun saat fajar; ballista menembak lewat tembok tetapi tidak di luar jangkauan |
+| `node tools/survival-devqa.mjs` | 25/25 PASS |
+| `node tools/survival-plotsqa.mjs` | 13/13 PASS |
+| `node tools/survival-intro.mjs` | PASS |
+| `node tools/survival-map.mjs` | 178/178 (satu barel di dinding barat/timur digeser 23 px, menjauh dari tangga postern) |
+| `node tools/survival-fxshots.mjs` | 14/14 PASS |
+| `node tools/envqa.mjs --mode=3d-smoke` | ENVQA PASS (merlon utuh, panggung postern di balik tembok) |
+| `node tools/survivalshots.mjs --landscape` | 26 shot (+ `night-out`), 0 page error |
+| `node tools/layoutqa.mjs` | PASS (termasuk `?legacy=1`) |
+| `node tools/glbtest.mjs` / `swtest.mjs` | PASS / PASS (`duskhold-v10`) |
+| `node tools/bundlecheck.mjs` | 1 FAIL lama (fingerprint signing) |
+
+**Bukti** (`qa-evidence/survival-gate10/`):
+- `compare-gate.png`, `compare-fight.png`: BUILD 9 (kapten di balik gerbang tertutup tetap mengenai musuh) vs BUILD 10 (gerbang terbuka untuk kapten, musuh tertahan, guard di menara). Skrip `survival-look` yang sama, detik yang sama.
+- `gate.png`, `fight.png`, `outside.png`, `posts.png`.
+- `land-night-door.png`, `land-night-out.png` (dengan chip "OUT HERE THEY COME FOR YOU"), `land-tower-night.png`.
+
+**Belum / terbuka:**
+- Rasa ritme "masuk mulut gerbang → mundur istirahat" dan keluar benteng belum dinilai manusia, termasuk apakah 12 HP/dtk terlalu murah atau batas 6 pengejar terlalu berat.
+- Guard di puncak menara gerbang utara bisa berada di tepi atas layar, sebagian tertutup panel jam, saat kapten berdiri dekat gerbang itu.
+- Daun gerbang adalah daun pintu kit yang diregangkan (sama seperti sebelumnya). Belum ada gerbang besar khusus.
+- Bot `active` (tanpa membangun) tetap kalah di malam 2, sama seperti BUILD 9.
 
 ## Pass perbaikan BUILD 9 — kamera, plot rapi, aset bangunan, kartu kecil, trailer (2026-10-17)
 
@@ -520,6 +609,7 @@ Game juga harus menjawab dan memvisualisasikan **siapa pemain, apa tujuannya, da
 **Status (revisi 2):** `docs/DESIGN-SYSTEM-PLAN.md` (DRAFT) berisi:
 - 6 konsep tanpa api, masing-masing dengan **jantung base** (objek yang dilindungi): K1 Benteng Terakhir (rekomendasi), K2 Kabur dari Duskhold, K3 Ruang Aman, K4 Telur Penjaga, K5 Vampir, K6 Harta;
 - 4 gambar konsep buatan AI di `docs/concepts/` (moodboard, **bukan aset game**);
+  *(2026-10-17: atas permintaan eksplisit user, gambar konsep AI karakter dan senjata kini juga ada di `ASSET_CHARACTER/`. Statusnya tetap referensi untuk pemodelan, bukan aset game; lihat "Pass BUILD 10".)*
 - referensi baru: Duck Survival, Dead Ahead, Survival Machine, Dome Keeper, Plants vs. Zombies, Kingdom Rush, City Defense Z, arcade idle, Wasteland Life;
 - 7 pola interaksi build; rekomendasi: jalan ke lingkaran + `BUILD` (Duck Survival) + ikon upgrade kontekstual;
 - konsekuensi aturan bila api dihapus: kalah = jantung hancur, aturan cahaya perlu keputusan ulang, wilayah bangun, resource pengganti Oil;
@@ -808,7 +898,9 @@ Ini screenshot checkpoint, bukan rekaman, dan bukan review di perangkat fisik.
 9. **Pass feedback 2026-10-16 (skala, pasukan GLB, efek, bangunan, UI):** terimplementasi dan lolos gate otomatis (lihat bagian paling atas). Belum: penilaian manusia apakah benteng sudah terasa pas dengan ukuran aktor, apakah efek tembakan/damage sudah "terasa", dan apakah kerja tiap bangunan terbaca tanpa dijelaskan. Juga belum: frame time di HP kelas bawah dengan knight GLB, dan penyetelan ulang balance di benteng ringkas (tower-builder 2/3). *(Diperbarui: dengan 10 seed, tower-builder 8/10; tidak ada bukti regresi, lihat "Momen akhir run".)*
 10. **Momen akhir run 2026-10-16 (R1–R4, R19):** bintang 1–3, rekor + NEW BEST!, panel kalah "Ns TO DAWN" + satu tip dari penyebab nyata, dan MVP bangunan terimplementasi dan lolos gate otomatis (lihat bagian paling atas). Bot memenuhi ukuran berhasil riset: builder ★★★, tower-builder yang menang tipis ★, dan tip sesuai penyebab untuk idle / active / tower-builder. Belum: penilaian manusia apakah bintang terasa adil, tip dipahami dan membantu, dan NEW BEST! memancing PLAY AGAIN tanpa diminta (protokol §6.1 riset). Ambang ★★ belum pernah muncul di run bot.
 11. **Pass visual besar 2026-10-17 ("tidak ada perubahan"):** terimplementasi dan lolos gate otomatis (lihat "Pass visual besar"). Belum: konfirmasi dari user bahwa layar menampilkan "BUILD 8" dan kelima poin kini terlihat, penilaian rasa (ukuran benteng vs aktor, horde GLB, efek, kerja bangunan, penanda gerbang), dan frame time horde instanced + knight di HP kelas bawah.
-12. **Pass perbaikan BUILD 9 2026-10-17 (kamera, plot rapi, aset bangunan, kartu, trailer):** terimplementasi dan lolos gate otomatis (lihat bagian paling atas). Belum: konfirmasi dari user bahwa layar menampilkan "BUILD 9"; penilaian di HP nyata atas jarak kamera dan rasa geser/pinch, kerapian denah, kecocokan aset KayKit dengan gaya benteng, ukuran dock, dan apakah intro tiap run mengganggu; frame time model kit di HP kelas bawah.
+12. **Pass perbaikan BUILD 9 2026-10-17 (kamera, plot rapi, aset bangunan, kartu, trailer):** terimplementasi dan lolos gate otomatis (lihat "Pass perbaikan BUILD 9"). Belum: konfirmasi dari user bahwa layar menampilkan "BUILD 9"; penilaian di HP nyata atas jarak kamera dan rasa geser/pinch, kerapian denah, kecocokan aset KayKit dengan gaya benteng, ukuran dock, dan apakah intro tiap run mengganggu; frame time model kit di HP kelas bawah.
+13. **Pass BUILD 10 2026-10-17 (aturan gerbang):** gerbang tertutup menahan tembakan, gerbang terbuka hanya untuk kapten, musuh mengejar di luar, istirahat di balik tembok, guard di menara gerbang, dan tembakan melengkung lewat tembok. Semuanya terimplementasi dan lolos gate otomatis (lihat "Pass BUILD 10"). Belum: konfirmasi user bahwa layar menampilkan "BUILD 10"; rasa keluar benteng dan ritme gerbang/istirahat di HP nyata; keterbacaan guard di puncak menara.
+14. **ASSET_CHARACTER 2026-10-17:** 11 dari 18 gambar konsep sudah dibuat (6 karakter + 5 senjata). Masih terbuka: 7 senjata yang menyusul, konversi gambar → GLB, socket senjata di tangan, upgrade senjata pasukan di game, dan penggantian kapten gelap di game.
 
 ## Aturan laporan
 
