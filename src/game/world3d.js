@@ -29,6 +29,17 @@ const KIT_FOOTPRINT = Object.freeze({ barracks: 132, sawmill: 134, mine: 136, to
 const KIT_LEVEL_GROW = 0.07;
 /** World px across a plot's foundation pad (the pack's dirt hex). */
 const PLOT_PAD_ACROSS = 158;
+/**
+ * BUILD 10, the guards' posts up on the wall: the plank deck beside a
+ * postern (px square), the wall height when a mansion has none of its own,
+ * where a guard holds his crossbow (px over his feet, x1.6), and the share of
+ * a climb spent going up the ladder (survival.js GUARD.climbShare: the rest
+ * is the step from the ladder onto the post).
+ */
+const WALL_DECK = 40;
+const FORT_WALL_FALLBACK = PIECE_METRES.wall;
+const GUARD_CHEST = 80;
+const GUARD_CLIMB_SHARE = 0.75;
 const PARTICLE_VERTEX_SHADER = `
   attribute vec3 aColor;
   attribute float aAlpha;
@@ -1831,6 +1842,9 @@ class World3DRuntime {
     };
     const towers = m.towers || [];
     const inTower = (x, z, pad = 0) => towers.some((t) => Math.abs(x - t.x) < t.size / 2 + pad && Math.abs(z - t.y) < t.size / 2 + pad);
+    // BUILD 10: the garrison's posts up on the wall (fortress.wallPosts)
+    const posts = m.wallPosts || [];
+    const onDeck = (x, z) => posts.some((p) => p.kind === 'wall' && Math.hypot(x - p.x, z - p.y) < WALL_DECK / 2 + 14);
 
     // grass yards inside the wall: trodden earth, a shade off the forest floor
     for (const room of m.roomList) {
@@ -1855,7 +1869,7 @@ class World3DRuntime {
       for (let i = 0; i < n; i++) {
         const a = (horiz ? s.x : s.y) + (i + 0.5) * (len / n);
         const x = horiz ? a : cx, z = horiz ? cz : a;
-        if (inTower(x, z, 6)) continue;
+        if (inTower(x, z, 6) || onDeck(x, z)) continue;
         spots.push({ x, z, ry: horiz ? 0 : Math.PI / 2 });
       }
     }
@@ -1928,6 +1942,31 @@ class World3DRuntime {
       }
     }
 
+    // BUILD 10: the guards' night posts. A big gate's two towers carry them
+    // on top; a postern gets a plank deck on the wall-walk either side, with
+    // a breastwork on the forest side. Every post has a ladder on the yard
+    // face, where its guard climbs up (survival.js _climb).
+    const ladderAt = (post, top) => {
+      const along = { x: -post.inward.y, y: post.inward.x };
+      const face = post.kind === 'tower' ? post.towerSize / 2 + 4 : WALL_DECK / 2 + 2;
+      const lx = post.x + post.inward.x * face, lz = post.y + post.inward.y * face;
+      for (const sgn of [-1, 1]) {
+        add(new THREE.BoxGeometry(4, top + 14, 4), wood, lx + along.x * 10 * sgn, (top + 14) / 2, lz + along.y * 10 * sgn);
+      }
+      const ry = Math.atan2(along.x, along.y) + Math.PI / 2;
+      for (let y = 16; y < top + 8; y += 18) add(new THREE.BoxGeometry(22, 3, 3), wood, lx, y, lz, ry);
+    };
+    for (const post of posts) {
+      const top = this._postTop(post.kind, m);
+      if (post.kind === 'wall') {
+        const horiz = post.side === 'north' || post.side === 'south';
+        add(new THREE.BoxGeometry(WALL_DECK, 6, WALL_DECK), wood, post.x, top - 3, post.y);
+        const ox = -post.inward.x * (WALL_DECK / 2 - 2), oz = -post.inward.y * (WALL_DECK / 2 - 2);
+        add(new THREE.BoxGeometry(horiz ? WALL_DECK : 4, 18, horiz ? 4 : WALL_DECK), wood, post.x + ox, top + 9, post.y + oz);
+      }
+      ladderAt(post, top);
+    }
+
     // ~250 static pieces become one mesh per material (a handful of draw
     // calls on a phone); the merlons are already one instanced mesh
     mergeStaticByMaterial(group, (material) => material === yardMat);
@@ -1941,9 +1980,19 @@ class World3DRuntime {
     }
     let meshes = 0;
     group.traverse((obj) => { if (obj.isMesh) meshes++; });
-    group.userData = { flags, yardMat, towers: towers.length, merlons: spots.length, meshes };
+    group.userData = { flags, yardMat, towers: towers.length, merlons: spots.length, meshes, posts: posts.length };
     this.root.add(group);
     return group;
+  }
+
+  /**
+   * How high a guard stands on a wall post (BUILD 10): on the cap of a big
+   * gate's tower, or on the plank deck on the wall-walk beside a postern.
+   * Matches _makeFortressDressing's masonry.
+   */
+  _postTop(kind, m = null) {
+    const wallTop = ((m && m.wallMetres) || FORT_WALL_FALLBACK) * PX_PER_METRE;
+    return kind === 'tower' ? wallTop + 88 + 8 : wallTop + 14;
   }
 
   _syncFortressDressing(game, mode) {
@@ -2205,7 +2254,8 @@ class World3DRuntime {
         ud.shotT = guard.shotT || 0;
         if (!down) {
           const night = mode.phase === 'night';
-          if (guard.moving) troop.loop(night ? 'run' : 'walk', 0.15, night ? 1.05 : 1.25);
+          if (guard.climbing) troop.loop('walk', 0.1, 1.6);
+          else if (guard.moving) troop.loop(night ? 'run' : 'walk', 0.15, night ? 1.05 : 1.25);
           else troop.loop(night && guard.target && !guard.target.dead ? 'aim' : 'idle', 0.2);
         }
         troop.update(dt);
@@ -2220,7 +2270,10 @@ class World3DRuntime {
       }
       if (ud.ring.scale.x !== SURVIVAL_ACTOR_SCALE) ud.ring.scale.setScalar(SURVIVAL_ACTOR_SCALE);
       const stride = guard.moving ? Math.sin(guard.walkT * 11) : 0;
-      mesh.position.set(guard.x, guard.moving && !troop ? Math.abs(stride) * 2.4 : 0, guard.y);
+      // up a ladder / on a wall post (BUILD 10): the climb is most of the lift
+      const post = guard.liftPost;
+      const lift = post ? this._postTop(post.kind, game.mansion) * Math.min(1, (guard.lift || 0) / GUARD_CLIMB_SHARE) : 0;
+      mesh.position.set(guard.x, (guard.moving && !troop ? Math.abs(stride) * 2.4 : 0) + lift, guard.y);
       mesh.rotation.y = Math.PI / 2 - guard.angle;
       mesh.userData.legL.rotation.x = stride * 0.6;
       mesh.userData.legR.rotation.x = -stride * 0.6;
@@ -2699,6 +2752,37 @@ class World3DRuntime {
   }
 
   /** Which mesh/trail recipe a bolt uses (pooled per look). */
+  /**
+   * How high an elevated bolt's arc rises over its straight drop (once per
+   * bolt): enough to clear the curtain wall, a tower or a shut gate where its
+   * line crosses one, plus a little lob so the shot reads as thrown down from
+   * height rather than slid along the ground.
+   */
+  _boltArc(bolt, muzzle, aim, m) {
+    if (bolt._arc != null) return bolt._arc;
+    let arc = Math.min(48, aim * 0.1);
+    if (m && m.isFortress) {
+      const wallTop = (m.wallMetres || FORT_WALL_FALLBACK) * PX_PER_METRE;
+      const ca = Math.cos(bolt.angle || 0), sa = Math.sin(bolt.angle || 0);
+      const ox = bolt.ox == null ? bolt.x : bolt.ox, oy = bolt.oy == null ? bolt.y : bolt.oy;
+      for (let d = 10; d < aim; d += 10) {
+        const x = ox + ca * d, y = oy + sa * d;
+        const solid = m.solidAt(x, y);
+        let need = 0;
+        if (solid && solid.type === 'tower') need = wallTop + (solid.tower && solid.tower.kind === 'corner' ? 138 : 116) + 10;
+        else if (solid && solid.type === 'wall') need = wallTop + 40;
+        else if (m.entrances.some((e) => e.gate && Math.abs(x - e.x) < e.w / 2 + 2 && Math.abs(y - e.y) < e.h / 2 + 2)) need = wallTop + 40;
+        if (!need) continue;
+        const u = d / aim;
+        const base = 18 + muzzle * (1 - u);
+        const bump = 4 * u * (1 - u);
+        if (base < need && bump > 0.04) arc = Math.max(arc, (need - base) / bump);
+      }
+    }
+    bolt._arc = Math.min(arc, 240);
+    return bolt._arc;
+  }
+
   _boltLook(bolt) {
     if (bolt.kind === 'knife') return 'knife';
     if (bolt.tower) return 'tower';
@@ -3054,15 +3138,25 @@ class World3DRuntime {
           this._playFx({ kind: 'muzzle', x: bolt.ox, y: bolt.oy, h: 18 + muzzle0, color, size: look === 'tower' ? 86 : look === 'guard' ? 48 : 56, life: look === 'tower' ? 0.14 : 0.09 });
         }
       }
-      // a tower's bolt leaves the ballista on the deck and drops to body
-      // height where it was aimed; everything else flies at 18
-      const muzzle = bolt.tower ? this._towerMuzzle(bolt) : 0;
-      const heightAt = (x, y) => (muzzle > 0
-        ? 18 + muzzle * Math.max(0, 1 - Math.hypot(x - bolt.ox, y - bolt.oy) / Math.max(1, bolt.aimDist || 1))
-        : 18);
+      // a tower's bolt leaves the ballista on the deck (a guard's, its post
+      // up on the wall) and drops to body height where it was aimed, in an
+      // arc that clears the wall when it flies over (BUILD 10: elevated
+      // shots go over, nothing goes through a shut gate); everything else
+      // flies at 18
+      const muzzle = bolt.tower ? this._towerMuzzle(bolt) : bolt.dropFrom ? this._postTop(bolt.dropFrom, game.mansion) + GUARD_CHEST : 0;
+      const aim = Math.max(1, bolt.aimDist || 1);
+      const arc = muzzle > 0 && bolt.over ? this._boltArc(bolt, muzzle, aim, game.mansion) : 0;
+      const heightAt = (x, y) => {
+        if (!(muzzle > 0)) return 18;
+        const u = Math.hypot(x - bolt.ox, y - bolt.oy) / aim;
+        return 18 + muzzle * Math.max(0, 1 - u) + (u < 1 ? arc * 4 * u * (1 - u) : 0);
+      };
       const bh = heightAt(bolt.x, bolt.y);
       direction.set(Math.cos(bolt.angle || 0), 0, Math.sin(bolt.angle || 0));
-      if (muzzle > 0 && bh > 18.5) direction.y = -muzzle / Math.max(1, bolt.aimDist || 1);
+      if (muzzle > 0) {
+        const u = Math.hypot(bolt.x - bolt.ox, bolt.y - bolt.oy) / aim;
+        if (u < 1) direction.y = (-muzzle + arc * 4 * (1 - 2 * u)) / aim;
+      }
       direction.normalize();
       mesh.position.set(bolt.x, bh, bolt.y);
       mesh.quaternion.setFromUnitVectors(up, direction);

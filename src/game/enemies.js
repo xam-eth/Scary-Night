@@ -1527,17 +1527,22 @@ export class Bolt {
       this.y += this.vy * sdt;
       if (this.dead) return;
       if (this.range > 0 && dist(this.x, this.y, this.ox, this.oy) > this.range) { this.dead = true; return; }
-      // wall / door
-      const e = game.mansion.entrances.find((en) =>
-        Math.abs(this.x - en.x) < en.w / 2 + 3 && Math.abs(this.y - en.y) < en.h / 2 + 3);
-      // pierceDoors: Survival's door slits — the Hunter's and the guards'
-      // bolts pass a closed door (never a window or a wall).
-      if (e && !(e.kind === 'door' && (e.open || e.broken || this.pierceDoors)) && !(e.kind === 'window' && e.broken)) {
-        this.hit(game, true);
-        return;
+      // wall / door. An elevated shot (`over`: a ballista on its deck, the
+      // keep's roof, a guard up on the wall) flies over the masonry and comes
+      // down among the bodies; every other bolt stops on a shut door, a wall
+      // or a solid. A fortress gate swung open for the captain (e.sortie) is
+      // open. pierceDoors is the legacy slit rule (Survival dropped it in
+      // BUILD 10: no shooting through a shut gate).
+      if (!this.over) {
+        const e = game.mansion.entrances.find((en) =>
+          Math.abs(this.x - en.x) < en.w / 2 + 3 && Math.abs(this.y - en.y) < en.h / 2 + 3);
+        if (e && !(e.kind === 'door' && (e.open || e.broken || e.sortie || this.pierceDoors)) && !(e.kind === 'window' && e.broken)) {
+          this.hit(game, true);
+          return;
+        }
+        const s = game.mansion.solidAt(this.x, this.y);
+        if (s) { this.hit(game, true); return; }
       }
-      const s = game.mansion.solidAt(this.x, this.y);
-      if (s) { this.hit(game, true); return; }
       const p = game.player;
       if (this.owner !== p && !this.friendly && p.alive && dist(this.x, this.y, p.x, p.y) < p.radius + 5) {
         if (p.takeDamage(this.damage, game, this.x - Math.cos(this.angle) * 40, this.y - Math.sin(this.angle) * 40, 'bolt')) {

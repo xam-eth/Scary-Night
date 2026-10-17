@@ -751,6 +751,10 @@ export class Mansion {
       }
     }
     for (const s of this.barriers()) {
+      // The fortress's gates open for the captain (BUILD 10: he walks out to
+      // fight; survival.js swings the leaf as he passes). They never open for
+      // the horde: a body is held until the gate is broken.
+      if (isPlayer && s.gate && this.isFortress) continue;
       // Entrances are authored by their CENTER (see makeDoor/makeWindow and
       // navBlocked). Treating x/y as a corner left the left/top half of every
       // closed door walkable.
@@ -811,9 +815,10 @@ export class Mansion {
 
   blocksSight(x, y, throughDoors = false) {
     for (const e of this.entrances) {
-      // a closed door blocks sight, an open/broken one does not
-      // (Survival's Hunter and guards shoot through door slits: throughDoors)
-      if (e.kind === 'door' && !e.open && !e.broken && x > e.x - e.w / 2 - 2 && x < e.x + e.w / 2 + 2 && y > e.y - e.h / 2 - 2 && y < e.y + e.h / 2 + 2) {
+      // a closed door blocks sight, an open/broken one does not; nor does a
+      // fortress gate swung open for the captain (e.sortie). throughDoors is
+      // the legacy slit rule, no longer used by Survival (BUILD 10)
+      if (e.kind === 'door' && !e.open && !e.broken && !e.sortie && x > e.x - e.w / 2 - 2 && x < e.x + e.w / 2 + 2 && y > e.y - e.h / 2 - 2 && y < e.y + e.h / 2 + 2) {
         if (!throughDoors) return true;
       }
       if (e.kind === 'window' && !e.broken && x > e.x - e.w / 2 && x < e.x + e.w / 2 && y > e.y - e.h / 2 && y < e.y + e.h / 2) return true;

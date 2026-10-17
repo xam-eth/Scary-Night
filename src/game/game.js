@@ -2135,11 +2135,14 @@ export class Game {
     b.kind = spec && spec.ammo === 'knives' ? 'knife' : 'bolt';
     // the kit travels with the bolt: a blessed bolt is not the same wood
     if (owner === this.player) b.kit = this.player.kit || null;
-    // Survival: the Hunter and his guards shoot through door slits and never
-    // hit each other (see Bolt.update).
+    // Survival: the captain and his garrison never hit each other. A shut
+    // gate stops their bolts like a wall (BUILD 10: no more door slits); an
+    // elevated shooter's bolt flies over the wall (see Bolt.update).
     if (this.mode === 'survival' && (owner === this.player || (spec && spec.friendly))) {
-      b.pierceDoors = true;
       b.friendly = true;
+      if (spec && spec.over) b.over = true;
+      // where an elevated bolt leaves the string, for the 3D view's drop
+      if (spec && spec.dropFrom) b.dropFrom = spec.dropFrom;
     }
     // a tower's heavy bolt runs on through bodies and drops past its reach
     // (own keys: the Hunter's spec is his weapon, which has a `range`)

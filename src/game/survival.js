@@ -474,6 +474,44 @@ function invade(enemy, dt, game, mode, speed, accel, preferHunter, fallback = nu
   return 'march';
 }
 
+/**
+ * Outside the walls (BUILD 10): while the captain is out — or stands in an
+ * open gate — a body near him leaves its gate and goes for him, at most
+ * SORTIE.maxOnCaptain at once. A gate's barrier still holds a body, so with
+ * the captain in a gate's mouth its claw reaches through the opening.
+ * Returns true when it took the frame. Breakers never come: the gate is
+ * their whole errand.
+ */
+function goForCaptain(enemy, dt, game, mode, speed, accel) {
+  const p = game.player;
+  if (!mode.captainExposed || !p.alive || p.state === 'death' || p.state === 'dead') {
+    enemy._onCaptain = false;
+    return false;
+  }
+  const pd = dist(enemy.x, enemy.y, p.x, p.y);
+  const range = SORTIE.aggro + (enemy._onCaptain ? SORTIE.leash : 0);
+  if (pd > range || (!enemy._onCaptain && !mode.claimCaptain())) {
+    enemy._onCaptain = false;
+    return false;
+  }
+  enemy._onCaptain = true;
+  const reach = (enemy.radius || 13) + p.radius + 12 + (mode.captainInGate ? SORTIE.gateReach : 0);
+  enemy.clawCd = (enemy.clawCd == null ? 0.35 : enemy.clawCd) - dt;
+  if (pd < reach) {
+    settle(enemy, dt);
+    enemy.state = 'strike';
+    enemy.angle = Math.atan2(p.y - enemy.y, p.x - enemy.x);
+    if (enemy.clawCd <= 0) {
+      enemy.clawCd = enemy.hitEvery || 1.6;
+      game.enemyHitPlayer(enemy, enemy.hitDamage || 10, enemy.hitKind || 'bite');
+    }
+    return true;
+  }
+  stepToward(enemy, dt, game, p.x, p.y, speed, accel);
+  enemy.state = 'march';
+  return true;
+}
+
 /** Death/hit-stun handling shared by all three survival enemy types. */
 function commonPreamble(enemy, dt, game) {
   if (enemy.dead) {
@@ -560,6 +598,10 @@ class SurvivalCrowdZombie extends CrowdBody {
     }
 
     if (!entrance) { this.state = CROWD.LEAVE; return; }
+    if (goForCaptain(this, dt, game, mode, mode.swarmSpeed(false) * this.gait * SORTIE.chaseMul, 5.2)) {
+      this.press = damp(this.press, 0, 5, dt);
+      return;
+    }
     const spot = survivalSpot(entrance, this.index, 72);
     const targetX = spot.x + this.jx * 0.25;
     const targetY = spot.y + this.jy * 0.25;
@@ -632,6 +674,7 @@ class SurvivalIndividualZombie extends Zombie {
       invade(this, dt, game, mode, this.type.huntSpeed * slow, 5.2, true, entrance && (entrance.outside || entrance));
       return;
     }
+    if (goForCaptain(this, dt, game, mode, this.type.huntSpeed * slow, 5.2)) return;
     if (!entrance) return;
     this.entranceId = entrance.id;
     const out = entrance.outside || entrance;
@@ -944,6 +987,35 @@ export const GUARD = Object.freeze({
   iframes: 0.5,        // s after a claw before the next one lands (the Hunter has 0.75)
   huntRange: 110,      // px: beyond the banner a body this close goes for a guard (Hunter: 170)
   maxHunters: 3,       // bodies going for one guard at once
+  climb: 0.7,          // s up (or down) the ladder to a post on the wall (BUILD 10)
+  climbShare: 0.75,    // of that, going up the ladder; the rest is the step onto the post (world3d.js)
+  upRange: 460,        // px a guard up on the wall shoots at (the height buys reach)
+});
+
+/**
+ * BUILD 10 (playtest 2026-10-17: "gerbang selalu tertutup tapi tembakan
+ * tetap kena ... untuk menghadapi musuh harus di luar benteng"): a shut gate
+ * stops every shot, so the captain fights by going out. A gate swings open
+ * for him as he walks into its mouth and shuts once he is through; it never
+ * opens for the horde (mansion.resolve holds a body until the gate breaks).
+ * Out there, or standing in an open gate, he is fair game: the nearest
+ * bodies leave the gate and go for him. Only what stands high — a ballista,
+ * the keep's roof, a guard up on the wall — shoots over the wall.
+ */
+export const SORTIE = Object.freeze({
+  band: 34,            // px either side of the wall line that counts as "in the gate"
+  near: 84,            // px from the wall line a walk toward the gate starts the swing
+  toward: 25,          // px/s toward the wall that counts as walking at it
+  openTime: 0.35,      // s for the leaf to swing open
+  holdTime: 0.4,       // s it stays open once he is clear
+  closeTime: 0.5,      // s for it to swing shut
+  aggro: 155,          // px: a body outside this close to an exposed captain goes for him
+  leash: 70,           // px more before one already on him gives up
+  maxOnCaptain: 6,     // bodies going for him at once
+  gateReach: 28,       // px a claw reaches through the open gate (the barrier holds the body)
+  chaseMul: 1.3,       // a swarm body's chase vs. its march outside (his run is 196 px/s)
+  restDelay: 2,        // s behind the wall without a claw before he gets his breath back
+  rest: 7,             // HP/s he gets back behind the wall (a sortie, then a breather)
 });
 
 class SurvivalGuard {
@@ -970,7 +1042,12 @@ class SurvivalGuard {
     this.rescueT = 0;              // how long the Hunter has stood beside it
     this.hurtFlash = 0;
     this.iframes = 0;
+    this.lift = 0;                 // 0 on the ground .. 1 up on a wall post (BUILD 10)
+    this.liftPost = null;          // the wall post it is on / climbing (fortress.wallPosts)
   }
+
+  /** Up on the wall (or most of the way up the ladder): out of every claw's reach. */
+  get up() { return this.lift > 0.3; }
 }
 
 export class SurvivalMode {
@@ -1691,6 +1768,7 @@ export class SurvivalMode {
     this.updateWaves();
     this.updateMines(dt);
     g.mansion.update(dt, g);
+    this.updateSortieGates(dt);
 
     this.currentTarget = this.autoTarget();
     if (this.currentTarget) {
@@ -1703,6 +1781,7 @@ export class SurvivalMode {
     if (g.input.interactPressed) this.useSkill();
     g.player.update(dt, g);
     g.player.anim(dt);
+    this.updateRest(dt);
 
     let attackers = 0;
     for (let i = g.enemies.length - 1; i >= 0; i--) {
@@ -1755,6 +1834,7 @@ export class SurvivalMode {
     g.danger = 0.02;
     g.bloodMoon = 0; g.duelDark = 0; g.blackoutT = 0; g.powerOut = false;
     g.mansion.update(dt, g);
+    this.updateSortieGates(dt);
     const p = g.player;
     const input = g.input;
     this.currentTarget = null;
@@ -2098,13 +2178,92 @@ export class SurvivalMode {
   enemyCanAttack() { return true; }
   enemyAttackMul() { return 1; }
 
+  /**
+   * BUILD 10: the gates open for the captain. Walking into a gate's mouth (or
+   * at it from close by) swings the leaf open; it stays open while he stands
+   * in the opening, a moment longer once he is clear, then swings shut. Open
+   * (e.sortie) is see-through for every shot and every line of sight; it
+   * never lets a body through (mansion.resolve). Also works out whether he
+   * is exposed tonight: outside the wall, or standing in a gate's mouth.
+   */
+  updateSortieGates(dt) {
+    const g = this.game;
+    const m = g.mansion;
+    const p = g.player;
+    const alive = p.alive !== false && p.state !== 'death' && p.state !== 'dead';
+    const prev = this._sortiePrev;
+    const step = Math.max(dt, 1e-3);
+    const vx = prev ? (p.x - prev.x) / step : 0, vy = prev ? (p.y - prev.y) / step : 0;
+    this._sortiePrev = { x: p.x, y: p.y };
+    this.captainInGate = null;
+    if (!m.isFortress) { this.captainExposed = false; return; }
+    for (const e of m.entrances) {
+      if (!e.gate || !e.exterior) continue;
+      const out = outwardOf(e);
+      const rx = p.x - e.x, ry = p.y - e.y;
+      const across = rx * out.x + ry * out.y;          // > 0: outside the wall
+      const along = -rx * out.y + ry * out.x;
+      const half = (e.axis === 'v' ? e.h : e.w) / 2;
+      const inSpan = alive && Math.abs(along) < half + 6;
+      const inBand = inSpan && Math.abs(across) < SORTIE.band;
+      const vOut = vx * out.x + vy * out.y;           // px/s outward
+      const atIt = inSpan && Math.abs(across) < SORTIE.near && (across < 0 ? vOut > SORTIE.toward : vOut < -SORTIE.toward);
+      if (inBand && !this.captainInGate) this.captainInGate = e;
+      const want = !e.broken && !e.open && (inBand || atIt);
+      e.sortieHold = want ? SORTIE.holdTime : Math.max(0, (e.sortieHold || 0) - dt);
+      const goal = want || e.sortieHold > 0 ? 1 : 0;
+      const t = e.sortieT || 0;
+      e.sortieT = goal > t ? Math.min(1, t + dt / SORTIE.openTime) : Math.max(0, t - dt / SORTIE.closeTime);
+      if (e.broken) e.sortieT = 0;
+      e.sortie = e.sortieT > 0.5;
+    }
+    this.captainExposed = this.phase === 'night' && alive
+      && (!!this.captainInGate || m.findRoom(p.x, p.y) === ROOM.OUTSIDE);
+    // how many bodies are already on him (goForCaptain caps new ones)
+    let on = 0;
+    if (this.captainExposed) for (const e of g.enemies) if (e._onCaptain && !e.dead && !e.removeMe) on++;
+    this._onCaptainCount = on;
+  }
+
+  /**
+   * Behind the wall the captain gets his breath back (BUILD 10): once he is
+   * inside — not out there, not in a gate's mouth — and nothing has clawed
+   * him for SORTIE.restDelay s, he heals SORTIE.rest HP/s, with a green
+   * "+" over him each second. A sortie costs HP; the bailey gives it back.
+   */
+  updateRest(dt) {
+    const p = this.game.player;
+    const hp = Number(p.blood) || 0;
+    if (this._restBlood != null && hp < this._restBlood - 0.01) this._restCalm = 0;
+    else this._restCalm = (this._restCalm || 0) + dt;
+    const alive = p.alive !== false && p.state !== 'death' && p.state !== 'dead' && hp > 0;
+    if (alive && !this.captainExposed && this._restCalm >= SORTIE.restDelay && hp < p.bloodMax) {
+      const gain = Math.min(p.bloodMax - hp, SORTIE.rest * dt);
+      p.blood = hp + gain;
+      this._restGain = (this._restGain || 0) + gain;
+      this.nightStats.rested = (this.nightStats.rested || 0) + gain;
+      if (this._restGain >= SORTIE.rest || p.blood >= p.bloodMax) {
+        this.pushFloater(p.x, p.y, `+${Math.round(this._restGain)}`, '#5ee07a', { h: 96, size: 15, icon: 'heart', life: 0.9 });
+        this._restGain = 0;
+      }
+    } else this._restGain = 0;
+    this._restBlood = Number(p.blood) || 0;
+  }
+
+  /** One more body may go for the exposed captain (SORTIE.maxOnCaptain at once). */
+  claimCaptain() {
+    if ((this._onCaptainCount || 0) >= SORTIE.maxOnCaptain) return false;
+    this._onCaptainCount = (this._onCaptainCount || 0) + 1;
+    return true;
+  }
+
   autoTarget() {
     const p = this.game.player;
-    // Closed doors have shooting slits: the Hunter picks off a crowd leaning
-    // on a door from inside. Solid walls still block the shot.
+    // BUILD 10: no more door slits. A shut gate blocks the shot like the wall
+    // does; one swung open for him (he stands in it) does not.
     const candidates = this.game.enemies.filter((e) => !e.dead && !e.removeMe && e.hp > 0
       && dist(p.x, p.y, e.x, e.y) <= this.tuning.autoAttackRange
-      && this.game.mansion.hasLOS(p.x, p.y, e.x, e.y, { throughDoors: true }));
+      && this.game.mansion.hasLOS(p.x, p.y, e.x, e.y));
     candidates.sort((a, b) => this.targetScore(p, a) - this.targetScore(p, b));
     return candidates[0] || null;
   }
@@ -2144,6 +2303,7 @@ export class SurvivalMode {
         const post = this._keepPost(guard.index);
         guard.x = post.x; guard.y = post.y; guard.post = post;
         guard.path = null; guard.moving = false; guard.target = null; guard.shotT = 0;
+        guard.lift = 0; guard.liftPost = null; guard.climbing = false;
         guard.hp = guard.hpMax; guard.down = false; guard.downT = 0; guard.rescueT = 0; guard.hurtFlash = 0; guard.iframes = 0;
       }
     }
@@ -2156,7 +2316,7 @@ export class SurvivalMode {
   guardInReach(enemy) {
     let best = null, bestD = Infinity;
     for (const guard of this.guards) {
-      if (guard.down) continue;
+      if (guard.down || guard.up) continue;          // up on the wall: out of reach
       const d = dist(enemy.x, enemy.y, guard.x, guard.y);
       if (d < (enemy.radius || 13) + guard.radius + GUARD.reach && d < bestD) { best = guard; bestD = d; }
     }
@@ -2170,12 +2330,12 @@ export class SurvivalMode {
    */
   guardToHunt(enemy) {
     const prev = enemy._prey;
-    if (prev && !prev.down && this.guards.includes(prev)
+    if (prev && !prev.down && !prev.up && this.guards.includes(prev)
       && dist(enemy.x, enemy.y, prev.x, prev.y) < GUARD.huntRange * 1.4) return prev;
     enemy._prey = null;
     let best = null, bestD = GUARD.huntRange;
     for (const guard of this.guards) {
-      if (guard.down || (guard.hunters || 0) >= GUARD.maxHunters) continue;
+      if (guard.down || guard.up || (guard.hunters || 0) >= GUARD.maxHunters) continue;
       const d = dist(enemy.x, enemy.y, guard.x, guard.y);
       if (d < bestD) { best = guard; bestD = d; }
     }
@@ -2262,8 +2422,17 @@ export class SurvivalMode {
     return this._freePost(keep.x + Math.cos(a) * r, keep.y + Math.sin(a) * r, 'keep', null);
   }
 
-  /** Just inside a door, beside its frame: slot 0/1 left and right of the slit. */
+  /**
+   * Where a guard holds a door. In the fortress (BUILD 10) that is up on the
+   * wall: slot 0/1 on the tops of the gate's two towers (a postern: the
+   * wooden decks either side of it), reached by the ladder at the post's
+   * foot (fortress.wallPosts). Elsewhere: just inside the door, beside its
+   * frame.
+   */
   _doorPost(door, slot) {
+    const wall = this.game.mansion.wallPosts;
+    const top = wall && slot < 2 ? wall.find((w) => w.gate === door.id && w.slot === slot) : null;
+    if (top) return { key: `wall:${door.id}:${slot}`, x: top.foot.x, y: top.foot.y, doorId: door.id, wall: top };
     const out = outwardOf(door);
     const inward = { x: -out.x, y: -out.y };
     const along = { x: -inward.y, y: inward.x };
@@ -2348,21 +2517,51 @@ export class SurvivalMode {
   _setGuardPost(guard, post) {
     if (guard.post && guard.post.key === post.key && Math.hypot(guard.post.x - post.x, guard.post.y - post.y) < 4) return;
     guard.post = post;
-    guard.path = this.game.mansion.navPath(guard.x, guard.y, post.x, post.y) || [{ x: post.x, y: post.y }];
+    // one up on the wall walks on from the foot of its ladder once it is down
+    const from = guard.liftPost ? guard.liftPost.foot : guard;
+    guard.path = this.game.mansion.navPath(from.x, from.y, post.x, post.y) || [{ x: post.x, y: post.y }];
     guard.pathI = 0;
   }
 
-  /** Nearest thing worth a bolt that this guard can actually hit. */
+  /**
+   * One step up (dt > 0) or down (dt < 0) the ladder of guard.liftPost: from
+   * its foot in the yard to the post on top. Returns true while the guard is
+   * still on the ladder (no shots, no claws once it is most of the way up).
+   */
+  _climb(guard, dt) {
+    const w = guard.liftPost;
+    if (!w) return false;
+    guard.lift = clamp(guard.lift + dt / GUARD.climb, 0, 1);
+    // straight up the ladder at its foot, then the step across onto the post
+    const across = clamp((guard.lift - GUARD.climbShare) / (1 - GUARD.climbShare), 0, 1);
+    guard.x = w.foot.x + (w.x - w.foot.x) * across;
+    guard.y = w.foot.y + (w.y - w.foot.y) * across;
+    guard.angle = Math.atan2(-w.inward.y, -w.inward.x);    // faces the wall, the ladder
+    if (guard.lift <= 0) { guard.liftPost = null; guard.climbing = false; return false; }
+    if (guard.lift >= 1) { guard.climbing = false; return false; }
+    guard.climbing = true;
+    guard.moving = true;
+    guard.walkT += Math.abs(dt);
+    return true;
+  }
+
+  /**
+   * Nearest thing worth a bolt that this guard can actually hit. Up on the
+   * wall it shoots over the masonry (and a little further); on the ground a
+   * shut gate blocks it like the wall does (BUILD 10: no door slits).
+   */
   guardTarget(guard) {
     const m = this.game.mansion;
+    const up = guard.lift >= 1;
+    const range = up ? GUARD.upRange : GUARD.range;
     let best = null, bestS = Infinity;
     for (const e of this.game.enemies) {
       if (e.dead || e.removeMe || !(e.hp > 0)) continue;
       const d = dist(guard.x, guard.y, e.x, e.y);
-      if (d > GUARD.range) continue;
+      if (d > range) continue;
       const s = this.targetScore(guard, e);
       if (s >= bestS) continue;
-      if (!m.hasLOS(guard.x, guard.y, e.x, e.y, { throughDoors: true })) continue;
+      if (!up && !m.hasLOS(guard.x, guard.y, e.x, e.y)) continue;
       best = e; bestS = s;
     }
     return best;
@@ -2392,8 +2591,17 @@ export class SurvivalMode {
         this._updateRescue(guard, dt);
         continue;
       }
-      // walk the path to the post
       guard.moving = false;
+      guard.climbing = false;
+      // BUILD 10: a post up on the wall (fortress.wallPosts) is reached by a
+      // ladder. Off to anywhere else (or at dawn) a guard climbs down first.
+      const wall = night && guard.post && guard.post.wall ? guard.post.wall : null;
+      if (guard.liftPost && guard.liftPost !== wall && this._climb(guard, -dt)) {
+        guard.target = null;
+        guard.cd = Math.max(guard.cd, 0.25);
+        continue;
+      }
+      // walk the path to the post
       if (guard.path && guard.pathI < guard.path.length) {
         const wp = guard.path[guard.pathI];
         const dx = wp.x - guard.x, dy = wp.y - guard.y;
@@ -2404,6 +2612,11 @@ export class SurvivalMode {
         if (d > 0.5) guard.angle = Math.atan2(dy, dx);
         guard.moving = true;
         guard.walkT += dt;
+      }
+      // at the foot of its ladder: up it goes
+      if (wall && !guard.moving && guard.lift < 1) {
+        guard.liftPost = wall;
+        if (this._climb(guard, dt)) { guard.target = null; guard.cd = Math.max(guard.cd, 0.25); continue; }
       }
       if (!night) { guard.target = null; continue; }
       guard.cd -= dt;
@@ -2418,8 +2631,16 @@ export class SurvivalMode {
       const lead = dist(guard.x, guard.y, target.x, target.y) / GUARD.boltSpeed;
       const tx = target.x + (target.vx || 0) * lead, ty = target.y + (target.vy || 0) * lead;
       guard.angle = Math.atan2(ty - guard.y, tx - guard.x);
-      const bolt = g.spawnBolt(guard, guard.angle, { offset: 16, boltSpeed: GUARD.boltSpeed, damage: GUARD.damage, friendly: true });
-      if (bolt) bolt.guard = true;
+      // from up on the wall the bolt flies over the merlons and drops on them
+      const up = guard.lift >= 1 && guard.liftPost;
+      const bolt = g.spawnBolt(guard, guard.angle, {
+        offset: 16, boltSpeed: GUARD.boltSpeed, damage: GUARD.damage, friendly: true,
+        over: !!up, dropFrom: up ? guard.liftPost.kind : null,
+      });
+      if (bolt) {
+        bolt.guard = true;
+        if (up) bolt.aimDist = Math.max(40, dist(guard.x, guard.y, target.x, target.y) - 10);
+      }
       guard.cd = GUARD.every + rand(-0.12, 0.18);
       guard.shotT = 0.2;
       this.nightStats.guardShots = (this.nightStats.guardShots || 0) + 1;
@@ -2519,8 +2740,11 @@ export class SurvivalMode {
   }
 
   /**
-   * A bolt from (x0, y0) reaches (x1, y1): sight through door slits, and no
-   * masonry or furniture in its way from where it leaves the string.
+   * A bolt from (x0, y0) reaches (x1, y1) at body height: sight through door
+   * slits, and no masonry or furniture in its way from where it leaves the
+   * string. Only the house layout's plot search still uses it (the fortress's
+   * ballistas shoot over the wall since BUILD 10); tools/survival-map.mjs
+   * uses it to check a ballista still faces its gate down a clear road.
    */
   boltPath(x0, y0, x1, y1, start = 20) {
     const m = this.game.mansion;
@@ -2556,14 +2780,20 @@ export class SurvivalMode {
     };
   }
 
+  /**
+   * What a ballista shoots. It stands high on its deck, so (BUILD 10) its
+   * bolt flies over the wall instead of threading a shut gate: anything in
+   * range will do. In the house layout it still needs a clear path.
+   */
   towerTarget(tower, range) {
+    const high = this.game.mansion.isFortress;
     let best = null, bestS = Infinity;
     for (const e of this.game.enemies) {
       if (e.dead || e.removeMe || !(e.hp > 0)) continue;
       if (dist(tower.x, tower.y, e.x, e.y) > range) continue;
       const s = this.targetScore(tower, e);
       if (s >= bestS) continue;
-      if (!this.boltPath(tower.x, tower.y, e.x, e.y)) continue;
+      if (!high && !this.boltPath(tower.x, tower.y, e.x, e.y)) continue;
       best = e; bestS = s;
     }
     return best;
@@ -2592,6 +2822,7 @@ export class SurvivalMode {
       const bolt = g.spawnBolt(t, t.angle, {
         offset: 20, boltSpeed: TOWER.boltSpeed, damage: st.damage, friendly: true,
         boltPierce: TOWER.pierce, boltRange: (st.range || 0) + TOWER.reach,
+        over: g.mansion.isFortress,
       });
       // aimDist: where the bolt drops from the deck to body height (3D)
       if (bolt) { bolt.tower = true; bolt.aimDist = Math.max(40, dist(t.x, t.y, target.x, target.y) - 20); }
@@ -2756,6 +2987,7 @@ export class SurvivalMode {
     const shooter = { x: keep.x + Math.cos(b.angle) * (keep.r + 14), y: keep.y + Math.sin(b.angle) * (keep.r + 14), type: { boltSpeed: TOWER.boltSpeed, boltDamage: 1 }, key: 'keep' };
     const bolt = this.game.spawnBolt(shooter, b.angle, {
       offset: 0, boltSpeed: TOWER.boltSpeed, damage: spec.damage, friendly: true, boltRange: spec.range + 60,
+      over: this.game.mansion.isFortress,
     });
     if (bolt) { bolt.tower = true; bolt.keepBolt = true; bolt.aimDist = Math.max(30, dist(shooter.x, shooter.y, best.x, best.y)); }
     b.cd = spec.every;

@@ -187,7 +187,9 @@ const HINTS = Object.freeze({
   flare: { icon: 'flare', text: 'TAP FLARE TO BLAST THEM', life: 6 },
   build: { icon: 'hammer', text: 'WALK INTO A CIRCLE TO BUILD', life: 7 },
   guard: { icon: 'guard', text: 'SOLDIERS GUARD THE GATES', life: 5 },
-  door: { icon: 'door', text: 'GO TO THE GATE: SHOOT THROUGH IT', life: 6 },
+  // BUILD 10: a shut gate stops every shot; the gates open for the captain
+  door: { icon: 'door', text: 'WALK OUT A GATE TO FIGHT THEM', life: 6 },
+  out: { icon: 'door', text: 'OUT HERE THEY COME FOR YOU', life: 5 },
   level: { icon: 'up', text: 'STAND BY A BUILDING TO LEVEL IT UP', life: 6 },
   rescue: { icon: 'medic', text: 'STAND BY A FALLEN GUARD TO HELP', life: 6 },
   pan: { icon: 'pan', text: 'DRAG THE RIGHT SIDE TO LOOK AROUND', life: 6 },
@@ -237,8 +239,11 @@ export function updateSurvivalHints(game, dt) {
     if (mode.skillCooldown <= 0 && mode.enemiesNear(game.player.x, game.player.y, mode.tuning.skillRadius) >= 3) offerSurvivalHint(game, 'flare');
     if ((mode.nightStats.guardShots || 0) > 0 && mode.elapsed > 6) offerSurvivalHint(game, 'guard');
     if (mode.guards && mode.guards.some((guard) => guard.down)) offerSurvivalHint(game, 'rescue');
-    // a door is being clawed and the Hunter has nothing to shoot: send him there
+    // a gate is being clawed and the captain has nothing to shoot: send him
+    // out (a shut gate stops his bolts since BUILD 10)
     if (mode.elapsed > 12 && !mode.currentTarget && mode.besiegedDoors().length > 0) offerSurvivalHint(game, 'door');
+    // the first time he stands outside at night: the horde comes for him
+    if (mode.captainExposed && !mode.captainInGate) offerSurvivalHint(game, 'out');
   } else if (mode.phase === 'day' && !mode.rewardPending()) {
     offerSurvivalHint(game, 'build');
     // once the first build is under way: the view can be dragged around

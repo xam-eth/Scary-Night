@@ -1796,7 +1796,31 @@ class EnvKitRuntime {
         // a door under siege sits crooked in its frame
         v.frame.rotation.z = hurt * 0.035 + (e.buckling || 0) * 0.02;
       }
-      if (v.pivot && v.leaf) {
+      // BUILD 10: a fortress gate swung open for the captain follows him —
+      // survival.js updateSortieGates owns its 0..1 swing (e.sortieT); the
+      // swing clock below takes over again once it is shut
+      const sortie = v.pivot && v.leaf && !e.open && !e.broken ? clamp(e.sortieT || 0, 0, 1) : 0;
+      if (sortie > 0) {
+        const eased = sortie * sortie * (3 - 2 * sortie);
+        const angle = DOOR_OPEN_ANGLE * eased;
+        const was = v.sortieWas || 0;
+        if (was === 0 || (sortie >= 1) !== (was >= 1)) {
+          if (this.renderer && this.renderer.shadowMap) this.renderer.shadowMap.needsUpdate = true;
+        }
+        v.sortieWas = sortie;
+        v.angle = v.fromAngle = v.targetAngle = angle;
+        v.motionStart = animationSeconds(game);
+        v.motionInitialized = true;
+        v.pivot.rotation.y = angle;
+        v.pivot.rotation.z = hurt * 0.05;
+        v.leaf.visible = true;
+      } else if (v.pivot && v.leaf) {
+        if (v.sortieWas > 0) {
+          // just shut (or opened for good): swing on from where it stands
+          v.sortieWas = 0;
+          v.fromAngle = v.targetAngle = v.angle;
+          if (this.renderer && this.renderer.shadowMap) this.renderer.shadowMap.needsUpdate = true;
+        }
         const now = animationSeconds(game);
         const target = e.open && !e.broken ? DOOR_OPEN_ANGLE : 0;
         let motionChanged = false;

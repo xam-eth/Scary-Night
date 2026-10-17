@@ -65,19 +65,26 @@ export function botNight(game, state, { ROOM, ISO_CAMERA }) {
     const reach = Math.min(d * 0.6, 600);
     goal = { x: keep.x + (t.x - keep.x) / d * reach, y: keep.y + (t.y - keep.y) / d * reach };
   } else if (state.doors !== false && mode.besiegedDoors) {
-    // Nothing inside: go and shoot the crowd through the door it is clawing
-    // (door slits), standing a step back from the wood.
-    const doors = mode.besiegedDoors().sort((a, b) => mode.doorPressure(b.id) - mode.doorPressure(a.id));
-    const door = doors[0];
-    if (door && door.inside) {
-      const ix = door.inside.x - door.x, iy = door.inside.y - door.y;
-      const il = Math.hypot(ix, iy) || 1;
-      goal = { x: door.inside.x + ix / il * 70, y: door.inside.y + iy / il * 70 };
-    }
+    // Nothing inside (BUILD 10): a shut gate stops his bolts. He steps into
+    // the busiest gate's mouth (it swings open for him) and shoots the crowd
+    // while its front rank claws back through the opening; at half HP he
+    // steps back to get his breath (SORTIE.rest) and goes again.
+    const spot = peekSpot(game, state, p);
+    if (spot) goal = spot;
+  } else state.peek = null;
+  state.outside = game.mansion.findRoom(p.x, p.y) === ROOM.OUTSIDE;
+  // in and out of the walls only by a gate (it opens for him)
+  const leg = travel(game, p, goal, ROOM);
+  if (globalThis.process && process.env.BOT_TRACE && Math.floor(mode.elapsed * 2) !== state._tr) {
+    state._tr = Math.floor(mode.elapsed * 2);
+    const near = live.filter((e) => dist(e, p) < 170).length;
+    const on = live.filter((e) => e._onCaptain).length;
+    console.log(`D${mode.day} t${mode.elapsed.toFixed(1)} p(${Math.round(p.x)},${Math.round(p.y)}) ${game.mansion.findRoom(p.x, p.y)} hp${Math.round(p.blood)} goal(${Math.round(goal.x)},${Math.round(goal.y)}) leg(${Math.round(leg.goal.x)},${Math.round(leg.goal.y)}${leg.path ? '' : ' direct'}) near${near} on${on} exp${mode.captainExposed ? 1 : 0} gate${mode.captainInGate ? mode.captainInGate.id : '-'} inside${inside.length} keepAtk${mode.keepAttackers} tgt${mode.currentTarget ? 1 : 0} gates${game.mansion.entrances.filter((e) => e.gate).map((e) => e.broken ? "X" : Math.round(e.hp)).join("/")}`);
   }
-  if (dist(p, goal) > 46) {
-    const path = game.mansion.navPath(p.x, p.y, goal.x, goal.y);
-    const wp = path && path.length ? (path.length > 1 && dist(p, path[0]) < 30 ? path[1] : path[0]) : goal;
+  const final = leg.goal === goal;
+  if (dist(p, leg.goal) > (final ? (goal.tight ? 8 : 46) : 10)) {
+    const path = leg.path ? game.mansion.navPath(p.x, p.y, leg.goal.x, leg.goal.y) : null;
+    const wp = path && path.length ? (path.length > 1 && dist(p, path[0]) < 30 ? path[1] : path[0]) : leg.goal;
     steerStick(game, wp.x - p.x, wp.y - p.y, ISO_CAMERA);
   } else {
     game.input.stick.active = false;
@@ -87,6 +94,74 @@ export function botNight(game, state, { ROOM, ISO_CAMERA }) {
     state.flareHeld = !state.flareHeld;
     if (game.input.keys.interact) state.flares = (state.flares || 0) + 1;
   } else state.flareHeld = false;
+}
+
+const gatesOf = (game) => game.mansion.entrances.filter((e) => e.gate && e.exterior);
+const outward = (e) => {
+  const dx = e.outside.x - e.x, dy = e.outside.y - e.y;
+  const l = Math.hypot(dx, dy) || 1;
+  return { x: dx / l, y: dy / l };
+};
+
+/**
+ * The next leg toward `goal`. Inside to outside (or back) goes by the gate
+ * that makes the shortest walk: to its near side by the nav grid, then
+ * straight through (the gate opens for the captain, BUILD 10; the nav grid
+ * still counts a shut gate as a wall). Returns { goal, path }.
+ */
+function travel(game, from, goal, ROOM) {
+  const m = game.mansion;
+  const b = m.bailey;
+  const inside = (pt) => (b ? pt.x > b.x && pt.x < b.x + b.w && pt.y > b.y && pt.y < b.y + b.h
+    : m.findRoom(pt.x, pt.y) !== ROOM.OUTSIDE);
+  const goalIn = inside(goal);
+  // at a gate (or in it): straight on through to the goal's side and a step past
+  for (const e of gatesOf(game)) {
+    const o = outward(e);
+    const rx = from.x - e.x, ry = from.y - e.y;
+    const across = rx * o.x + ry * o.y, along = -rx * o.y + ry * o.x;
+    const half = (e.axis === 'v' ? e.h : e.w) / 2;
+    if (Math.abs(along) > half - 8 || Math.abs(across) > 84) continue;
+    if (goalIn && across > -30) return { goal: e.inside, path: false };
+    if (!goalIn && across < 30) return { goal: e.outside, path: false };
+  }
+  const a = !inside(from);
+  if (a === !goalIn) return { goal, path: true };
+  // never through a crowd: a gate with bodies at it costs a long detour
+  const crowds = game.enemies.filter((e) => e._survivalType && !e.dead && !e.removeMe && !e._inHouse);
+  let best = null, bestD = Infinity;
+  for (const e of gatesOf(game)) {
+    const near = a ? e.outside : e.inside, far = a ? e.inside : e.outside;
+    const busy = crowds.filter((z) => dist(z, e.outside) < 190).length;
+    const d = dist(from, near) + dist(far, goal) + busy * 400;
+    if (d < bestD) { best = e; bestD = d; }
+  }
+  if (!best) return { goal, path: true };
+  return { goal: a ? best.outside : best.inside, path: true };
+}
+
+/**
+ * The gate the captain holds and where he stands for it: in its mouth (20 px
+ * inside the wall line, so the leaf is open and his bolts fly out) while he
+ * is above half HP, then 140 px back inside (the gate shuts, the claws stop)
+ * until he has his breath back. Sticks with one gate while it is besieged.
+ */
+function peekSpot(game, state, p) {
+  const mode = game.survival;
+  const doors = mode.besiegedDoors().filter((e) => e.gate && e.outside);
+  if (!doors.length) { state.peek = null; return null; }
+  let pk = state.peek && doors.find((e) => e.id === state.peek.door) ? state.peek : null;
+  if (!pk) {
+    // the busiest gate, the weakest first among equals
+    doors.sort((a, b) => (mode.doorPressure(b.id) - mode.doorPressure(a.id)) || (a.hp / a.hpMax - b.hp / b.hpMax));
+    pk = state.peek = { door: doors[0].id, phase: 'peek' };
+  }
+  const door = doors.find((e) => e.id === pk.door);
+  if (pk.phase === 'peek' && p.blood < p.bloodMax * 0.5) pk.phase = 'rest';
+  else if (pk.phase === 'rest' && p.blood >= p.bloodMax * 0.92) pk.phase = 'peek';
+  const o = outward(door);
+  const back = pk.phase === 'peek' ? 20 : 140;
+  return { x: door.x - o.x * back, y: door.y - o.y * back, tight: pk.phase === 'peek' };
 }
 
 /**
