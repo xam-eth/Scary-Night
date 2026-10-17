@@ -1,7 +1,82 @@
 # Status Rebuild 3D & Survival Milestone 1
 
 **Pembaruan:** 2026-10-17 (Asia/Makassar)
-**Status keseluruhan: MASIH TERBUKA — bukan klaim siap rilis.** Inti rebuild dunia 3D dan loop Survival Milestone 1 sudah terimplementasi. Pada 2026-10-12 arah UI/UX dan threat model dikoreksi mengikuti feedback user; pada 2026-10-15 dilakukan pass analisis gap & bug (lihat bagian "Gap & bug pass 2026-10-15"), lalu pass progres Hunter + level bangunan (lihat "Progres Hunter & level bangunan"), lalu pass menara crossbow (lihat "Menara crossbow"), lalu pass guard yang bisa jatuh (lihat "Guard bisa jatuh"; termasuk perbaikan bug gelombang yang muncul di dalam rumah), dan seluruh gate otomatis dijalankan ulang. Setelah itu user memutuskan **game landscape only** dan meminta brainstorming + design system plan sebelum koding lagi (lihat "Arah desain & orientasi" dan `docs/DESIGN-SYSTEM-PLAN.md`; belum ada perubahan kode game untuk arah ini). Revisi 1 desain (konsep api) ditolak user. Di revisi 2 user memilih konsep **K1 "Benteng Terakhir"**, pola build **jalan ke lingkaran + BUILD**, dan nada **dark stylized**, lalu menyetujui semua rekomendasi aturan dan meminta "pastikan dunianya 3D". K1 kini **terimplementasi sebagai vertical slice** (lihat "K1 Benteng Terakhir — implementasi"); acceptance manusia/perangkat untuk K1 belum ada. Atas feedback user berikutnya, Survival kini dimainkan di **dunia benteng (bailey)** baru, bukan di dalam ruangan mansion (lihat "Dunia benteng untuk Survival"). Setelah itu kedua bookend cerita K1 dibuat: **intro sinematik** di malam pertama dan **adegan bala bantuan tiba** di fajar ke-3 (lihat "Bookend K1"); pemahaman pemain atas keduanya belum diuji. Lalu dibuat **riset UX & replay** dari review pemain (Play Store, Steam, Reddit, dan platform review lain) plus playtest bot "sebagai gamer" (lihat "Riset UX & replay" dan `docs/UX-REPLAY-RESEARCH.md`). Riset itu lalu diperdalam atas permintaan user agar tidak ada coding: v2 menambah review bintang 5, persona, peta perjalanan, dan protokol playtest; v3 menambah pemain Indonesia, analisis loop 3 lapis, dan uji HP kelas bawah. Setelah itu, atas feedback user, dibuat pass perbaikan: benteng diperkecil dan aktor diperbesar, pasukan memakai GLB (KayKit Knight, CC0), efek tembakan/damage diperkuat, kerja bangunan dibuat terlihat, dan UI dirapikan (NIGHT dipisah dari BUILD, panel fajar/akhir menghitung kontribusi). Dari rekomendasi riset, yang terbangun baru R1 sebagian, R18a, dan R19 (lihat "Perbaikan dari feedback user"). Lalu pesan "next" berikutnya dikerjakan sebagai P0 riset **"Momen akhir run"**: bintang 1–3, rekor + NEW BEST!, panel kalah "Ns TO DAWN" + satu tip dari penyebab nyata, dan MVP bangunan (R1–R4, R19; lihat "Momen akhir run"). R5 dan R6 belum. Lalu user melapor "tidak ada perubahan" (2026-10-17): dibuat **pass visual besar** — build yang benar sampai ke layar (service worker hanya di host rilis, preview tanpa cache, stempel BUILD 8), bailey setengah ukuran dengan aktor ×1,6 dan kamera lebih dekat, seluruh horde monster GLB (vertex animation texture), knight dimuat saat boot dengan helm biru berjambul, efek tembakan/damage lebih besar, ballista yang membunuh dan menandai kill-nya, koin mine di HUD, dan penanda gerbang dengan jumlah musuh (lihat "Pass visual besar"). Lalu user meminta lima perbaikan lagi (2026-10-17, "ada beberapa masih perlu di fix"): kamera dijauhkan sedikit dan bisa digeser, plot bangunan ditata rapi, bangunan memakai aset gratis yang diunduh (bukan prototipe), kartu diperkecil, dan trailer pembuka dipertahankan. Kelimanya terimplementasi di **BUILD 9** (lihat "Pass perbaikan BUILD 9"). Lalu user meminta gambar karakter manusia yang cerah dengan senjata terpisah (folder `ASSET_CHARACTER`, gambar konsep AI atas permintaan user) dan aturan gerbang yang benar. Di **BUILD 10** gerbang tertutup menahan tembakan, gerbang hanya terbuka untuk kapten, dan untuk melawan, kapten keluar ke mulut gerbang atau ke luar benteng (lihat "Pass BUILD 10"). Acceptance visual/manual di perangkat, playtest manusia, dan packaging Play masih terbuka. Hasil tiap skrip hanya berlaku untuk cakupan yang benar-benar diuji.
+**Status keseluruhan: MASIH TERBUKA — bukan klaim siap rilis.** Inti rebuild dunia 3D dan loop Survival Milestone 1 sudah terimplementasi. Pada 2026-10-12 arah UI/UX dan threat model dikoreksi mengikuti feedback user; pada 2026-10-15 dilakukan pass analisis gap & bug (lihat bagian "Gap & bug pass 2026-10-15"), lalu pass progres Hunter + level bangunan (lihat "Progres Hunter & level bangunan"), lalu pass menara crossbow (lihat "Menara crossbow"), lalu pass guard yang bisa jatuh (lihat "Guard bisa jatuh"; termasuk perbaikan bug gelombang yang muncul di dalam rumah), dan seluruh gate otomatis dijalankan ulang. Setelah itu user memutuskan **game landscape only** dan meminta brainstorming + design system plan sebelum koding lagi (lihat "Arah desain & orientasi" dan `docs/DESIGN-SYSTEM-PLAN.md`; belum ada perubahan kode game untuk arah ini). Revisi 1 desain (konsep api) ditolak user. Di revisi 2 user memilih konsep **K1 "Benteng Terakhir"**, pola build **jalan ke lingkaran + BUILD**, dan nada **dark stylized**, lalu menyetujui semua rekomendasi aturan dan meminta "pastikan dunianya 3D". K1 kini **terimplementasi sebagai vertical slice** (lihat "K1 Benteng Terakhir — implementasi"); acceptance manusia/perangkat untuk K1 belum ada. Atas feedback user berikutnya, Survival kini dimainkan di **dunia benteng (bailey)** baru, bukan di dalam ruangan mansion (lihat "Dunia benteng untuk Survival"). Setelah itu kedua bookend cerita K1 dibuat: **intro sinematik** di malam pertama dan **adegan bala bantuan tiba** di fajar ke-3 (lihat "Bookend K1"); pemahaman pemain atas keduanya belum diuji. Lalu dibuat **riset UX & replay** dari review pemain (Play Store, Steam, Reddit, dan platform review lain) plus playtest bot "sebagai gamer" (lihat "Riset UX & replay" dan `docs/UX-REPLAY-RESEARCH.md`). Riset itu lalu diperdalam atas permintaan user agar tidak ada coding: v2 menambah review bintang 5, persona, peta perjalanan, dan protokol playtest; v3 menambah pemain Indonesia, analisis loop 3 lapis, dan uji HP kelas bawah. Setelah itu, atas feedback user, dibuat pass perbaikan: benteng diperkecil dan aktor diperbesar, pasukan memakai GLB (KayKit Knight, CC0), efek tembakan/damage diperkuat, kerja bangunan dibuat terlihat, dan UI dirapikan (NIGHT dipisah dari BUILD, panel fajar/akhir menghitung kontribusi). Dari rekomendasi riset, yang terbangun baru R1 sebagian, R18a, dan R19 (lihat "Perbaikan dari feedback user"). Lalu pesan "next" berikutnya dikerjakan sebagai P0 riset **"Momen akhir run"**: bintang 1–3, rekor + NEW BEST!, panel kalah "Ns TO DAWN" + satu tip dari penyebab nyata, dan MVP bangunan (R1–R4, R19; lihat "Momen akhir run"). R5 dan R6 belum. Lalu user melapor "tidak ada perubahan" (2026-10-17): dibuat **pass visual besar** — build yang benar sampai ke layar (service worker hanya di host rilis, preview tanpa cache, stempel BUILD 8), bailey setengah ukuran dengan aktor ×1,6 dan kamera lebih dekat, seluruh horde monster GLB (vertex animation texture), knight dimuat saat boot dengan helm biru berjambul, efek tembakan/damage lebih besar, ballista yang membunuh dan menandai kill-nya, koin mine di HUD, dan penanda gerbang dengan jumlah musuh (lihat "Pass visual besar"). Lalu user meminta lima perbaikan lagi (2026-10-17, "ada beberapa masih perlu di fix"): kamera dijauhkan sedikit dan bisa digeser, plot bangunan ditata rapi, bangunan memakai aset gratis yang diunduh (bukan prototipe), kartu diperkecil, dan trailer pembuka dipertahankan. Kelimanya terimplementasi di **BUILD 9** (lihat "Pass perbaikan BUILD 9"). Lalu user meminta gambar karakter manusia yang cerah dengan senjata terpisah (folder `ASSET_CHARACTER`, gambar konsep AI atas permintaan user) dan aturan gerbang yang benar. Di **BUILD 10** gerbang tertutup menahan tembakan, gerbang hanya terbuka untuk kapten, dan untuk melawan, kapten keluar ke mulut gerbang atau ke luar benteng (lihat "Pass BUILD 10"). Lalu user melapor kapten berjalan sendiri keluar benteng dan bailey terlihat terlalu padat. Di **BUILD 11** kapten tidak lagi digerakkan apa pun selain stick, gerbang hanya terbuka untuk arah stick, setiap jenis bangunan punya warna sendiri, plot terkunci dan tiang hantu disembunyikan, dan props dikurangi (lihat "Pass BUILD 11"). Acceptance visual/manual di perangkat, playtest manusia, dan packaging Play masih terbuka. Hasil tiap skrip hanya berlaku untuk cakupan yang benar-benar diuji.
+
+## Pass BUILD 11 — kapten tidak jalan sendiri, bailey tidak padat, bangunan dikenali (2026-10-17)
+
+**Pesan user (2026-10-17):**
+1. "ada bug pada character berjalan sendiri keluar dari benteng tanpa ada musuh mentriger nya keluar dan keluarnya juga tembus benteng bukan lewat gerbang sedangkan musuh datang dari gerbang lain".
+2. "struktur bangunan juga masih perlu di perbaiki karna yg ada sekarang lebar benteng dengan compenent di dalam terlihat sangat padat dan itu membuat mata pemain susah fokos dan tidak tau build yg mana".
+
+Stempel di layar kini **BUILD 11**, service worker `duskhold-v11`.
+
+### 1. Bug: kapten berjalan sendiri dan keluar benteng
+
+**Penyebab yang ditemukan.** Tes headless dijalankan: satu malam penuh tanpa sentuhan sama sekali. Hasilnya, kapten tetap bergeser sendiri, (190, 0) → (171, 19). Ada tiga gaya yang menggerakkan kapten tanpa input:
+- **Tendangan balik tembakan.** Sejak BUILD 8 ("tembakan harus terasa kuat") setiap tembakan otomatis memberi kapten kecepatan 40 px/dtk ke belakang. Tembakan otomatis datang tiap 0,46 dtk, jadi kapten meluncur menjauhi target.
+- **Dorongan cakaran:** 150 px/dtk setiap kali kena.
+- **Goyangan HP rendah:** mekanik vampir lama dari mode legacy.
+
+Sejak BUILD 10 gerbang terbuka untuk kapten. Dorongan ke arah gerbang (yang kecepatannya lebih dari ambang "berjalan ke gerbang") ikut membuka gerbang, lalu kapten terseret keluar. Musuhnya ada di gerbang lain, yaitu gerbang yang sedang ia tembak. Postern di dinding barat/timur adalah gerbang kecil sehingga bisa terlihat seperti "tembus dinding".
+
+Uji 660 percobaan jalan ke dinding dari setiap sisi tidak menemukan satu pun kebocoran: tabrakan dinding/menara sehat. Kapten hanya bisa lewat bukaan gerbang.
+
+| Perbaikan | File |
+|---|---|
+| Tembakan kapten di Survival **tidak lagi mendorong badannya**. Kilatan moncong dan klip tembak 3D tetap ada | `game.js` (`playerAttackHit`) |
+| Cakaran **tidak lagi mendorong** kapten di Survival. Flash dan animasi kena tetap ada. Goyangan HP rendah tidak berlaku di Survival. Mode legacy tidak berubah | `player.js` (`takeDamage`, gerak) |
+| Gerbang terbuka **hanya untuk arah stick/tombol** pemain yang menuju gerbang, bukan untuk gerak badan. Gerbang yang tertutup kini menjadi **tembok juga bagi kapten** (`sortieT > 0` baru boleh lewat). "Di mulut gerbang" kini 24 px dari garis tembok, lebih sempit dari tempat gerbang tertutup menahannya (26 px), jadi hanya berjalan lewat gerbang yang sedang terbuka yang membawanya ke sana | `survival.js` (`updateSortieGates`, `SORTIE`), `mansion.js` (`resolve`) |
+| Stick mouse dilepas kalau tombol mouse ternyata sudah terangkat di luar frame preview (mouseup tidak sampai) | `input.js` |
+
+**Cek baru di harness:**
+- Selama 6 dtk tembakan otomatis (13 tembakan) ditambah satu cakaran dan HP 12, kapten bergeser **0,00 px**.
+- Kapten yang dilempar ke gerbang tertutup tanpa stick berhenti di depan gerbang. Dengan stick ke gerbang, gerbang membuka dan ia keluar.
+
+### 2. Bailey padat dan bangunan tidak dikenali
+
+| Perubahan | File |
+|---|---|
+| **Satu warna per bangunan**, dari pack yang sama (varian warna resmi KayKit, atlas sama): BARRACKS **biru**, GOLD MINE **kuning**, SAWMILL **hijau**, BALLISTA **merah**. Warna yang sama dipakai di atap model, lingkaran di tanah, label, bingkai pil status, dan ikon kartu dock. Model mine/lumbermill/tower biru diganti varian kuning/hijau/merah (6 file, hash blob dicek terhadap commit upstream yang sama; sha256 di `CREDITS.txt`) | `buildings3d.js` (`BUILDING_COLOR`), `assets/buildings/kaykit-hex/`, `world3d.js`, `ui/survival.js` |
+| **Tiang hantu transparan di setiap plot dihapus.** Model tembus pandang kini hanya muncul di lingkaran tempat kapten berdiri (1, bukan 15) | `world3d.js` (`_syncSurvivalCircles`) |
+| **Plot terkunci tidak tampil sama sekali**: tidak ada lingkaran, badge gembok, atau pad. Plot itu muncul saat panji keep sampai ke halamannya | `world3d.js`, `ui/survival.js` |
+| **Label di atas pad** (bukan badge melayang tinggi): ikon dengan warna bangunannya, dan **nama** (BARRACKS / GOLD MINE / SAWMILL / BALLISTA / BARRICADE) pada 3 plot terdekat. Plot lain hanya ikon berwarna. Ketuk label = jalan ke sana | `ui/survival.js` (`drawPlotLabel`) |
+| **Props dikurangi:** 16 barel/peti di sepanjang dinding dan meja pasar dihapus. Tinggal satu tumpukan di gerbang utama dan kembarannya di gerbang utara, plus sumur | `fortress.js` (`furnish`) |
+
+**Balance setelah kedua perbaikan** (5 seed, malam 72 dtk; `qa-evidence/survival-build11/balance-5seed-72s.txt`):
+
+| Bot | BUILD 11 | BUILD 10 |
+|---|---|---|
+| idle | 0/5 | 0/5 |
+| active | 0/5 | 0/5 |
+| builder | 5/5 ★★★ ×5 | 5/5, ★★★ ×4 |
+| tower-builder | 5/5 ★★★ ×5 | 5/5 ★★★ ×5 |
+| keep-builder | 1/5 | 0/5 |
+| hunter-builder | 5/5 ★★★ ×5 | 5/5 ★★★ ×5 |
+
+**QA BUILD 11:**
+
+| Perintah | Hasil |
+|---|---|
+| `node tools/harness.mjs` | 65 PASS / 0 FAIL (+2 cek bug kapten) |
+| `node tools/survival-devqa.mjs` | 25/25 (cek siang kini: tepat 1 hantu, di lingkaran kapten) |
+| `node tools/survival-plotsqa.mjs` | 13/13 |
+| `node tools/survival-intro.mjs` | PASS |
+| `node tools/survival-map.mjs` | 178/178 |
+| `node tools/survival-fxshots.mjs` | 14/14 |
+| `node tools/envqa.mjs --mode=3d-smoke` | PASS |
+| `node tools/survivalshots.mjs --landscape` | 26 shot, 0 page error |
+| `node tools/layoutqa.mjs` | PASS (termasuk `?legacy=1`) |
+| `node tools/glbtest.mjs` / `swtest.mjs` | PASS / PASS (`duskhold-v11`) |
+| `node tools/bundlecheck.mjs` | 1 FAIL lama (fingerprint signing) |
+
+**Bukti** (`qa-evidence/survival-build11/`): `compare-day0.png` (siang pertama, belum ada bangunan), `compare-day.png` (4 bangunan), dan `compare-build.png` (kapten di lingkaran ballista). Ketiganya BUILD 10 vs BUILD 11, skrip `survival-look` dan momen yang sama. Juga `day0.png`, `day.png`, `build.png`.
+
+**Belum / terbuka:**
+- Apakah bailey kini cukup lapang, dan apakah warna + label membuat pemain langsung tahu bangunan mana, belum dinilai manusia di HP.
+- Ukuran bailey dan zoom kamera **tidak** diubah (keduanya sudah diatur di pass sebelumnya). Pinch zoom 0,8–1,3× tetap ada.
+- Warna kuning tambang di model KayKit kecil (aksen); identitasnya terutama dari lingkaran, label, dan pil.
+- Rekaman bug asli dari user tidak ada. Perbaikan didasarkan pada penyebab yang direproduksi (dorongan tanpa input + gerbang terbuka).
 
 ## Pass BUILD 10 — gerbang tertutup, kapten keluar benteng, ASSET_CHARACTER (2026-10-17)
 
@@ -901,6 +976,7 @@ Ini screenshot checkpoint, bukan rekaman, dan bukan review di perangkat fisik.
 12. **Pass perbaikan BUILD 9 2026-10-17 (kamera, plot rapi, aset bangunan, kartu, trailer):** terimplementasi dan lolos gate otomatis (lihat "Pass perbaikan BUILD 9"). Belum: konfirmasi dari user bahwa layar menampilkan "BUILD 9"; penilaian di HP nyata atas jarak kamera dan rasa geser/pinch, kerapian denah, kecocokan aset KayKit dengan gaya benteng, ukuran dock, dan apakah intro tiap run mengganggu; frame time model kit di HP kelas bawah.
 13. **Pass BUILD 10 2026-10-17 (aturan gerbang):** gerbang tertutup menahan tembakan, gerbang terbuka hanya untuk kapten, musuh mengejar di luar, istirahat di balik tembok, guard di menara gerbang, dan tembakan melengkung lewat tembok. Semuanya terimplementasi dan lolos gate otomatis (lihat "Pass BUILD 10"). Belum: konfirmasi user bahwa layar menampilkan "BUILD 10"; rasa keluar benteng dan ritme gerbang/istirahat di HP nyata; keterbacaan guard di puncak menara.
 14. **ASSET_CHARACTER 2026-10-17:** 11 dari 18 gambar konsep sudah dibuat (6 karakter + 5 senjata). Masih terbuka: 7 senjata yang menyusul, konversi gambar → GLB, socket senjata di tangan, upgrade senjata pasukan di game, dan penggantian kapten gelap di game.
+15. **Pass BUILD 11 2026-10-17 (bug kapten + bailey padat):** dorongan tanpa input dihapus, gerbang hanya terbuka untuk arah stick, warna per bangunan, plot terkunci dan tiang hantu disembunyikan, label nama di pad, props dikurangi. Semuanya lolos gate otomatis (lihat "Pass BUILD 11"). Belum: konfirmasi user bahwa bug tidak muncul lagi di perangkatnya dan layar menampilkan "BUILD 11"; penilaian manusia atas kepadatan dan keterbacaan bangunan.
 
 ## Aturan laporan
 
