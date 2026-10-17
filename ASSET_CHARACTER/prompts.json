@@ -1,0 +1,127 @@
+{
+  "what": "AI-generated concept images for 3D modelling (characters in A-pose, weapons as separate props). Not licensed third-party assets and not loaded by the game.",
+  "generated": "2026-10-17",
+  "tool": "Arena agent image generation (generate_image)",
+  "requested_by": "user, 2026-10-17: character, troops, enemies and boss; human, not chibi; weapons separate so they can be animated on every character and upgraded",
+  "cutouts": "cutout/ = transparent PNGs made by tools/asset-cutout.py from these files; the generated files themselves are unchanged",
+  "items": [
+    {
+      "file": "characters/01-captain-duskhold.png",
+      "kind": "character",
+      "status": "generated",
+      "note": "Two candidates from two different models; the user picked option 1 of 2 (2026-10-17). This image is the style reference for every other character.",
+      "prompt": "Full-body 3D character design render of \"Captain Duskhold\", the heroic human captain who defends a medieval fantasy fortress, made for a bright, colorful stylized 3D strategy game. Realistic adult human proportions, about 7.5 heads tall, long legs and a normal-sized head — NOT chibi, not big-headed, not cartoon-toddler proportions. A confident, friendly man in his thirties with short brown hair and a neatly trimmed beard, determined smile. Outfit in bright, saturated team colors: a royal-blue tabard with gold trim and a small gold tower emblem on the chest, polished silver steel shoulder pauldrons, bracers and knee guards over light chainmail, a warm brown leather belt with small pouches, a short royal-blue cape, brown leather boots, and a brown wide-brimmed captain's hat with a gold band and a white feather. Pose: standard neutral A-pose for 3D rigging — standing straight and facing the camera, arms straight and held about 45 degrees out from the body, hands open and empty with fingers together, feet shoulder-width apart, symmetrical. He holds NO weapon: nothing in his hands, no crossbow, no sword, no shield, no scabbard, no quiver. Style: clean stylized 3D game-asset render with smooth simple forms and hand-painted colors, soft bright even studio lighting, crisp readable silhouette. Framing: the entire body from the hat to the boots visible and centered with empty margin around it, on a plain pure white background, no floor, no cast shadow, no text, no watermark."
+    },
+    {
+      "file": "characters/02-guard.png",
+      "kind": "character",
+      "status": "generated",
+      "reference": "ASSET_CHARACTER/characters/01-captain-duskhold.png",
+      "prompt": "Use the reference image only as the art-style guide: match its stylized 3D game-asset render look, realistic adult human proportions (about 7.5 heads tall, NOT chibi, not big-headed), soft bright even studio lighting, framing and plain pure white background. Create a completely different character (not the captain): a fortress guard soldier of Captain Duskhold's garrison — a young adult man, clean-shaven, wearing a polished silver open-face steel kettle helmet with a small royal-blue plume, a royal-blue padded gambeson tabard with a simple gold stripe and a small gold tower emblem, a chainmail collar and sleeves, simple silver steel shoulder plates, a brown leather belt with a small bolt pouch, grey trousers and brown leather boots. No cape, no hat. Pose: standard neutral A-pose for 3D rigging — standing straight and facing the camera, arms straight and held about 45 degrees out from the body, hands open and empty, feet shoulder-width apart, symmetrical. He holds NO weapon: nothing in his hands, no crossbow, no shield on his arm or back, no scabbard. The entire body from the helmet to the boots visible and centered with empty margin, plain pure white background, no floor, no cast shadow, no text, no watermark."
+    },
+    {
+      "file": "characters/03-enemy-ghoul.png",
+      "kind": "character",
+      "status": "generated",
+      "reference": "ASSET_CHARACTER/characters/01-captain-duskhold.png",
+      "prompt": "Use the reference image only as the art-style guide: match its stylized 3D game-asset render look, realistic adult human proportions (NOT chibi, not big-headed), soft bright even studio lighting, framing and plain pure white background. Create a completely different character (not the captain): a \"Night Horde ghoul\", the basic enemy of the game — an undead human villager risen from the grave, gaunt but with normal adult human anatomy, sickly pale-green skin, sunken cheeks, messy dark hair, glowing yellow-green eyes and a snarling mouth. He wears torn, patched peasant clothes in muted crimson and brown with a frayed rope belt, ragged trousers and worn shoes. Stylized and readable for a bright fantasy strategy game, not gory: no blood, no exposed organs. Pose: standard neutral A-pose for 3D rigging — standing straight and facing the camera, arms straight and held about 45 degrees out from the body, hands open and empty with clawed fingers, feet shoulder-width apart, symmetrical. He holds NO weapon, nothing in his hands. The entire body from head to feet visible and centered with empty margin, plain pure white background, no floor, no cast shadow, no text, no watermark."
+    },
+    {
+      "file": "characters/04-enemy-undead-soldier.png",
+      "kind": "character",
+      "status": "generated",
+      "reference": "ASSET_CHARACTER/characters/01-captain-duskhold.png",
+      "prompt": "Use the reference image only as the art-style guide: match its stylized 3D game-asset render look, realistic adult human proportions (NOT chibi, not big-headed), soft bright even studio lighting, framing and plain pure white background. Create a completely different character (not the captain): an \"undead soldier\", the fast elite hunter enemy of the Night Horde — a fallen soldier risen from the grave, lean athletic adult human anatomy, pale-green skin, glowing yellow-green eyes under a dented rusty iron nasal helmet, rusted and torn chainmail, one rusty shoulder pauldron, a ragged crimson tabard with a black skull sigil, leather straps and bracers, worn leather boots. Menacing but stylized and readable for a bright fantasy strategy game, not gory, no blood. Pose: standard neutral A-pose for 3D rigging — standing straight and facing the camera, arms straight and held about 45 degrees out from the body, hands open and empty, feet shoulder-width apart, symmetrical. He holds NO weapon, nothing in his hands, no shield, no scabbard. The entire body from helmet to boots visible and centered with empty margin, plain pure white background, no floor, no cast shadow, no text, no watermark."
+    },
+    {
+      "file": "characters/05-enemy-breaker.png",
+      "kind": "character",
+      "status": "generated",
+      "reference": "ASSET_CHARACTER/characters/01-captain-duskhold.png",
+      "prompt": "Use the reference image only as the art-style guide: match its stylized 3D game-asset render look, soft bright even studio lighting, framing and plain pure white background. Create a completely different character (not the captain): the \"Breaker\", a huge gate-smashing brute of the Night Horde — an enormous heavyset undead man, much broader and taller than a normal soldier but still with realistic human anatomy and proportions (not a monster, not an ogre, NOT chibi), pale-green skin with stitched scars, a bald head, glowing yellow-green eyes, heavy rusty iron plates strapped over his shoulders and chest with chains, a thick leather apron, torn crimson cloth wrapped around his waist and iron-shod boots. Powerful and intimidating, stylized and readable for a bright fantasy strategy game, not gory, no blood. Pose: standard neutral A-pose for 3D rigging — standing straight and facing the camera, arms straight and held about 45 degrees out from the body, hands open and empty, feet shoulder-width apart, symmetrical. He holds NO weapon, nothing in his hands. The entire body from head to boots visible and centered with empty margin, plain pure white background, no floor, no cast shadow, no text, no watermark."
+    },
+    {
+      "file": "characters/06-boss-night-lord.png",
+      "kind": "character",
+      "status": "generated",
+      "reference": "ASSET_CHARACTER/characters/01-captain-duskhold.png",
+      "prompt": "Use the reference image only as the art-style guide: match its stylized 3D game-asset render look, soft bright even studio lighting, framing and plain pure white background. Create a completely different character (not the captain): the \"Night Lord\", the boss of the Night Horde — a tall, imposing undead warlord king, taller than a normal man but with realistic human proportions (not a monster, NOT chibi), a gaunt pale-green face with glowing emerald-green eyes, a spiked dark-iron crown helmet, ornate dark-iron plate armor with crimson and royal-purple cloth panels and thin glowing green rune lines, a tattered purple cape, a skull clasp on the chest, armored gauntlets and plated boots. Regal and menacing, with rich saturated colors that stay readable in a bright stylized fantasy strategy game, not gory, no blood. Pose: standard neutral A-pose for 3D rigging — standing straight and facing the camera, arms straight and held about 45 degrees out from the body, hands open and empty, feet shoulder-width apart, symmetrical. He holds NO weapon, nothing in his hands, no scabbard. The entire body from crown to boots visible and centered with empty margin, plain pure white background, no floor, no cast shadow, no text, no watermark."
+    },
+    {
+      "file": "weapons/captain-crossbow-lv1.png",
+      "kind": "weapon",
+      "status": "generated",
+      "prompt": "Stylized 3D game-asset render of a single weapon prop for a bright, colorful medieval fantasy strategy game: smooth simple forms, hand-painted colors, soft bright even studio lighting, crisp readable silhouette. The weapon: Captain Duskhold's level-1 hand crossbow — a compact one-handed crossbow with a polished warm-brown wooden stock, simple steel bow arms, a dark string, iron fittings and a royal-blue leather wrap on the grip; sturdy and simple. Unloaded, no bolt. Shown in a three-quarter view from slightly above, pointing to the upper right, so the stock, the grip and both bow arms are clearly visible. Only the weapon: no person, no hands, no stand, no other objects. The whole weapon visible and centered with empty margin, on a plain pure white background, no cast shadow, no text, no watermark."
+    },
+    {
+      "file": "weapons/captain-sword.png",
+      "kind": "weapon",
+      "status": "generated",
+      "prompt": "Stylized 3D game-asset render of a single weapon prop for a bright, colorful medieval fantasy strategy game: smooth simple forms, hand-painted colors, soft bright even studio lighting, crisp readable silhouette. The weapon: Captain Duskhold's arming sword — a one-handed straight sword with a polished steel blade, a gold crossguard, a royal-blue leather-wrapped grip and a round gold pommel with a small tower emblem. Shown standing upright with the blade pointing up, front view slightly angled to show the blade's thickness. Only the weapon: no person, no hands, no stand, no scabbard, no other objects. The whole sword visible and centered with empty margin, on a plain pure white background, no cast shadow, no text, no watermark."
+    },
+    {
+      "file": "weapons/guard-crossbow-lv1.png",
+      "kind": "weapon",
+      "status": "generated",
+      "prompt": "Stylized 3D game-asset render of a single weapon prop for a bright, colorful medieval fantasy strategy game: smooth simple forms, hand-painted colors, soft bright even studio lighting, crisp readable silhouette. The weapon: the garrison soldier's level-1 crossbow — a standard two-handed military crossbow with a plain light-brown wooden stock, an iron bow, a dark string, a simple iron foot stirrup at the front and a trigger lever underneath; plain and practical. Unloaded, no bolt. Shown in a three-quarter view from slightly above, pointing to the upper right, so the stock and both bow arms are clearly visible. Only the weapon: no person, no hands, no stand, no other objects. The whole crossbow visible and centered with empty margin, on a plain pure white background, no cast shadow, no text, no watermark."
+    },
+    {
+      "file": "weapons/guard-shield.png",
+      "kind": "weapon",
+      "status": "generated",
+      "prompt": "Stylized 3D game-asset render of a single equipment prop for a bright, colorful medieval fantasy strategy game: smooth simple forms, hand-painted colors, soft bright even studio lighting, crisp readable silhouette. The item: the garrison soldier's round shield — a round wooden shield painted royal blue with a gold tower emblem in the center, a polished steel rim and a round steel boss, faint wooden plank lines visible under the paint. Shown from the front, slightly angled to show its thickness. Only the shield: no person, no hands, no stand, no other objects. The whole shield visible and centered with empty margin, on a plain pure white background, no cast shadow, no text, no watermark."
+    },
+    {
+      "file": "weapons/ghoul-cleaver.png",
+      "kind": "weapon",
+      "status": "generated",
+      "prompt": "Stylized 3D game-asset render of a single weapon prop for a bright, colorful medieval fantasy strategy game: smooth simple forms, hand-painted colors, soft bright even studio lighting, crisp readable silhouette. The weapon: a Night Horde ghoul's rusty butcher's cleaver — a chipped, rusty iron cleaver blade with a cracked wooden handle wrapped in a dirty crimson rag. Not bloody. Shown upright with the handle at the bottom, slightly angled. Only the weapon: no person, no hands, no stand, no other objects. The whole cleaver visible and centered with empty margin, on a plain pure white background, no cast shadow, no text, no watermark."
+    },
+    {
+      "file": "weapons/undead-soldier-axe.png",
+      "kind": "weapon",
+      "status": "planned",
+      "prompt": "Stylized 3D game-asset render of a single weapon prop for a bright, colorful medieval fantasy strategy game: smooth simple forms, hand-painted colors, soft bright even studio lighting, crisp readable silhouette. The weapon: an undead soldier's notched war axe — a one-handed bearded axe with a rusty, chipped iron head, a dark cracked wooden haft and a torn crimson cloth strip tied below the head. Not bloody. Shown upright with the axe head at the top, slightly angled. Only the weapon: no person, no hands, no stand, no other objects. The whole axe visible and centered with empty margin, on a plain pure white background, no cast shadow, no text, no watermark."
+    },
+    {
+      "file": "weapons/breaker-maul.png",
+      "kind": "weapon",
+      "status": "planned",
+      "prompt": "Stylized 3D game-asset render of a single weapon prop for a bright, colorful medieval fantasy strategy game: smooth simple forms, hand-painted colors, soft bright even studio lighting, crisp readable silhouette. The weapon: the Breaker's huge two-handed siege maul — a massive rusty iron hammer head studded with blunt spikes and iron bands, on a thick dark wooden haft wrapped with chains and leather, built to smash fortress gates. Shown diagonally with the hammer head at the upper right. Only the weapon: no person, no hands, no stand, no other objects. The whole maul visible and centered with empty margin, on a plain pure white background, no cast shadow, no text, no watermark."
+    },
+    {
+      "file": "weapons/night-lord-greatsword.png",
+      "kind": "weapon",
+      "status": "planned",
+      "prompt": "Stylized 3D game-asset render of a single weapon prop for a bright, colorful medieval fantasy strategy game: smooth simple forms, hand-painted colors, soft bright even studio lighting, crisp readable silhouette. The weapon: the Night Lord's cursed greatsword — a giant two-handed sword with a broad dark-iron blade etched with glowing emerald-green runes, a spiked dark-iron crossguard with royal-purple accents, a long crimson-wrapped grip and a skull pommel with glowing green eyes. Shown standing upright with the blade pointing up, slightly angled. Only the weapon: no person, no hands, no stand, no other objects. The whole sword visible and centered with empty margin, on a plain pure white background, no cast shadow, no text, no watermark."
+    },
+    {
+      "file": "weapons/captain-crossbow-lv2.png",
+      "kind": "weapon",
+      "status": "planned",
+      "reference": "ASSET_CHARACTER/weapons/captain-crossbow-lv1.png",
+      "prompt": "Upgrade this exact hand crossbow to level 2, keeping the same overall silhouette, size, viewing angle, framing, style, lighting and plain white background: reinforce the stock with royal-blue lacquer and polished gold fittings, make the bow arms stronger recurved steel, add a small brass sight and steel plating along the rail. Still unloaded, no bolt, no person, no hands, no text."
+    },
+    {
+      "file": "weapons/captain-crossbow-lv3.png",
+      "kind": "weapon",
+      "status": "planned",
+      "reference": "ASSET_CHARACTER/weapons/captain-crossbow-lv1.png",
+      "prompt": "Upgrade this exact hand crossbow to its ultimate level 3, keeping the same viewing angle, framing, style, lighting and plain white background: it becomes a triple crossbow with three bolt grooves fanning out (it fires three bolts at once), an ornate royal-blue and gold stock, silver bow arms with gold tips and a glowing blue gem set in the stock. Unloaded, no bolts, no person, no hands, no text."
+    },
+    {
+      "file": "weapons/guard-crossbow-lv2.png",
+      "kind": "weapon",
+      "status": "planned",
+      "reference": "ASSET_CHARACTER/weapons/guard-crossbow-lv1.png",
+      "prompt": "Upgrade this exact crossbow to level 2, keeping the same silhouette, size, viewing angle, framing, style, lighting and plain white background: a steel-reinforced stock painted royal blue, a stronger steel bow and steel bands along the stock. Unloaded, no bolt, no person, no hands, no text."
+    },
+    {
+      "file": "weapons/guard-crossbow-lv3.png",
+      "kind": "weapon",
+      "status": "planned",
+      "reference": "ASSET_CHARACTER/weapons/guard-crossbow-lv1.png",
+      "prompt": "Upgrade this exact crossbow to level 3, keeping the same viewing angle, framing, style, lighting and plain white background: a heavy arbalest with a royal-blue, gold-trimmed stock, a large thick steel bow, a winding crank (cranequin) at the back and gold fittings. Unloaded, no bolt, no person, no hands, no text."
+    }
+  ]
+}
