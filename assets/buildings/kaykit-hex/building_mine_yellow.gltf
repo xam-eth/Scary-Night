@@ -15,7 +15,7 @@
     "nodes" : [
         {
             "mesh" : 0,
-            "name" : "building_mine_blue"
+            "name" : "building_mine_yellow"
         }
     ],
     "materials" : [
@@ -32,7 +32,7 @@
     ],
     "meshes" : [
         {
-            "name" : "building_mine_blue",
+            "name" : "building_mine_yellow",
             "primitives" : [
                 {
                     "attributes" : {
@@ -130,7 +130,7 @@
     "buffers" : [
         {
             "byteLength" : 66020,
-            "uri" : "building_mine_blue.bin"
+            "uri" : "building_mine_yellow.bin"
         }
     ]
 }

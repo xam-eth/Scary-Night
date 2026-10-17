@@ -13,7 +13,7 @@ import {
   SlotBook, behaviorReady, enemyClipForState, requiredClips, selectGlbSlots, standinViolation,
 } from '../src/game/enemy3d.js';
 import { TROOP_ASSETS, TROOP_CLIPS, TROOP_LOADOUTS } from '../src/game/troop3d.js';
-import { BUILDING_KIT, BUILDING_CORE, BUILDING_MODEL } from '../src/game/buildings3d.js';
+import { BUILDING_KIT, BUILDING_CORE, BUILDING_MODEL, SAW_NODE } from '../src/game/buildings3d.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE_NAME = 'hunter_run_walk_claw_sword_shot.glb';
@@ -523,7 +523,7 @@ console.log('\nbailey buildings (KayKit Medieval Hexagon Pack, CC0):');
     Object.entries(BUILDING_MODEL).map(([type, key]) => `${type}=${key}`).join(', '));
   const saw = JSON.parse(fs.readFileSync(path.join(ROOT, BUILDING_KIT.sawmill), 'utf8'));
   ok('the lumbermill keeps its separate saw node (it spins while the sawmill works)',
-    (saw.nodes || []).some((node) => node.name === 'building_lumbermill_saw_blue'));
+    (saw.nodes || []).some((node) => node.name === SAW_NODE));
 }
 
 console.log(failures === 0 ? '\nGLB registry + environment kit + garrison troops + bailey buildings: all PASS' : `\n${failures} FAILURE(S)`);

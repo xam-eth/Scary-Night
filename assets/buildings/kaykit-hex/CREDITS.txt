@@ -19,6 +19,13 @@ upstream folder. Survival builds its buildings from these at runtime
 the keep's royal-blue livery. Ghosts (what a plot will build) are runtime
 material swaps on clones; the files stay as shipped.
 
+2026-10-17, BUILD 11 (playtest: "tidak tau build yg mana" — which building is
+which): every building type now has its own colour from the same pack, the
+upstream colour variants of the same models (same atlas, other UVs): BARRACKS
+blue, GOLD MINE yellow, SAWMILL green, BALLISTA red. The blue mine, lumbermill
+and tower base were removed; their yellow / green / red twins were fetched
+from the same commit, blob hashes checked the same way.
+
   LICENSE.txt                    LICENSE.txt (repository root)
     sha256 881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360
   barrel.bin                     decoration/props/barrel.bin
@@ -37,14 +44,18 @@ material swaps on clones; the files stay as shipped.
     sha256 67ec3d19c646ad42d2f46dbd546fa41a595d5a2a2a98a4000da09c53dcab4d86
   building_dirt.gltf             buildings/neutral/building_dirt.gltf
     sha256 dd7d0f3e4740b0465615d69024a553f87314385998431c8555788bef354aed16   — the foundation pad under every build plot (drawn with a runtime tan material)
-  building_lumbermill_blue.bin   buildings/blue/building_lumbermill_blue.bin
-    sha256 48833c0baee78d6f896fbeda6210492b303101dd5aea686b529614ebb9888247
-  building_lumbermill_blue.gltf  buildings/blue/building_lumbermill_blue.gltf
-    sha256 bf6ff5811c7e4aac10dbd32d0cb26b2dda6e31b894726bf9d567371a0fb1f1b4   — SAWMILL (every level; its saw node spins while it works)
-  building_mine_blue.bin         buildings/blue/building_mine_blue.bin
-    sha256 aaceea5aebc4039839feeade050616c9dd49e1c67d0f90442fa9a24f5aef186e
-  building_mine_blue.gltf        buildings/blue/building_mine_blue.gltf
-    sha256 fe21db192f3ee7d40bd5f64a1d3782c6301b92a6676ca8a4d43e8c3e85ab7695   — GOLD MINE (every level)
+  building_lumbermill_green.bin  buildings/green/building_lumbermill_green.bin
+    sha256 94153bb2bef6a9d72ebdd311e0e47d01a00703722c0717c6eb1fc463e5604b0c
+  building_lumbermill_green.gltf buildings/green/building_lumbermill_green.gltf
+    sha256 fbbfa52b3a53cf3aa0df0f18f7a21709e7ae0c04d24862ec0e4b710f47debc7a   — SAWMILL (every level; its saw node spins while it works). Green = wood
+  building_mine_yellow.bin       buildings/yellow/building_mine_yellow.bin
+    sha256 1d5694a6585ddeebd1662096cc91c5c77124034a50657aea5059267bc6dae1c2
+  building_mine_yellow.gltf      buildings/yellow/building_mine_yellow.gltf
+    sha256 fa6b36f80fcccd86088604be07a01f817c4dae41ab5b49bdde2c835a1694f42c   — GOLD MINE (every level). Yellow = gold
+  building_tower_base_red.bin    buildings/red/building_tower_base_red.bin
+    sha256 aadf84125da5dd0e925ed15617f8edcc5b6d024506b4a5a61f2c09cdafe73044
+  building_tower_base_red.gltf   buildings/red/building_tower_base_red.gltf
+    sha256 6180b9765ede8c378823175b18c834aadbca3e69f08738a02750572ae3f2396f   — BALLISTA tower (every level, the crossbow swivel on top). Red = it fights
   building_scaffolding.bin       buildings/neutral/building_scaffolding.bin
     sha256 eed989f5f3c82d0e251b2dd2fc7e0cc350705160892a409a337c73b5f448fa54
   building_scaffolding.gltf      buildings/neutral/building_scaffolding.gltf
@@ -61,10 +72,6 @@ material swaps on clones; the files stay as shipped.
     sha256 5a796b17dd2d9ff514ccccbc6018c1756827e33a2fd098e473c6644151e21d8c
   building_stage_C.gltf          buildings/neutral/building_stage_C.gltf
     sha256 9de7e1e3b336905b3eee72c7bc010b4fb803fa07b9adb91411d5aff0861e3446   — construction, last third
-  building_tower_base_blue.bin   buildings/blue/building_tower_base_blue.bin
-    sha256 3f2e11bc4c7cde36a01c9d5fb5dbb98d78d02e6708800fe12b7914698e34da35
-  building_tower_base_blue.gltf  buildings/blue/building_tower_base_blue.gltf
-    sha256 60c9ea992b4dd584f57183a6c9b89619ff36eda2c81be71cefdb8704bdf84f4a   — BALLISTA tower (the ballista on top is crossbow_2handed, see ../../troops/kaykit/CREDITS.txt)
   building_well_blue.bin         buildings/blue/building_well_blue.bin
     sha256 5c50811c6666df2a9b43afc1a83ccccf19678c0f8e40c3ca0bf341722dc5133f
   building_well_blue.gltf        buildings/blue/building_well_blue.gltf

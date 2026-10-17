@@ -53,12 +53,17 @@ const BUTTON_COLORS = Object.freeze({
   gray: ['#a3a8ba', '#6c7189', '#43485c'],
 });
 
+// color: each type's own colour (BUILD 11, playtest 2026-10-17: "tidak tau
+// build yg mana") — the same as its kit model's roof and its circle on the
+// ground (buildings3d.js BUILDING_COLOR)
 const BUILD_META = Object.freeze({
-  mine: { icon: 'mine', name: 'GOLD MINE' },      // digs gold during the night
-  sawmill: { icon: 'sawmill', name: 'SAWMILL' },  // wood every dawn + door planks
-  barracks: { icon: 'barracks', name: 'BARRACKS' },// houses soldiers = door guards
-  tower: { icon: 'tower', name: 'BALLISTA' },     // shoots through its room's door
+  mine: { icon: 'mine', name: 'GOLD MINE', color: '#ffc22e' },      // digs gold during the night
+  sawmill: { icon: 'sawmill', name: 'SAWMILL', color: '#4cc35e' },  // wood every dawn + door planks
+  barracks: { icon: 'barracks', name: 'BARRACKS', color: '#3e7bff' },// houses soldiers = gate guards
+  tower: { icon: 'tower', name: 'BALLISTA', color: '#ff5640' },     // shoots over the wall
 });
+/** How many of the nearest empty circles show their name (the rest: the icon). */
+const PLOT_NAMES_NEAR = 3;
 
 /**
  * What a building does at one level, as icon rows (main row first), each
@@ -811,7 +816,7 @@ function dayAction(mode, here) {
   if (here.locked) {
     const need = mode.slotUnlockLevel(here.id);
     return {
-      icon: meta.icon, name: meta.name, level: 0, maxLevel: BUILDING_MAX_LEVEL, locked: need,
+      icon: meta.icon, name: meta.name, tint: meta.color, level: 0, maxLevel: BUILDING_MAX_LEVEL, locked: need,
       rows: buildingRows(mode, here.type, 1).map((row) => ({ icon: row.icon, now: row.value, next: null, when: row.when })),
       main: { label: `KEEP Lv${need}`, icon: 'lock', id: `LOCKED ${here.type}`, disabled: true, color: 'gray' },
     };
@@ -821,7 +826,7 @@ function dayAction(mode, here) {
     // the builder is at work on this circle: the button shows his progress
     const pct = 1 - clamp(job.remaining / Math.max(0.01, job.duration), 0, 1);
     return {
-      icon: meta.icon, name: meta.name, level: here.built ? mode.buildingLevel(here.id) : 0, maxLevel: BUILDING_MAX_LEVEL,
+      icon: meta.icon, name: meta.name, tint: meta.color, level: here.built ? mode.buildingLevel(here.id) : 0, maxLevel: BUILDING_MAX_LEVEL,
       rows: buildingRows(mode, job.type, job.targetLevel || 1).map((row) => ({ icon: row.icon, now: row.value, next: null, when: row.when })),
       main: { label: `BUILDING ${Math.round(pct * 100)}%`, icon: 'hammer', id: 'BUILDING', disabled: true, color: 'green' },
     };
@@ -829,7 +834,7 @@ function dayAction(mode, here) {
   if (!here.built) {
     const spec = SURVIVAL_BUILDINGS[here.type];
     return {
-      icon: meta.icon, name: meta.name, level: 0, maxLevel: BUILDING_MAX_LEVEL,
+      icon: meta.icon, name: meta.name, tint: meta.color, level: 0, maxLevel: BUILDING_MAX_LEVEL,
       rows: buildingRows(mode, here.type, 1).map((row) => ({ icon: row.icon, now: row.value, next: null, when: row.when })),
       main: { label: 'BUILD', icon: 'hammer', id: `BUILD ${here.type}`, cost: spec, color: 'green', disabled: busy || !affordable(mode, spec), run: () => mode.startBuild(here.type, here.id) },
     };
@@ -840,7 +845,7 @@ function dayAction(mode, here) {
   const nowRows = buildingRows(mode, here.built, level);
   const nextRows = max ? nowRows : buildingRows(mode, here.built, level + 1);
   return {
-    icon: meta.icon, name: meta.name, level, maxLevel: BUILDING_MAX_LEVEL,
+    icon: meta.icon, name: meta.name, tint: meta.color, level, maxLevel: BUILDING_MAX_LEVEL,
     rows: nowRows.map((row, i) => ({ icon: row.icon, now: row.value, next: max ? null : nextRows[i].value, when: row.when })),
     main: max
       ? { label: 'MAX', icon: 'star', id: 'UPGRADE MAX', disabled: true, color: 'gold' }
@@ -889,7 +894,15 @@ function drawDockInfo(game, ctx, box, action) {
   const x = box.x + 8;
   const row1 = box.y + Math.round(box.h * 0.31);
   const row2 = box.y + Math.round(box.h * 0.72);
-  drawSurvivalIcon(ctx, action.icon, x + 10, row1, 20);
+  if (action.tint) {
+    // the building's own colour behind its icon, as on its circle and roof
+    ctx.save();
+    ctx.beginPath(); ctx.arc(x + 10, row1, 11.5, 0, TAU);
+    ctx.fillStyle = action.tint; ctx.fill();
+    ctx.lineWidth = 1.8; ctx.strokeStyle = INK; ctx.stroke();
+    ctx.restore();
+  }
+  drawSurvivalIcon(ctx, action.icon, x + 10, row1, action.tint ? 17 : 20);
   let nameSize = 12;
   const pipW = action.locked ? 34 : action.maxLevel > 1 ? action.maxLevel * 10 + 4 : 0;
   const room = box.w - 32 - pipW - 8;
@@ -973,11 +986,40 @@ function drawStatusPill(ctx, x, y, status, alpha = 1) {
   const tw = statusPillWidth(ctx, status);
   ctx.save();
   ctx.globalAlpha = alpha;
-  drawPanel(ctx, x - tw / 2, y - 11, tw, 22, { radius: 11, top: '#3b3570', bottom: '#211c45', lineWidth: 1.8, highlight: false, shadow: false });
+  // the building's own colour as the rim (BUILD 11): which building says it
+  drawPanel(ctx, x - tw / 2, y - 11, tw, 22, { radius: 11, top: '#3b3570', bottom: '#211c45', lineWidth: status.tint ? 2.6 : 1.8, stroke: status.tint || INK, highlight: false, shadow: false });
   ctx.restore();
   drawSurvivalIcon(ctx, status.icon, x - tw / 2 + 12, y, 16, { alpha });
   drawLabel(ctx, status.text, x - tw / 2 + 22, y + 1, size, status.color, { align: 'left', outline: 0, alpha });
   if (status.tail) drawSurvivalIcon(ctx, status.tail, x + tw / 2 - 11, y, 13, { alpha });
+}
+
+/**
+ * An empty circle's label, on its pad (BUILD 11): the building's icon on its
+ * own colour, and its name when `full`. Returns the box it covers.
+ */
+function drawPlotLabel(ctx, x, y, icon, name, color, full) {
+  if (!full) {
+    ctx.save();
+    ctx.beginPath(); ctx.arc(x, y, 12, 0, TAU);
+    ctx.fillStyle = color; ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = INK; ctx.stroke();
+    ctx.restore();
+    drawSurvivalIcon(ctx, icon, x, y, 17);
+    return { x: x - 18, y: y - 18, w: 36, h: 36 };
+  }
+  const size = 11;
+  const pw = measureLabel(ctx, name, size) + 36, ph = 24;
+  const left = x - pw / 2;
+  drawPanel(ctx, left, y - ph / 2, pw, ph, { radius: 12, top: '#2e2b58', bottom: '#1a1736', lineWidth: 2, stroke: INK, highlight: false, shadow: false });
+  ctx.save();
+  ctx.beginPath(); ctx.arc(left + 13, y, 10, 0, TAU);
+  ctx.fillStyle = color; ctx.fill();
+  ctx.lineWidth = 1.6; ctx.strokeStyle = INK; ctx.stroke();
+  ctx.restore();
+  drawSurvivalIcon(ctx, icon, left + 13, y, 15);
+  drawLabel(ctx, name, left + 27, y + 1, size, '#ffffff', { align: 'left', outline: 2 });
+  return { x: left, y: y - ph / 2, w: pw, h: ph };
 }
 
 function drawDayWorldLayer(game, ctx, w, h, view) {
@@ -986,41 +1028,49 @@ function drawDayWorldLayer(game, ctx, w, h, view) {
   const p = game.player;
   const here = mode.dayContext();
   let nearestOff = null, nearestD = Infinity;
+  // BUILD 11 (playtest 2026-10-17: "lebar benteng dengan component di dalam
+  // terlihat sangat padat ... tidak tau build yg mana"): only the circles
+  // under the keep's banner show, each with a small label ON its pad in its
+  // building's colour; the few nearest the captain spell the name, the rest
+  // show the icon. A locked circle shows nothing until the banner reaches
+  // its yard (no lock badges over the bailey).
+  const empty = [];
   for (const point of mode.dayPoints()) {
     if (point.kind === 'keep' || point.kind === 'armory') continue;
     if (here && here.id === point.id) continue;
+    if (point.locked) continue;
     const built = point.kind === 'slot' ? !!point.built : mode.gateBuilt;
-    let icon = null, chip = '#ffffff', tag = null;
-    if (point.kind === 'gate') { if (built) continue; icon = 'gate'; }
-    else if (point.locked) { icon = 'lock'; chip = '#c9ccd8'; tag = `Lv${mode.slotUnlockLevel(point.id)}`; }
-    else if (!built) icon = (BUILD_META[point.type] || BUILD_META.barracks).icon;
-    else if (point.level < BUILDING_MAX_LEVEL && affordable(mode, mode.upgradeCost(point.id))) { icon = 'up'; chip = '#fff3c4'; }
-    if (!icon) continue;
-    const height = point.kind === 'slot' ? chipHeight(point.type) : 100;
-    const at = project(game, point.x, point.y, height);
-    const inView = at.x > view.x0 && at.x < view.x1 && at.y > view.y0 && at.y < view.y1;
-    if (!inView) {
-      if (!point.locked && !built) {
-        const d = Math.hypot(point.x - p.x, point.y - p.y);
-        if (d < nearestD) { nearestD = d; nearestOff = { point, at, icon }; }
-      }
+    if (point.kind === 'gate' || !built) {
+      if (built) continue;
+      const meta = point.kind === 'gate' ? { icon: 'gate', name: 'BARRICADE', color: '#d9a75f' } : (BUILD_META[point.type] || BUILD_META.barracks);
+      empty.push({ point, meta, d: Math.hypot(point.x - p.x, point.y - p.y) });
       continue;
     }
+    // a building that can go up a level: the arrow over its roof
+    if (!(point.level < BUILDING_MAX_LEVEL && affordable(mode, mode.upgradeCost(point.id)))) continue;
+    const at = project(game, point.x, point.y, chipHeight(point.type));
+    if (!(at.x > view.x0 && at.x < view.x1 && at.y > view.y0 && at.y < view.y1)) continue;
     const bob = Math.sin(t * 4 + point.x * 0.01) * 2;
-    const r = point.locked ? 13 : 16;
     ctx.save();
-    ctx.globalAlpha = point.locked ? 0.85 : 1;
-    ctx.beginPath(); ctx.arc(at.x, at.y + bob, r, 0, TAU);
-    ctx.fillStyle = chip; ctx.fill();
+    ctx.beginPath(); ctx.arc(at.x, at.y + bob, 15, 0, TAU);
+    ctx.fillStyle = '#fff3c4'; ctx.fill();
     ctx.lineWidth = 2.2; ctx.strokeStyle = INK; ctx.stroke();
     ctx.restore();
-    drawSurvivalIcon(ctx, icon, at.x, at.y + bob, r * 1.45);
-    if (tag) {
-      drawPanel(ctx, at.x - 15, at.y + bob + r - 5, 30, 14, { radius: 7, top: '#8a90a6', bottom: '#5c6278', lineWidth: 1.6, highlight: false, shadow: false });
-      drawLabel(ctx, tag, at.x, at.y + bob + r + 2, 9, '#ffffff', { outline: 0 });
-    }
+    drawSurvivalIcon(ctx, 'up', at.x, at.y + bob, 21);
     addHit(game, { x: at.x - 24, y: at.y + bob - 24, w: 48, h: 48 }, `walk:${point.id}`, () => mode.walkTo(point.x, point.y), false, true);
   }
+  empty.sort((a, b) => a.d - b.d);
+  empty.forEach((row, i) => {
+    const { point, meta } = row;
+    const at = project(game, point.x, point.y, point.kind === 'gate' ? 60 : 16);
+    const inView = at.x > view.x0 && at.x < view.x1 && at.y > view.y0 && at.y < view.y1;
+    if (!inView) {
+      if (row.d < nearestD) { nearestD = row.d; nearestOff = { point, at, icon: meta.icon }; }
+      return;
+    }
+    const box = drawPlotLabel(ctx, at.x, at.y, meta.icon, meta.name, meta.color, i < PLOT_NAMES_NEAR);
+    addHit(game, { x: box.x - 4, y: box.y - 8, w: box.w + 8, h: box.h + 16 }, `walk:${point.id}`, () => mode.walkTo(point.x, point.y), false, true);
+  });
   // what every built building does, at a glance (R19; playtest 2026-10-16:
   // "bangunan yg di build juga tidak berfungsi"): a mine's gold a night, a
   // sawmill's planks at dawn, the soldiers a barracks houses, a ballista's
@@ -1034,7 +1084,8 @@ function drawDayWorldLayer(game, ctx, w, h, view) {
     if (!(at.x > view.x0 && at.x < view.x1 && at.y > view.y0 && at.y < view.y1)) continue;
     const arrow = !(here && here.id === point.id) && point.level < BUILDING_MAX_LEVEL && affordable(mode, mode.upgradeCost(point.id));
     const pw = statusPillWidth(ctx, status);
-    drawStatusPill(ctx, arrow ? at.x + 22 + pw / 2 : at.x, at.y + (arrow ? 0 : 2), status, here && here.id === point.id ? 1 : 0.94);
+    const meta = BUILD_META[point.type];
+    drawStatusPill(ctx, arrow ? at.x + 22 + pw / 2 : at.x, at.y + (arrow ? 0 : 2), { ...status, tint: meta && meta.color }, here && here.id === point.id ? 1 : 0.94);
   }
   // nothing to build in view: one pointer to the nearest empty circle
   if (nearestOff && !here) {

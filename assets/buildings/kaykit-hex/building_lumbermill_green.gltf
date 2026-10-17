@@ -15,7 +15,7 @@
     "nodes" : [
         {
             "mesh" : 0,
-            "name" : "building_lumbermill_saw_blue",
+            "name" : "building_lumbermill_saw_green",
             "translation" : [
                 0.2799956798553467,
                 0.28000104427337646,
@@ -24,11 +24,11 @@
         },
         {
             "mesh" : 1,
-            "name" : "building_lumbermill_top_blue",
+            "name" : "building_lumbermill_top_green",
             "translation" : [
                 -0.14000844955444336,
                 1.0500000715255737,
-                -0.1399998813867569
+                -0.1400003433227539
             ]
         },
         {
@@ -37,7 +37,7 @@
                 1
             ],
             "mesh" : 2,
-            "name" : "building_lumbermill_blue"
+            "name" : "building_lumbermill_green"
         }
     ],
     "materials" : [
@@ -54,7 +54,7 @@
     ],
     "meshes" : [
         {
-            "name" : "building_lumbermill_saw_blue",
+            "name" : "building_lumbermill_saw_green",
             "primitives" : [
                 {
                     "attributes" : {
@@ -68,7 +68,7 @@
             ]
         },
         {
-            "name" : "building_lumbermill_top_blue",
+            "name" : "building_lumbermill_top_green",
             "primitives" : [
                 {
                     "attributes" : {
@@ -82,7 +82,7 @@
             ]
         },
         {
-            "name" : "building_lumbermill_blue",
+            "name" : "building_lumbermill_green",
             "primitives" : [
                 {
                     "attributes" : {
@@ -296,7 +296,7 @@
     "buffers" : [
         {
             "byteLength" : 166284,
-            "uri" : "building_lumbermill_blue.bin"
+            "uri" : "building_lumbermill_green.bin"
         }
     ]
 }

@@ -245,12 +245,13 @@ export class Fortress extends Mansion {
   }
 
   /**
-   * The bailey's life: stores along the curtain wall, a well, a market
-   * table. Laid out with the build plots (survival.js PLOT, checked by
-   * tools/survival-map.mjs): in rows against the wall between the plots, in
-   * the same point symmetry through the keep, never on a plot, a gate's way
-   * in or a ballista's line of fire (playtest 2026-10-17: "letak build
-   * bangunan masih belum rapi" — barrels stood on the plots).
+   * The bailey's life: a pile of stores by the main gate and its twin by
+   * the north gate, and a well (BUILD 11: the rest went, it read as
+   * clutter). Laid out with the build plots (survival.js PLOT, checked by
+   * tools/survival-map.mjs): against the wall between the plots, in the same
+   * point symmetry through the keep, never on a plot, a gate's way in or a
+   * ballista's line of fire (playtest 2026-10-17: "letak build bangunan
+   * masih belum rapi" — barrels stood on the plots).
    */
   furnish() {
     const put = (cx, cy, w, h, type) => this.addF(cx - w / 2, cy - h / 2, w, h, type, { room: this.findRoom(cx, cy) });
@@ -258,19 +259,15 @@ export class Fortress extends Mansion {
     const crates = (x, y) => put(x, y, 60, 50, 'crates');
     // s = 1: the south and west walls; s = -1: their twins on the north and
     // east walls (x, y -> -x, -y)
+    // BUILD 11 (playtest 2026-10-17: "lebar benteng dengan component di
+    // dalam terlihat sangat padat"): the stores along the walls (16 barrels
+    // and crates) and the market table are gone; one pile stays by the main
+    // gate and its twin by the north gate, and the well
     for (const s of [1, -1]) {
       // beside the main gate's west tower / the north gate's east tower
-      barrel(-215 * s, 425 * s); barrel(-250 * s, 425 * s); crates(-320 * s, 416 * s);
-      // the far corner of the same wall, short of the corner tower
-      barrel(455 * s, 425 * s); crates(520 * s, 416 * s);
-      // the west wall between the postern and the gate tower / the east wall
-      // (clear of the postern's guard platform and its ladder, BUILD 10)
-      barrel(-600 * s, -192 * s);
-      // the west wall below the gate tower / the east wall above it
-      crates(-598 * s, 235 * s); barrel(-600 * s, 300 * s);
+      barrel(-230 * s, 425 * s); crates(-300 * s, 416 * s);
     }
     put(300, -250, 96, 96, 'well');           // the well (KayKit), in the northeast yard
-    put(-310, 245, 150, 56, 'longTable');     // the market table, its twin
   }
 
   /** Lighting is the survival mode's (the keep's lamp); no house fixtures. */

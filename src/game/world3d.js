@@ -11,7 +11,7 @@ import { Valen3D } from './valen3d.js';
 import { Enemy3D, ENEMY_HEIGHT } from './enemy3d.js';
 import { Troop3D } from './troop3d.js';
 import { Crowd3D } from './crowd3d.js';
-import { Buildings3D, BUILDING_MODEL } from './buildings3d.js';
+import { Buildings3D, BUILDING_MODEL, BUILDING_COLOR, SAW_NODE } from './buildings3d.js';
 import { ROOM_MARKS } from './narrative.js';
 import { ROOM } from './mansion.js';
 import { weaponById } from './weapons.js';
@@ -1018,7 +1018,7 @@ class World3DRuntime {
     const unit = KIT_FOOTPRINT[type] / Math.max(size.x, size.z);
     group.userData = { kit: true, type, unit, height: size.y, half: { x: size.x / 2, z: size.z / 2 } };
     if (type === 'sawmill') {
-      const saw = body.getObjectByName('building_lumbermill_saw_blue');
+      const saw = body.getObjectByName(SAW_NODE);
       if (saw) { group.userData.saw = saw; group.userData.sawAxis = 'x'; }
     } else if (type === 'mine') {
       // a cart of gold rolls out along the mine's rails and back while it digs
@@ -1687,9 +1687,10 @@ class World3DRuntime {
   }
 
   /**
-   * Every build circle on the floor, with the ghost of what it builds; the
+   * Every build circle under the banner on the floor in its building's
+   * colour, with the ghost of what it builds where the captain stands; the
    * keep, the armory and the barricade get a ring while the Hunter is at
-   * them. Circles show by day only; beyond the banner they are grey.
+   * them. Circles show by day only; beyond the banner none (BUILD 11).
    */
   _syncSurvivalCircles(game, mode) {
     const day = mode.phase === 'day' && game.screen === 'playing' && !mode.rewardPending();
@@ -1706,12 +1707,14 @@ class World3DRuntime {
         rec = { ring: this._makeSurvivalCircle(point.kind === 'slot' ? 58 : 50), ghost: null };
         this.survivalCircles.set(point.id, rec);
       }
-      // every plot stands on its foundation pad, day and night, so the
-      // bailey reads as laid out: the pack's dirt hex (the armory has one)
+      // every plot under the banner stands on its foundation pad, day and
+      // night, so the bailey reads as laid out: the pack's dirt hex (the
+      // armory has one). A locked plot's pad stays hidden until the banner
+      // reaches its yard (BUILD 11: "terlihat sangat padat")
       if (kit && (point.kind === 'slot' || point.kind === 'armory')) {
         let pad = this.survivalPads.get(point.id);
         if (!pad) { pad = this._makeKitPad(point.kind === 'armory' ? 136 : PLOT_PAD_ACROSS); this.survivalPads.set(point.id, pad); }
-        if (pad) { pad.visible = true; pad.position.set(point.x, 0, point.y); }
+        if (pad) { pad.visible = !point.locked || !!point.built; pad.position.set(point.x, 0, point.y); }
       }
       // a ghost made before the kit arrived is rebuilt from it
       if (rec.ghost && kit && !rec.ghost.userData.kit && point.kind === 'slot') {
@@ -1722,20 +1725,25 @@ class World3DRuntime {
       const built = point.kind === 'slot' ? !!point.built : point.kind === 'gate' ? mode.gateBuilt : point.kind === 'armory';
       const working = mode.builderJob && ((mode.builderJob.slotId && mode.builderJob.slotId === point.id)
         || (point.kind === 'gate' && mode.builderJob.kind === 'gate') || (point.kind === 'armory' && mode.builderJob.kind === 'hunter'));
+      // BUILD 11: a circle in its building's colour (the same as the roof it
+      // will get and its label); none over a locked plot
+      const tint = point.kind === 'slot' ? (BUILDING_COLOR[point.type] || 0xffffff) : 0xffffff;
       const ring = rec.ring;
-      ring.visible = day && (!built || near) && !working;
+      ring.visible = day && (!built || near) && !working && !point.locked;
       if (ring.visible) {
         ring.position.set(point.x, point.kind === 'slot' || point.kind === 'armory' ? this._padTop() + 1.6 : 2.4, point.y);
         const pulse = near ? 1 + 0.06 * Math.sin(t * 6) : 1;
         ring.scale.set(pulse, pulse, 1);
-        ring.material.color.setHex(point.locked ? 0x9097a6 : built ? 0xffd24a : near ? 0xfff2b0 : 0xffffff);
-        ring.material.opacity = point.locked ? 0.42 : near ? 1 : 0.78;
+        ring.material.color.setHex(built ? 0xffd24a : tint);
+        ring.material.opacity = near ? 1 : 0.7;
       }
       if (point.kind === 'armory') continue;
+      // the see-through model of what a circle builds only where the captain
+      // stands (one, not fifteen: BUILD 11)
+      const showGhost = day && !built && !working && near && !point.locked;
       const ghostType = point.kind === 'gate' ? 'gate' : point.type;
-      if (!rec.ghost && ghostType) rec.ghost = this._makeSurvivalGhost(ghostType);
+      if (!rec.ghost && ghostType && showGhost) rec.ghost = this._makeSurvivalGhost(ghostType);
       if (!rec.ghost) continue;
-      const showGhost = day && !built && !working;
       rec.ghost.visible = showGhost;
       if (showGhost) {
         if (point.kind === 'gate') {
@@ -1746,8 +1754,8 @@ class World3DRuntime {
           rec.ghost.position.set(point.x, this._padTop(), point.y);
         }
         const m = rec.ghost.userData.ghostMaterial;
-        m.color.setHex(point.locked ? 0x8a8f9c : 0x8cc0ff);
-        m.opacity = point.locked ? 0.16 : near ? 0.62 + 0.08 * Math.sin(t * 5) : 0.36;
+        m.color.setHex(point.kind === 'slot' ? tint : 0x8cc0ff);
+        m.opacity = 0.5 + 0.08 * Math.sin(t * 5);
       }
     }
     for (const [id, rec] of this.survivalCircles) {

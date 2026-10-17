@@ -8,13 +8,14 @@
  * tepat masih berupa prototype harus cari dan download asset dari platform
  * penyedia asset free"). They are now Kay Lousberg's Medieval Hexagon Pack
  * (assets/buildings/kaykit-hex/CREDITS.txt), the same author as the
- * garrison's Knight and the fortress' kit, in the blue team colour that
- * matches the keep's livery:
+ * garrison's Knight and the fortress' kit. Each type has its own colour of
+ * the pack (BUILD 11, playtest 2026-10-17: "tidak tau build yg mana"), the
+ * same one its circle, its label and its card use (BUILD_COLOR):
  *
- *   BARRACKS   building_barracks_blue
- *   SAWMILL    building_lumbermill_blue   (its saw node spins while it works)
- *   GOLD MINE  building_mine_blue         (+ the pack's wheelbarrow as a cart)
- *   BALLISTA   building_tower_base_blue   + the Adventurers pack's
+ *   BARRACKS   building_barracks_blue      blue: soldiers, the keep's livery
+ *   SAWMILL    building_lumbermill_green   green: wood (its saw node spins while it works)
+ *   GOLD MINE  building_mine_yellow        yellow: gold (+ the pack's wheelbarrow as a cart)
+ *   BALLISTA   building_tower_base_red     red: it fights, + the Adventurers pack's
  *              crossbow_2handed on a swivel on top (it aims and recoils)
  *   plot pad   building_dirt              (the foundation under every plot)
  *   building   building_stage_A / B / C   (a build's thirds)
@@ -36,9 +37,9 @@ const DIR = 'assets/buildings/kaykit-hex/';
 
 export const BUILDING_KIT = Object.freeze({
   barracks: `${DIR}building_barracks_blue.gltf`,
-  sawmill: `${DIR}building_lumbermill_blue.gltf`,
-  mine: `${DIR}building_mine_blue.gltf`,
-  towerBase: `${DIR}building_tower_base_blue.gltf`,
+  sawmill: `${DIR}building_lumbermill_green.gltf`,
+  mine: `${DIR}building_mine_yellow.gltf`,
+  towerBase: `${DIR}building_tower_base_red.gltf`,
   ballista: 'assets/troops/kaykit/crossbow_2handed.gltf',
   pad: `${DIR}building_dirt.gltf`,
   stageA: `${DIR}building_stage_A.gltf`,
@@ -64,6 +65,20 @@ export const BUILDING_CORE = Object.freeze(['barracks', 'sawmill', 'mine', 'towe
 
 /** Which kit model each building type stands on. */
 export const BUILDING_MODEL = Object.freeze({ barracks: 'barracks', sawmill: 'sawmill', mine: 'mine', tower: 'towerBase' });
+
+/**
+ * Each building type's colour (BUILD 11): its kit model's roof, its circle on
+ * the ground, the name label over the circle and its card in the dock, so a
+ * player tells a gold mine from a ballista at a glance.
+ */
+export const BUILDING_COLOR = Object.freeze({
+  barracks: 0x3e7bff,
+  mine: 0xffc22e,
+  sawmill: 0x4cc35e,
+  tower: 0xff5640,
+});
+/** The saw node of the lumbermill (it spins while the sawmill works). */
+export const SAW_NODE = 'building_lumbermill_saw_green';
 
 class BuildingKit {
   constructor() {

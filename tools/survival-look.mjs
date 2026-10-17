@@ -8,7 +8,7 @@
  * each frame (horde kinds, GLB guards, effects).
  *
  * Usage: node tools/survival-look.mjs [--out=/tmp/look] [--dpr=2]
- *        [--port=8123] [--only=gate,fight,outside,posts,wide,south,day,build]
+ *        [--port=8123] [--only=gate,fight,outside,posts,wide,south,day0,day,build]
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -158,6 +158,20 @@ await shot('south', () => {
   window.__lkFast(() => m.phase === 'night' && m.elapsed < 46);
   window.__lkReal(12);
   return { t: +m.elapsed.toFixed(1), alive: m.aliveEnemies(), kills: m.nightStats.kills, ...window.__lkDiag() };
+});
+// the first day: nothing built yet — where does a player look? (BUILD 11)
+await shot('day0', () => {
+  const g = window.__LN; const m = g.survival;
+  m.restart();
+  m.completeNight();
+  window.__lkReal(2);
+  if (m.rewardPending && m.rewardPending()) m.ackRewards();
+  g.survivalBakeDirty = true;
+  const home = m.hunterHome();
+  g.player.x = home.x; g.player.y = home.y;
+  g.renderer.snapCamera && g.renderer.snapCamera(g.player.x, g.player.y);
+  window.__lkReal(20);
+  return { phase: m.phase, day: m.day, ...window.__lkDiag() };
 });
 await shot('day', () => {
   const g = window.__LN; const m = g.survival;

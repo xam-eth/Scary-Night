@@ -15,7 +15,7 @@
     "nodes" : [
         {
             "mesh" : 0,
-            "name" : "building_tower_base_blue"
+            "name" : "building_tower_base_red"
         }
     ],
     "materials" : [
@@ -32,7 +32,7 @@
     ],
     "meshes" : [
         {
-            "name" : "building_tower_base_blue",
+            "name" : "building_tower_base_red",
             "primitives" : [
                 {
                     "attributes" : {
@@ -130,7 +130,7 @@
     "buffers" : [
         {
             "byteLength" : 81708,
-            "uri" : "building_tower_base_blue.bin"
+            "uri" : "building_tower_base_red.bin"
         }
     ]
 }

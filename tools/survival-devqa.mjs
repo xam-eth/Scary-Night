@@ -414,7 +414,8 @@ try {
   const dayJob = await page.evaluate(() => { const m = window.__LN.survival; return m.builderJob ? { kind: m.builderJob.kind, slot: m.builderJob.slotId } : null; });
   check('day (P1): the stick walks the Hunter by day; in a circle ONE contextual BUILD button shows (no side panel, no "+"); a real tap on it starts the builder',
     dayWalk > 40 && dayAt.gameplay && dayAt.context === 'south:tower' && dayAt.build && !dayAt.build.disabled
-      && dayAt.oldLabels.length === 0 && dayAt.tallPanels === 0 && dayAt.circles >= 3 && dayAt.ghosts >= 3
+      // BUILD 11 ("terlihat sangat padat"): one ghost, the circle he stands in
+      && dayAt.oldLabels.length === 0 && dayAt.tallPanels === 0 && dayAt.circles >= 3 && dayAt.ghosts === 1
       && dayJob && dayJob.kind === 'building' && dayJob.slot === 'south:tower',
     { stickMoved: Math.round(dayWalk), ...dayAt, job: dayJob });
   await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
