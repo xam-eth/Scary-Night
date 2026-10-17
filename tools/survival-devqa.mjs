@@ -216,19 +216,25 @@ try {
   const shots0 = await page.evaluate(() => {
     const g = window.__LN;
     g.survival.restart();
-    // the Hunter stands behind the gate wave 1 claws (K1 bailey: Night 1 opens
-    // at the north gate, across the bailey from the camera), so he and the
-    // guards shoot through its slit: enough shots to exercise the pool.
+    // the captain holds the gate wave 1 claws (K1 bailey: Night 1 opens at
+    // the north gate, across the bailey from the camera). BUILD 10: a shut
+    // gate stops every shot, so he steps into its mouth (it swings open), 2 s
+    // at a time with 3 s back inside to get his breath; the guards shoot from
+    // its towers: enough shots to exercise the pool.
     const door = g.survival.entranceById('northGate');
     const ix = door.inside.x - door.x, iy = door.inside.y - door.y, il = Math.hypot(ix, iy) || 1;
-    g.player.x = door.inside.x + ix / il * 60; g.player.y = door.inside.y + iy / il * 60;
+    window.__hold = (k) => {
+      const back = k % 20 < 8 ? 20 : 150;
+      g.player.x = door.x + ix / il * back; g.player.y = door.y + iy / il * back;
+    };
+    window.__hold(0);
     return g.stats.shotsFired || 0;
   });
   // 20 s of night with a render every 0.25 s (one render per __step call;
   // bolts fly >= 0.3 s), so bolts are created, retired and reused the way they
   // are in a session. Separate evaluate calls keep each CDP call short on
   // software WebGL.
-  for (let k = 0; k < 80; k++) await page.evaluate(() => window.__step(15));
+  for (let k = 0; k < 80; k++) await page.evaluate((k) => { window.__hold(k); window.__step(15); }, k);
   const pool = await page.evaluate((shots0) => {
     const g = window.__LN;
     const W = window.__W;

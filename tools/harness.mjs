@@ -1205,6 +1205,8 @@ async function runSurvivalMilestone() {
     const pin = (guard, at) => {
       guard.x = at.x; guard.y = at.y; guard.path = null; guard.moving = false;
       guard.post = { key: 'test', x: at.x, y: at.y, doorId: null };
+      // off any ladder (BUILD 10: gate posts are up on the wall)
+      guard.lift = 0; guard.liftPost = null; guard.climbing = false;
     };
     // "dark" = beyond the keep's banner (NE yard at keep Lv1), "lit" = under it (west road)
     const kc = m.roomCenter(FORT.NE);

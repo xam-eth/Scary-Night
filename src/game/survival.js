@@ -2362,6 +2362,12 @@ export class SurvivalMode {
   }
 
   _downGuard(guard) {
+    // claws never reach one up on the wall; dropped there anyway (a script),
+    // it lies at the foot of its ladder
+    if (guard.liftPost) {
+      guard.x = guard.liftPost.foot.x; guard.y = guard.liftPost.foot.y;
+      guard.lift = 0; guard.liftPost = null; guard.climbing = false;
+    }
     guard.down = true;
     guard.hp = 0;
     guard.downT = 0;
