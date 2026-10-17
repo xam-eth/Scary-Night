@@ -747,6 +747,20 @@ const ICONS = {
     rr(ctx, -0.09, -0.4, 0.18, 0.7, 0.06); ctx.fill();
     ctx.beginPath(); ctx.arc(0, 0.56, 0.1, 0, Math.PI * 2); ctx.fill();
   },
+  /** Drag the view: a fingertip with arrows either way. */
+  pan(ctx) {
+    circle(ctx, 0, 0, 0.92, 'rgba(90,120,255,0.22)');
+    ctx.fillStyle = '#ffffff';
+    for (const [x, a] of [[-0.62, Math.PI], [0.62, 0]]) {
+      ctx.save();
+      ctx.translate(x, 0);
+      ctx.rotate(a);
+      ctx.beginPath(); ctx.moveTo(0.26, 0); ctx.lineTo(-0.1, -0.26); ctx.lineTo(-0.1, 0.26); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      ctx.restore();
+    }
+    circle(ctx, 0, 0.04, 0.32, '#ffd9b0');
+  },
   arrow(ctx) {
     ctx.beginPath();
     ctx.moveTo(0.95, 0); ctx.lineTo(-0.3, -0.72); ctx.lineTo(-0.1, 0); ctx.lineTo(-0.3, 0.72);

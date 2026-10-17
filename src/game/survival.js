@@ -6,15 +6,31 @@
  * resources, builder queue, night waves, and rewards.
  */
 
-import { approachAngle, clamp, damp, dist, lerp, rand, writeSave } from '../core/util.js';
+import { ISO_CAMERA, approachAngle, clamp, damp, dist, lerp, rand, writeSave } from '../core/util.js';
 import { SURVIVAL_TUNING, SURVIVAL_ACTOR_SCALE } from '../core/config.js';
 import { CrowdBody, Zombie, outwardOf, CROWD, ESTATE } from './enemies.js';
 import { ROOM } from './mansion.js';
 import { FORT } from './fortress.js';
 
 const RESOURCE_CAP = 999;
-/** The camera's extra closeness over the 0.7 bailey's framing (frameMul). */
-const FRAME_CLOSER = 1.3;
+/**
+ * The camera's extra closeness over the 0.7 bailey's framing (frameMul).
+ * 1.3 (2026-10-17 visual pass) read as too close on a phone: "camera terlalu
+ * dekat harus jauhkan sedikit jarak nya" — 1.1 shows ~18% more bailey each
+ * way, and the player can drag the view and pinch it (SURVIVAL_CAMERA).
+ */
+const FRAME_CLOSER = 1.1;
+/**
+ * The player's own hand on the camera: a drag on the free half of the screen
+ * (the stick lives on the other half) slides the view, a pinch or the mouse
+ * wheel zooms it within `zoom`, and it eases back onto the captain once he
+ * walks. `reach`: how far past the bailey's edge the view centre may go.
+ */
+export const SURVIVAL_CAMERA = Object.freeze({
+  zoom: Object.freeze([0.8, 1.3]),
+  reach: 160,
+  recenter: 3.2,      // 1/s the pan eases out while the captain walks
+});
 const SAVE_EVERY = 2.5;
 // Night pacing: the first rank hits a door within seconds, so Night 1 has
 // action near the Hunter before the halfway mark.
@@ -106,29 +122,90 @@ export const TERRITORY = Object.freeze({
  * Typed build circles (P1, "walk into a circle, tap BUILD"). Every circle is
  * one building type, drawn on the ground as that building's ghost, so what
  * and where read without text. Every yard of the bailey has one economy
- * circle (at `at`, a fraction of the yard: off the gate road, so the road to
- * the keep stays open) and, when a gate opens into it, a ballista circle
- * inside that gate. Ids: the yard id for the economy circle, `<yard>:tower`
- * for the ballista.
+ * circle and, when a gate opens into it, a ballista circle inside that gate.
+ * Ids: the yard id for the economy circle, `<yard>:tower` for the ballista.
+ * Where each one stands is PLOT below (the old `at` yard fractions are gone).
  */
 export const SURVIVAL_SLOTS = Object.freeze([
   Object.freeze({ id: 'south:tower', room: FORT.SOUTH, type: 'tower' }),
-  Object.freeze({ id: FORT.WARD, room: FORT.WARD, type: 'barracks', at: Object.freeze([0.80, 0.80]) }),
-  // west of the gate road: its ballista stands east of the road (TOWER.side)
-  Object.freeze({ id: FORT.SOUTH, room: FORT.SOUTH, type: 'sawmill', at: Object.freeze([0.20, 0.45]) }),
-  Object.freeze({ id: FORT.NORTH, room: FORT.NORTH, type: 'mine', at: Object.freeze([0.22, 0.55]) }),
+  Object.freeze({ id: FORT.WARD, room: FORT.WARD, type: 'barracks' }),
+  Object.freeze({ id: FORT.SOUTH, room: FORT.SOUTH, type: 'sawmill' }),
+  Object.freeze({ id: FORT.NORTH, room: FORT.NORTH, type: 'mine' }),
   Object.freeze({ id: 'north:tower', room: FORT.NORTH, type: 'tower' }),
-  Object.freeze({ id: FORT.WEST, room: FORT.WEST, type: 'sawmill', at: Object.freeze([0.50, 0.78]) }),
+  Object.freeze({ id: FORT.WEST, room: FORT.WEST, type: 'sawmill' }),
   Object.freeze({ id: 'west:tower', room: FORT.WEST, type: 'tower' }),
-  Object.freeze({ id: FORT.EAST, room: FORT.EAST, type: 'mine', at: Object.freeze([0.50, 0.22]) }),
+  Object.freeze({ id: FORT.EAST, room: FORT.EAST, type: 'mine' }),
   Object.freeze({ id: 'east:tower', room: FORT.EAST, type: 'tower' }),
-  Object.freeze({ id: FORT.NW, room: FORT.NW, type: 'barracks', at: Object.freeze([0.58, 0.42]) }),
+  Object.freeze({ id: FORT.NW, room: FORT.NW, type: 'barracks' }),
   Object.freeze({ id: 'northwest:tower', room: FORT.NW, type: 'tower' }),
-  Object.freeze({ id: FORT.SE, room: FORT.SE, type: 'mine', at: Object.freeze([0.42, 0.58]) }),
+  Object.freeze({ id: FORT.SE, room: FORT.SE, type: 'mine' }),
   Object.freeze({ id: 'southeast:tower', room: FORT.SE, type: 'tower' }),
-  Object.freeze({ id: FORT.NE, room: FORT.NE, type: 'sawmill', at: Object.freeze([0.38, 0.52]) }),
-  Object.freeze({ id: FORT.SW, room: FORT.SW, type: 'barracks', at: Object.freeze([0.55, 0.45]) }),
+  Object.freeze({ id: FORT.NE, room: FORT.NE, type: 'sawmill' }),
+  Object.freeze({ id: FORT.SW, room: FORT.SW, type: 'barracks' }),
 ]);
+/**
+ * WHERE EVERY PLOT STANDS — a laid-out bailey (playtest 2026-10-17: "letak
+ * build bangunan masih belum rapi").
+ *
+ * The plots used to be searched for at run time from yard fractions, so they
+ * landed wherever the search found floor: a ballista between the west gate's
+ * towers, the ward's barracks against the keep, plots on top of the stores.
+ * They are now a fixed plan, offsets from the keep in world px, drawn and
+ * checked by tools/survival-map.mjs:
+ *   - the plan is point-symmetric through the keep, like the fortress itself
+ *     (the NW postern answers the SE one): every plot has a twin at -x, -y;
+ *   - the main and north gate roads each have their pair either side of the
+ *     road, mirrored (x = +-130, 160 px inside the wall): a street to the
+ *     gate, its ballista on the side its twin gate's is not; the side gates'
+ *     ballistas stand 115 px off their road, 170 px in;
+ *   - the plots stand in columns (x = +-130, +-165, +-340, +-480) and keep
+ *     30+ px between pads, 60+ px from the curtain wall, 24+ px from the keep;
+ *   - every ballista sees out of its gate through the opening (boltPath),
+ *     close enough to the road to see the crowd at the gate: at 150 px off
+ *     the road its view through the opening narrowed and the ballista-only
+ *     bot fell from 5/5 three-star wins to 4/5 (survival-balance, 5 seeds);
+ *   - the ward's barracks and the armory flank the road from the keep's door
+ *     to the main gate; the captain starts on the east road by the keep.
+ * Every building faces south (the main gate, the camera), so the bailey
+ * reads as one planned town rather than a scatter.
+ */
+export const PLOT = Object.freeze({
+  radius: 68,
+  at: Object.freeze({
+    ward: Object.freeze([165, 120]),
+    south: Object.freeze([-130, 315]),
+    'south:tower': Object.freeze([130, 315]),
+    north: Object.freeze([130, -315]),
+    'north:tower': Object.freeze([-130, -315]),
+    west: Object.freeze([-340, -125]),
+    'west:tower': Object.freeze([-480, 115]),
+    east: Object.freeze([340, 125]),
+    'east:tower': Object.freeze([480, -115]),
+    northwest: Object.freeze([-340, -345]),
+    'northwest:tower': Object.freeze([-480, -235]),
+    southeast: Object.freeze([340, 345]),
+    'southeast:tower': Object.freeze([480, 235]),
+    northeast: Object.freeze([480, -320]),
+    southwest: Object.freeze([-480, 320]),
+  }),
+  /** The armory (the captain's upgrades): the ward barracks' mirror image. */
+  armory: Object.freeze([-165, 120]),
+  /**
+   * Where the captain starts a run and every dawn: on the east road just off
+   * the keep, between the ward's barracks and the east gate. (South of the
+   * keep, before its door, the engaged bot's night anchor ended Night 1 with
+   * the keep at 43% — one star; here it holds 94%, as the old start did.)
+   */
+  home: Object.freeze([190, 0]),
+  /** Twins the plan keeps (p: through the keep; x: across the north-south axis). */
+  mirrors: Object.freeze([
+    ['south', 'north', 'p'], ['south:tower', 'north:tower', 'p'],
+    ['west', 'east', 'p'], ['west:tower', 'east:tower', 'p'],
+    ['northwest', 'southeast', 'p'], ['northwest:tower', 'southeast:tower', 'p'],
+    ['northeast', 'southwest', 'p'],
+    ['south', 'south:tower', 'x'], ['north', 'north:tower', 'x'],
+  ].map((row) => Object.freeze(row))),
+});
 const SLOT_BY_ID = new Map(SURVIVAL_SLOTS.map((slot) => [slot.id, slot]));
 export function survivalSlot(id) { return SLOT_BY_ID.get(id) || null; }
 /** Pre-K1 saves: the old building ids. */
@@ -930,6 +1007,10 @@ export class SurvivalMode {
     this._lastGateOpen = null;
     this._savedDurationOverride = options.nightDuration || null;
     this.uiClock = 0;
+    // the player's drag on the camera (world px off the captain) — _steerCamera
+    this.camPan = { x: 0, y: 0 };
+    this._recenter = false;
+    this._userZoom = null;
     this.guards = [];
     this.towers = [];
     this.floaters = [];
@@ -1190,7 +1271,8 @@ export class SurvivalMode {
     g.screen = 'playing';
     g.paused = false;
     g.player.state = 'idle';
-    if (g.renderer.setZoomMul) g.renderer.setZoomMul(this.frameMul(this.phase !== 'day'));
+    this.recenterCamera(true);
+    if (g.renderer.setZoomMul) g.renderer.setZoomMul(this.frameMul(this.phase !== 'day') * this.userZoom());
     g.renderer.snapCamera(g.player.x, g.player.y);
     if (this._wantsIntro()) this._startIntro();
     g.uiPanel = this.panelFor();
@@ -1211,20 +1293,25 @@ export class SurvivalMode {
 
   /* ---------------- K1 bookends (CINE) ---------------- */
 
-  /** The opening belongs to the first night of a save that never saw it. */
+  /**
+   * The opening plays at the start of every run (Night 1, before its clock
+   * has run): a fresh save, PLAY AGAIN and RESTART all open on it, a tap
+   * skips it. It used to be told once per save (`introSeen`), so after the
+   * first run it never came back and read as lost (playtest 2026-10-17:
+   * "tralier toturial yg sebelum nya di buat di Awal itu hilang, harusnya
+   * itu di pertahan kan"). `introSeen` is still written, as a record only.
+   */
   _wantsIntro() {
     if (!this.cinematics || this.cine) return false;
     if (this.phase !== 'night' || this.day !== 1 || this.nightsCompleted > 0) return false;
     // a reload in the middle of a night is not an opening
-    if (this.elapsed > 0.5) return false;
-    const s = this.game.save.survival;
-    return !(s && s.introSeen);
+    return !(this.elapsed > 0.5);
   }
 
   _startIntro() {
     const g = this.game;
     const s = g.save.survival || (g.save.survival = freshProgress(this.nightDuration));
-    // told once: a tab closed half-way through does not owe it again
+    // a record that this save has seen the opening (it no longer gates it)
     s.introSeen = true;
     // The night opens on its first wave already at a gate — the state the
     // night reaches at its first wave mark, minus the empty seconds before.
@@ -1290,12 +1377,16 @@ export class SurvivalMode {
     };
     const p = this.game.player;
     const play = this._playFocus(true);
+    // zooms are multiples of the play frame (FRAME_CLOSER 1.1): the first
+    // shot holds the townsfolk on the roof walk and pulls back until the
+    // whole keep and its banner stand in the letterbox (at 2.4 x the 1.3
+    // frame it showed only the battlements, cut by the bars)
     return [
-      { t: 0, x: top.x, y: top.y, z: 2.4 },
-      { t: 2.2, x: top.x, y: top.y, z: 2.1 },
-      { t: 3.3, ...along(0.45, 0.95) },
-      { t: 4.7, ...along(0.52, 1.05) },
-      { t: 5.7, x: p.x - 30, y: p.y - 30, z: 1.55 },
+      { t: 0, x: top.x - 22, y: top.y - 22, z: 1.6 },
+      { t: 2.2, x: top.x + 24, y: top.y + 24, z: 1.3 },
+      { t: 3.3, ...along(0.45, 0.9) },
+      { t: 4.7, ...along(0.52, 1.0) },
+      { t: 5.7, x: p.x - 30, y: p.y - 30, z: 1.4 },
       { t: CINE.intro.dur, x: play.x, y: play.y, z: 1 },
     ];
   }
@@ -1366,8 +1457,9 @@ export class SurvivalMode {
     c.t = c.dur;
     this._cineCamera();
     this.cine = null;
+    this.recenterCamera(true);
     if (c.kind === 'intro') {
-      if (r.setZoomMul) r.setZoomMul(this.frameMul(true));
+      if (r.setZoomMul) r.setZoomMul(this.frameMul(true) * this.userZoom());
       this._nightIntro();
     } else if (c.kind === 'arrival') {
       this.updateRelief(Infinity);
@@ -1472,6 +1564,7 @@ export class SurvivalMode {
     if (this.phase !== 'day' || this.builderJob) return false;
     const g = this.game;
     g._survivalHint = null;   // nor a day's into the night
+    this.recenterCamera(true);
     this.phase = 'night';
     this.elapsed = 0;
     this.nightKeepStart = this.keepHp;
@@ -2350,10 +2443,10 @@ export class SurvivalMode {
 
   /**
    * Where a circle's building stands (its model, its ghost and the circle on
-   * the floor): an economy building near the middle of its room, a ballista
-   * beside the room's outer door, a little off the doorway so the slit stays
-   * in its sights. Either way on clear floor, never on a table or inside the
-   * keep, and a room's two circles keep apart. Fixed per circle.
+   * the floor): the bailey's plan (PLOT), an offset from the keep. A ballista
+   * plot also names the gate it guards (its yard's outer gate). A plot the
+   * plan does not know (a house layout) falls back to the floor search.
+   * Fixed per circle.
    */
   buildingSpot(slotId) {
     if (!this._spots) this._spots = new Map();
@@ -2362,12 +2455,19 @@ export class SurvivalMode {
     const room = slot && this.game.mansion.room(slot.room);
     if (!room) return null;
     const door = slot.type === 'tower' ? this.towerDoor(room) : null;
-    const avoid = [];
-    for (const other of SURVIVAL_SLOTS) {
-      if (other === slot || other.room !== slot.room || !this._spots.has(other.id)) continue;
-      avoid.push(this._spots.get(other.id));
+    const plan = this.game.mansion.isFortress ? PLOT.at[slotId] : null;
+    let spot;
+    if (plan) {
+      const keep = this.keep();
+      spot = { x: Math.round(keep.x + plan[0]), y: Math.round(keep.y + plan[1]), doorId: door ? door.id : null };
+    } else {
+      const avoid = [];
+      for (const other of SURVIVAL_SLOTS) {
+        if (other === slot || other.room !== slot.room || !this._spots.has(other.id)) continue;
+        avoid.push(this._spots.get(other.id));
+      }
+      spot = this._findSpot(room, door, avoid, null);
     }
-    const spot = this._findSpot(room, door, avoid, slot.at);
     this._spots.set(slotId, spot);
     return spot;
   }
@@ -2681,17 +2781,21 @@ export class SurvivalMode {
   }
 
   /**
-   * Where the Hunter stands at the start of a run and every dawn: beside the
-   * keep (east), so the tower stands next to him on screen instead of under
-   * the top of the HUD.
+   * Where the Hunter stands at the start of a run and every dawn: before the
+   * keep's door, between the ward's barracks plot and the armory (PLOT.home).
    */
   hunterHome() {
     const keep = this.keep();
+    if (this.game.mansion.isFortress) return { x: keep.x + PLOT.home[0], y: keep.y + PLOT.home[1] };
     return { x: keep.x + keep.r + 86, y: keep.y + 34 };
   }
 
   /** The armory rack beside the keep: the Hunter's own upgrades. */
   armorySpot() {
+    if (!this._armory && this.game.mansion.isFortress) {
+      const keep = this.keep();
+      this._armory = { x: Math.round(keep.x + PLOT.armory[0]), y: Math.round(keep.y + PLOT.armory[1]) };
+    }
     if (!this._armory) {
       const keep = this.keep();
       const m = this.game.mansion;
@@ -3035,6 +3139,7 @@ export class SurvivalMode {
     if (this.phase !== 'night') return;
     const g = this.game;
     g._survivalHint = null;   // a night's hint chip never runs on into the day
+    this.recenterCamera(true);
     const dayIndex = clamp(this.day - 1, 0, 2);
     let gold = this.tuning.nightRewards.gold[dayIndex];
     let wood = this.tuning.nightRewards.wood[dayIndex];
@@ -3350,7 +3455,8 @@ export class SurvivalMode {
     const p = g.player;
     const r = g.renderer;
     const night = this.phase !== 'day';
-    if (r.setZoomMul) r.setZoomMul(this.frameMul(night), dt);
+    this._steerCamera(dt);
+    if (r.setZoomMul) r.setZoomMul(this.frameMul(night) * this.userZoom(), dt);
     let lookX = clamp(p.vx * 0.18, -56, 56);
     // a phone held sideways is short and its top band is HUD: frame a little
     // north of the Hunter so what stands above him is not under the HUD
@@ -3365,7 +3471,87 @@ export class SurvivalMode {
       const here = this.dayContext();
       if (here) { lookX += clamp((here.x - p.x) * 0.5, -80, 80); lookY += clamp((here.y - p.y) * 0.5, -80, 80); }
     }
+    // the player's own drag rides on top of the follow
+    const pan = this.camPan;
+    if (pan.x || pan.y) {
+      lookX = lookX * this._panLook() + pan.x;
+      lookY = lookY * this._panLook() + pan.y;
+    }
     r.followCamera(p.x, p.y, dt, lookX, lookY, g.mansion.camBounds);
+  }
+
+  /** The look-ahead fades while the view is dragged away (it would fight the drag). */
+  _panLook() {
+    const d = Math.hypot(this.camPan.x, this.camPan.y);
+    return clamp(1 - d / 160, 0, 1);
+  }
+
+  /** The player's zoom on top of the framing (SURVIVAL_CAMERA.zoom), persisted. */
+  userZoom() {
+    if (this._userZoom == null) {
+      const s = this.game.save && this.game.save.survival;
+      const z = s && Number(s.camZoom);
+      this._userZoom = Number.isFinite(z) && z > 0 ? clamp(z, SURVIVAL_CAMERA.zoom[0], SURVIVAL_CAMERA.zoom[1]) : 1;
+    }
+    return this._userZoom;
+  }
+
+  /** Drop the drag: the view goes back onto the captain (snap: at once). */
+  recenterCamera(snap = false) {
+    if (snap) { this.camPan.x = 0; this.camPan.y = 0; this._recenter = false; return; }
+    this._recenter = Math.hypot(this.camPan.x, this.camPan.y) > 1;
+  }
+
+  /** How far the view has been dragged off the captain (world px). */
+  cameraOffset() { return Math.hypot(this.camPan.x, this.camPan.y); }
+
+  /**
+   * The player's hand on the camera (playtest 2026-10-17: "camera terlalu
+   * dekat ... dan bisa di geser"). A drag on the free half moves the ground
+   * with the finger, 1:1 (the camera jumps with it, so it never lags); a
+   * pinch or the wheel zooms within SURVIVAL_CAMERA.zoom. Walking eases the
+   * view back onto the captain, so the drag never costs him the fight; a tap
+   * on free ground (or the RECENTER chip) brings it back at once.
+   */
+  _steerCamera(dt) {
+    const g = this.game;
+    const input = g.input;
+    const r = g.renderer;
+    const pan = this.camPan;
+    if (!input || !r || !r.cam) return;
+    const d = input.panDelta;
+    if (d && (d.x || d.y) && r.cam.zoom > 0) {
+      const u = d.x / (r.cam.zoom * ISO_CAMERA.horizontal);
+      const q = d.y / (r.cam.zoom * ISO_CAMERA.vertical);
+      // the ground follows the finger: the view moves the other way
+      const wx = -(u + q) * 0.5, wy = -(q - u) * 0.5;
+      pan.x += wx; pan.y += wy;
+      r.cam.x += wx; r.cam.y += wy;
+      this._recenter = false;
+      this._panUsed = true;
+    }
+    const z = input.zoomDelta;
+    if (z && Math.abs(z - 1) > 1e-4) {
+      this._userZoom = clamp(this.userZoom() * z, SURVIVAL_CAMERA.zoom[0], SURVIVAL_CAMERA.zoom[1]);
+      const s = g.save && g.save.survival;
+      if (s) s.camZoom = +this._userZoom.toFixed(3);
+      this._panUsed = true;
+    }
+    if (typeof input.takePanTap === 'function' && input.takePanTap() && this.cameraOffset() > 40) this._recenter = true;
+    // the view centre stays over the bailey (+ reach)
+    const p = g.player;
+    const B = g.mansion.bailey || g.mansion.bounds;
+    if (B && p) {
+      const reach = SURVIVAL_CAMERA.reach;
+      pan.x = clamp(p.x + pan.x, B.x - reach, B.x + B.w + reach) - p.x;
+      pan.y = clamp(p.y + pan.y, B.y - reach, B.y + B.h + reach) - p.y;
+    }
+    const walking = !!(input.moving || this.walkPath);
+    if (this._recenter || walking) {
+      const k = Math.exp(-(this._recenter ? 7 : SURVIVAL_CAMERA.recenter) * dt);
+      pan.x *= k; pan.y *= k;
+      if (Math.hypot(pan.x, pan.y) < 1) { pan.x = 0; pan.y = 0; this._recenter = false; }
+    }
   }
 
   /**

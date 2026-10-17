@@ -23,6 +23,14 @@ bytes and its embedded texture stay as shipped.
     sha256 04fb009d03becf748614610ab21c52cf3a68f4cb21fc0b9544309c498f404136
   crossbow_1handed.bin      Assets/gltf/crossbow_1handed.bin
     sha256 0401a7f6a6264d60d17fee260518715161aac96f7b4e8e541fd562b1815f9a2a
+  crossbow_2handed.gltf     Assets/gltf/crossbow_2handed.gltf
+    sha256 c38dcbc7beefb76805aaf99098c681b346a021bb44988daf0c5ce787018673ed
+  crossbow_2handed.bin      Assets/gltf/crossbow_2handed.bin
+    sha256 1fcadb445d622190bac4bf9b0e6df2b961ed43309b3cfbf8996259175971a537
+    (2026-10-17: the BALLISTA. The two-handed crossbow, scaled up on a
+    swivel on top of the Medieval Hexagon Pack's stone tower base, is the
+    tower's ballista — it turns to what it shoots and kicks back on a shot.
+    It shares rogue_texture.png with the one-handed crossbow above.)
   rogue_texture.png         Assets/gltf/rogue_texture.png (the crossbow's atlas)
     sha256 a4032e877c3b91939f5cdbb630349c1998fdbc3211bbd587c111125500fe4cc5
   LICENSE.txt               LICENSE.txt

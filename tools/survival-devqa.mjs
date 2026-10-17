@@ -141,10 +141,20 @@ try {
     return Math.hypot(after.x - before.x, after.y - before.y);
   };
   const leftMove = await drag(90, 640, 0, -80);
-  const rightMove = await drag(250, 520, 0, -80);
-  const topBand = await drag(200, 60, 0, 60);
-  check('touch: the stick starts anywhere below the HUD band', leftMove > 40 && rightMove > 40 && topBand < 10,
-    { leftHalf: Math.round(leftMove), rightHalf: Math.round(rightMove), hudBand: Math.round(topBand) });
+  const pan0 = await page.evaluate(() => ({ ...window.__LN.survival.camPan }));
+  const rightMove = await drag(300, 520, -60, -80);
+  const pan1 = await page.evaluate(() => ({ ...window.__LN.survival.camPan }));
+  const topBand = await drag(120, 60, 0, 60);
+  const panned = Math.hypot(pan1.x - pan0.x, pan1.y - pan0.y);
+  // 2026-10-17 ("camera ... bisa di geser"): the stick keeps the left half,
+  // a drag on the right half slides the view and leaves the captain standing
+  check('touch: the stick floats in the left half below the HUD band; a right-half drag moves the camera, not the captain',
+    leftMove > 40 && rightMove < 10 && panned > 60 && topBand < 10,
+    { leftHalf: Math.round(leftMove), rightHalf: Math.round(rightMove), cameraPan: Math.round(panned), hudBand: Math.round(topBand) });
+  // walking takes the view back onto the captain
+  await drag(90, 640, 40, -60);
+  const back = await page.evaluate(() => { window.__step(90); return Math.round(window.__LN.survival.cameraOffset()); });
+  check('camera: walking eases the dragged view back onto the captain', back < 20, { offsetAfterWalk: back, dragged: Math.round(panned) });
 
   // ---------------- controls: one Flare button, hit = drawn ----------------
   const btn = await page.evaluate(() => {
@@ -464,7 +474,7 @@ try {
   });
   check('cine: a fresh save opens on the K1 intro — keep close-up, captioned, the clock and the horde wait, no HUD but SKIP',
     opening.cine && opening.cine.kind === 'intro' && opening.t > 0.8 && opening.elapsed[0] === opening.elapsed[1] && opening.horde >= 21 && opening.still
-      && opening.closeUp > 1.6 && opening.caption === 'PROTECT THE KEEP' && opening.labels.length === 1 && opening.labels[0] === 'survival:SKIP'
+      && opening.closeUp > 1.25 && opening.caption === 'PROTECT THE KEEP' && opening.labels.length === 1 && opening.labels[0] === 'survival:SKIP'
       && opening.panel === 'survival-cine' && !opening.gameplay && !opening.stick && opening.introSeen, opening);
   await cine.touchscreen.tap(422, 195);
   await cine.evaluate(() => window.__step(3));
@@ -481,7 +491,9 @@ try {
   await withTimeout(cine.reload({ waitUntil: 'domcontentloaded', timeout: 120000 }), 130000, 'reload cine');
   await freeze();
   const replay = await cine.evaluate(() => { const g = window.__LN; const m = g.survival; window.__step(5); return { cine: !!m.cine, phase: m.phase, panel: g.uiPanel, elapsed: +m.elapsed.toFixed(2) }; });
-  check('cine: the intro is told once (a reload plays straight on)', !replay.cine && replay.phase === 'night' && replay.panel === null, replay);
+  check('cine: a reload mid-night plays straight on (the intro opens every run, not every page load)', !replay.cine && replay.phase === 'night' && replay.panel === null, replay);
+  const again = await cine.evaluate(() => { const g = window.__LN; const m = g.survival; m.restart(); window.__step(3); const kind = m.cine && m.cine.kind; m.endCine(); window.__step(3); return { kind, seen: !!g.save.survival.introSeen }; });
+  check('cine: RESTART opens on the intro again (playtest 2026-10-17: the trailer must stay)', again.kind === 'intro' && again.seen, again);
   const arrival = await cine.evaluate(() => {
     const g = window.__LN; const m = g.survival;
     m.keepLevel = 3; m.keepHp = m.keepHpMax();

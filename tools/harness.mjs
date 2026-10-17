@@ -1400,8 +1400,12 @@ async function runSurvivalMilestone() {
     const again = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60, cinematics: true });
     again.beginNight();
     const off = (() => { window.localStorage.removeItem('lastnight.save.v1'); const c = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 }); c.beginNight(); return !c.survival.cine && c.survival.elapsed === 0 && c.survival.waveIndex === 0; })();
-    cineCheck('intro: told once (restart and a new session play straight on); cinematics off starts the night at 0 s',
-      !am.cine && !again.survival.cine && off, `restart ${!am.cine}, new session ${!again.survival.cine}, off ${off}`);
+    // 2026-10-17: the opening is kept for every run ("tralier toturial ...
+    // hilang, harusnya itu di pertahan kan") — RESTART / PLAY AGAIN open on
+    // it again; a reload part-way into a night (the clock past 0.5 s) does not
+    const replayed = !!(am.cine && am.cine.kind === 'intro');
+    cineCheck('intro: every run opens on it (restart replays it); a new session mid-night plays straight on; cinematics off starts the night at 0 s',
+      replayed && !again.survival.cine && off, `restart replays ${replayed}, new session ${!again.survival.cine}, off ${off}`);
     window.localStorage.removeItem('lastnight.save.v1');
     const d = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60, cinematics: true });
     d.renderer.resize(844, 390, 1);
@@ -1422,7 +1426,8 @@ async function runSurvivalMilestone() {
     e.beginNight();
     const reloadOk = e.survival.phase === 'complete' && !e.survival.cine && e.uiPanel === 'survival-complete' && e.survival.reinforcements && e.survival.reinforcements.every((t) => t.i === t.path.length);
     e.survival.restart();
-    const restartOk = !e.survival.reinforcements && !e.survival.cine && e.survival.phase === 'night' && !e.survival.mainGate().open;
+    // PLAY AGAIN opens on the intro again (every run does), never the arrival
+    const restartOk = !e.survival.reinforcements && (!e.survival.cine || e.survival.cine.kind === 'intro') && e.survival.phase === 'night' && !e.survival.mainGate().open;
     cineCheck('arrival: a reload after the victory shows the column in line under the end panel (no replay); PLAY AGAIN clears it and shuts the gate',
       reloadOk && restartOk, `reload ${reloadOk}, restart ${restartOk}`);
     window.localStorage.removeItem('lastnight.save.v1');

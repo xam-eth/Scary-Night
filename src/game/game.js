@@ -779,6 +779,8 @@ export class Game {
     this.input.gameplay = !worldHeld && this.screen === 'playing' && (night || day);
     // a thumb that lands on a HUD button presses it; it does not grab the stick
     if (!this.input.stickBlock) this.input.stickBlock = (p) => this.ui.some((item) => !item.passive && p.x > item.x && p.x < item.x + item.w && p.y > item.y && p.y < item.y + item.h);
+    // a world chip takes the tap; it never starts a camera drag
+    if (!this.input.panBlock) this.input.panBlock = (p) => this.ui.some((item) => p.x > item.x && p.x < item.x + item.w && p.y > item.y && p.y < item.y + item.h);
     const b = this.input.buttons;
     // Survival shoots automatically; the red attack button was a second,
     // redundant thumb target (keyboard F still forces a shot).
@@ -789,6 +791,8 @@ export class Game {
     b.repair.hidden = true;
     b.barricade.hidden = true;
     this.input.stickAnywhere = true;
+    // the stick keeps the left half; the right half drags the camera
+    this.input.panEnabled = true;
     if (this.input.gameplay) this.input.layoutSurvival(this.renderer.w, this.renderer.h);
     this.input.update(dt);
     // Movement stays active, but night combat is Hunter's automatic shot; the
@@ -2859,6 +2863,13 @@ export class Game {
       }
     }
 
+    // the RECENTER chip works by night too (no panel takes taps then)
+    if (this.screen === 'playing' && input.uiTap) {
+      const tap = input.uiTap;
+      const chip = this.ui.find((item) => item.label === 'survival:RECENTER'
+        && tap.x > item.x && tap.x < item.x + item.w && tap.y > item.y && tap.y < item.y + item.h);
+      if (chip) { input.uiTap = null; chip.onClick(); return; }
+    }
     const uiActive = this.screen === 'paused' || (this.screen === 'playing' && !!this.uiPanel);
     if (!uiActive) { this.uiIndex = 0; input.uiTap = null; return; }
     if (input.keys.up && !this._navUp) { this.uiIndex = Math.max(0, this.uiIndex - 1); this.usingKeyboard = true; }

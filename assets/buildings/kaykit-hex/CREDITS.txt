@@ -1,0 +1,109 @@
+KayKit : Medieval Hexagon Pack 1.0
+Created by Kay Lousberg (KayKit) — www.kaylousberg.com
+License: CC0 1.0 Universal — https://creativecommons.org/publicdomain/zero/1.0/
+(the pack's own LICENSE.txt is copied next to this file)
+
+Source: https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0
+        commit 84fa4e91af6a88989be7c99e0891cede11f2ca38 (2024-04-26)
+        path   addons/kaykit_medieval_hexagon_pack/Assets/gltf/<folder>/<file>
+
+Fetched 2026-10-17 through the GitHub API for the build-plot pass (playtest:
+"bangunan yg di build belum memakai asset visual yg layak dan tepat masih
+berupa prototype"). Every file below is vendored byte-for-byte for runtime use
+(not re-exported or modified); each one's git blob hash was checked against the
+upstream tree at the commit above. The upstream folders are flattened into this
+one directory: every .gltf references its .bin and hexagons_medieval.png by a
+bare file name, and the atlas is the same file (git blob 14cdc253) in every
+upstream folder. Survival builds its buildings from these at runtime
+(src/game/buildings3d.js, src/game/world3d.js); the blue team colour matches
+the keep's royal-blue livery. Ghosts (what a plot will build) are runtime
+material swaps on clones; the files stay as shipped.
+
+  LICENSE.txt                    LICENSE.txt (repository root)
+    sha256 881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360
+  barrel.bin                     decoration/props/barrel.bin
+    sha256 ff1b034f1ac95b063a2baa3d72a0ad0b33f25337f776e7a25fbc811d9c77dee8
+  barrel.gltf                    decoration/props/barrel.gltf
+    sha256 24673663eb53ffab6c8db612654856f051c4877bfc02ea25fee89cd95ee4d100   — barracks stores (Lv2+), the armory, a Lv2 ballista
+  bucket_arrows.bin              decoration/props/bucket_arrows.bin
+    sha256 374d4ba50d81d78443ac181e861f94640e902152f69e0a01bd09f32094864966
+  bucket_arrows.gltf             decoration/props/bucket_arrows.gltf
+    sha256 7b01b94f11ee20c38f712197012dde3a48449f61d8d5831a787ab48c686ca1c2   — the armory; a Lv3 ballista
+  building_barracks_blue.bin     buildings/blue/building_barracks_blue.bin
+    sha256 e3613795eeb9a6366920771b7b1c2b67b2b1df8c39b3ac82edc22d816c18499e
+  building_barracks_blue.gltf    buildings/blue/building_barracks_blue.gltf
+    sha256 a4f3aaa7ebb33cf0d86a139941b350e580e3e1376e3ead99a5aaecb5de2f3817   — BARRACKS (every level)
+  building_dirt.bin              buildings/neutral/building_dirt.bin
+    sha256 67ec3d19c646ad42d2f46dbd546fa41a595d5a2a2a98a4000da09c53dcab4d86
+  building_dirt.gltf             buildings/neutral/building_dirt.gltf
+    sha256 dd7d0f3e4740b0465615d69024a553f87314385998431c8555788bef354aed16   — the foundation pad under every build plot (drawn with a runtime tan material)
+  building_lumbermill_blue.bin   buildings/blue/building_lumbermill_blue.bin
+    sha256 48833c0baee78d6f896fbeda6210492b303101dd5aea686b529614ebb9888247
+  building_lumbermill_blue.gltf  buildings/blue/building_lumbermill_blue.gltf
+    sha256 bf6ff5811c7e4aac10dbd32d0cb26b2dda6e31b894726bf9d567371a0fb1f1b4   — SAWMILL (every level; its saw node spins while it works)
+  building_mine_blue.bin         buildings/blue/building_mine_blue.bin
+    sha256 aaceea5aebc4039839feeade050616c9dd49e1c67d0f90442fa9a24f5aef186e
+  building_mine_blue.gltf        buildings/blue/building_mine_blue.gltf
+    sha256 fe21db192f3ee7d40bd5f64a1d3782c6301b92a6676ca8a4d43e8c3e85ab7695   — GOLD MINE (every level)
+  building_scaffolding.bin       buildings/neutral/building_scaffolding.bin
+    sha256 eed989f5f3c82d0e251b2dd2fc7e0cc350705160892a409a337c73b5f448fa54
+  building_scaffolding.gltf      buildings/neutral/building_scaffolding.gltf
+    sha256 1c11a7545694863a7edc58780ee60510b55676b97d6c5eee7e0dc7c256185c7a   — scaffolding by the keep / the gate while they are worked on
+  building_stage_A.bin           buildings/neutral/building_stage_A.bin
+    sha256 d18c8bd6cac535ea1be929f316b4dbd1367c24c49918df1980ffc29fe7322b3e
+  building_stage_A.gltf          buildings/neutral/building_stage_A.gltf
+    sha256 43ef26645bfab5fc2ef1a66b27173857485f0392e0e96b2243ceed53fd9043d5   — construction, first third of a build
+  building_stage_B.bin           buildings/neutral/building_stage_B.bin
+    sha256 4878dffc475b69081778e703feca790f5c7aa39b18f11435a381beff1c6295f0
+  building_stage_B.gltf          buildings/neutral/building_stage_B.gltf
+    sha256 c45eec59415c78576c8488711bf0120705d08e0b50834c88c90606f590671a1b   — construction, second third
+  building_stage_C.bin           buildings/neutral/building_stage_C.bin
+    sha256 5a796b17dd2d9ff514ccccbc6018c1756827e33a2fd098e473c6644151e21d8c
+  building_stage_C.gltf          buildings/neutral/building_stage_C.gltf
+    sha256 9de7e1e3b336905b3eee72c7bc010b4fb803fa07b9adb91411d5aff0861e3446   — construction, last third
+  building_tower_base_blue.bin   buildings/blue/building_tower_base_blue.bin
+    sha256 3f2e11bc4c7cde36a01c9d5fb5dbb98d78d02e6708800fe12b7914698e34da35
+  building_tower_base_blue.gltf  buildings/blue/building_tower_base_blue.gltf
+    sha256 60c9ea992b4dd584f57183a6c9b89619ff36eda2c81be71cefdb8704bdf84f4a   — BALLISTA tower (the ballista on top is crossbow_2handed, see ../../troops/kaykit/CREDITS.txt)
+  building_well_blue.bin         buildings/blue/building_well_blue.bin
+    sha256 5c50811c6666df2a9b43afc1a83ccccf19678c0f8e40c3ca0bf341722dc5133f
+  building_well_blue.gltf        buildings/blue/building_well_blue.gltf
+    sha256 66305823322b2e6a7f1cb8d8bf0d91ed9b94b8d96f61d0f7af77bd0d09f6463e   — the well in the northeast yard
+  crate_A_big.bin                decoration/props/crate_A_big.bin
+    sha256 600d29bdf010f891dcabfb014b6271789e7b45fec7317989a13ccca92908c5c8
+  crate_A_big.gltf               decoration/props/crate_A_big.gltf
+    sha256 a96ce5522e45104b5a04cf9605ca30b9572cc79c7633d41f3434b9843010a225   — barracks / sawmill stores (Lv3)
+  flag_blue.bin                  decoration/props/flag_blue.bin
+    sha256 2ff9fa2caea9c02a2eda8092c203e378ef92dca7741d41110627740211fc03a7
+  flag_blue.gltf                 decoration/props/flag_blue.gltf
+    sha256 de33035f0e9945f8d4e6ca3242e18f4822227cc8cc3a1afd9f0d193419573f08   — Lv2 flag on a building
+  flag_yellow.bin                decoration/props/flag_yellow.bin
+    sha256 f64d1627cd1222f79c02d0e999528aee9030e4d898b9ea7f633ffd8a12f23cea
+  flag_yellow.gltf               decoration/props/flag_yellow.gltf
+    sha256 0e68155151ea610a3a4f37c30127b1275e51c66c2c7afc48803196730b10119a   — Lv3 flag on a building
+  hexagons_medieval.png          buildings/blue/hexagons_medieval.png (shared atlas)
+    sha256 5301a06866ba3be68dcc14cc429bd6d0f69004b72884283715d7e233f2e9782e
+  resource_lumber.bin            decoration/props/resource_lumber.bin
+    sha256 90bb1e1f23dbc3de372059b45ae289ec414b1fb50b49852ce0a3b30dc370db8b
+  resource_lumber.gltf           decoration/props/resource_lumber.gltf
+    sha256 601a69f44f0c4a9b5070a80bd4a20887960e01f1523a6125c1edc8ba19168f1f   — sawmill stock (Lv2+)
+  resource_stone.bin             decoration/props/resource_stone.bin
+    sha256 8af67e8fb7272c0d5e439361f9ebb33f55406bb65a4dcf0d7156fc2959ddb744
+  resource_stone.gltf            decoration/props/resource_stone.gltf
+    sha256 427a22daaec3934ac85cd7e538415157264b96527577a3c9bbf793c1b5df8dca   — mine spoil (Lv2+)
+  sack.bin                       decoration/props/sack.bin
+    sha256 5c3e6f5c63f8c4420ed3dfb2027beffc981740b5af9c89be148b56c19b993e02
+  sack.gltf                      decoration/props/sack.gltf
+    sha256 b61929d6161907aff4f1fd211cd0a8300d002d1a686ba43d07c4aff171fbd9f0   — mine stores (Lv3)
+  target.bin                     decoration/props/target.bin
+    sha256 783dc41050451fb43efafc97b60bf486a50679bac07a782c0beb7af9d05bbe2e
+  target.gltf                    decoration/props/target.gltf
+    sha256 e92374d50c46b5816a1c118260d27ac49d3e52e8d7de6b0b7a9326a69c43cc44   — the armory
+  weaponrack.bin                 decoration/props/weaponrack.bin
+    sha256 3773a0eab3da0c7526a13880b3dc7f2c8c42f97e5b8970d5bf5a522f0ea7f0ea
+  weaponrack.gltf                decoration/props/weaponrack.gltf
+    sha256 e6985e05285ae219a0a6317522debb9d48c8b39334820e0c9694f195f1519be5   — the armory (captain upgrades)
+  wheelbarrow.bin                decoration/props/wheelbarrow.bin
+    sha256 72ca612b0dc940c856ed5abbbb9df9562c09bff52cfb2258375b16cbaad29e12
+  wheelbarrow.gltf               decoration/props/wheelbarrow.gltf
+    sha256 bb037662a3e5be1f4fe597ffc4927d2a6ad88d307da10388cfb178ca5fdae63d   — the mine cart that rolls while it digs

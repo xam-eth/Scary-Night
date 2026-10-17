@@ -11,6 +11,7 @@ import { Valen3D } from './valen3d.js';
 import { Enemy3D, ENEMY_HEIGHT } from './enemy3d.js';
 import { Troop3D } from './troop3d.js';
 import { Crowd3D } from './crowd3d.js';
+import { Buildings3D, BUILDING_MODEL } from './buildings3d.js';
 import { ROOM_MARKS } from './narrative.js';
 import { ROOM } from './mansion.js';
 import { weaponById } from './weapons.js';
@@ -18,6 +19,16 @@ import { weaponById } from './weapons.js';
 const VERTICAL_PROJECTION = Math.sqrt(1 - ISO_CAMERA.tilt * ISO_CAMERA.tilt);
 /** A GLB guard's standing height, world px before SURVIVAL_ACTOR_SCALE (the captain is 1.7 m = ~88). */
 const GUARD_TROOP_HEIGHT = 84;
+/**
+ * KayKit buildings (buildings3d.js): world px across a building's widest
+ * floor side at Lv1. A plot is 136 px across (CIRCLE.radius 68); a building
+ * fills ~95% of it, the ballista's tower (a narrow hex) less, so the swivel
+ * on its top reads. Each level stands KIT_LEVEL_GROW bigger, still on its pad.
+ */
+const KIT_FOOTPRINT = Object.freeze({ barracks: 132, sawmill: 134, mine: 136, tower: 110 });
+const KIT_LEVEL_GROW = 0.07;
+/** World px across a plot's foundation pad (the pack's dirt hex). */
+const PLOT_PAD_ACROSS = 158;
 const PARTICLE_VERTEX_SHADER = `
   attribute vec3 aColor;
   attribute float aAlpha;
@@ -166,6 +177,8 @@ class World3DRuntime {
     this.survivalCrowdProxies = new Map();
     this.survivalBuildingMeshes = new Map();
     this.survivalCircles = new Map();      // K1 build circles: id -> { ring, ghost }
+    this.survivalPads = new Map();         // plot id -> its foundation pad (KayKit building_dirt)
+    this.survivalStage = null;             // KayKit construction stages / scaffolding at the job
     this.survivalTerritory = new Map();    // room id -> banner floor tint
     this.survivalKeep = null;
     this.survivalGateMesh = null;
@@ -834,6 +847,12 @@ class World3DRuntime {
   }
 
   _makeSurvivalBuilding(type) {
+    // the KayKit Medieval Hexagon Pack once it has arrived (buildings3d.js);
+    // the procedural model below is the fallback while it loads or if it fails
+    if (Buildings3D.ready && BUILDING_MODEL[type]) {
+      const kit = this._makeKitBuilding(type);
+      if (kit) return kit;
+    }
     const group = new THREE.Group();
     group.name = `survival-building-3d-${type}`;
     const wood = new THREE.MeshStandardMaterial({ color: 0x60452a, roughness: 0.96, flatShading: true });
@@ -969,6 +988,248 @@ class World3DRuntime {
     return group;
   }
 
+  /**
+   * A building from the KayKit Medieval Hexagon Pack (buildings3d.js). Built
+   * in kit units, centred on its plot; the sync scales the group to world px
+   * (`userData.unit` per kit unit, +KIT_LEVEL_GROW a level). The parts that
+   * move keep the procedural model's names: a sawmill's `saw`, a mine's
+   * `cart`, a ballista's `yaw` / `stock` / `loaded`.
+   */
+  _makeKitBuilding(type) {
+    const key = BUILDING_MODEL[type];
+    const body = Buildings3D.clone(key);
+    const box = Buildings3D.box(key);
+    if (!body || !box) return null;
+    const group = new THREE.Group();
+    group.name = `survival-building-3d-${type}`;
+    const size = box.getSize(new THREE.Vector3());
+    const cx = (box.min.x + box.max.x) / 2, cz = (box.min.z + box.max.z) / 2;
+    body.position.set(-cx, -box.min.y, -cz);
+    group.add(body);
+    const unit = KIT_FOOTPRINT[type] / Math.max(size.x, size.z);
+    group.userData = { kit: true, type, unit, height: size.y, half: { x: size.x / 2, z: size.z / 2 } };
+    if (type === 'sawmill') {
+      const saw = body.getObjectByName('building_lumbermill_saw_blue');
+      if (saw) { group.userData.saw = saw; group.userData.sawAxis = 'x'; }
+    } else if (type === 'mine') {
+      // a cart of gold rolls out along the mine's rails and back while it digs
+      const cart = new THREE.Group();
+      cart.name = 'survival-mine-cart';
+      const barrow = Buildings3D.clone('wheelbarrow');
+      if (barrow) {
+        barrow.scale.setScalar(1.6);
+        cart.add(barrow);
+        const goldMat = new THREE.MeshStandardMaterial({ color: 0xffcc3a, emissive: 0x8a5a00, emissiveIntensity: 0.55, metalness: 0.5, roughness: 0.4, flatShading: true });
+        for (let i = 0; i < 5; i++) {
+          const nugget = new THREE.Mesh(new THREE.DodecahedronGeometry(0.055, 0), goldMat);
+          nugget.position.set(-0.07 + (i % 3) * 0.07, 0.25 + Math.floor(i / 3) * 0.05, -0.08 + (i % 2) * 0.12);
+          nugget.castShadow = true;
+          cart.add(nugget);
+        }
+        // the rails leave the mine's door at x ~0, from z +0.45 to +0.9
+        cart.position.set(-cx, 0, 0.5 - cz);
+        group.add(cart);
+        group.userData.cart = cart;
+        group.userData.cartZ = [0.42 - cz, 0.86 - cz];
+      }
+    } else if (type === 'tower') {
+      // The ballista: the Adventurers pack's two-handed crossbow, scaled up
+      // on a swivel on the tower's top. It turns to what it shoots (yaw) and
+      // kicks back on a shot (stock); the bolt on it hides after a shot.
+      const top = size.y - 0.06;
+      const yaw = new THREE.Group();
+      yaw.name = 'survival-tower-yaw';
+      yaw.position.set(0, top, 0);
+      group.add(yaw);
+      const iron = new THREE.MeshStandardMaterial({ color: 0x55504a, metalness: 0.55, roughness: 0.5, flatShading: true });
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.1, 0.14, 8), iron);
+      post.position.y = 0.07;
+      post.castShadow = true;
+      yaw.add(post);
+      const stock = new THREE.Group();
+      stock.name = 'survival-tower-stock';
+      stock.position.set(0, 0.14, 0);
+      yaw.add(stock);
+      const bow = Buildings3D.clone('ballista');
+      const bowBox = Buildings3D.box('ballista');
+      const k = 0.62;
+      bow.scale.setScalar(k);
+      bow.position.set(0, -bowBox.min.y * k, -((bowBox.min.z + bowBox.max.z) / 2) * k);
+      bow.name = 'survival-tower-ballista';
+      stock.add(bow);
+      const loaded = new THREE.Group();
+      loaded.name = 'survival-tower-bolt';
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.56, 6), new THREE.MeshStandardMaterial({ color: 0x917044, roughness: 0.9, flatShading: true }));
+      shaft.rotation.x = Math.PI / 2;
+      const tip = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.12, 6), new THREE.MeshStandardMaterial({ color: 0xff8a3a, emissive: 0xff5a1a, emissiveIntensity: 0.6, roughness: 0.5 }));
+      tip.rotation.x = Math.PI / 2;
+      tip.position.z = 0.33;
+      loaded.add(shaft, tip);
+      loaded.position.set(0, (bowBox.max.y - bowBox.min.y) * k * 0.62, 0.06);
+      stock.add(loaded);
+      group.userData.yaw = yaw;
+      group.userData.stock = stock;
+      group.userData.loaded = loaded;
+      group.userData.recoil = 0.45;                 // kit units a full kick slides back
+      group.userData.muzzleY = top + 0.14 + loaded.position.y;
+    }
+    group.traverse((item) => { if (item.isMesh) item.userData.survivalBuilding = type; });
+    return group;
+  }
+
+  /**
+   * A kit building's level reads from across the bailey: it stands bigger
+   * (sync), flies the pack's flags (Lv2 blue, Lv3 blue + gold) and its stock
+   * grows — stone at a mine, sawn lumber at a sawmill, barrels and a weapon
+   * rack at a barracks, a barrel and a bucket of bolts by a ballista.
+   */
+  _dressKitLevel(group, level) {
+    const old = group.getObjectByName('survival-building-level');
+    if (old) group.remove(old);
+    if (level < 2) return;
+    const ud = group.userData;
+    const dress = new THREE.Group();
+    dress.name = 'survival-building-level';
+    const put = (key, x, y, z, scale = 1, ry = 0) => {
+      const item = Buildings3D.clone(key);
+      if (!item) return null;
+      item.position.set(x, y, z);
+      item.scale.setScalar(scale);
+      item.rotation.y = ry;
+      dress.add(item);
+      return item;
+    };
+    const hx = ud.half.x, hz = ud.half.z;
+    const tower = ud.type === 'tower';
+    // flags: on the roof (a tower flies them from its battlements, the
+    // ballista has its top), the cloth toward screen-right
+    const flagY = tower ? ud.height - 0.1 : ud.height - 0.08;
+    const flagAt = tower ? [[hx * 0.86, -hz * 0.3], [-hx * 0.86, -hz * 0.3]] : [[0, 0], [hx * 0.55, -hz * 0.4]];
+    put('flagBlue', flagAt[0][0], flagY, flagAt[0][1], tower ? 2.2 : 2.6, Math.PI / 4);
+    if (level >= 3) put('flagYellow', flagAt[1][0], flagY - (tower ? 0 : 0.18), flagAt[1][1], tower ? 2.2 : 2.6, Math.PI / 4);
+    // stock at the front corners of the plot
+    const fx = hx * 0.92, fz = hz * 0.86;
+    if (ud.type === 'mine') {
+      put('stone', fx, 0, fz, 1.5, 0.4);
+      if (level >= 3) { put('sack', -fx, 0, fz, 2.4, 0.3); put('sack', -fx + 0.2, 0, fz - 0.12, 2.4, -0.5); }
+    } else if (ud.type === 'sawmill') {
+      put('lumber', fx * 0.9, 0, fz, 1.3, Math.PI / 2);
+      if (level >= 3) put('crate', -fx, 0, fz, 2, 0.25);
+    } else if (ud.type === 'barracks') {
+      put('barrel', fx, 0, fz, 2.2, 0); put('barrel', fx - 0.24, 0, fz + 0.05, 2.2, 0.6);
+      if (level >= 3) { put('weaponrack', -fx, 0, fz, 2.6, 0); put('crate', -fx + 0.3, 0, fz + 0.04, 1.8, 0.4); }
+    } else if (tower) {
+      put('barrel', hx + 0.1, 0, hz * 0.7, 1.8, 0);
+      if (level >= 3) put('bucketArrows', -hx - 0.08, 0, hz * 0.7, 2.4, 0);
+    }
+    dress.traverse((item) => { if (item.isMesh) item.userData.survivalBuilding = ud.type; });
+    group.add(dress);
+  }
+
+  /** The foundation pad under a plot: the pack's dirt hex, fitted to the plot. */
+  _makeKitPad(across = PLOT_PAD_ACROSS) {
+    const pad = Buildings3D.clone('pad');
+    const box = Buildings3D.box('pad');
+    if (!pad || !box) return null;
+    const size = box.getSize(new THREE.Vector3());
+    const group = new THREE.Group();
+    group.name = 'survival-plot-pad-3d';
+    pad.position.set(-(box.min.x + box.max.x) / 2, -box.min.y, -(box.min.z + box.max.z) / 2);
+    // the pack's dirt is a strong terracotta that read as red stains on the
+    // paving at night: the pad keeps the hex's shape (rim and dimples) under
+    // a runtime packed-earth material (the file and its atlas are untouched)
+    if (!this._padMat) {
+      this._padMat = new THREE.MeshStandardMaterial({ color: 0xb79c74, roughness: 1, metalness: 0, flatShading: true });
+      this._padMat.name = 'plot-pad-packed-earth';
+    }
+    pad.traverse((item) => {
+      if (!item.isMesh) return;
+      item.castShadow = false; item.receiveShadow = true;
+      item.material = this._padMat;
+    });
+    group.add(pad);
+    const unit = across / Math.max(size.x, size.z);
+    group.scale.setScalar(unit);
+    group.userData = { top: size.y * unit };
+    group.renderOrder = 2;
+    this.root.add(group);
+    return group;
+  }
+
+  /**
+   * A job under way on a plot: the pack's construction stages in thirds
+   * (A, B, C) where a building rises; its scaffolding by the keep or the gate.
+   */
+  _syncKitStage(spot, job, mode, t) {
+    if (!this.survivalStage) {
+      const stages = {};
+      for (const key of ['stageA', 'stageB', 'stageC', 'scaffold']) {
+        const model = Buildings3D.clone(key);
+        const box = Buildings3D.box(key);
+        if (!model || !box) continue;
+        const size = box.getSize(new THREE.Vector3());
+        const holder = new THREE.Group();
+        holder.name = `survival-${key}-3d`;
+        model.position.set(-(box.min.x + box.max.x) / 2, -box.min.y, -(box.min.z + box.max.z) / 2);
+        holder.add(model);
+        holder.userData.unit = (key === 'scaffold' ? 150 : 124) / Math.max(size.x, size.z);
+        holder.visible = false;
+        this.root.add(holder);
+        stages[key] = holder;
+      }
+      this.survivalStage = stages;
+    }
+    const stages = this.survivalStage;
+    let want = null;
+    if (spot && job && mode.phase === 'day') {
+      const pct = 1 - clamp(job.remaining / Math.max(0.01, job.duration), 0, 1);
+      if (job.slotId) want = pct < 1 / 3 ? 'stageA' : pct < 2 / 3 ? 'stageB' : 'stageC';
+      else if (job.kind !== 'hunter') want = 'scaffold';
+    }
+    for (const [key, holder] of Object.entries(stages)) {
+      holder.visible = key === want;
+      if (!holder.visible) continue;
+      const keepJob = job.kind === 'keep' || job.kind === 'repair';
+      const lift = job.slotId ? this._padTop() : 0;
+      holder.position.set(spot.x + (keepJob ? 70 : 0), lift, spot.y + (keepJob ? 70 : 0));
+      // the work shows: a small hop on every hammer blow
+      const blow = Math.max(0, Math.sin(t * 12));
+      holder.scale.setScalar(holder.userData.unit * (1 + blow * 0.025));
+    }
+    return !!want;
+  }
+
+  /** Height of a plot's pad top (world px; 0 before the kit arrives). */
+  _padTop() {
+    for (const pad of this.survivalPads.values()) if (pad && pad.userData) return pad.userData.top || 0;
+    return 0;
+  }
+
+  /**
+   * The armory: the pack's weapon racks, a target and a bucket of bolts on a
+   * pad of its own (the captain's upgrades are bought here).
+   */
+  _makeKitArmory() {
+    const group = new THREE.Group();
+    group.name = 'survival-armory-3d';
+    group.userData.kit = true;
+    const put = (key, x, z, scale, ry = 0) => {
+      const item = Buildings3D.clone(key);
+      if (!item) return;
+      item.position.set(x, 0, z);
+      item.scale.setScalar(scale);
+      item.rotation.y = ry;
+      group.add(item);
+    };
+    put('weaponrack', -22, 4, 230, 0);
+    put('weaponrack', 22, 4, 230, 0);
+    put('target', 0, -34, 200, 0);
+    put('bucketArrows', 44, 30, 200, 0);
+    put('barrel', -46, 28, 190, 0.5);
+    this.root.add(group);
+    return group;
+  }
+
   /** A see-through blue copy of a building: what a circle will build. */
   _makeSurvivalGhost(type) {
     const group = type === 'gate' ? this._makeSurvivalGateModel() : this._makeSurvivalBuilding(type);
@@ -976,7 +1237,7 @@ class World3DRuntime {
     const material = new THREE.MeshBasicMaterial({ color: 0x8cc0ff, transparent: true, opacity: 0.4, depthWrite: false, toneMapped: false });
     group.traverse((item) => { if (item.isMesh) { item.material = material; item.castShadow = false; item.receiveShadow = false; item.renderOrder = 6; } });
     group.userData.ghostMaterial = material;
-    group.scale.setScalar(type === 'gate' ? 1 : 1.6);
+    group.scale.setScalar(type === 'gate' ? 1 : group.userData.kit ? group.userData.unit : 1.6);
     group.visible = false;
     this.root.add(group);
     return group;
@@ -1023,6 +1284,7 @@ class World3DRuntime {
    */
   _setSurvivalBuildingLevel(group, level) {
     group.userData.level = level;
+    if (group.userData.kit) { this._dressKitLevel(group, level); return; }
     // ×1.6 at Lv1 so a building stands bigger than the x1.6 actors beside
     // it; +0.2 a level, so a level reads from across the bailey
     group.scale.setScalar(1.6 + 0.2 * (level - 1));
@@ -1068,6 +1330,7 @@ class World3DRuntime {
       return keep ? keep.userData.roofY * keep.scale.y - 10 : 220;
     }
     const mesh = owner.slotId ? this.survivalBuildingMeshes.get(owner.slotId) : null;
+    if (mesh && mesh.userData.muzzleY != null) return mesh.userData.muzzleY * mesh.scale.y + mesh.position.y;
     // deck swivel (86) + stock (12) + the loaded bolt (5), in model units
     return mesh ? 103 * mesh.scale.y - 18 : 0;
   }
@@ -1077,12 +1340,21 @@ class World3DRuntime {
    * when they work, slowly by day — so a building reads as doing something.
    */
   _syncSurvivalWorkshop(mesh, mode, game) {
-    const { wheel, saw } = mesh.userData;
-    if (!wheel && !saw) return;
+    const { wheel, saw, cart, cartZ } = mesh.userData;
+    if (!wheel && !saw && !cart) return;
     const dt = this._troopDt(game, `shop:${mesh.uuid}`);
     const night = mode.phase === 'night';
     if (wheel) wheel.rotation.z -= dt * (night ? 3.2 : 0.9);
-    if (saw) saw.rotation.z -= dt * (night ? 9 : 2.4);
+    if (saw) {
+      if (mesh.userData.sawAxis === 'x') saw.rotation.x -= dt * (night ? 9 : 2.4);
+      else saw.rotation.z -= dt * (night ? 9 : 2.4);
+    }
+    if (cart && cartZ) {
+      // out of the mine and back: brisk through the night, slow by day
+      mesh.userData.cartT = (mesh.userData.cartT || 0) + dt * (night ? 0.55 : 0.18);
+      const k = 0.5 - 0.5 * Math.cos(mesh.userData.cartT * Math.PI * 2);
+      cart.position.z = cartZ[0] + (cartZ[1] - cartZ[0]) * k;
+    }
   }
 
   /** The ballista swings to its tower's bearing and kicks back on a shot. */
@@ -1093,7 +1365,7 @@ class World3DRuntime {
     const aim = tower ? tower.aim : Math.PI / 2;
     yaw.rotation.y = Math.PI / 2 - aim;
     const kick = tower ? tower.shotT : 0;
-    if (stock) stock.position.z = -kick * 34;
+    if (stock) stock.position.z = -kick * (mesh.userData.recoil || 34);
     if (loaded) loaded.visible = kick < 0.12;
   }
 
@@ -1416,6 +1688,7 @@ class World3DRuntime {
     const t = game.now || 0;
     const points = mode.dayPoints();
     const seen = new Set();
+    const kit = Buildings3D.ready;
     for (const point of points) {
       if (point.kind === 'keep') continue;
       seen.add(point.id);
@@ -1424,6 +1697,18 @@ class World3DRuntime {
         rec = { ring: this._makeSurvivalCircle(point.kind === 'slot' ? 58 : 50), ghost: null };
         this.survivalCircles.set(point.id, rec);
       }
+      // every plot stands on its foundation pad, day and night, so the
+      // bailey reads as laid out: the pack's dirt hex (the armory has one)
+      if (kit && (point.kind === 'slot' || point.kind === 'armory')) {
+        let pad = this.survivalPads.get(point.id);
+        if (!pad) { pad = this._makeKitPad(point.kind === 'armory' ? 136 : PLOT_PAD_ACROSS); this.survivalPads.set(point.id, pad); }
+        if (pad) { pad.visible = true; pad.position.set(point.x, 0, point.y); }
+      }
+      // a ghost made before the kit arrived is rebuilt from it
+      if (rec.ghost && kit && !rec.ghost.userData.kit && point.kind === 'slot') {
+        this.root.remove(rec.ghost);
+        rec.ghost = null;
+      }
       const near = here && here.id === point.id;
       const built = point.kind === 'slot' ? !!point.built : point.kind === 'gate' ? mode.gateBuilt : point.kind === 'armory';
       const working = mode.builderJob && ((mode.builderJob.slotId && mode.builderJob.slotId === point.id)
@@ -1431,7 +1716,7 @@ class World3DRuntime {
       const ring = rec.ring;
       ring.visible = day && (!built || near) && !working;
       if (ring.visible) {
-        ring.position.set(point.x, 2.4, point.y);
+        ring.position.set(point.x, point.kind === 'slot' || point.kind === 'armory' ? this._padTop() + 1.6 : 2.4, point.y);
         const pulse = near ? 1 + 0.06 * Math.sin(t * 6) : 1;
         ring.scale.set(pulse, pulse, 1);
         ring.material.color.setHex(point.locked ? 0x9097a6 : built ? 0xffd24a : near ? 0xfff2b0 : 0xffffff);
@@ -1449,7 +1734,7 @@ class World3DRuntime {
           rec.ghost.position.set(gate.x, 0, gate.y);
           rec.ghost.rotation.y = gate.axis === 'v' ? Math.PI / 2 : 0;
         } else {
-          rec.ghost.position.set(point.x, 0, point.y);
+          rec.ghost.position.set(point.x, this._padTop(), point.y);
         }
         const m = rec.ghost.userData.ghostMaterial;
         m.color.setHex(point.locked ? 0x8a8f9c : 0x8cc0ff);
@@ -1460,6 +1745,8 @@ class World3DRuntime {
       if (seen.has(id)) continue;
       rec.ring.visible = false;
       if (rec.ghost) rec.ghost.visible = false;
+      const pad = this.survivalPads.get(id);
+      if (pad) pad.visible = false;
     }
     // the keep's own ring while the Hunter stands at it
     if (!this.survivalKeepRing) {
@@ -1480,15 +1767,21 @@ class World3DRuntime {
       this.survivalKeepRing.material.opacity = 0.7 + 0.25 * Math.sin(t * 5);
     }
     // the armory rack always stands (it is furniture of the hall)
-    if (!this.survivalArmory) this.survivalArmory = this._makeSurvivalArmory();
+    if (this.survivalArmory && kit && !this.survivalArmory.userData.kit) {
+      this.root.remove(this.survivalArmory);
+      this.survivalArmory = null;
+    }
+    if (!this.survivalArmory) this.survivalArmory = kit ? this._makeKitArmory() : this._makeSurvivalArmory();
     const armory = mode.armorySpot();
     this.survivalArmory.visible = true;
-    this.survivalArmory.position.set(armory.x, 0, armory.y);
-    // scaffold + builder at a job
+    this.survivalArmory.position.set(armory.x, kit ? this._padTop() : 0, armory.y);
+    // the job under way: the pack's construction stages / scaffolding, or
+    // (before the kit arrives) the procedural scaffold and its builder
     if (!this.survivalScaffold) this.survivalScaffold = this._makeSurvivalScaffold();
     const job = mode.builderJob;
     const spot = job ? mode.jobSpot(job) : null;
-    this.survivalScaffold.visible = !!spot && mode.phase === 'day';
+    const staged = kit ? this._syncKitStage(spot, job, mode, t) : false;
+    this.survivalScaffold.visible = !kit && !staged && !!spot && mode.phase === 'day';
     if (spot && this.survivalScaffold.visible) {
       const keepJob = job.kind === 'keep' || job.kind === 'repair';
       this.survivalScaffold.position.set(spot.x, 0, spot.y + (keepJob ? 30 : 0));
@@ -1657,6 +1950,32 @@ class World3DRuntime {
     const m = game.mansion;
     if (!m || !m.isFortress) return;
     if (!this.fortressDressing) this.fortressDressing = this._makeFortressDressing(m);
+    // the yard's well: the pack's model on the well's footprint (a plain
+    // stone ring if the kit never arrives)
+    if (!this.fortressWells && (Buildings3D.ready || Buildings3D.failed)) {
+      this.fortressWells = [];
+      for (const f of m.furniture || []) {
+        if (f.type !== 'well') continue;
+        let well = Buildings3D.ready ? Buildings3D.clone('well') : null;
+        const holder = new THREE.Group();
+        holder.name = 'survival-well-3d';
+        if (well) {
+          const box = Buildings3D.box('well');
+          const size = box.getSize(new THREE.Vector3());
+          well.position.set(-(box.min.x + box.max.x) / 2, -box.min.y, -(box.min.z + box.max.z) / 2);
+          holder.add(well);
+          holder.scale.setScalar((Math.max(f.w, f.h) + 12) / Math.max(size.x, size.z));
+        } else {
+          well = new THREE.Mesh(new THREE.CylinderGeometry(f.w * 0.46, f.w * 0.5, 34, 12), new THREE.MeshStandardMaterial({ color: 0x8c867e, roughness: 0.95, flatShading: true }));
+          well.position.y = 17;
+          holder.add(well);
+        }
+        holder.position.set(f.x + f.w / 2, 0, f.y + f.h / 2);
+        holder.traverse((item) => { if (item.isMesh) { item.castShadow = true; item.receiveShadow = true; } });
+        this.root.add(holder);
+        this.fortressWells.push(holder);
+      }
+    }
     const ud = this.fortressDressing.userData;
     const t = game.now || 0;
     ud.yardMat.color.setHex(mode.daylight() ? 0x86a35a : 0x4b6448);
@@ -2122,24 +2441,31 @@ class World3DRuntime {
     // buildings stand on their circles (keyed by circle id)
     const activeBuildings = new Set();
     const pop = mode.lastBuilt && mode.uiClock - mode.lastBuilt.t < 0.35 ? mode.lastBuilt : null;
+    const kitReady = Buildings3D.ready;
+    const job = mode.builderJob;
     for (const [slotId, type] of Object.entries(mode.buildings)) {
       const spot = mode.buildingSpot ? mode.buildingSpot(slotId) : null;
       if (!spot) continue;
       activeBuildings.add(slotId);
       let mesh = this.survivalBuildingMeshes.get(slotId);
-      if (!mesh || mesh.userData.type !== type) {
+      // a procedural stand-in made before the kit arrived is replaced by it
+      const stale = mesh && kitReady && !mesh.userData.kit && BUILDING_MODEL[type];
+      if (!mesh || mesh.userData.type !== type || stale) {
         if (mesh) { this.root.remove(mesh); this.survivalBuildingMeshes.delete(slotId); }
         mesh = this._makeSurvivalBuilding(type);
         mesh.userData.type = type;
         this.survivalBuildingMeshes.set(slotId, mesh);
         this.root.add(mesh);
       }
-      mesh.visible = true;
-      mesh.position.set(spot.x, 0, spot.y);
+      // an upgrade under way: the construction stages stand on the plot in
+      // its place until the new level pops up
+      const rebuilding = kitReady && mode.phase === 'day' && job && job.slotId === slotId;
+      mesh.visible = !rebuilding;
+      mesh.position.set(spot.x, mesh.userData.kit ? this._padTop() : 0, spot.y);
       const level = mode.buildingLevel ? mode.buildingLevel(slotId) : 1;
       if (mesh.userData.level !== level) this._setSurvivalBuildingLevel(mesh, level);
       // a finished build pops: 0.85 → 1.08 → 1.0 over a quarter second
-      const base = 1.3 + 0.18 * (level - 1);
+      const base = mesh.userData.kit ? mesh.userData.unit * (1 + KIT_LEVEL_GROW * (level - 1)) : 1.3 + 0.18 * (level - 1);
       if (pop && pop.slotId === slotId) {
         const k = (mode.uiClock - pop.t) / 0.35;
         const s = k < 0.5 ? 0.85 + (1.08 - 0.85) * (k / 0.5) : 1.08 - 0.08 * ((k - 0.5) / 0.5);
@@ -3410,6 +3736,18 @@ class World3DRuntime {
       visibleSurvivalBuildSlots: [...this.survivalCircles.values()].filter((rec) => rec.ring.visible).length,
       visibleSurvivalGhosts: [...this.survivalCircles.values()].filter((rec) => rec.ghost && rec.ghost.visible).length,
       visibleSurvivalBuildings: [...this.survivalBuildingMeshes.values()].filter((object) => object.visible).length,
+      // the KayKit Medieval Hexagon Pack (buildings3d.js): how many placed
+      // buildings / ghosts are kit models, the plot pads, the build stages
+      buildingKit: {
+        ready: Buildings3D.ready, failed: Buildings3D.failed, error: Buildings3D.error, models: Buildings3D.templates.size,
+        kitBuildings: [...this.survivalBuildingMeshes.values()].filter((object) => object.visible && object.userData.kit).length,
+        proceduralBuildings: [...this.survivalBuildingMeshes.values()].filter((object) => object.visible && !object.userData.kit).length,
+        kitGhosts: [...this.survivalCircles.values()].filter((rec) => rec.ghost && rec.ghost.userData.kit).length,
+        pads: [...this.survivalPads.values()].filter((pad) => pad && pad.visible).length,
+        stage: this.survivalStage ? Object.entries(this.survivalStage).filter(([, holder]) => holder.visible).map(([key]) => key)[0] || null : null,
+        armoryKit: !!(this.survivalArmory && this.survivalArmory.userData.kit),
+        wells: (this.fortressWells || []).length,
+      },
       survivalGateVisible: !!(this.survivalGateMesh && this.survivalGateMesh.visible),
       visibleReliefTroops: (this.relief ? (this.relief.bodies.visible ? this.relief.bodies.count : 0) + (this.relief.bearer.visible ? 1 : 0) : 0)
         + (this.reliefTroops ? this.reliefTroops.filter((rec) => rec && rec.group.visible).length : 0),

@@ -14,6 +14,7 @@ import { Valen3D } from './game/valen3d.js';
 import { Enemy3D } from './game/enemy3d.js';
 import { Troop3D } from './game/troop3d.js';
 import { Crowd3D } from './game/crowd3d.js';
+import { Buildings3D } from './game/buildings3d.js';
 import { EnvKit } from './game/envkit.js';
 import { World3D } from './game/world3d.js';
 import { Ads } from './shop/ads.js';
@@ -213,6 +214,10 @@ Enemy3D.init();
 // guard is a GLB knight from the first frame instead of a placeholder figure
 // while 3.6 MB arrive (playtest 2026-10-17: "pasukan nya masih place holder").
 if (gameMode === 'survival') Troop3D.init();
+// ...and its buildings are the KayKit Medieval Hexagon Pack (1.1 MB of
+// gltf/bin, one 16 KB atlas): fetched at boot so a plot never shows the
+// procedural stand-in (playtest 2026-10-17: "masih berupa prototype").
+if (gameMode === 'survival') Buildings3D.init();
 const bootStarted = performance.now();
 
 function bootTick() {
@@ -232,7 +237,8 @@ function bootTick() {
     return !!(rec && (rec.loaded || rec.failed));
   });
   const troopsSettled = !survival || waited || Troop3D.ready || Troop3D.failed;
-  if (bodySettled && modeReady && hordeSettled && troopsSettled) {
+  const buildingsSettled = !survival || waited || Buildings3D.ready || Buildings3D.failed;
+  if (bodySettled && modeReady && hordeSettled && troopsSettled && buildingsSettled) {
     // bake the horde's animation textures behind the veil, not in the night
     if (survival) Crowd3D.prepare();
     clearVeil();
@@ -245,7 +251,7 @@ function bootTick() {
   if (veilBar) {
     const playerProgress = clampBootProgress(Valen3D.progress || 0);
     const troops = survival ? 1 : 0;
-    const rosterProgress = roster.total ? (roster.loaded + (survival && (Troop3D.ready || Troop3D.failed) ? 1 : 0)) / (roster.total + troops) : 0;
+    const rosterProgress = roster.total ? (roster.loaded + (survival && (Troop3D.ready || Troop3D.failed) ? 1 : 0) + (survival ? Buildings3D.progress : 0)) / (roster.total + troops * 2) : 0;
     const shown = Math.min(playerProgress, rosterProgress);
     veilBar.style.width = `${(4 + shown * 96).toFixed(1)}%`;
   }

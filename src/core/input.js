@@ -46,6 +46,19 @@ export class Input {
     // the top HUD band and the buttons). Legacy keeps its left-half zone.
     this.stickAnywhere = false;
     this.stickTopBand = 128;
+    // Survival's camera (2026-10-17: "camera ... bisa di geser"): the stick
+    // takes the left half of the screen, a drag on the free right half slides
+    // the view, two fingers there pinch it, the mouse wheel zooms it.
+    this.panEnabled = false;
+    this.panSplit = 0.5;
+    this.pan = { active: false, id: -1, pointer: false, x: 0, y: 0, ox: 0, oy: 0, dx: 0, dy: 0, travel: 0, t0: 0 };
+    this.pinch = { active: false, a: -1, b: -1, d: 0, k: 1 };
+    this.touchPoints = new Map();
+    this.wheelZoom = 1;
+    this.panDelta = { x: 0, y: 0 };
+    this.zoomDelta = 1;
+    this.panTap = null;
+    this.panBlock = null;    // (p) => true over any HUD item, a world chip included
     this.firstGesture = [];
     this.anyInput = false;
     this.debug = false;
@@ -74,8 +87,41 @@ export class Input {
 
   /** Where a drag may start the stick. */
   _stickZone(p, c, xFrac, yFrac) {
-    if (this.stickAnywhere) return p.y > Math.min(this.stickTopBand, c.clientHeight * 0.3);
+    if (this.stickAnywhere) {
+      const below = p.y > Math.min(this.stickTopBand, c.clientHeight * 0.3);
+      // with the camera drag on, the stick keeps the left half to itself
+      return below && (!this.panEnabled || p.x < c.clientWidth * this.panSplit);
+    }
     return p.x < c.clientWidth * xFrac && p.y > c.clientHeight * yFrac;
+  }
+
+  /** Where a drag may slide the camera (Survival): the right half, below the HUD band. */
+  _panZone(p, c) {
+    return this.panEnabled && p.x >= c.clientWidth * this.panSplit && p.y > Math.min(this.stickTopBand, c.clientHeight * 0.3) * 0.6;
+  }
+
+  _startPan(p, id, pointer) {
+    const pan = this.pan;
+    pan.active = true; pan.id = id; pan.pointer = pointer;
+    pan.x = pan.ox = p.x; pan.y = pan.oy = p.y;
+    pan.travel = 0;
+    pan.t0 = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  }
+
+  _movePan(p) {
+    const pan = this.pan;
+    pan.dx += p.x - pan.x; pan.dy += p.y - pan.y;
+    pan.travel += Math.hypot(p.x - pan.x, p.y - pan.y);
+    pan.x = p.x; pan.y = p.y;
+  }
+
+  /** A pan that ends without travelling is a tap on the free ground. */
+  _endPan(p) {
+    const pan = this.pan;
+    if (!pan.active) return;
+    const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    if (pan.travel < 10 && now - pan.t0 < 320) this.panTap = { x: p ? p.x : pan.x, y: p ? p.y : pan.y };
+    pan.active = false; pan.id = -1; pan.pointer = false;
   }
 
   _hitButton(p) {
@@ -120,7 +166,10 @@ export class Input {
       this.anyInput = true;
     }, { passive: false });
     addEventListener('keyup', (e) => { if (KEYMAP[e.code]) this.keys[KEYMAP[e.code]] = false; });
-    addEventListener('blur', () => { this.keys = Object.create(null); this._releasePointerStick(); });
+    addEventListener('blur', () => {
+      this.keys = Object.create(null); this._releasePointerStick();
+      this.pan.active = false; this.pinch.active = false; this.touchPoints.clear();
+    });
 
     c.addEventListener('mousemove', (e) => {
       const p = this._local(e);
@@ -130,6 +179,16 @@ export class Input {
         this.stick.x = p.x; this.stick.y = p.y;
       }
     });
+    addEventListener('mousemove', (e) => {
+      if (!this.pan.active || !this.pan.pointer) return;
+      this._movePan(this._local(e));
+    });
+    c.addEventListener('wheel', (e) => {
+      if (!this.panEnabled || !this.gameplay) return;
+      // one notch (~100) zooms ~10%; trackpads send many small deltas
+      this.wheelZoom *= Math.exp(-clamp(e.deltaY, -240, 240) * 0.001);
+      e.preventDefault();
+    }, { passive: false });
     // A fast drag that leaves the canvas used to freeze the stick, so the
     // last vector pointed the wrong way. Follow the pointer anywhere.
     addEventListener('mousemove', (e) => {
@@ -162,7 +221,16 @@ export class Input {
       }
       // Left thumb zone moves. The right half aims and claws, so a drag never
       // swings and a keyboard player can still point with the mouse.
-      const moveZone = this._stickZone(p, c, 0.46, 0.2) && !(this.stickBlock && this.stickBlock(p));
+      const blocked = !!(this.stickBlock && this.stickBlock(p));
+      const panBlocked = blocked || !!(this.panBlock && this.panBlock(p));
+      if (this.gameplay && !panBlocked && this._panZone(p, c) && !this.pan.active) {
+        // the right half drags the camera (a short click still taps the ground)
+        this._startPan(p, -1, true);
+        this.mouse.down = false;
+        this.mouse.clicked = false;
+        return;
+      }
+      const moveZone = this._stickZone(p, c, 0.46, 0.2) && !blocked;
       if (this.gameplay && moveZone && !this.stick.active) {
         this.stick.active = true;
         this.stick.pointer = true;
@@ -180,6 +248,7 @@ export class Input {
       if (e.button === 0) {
         this.mouse.down = false;
         this._releasePointerStick(this._local(e), true);
+        if (this.pan.active && this.pan.pointer) this._endPan(this._local(e));
       }
       if (e.button === 2) this.mouse.right = false;
     });
@@ -195,10 +264,22 @@ export class Input {
         if (!this.gameplay) continue;
         const b = this._hitButton(p);
         if (b) { this.buttons[b].down = true; this.buttons[b].pulse = 1; this.buttons[b].id = t.identifier; continue; }
-        if (!this.stick.active && this._stickZone(p, c, 0.5, 0.18) && !(this.stickBlock && this.stickBlock(p))) {
+        const blocked = !!(this.stickBlock && this.stickBlock(p));
+        if (!this.stick.active && this._stickZone(p, c, 0.5, 0.18) && !blocked) {
           this.stick.active = true; this.stick.pointer = false; this.stick.id = t.identifier;
           this.stick.ox = p.x; this.stick.oy = p.y;
           this.stick.x = p.x; this.stick.y = p.y;
+          continue;
+        }
+        if (blocked || (this.panBlock && this.panBlock(p)) || !this._panZone(p, c)) continue;
+        this.touchPoints.set(t.identifier, { x: p.x, y: p.y });
+        if (!this.pan.active && !this.pinch.active) this._startPan(p, t.identifier, false);
+        else if (this.pan.active && !this.pinch.active && this.touchPoints.has(this.pan.id)) {
+          // a second finger on the free half: pinch to zoom
+          const a = this.touchPoints.get(this.pan.id);
+          this.pinch.active = true; this.pinch.a = this.pan.id; this.pinch.b = t.identifier;
+          this.pinch.d = Math.max(12, Math.hypot(p.x - a.x, p.y - a.y));
+          this.pan.travel = 99;   // a pinch is never a tap
         }
       }
       e.preventDefault();
@@ -207,6 +288,17 @@ export class Input {
       for (const t of e.changedTouches) {
         const p = area(t);
         if (this.stick.active && t.identifier === this.stick.id) { this.stick.x = p.x; this.stick.y = p.y; }
+        if (this.touchPoints.has(t.identifier)) {
+          this.touchPoints.set(t.identifier, { x: p.x, y: p.y });
+          if (this.pinch.active && (t.identifier === this.pinch.a || t.identifier === this.pinch.b)) {
+            const a = this.touchPoints.get(this.pinch.a), b2 = this.touchPoints.get(this.pinch.b);
+            if (a && b2) {
+              const d = Math.max(12, Math.hypot(a.x - b2.x, a.y - b2.y));
+              this.pinch.k *= d / this.pinch.d;
+              this.pinch.d = d;
+            }
+          } else if (this.pan.active && t.identifier === this.pan.id) this._movePan(p);
+        }
         for (const k of ['attack', 'run', 'dash', 'interact', 'repair', 'barricade']) {
           const b = this.buttons[k];
           if (b.id === t.identifier) {
@@ -223,6 +315,16 @@ export class Input {
         if (this.stick.active && t.identifier === this.stick.id) {
           this.stick.active = false; this.stick.pointer = false;
           this.stick.dx = 0; this.stick.dy = 0; this.stick.mag = 0;
+        }
+        if (this.touchPoints.has(t.identifier)) {
+          this.touchPoints.delete(t.identifier);
+          if (this.pinch.active && (t.identifier === this.pinch.a || t.identifier === this.pinch.b)) {
+            // the finger left on the glass goes on panning from where it is
+            this.pinch.active = false;
+            const rest = t.identifier === this.pinch.a ? this.pinch.b : this.pinch.a;
+            const q = this.touchPoints.get(rest);
+            if (q) { this._startPan(q, rest, false); this.pan.travel = 99; } else this.pan.active = false;
+          } else if (this.pan.active && t.identifier === this.pan.id) this._endPan(commit ? p : null);
         }
         for (const k of ['attack', 'run', 'dash', 'interact', 'repair', 'barricade']) {
           const b = this.buttons[k];
@@ -280,7 +382,20 @@ export class Input {
     this.barricadePressed = (!!k.barricade && !this.prevKeys.barricade) || this.buttons.barricade.pulse > 0.82;
     this.mouse.clicked = false;
     this.mouse.rightClick = false;
+    // the camera's share of this frame: a drag in screen px, a zoom factor
+    this.panDelta.x = this.pan.dx; this.panDelta.y = this.pan.dy;
+    this.pan.dx = 0; this.pan.dy = 0;
+    this.zoomDelta = this.pinch.k * this.wheelZoom;
+    this.pinch.k = 1; this.wheelZoom = 1;
+    if (!this.gameplay) { this.pan.active = false; this.pinch.active = false; this.touchPoints.clear(); }
     Object.assign(this.prevKeys, k);
+  }
+
+  /** The tap on free ground since the last call (null if none). */
+  takePanTap() {
+    const tap = this.panTap;
+    this.panTap = null;
+    return tap;
   }
 
   /**

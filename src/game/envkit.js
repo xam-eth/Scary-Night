@@ -1313,8 +1313,9 @@ class EnvKitRuntime {
       'fireplace', 'clock', 'stainedGlass', 'cobweb', 'bones', 'mossPatch', 'urn',
       'hangingVine', 'books', 'deskLamp', 'ward', 'stakes',
     ]);
+    // 'well': the bailey's well is a KayKit model World3D places itself
     const knownFurniture = new Set([
-      ...Object.keys(PROP_FOR), 'fountain', 'font', 'stairRail',
+      ...Object.keys(PROP_FOR), 'fountain', 'font', 'stairRail', 'well',
     ]);
     const missing = [];
 

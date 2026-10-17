@@ -215,38 +215,31 @@ export class Fortress extends Mansion {
   }
 
   /**
-   * The bailey's life: stores by the gates, a well, a market table. Laid out
-   * on the 0.7 bailey (inner wall face at x = +-910, y = +-665) and scaled
-   * to the current one; anything that would end up in the wall is pulled
-   * back to stand 34 px clear of it. Clusters keep their own spacing, so
-   * nothing overlaps, and every prop stays clear of the build circles and
-   * the roads.
+   * The bailey's life: stores along the curtain wall, a well, a market
+   * table. Laid out with the build plots (survival.js PLOT, checked by
+   * tools/survival-map.mjs): in rows against the wall between the plots, in
+   * the same point symmetry through the keep, never on a plot, a gate's way
+   * in or a ballista's line of fire (playtest 2026-10-17: "letak build
+   * bangunan masih belum rapi" — barrels stood on the plots).
    */
   furnish() {
-    const k = FORT_SCALE / 0.7;
-    const inX = BAILEY.w / 2 - 34, inY = BAILEY.h / 2 - 34;
-    const F = (cx0, cy0, w, h, type, o = {}) => {
-      const cx = Math.max(-inX + w / 2, Math.min(inX - w / 2, Math.round(cx0 * k)));
-      const cy = Math.max(-inY + h / 2, Math.min(inY - h / 2, Math.round(cy0 * k)));
-      return this.addF(cx - w / 2, cy - h / 2, w, h, type, { room: this.findRoom(cx, cy), ...o });
-    };
-    const barrel = (x, y) => F(x, y, 32, 32, 'barrel');
-    const crates = (x, y) => F(x, y, 60, 50, 'crates');
-    // gate road: supplies stacked either side of the main gate
-    barrel(-200, 626); barrel(-250, 632); crates(-330, 622);
-    barrel(202, 626); crates(330, 622);
-    // north road
-    crates(-320, -622); barrel(200, -626); barrel(250, -620);
-    // west and east roads, against the curtain wall
-    crates(-872, -180); barrel(-876, 150); barrel(-874, 200);
-    crates(872, 180); barrel(876, -150); barrel(874, -200);
-    // the yards
-    F(756, -532, 96, 96, 'fountain');                      // the well
-    barrel(866, -360);
-    crates(-600, -626); crates(-500, -630); barrel(-868, -320);
-    F(-640, 625, 150, 56, 'longTable');                    // market table
-    crates(-866, 392); barrel(-866, 460);
-    crates(830, 606); barrel(536, 640); crates(650, 628);
+    const put = (cx, cy, w, h, type) => this.addF(cx - w / 2, cy - h / 2, w, h, type, { room: this.findRoom(cx, cy) });
+    const barrel = (x, y) => put(x, y, 32, 32, 'barrel');
+    const crates = (x, y) => put(x, y, 60, 50, 'crates');
+    // s = 1: the south and west walls; s = -1: their twins on the north and
+    // east walls (x, y -> -x, -y)
+    for (const s of [1, -1]) {
+      // beside the main gate's west tower / the north gate's east tower
+      barrel(-215 * s, 425 * s); barrel(-250 * s, 425 * s); crates(-320 * s, 416 * s);
+      // the far corner of the same wall, short of the corner tower
+      barrel(455 * s, 425 * s); crates(520 * s, 416 * s);
+      // the west wall between the postern and the gate tower / the east wall
+      barrel(-600 * s, -215 * s);
+      // the west wall below the gate tower / the east wall above it
+      crates(-598 * s, 235 * s); barrel(-600 * s, 300 * s);
+    }
+    put(300, -250, 96, 96, 'well');           // the well (KayKit), in the northeast yard
+    put(-310, 245, 150, 56, 'longTable');     // the market table, its twin
   }
 
   /** Lighting is the survival mode's (the keep's lamp); no house fixtures. */

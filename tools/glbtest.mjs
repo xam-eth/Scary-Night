@@ -13,6 +13,7 @@ import {
   SlotBook, behaviorReady, enemyClipForState, requiredClips, selectGlbSlots, standinViolation,
 } from '../src/game/enemy3d.js';
 import { TROOP_ASSETS, TROOP_CLIPS, TROOP_LOADOUTS } from '../src/game/troop3d.js';
+import { BUILDING_KIT, BUILDING_CORE, BUILDING_MODEL } from '../src/game/buildings3d.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE_NAME = 'hunter_run_walk_claw_sword_shot.glb';
@@ -486,5 +487,44 @@ console.log('\ngarrison troops (KayKit, CC0):');
     bowFiles.join(', '));
 }
 
-console.log(failures === 0 ? '\nGLB registry + environment kit + garrison troops: all PASS' : `\n${failures} FAILURE(S)`);
+/* Survival's buildings (src/game/buildings3d.js): the KayKit Medieval Hexagon
+ * Pack, vendored byte-for-byte (2026-10-17: "bangunan yg di build belum
+ * memakai asset visual yg layak ... masih berupa prototype"). */
+console.log('\nbailey buildings (KayKit Medieval Hexagon Pack, CC0):');
+{
+  const KIT_DIR = path.join(ROOT, 'assets', 'buildings', 'kaykit-hex');
+  const credits = fs.readFileSync(path.join(KIT_DIR, 'CREDITS.txt'), 'utf8');
+  const listed = [...credits.matchAll(/^\s{2}(\S+)\s.*\n\s+sha256 ([0-9a-f]{64})/gm)].map((m) => ({ file: m[1], sha: m[2] }));
+  const drift = listed.filter(({ file, sha }) => !fs.existsSync(path.join(KIT_DIR, file))
+    || createHash('sha256').update(fs.readFileSync(path.join(KIT_DIR, file))).digest('hex') !== sha).map((row) => row.file);
+  const shipped = fs.readdirSync(KIT_DIR).filter((file) => file !== 'CREDITS.txt');
+  const unlisted = shipped.filter((file) => !listed.some((row) => row.file === file));
+  ok('every vendored building file matches the SHA-256 in CREDITS.txt, and nothing ships unlisted',
+    listed.length >= 40 && drift.length === 0 && unlisted.length === 0,
+    `${listed.length} listed${drift.length ? `; changed: ${drift.join(', ')}` : ''}${unlisted.length ? `; unlisted: ${unlisted.join(', ')}` : ''}`);
+  ok('the pack ships its CC0 licence and the credits name the source commit',
+    /Creative Commons Zero, CC0/.test(fs.readFileSync(path.join(KIT_DIR, 'LICENSE.txt'), 'utf8'))
+      && /commit 84fa4e91af6a88989be7c99e0891cede11f2ca38/.test(credits));
+  const broken = [];
+  let meshes = 0;
+  for (const [key, rel] of Object.entries(BUILDING_KIT)) {
+    const file = path.join(ROOT, rel);
+    if (!fs.existsSync(file)) { broken.push(`${key}: missing`); continue; }
+    const json = JSON.parse(fs.readFileSync(file, 'utf8'));
+    meshes += (json.meshes || []).length;
+    const refs = [...(json.buffers || []), ...(json.images || [])].map((item) => item.uri).filter(Boolean);
+    const bad = refs.filter((uri) => /^(data:|https?:)/.test(uri) || !fs.existsSync(path.join(path.dirname(file), decodeURIComponent(uri))));
+    if (!(json.meshes || []).length || bad.length) broken.push(`${key}: ${bad.join(', ') || 'no mesh'}`);
+  }
+  ok('every kit model the game loads is a glTF with a mesh whose buffer and atlas sit next to it',
+    broken.length === 0, broken.length ? broken.join('; ') : `${Object.keys(BUILDING_KIT).length} models, ${meshes} meshes`);
+  const coreOk = BUILDING_CORE.every((key) => BUILDING_KIT[key]) && Object.values(BUILDING_MODEL).every((key) => BUILDING_CORE.includes(key));
+  ok('every buildable type (barracks, sawmill, mine, ballista) maps to a core kit model', coreOk,
+    Object.entries(BUILDING_MODEL).map(([type, key]) => `${type}=${key}`).join(', '));
+  const saw = JSON.parse(fs.readFileSync(path.join(ROOT, BUILDING_KIT.sawmill), 'utf8'));
+  ok('the lumbermill keeps its separate saw node (it spins while the sawmill works)',
+    (saw.nodes || []).some((node) => node.name === 'building_lumbermill_saw_blue'));
+}
+
+console.log(failures === 0 ? '\nGLB registry + environment kit + garrison troops + bailey buildings: all PASS' : `\n${failures} FAILURE(S)`);
 process.exit(failures === 0 ? 0 : 1);
