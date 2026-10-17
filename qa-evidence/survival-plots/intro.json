@@ -1,0 +1,56 @@
+{
+  "first": {
+    "cine": "intro",
+    "t": 0.08
+  },
+  "shots": [
+    {
+      "name": "intro-1-keep",
+      "t": 0.7,
+      "caption": "PROTECT THE KEEP",
+      "zoom": 1.002,
+      "play": 0.655
+    },
+    {
+      "name": "intro-2-keep-wide",
+      "t": 2.32,
+      "caption": "PROTECT THE KEEP",
+      "zoom": 0.844,
+      "play": 0.655
+    },
+    {
+      "name": "intro-3-horde",
+      "t": 4.02,
+      "caption": "THE HORDE COMES AT NIGHT",
+      "zoom": 0.624,
+      "play": 0.655
+    },
+    {
+      "name": "intro-4-captain",
+      "t": 6.02,
+      "caption": "YOU ARE THE CAPTAIN",
+      "zoom": 0.887,
+      "play": 0.655
+    },
+    {
+      "name": "intro-5-handover",
+      "t": 7.17,
+      "caption": "YOU ARE THE CAPTAIN",
+      "zoom": 0.656,
+      "play": 0.655
+    }
+  ],
+  "restart": {
+    "seen": true,
+    "restart": "intro",
+    "ended": "survival-failed",
+    "playAgain": true,
+    "again": "intro"
+  },
+  "reload": {
+    "cine": false,
+    "phase": "night",
+    "elapsed": 4
+  },
+  "errors": []
+}

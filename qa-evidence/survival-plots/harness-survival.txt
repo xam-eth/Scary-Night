@@ -1,0 +1,95 @@
+=== SURVIVAL MILESTONE 1 — deterministic three-day probe ===
+  PASS  Night 1–3 waves: requested 21/21/24 → 24/27/27 → 30/30/30; actual Swarm 66/78/90 (no clamp, HP 48→54→60), Breaker 0/1/2
+  PASS  the keep's banner: x1.5 damage inside its rooms (15.0 vs 10.0); it never slows or blunts a body (same walk 75.0 vs 75.0 px/s under / beyond it, claws x1)
+  PASS  a closed door blocks bodies across its full width (-0.4:blocked -0.2:blocked 0:blocked 0.2:blocked 0.4:blocked)
+  PASS  door damage is the same under and beyond the banner (20 vs 20; no firelight halving)
+  PASS  breach → flow field → keep: body reached the keep's wall in 3.3s (153 px from its centre), clawed 36 HP, keep at 0 → failed (THE KEEP FELL)
+  PASS  Breaker retargets southGate → posternSE → keep
+  PASS  Survival Hunter moves in all four screen directions from ward ({"right":178.4,"left":178.4,"down":142.8,"up":178.4})
+  PASS  Breaker keeps southGate wall target with Hunter visible
+  PASS  Hunter auto-shot hits an unobstructed in-range test target (1 hit(s), 1 bolt(s), target=987654, weapon=shot; LOS stubbed open)
+  PASS  Hunter auto-shot acquires and hits a real-LOS target with mansion collision enabled (ward; 1 hit(s))
+  PASS  Hunter's Flare skill damages/staggers in radius and respects cooldown (500 → 442 HP)
+  PASS  wave 3 (30 bodies) reaches its own ranks at the NW postern: 29 pressing, door 110 → 17 within 10s, front rank index 0
+  PASS  ranks close up after the front row dies (nearest body 81 px → 77 px from the chapel door)
+  PASS  Hunter shoots through a closed door's slit (plain LOS blocked=true; body 400 → 208 HP; door 260 → 253, still closed)
+  PASS  survivors guard the clawed door (2 guards, 2 posted at southGate, 26 shots, 4 kills with the Hunter's shot disabled)
+  PASS  a guard's bolt passes through the Hunter (blood 100 → 100)
+  PASS  pause freezes Flare cooldown (10 while paused → 9.00 after 1s) and the clock; no pause on the end panel (playing) or the dawn reward (false), pause on the build day (true); dawn patches the keep 300 → 405 (want 405), captain home=true
+  PASS  reload keeps an invader inside (_inHouse=true) and rebuilds 2 guards
+  PASS  save/reload resumes Day 2 day (1/3 nights, 60s)
+  economy: [{"type":"mine","slot":"north","queued":true,"finished":true},{"type":"sawmill","slot":"west","queued":true,"finished":true},{"type":"barracks","slot":"ward","queued":true,"finished":true}] → soldiers 3 at build, mined 6.00 gold overnight (purse +6.00, nothing burns), wrong-type circle refused=true, dawn +14 gold, +21 wood, soldiers 3 (PASS)
+  PASS  building levels: queued, paid and finished through the one builder; Lv3 is the cap (mine Lv1→2→3, cost Lv2 4/12, Lv3 6/16, queue lock build=false hunter=false upgrade=false, max locked=true)
+  PASS  Lv3 mine digs 14 gold over one night; nothing is bought at night (goldPerNight 14, mined 14.00, night purchase=false)
+  PASS  barracks levels house 1 / 2 / 3 soldiers as soon as they stand; each one guards (soldiers 2 → 3 → 4 → 5, guards 5)
+  PASS  sawmill planks raise every outer door +10% at Lv1, +20% at Lv2 (doors full by day) (door max HP 260/200/110/200/200/110 → 286/220/121/220/220/121 → 312/240/132/240/240/132)
+  PASS  Hunter Lv2: bolt 32 → 40 that runs through a body, health 100 → 120 (healed); Lv3: a fan of three 48-damage bolts (cost 14/8, Lv2 shot [{"damage":40,"pierce":1}] HP 120/120, Lv3 shot [{"damage":48,"pierce":1},{"damage":48,"pierce":1},{"damage":48,"pierce":1}])
+  PASS  save/reload keeps building + Hunter + keep levels (gold, no oil); a pre-K1 save migrates onto the typed circles; a mid-night reload keeps 60/140 HP (saved levels {"north":3,"ward":3,"west":2}, hunter 3; old save → gold 77, keep Lv2, north:mine Lv1, ward:barracks Lv1, south:sawmill Lv1, south:tower:tower Lv1, west:sawmill Lv1, Hunter Lv1; mid-night 60/140)
+  PASS  ballista: built on its own circle under the banner through the one builder, just inside the room's outer door; other circles refuse it; doorless rooms have none; circles keep apart on clear floor (south:tower circle=true, wrong circles refused=true, paid 4/16=true, spot (130, 315) 216px from southGate, doorless rooms without=true, every ballista by a door=true, pair gaps 260/260/278/278/178/178, clear floor=true, towers 1)
+  PASS  tower: watches by day; by night fires its heavy bolt through the door slit (Hunter shot + guards off) (day shots 0; night 2 shots, body 999 → 951 (3×16), bolt {"pierce":1,"range":640,"friendly":true,"slits":true,"damage":24}, plain LOS blocked=true)
+  PASS  the Hunter's and guards' bolts keep no reach cap and no pierce (hunter range 0 pierce 0; guard range 0 pierce 0)
+  PASS  tower bolt runs through 2 bodies in a line and stops in the 2nd (pierce 1) (one shot of 24, bodies 975 / 975 / 999)
+  PASS  tower never shoots through a wall (a body in range behind masonry is ignored) (body at (10, -145) in ward, in range=true, no LOS=true, shots 3 → 3, body 999)
+  PASS  tower levels: Lv2 32 dmg / 580 range, Lv3 42 / 640 (costs 6/18, 8/22); a Lv3 bolt lands for 42 (cost Lv2 6/18, Lv3 8/22; Lv2 32/580, Lv3 42/640; body 999 → 957)
+  PASS  save/reload keeps the ballista at Lv3 on the same circle (reloaded tower Lv3, towers 1 at (130, 315))
+  PASS  guards take full claws from invaders under the banner and beyond it; 8 claws in one frame land once (beyond the banner true: 40 → 29 (claw 11); under it true: 40 → 29; 8 bodies at once → 11 damage (0.5 s i-frames))
+  PASS  beyond the banner bodies within 110 px go for a guard (3 at most, the rest walk on); under it they pass one not in their way (beyond: 3/5 bodies on the guard, 22 damage in 2.5 s; under: 0/3 on it, 0 damage)
+  PASS  at 0 HP a guard drops where it stands: it stops shooting and invaders walk past it (down=true, banner=true, guardsDown 1, shots while down none, walker 172px on, standing 1/2)
+  PASS  the Hunter beside a fallen guard helps it up in 1.5 s with half HP; stepping away resets it (0.8 s beside → 0.80 s (still down=true); after stepping away 0.00; back → up after 1.50 s with 20 HP, rescued 1)
+  PASS  a guard at or below 35% HP falls back to a post by the keep; the healthy one keeps the door; no claws through an intact door (both posted at southGate=true (standing at their posts=true), door 129 damage taken, guard HP after 14 s 13/40, wounded 13 HP → keep, healthy → southGate)
+  PASS  a mid-night reload keeps a fallen guard down where it fell (with its clock) and a hurt one's HP (reloaded: guard 0 down=true at (438, -317) vs (438, -317), help 0.4s, alone 6.5s; guard 1 23 HP)
+  PASS  a fallen guard left alone 20 s is lost (survivors 2 → 1 at once); one still down at dawn stands up healed (lost after 20 s alone (banner=true): survivors 1, guards 1; dawn: phase day, survivors 1, reward lost 1 / rescued 1, guards 40)
+  PASS  every wave body starts outside the curtain wall and off props (no crowd starts inside the bailey) (189 bodies over 6 gates + Breakers + individuals, 0 inside/on props)
+  PASS  intro: a fresh save opens on the first wave at its gate; the clock, the horde and the banners wait; the run holds (wave 1, 21 bodies, clock 2.4 s → 2.4 s, horde still true, introSeen true)
+  PASS  intro: SKIP is refused in the first beat, then hands over: HOLD THE KEEP, the night clock runs, the play frame (refused early true, clock 3.4 s, zoomMul 0.910 / 0.910)
+  PASS  intro: every run opens on it (restart replays it); a new session mid-night plays straight on; cinematics off starts the night at 0 s (restart replays true, new session true, off true)
+  PASS  arrival: the third dawn opens the main gate and marches 9 troops in from outside to two lines before the keep, then the end panel (gate open true, 9/9 start outside, 2 marching at 3 s, in line true, panel survival-complete)
+  PASS  arrival: a reload after the victory shows the column in line under the end panel (no replay); PLAY AGAIN clears it and shuts the gate (reload true, restart true)
+  PASS  R1/R2: a won run counts all three nights and earns its stars from the keep's lowest point and the guards lost (nights 66+79+93 = 238, panel 238; keep low 94% (2 stars from 50%), guards lost 0 → 3 stars; keep left 96%, built 3, time 235s)
+  PASS  R2: 3 stars = the keep never below half and no guard lost, 2 = a guard lost, 1 = the keep fell below half, a loss 0 (stars 3,2,1,3,0)
+  PASS  R4: the idle loss shows how close dawn was and a Night-1 tip read off it (never moved: walk to the gate) (night 1, keep fell at 38.6 s → 22s to dawn, tip "WALK TO THE GATE UNDER ATTACK")
+  PASS  R4: the tip names the first missing piece (8 words at most): Flare, build by day, the breached gate's ballista, the keep level that unlocks it, a keep a level behind, the captain's HP (moved: TAP FLARE ON BIG GROUPS; nothing: BUILD BY DAY: WALK INTO A CIRCLE; ballista: BUILD A BALLISTA AT THE EAST GATE; locked: RAISE THE KEEP TO GUARD THE NW GATE; keep: UPGRADE THE KEEP BY DAY; captain: FALL BACK TO THE KEEP WHEN HURT)
+  PASS  R3: records across runs in save.survival.records; NEW BEST only when one falls (never on the first run); a reload keeps the panel and the records; PLAY AGAIN keeps the records (NEW BEST false/true/true/false; reload kept=true, PLAY AGAIN cleared the result=true; saved {"runs":4,"wins":1,"bestStars":3,"bestNights":3,"bestKills":40,"totalKills":40})
+  PASS  R19: the MVP is the garrison piece with most kills (one ballista by its circle, the keep's, the guards), never the captain; a ballista bolt's kill is tallied on its circle (NORTH BALLISTA 31 over guards 12 / captain 180; GUARDS over one ballista 9; captain only → null; south ballista kill tallied 1, MVP SOUTH BALLISTA)
+  PASS  scale: the bailey is half its first size (1300 x 950 px) with the keep r100 and a 2 m curtain wall, for actors x1.6 (FORT_SCALE 0.5, bailey 1300x950, keep r100, wall 2 m, actors x1.6)
+  PASS  roof ballista reaches the gate roads: Lv2 440 / Lv3 500 px against the N/S gate insides ~430 px from the keep (it used to cover only the inner ward) (gate insides 432 px from the keep; ranges 440/500; ballista Lv1 bolt 24)
+  PASS  ballista: its kill is counted on its deck tonight and pops "+1" with a skull over it (killed true, tally 1, pop +1 at the tower)
+  PASS  mine: a dug coin pops "+1" beside the purse in the HUD (hudPops), and a new night resets the ballista tallies (hud pop +1 gold from mine; tallies 0)
+  idle Night 3: 0 peak enemies / 0 Breakers, 0 kills, 0 wall damage, gate 0 HP, Hunter 100 HP; failed
+  builder Night 3: 51 peak enemies / 2 Breakers, 93 kills, 847 wall damage, gate 0 HP, Hunter 120 HP; keep Lv3 1169 HP, soldiers 3, buildings mine,sawmill,barracks, gateBuilt=true; complete
+  PASS  idle (no input, no builds) does not survive: failed on Night 1 (THE KEEP FELL)
+  PASS  engaged builder survives Night 3 (Flare ×6, keep Lv3 at 1169 HP, gold 81)
+  PASS  three-day loop, keep Lv1→3→3 (banner 5→9→9 yards), one builder queue, idle loses / engaged builder wins
+
+=== LAST NIGHT — bot run (18277 frames, 3.3s wall, sim 300.0s) ===
+outcome: DAWN   screen=dawn
+claw swings=11 clawHits=11 fightFrames=216
+blood=95.7 kills=4 waves=3 spawned=13 hits taken=0
+doors: SERVANT DOOR=BROKEN  FRONT DOOR=126%  CELLAR DOOR=BROKEN  CHAPEL DOOR=118%  SCULLERY DOOR=21%  PALISADE GATE=185%  POSTERN=60%
+windows: BAY WINDOW=62%  TALL WINDOW=51%  SCULLERY WINDOW=BROKEN  STUDY WINDOW=23%  GALLERY WINDOW=BROKEN  ORATORY WINDOW=55%  SKYLIGHT ROW=BROKEN  PANE WALL=26%  ROSE WINDOW=BROKEN
+shards earned: 79  bestTime=300.0
+
+   t   blood alive(inside) kills planks doors          win          mood        danger  hb   budget knock
+    0  0.48   0( 0)       0    3   [130 130 130 130  78 210  72] [ 62  62  62  62  62  62  62  62  62] calm        0.06 1.36   0.6 
+   15  0.53   0( 0)       0    3   [130 130 130 130  78 210  72] [ 62  62  62  62  62  62  62  62  62] calm        0.06  1.3   0.6 
+   30   0.5   1( 0)       0    3   [130 130 130 130  78 210  72] [ 62  62  62  62  62  62  62  62  62] calm        0.06 1.34   0.6 
+   45  0.47   1( 0)       0    3   [130 130 130 130  78 210  72] [ 62  62  62  62  62  62  62  60  62] calm        0.06 1.37   0.6 crawler
+ 60.1  0.54   1( 0)       0    3   [130 130 130 130  78 210  72] [ 62  62  62  62  62  62  62  58  62] curious     0.22 1.38  0.77 crawler
+ 75.1  0.51   1( 0)       0    3   [130 130 130 130  78 210  72] [ 62  62  62  62  62  62  62  56  62] curious     0.23 1.42  1.33 crawler
+ 90.1  0.48   1( 0)       0    3   [130 130 130 130  78 210  72] [ 62  62  62  62  62  62  62  54  62] curious     0.23 1.45  1.88 crawler
+105.1  0.45   1( 0)       0    3   [130 130 130 130  78 210  72] [ 62  62  62  62  62  62  62  52  62] curious     0.23 1.48  2.34 crawler
+120.1  0.42   1( 0)       0    3   [130 130 130 130  78 210  72] [ 62  62  62  62  62  62  62  49  62] uneasy      0.25 1.53  2.34 crawler
+135.1  0.61   4( 3)       1    3   [  0 130 130 130  78 210  72] [ 62  62  62  62  62  62  62  45  62] panic       0.48 1.61  0.77 
+150.1  0.62   4( 3)       1    3   [  0 128 130 130  78 210  72] [ 62  62  62  62  62  62  62  37  62] pressured   0.49 1.81  1.55 
+165.1  0.63   4( 2)       1    3   [  0 128 130 130  78 210  72] [ 62  62  62  62  62  62  62  35  62] pressured   0.46 1.41  2.33 
+180.1  0.64   4( 3)       1    3   [  0 128 130 130  74 210  72] [ 62  62  62  62  62  62  62  35  62] pressured   0.48 1.41  2.34 
+195.1  0.61   4( 2)       1    3   [  0 128 130 130  69 210  72] [ 62  62  62  60  62  62  62  35  58] pressured   0.65 1.67  2.34 
+210.1  0.72   3( 2)       2    3   [  0 128 130 130  63 210  72] [ 62  62  62  55  62  62  62  35  48] panic       0.65 1.44  2.34 
+225.1  0.82   3( 1)       3    3   [  0 128 130 130  57 210  72] [ 62  62  44  51  62  62  62  35  37] alert       0.66 1.75  0.88 crawler
+240.1  0.93   2( 0)       4    3   [  0 128 130 130  51 210  72] [ 62  62  14  47  62  62  62  35  26] relief      0.67  1.2  1.85 crawler
+255.1   0.9   3( 2)       4    3   [  0 128 130 130  45 210  72] [ 62  62   0  45  62  62  62  35   0] pressured   0.82 1.34  2.34 crawler
+270.2  0.87   3( 0)       4    3   [  0 128 121 130  39 210  70] [ 62  62   0  42  62  62  50  35   0] panic       0.84 1.86  2.34 crawler
+285.2  0.84   9( 3)       4    3   [  0 128   0 130  32 209  65] [ 62  62   0  35   0  62  24  29   0] panic       1.05 2.74  1.53 
+
+no runtime errors.
+final screen: dawn, events: 133.6:mood=pressured | 133.8:mood=panic | 136.7:mood=pressured | 180.0:heavy | 199.9:mood=panic | 221.4:mood=alert | 228.0:mood=pressured | 232.5:mood=relief | 240.0:final | 247.7:mood=pressured | 270.0:panic | 270.0:mood=panic | 290.0:silence | 300.0:dawn

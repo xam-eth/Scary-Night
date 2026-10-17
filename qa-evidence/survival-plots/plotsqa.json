@@ -1,0 +1,253 @@
+{
+  "results": [
+    {
+      "name": "camera: the night frame is further out than build 8 (zoom < 0.70, was 0.775)",
+      "ok": true,
+      "detail": {
+        "zoom": 0.655,
+        "play": 0.655,
+        "user": 1
+      }
+    },
+    {
+      "name": "camera: a drag on the right half slides the view (the ground follows the finger) and the captain stays put",
+      "ok": true,
+      "detail": {
+        "camMoved": 406,
+        "playerMoved": 0,
+        "offset": 411
+      }
+    },
+    {
+      "name": "camera: dragged away, a CAPTAIN chip appears to bring the view back",
+      "ok": true,
+      "detail": {
+        "x": 370,
+        "y": 76,
+        "w": 104,
+        "h": 38
+      }
+    },
+    {
+      "name": "camera: the CAPTAIN chip eases the view back onto him",
+      "ok": true,
+      "detail": {
+        "offset": 0
+      }
+    },
+    {
+      "name": "camera: the wheel zooms in and out within 0.8–1.3 of the frame, and the choice is saved",
+      "ok": true,
+      "detail": {
+        "z0": 1,
+        "zIn": 1.3,
+        "zOut": 0.8,
+        "camZoom": 0.528,
+        "saved": 0.8
+      }
+    },
+    {
+      "name": "camera: two fingers spread on the right half zoom in",
+      "ok": true,
+      "detail": {
+        "z0": 0.8,
+        "z1": 1.3
+      }
+    },
+    {
+      "name": "assets: the KayKit kit is loaded and every placed building is a kit model (0 procedural)",
+      "ok": true,
+      "detail": {
+        "kit": {
+          "ready": true,
+          "failed": false,
+          "error": null,
+          "models": 22,
+          "kitBuildings": 7,
+          "proceduralBuildings": 0,
+          "kitGhosts": 15,
+          "pads": 16,
+          "stage": null,
+          "armoryKit": true,
+          "wells": 1
+        },
+        "meshes": [
+          {
+            "slot": "ward",
+            "kit": true,
+            "level": 2,
+            "dressed": true
+          },
+          {
+            "slot": "south",
+            "kit": true,
+            "level": 1,
+            "dressed": false
+          },
+          {
+            "slot": "north",
+            "kit": true,
+            "level": 2,
+            "dressed": true
+          },
+          {
+            "slot": "south:tower",
+            "kit": true,
+            "level": 3,
+            "dressed": true
+          },
+          {
+            "slot": "east:tower",
+            "kit": true,
+            "level": 1,
+            "dressed": false
+          },
+          {
+            "slot": "east",
+            "kit": true,
+            "level": 1,
+            "dressed": false
+          },
+          {
+            "slot": "west",
+            "kit": true,
+            "level": 1,
+            "dressed": false
+          }
+        ],
+        "plots": 15
+      }
+    },
+    {
+      "name": "assets: every plot stands on its pad, the armory is the pack's racks, the yard has its well",
+      "ok": true,
+      "detail": {
+        "pads": 16,
+        "plots": 15,
+        "armory": true,
+        "wells": 1
+      }
+    },
+    {
+      "name": "assets: a levelled building shows it (Lv2/Lv3 flags and stock from the pack)",
+      "ok": true,
+      "detail": [
+        {
+          "slot": "ward",
+          "kit": true,
+          "level": 2,
+          "dressed": true
+        },
+        {
+          "slot": "south",
+          "kit": true,
+          "level": 1,
+          "dressed": false
+        },
+        {
+          "slot": "north",
+          "kit": true,
+          "level": 2,
+          "dressed": true
+        },
+        {
+          "slot": "south:tower",
+          "kit": true,
+          "level": 3,
+          "dressed": true
+        },
+        {
+          "slot": "east:tower",
+          "kit": true,
+          "level": 1,
+          "dressed": false
+        },
+        {
+          "slot": "east",
+          "kit": true,
+          "level": 1,
+          "dressed": false
+        },
+        {
+          "slot": "west",
+          "kit": true,
+          "level": 1,
+          "dressed": false
+        }
+      ]
+    },
+    {
+      "name": "build: a new building rises through the pack's three construction stages, then pops up",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "stages": [
+          "stageA",
+          "stageB",
+          "stageC"
+        ],
+        "built": "tower"
+      }
+    },
+    {
+      "name": "cards: the build/upgrade dock is one row (<= 56 px tall, was 166) under half the old area",
+      "ok": true,
+      "detail": {
+        "action": {
+          "x": 684,
+          "y": 328,
+          "w": 148,
+          "h": 50,
+          "label": "survival:UPGRADE MAX"
+        },
+        "night": {
+          "x": 12,
+          "y": 62,
+          "w": 112,
+          "h": 38,
+          "label": "survival:START NIGHT"
+        },
+        "view": {
+          "w": 844,
+          "h": 390
+        },
+        "dockArea": 16500
+      }
+    },
+    {
+      "name": "cards: NIGHT is a chip (<= 130 x 44, was 148 x 50), still top-left (R18a)",
+      "ok": true,
+      "detail": {
+        "x": 12,
+        "y": 62,
+        "w": 112,
+        "h": 38,
+        "label": "survival:START NIGHT"
+      }
+    },
+    {
+      "name": "cards: the keep's two actions (UPGRADE + REPAIR) share the same one-row dock",
+      "ok": true,
+      "detail": {
+        "here": "keep",
+        "items": [
+          {
+            "label": "survival:UPGRADE MAX",
+            "x": 684,
+            "y": 328,
+            "w": 148,
+            "h": 50
+          },
+          {
+            "label": "survival:REPAIR KEEP",
+            "x": 366,
+            "y": 328,
+            "w": 124,
+            "h": 50
+          }
+        ]
+      }
+    }
+  ],
+  "errors": []
+}

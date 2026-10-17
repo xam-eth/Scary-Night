@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-10-17T00:30:54.452Z",
+  "capturedAt": "2026-10-17T06:03:18.139Z",
   "view": {
     "width": 844,
     "height": 390,
@@ -37,10 +37,10 @@
       "name": "fx: hits flash, kills burst and shots flash at the muzzle",
       "ok": true,
       "detail": {
-        "live": 3,
+        "live": 6,
         "played": {
           "impact": 6,
-          "kill": 2,
+          "kill": 3,
           "muzzle": 2,
           "coin": 0,
           "log": 0,
@@ -52,9 +52,9 @@
       "name": "kills: every kill is credited to a source (captain / guard / ballista / keep / flare)",
       "ok": true,
       "detail": {
-        "kills": 8,
+        "kills": 9,
         "by": {
-          "captain": 8,
+          "captain": 9,
           "guard": 0,
           "tower": 0,
           "keep": 0,
@@ -79,9 +79,9 @@
       "detail": {
         "drawn": 48,
         "byKind": {
-          "zombie": 24,
+          "zombie": 25,
           "crawler": 14,
-          "ghoul": 10
+          "ghoul": 9
         },
         "primitive": 0,
         "rigs": 1
@@ -91,8 +91,8 @@
       "name": "ballista: a built ballista kills and says so over its deck (\"+1\" skull, the night tally)",
       "ok": true,
       "detail": {
-        "towerKills": 4,
-        "skullPops": 4
+        "towerKills": 3,
+        "skullPops": 3
       }
     },
     {
@@ -109,7 +109,8 @@
             "helmet": true
           }
         ],
-        "build": "8"
+        "build": "9",
+        "page": "9"
       }
     },
     {
@@ -120,11 +121,11 @@
         "killsBy": {
           "captain": 13,
           "guard": 5,
-          "tower": 4,
+          "tower": 3,
           "keep": 0,
           "flare": 0
         },
-        "runKills": 22
+        "runKills": 21
       }
     },
     {
@@ -143,9 +144,9 @@
       "detail": {
         "night": {
           "x": 12,
-          "y": 74,
-          "w": 148,
-          "h": 50,
+          "y": 62,
+          "w": 112,
+          "h": 38,
           "label": "survival:START NIGHT"
         },
         "action": null,
@@ -163,8 +164,8 @@
         "ok": true,
         "survivors": 3,
         "start": {
-          "x": 135,
-          "y": 136
+          "x": 165,
+          "y": 160
         },
         "fromSpot": 40,
         "rally": 1,
@@ -185,10 +186,10 @@
       "ok": true,
       "detail": {
         "natural": true,
-        "kills": 29,
+        "kills": 27,
         "by": {
-          "captain": 14,
-          "guard": 10,
+          "captain": 13,
+          "guard": 9,
           "tower": 5,
           "keep": 0,
           "flare": 0
@@ -197,7 +198,7 @@
           "night": 2,
           "toDawn": 37,
           "nights": 1,
-          "kills": 29,
+          "kills": 27,
           "tip": {
             "icon": "tower",
             "text": "BUILD A BALLISTA AT THE WEST GATE"
@@ -206,7 +207,7 @@
             "id": "guard",
             "icon": "guard",
             "name": "GUARDS",
-            "kills": 10
+            "kills": 9
           },
           "newBest": false
         }
@@ -225,14 +226,14 @@
         "result": {
           "stars": 3,
           "kills": 239,
-          "keepLeft": 85,
+          "keepLeft": 97,
           "built": 3,
           "time": 271,
           "mvp": {
             "id": "guard",
             "icon": "guard",
             "name": "GUARDS",
-            "kills": 29
+            "kills": 19
           },
           "newBest": true
         },
@@ -242,14 +243,14 @@
           "bestStars": 3,
           "bestNights": 3,
           "bestKills": 239,
-          "totalKills": 268
+          "totalKills": 266
         },
         "by": {
-          "captain": 181,
-          "guard": 29,
+          "captain": 177,
+          "guard": 19,
           "tower": 0,
-          "keep": 11,
-          "flare": 18
+          "keep": 12,
+          "flare": 31
         },
         "towers": {}
       }
@@ -295,9 +296,9 @@
       "name": "fx-gate-b",
       "file": "qa-evidence/survival-fixes/fx-gate-b.png",
       "state": {
-        "kills": 8,
+        "kills": 9,
         "by": {
-          "captain": 8,
+          "captain": 9,
           "guard": 0,
           "tower": 0,
           "keep": 0,
@@ -312,10 +313,10 @@
         },
         "glbGuards": 2,
         "fx": {
-          "live": 3,
+          "live": 6,
           "played": {
             "impact": 6,
-            "kill": 2,
+            "kill": 3,
             "muzzle": 2,
             "coin": 0,
             "log": 0,
@@ -353,7 +354,7 @@
                 "hurt",
                 "die"
               ],
-              "drawn": 24
+              "drawn": 25
             },
             "crawler": {
               "verts": 2671,
@@ -377,23 +378,23 @@
                 "hurt",
                 "die"
               ],
-              "drawn": 10
+              "drawn": 9
             }
           },
           "failed": [],
           "error": null,
-          "bakeMs": 392,
+          "bakeMs": 194,
           "drawn": 48,
           "byKind": {
-            "zombie": 24,
+            "zombie": 25,
             "crawler": 14,
-            "ghoul": 10
+            "ghoul": 9
           }
         },
         "primitiveCrowd": 0,
         "rigs": 1,
-        "towerKills": 4,
-        "skullPops": 4,
+        "towerKills": 3,
+        "skullPops": 3,
         "knights": [
           {
             "crest": true,
@@ -404,7 +405,7 @@
             "helmet": true
           }
         ],
-        "build": "8"
+        "build": "9"
       }
     },
     {
@@ -415,10 +416,10 @@
         "rewards": {
           "gold": 17,
           "wood": 26,
-          "kills": 22,
-          "walls": 418.3,
+          "kills": 21,
+          "walls": 407.9,
           "survivors": 0,
-          "keepDamage": 456,
+          "keepDamage": 420,
           "keepPatched": 0,
           "mined": 3,
           "lost": 0,
@@ -428,18 +429,18 @@
           "killsBy": {
             "captain": 13,
             "guard": 5,
-            "tower": 4,
+            "tower": 3,
             "keep": 0,
             "flare": 0
           },
-          "towerKills": 4
+          "towerKills": 3
         },
         "run": {
-          "kills": 22,
+          "kills": 21,
           "by": {
             "captain": 13,
             "guard": 5,
-            "tower": 4,
+            "tower": 3,
             "keep": 0,
             "flare": 0
           },
@@ -450,7 +451,7 @@
           "keepMin": 1,
           "lost": 0,
           "towers": {
-            "south:tower": 4
+            "south:tower": 3
           },
           "time": 45.249999999998714
         },
@@ -475,9 +476,9 @@
       "state": {
         "night": {
           "x": 12,
-          "y": 74,
-          "w": 148,
-          "h": 50,
+          "y": 62,
+          "w": 112,
+          "h": 38,
           "label": "survival:START NIGHT"
         },
         "action": null,
@@ -494,8 +495,8 @@
         "ok": true,
         "survivors": 3,
         "start": {
-          "x": 135,
-          "y": 136
+          "x": 165,
+          "y": 160
         },
         "fromSpot": 40,
         "rally": 1
@@ -509,15 +510,15 @@
         "natural": true,
         "phase": "failed",
         "run": {
-          "kills": 29,
+          "kills": 27,
           "by": {
-            "captain": 14,
-            "guard": 10,
+            "captain": 13,
+            "guard": 9,
             "tower": 5,
             "keep": 0,
             "flare": 0
           },
-          "mined": 5.818055555556145,
+          "mined": 5.780555555556139,
           "sawn": 7,
           "recruited": 1,
           "nights": 1,
@@ -526,14 +527,14 @@
           "towers": {
             "south:tower": 5
           },
-          "time": 91.54999999999609
+          "time": 91.28333333332944
         },
-        "sum": 29,
+        "sum": 27,
         "result": {
           "night": 2,
           "toDawn": 37,
           "nights": 1,
-          "kills": 29,
+          "kills": 27,
           "tip": {
             "icon": "tower",
             "text": "BUILD A BALLISTA AT THE WEST GATE"
@@ -542,7 +543,7 @@
             "id": "guard",
             "icon": "guard",
             "name": "GUARDS",
-            "kills": 10
+            "kills": 9
           },
           "newBest": false
         },
@@ -565,27 +566,27 @@
         "run": {
           "kills": 239,
           "by": {
-            "captain": 181,
-            "guard": 29,
+            "captain": 177,
+            "guard": 19,
             "tower": 0,
-            "keep": 11,
-            "flare": 18
+            "keep": 12,
+            "flare": 31
           },
           "towers": {},
-          "keepMin": 0.78,
+          "keepMin": 0.9666666666666667,
           "lost": 0
         },
         "result": {
           "stars": 3,
           "kills": 239,
-          "keepLeft": 85,
+          "keepLeft": 97,
           "built": 3,
           "time": 271,
           "mvp": {
             "id": "guard",
             "icon": "guard",
             "name": "GUARDS",
-            "kills": 29
+            "kills": 19
           },
           "newBest": true
         },
@@ -595,7 +596,7 @@
           "bestStars": 3,
           "bestNights": 3,
           "bestKills": 239,
-          "totalKills": 268
+          "totalKills": 266
         },
         "ui": [
           "survival:PLAY AGAIN"

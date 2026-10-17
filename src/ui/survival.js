@@ -8,14 +8,19 @@
  * and every placed object are 3D, in World3D.
  *
  * The day has no side panel and no "+" bubbles. The Hunter walks into a
- * circle on the floor (or taps it and walks there) and ONE contextual button
- * appears in the right thumb corner — BUILD, UPGRADE, REPAIR — with a mini
- * card above it (two stats, now → next). NIGHT sits beside it.
+ * circle on the floor (or taps it and walks there) and ONE contextual dock
+ * appears in the right thumb corner: a single 50 px row of the building's
+ * name, level pips and two stats (now → next) beside its BUILD / UPGRADE
+ * button (REPAIR joins the row at the keep). NIGHT is a chip top-left.
+ * The right half of the screen drags the camera (the stick keeps the left);
+ * dragged far, a CAPTAIN chip under the phase pill brings the view back.
  *
  * Interaction contract (QA relies on it):
  *   - every tappable item is pushed to game.ui with label `survival:<ID>`;
  *   - the night HUD registers only the PAUSE item (combat is the touch stick,
  *     the auto-shot and the Flare button drawn by drawSurvivalControls);
+ *   - `survival:RECENTER` (day and night) while the view is dragged off
+ *     the captain;
  *   - day: `survival:BUILD <type>` (the circle the Hunter stands in),
  *     `survival:UPGRADE <type> LV<n>`, `survival:UPGRADE KEEP LV<n>`,
  *     `survival:REPAIR KEEP`, `survival:UPGRADE HUNTER LV<n>`, `survival:GATE`,

@@ -1,0 +1,1043 @@
+{
+  "plots": [
+    {
+      "id": "south:tower",
+      "type": "tower",
+      "room": "south",
+      "x": 130,
+      "y": 315,
+      "doorId": "southGate",
+      "face": null
+    },
+    {
+      "id": "ward",
+      "type": "barracks",
+      "room": "ward",
+      "x": 165,
+      "y": 120,
+      "doorId": null,
+      "face": null
+    },
+    {
+      "id": "south",
+      "type": "sawmill",
+      "room": "south",
+      "x": -130,
+      "y": 315,
+      "doorId": null,
+      "face": null
+    },
+    {
+      "id": "north",
+      "type": "mine",
+      "room": "north",
+      "x": 130,
+      "y": -315,
+      "doorId": null,
+      "face": null
+    },
+    {
+      "id": "north:tower",
+      "type": "tower",
+      "room": "north",
+      "x": -130,
+      "y": -315,
+      "doorId": "northGate",
+      "face": null
+    },
+    {
+      "id": "west",
+      "type": "sawmill",
+      "room": "west",
+      "x": -340,
+      "y": -125,
+      "doorId": null,
+      "face": null
+    },
+    {
+      "id": "west:tower",
+      "type": "tower",
+      "room": "west",
+      "x": -480,
+      "y": 115,
+      "doorId": "westGate",
+      "face": null
+    },
+    {
+      "id": "east",
+      "type": "mine",
+      "room": "east",
+      "x": 340,
+      "y": 125,
+      "doorId": null,
+      "face": null
+    },
+    {
+      "id": "east:tower",
+      "type": "tower",
+      "room": "east",
+      "x": 480,
+      "y": -115,
+      "doorId": "eastGate",
+      "face": null
+    },
+    {
+      "id": "northwest",
+      "type": "barracks",
+      "room": "northwest",
+      "x": -340,
+      "y": -345,
+      "doorId": null,
+      "face": null
+    },
+    {
+      "id": "northwest:tower",
+      "type": "tower",
+      "room": "northwest",
+      "x": -480,
+      "y": -235,
+      "doorId": "posternNW",
+      "face": null
+    },
+    {
+      "id": "southeast",
+      "type": "mine",
+      "room": "southeast",
+      "x": 340,
+      "y": 345,
+      "doorId": null,
+      "face": null
+    },
+    {
+      "id": "southeast:tower",
+      "type": "tower",
+      "room": "southeast",
+      "x": 480,
+      "y": 235,
+      "doorId": "posternSE",
+      "face": null
+    },
+    {
+      "id": "northeast",
+      "type": "sawmill",
+      "room": "northeast",
+      "x": 480,
+      "y": -320,
+      "doorId": null,
+      "face": null
+    },
+    {
+      "id": "southwest",
+      "type": "barracks",
+      "room": "southwest",
+      "x": -480,
+      "y": 320,
+      "doorId": null,
+      "face": null
+    }
+  ],
+  "armory": {
+    "x": -165,
+    "y": 120
+  },
+  "gateSpot": {
+    "x": 0,
+    "y": 408
+  },
+  "home": {
+    "x": 190,
+    "y": 0
+  },
+  "results": [
+    {
+      "name": "plot south:tower clear of masonry (r68+6)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot south:tower clear of props (+10)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot south:tower clear of the keep (gap 173 >= 24)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot south:tower leaves the southGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot south:tower leaves the westGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot south:tower leaves the posternNW passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot south:tower leaves the northGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot south:tower leaves the eastGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot south:tower leaves the posternSE passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot ward clear of masonry (r68+6)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot ward clear of props (+10)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot ward clear of the keep (gap 36 >= 24)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot ward leaves the southGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot ward leaves the westGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot ward leaves the posternNW passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot ward leaves the northGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot ward leaves the eastGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot ward leaves the posternSE passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot south clear of masonry (r68+6)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot south clear of props (+10)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot south clear of the keep (gap 173 >= 24)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot south leaves the southGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot south leaves the westGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot south leaves the posternNW passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot south leaves the northGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot south leaves the eastGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot south leaves the posternSE passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot north clear of masonry (r68+6)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot north clear of props (+10)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot north clear of the keep (gap 173 >= 24)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot north leaves the southGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot north leaves the westGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot north leaves the posternNW passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot north leaves the northGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot north leaves the eastGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot north leaves the posternSE passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot north:tower clear of masonry (r68+6)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot north:tower clear of props (+10)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot north:tower clear of the keep (gap 173 >= 24)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot north:tower leaves the southGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot north:tower leaves the westGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot north:tower leaves the posternNW passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot north:tower leaves the northGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot north:tower leaves the eastGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot north:tower leaves the posternSE passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot west clear of masonry (r68+6)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot west clear of props (+10)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot west clear of the keep (gap 194 >= 24)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot west leaves the southGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot west leaves the westGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot west leaves the posternNW passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot west leaves the northGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot west leaves the eastGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot west leaves the posternSE passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot west:tower clear of masonry (r68+6)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot west:tower clear of props (+10)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot west:tower clear of the keep (gap 326 >= 24)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot west:tower leaves the southGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot west:tower leaves the westGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot west:tower leaves the posternNW passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot west:tower leaves the northGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot west:tower leaves the eastGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot west:tower leaves the posternSE passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot east clear of masonry (r68+6)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot east clear of props (+10)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot east clear of the keep (gap 194 >= 24)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot east leaves the southGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot east leaves the westGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot east leaves the posternNW passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot east leaves the northGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot east leaves the eastGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot east leaves the posternSE passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot east:tower clear of masonry (r68+6)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot east:tower clear of props (+10)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot east:tower clear of the keep (gap 326 >= 24)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot east:tower leaves the southGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot east:tower leaves the westGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot east:tower leaves the posternNW passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot east:tower leaves the northGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot east:tower leaves the eastGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot east:tower leaves the posternSE passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot northwest clear of masonry (r68+6)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot northwest clear of props (+10)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot northwest clear of the keep (gap 316 >= 24)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot northwest leaves the southGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot northwest leaves the westGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot northwest leaves the posternNW passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot northwest leaves the northGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot northwest leaves the eastGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot northwest leaves the posternSE passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot northwest:tower clear of masonry (r68+6)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot northwest:tower clear of props (+10)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot northwest:tower clear of the keep (gap 366 >= 24)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot northwest:tower leaves the southGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot northwest:tower leaves the westGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot northwest:tower leaves the posternNW passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot northwest:tower leaves the northGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot northwest:tower leaves the eastGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot northwest:tower leaves the posternSE passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot southeast clear of masonry (r68+6)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot southeast clear of props (+10)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot southeast clear of the keep (gap 316 >= 24)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot southeast leaves the southGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot southeast leaves the westGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot southeast leaves the posternNW passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot southeast leaves the northGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot southeast leaves the eastGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot southeast leaves the posternSE passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot southeast:tower clear of masonry (r68+6)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot southeast:tower clear of props (+10)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot southeast:tower clear of the keep (gap 366 >= 24)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot southeast:tower leaves the southGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot southeast:tower leaves the westGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot southeast:tower leaves the posternNW passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot southeast:tower leaves the northGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot southeast:tower leaves the eastGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot southeast:tower leaves the posternSE passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot northeast clear of masonry (r68+6)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot northeast clear of props (+10)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot northeast clear of the keep (gap 409 >= 24)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot northeast leaves the southGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot northeast leaves the westGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot northeast leaves the posternNW passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot northeast leaves the northGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot northeast leaves the eastGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot northeast leaves the posternSE passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot southwest clear of masonry (r68+6)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot southwest clear of props (+10)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot southwest clear of the keep (gap 409 >= 24)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot southwest leaves the southGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot southwest leaves the westGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot southwest leaves the posternNW passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot southwest leaves the northGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot southwest leaves the eastGate passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot southwest leaves the posternSE passage open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "every pair of plots at least 30 px apart",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "ballista south:tower guards a gate",
+      "ok": true,
+      "detail": "southGate"
+    },
+    {
+      "name": "ballista south:tower sees out of southGate",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "ballista north:tower guards a gate",
+      "ok": true,
+      "detail": "northGate"
+    },
+    {
+      "name": "ballista north:tower sees out of northGate",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "ballista west:tower guards a gate",
+      "ok": true,
+      "detail": "westGate"
+    },
+    {
+      "name": "ballista west:tower sees out of westGate",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "ballista east:tower guards a gate",
+      "ok": true,
+      "detail": "eastGate"
+    },
+    {
+      "name": "ballista east:tower sees out of eastGate",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "ballista northwest:tower guards a gate",
+      "ok": true,
+      "detail": "posternNW"
+    },
+    {
+      "name": "ballista northwest:tower sees out of posternNW",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "ballista southeast:tower guards a gate",
+      "ok": true,
+      "detail": "posternSE"
+    },
+    {
+      "name": "ballista southeast:tower sees out of posternSE",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "armory clear of the plots",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "barricade clear of the plots",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "home clear of the plots",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plots south / north mirrored through the keep",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plots south:tower / north:tower mirrored through the keep",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plots west / east mirrored through the keep",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plots west:tower / east:tower mirrored through the keep",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plots northwest / southeast mirrored through the keep",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plots northwest:tower / southeast:tower mirrored through the keep",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plots northeast / southwest mirrored through the keep",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plots south / south:tower mirrored across the north-south axis",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plots north / north:tower mirrored across the north-south axis",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "the plan has its twins (PLOT.mirrors)",
+      "ok": true,
+      "detail": "9"
+    },
+    {
+      "name": "plot south:tower on a plan column (|x| in 130/165/340/480)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot ward on a plan column (|x| in 130/165/340/480)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot south on a plan column (|x| in 130/165/340/480)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot north on a plan column (|x| in 130/165/340/480)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot north:tower on a plan column (|x| in 130/165/340/480)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot west on a plan column (|x| in 130/165/340/480)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot west:tower on a plan column (|x| in 130/165/340/480)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot east on a plan column (|x| in 130/165/340/480)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot east:tower on a plan column (|x| in 130/165/340/480)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot northwest on a plan column (|x| in 130/165/340/480)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot northwest:tower on a plan column (|x| in 130/165/340/480)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot southeast on a plan column (|x| in 130/165/340/480)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot southeast:tower on a plan column (|x| in 130/165/340/480)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot northeast on a plan column (|x| in 130/165/340/480)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "plot southwest on a plan column (|x| in 130/165/340/480)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "armory mirrors the ward barracks across the gate road",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "the captain starts on a road axis just off the keep",
+      "ok": true,
+      "detail": ""
+    }
+  ]
+}

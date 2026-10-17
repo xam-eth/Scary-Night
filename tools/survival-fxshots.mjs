@@ -39,6 +39,8 @@ import chromium from '@sparticuz/chromium';
 import puppeteer from 'puppeteer-core';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+// the build index.html names (window.DUSKHOLD_BUILD): the page must print it
+const PAGE_BUILD = (fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8').match(/DUSKHOLD_BUILD = '([^']+)'/) || [])[1] || null;
 const args = Object.fromEntries(process.argv.slice(2).map((a) => {
   const [k, v] = a.replace(/^--/, '').split('=');
   return [k, v === undefined ? true : v];
@@ -208,7 +210,7 @@ check('horde: every swarm body is an animated GLB monster (instanced, 3 kinds), 
 check('ballista: a built ballista kills and says so over its deck ("+1" skull, the night tally)',
   horde.towerKills >= 1 && horde.skullPops >= horde.towerKills, { towerKills: horde.towerKills, skullPops: horde.skullPops });
 check('troops: every GLB guard wears the keep\'s blue helmet with a gold crest; the page names its build',
-  horde.knights.length >= 2 && horde.knights.every((k) => k.crest && k.helmet) && horde.build === '8', { knights: horde.knights, build: horde.build });
+  horde.knights.length >= 2 && horde.knights.every((k) => k.crest && k.helmet) && horde.build === PAGE_BUILD, { knights: horde.knights, build: horde.build, page: PAGE_BUILD });
 
 // 3. dawn: the panel credits the sawmill and the guards
 const dawn = await shot('fx-dawn', () => {
