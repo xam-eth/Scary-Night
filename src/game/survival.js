@@ -173,7 +173,8 @@ export const SURVIVAL_SLOTS = Object.freeze([
  *     (BUILD 11: 170-183 px inside the wall, 115-130 px off the gate's axis,
  *     85 px off a postern's), so each one sees out of its gate through the
  *     opening exactly as before (boltPath; at 150 px off the road the view
- *     narrowed and the ballista-only bot lost a win in five);
+ *     narrowed and the ballista-only bot lost a win in five); the north and
+ *     south ones 120 px off, inside their road (ROAD_HALF 130);
  *   - the economy plots keep 130+ px of grass between pads (BUILD 11: 36-62),
  *     190+ px from the wall, and stay off the roads and the plaza;
  *   - the ballistas are point-symmetric through the keep (each gate's twin),
@@ -187,8 +188,8 @@ export const PLOT = Object.freeze({
   radius: 68,
   at: Object.freeze({
     // the ballistas, by their gates
-    'south:tower': Object.freeze([130, 600]),
-    'north:tower': Object.freeze([-130, -600]),
+    'south:tower': Object.freeze([120, 600]),
+    'north:tower': Object.freeze([-120, -600]),
     'west:tower': Object.freeze([-870, 115]),
     'east:tower': Object.freeze([870, -115]),
     'northwest:tower': Object.freeze([-870, -427]),
@@ -3771,11 +3772,11 @@ export class SurvivalMode {
     return clamp(Math.log(this.zoomGoal() / lo) / Math.log(hi / lo), 0, 1);
   }
 
-  /** One + / - step (the buttons, the keys), eased in by _steerCamera. */
+  /** `dir` + / - steps (the buttons: one; the keys: one a press), eased in by _steerCamera. */
   zoomStep(dir) {
     const [lo, hi] = SURVIVAL_CAMERA.zoom;
     const from = this.zoomGoal();
-    const to = clamp(from * Math.pow(SURVIVAL_CAMERA.step, Math.sign(dir) || 0), lo, hi);
+    const to = clamp(from * Math.pow(SURVIVAL_CAMERA.step, clamp(Math.round(dir) || 0, -3, 3)), lo, hi);
     if (Math.abs(to - from) < 1e-4) return false;
     this._zoomGoal = to;
     this._panUsed = true;

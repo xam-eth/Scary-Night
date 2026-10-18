@@ -140,7 +140,8 @@ const zoomed = await page.evaluate(async () => {
   const camZoom = g.renderer.cam.zoom;
   return { z0, zIn: +zIn.toFixed(3), zOut: +zOut.toFixed(3), camZoom: +camZoom.toFixed(3), saved: g.save.survival && g.save.survival.camZoom };
 });
-check('camera: the wheel zooms in and out within 0.8–1.3 of the frame, and the choice is saved', zoomed.zIn > zoomed.z0 && Math.abs(zoomed.zOut - 0.8) < 0.01 && zoomed.saved === zoomed.zOut, zoomed);
+// BUILD 12: the range is 0.42 (the whole bailey) to 1.6 (a close-up)
+check('camera: the wheel zooms in and out within 0.42–1.6 of the frame, and the choice is saved', zoomed.zIn > zoomed.z0 && Math.abs(zoomed.zOut - 0.42) < 0.01 && zoomed.saved === zoomed.zOut, zoomed);
 await shot('cam-3-zoomed-out');
 // two fingers: spread them apart on the right half
 const pinch = await page.evaluate(() => {
@@ -162,12 +163,130 @@ const pinch = await page.evaluate(() => {
   return { z0: +z0.toFixed(3), z1: +m.userZoom().toFixed(3) };
 });
 check('camera: two fingers spread on the right half zoom in', pinch.z1 > pinch.z0 * 1.3, pinch);
-await page.evaluate(() => { const g = window.__LN; const m = g.survival; m._userZoom = 1; g.save.survival.camZoom = 1; m.recenterCamera(true); window.__pStep(30); });
+
+/* ---- BUILD 12: the dynamic camera ("bisa di pebesar perkecil geser") ---- */
+const reset = () => page.evaluate(() => {
+  const g = window.__LN; const m = g.survival;
+  m._userZoom = 1; m._zoomGoal = null; g.save.survival.camZoom = 1; m.recenterCamera(true); window.__pStep(40);
+});
+await reset();
+// a zoom about the cursor keeps the ground under it where it was
+const anchor = await page.evaluate(() => {
+  const g = window.__LN; const m = g.survival; const r = g.renderer;
+  const c = g.input.canvas; const rect = c.getBoundingClientRect();
+  const sx = 700, sy = 120;
+  const w0 = r.screenToWorld(sx, sy);
+  for (let i = 0; i < 4; i++) c.dispatchEvent(new WheelEvent('wheel', { deltaY: 160, clientX: rect.left + sx, clientY: rect.top + sy, bubbles: true, cancelable: true }));
+  window.__pStep(1);
+  const s1 = r.worldToScreen(w0.x, w0.y);
+  return { z: +m.userZoom().toFixed(3), drift: +Math.hypot(s1.x - sx, s1.y - sy).toFixed(1) };
+});
+check('camera: the wheel zooms about the cursor (the ground under it stays within 12 px)', anchor.z < 0.8 && anchor.drift < 12, anchor);
+await reset();
+// two fingers landing together anywhere pinch, even with one on the stick's half
+const pinchAny = await page.evaluate(() => {
+  const g = window.__LN; const m = g.survival;
+  const c = g.input.canvas; const rect = c.getBoundingClientRect();
+  const T = (id, x, y) => new Touch({ identifier: id, target: c, clientX: rect.left + x, clientY: rect.top + y });
+  const fire = (type, touches, changed) => c.dispatchEvent(new TouchEvent(type, { touches, targetTouches: touches, changedTouches: changed, bubbles: true, cancelable: true }));
+  const run = (ax, bx, y, spread) => {
+    const z0 = m.userZoom();
+    const p0 = [g.player.x, g.player.y];
+    const a0 = T(21, ax, y), b0 = T(22, bx, y);
+    fire('touchstart', [a0], [a0]); window.__pStep(1);
+    fire('touchstart', [a0, b0], [b0]); window.__pStep(1);
+    let a = a0, b = b0;
+    for (let i = 1; i <= 6; i++) {
+      a = T(21, ax - i * spread, y); b = T(22, bx + i * spread, y);
+      fire('touchmove', [a, b], [a, b]); window.__pStep(1);
+    }
+    fire('touchend', [b], [a]); fire('touchend', [], [b]); window.__pStep(20);
+    return { z0: +z0.toFixed(3), z1: +m.userZoom().toFixed(3), moved: +Math.hypot(g.player.x - p0[0], g.player.y - p0[1]).toFixed(1), stick: g.input.stick.active };
+  };
+  const split = run(330, 520, 230, -16);     // one each side of the middle, pinched together: out
+  m._userZoom = 1; window.__pStep(5);
+  const left = run(120, 260, 260, 14);       // both on the stick's half, spread: in
+  return { split, left };
+});
+check('camera: two fingers anywhere pinch (one each side: zoom out; both on the stick side: zoom in) and the captain stays put',
+  pinchAny.split.z1 < pinchAny.split.z0 * 0.8 && pinchAny.left.z1 > pinchAny.left.z0 * 1.2 && pinchAny.split.moved < 4 && pinchAny.left.moved < 4 && !pinchAny.left.stick, pinchAny);
+await reset();
+// the + / - buttons on the right edge, and the + / - keys
+const buttons = await page.evaluate(() => {
+  const g = window.__LN; const m = g.survival;
+  window.__pStep(2);
+  const pick = (label) => { const u = g.ui.find((item) => item.label === label); return u ? { x: u.x, y: u.y, w: u.w, h: u.h } : null; };
+  return { zin: pick('survival:ZOOM IN'), zout: pick('survival:ZOOM OUT'), w: g.renderer.w, h: g.renderer.h, z0: m.userZoom() };
+});
+let zoomSteps = null;
+if (buttons.zin && buttons.zout) {
+  await page.touchscreen.tap(buttons.zin.x + buttons.zin.w / 2, buttons.zin.y + buttons.zin.h / 2);
+  const zIn = await page.evaluate(() => { window.__pStep(40); return window.__LN.survival.userZoom(); });
+  await page.touchscreen.tap(buttons.zout.x + buttons.zout.w / 2, buttons.zout.y + buttons.zout.h / 2);
+  await page.evaluate(() => window.__pStep(40));
+  await page.touchscreen.tap(buttons.zout.x + buttons.zout.w / 2, buttons.zout.y + buttons.zout.h / 2);
+  const zOut = await page.evaluate(() => { window.__pStep(40); return window.__LN.survival.userZoom(); });
+  await page.keyboard.press('Equal');
+  const zKey = await page.evaluate(() => { window.__pStep(40); return window.__LN.survival.userZoom(); });
+  const moved = await page.evaluate(() => Math.round(window.__LN.survival.cameraOffset()));
+  zoomSteps = { zIn: +zIn.toFixed(3), zOut: +zOut.toFixed(3), zKey: +zKey.toFixed(3), offset: moved };
+}
+check('camera: + / - on the right edge (between the counters and the thumb corner) zoom a step each, eased; the + key too',
+  zoomSteps && Math.abs(zoomSteps.zIn - 1.35) < 0.01 && Math.abs(zoomSteps.zOut - 1 / 1.35) < 0.01 && Math.abs(zoomSteps.zKey - 1) < 0.01
+    && buttons.zin.x > buttons.w - 70 && buttons.zin.y > 120 && buttons.zout.y + buttons.zout.h < buttons.h - 96,
+  { ...buttons, steps: zoomSteps });
+await reset();
+// a flick glides on after the finger lifts, then stops
+const flick = await (async () => {
+  await page.touchscreen.touchStart(700, 200);
+  await page.evaluate(() => window.__pStep(1));
+  for (let i = 1; i <= 3; i++) {
+    await page.touchscreen.touchMove(700 - i * 60, 200 - i * 14);
+    await page.evaluate(() => window.__pStep(1));
+  }
+  await page.touchscreen.touchEnd();
+  return page.evaluate(() => {
+    const m = window.__LN.survival;
+    window.__pStep(1);
+    const atLift = m.cameraOffset();
+    window.__pStep(20);
+    const glided = m.cameraOffset();
+    window.__pStep(120);
+    const settled = m.cameraOffset();
+    window.__pStep(30);
+    return { atLift: Math.round(atLift), glided: Math.round(glided), settled: Math.round(settled), still: Math.round(m.cameraOffset()) };
+  });
+})();
+check('camera: a flick glides on after the finger lifts, then comes to rest', flick.glided > flick.atLift + 40 && Math.abs(flick.still - flick.settled) < 2, flick);
+await reset();
+// all the way out: the whole bailey, wall to wall, on a sideways phone
+const overview = await page.evaluate(() => {
+  const g = window.__LN; const m = g.survival; const r = g.renderer;
+  const keep = m.keep();
+  const B = g.mansion.bailey;
+  m.completeNight && m.phase === 'night' && m.completeNight();
+  window.__pStep(2);
+  if (m.rewardPending && m.rewardPending()) m.ackRewards();
+  const home = m.hunterHome();
+  g.player.x = home.x; g.player.y = home.y;
+  m._userZoom = 0.42; m._zoomGoal = null;
+  m.camPan.x = keep.x - home.x; m.camPan.y = keep.y - home.y + 40;
+  r.snapCamera(keep.x, keep.y);
+  window.__pStep(90);
+  const corners = [[B.x, B.y], [B.x + B.w, B.y], [B.x, B.y + B.h], [B.x + B.w, B.y + B.h]].map(([x, y]) => r.worldToScreen(x, y));
+  const inView = corners.every((c) => c.x >= 0 && c.x <= r.w && c.y >= 0 && c.y <= r.h);
+  return { phase: m.phase, zoom: +r.cam.zoom.toFixed(3), corners: corners.map((c) => [Math.round(c.x), Math.round(c.y)]), inView };
+});
+check('camera: all the way out the whole bailey (2080 x 1520) fits a sideways phone', overview.inView && overview.zoom < 0.3, overview);
+await shot('cam-4-overview-day');
+await page.evaluate(() => { const g = window.__LN; const m = g.survival; m._userZoom = 1.6; window.__pStep(60); });
+await shot('cam-5-closeup-day');
+await reset();
 
 /* ---- 2 + 3. the plots and the KayKit buildings ---- */
 const kit = await page.evaluate(() => {
   const g = window.__LN; const m = g.survival;
-  m.completeNight(); window.__pStep(2);
+  if (m.phase === 'night') { m.completeNight(); window.__pStep(2); }
   if (m.rewardPending && m.rewardPending()) m.ackRewards();
   m.gold = 400; m.wood = 400; m.keepLevel = 3; m.keepHp = m.keepHpMax();
   m._syncTerritory && m._syncTerritory();

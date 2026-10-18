@@ -283,7 +283,7 @@ if (!args['no-progression'] && !TOWERS_ONLY && !GUARDS_ONLY && !CINE_ONLY) {
     const k = m.keep();
     g.player.x = k.x + 30; g.player.y = k.y + k.r + 70;
     (${stepFrames})(60);
-    return { keepLevel: m.keepLevel, hp: Math.round(m.keepHp) + '/' + m.keepHpMax(), territory: m.territoryRooms().length, context: m.dayContext() && m.dayContext().id, ui: g.ui.map((b) => b.label).filter((l) => !/walk:/.test(l)) };
+    return { keepLevel: m.keepLevel, hp: Math.round(m.keepHp) + '/' + m.keepHpMax(), territory: m.territoryPlots().length, banner: m.bannerReach(), context: m.dayContext() && m.dayContext().id, ui: g.ui.map((b) => b.label).filter((l) => !/walk:/.test(l)) };
   })()`);
   await shot('prog-hunter', `(() => {
     const g = window.__LN;

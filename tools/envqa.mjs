@@ -196,7 +196,9 @@ async function survivalFtueSection() {
         riggedCrowd, proxyCrowd: [...world.survivalCrowdProxies.values()].filter((item) => item.visible).length,
         keepHp: Math.round(g.survival.keepHp),
         keepMesh: !!(world.survivalKeep && world.survivalKeep.visible),
-        territoryPlanes: world.diagnostics().survivalTerritoryRooms,
+        // BUILD 12: the banner is one wash round the keep, clipped to the bailey
+        banner: world.diagnostics().survivalBanner,
+        decor: ((world.diagnostics().buildingKit || {}).decor) || null,
         fortressTowers: world.diagnostics().fortressTowers,
         fortressMeshes: world.diagnostics().fortressMeshes,
         fortressMerlons: world.diagnostics().fortressMerlons,
@@ -215,7 +217,7 @@ async function survivalFtueSection() {
       };
     });
     checkpoints.push({ seconds, file: path.relative(ROOT, file), advance, state });
-    console.log(`  CAPTURE ${seconds}s (sim ${state.elapsed}s, ${advance.steps} fixed steps) — ${file}; swarm=${state.swarm}, rendered crowd=${state.riggedCrowd + state.proxyCrowd}, keep=${state.keepHp} HP (3D ${state.keepMesh}), banner rooms=${state.territoryPlanes}`);
+    console.log(`  CAPTURE ${seconds}s (sim ${state.elapsed}s, ${advance.steps} fixed steps) — ${file}; swarm=${state.swarm}, rendered crowd=${state.riggedCrowd + state.proxyCrowd}, keep=${state.keepHp} HP (3D ${state.keepMesh}), banner ${state.banner ? `${state.banner.reach} px, ${state.banner.edgeSegments} edge segments` : 'none'}`);
   };
   await capture(0.2, 'survival-ftue-00s.png');
   await capture(15, 'survival-ftue-15s.png');
@@ -223,8 +225,9 @@ async function survivalFtueSection() {
   const final = checkpoints[checkpoints.length - 1].state;
   check(final.mode === 'survival' && final.screen === 'playing' && final.day === 1 && final.phase === 'night',
     'the default route reaches playable Night 1 directly (no menu, intro or narration)');
-  check(final.ui.length === 1 && final.ui[0] === 'PAUSE' && !final.coach && !final.narration,
-    `Night-1 icon HUD registers only PAUSE as a tap target (gold/guard/enemy counters, night clock and the keep's bar are read-only; legacy coach/narration hidden; UI=${final.ui.join(',')})`);
+  // BUILD 12: the dynamic camera's + / - sit on the right edge by night too
+  check(final.ui.join(',') === 'PAUSE,survival:ZOOM IN,survival:ZOOM OUT' && !final.coach && !final.narration,
+    `Night-1 icon HUD registers only PAUSE and the camera's + / - as tap targets (gold/guard/enemy counters, night clock and the keep's bar are read-only; legacy coach/narration hidden; UI=${final.ui.join(',')})`);
   const readable = await playfieldLuma(path.join(evidenceDir, 'survival-ftue-15s.png'));
   checkpoints.find((row) => row.seconds === 15).luma = readable;
   check(readable.meanLuma >= 40 && readable.darkPct <= 45,
@@ -232,15 +235,19 @@ async function survivalFtueSection() {
   check(final.elapsed >= 30 && final.duration >= 60 && final.duration <= 90,
     `the first 30 playable seconds stay in the configurable ${final.duration}s night`);
   check(final.swarm > 0 && final.renderMode === 'webgl-3d'
-    && final.keepMesh && final.territoryPlanes === 5 && final.riggedCrowd + final.proxyCrowd > 0
-    && final.fortressTowers === 12 && final.fortressMeshes > 0 && final.fortressMeshes <= 16
+    && final.keepMesh && final.banner && final.banner.visible && final.banner.reach === 900 && final.banner.edgeSegments > 20
+    && final.riggedCrowd + final.proxyCrowd > 0
+    // + BUILD 12's plaza (paving, kerb, inner ring): three more merged meshes
+    && final.fortressTowers === 12 && final.fortressMeshes > 0 && final.fortressMeshes <= 20
+    // the districts' KayKit dressing is placed and merged into a few meshes
+    && final.decor && final.decor.placed >= 16 && final.decor.missing === 0 && final.decor.meshes <= 4
     // every run crenellated: towers may cover up to a third of the slots
     // (scale 1: 146/170 slots on 8114 px; FORT_SCALE 0.7: 88/112 on 5414 px;
     // FORT_SCALE 0.5: 52/74 on 3614 px)
     && final.curtainSlots >= 60 && final.fortressMerlons >= Math.ceil(final.curtainSlots * 2 / 3)
     // the horde is GLB monsters (instanced, crowd3d.js): no primitive figure
     && final.hordeDrawn > 0 && final.primitiveCrowd === 0,
-  `the full 3D bailey (curtain wall, towers, gates), the 3D keep, its banner's 5 yards and the crowd are visible (${final.fortressTowers} towers, ${final.fortressMerlons}/${final.curtainSlots} merlon slots on ${final.curtainRun}px of curtain wall in ${final.fortressMeshes} meshes; ${final.riggedCrowd} skinned rigs + ${final.proxyCrowd} horde bodies, ${final.hordeDrawn} drawn as GLB monsters (${final.hordeKinds.join('/')}), ${final.primitiveCrowd} primitive figures)`);
+  `the full 3D bailey (curtain wall, towers, gates), the 3D keep, its banner's wash (${final.banner ? final.banner.reach : 0} px, ${final.banner ? final.banner.edgeSegments : 0} edge segments), the districts' dressing (${final.decor ? `${final.decor.placed} kit props in ${final.decor.meshes} meshes` : 'none'}) and the crowd are visible (${final.fortressTowers} towers, ${final.fortressMerlons}/${final.curtainSlots} merlon slots on ${final.curtainRun}px of curtain wall in ${final.fortressMeshes} meshes; ${final.riggedCrowd} skinned rigs + ${final.proxyCrowd} horde bodies, ${final.hordeDrawn} drawn as GLB monsters (${final.hordeKinds.join('/')}), ${final.primitiveCrowd} primitive figures)`);
 
   const radiusTest = await page.evaluate(() => {
     const g = window.__LN, world = window.__survWorld;
@@ -254,10 +261,10 @@ async function survivalFtueSection() {
     // the Hunter stands at the keep: its contextual UPGRADE button shows
     const home = m.hunterHome();
     g.player.x = home.x; g.player.y = home.y;
-    const roomsBefore = m.territoryRooms().length;
+    const roomsBefore = m.territoryPlots().length;
     g.render();
     const before = world.survivalKeep ? world.survivalKeep.userData.level : 0;
-    const planesBefore = world.diagnostics().survivalTerritoryRooms;
+    const planesBefore = (world.diagnostics().survivalBanner || {}).reach || 0;
     const button = g.ui.find((item) => item.label === 'survival:UPGRADE KEEP LV2');
     const clicked = !!(button && button.onClick && (button.onClick(), true));
     const queued = m.builderJob && m.builderJob.targetLevel;
@@ -266,12 +273,12 @@ async function survivalFtueSection() {
     return {
       clicked, queued, level: m.keepLevel, hp: `${m.keepHp}/${m.keepHpMax()}`,
       before, after: world.survivalKeep ? world.survivalKeep.userData.level : 0,
-      roomsBefore, roomsAfter: m.territoryRooms().length, planesBefore, planesAfter: world.diagnostics().survivalTerritoryRooms,
+      roomsBefore, roomsAfter: m.territoryPlots().length, planesBefore, planesAfter: (world.diagnostics().survivalBanner || {}).reach || 0,
     };
   });
   check(radiusTest.clicked && radiusTest.queued === 2 && radiusTest.level === 2 && radiusTest.after === 2 && radiusTest.before === 1
-    && radiusTest.roomsAfter > radiusTest.roomsBefore && radiusTest.planesAfter === radiusTest.roomsAfter,
-    `a keep upgrade through its UI button raises the 3D keep Lv${radiusTest.before} → Lv${radiusTest.after} (${radiusTest.hp}) and widens the banner ${radiusTest.roomsBefore} → ${radiusTest.roomsAfter} yards (ground tint ${radiusTest.planesBefore} → ${radiusTest.planesAfter})`);
+    && radiusTest.roomsBefore === 9 && radiusTest.roomsAfter === 13 && radiusTest.planesBefore === 900 && radiusTest.planesAfter === 1100,
+    `a keep upgrade through its UI button raises the 3D keep Lv${radiusTest.before} → Lv${radiusTest.after} (${radiusTest.hp}), opens plots ${radiusTest.roomsBefore} → ${radiusTest.roomsAfter} and widens the banner's wash ${radiusTest.planesBefore} → ${radiusTest.planesAfter} px`);
   const evidence = {
     title: 'Survival FTUE — first 30 playable seconds',
     capturedAt: new Date().toISOString(),

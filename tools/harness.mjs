@@ -240,14 +240,17 @@ async function runSurvivalMilestone() {
       && row.spawnedSwarms === row.swarms.reduce((sum, wave) => sum + wave.count, 0));
   console.log(`  ${waveSchedulePass ? 'PASS' : 'FAIL'}  Night 1–3 waves: requested ${waveSchedule.map((row) => row.swarms.map((wave) => wave.count).join('/')).join(' → ')}; actual Swarm ${waveSchedule.map((row) => row.spawnedSwarms).join('/')} (no clamp, HP ${waveSchedule.map((row) => row.swarmHp).join('→')}), Breaker ${waveSchedule.map((row) => row.spawnedBreakers).join('/')}`);
 
-  // K1: the keep's banner. Inside its rooms the garrison hits harder (x1.5);
+  // K1: the keep's banner. Inside its reach the garrison hits harder (x1.5);
   // it never slows or blunts a body. The walk is compared on the SAME spot at
-  // keep Lv1 (conservatory beyond the banner) and Lv3 (under it), so only the
-  // banner differs, never the geometry.
+  // keep Lv1 (beyond the banner) and Lv3 (under it), so only the banner
+  // differs, never the geometry. BUILD 12: the banner is a radius round the
+  // keep (BANNER 900 / 1100 / 1400, clipped to the bailey), so the points are
+  // explicit: the north-west grass 551 px out, and by the east wall 1006 px out.
   survivalGame.survival.restart();
   const lightMode = survivalGame.survival;
-  const heldPoint = survivalGame.mansion.roomCenter(FORT.WEST);       // under the Lv1 banner
-  const wildPoint = survivalGame.mansion.roomCenter(FORT.NE);         // beyond it at Lv1
+  const bannerKeep = lightMode.keep();
+  const heldPoint = { x: bannerKeep.x - 400, y: bannerKeep.y - 380 };   // under the Lv1 banner
+  const wildPoint = { x: bannerKeep.x + 960, y: bannerKeep.y - 300 };   // beyond it at Lv1, under it at Lv3
   const litProbe = { x: heldPoint.x, y: heldPoint.y, hp: 1e9 };
   const unlitProbe = { x: wildPoint.x, y: wildPoint.y, hp: 1e9 };
   const lightDoor = lightMode.mainGate();
@@ -714,7 +717,7 @@ async function runSurvivalMilestone() {
     resetControls();
     const mode = survivalGame.survival;
     const botState = { flareHeld: false, flares: 0 };
-    const upgrades = [{ level: 1, rooms: mode.territoryRooms().length }];
+    const upgrades = [{ level: 1, plots: mode.territoryPlots().length }];
     const workResults = [];
     let queueLockVerified = false;
     let failure = null;
@@ -761,7 +764,7 @@ async function runSurvivalMilestone() {
           workResults.push({ day: day + 1, job: mode.builderJob.kind, type: mode.builderJob.type, slot: mode.builderJob.slotId || null });
           waitForBuilder();
         }
-        upgrades.push({ level: mode.keepLevel, rooms: mode.territoryRooms().length });
+        upgrades.push({ level: mode.keepLevel, plots: mode.territoryPlots().length });
         if (!started || mode.phase !== 'night') { failure = `Night ${day + 1} could not start`; break; }
         continue;
       }
@@ -1208,9 +1211,10 @@ async function runSurvivalMilestone() {
       // off any ladder (BUILD 10: gate posts are up on the wall)
       guard.lift = 0; guard.liftPost = null; guard.climbing = false;
     };
-    // "dark" = beyond the keep's banner (NE yard at keep Lv1), "lit" = under it (west road)
-    const kc = m.roomCenter(FORT.NE);
-    const dark = mode._freePost(kc.x, kc.y, 'test', null);
+    // "dark" = beyond the keep's banner (by the east wall at keep Lv1, BUILD
+    // 12's radius banner), "lit" = under it (the west road)
+    const kk = mode.keep();
+    const dark = mode._freePost(kk.x + 960, kk.y - 300, 'test', null);
     const dc = m.roomCenter(FORT.WEST);
     const lit = mode._freePost(dc.x + 60, dc.y - 60, 'test', null);
     const clawOnce = (guard, frames = 40) => {
@@ -1617,12 +1621,13 @@ async function runSurvivalMilestone() {
     const north = vm.entranceById('northGate'), south = vm.entranceById('southGate');
     const toGate = Math.min(Math.hypot((north.inside || north).x - keep.x, (north.inside || north).y - keep.y),
       Math.hypot((south.inside || south).x - keep.x, (south.inside || south).y - keep.y));
-    passCheck('scale: the bailey is half its first size (1300 x 950 px) with the keep r100 and a 2 m curtain wall, for actors x1.6',
-      FORT_SCALE === 0.5 && BAILEY.w === 1300 && BAILEY.h === 950 && keep.r === 100 && vg.mansion.wallMetres === FORT_WALL_METRES
+    passCheck('scale: layout B (BUILD 12) — the bailey 1.6x BUILD 11\'s (2080 x 1520 px, FORT_SCALE 0.8) with the keep r100 and a 2 m curtain wall, for actors x1.6',
+      FORT_SCALE === 0.8 && BAILEY.w === 2080 && BAILEY.h === 1520 && keep.r === 100 && vg.mansion.wallMetres === FORT_WALL_METRES
         && FORT_WALL_METRES === 2 && SURVIVAL_ACTOR_SCALE === 1.6,
       `FORT_SCALE ${FORT_SCALE}, bailey ${BAILEY.w}x${BAILEY.h}, keep r${keep.r}, wall ${vg.mansion.wallMetres} m, actors x${SURVIVAL_ACTOR_SCALE}`);
-    passCheck('roof ballista reaches the gate roads: Lv2 440 / Lv3 500 px against the N/S gate insides ~430 px from the keep (it used to cover only the inner ward)',
-      KEEP.ballista[2].range >= toGate && KEEP.ballista[3].range > KEEP.ballista[2].range && SURVIVAL_BUILDING_LEVELS.tower[1].damage === 24,
+    passCheck('roof ballista reaches out along the gate roads: Lv2 600 / Lv3 700 px, Lv3 most of the way to the N/S gate insides (~690 px from the keep in layout B), never past the wall',
+      KEEP.ballista[2].range >= 0.8 * toGate && KEEP.ballista[3].range > KEEP.ballista[2].range && KEEP.ballista[3].range < toGate + 90
+        && SURVIVAL_BUILDING_LEVELS.tower[1].damage === 24,
       `gate insides ${Math.round(toGate)} px from the keep; ranges ${KEEP.ballista[2].range}/${KEEP.ballista[3].range}; ballista Lv1 bolt ${SURVIVAL_BUILDING_LEVELS.tower[1].damage}`);
 
     // a ballista kill: the tower's night tally and a "+1" skull over its deck
@@ -1882,10 +1887,10 @@ async function runSurvivalMilestone() {
     && idleLoses && builder.complete && builder.keepLevel === 3
     && builder.queueLockVerified && builder.sawmillBuilt && builder.gateBuilt && builder.barracksBuilt
     && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass && gateRulePass
-    && builder.upgrades[0].level === 1 && builder.upgrades[0].rooms === 5
-    && builder.upgrades[builder.upgrades.length - 1].level === 3 && builder.upgrades[builder.upgrades.length - 1].rooms === 9
+    && builder.upgrades[0].level === 1 && builder.upgrades[0].plots === 9
+    && builder.upgrades[builder.upgrades.length - 1].level === 3 && builder.upgrades[builder.upgrades.length - 1].plots === 15
     && builder.upgrades.every((item, i, all) => i === 0 || item.level >= all[i - 1].level);
-  console.log(`  ${pass ? 'PASS' : 'FAIL'}  three-day loop, keep Lv${builder.upgrades.map((item) => item.level).join('→')} (banner ${builder.upgrades.map((item) => item.rooms).join('→')} yards), one builder queue, idle loses / engaged builder wins`);
+  console.log(`  ${pass ? 'PASS' : 'FAIL'}  three-day loop, keep Lv${builder.upgrades.map((item) => item.level).join('→')} (plots open ${builder.upgrades.map((item) => item.plots).join('→')}), one builder queue, idle loses / engaged builder wins`);
   if (!pass) process.exitCode = 1;
   window.localStorage.removeItem('lastnight.save.v1');
 }

@@ -68,6 +68,7 @@ export class Input {
     this.zoomAt = null;
     this._wheelAt = null;
     this.zoomStep = 0;
+    this._zoomKeys = 0;
     this.panTap = null;
     this.panBlock = null;    // (p) => true over any HUD item, a world chip included
     this.firstGesture = [];
@@ -188,6 +189,9 @@ export class Input {
       if (KEYMAP[e.code]) {
         if (!this.keys[KEYMAP[e.code]]) this._fireGesture();
         this.keys[KEYMAP[e.code]] = true;
+        // a + / - press counts even when it is up again before the next frame
+        if (!e.repeat && KEYMAP[e.code] === 'zoomIn') this._zoomKeys += 1;
+        if (!e.repeat && KEYMAP[e.code] === 'zoomOut') this._zoomKeys -= 1;
         if (['up', 'down', 'left', 'right', 'interact', 'dash', 'attack'].includes(KEYMAP[e.code])) e.preventDefault();
       }
       if (e.code === 'F1') e.preventDefault();
@@ -443,7 +447,8 @@ export class Input {
     this.zoomDelta = this.pinch.k * this.wheelZoom;
     this.zoomAt = this.pinch.active ? { x: this.pinch.mx, y: this.pinch.my } : this.wheelZoom !== 1 ? this._wheelAt : null;
     this.pinch.k = 1; this.wheelZoom = 1;
-    this.zoomStep = (k.zoomIn && !this.prevKeys.zoomIn ? 1 : 0) - (k.zoomOut && !this.prevKeys.zoomOut ? 1 : 0);
+    this.zoomStep = clamp(this._zoomKeys, -3, 3);
+    this._zoomKeys = 0;
     if (!this.gameplay) { this.pan.active = false; this.pinch.active = false; this.touchPoints.clear(); }
     Object.assign(this.prevKeys, k);
   }

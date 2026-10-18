@@ -151,7 +151,7 @@ const axisName = { p: 'through the keep', x: 'across the north-south axis', y: '
 for (const [a, b, axis] of pairs) check(`plots ${a} / ${b} mirrored ${axisName[axis] || axis}`, mirror(a, b, axis));
 check('the plan has its twins (PLOT.mirrors)', pairs.length >= 7, `${pairs.length}`);
 // every plot stands on one of the plan's columns
-const columns = [130, 330, 465, 600, 870];
+const columns = [120, 330, 465, 600, 870];
 for (const p of plots) check(`plot ${p.id} on a plan column (|x| in ${columns.join('/')})`, columns.includes(Math.abs(p.x - keep.x)));
 // the armory is the ward barracks' twin through the keep (the south-east
 // district mirrors the north-west one); the captain starts on a road axis at
