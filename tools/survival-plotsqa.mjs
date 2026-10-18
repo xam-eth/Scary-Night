@@ -756,8 +756,9 @@ const b16a = await page.evaluate(() => {
   // a spot of the night pill's own face (right of its clock, above its timeline)
   const pillAt = [g.renderer.w / 2 + Math.min(156, g.renderer.w - 216) / 2 - 12, 38];
   const night = { ground: window.__pGround(), pill: window.__pHud(...pillAt) };
-  let n = 0;
-  while (!m.cleared && n++ < 600) window.__pStep(1);
+  // the sim runs on undrawn (window.__pFast) and draws the moments it is
+  // judged at: at DPR 2 hundreds of queued frames stall a screenshot
+  window.__pFast(() => !m.cleared && m.phase === 'night');
   const cleared = m.cleared ? { ...m.cleared } : null;
   window.__pStep(2);
   const at = { ground: window.__pGround(), pill: window.__pHud(...pillAt), banner: m.banner && { kind: m.banner.kind, text: m.banner.text, sub: m.banner.sub } };
@@ -766,15 +767,20 @@ const b16a = await page.evaluate(() => {
 await shot('b16-1-night-cleared');
 const b16a2 = await page.evaluate(() => {
   const g = window.__LN; const m = g.survival;
-  for (let i = 0; i < 58; i++) window.__pStep(1);
+  let n = 0;
+  window.__pFast(() => n++ < 56);
+  window.__pStep(2);
   return { blend: +m.dawnBlend().toFixed(2), ground: window.__pGround(), phase: m.phase };
 });
 await shot('b16-2-dawn-warming');
 const b16a3 = await page.evaluate(() => {
   const g = window.__LN; const m = g.survival;
+  // the keep as a night leaves it (the scripted 99999 would read as a patch on the card)
+  m.keepHp = Math.min(m.keepHp, m.keepHpMax());
+  window.__pFast(() => m.phase === 'night');
   let n = 0;
-  while (m.phase === 'night' && n++ < 300) window.__pStep(1);
-  window.__pStep(30);
+  window.__pFast(() => n++ < 28);
+  window.__pStep(2);
   const rw = m.lastRewards || {};
   return { phase: m.phase, panel: g.uiPanel, pending: m.rewardPending(), cleared: rw.cleared || null, endAt: rw.endAt, ground: window.__pGround() };
 });
@@ -795,10 +801,11 @@ const b16b = await page.evaluate(() => {
   const g = window.__LN; const m = g.survival;
   window.__pNight(2);
   g.enemies.length = 0; g.bolts.length = 0;
-  let n = 0;
   // the wave's call shows once the night's own banner has had its say
-  while (!(m.banner && m.banner.kind === 'wave') && n++ < 600) window.__pStep(1);
-  window.__pStep(12);
+  window.__pFast(() => !(m.banner && m.banner.kind === 'wave'));
+  let n = 0;
+  window.__pFast(() => n++ < 10);
+  window.__pStep(2);
   return { at: +m.elapsed.toFixed(2), wave: m.waveIndex, banner: m.banner && { kind: m.banner.kind, text: m.banner.text, sub: m.banner.sub }, horns: m.horns || 0 };
 });
 await shot('b16-4-wave-call');
@@ -822,10 +829,13 @@ const b16c = await page.evaluate(() => {
   g.enemies.push(far1, far2, claw);
   m.guards.length = 0; m.survivors = 0;
   const flee = [];
-  for (let i = 0; i < 6; i++) { window.__pStep(1); }
+  let n = 0;
+  window.__pFast(() => n++ < 6);
   flee.push(!!far1.fleeing, !!far2.fleeing, !!claw.fleeing);
   // the night's own banner has its 2.6 s first; the call comes after it
-  for (let i = 0; i < 165; i++) window.__pStep(1);
+  n = 0;
+  window.__pFast(() => n++ < 163);
+  window.__pStep(2);
   const w = g.renderer.w, h = g.renderer.h;
   // the clawing one is off the screen (the west gate: up and left on the
   // screen): a red pointer on the playfield's frame (with the gate's), not

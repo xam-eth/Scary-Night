@@ -3794,7 +3794,7 @@ export class SurvivalMode {
     // the keep as dawn found it (the end panel's "keep left", before the patch)
     this._keepAtDawn = this.keepHp / Math.max(1, this.keepHpMax());
     // the townsfolk patch part of the keep for free; the rest is wood by day
-    const missing = this.keepHpMax() - this.keepHp;
+    const missing = Math.max(0, this.keepHpMax() - this.keepHp);
     const patched = Math.round(missing * this.tuning.keepDawnHeal);
     this.keepHp = Math.min(this.keepHpMax(), this.keepHp + patched);
     this.repairDoors();
