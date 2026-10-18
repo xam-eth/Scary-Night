@@ -8,7 +8,8 @@
  * each frame (horde kinds, GLB guards, effects).
  *
  * Usage: node tools/survival-look.mjs [--out=/tmp/look] [--dpr=2]
- *        [--port=8123] [--only=gate,fight,outside,posts,wide,south,day0,day,build,overview,closeup]
+ *        [--port=8123] [--only=gate,fight,outside,posts,wide,south,killzone,day0,day,build,overview,closeup]
+ * (killzone needs south first: the crowd it frames is the one south brings.)
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -75,7 +76,10 @@ await page.evaluate(() => {
   window.__lkFast = (until) => { let n = 0; while (until() && n < 20000) { window.__lkOrig.call(g, 1 / 60); n++; } return n; };
   window.__lkDiag = () => {
     const d = window.__lkWorld.diagnostics();
-    return { horde: d.horde, primitiveCrowd: d.primitiveCrowd, rigs: d.visibleRiggedEnemies, glbGuards: d.glbGuards, troop: d.troop3d && d.troop3d.ready, fx: d.fx && d.fx.played, zoom: +window.__LN.renderer.cam.zoom.toFixed(3) };
+    const m = window.__LN.survival;
+    return { horde: d.horde, primitiveCrowd: d.primitiveCrowd, rigs: d.visibleRiggedEnemies, glbGuards: d.glbGuards, troop: d.troop3d && d.troop3d.ready, fx: d.fx && d.fx.played, zoom: +window.__LN.renderer.cam.zoom.toFixed(3),
+      // BUILD 15: the fight frame's lean, the see-through captain, the felled zones
+      lean: m && m.threatLean ? m.threatLean() : null, sight: d.sightlines ? { felled: d.sightlines.felled, xray: d.sightlines.xray && d.sightlines.xray.on } : null };
   };
   g.render();
 });
@@ -158,6 +162,18 @@ await shot('south', () => {
   window.__lkFast(() => m.phase === 'night' && m.elapsed < 46);
   window.__lkReal(12);
   return { t: +m.elapsed.toFixed(1), alive: m.aliveEnemies(), kills: m.nightStats.kills, ...window.__lkDiag() };
+});
+// BUILD 15 (V7): out in the main gate's kill zone, on the camera's side of
+// the wall — the felled ground (stumps, no crowns); the crowd at the gate and
+// the captain both in sight
+await shot('killzone', () => {
+  const g = window.__LN; const m = g.survival;
+  const door = g.mansion.entrances.find((e) => e.id === 'southGate');
+  const park = () => { g.player.x = door.x - 240; g.player.y = door.y + 190; g.player.blood = Math.max(g.player.blood, 80); };
+  park();
+  g.renderer.snapCamera && g.renderer.snapCamera(g.player.x, g.player.y);
+  for (let i = 0; i < 40; i++) { park(); window.__lkReal(1); }
+  return { t: +m.elapsed.toFixed(1), exposed: !!m.captainExposed, onHim: g.enemies.filter((e) => e._onCaptain).length, target: !!m.currentTarget, ...window.__lkDiag() };
 });
 // the first day: nothing built yet — where does a player look? (BUILD 11)
 await shot('day0', () => {

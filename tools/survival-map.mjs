@@ -236,6 +236,139 @@ for (const f of decor) {
     [onRoad && 'road', onPlaza && 'plaza', wall < 30 && `wall ${Math.round(wall)}`, towerHit && 'masonry', fire.length && `fire:${fire.map((p) => p.id).join(',')}`].filter(Boolean).join(' '));
 }
 
+/* ---------------- BUILD 15 (V6 / V7): the night fight in sight ----------------
+ * docs/VISUAL-LAYOUT-RESEARCH.md §7. The towers as World3D builds them
+ * (fortress.js TOWER_RISE over the wall's top, then the cap and merlons: +28
+ * on a gate tower, +33 on a corner; a bridge over a north / west gate), the
+ * camera's line of sight (azimuth 45°, elevation 35.26°: toward the camera is
+ * (+1, +1) on the ground, rising 1/sqrt(2) px per px) and the captain's
+ * height (x1.6). The captain's see-through silhouette is 3D
+ * (survival-plotsqa §7); this is the masonry itself.
+ */
+const { TOWER_RISE, NEAR_SIDES } = await import('../src/game/fortress.js');
+const { PX_PER_METRE, PIECE_METRES, VALEN_METRES, SURVIVAL_ACTOR_SCALE } = await import('../src/game/envkit.js');
+const { KILL_ZONE, GLACIS } = await import('../src/game/exterior.js');
+const wallTop = m.wallMetres * PX_PER_METRE;
+const gateTop = Math.max(wallTop, PIECE_METRES.doorway * PX_PER_METRE + 6);
+const sightSolids = [];
+for (const t of m.towers) {
+  const rise = Number.isFinite(t.rise) ? t.rise : (t.kind === 'corner' ? TOWER_RISE.corner : TOWER_RISE.gate);
+  if (t.kind === 'corner') sightSolids.push({ id: `corner(${t.x},${t.y})`, kind: 'cyl', x: t.x, y: t.y, r: t.size / 2 + 8, top: wallTop + rise + 33 });
+  else sightSolids.push({ id: `${t.gate}:${t.flank > 0 ? '+' : '-'}`, kind: 'box', x: t.x, y: t.y, hw: t.size / 2 + 5, hd: t.size / 2 + 5, top: wallTop + rise + 28 });
+}
+for (const e of m.entrances) {
+  if (!e.gate || !e.big || NEAR_SIDES.includes(e.facing)) continue;
+  const horiz = e.axis === 'h';
+  const span = (horiz ? e.w : e.h) + 20;
+  sightSolids.push({ id: `${e.id}:bridge`, kind: 'box', x: e.x, y: e.y, hw: horiz ? span / 2 : 21, hd: horiz ? 21 : span / 2, bottom: gateTop - 4, top: gateTop + 40 });
+}
+const LOS = Math.SQRT1_2;
+function sightHit(px, py, z, sd) {
+  let tin, tout;
+  if (sd.kind === 'box') {
+    const t1 = (sd.x - sd.hw - px) / LOS, t2 = (sd.x + sd.hw - px) / LOS;
+    const t3 = (sd.y - sd.hd - py) / LOS, t4 = (sd.y + sd.hd - py) / LOS;
+    tin = Math.max(Math.min(t1, t2), Math.min(t3, t4)); tout = Math.min(Math.max(t1, t2), Math.max(t3, t4));
+  } else {
+    const fx = px - sd.x, fy = py - sd.y;
+    const b = fx * LOS + fy * LOS, c = fx * fx + fy * fy - sd.r * sd.r;
+    const disc = b * b - c;
+    if (disc < 0) return false;
+    tin = -b - Math.sqrt(disc); tout = -b + Math.sqrt(disc);
+  }
+  if (tout < 0 || tin > tout) return false;
+  tin = Math.max(0, tin);
+  return z + LOS * tin < sd.top && z + LOS * tout > (sd.bottom || 0);
+}
+const captainH = VALEN_METRES * PX_PER_METRE * SURVIVAL_ACTOR_SCALE;
+const headZ = captainH * 0.85;
+const gateDoors = m.entrances.filter((e) => e.exterior && e.kind === 'door');
+const fightSpots = (e) => {
+  const iw = { x: e.inside.x - e.x, y: e.inside.y - e.y };
+  const il = Math.hypot(iw.x, iw.y) || 1; iw.x /= il; iw.y /= il;
+  const lat = { x: -iw.y, y: iw.x };
+  const out = [];
+  for (const off of [-40, 0, 40]) out.push({ at: `in ${off}`, x: e.x + iw.x * 80 + lat.x * off, y: e.y + iw.y * 80 + lat.y * off });
+  for (const d of [80, 200]) for (const off of [-60, 0, 60]) out.push({ at: `out ${d}/${off}`, x: e.x - iw.x * d + lat.x * off, y: e.y - iw.y * d + lat.y * off });
+  return out;
+};
+const nearHidden = [], farHidden = [];
+let farSpots = 0;
+for (const e of gateDoors) {
+  for (const sp of fightSpots(e)) {
+    const by = sightSolids.filter((sd) => sightHit(sp.x, sp.y, headZ, sd)).map((sd) => sd.id);
+    if (NEAR_SIDES.includes(e.facing)) { if (by.length) nearHidden.push(`${e.id} ${sp.at} (${by.join('+')})`); }
+    else { farSpots++; if (by.length) farHidden.push(`${e.id} ${sp.at}`); }
+  }
+}
+check(`V6: from every fight spot at a south / east gate (80 px inside, 80 / 200 px out) the captain's head clears the masonry`,
+  nearHidden.length === 0,
+  nearHidden.length ? nearHidden.join(', ') : `north / west gates: head behind a tall tower at ${farHidden.length}/${farSpots} spots (the see-through silhouette shows him there)`);
+// how much of the screen one piece of masonry covers, at the night zoom on
+// the 844 x 390 screen, the view centred inside, in the mouth and outside
+game.renderer.resize(844, 390, 1);   // a phone held sideways (the stub never sized it)
+const zNight = game.renderer.baseZoom * mode.frameMul(true);
+const SW = game.renderer.w, SH = game.renderer.h;
+const hull = (pts) => {
+  pts = pts.slice().sort((a, b) => a.x - b.x || a.y - b.y);
+  const cross = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+  const lo = [], up = [];
+  for (const q of pts) { while (lo.length >= 2 && cross(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop(); lo.push(q); }
+  for (const q of pts.slice().reverse()) { while (up.length >= 2 && cross(up[up.length - 2], up[up.length - 1], q) <= 0) up.pop(); up.push(q); }
+  return lo.slice(0, -1).concat(up.slice(0, -1));
+};
+const clipRect = (poly) => {
+  const edges = [
+    [(q) => q.x >= 0, (a, b) => ({ x: 0, y: a.y + (b.y - a.y) * (0 - a.x) / (b.x - a.x) })],
+    [(q) => q.x <= SW, (a, b) => ({ x: SW, y: a.y + (b.y - a.y) * (SW - a.x) / (b.x - a.x) })],
+    [(q) => q.y >= 0, (a, b) => ({ x: a.x + (b.x - a.x) * (0 - a.y) / (b.y - a.y), y: 0 })],
+    [(q) => q.y <= SH, (a, b) => ({ x: a.x + (b.x - a.x) * (SH - a.y) / (b.y - a.y), y: SH })],
+  ];
+  for (const [inside, cut] of edges) {
+    const out = [];
+    for (let i = 0; i < poly.length; i++) {
+      const a = poly[i], b = poly[(i + 1) % poly.length];
+      if (inside(b)) { if (!inside(a)) out.push(cut(a, b)); out.push(b); } else if (inside(a)) out.push(cut(a, b));
+    }
+    poly = out;
+    if (!poly.length) break;
+  }
+  return poly;
+};
+const polyArea = (poly) => { let a = 0; for (let i = 0; i < poly.length; i++) { const p = poly[i], q = poly[(i + 1) % poly.length]; a += p.x * q.y - q.x * p.y; } return Math.abs(a) / 2; };
+const screenShare = (sd, cx, cy) => {
+  const proj = (x, y, hgt) => ({ x: SW / 2 + zNight * Math.SQRT1_2 * ((x - cx) - (y - cy)), y: SH / 2 + zNight / Math.sqrt(6) * ((x - cx) + (y - cy)) - zNight * Math.sqrt(2 / 3) * hgt });
+  const pts = [];
+  if (sd.kind === 'box') { for (const a of [-1, 1]) for (const b of [-1, 1]) for (const hgt of [sd.bottom || 0, sd.top]) pts.push(proj(sd.x + a * sd.hw, sd.y + b * sd.hd, hgt)); }
+  else for (let i = 0; i < 16; i++) { const a = (i / 16) * Math.PI * 2; for (const hgt of [0, sd.top]) pts.push(proj(sd.x + Math.cos(a) * sd.r, sd.y + Math.sin(a) * sd.r, hgt)); }
+  return polyArea(clipRect(hull(pts))) / (SW * SH);
+};
+let worstShare = { f: 0, id: '', view: '' };
+for (const e of gateDoors) {
+  const iw = { x: e.inside.x - e.x, y: e.inside.y - e.y };
+  const il = Math.hypot(iw.x, iw.y) || 1; iw.x /= il; iw.y /= il;
+  for (const [view, d] of [['inside', -80], ['mouth', 0], ['outside', 200]]) {
+    const cx = e.x - iw.x * d, cy = e.y - iw.y * d;
+    for (const sd of sightSolids) {
+      const f = screenShare(sd, cx, cy);
+      if (f > worstShare.f) worstShare = { f, id: sd.id, view: `${e.id} ${view}` };
+    }
+  }
+}
+check(`V6: no tower or gate bridge covers more than 10% of the ${SW}x${SH} screen at the night zoom (${zNight.toFixed(3)}) from a gate's fight views`,
+  worstShare.f <= 0.1, `worst ${(worstShare.f * 100).toFixed(1)}%: ${worstShare.id} seen from ${worstShare.view}`);
+// the kill zones and the glacis (exterior.js): open floor in front of every
+// gate (rocks and stumps are low), no conifer on the near faces
+const trees = m.exterior.trees;
+const standingTrees = trees.filter((t) => !t.felled);
+const zoneClear = gateDoors.map((e) => ({ id: e.id, d: Math.min(...standingTrees.map((t) => Math.hypot(t.x - e.outside.x, t.y - e.outside.y))) }));
+check(`V7: at least 300 px of open floor in front of every gate (no standing tree within ${KILL_ZONE} px of its outside)`,
+  zoneClear.every((z) => z.d >= Math.max(300, KILL_ZONE)), zoneClear.map((z) => `${z.id} ${Math.round(z.d)}`).join(', '));
+const glacisTrees = standingTrees.filter((t) => (t.y > B0.y + B0.h && t.y < B0.y + B0.h + GLACIS && t.x > B0.x - GLACIS && t.x < B0.x + B0.w + GLACIS)
+  || (t.x > B0.x + B0.w && t.x < B0.x + B0.w + GLACIS && t.y > B0.y - GLACIS && t.y < B0.y + B0.h + GLACIS));
+check(`V7: the south / east glacis (${GLACIS} px) holds no standing conifer; ${trees.filter((t) => t.felled).length} felled to stumps`,
+  glacisTrees.length === 0 && trees.some((t) => t.felled), glacisTrees.map((t) => `(${Math.round(t.x)},${Math.round(t.y)})`).join(' '));
+
 /* ---------------- drawing ---------------- */
 const B = m.bailey;
 const margin = 220;

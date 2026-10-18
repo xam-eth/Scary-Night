@@ -395,6 +395,9 @@ const captainLum = () => page.evaluate(() => {
   };
   g.render();
   const look = V.lookState();
+  // the captain's own colours: his see-through silhouette (BUILD 15) off meanwhile
+  const xray = V.xrayState ? V.xrayState().on : false;
+  if (V.setXray) V.setXray(false);
   const mean = (A, B) => {
     let n = 0, sum = 0;
     for (let i = 0; i < A.length; i += 4) {
@@ -408,6 +411,7 @@ const captainLum = () => page.evaluate(() => {
   const on = pass(look);
   const bare = pass({ look: 0, rim: 0, lift: 0 });
   V.setLook(look);
+  if (V.setXray) V.setXray(xray);
   g.render();
   return { phase: g.survival.phase, look, on, bare, diag: W.diagnostics().captainLook || null };
 });
@@ -572,6 +576,119 @@ check('B14: at night a Lv3 guard up on its tower shoots the gold bolt (18 damage
   // (a bolt that has already run through one body has pierce 0 left)
   b14c.up >= 1 && b14c.bolts.length >= 1 && b14c.bolts.every((b) => b.arms === 3 && b.pierce <= 1 && b.damage === 18) && b14c.bolts.some((b) => b.pierce === 1)
     && b14c.meshLevels.length >= 1 && b14c.meshLevels.every((lv) => lv === 3), b14c);
+
+/* ---- 7. BUILD 15 (docs/VISUAL-LAYOUT-RESEARCH.md §7 V6 / V7): the night
+ * fight in sight — the captain seen through cover, the felled kill zones,
+ * the squat south / east towers, the frame that leans onto the fight. The
+ * rules are in tools/harness.mjs, the sightlines in tools/survival-map.mjs ---- */
+const b15a = await page.evaluate(() => {
+  const g = window.__LN; const m = g.survival;
+  const W = window.__pW, V = window.__pV, E = window.__pE;
+  m.startNight();
+  if (m.cine) m.cine = null;
+  m.keepHp = 99999;
+  m.waveIndex = 99; m.breakerIndex = 99; m.individualIndex = 99;
+  g.enemies.length = 0; g.bolts.length = 0;
+  // outside the north gate, 60 px east of its middle: from the camera the
+  // gate's east tower stands in front of him (survival-map: head hidden)
+  const north = m.entranceById('northGate');
+  const park = () => { g.player.x = north.x + 60; g.player.y = north.y - 80; g.player.vx = 0; g.player.vy = 0; m._userZoom = 1.3; m._zoomGoal = null; m.camPan.x = 0; m.camPan.y = 0; };
+  park(); m.recenterCamera(true); g.renderer.snapCamera(g.player.x, g.player.y);
+  for (let i = 0; i < 40; i++) { park(); window.__pStep(1); }
+  const gl = E.renderer.getContext(), width = E.canvas.width, height = E.canvas.height;
+  const frame = () => {
+    E.renderer.render(W.scene, E.camera); gl.finish();
+    const px = new Uint8Array(width * height * 4);
+    gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    return px;
+  };
+  const diff = (A, B) => {
+    let n = 0, r = 0, b = 0;
+    for (let i = 0; i < A.length; i += 4) {
+      if (Math.abs(A[i] - B[i]) + Math.abs(A[i + 1] - B[i + 1]) + Math.abs(A[i + 2] - B[i + 2]) > 18) { n++; r += A[i]; b += A[i + 2]; }
+    }
+    return { n, r: n ? Math.round(r / n) : 0, b: n ? Math.round(b / n) : 0 };
+  };
+  const state0 = V.xrayState();
+  V.setXray(true);
+  const withX = frame();
+  V.model.visible = false;
+  const none = frame();
+  V.model.visible = true;
+  V.setXray(false);
+  const plain = frame();
+  V.setXray(true);
+  g.render();
+  const seen = diff(withX, none), bare = diff(plain, none);
+  // the silhouette's own pixels: on with the twin, not with the plain body
+  let sil = 0, silB = 0, silR = 0;
+  for (let i = 0; i < withX.length; i += 4) {
+    const dX = Math.abs(withX[i] - plain[i]) + Math.abs(withX[i + 1] - plain[i + 1]) + Math.abs(withX[i + 2] - plain[i + 2]);
+    if (dX > 18) { sil++; silB += withX[i + 2]; silR += withX[i]; }
+  }
+  return { state0, xray: V.xrayState(), seen, bare, sil, silBlue: sil ? Math.round(silB / sil) : 0, silRed: sil ? Math.round(silR / sil) : 0, diag: W.diagnostics().sightlines };
+});
+await shot('b15-1-captain-through-tower');
+check('B15: the captain is seen through cover — behind the north gate\'s east tower his figure shows through it as a blue silhouette (a twin of his skinned mesh, GreaterDepth, survival only); in plain sight he paints over it',
+  b15a.state0.on && b15a.xray.on && b15a.xray.twins >= 1 && b15a.sil >= 300 && b15a.silBlue > b15a.silRed + 40 && b15a.seen.n > b15a.bare.n,
+  b15a);
+const b15b = await page.evaluate(() => {
+  const g = window.__LN; const m = g.survival;
+  const W = window.__pW;
+  // two guards up on their posts: the south gate's bastion, the north gate's tower
+  const south = m.entranceById('southGate'), north = m.entranceById('northGate');
+  m.guards.length = Math.min(2, m.guards.length);
+  const posts = [m._doorPost(south, 0), m._doorPost(north, 0)];
+  m.guards.forEach((gd, i) => { const post = posts[i]; gd.x = post.x; gd.y = post.y + (i ? 6 : -6); m._setGuardPost(gd, post); });
+  m._guardAssignT = 99;
+  window.__pFast(() => { m._guardAssignT = 99; return m.guards.some((gd) => gd.lift < 1) && m.elapsed < 40; });
+  window.__pStep(2);
+  const ys = m.guards.map((gd, i) => {
+    const mesh = W.survivalGuardMeshes && W.survivalGuardMeshes[i];
+    return mesh ? +mesh.position.y.toFixed(1) : null;
+  });
+  const stumps = W.scene.getObjectByName('forest-felled-trunk-stumps-3d');
+  const cuts = W.scene.getObjectByName('forest-felled-stump-cuts-3d');
+  const d = W.diagnostics().sightlines;
+  // the south gate up close: the bastions, the stumps in front
+  const park = () => { g.player.x = south.x + 40; g.player.y = south.y - 90; g.player.vx = 0; g.player.vy = 0; m._userZoom = 1; m._zoomGoal = null; m.camPan.x = 0; m.camPan.y = 0; m._guardAssignT = 99; };
+  park(); m.recenterCamera(true); g.renderer.snapCamera(g.player.x, g.player.y);
+  for (let i = 0; i < 20; i++) { park(); window.__pStep(1); }
+  return { lifts: m.guards.map((gd) => gd.lift), ys, stumps: stumps ? stumps.count : 0, cuts: cuts ? cuts.count : 0, d };
+});
+await shot('b15-2-south-gate-bastions');
+check('B15: the south / east gates have squat bastions (no bridge over them; the north / west keep their towers and bridges), the south-east corner is cut down, the felled kill zones show stumps; a guard on the south bastion stands ~68 px lower than one on the north tower',
+  b15b.d && b15b.d.felled >= 10 && b15b.stumps === b15b.d.felled && b15b.cuts === b15b.d.felled
+    && b15b.d.lowTowers && b15b.d.lowTowers.length === 5 && b15b.d.lowTowers.includes('corner')
+    && ['southGate:-1', 'southGate:1', 'eastGate:-1', 'eastGate:1'].every((id) => b15b.d.lowTowers.includes(id))
+    && JSON.stringify((b15b.d.bridges || []).slice().sort()) === JSON.stringify(['northGate', 'westGate'])
+    && b15b.lifts.every((l) => l === 1) && b15b.ys[0] != null && b15b.ys[1] != null && Math.abs((b15b.ys[1] - b15b.ys[0]) - 68) <= 2,
+  b15b);
+const b15c = await page.evaluate(async () => {
+  const g = window.__LN; const m = g.survival;
+  const { SurvivalCrowdZombie: Crowd } = await import('./src/game/survival.js');
+  const south = m.entranceById('southGate');
+  g.enemies.length = 0; g.bolts.length = 0;
+  m.guards.length = 0; m.survivors = 0;
+  const park = () => { g.player.x = south.inside.x; g.player.y = south.inside.y - 60; g.player.vx = 0; g.player.vy = 0; m._userZoom = 1; m._zoomGoal = null; m.camPan.x = 0; m.camPan.y = 0; };
+  park(); m.recenterCamera(true); g.renderer.snapCamera(g.player.x, g.player.y);
+  m._lean = null;
+  for (let i = 0; i < 10; i++) {
+    const z = new Crowd(south.outside.x - 90 + (i % 5) * 45, south.outside.y + 70 + Math.floor(i / 5) * 60, south, 0, 1);
+    z.hp = z.hpMax = 99999; z.update = () => {};
+    g.enemies.push(z);
+  }
+  for (let i = 0; i < 180; i++) { park(); window.__pStep(1); }
+  const knot = g.enemies.reduce((a, e) => ({ x: a.x + e.x / g.enemies.length, y: a.y + e.y / g.enemies.length }), { x: 0, y: 0 });
+  const sk = g.renderer.worldToScreen(knot.x, knot.y), sc = g.renderer.worldToScreen(g.player.x, g.player.y);
+  return { lean: m.threatLean(), knot: { x: Math.round(sk.x), y: Math.round(sk.y) }, captain: { x: Math.round(sc.x), y: Math.round(sc.y) }, h: g.renderer.h, w: g.renderer.w };
+});
+await shot('b15-3-fight-frame');
+check('B15: holding the main gate from inside, the night frame leans onto the knot outside — knot and captain both in the playfield (below the HUD band, above the stick / FLARE band)',
+  b15c.lean.w > 0.9 && b15c.lean.y > 120 && b15c.knot.y > 85 && b15c.knot.y < b15c.h - 105 && b15c.captain.y > 85 && b15c.captain.y < b15c.h - 95,
+  b15c);
+// clean up for anything after: the fake knot goes
+await page.evaluate(() => { const g = window.__LN; g.enemies.length = 0; g.survival._lean = null; });
 
 fs.writeFileSync(path.join(OUT, 'plotsqa.json'), JSON.stringify({ results, errors }, null, 2));
 console.log(`errors ${errors.length}`);
