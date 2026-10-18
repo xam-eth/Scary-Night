@@ -1367,7 +1367,10 @@ async function runSurvivalMilestone() {
       `reloaded: guard 0 down=${ra && ra.down} at (${ra && Math.round(ra.x)}, ${ra && Math.round(ra.y)}) vs (${Math.round(dark.x)}, ${Math.round(dark.y)}), help ${ra && ra.rescueT}s, alone ${ra && ra.downT}s; guard 1 ${rb && rb.hp} HP`);
 
     // 6) left alone for 20 s a fallen guard is lost at once (one survivor
-    //    fewer); one still down at dawn gets up, healed
+    //    fewer); one still down at dawn gets up, healed. (The crowd above
+    //    was swept off the board, not killed: BUILD 16's NIGHT CLEARED must
+    //    not end this night early — it is about the guards.)
+    mode.nightStats.spawned = 0;
     parkHunter();
     let lostAt = null;
     for (let i = 0; i < 60 * 16 && lostAt == null; i++) { tick(); if (!mode.guards.includes(ga)) lostAt = mode.elapsed; }
@@ -2216,6 +2219,172 @@ async function runSurvivalMilestone() {
   }
   const b15Pass = b15Checks.length === 3 && b15Checks.every(Boolean);
 
+  // ---- BUILD 16 (R5 / R6, docs/UX-REPLAY-RESEARCH.md §5): night tempo — a
+  // cleared night ends early (NIGHT CLEARED!, dawn 2 s later, a gold for
+  // every whole second saved, the mines' unrun shift paid, the light warming
+  // meanwhile); the last few break and run; Nights 2–3 open on their first
+  // wave at once, every wave called with its gate and a horn. The pictures
+  // are in the browser (survival-plotsqa §8), the tempo in
+  // tools/survival-uxprobe.mjs ----
+  const b16Checks = [];
+  const b16Check = (name, ok, detail) => {
+    b16Checks.push(!!ok);
+    console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} (${detail})`);
+  };
+  {
+    const { NIGHT_CLEAR, SurvivalCrowdZombie: Crowd, SurvivalIndividualZombie: Ind, gateLabel } = await import('../src/game/survival.js');
+    const { World3D, SURVIVAL_RIG, dawnHex } = await import('../src/game/world3d.js');
+    window.localStorage.removeItem('lastnight.save.v1');
+    const hg = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 72 });
+    const hm = hg.survival;
+    const htick = (n = 1) => { for (let i = 0; i < n; i++) hg.update(step); };
+    // the horde's horn: SurvivalMode counts each one it blows (_hornFrom)
+    const horns = () => hm.horns || 0;
+    // a night as the day's START NIGHT opens it: Night `day`, keep safe
+    const openNight = (day) => {
+      hm.restart();
+      hm.phase = 'day'; hm.day = day; hm.nightsCompleted = day - 1; hm.rewardAck = day - 1;
+      hg.screen = 'playing'; hg.uiPanel = 'survival-day';
+      hm.startNight();
+      if (hm.cine) hm.cine = null;
+      hm.keepHp = 99999;
+      const home = hm.hunterHome();
+      hg.player.x = home.x; hg.player.y = home.y;
+    };
+    const bannerOf = (kind) => [hm.banner, ...hm.bannerQueue].find((ev) => ev && ev.kind === kind) || null;
+
+    // 1) NIGHT CLEARED: Night 2 at 50 s, every spawn out, one body left by
+    //    the captain; a mine on its plot
+    openNight(2);
+    hm.buildings.north = 'mine'; hm.buildingLevels.north = 1;
+    hm.elapsed = 50; hm.waveIndex = 3; hm.breakerIndex = 1; hm.individualIndex = 2;
+    hm.nightStats.spawned = 40;
+    hg.enemies.length = 0;
+    const lastOne = new Crowd(hg.player.x + 120, hg.player.y, hm.entranceById('southGate'), 0, 2);
+    lastOne._inHouse = true; lastOne.hp = 1;
+    hg.enemies.push(lastOne);
+    const purse0 = hm.gold;
+    const rate = hm.goldRate();
+    let guard16 = 0;
+    while (!hm.cleared && hm.phase === 'night' && guard16++ < 600) htick();
+    const cl = hm.cleared ? { ...hm.cleared } : null;
+    const clBanner = bannerOf('cleared');
+    const blend0 = hm.dawnBlend();
+    const rig0 = World3D._survivalRig(hg).exposure;
+    htick(60);
+    const blend1 = hm.dawnBlend();
+    const rig1 = World3D._survivalRig(hg).exposure;
+    // a reload in the middle of the clear keeps its dawn
+    hm._persist(true);
+    const reloadedClear = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 72 }).survival.cleared;
+    let endElapsed = hm.elapsed;
+    guard16 = 0;
+    while (hm.phase === 'night' && guard16++ < 600) { endElapsed = hm.elapsed; htick(); }
+    const rw = hm.lastRewards || {};
+    const purse1 = hm.gold;
+    const phase1 = hm.phase;
+    const killGold = Math.floor((rw.kills || 0) / 6);
+    const wantPurse = purse0 + hm.tuning.nightRewards.gold[1] + killGold + (cl ? cl.bonus : 0) + rate * (72 - 50);
+    const wantBonus = cl ? Math.floor(72 - (cl.at + NIGHT_CLEAR.delay) + 1e-6) : -1;
+    const blendDay = hm.dawnBlend();
+    // no clear while a spawn is still to come, nor on a board swept by hand
+    openNight(2);
+    hm.elapsed = 50; hm.waveIndex = 3; hm.breakerIndex = 1; hm.individualIndex = 1;
+    hm.nightStats.spawned = 40; hg.enemies.length = 0;
+    hm.updateWaves = () => {};
+    htick(30);
+    const pendingClear = !!hm.cleared;
+    delete hm.updateWaves;
+    openNight(2);
+    hm.elapsed = 50; hm.waveIndex = 3; hm.breakerIndex = 1; hm.individualIndex = 2;
+    hg.enemies.length = 0;
+    htick(30);
+    const sweptClear = !!hm.cleared;
+    b16Check(`NIGHT CLEARED: once every spawn is out and none stands, the banner says so with the gold, dawn comes ${NIGHT_CLEAR.delay} s later (the light warming meanwhile), each whole second saved pays ${NIGHT_CLEAR.goldPerSecond} gold and the mines are paid the shift they did not dig; a reload keeps the dawn; no clear with a spawn still to come or a board swept by hand`,
+      !!cl && Math.abs(cl.dawnAt - (cl.at + NIGHT_CLEAR.delay)) < 1e-6 && cl.bonus === wantBonus && cl.bonus >= 15
+        && clBanner && clBanner.text === 'NIGHT CLEARED!' && clBanner.sub === `DAWN COMES EARLY · +${cl.bonus} GOLD`
+        && phase1 === 'day' && Math.abs(endElapsed - cl.dawnAt) <= step + 1e-6 && rw.cleared && rw.cleared.bonus === cl.bonus
+        && Math.abs(purse1 - wantPurse) < 0.05 && blend0 < 0.05 && Math.abs(blend1 - 0.5) < 0.05 && blendDay === 1
+        && Math.abs(rig0 - SURVIVAL_RIG.night.exposure) < 0.005 && rig1 > rig0 + 0.03 && rig1 < SURVIVAL_RIG.day.exposure - 0.03
+        && dawnHex(0x3f5a46, 0x7c9a55, 0.5) === 0x5e7a4e && dawnHex(0x3f5a46, 0x7c9a55, 0) === 0x3f5a46
+        && reloadedClear && Math.abs(reloadedClear.dawnAt - cl.dawnAt) < 1e-6 && !pendingClear && !sweptClear,
+      `cleared at ${cl && cl.at}s → dawn at ${endElapsed.toFixed(2)}s (wanted ${cl && cl.dawnAt}), bonus +${cl && cl.bonus} (wanted +${wantBonus}), banner "${clBanner && clBanner.text}" / "${clBanner && clBanner.sub}", purse ${purse1.toFixed(2)} (wanted ${wantPurse.toFixed(2)}: night ${hm.tuning.nightRewards.gold[1]} + kills ${killGold} + clear ${cl && cl.bonus} + mines ${(rate * 22).toFixed(2)}), light ${blend0.toFixed(2)} → ${blend1.toFixed(2)} → ${blendDay} (exposure ${rig0} → ${rig1.toFixed(3)}), reload dawn ${reloadedClear && reloadedClear.dawnAt}, pending spawn cleared=${pendingClear}, swept board cleared=${sweptClear}`);
+
+    // 2) the horde breaks: Night 3 at 60 s, every spawn out — two
+    //    Individuals far outside (out of the fight) run for the trees and
+    //    are gone without a kill; the one clawing the west gate stays, marked
+    //    (LAST 1!); when it falls the night is cleared ("THE REST FLED")
+    openNight(3);
+    hm.elapsed = 60; hm.waveIndex = 3; hm.breakerIndex = 2; hm.individualIndex = 2;
+    hm.nightStats.spawned = 90;
+    hg.enemies.length = 0;
+    const west = hm.entranceById('westGate');
+    west.hp = west.hpMax = 99999;
+    const far1 = new Ind(1400, 900, hm.entranceById('eastGate'), 3, 0);
+    const far2 = new Ind(-1300, -950, hm.entranceById('northGate'), 3, 1);
+    const claw = new Crowd(west.outside.x - 40, west.outside.y, west, 0, 3);
+    claw.hp = claw.hpMax = 99999;
+    hg.enemies.push(far1, far2, claw);
+    hm.guards.length = 0; hm.survivors = 0;
+    hm.towers.length = 0;
+    htick(1);
+    const fled0 = [far1.fleeing, far2.fleeing, !!claw.fleeing];
+    const alive0 = hm.aliveEnemies();
+    const lastBanner = bannerOf('stragglers');
+    const kills0 = hm.nightStats.kills;
+    const at0 = { x: far1.x, y: far1.y };
+    htick(Math.ceil(60 * (NIGHT_CLEAR.flee + 0.1)));
+    const gone = !hg.enemies.includes(far1) && !hg.enemies.includes(far2);
+    const ran = Math.hypot(far1.x, far1.y) - Math.hypot(at0.x, at0.y);
+    const killsAfterFlight = hm.nightStats.kills;
+    const stillHere = hg.enemies.includes(claw) && !claw.dead && !claw.fleeing && !hm.cleared;
+    claw.hurt(999999, hg, claw.x - 10, claw.y);
+    htick(2);
+    const routBanner = bannerOf('cleared');
+    b16Check(`the horde breaks: with every spawn out and ${NIGHT_CLEAR.stragglers} or fewer left, the ones out of the fight run for the trees (${NIGHT_CLEAR.fleeSpeed} px/s, gone after ${NIGHT_CLEAR.flee} s, not a kill); one clawing a gate stays, called LAST 1!; when it falls the night is cleared`,
+      fled0[0] && fled0[1] && !fled0[2] && alive0 === 1 && lastBanner && lastBanner.text === 'LAST 1!'
+        && gone && ran > 120 && killsAfterFlight === kills0 && stillHere
+        && !!hm.cleared && hm.cleared.fled === 2 && routBanner && /^THE REST FLED · \+\d+ GOLD$/.test(routBanner.sub),
+      `fleeing ${fled0.join('/')}, alive ${alive0}, banner "${lastBanner && lastBanner.text}", gone ${gone} after running ${Math.round(ran)} px, kills ${kills0} → ${killsAfterFlight}, clawing one still there ${stillHere}, then cleared ${!!hm.cleared} (fled ${hm.cleared && hm.cleared.fled}) "${routBanner && routBanner.sub}"`);
+
+    // 3) R6: Nights 2–3 set their first wave out at once (Night 1 opens on
+    //    the opening's last shot at 4 %); every wave and Breaker is called
+    //    with its gate and blown on the horde's horn; a gate is clawed
+    //    within 5 s with the captain still at the keep
+    const firstWave = {};
+    for (const day of [1, 2, 3]) {
+      openNight(day);
+      hg.enemies.length = 0;
+      const horn0 = horns();
+      let at = null, contact = null, call = null, n = 0;
+      while ((at == null || contact == null) && n++ < 60 * 12) {
+        const home = hm.hunterHome();
+        hg.player.x = home.x; hg.player.y = home.y;
+        htick();
+        if (at == null && hm.waveIndex >= 1) { at = hm.elapsed; call = bannerOf('wave'); }
+        if (contact == null && hm.besiegedDoors().length) contact = hm.elapsed;
+      }
+      const crowdGate = hg.enemies.find((e) => e._survivalType === 'swarm');
+      const gate = crowdGate && hm.entranceById(crowdGate.entranceId);
+      firstWave[day] = { at: at && +at.toFixed(2), contact: contact && +contact.toFixed(2), text: call && call.text, sub: call && call.sub,
+        want: gate ? `${gateLabel(gate)} ×${hm.waveCounts()[0]}` : null, horn: horns() - horn0 };
+    }
+    // a Breaker is called with its gate and a horn too (Night 2, 20 %)
+    openNight(2);
+    hm.elapsed = 72 * 0.2 - 0.05; hm.waveIndex = 3;
+    const brkHorn0 = horns();
+    htick(6);
+    const brk = bannerOf('breaker');
+    b16Check(`R6: Nights 2–3 send their first wave at ${(72 * 0.015).toFixed(2)} s (Night 1 at ${(72 * 0.04).toFixed(2)} s, the opening's handover), each wave called with its gate and count and the horde's horn, a Breaker too; with the captain at the keep a gate is clawed within 5 s on Nights 2–3`,
+      [2, 3].every((d) => firstWave[d].at <= 72 * 0.015 + step + 1e-6 && firstWave[d].contact != null && firstWave[d].contact <= 5)
+        && Math.abs(firstWave[1].at - 72 * 0.04) <= step + 1e-6
+        && [1, 2, 3].every((d) => firstWave[d].text === 'WAVE 1/3' && firstWave[d].sub === firstWave[d].want && firstWave[d].horn >= 1)
+        && brk && brk.text === 'BREAKER!' && brk.sub === gateLabel(hm.mainGate()) && horns() === brkHorn0 + 1,
+      Object.entries(firstWave).map(([d, f]) => `N${d}: wave 1 at ${f.at}s, gate clawed at ${f.contact}s, "${f.text}" / "${f.sub}" (want "${f.want}"), horns ${f.horn}`).join(' | ') + ` | breaker "${brk && brk.text}" / "${brk && brk.sub}"`);
+    window.localStorage.removeItem('lastnight.save.v1');
+  }
+  const b16Pass = b16Checks.length === 3 && b16Checks.every(Boolean);
+
   console.log(`  idle Night 3: ${idle.nightThree.peakEnemies} peak enemies / ${idle.nightThree.peakBreakers} Breakers, ${idle.nightThree.kills} kills, ${idle.nightThree.wallDamage} wall damage, gate ${idle.nightThree.gateHp} HP, Hunter ${idle.nightThree.playerHp} HP; ${idle.phase}`);
   console.log(`  builder Night 3: ${builder.nightThree.peakEnemies} peak enemies / ${builder.nightThree.peakBreakers} Breakers, ${builder.nightThree.kills} kills, ${builder.nightThree.wallDamage} wall damage, gate ${builder.nightThree.gateHp} HP, Hunter ${builder.nightThree.playerHp} HP; keep Lv${builder.keepLevel} ${builder.keepHp} HP, soldiers ${builder.survivors}, buildings ${builder.buildings.join(',') || 'none'}, gateBuilt=${builder.gateBuilt}; ${builder.phase}`);
   // Balance target (M1 rebuild, K1): doing nothing must not win; an engaged
@@ -2228,7 +2397,7 @@ async function runSurvivalMilestone() {
     && hunterAutoShot && hunterRealLos && hunterSkill
     && idleLoses && builder.complete && builder.keepLevel === 3
     && builder.queueLockVerified && builder.sawmillBuilt && builder.gateBuilt && builder.barracksBuilt
-    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass && gateRulePass && b13Pass && b14Pass && b15Pass
+    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass && gateRulePass && b13Pass && b14Pass && b15Pass && b16Pass
     && builder.upgrades[0].level === 1 && builder.upgrades[0].plots === 9
     && builder.upgrades[builder.upgrades.length - 1].level === 3 && builder.upgrades[builder.upgrades.length - 1].plots === 15
     && builder.upgrades.every((item, i, all) => i === 0 || item.level >= all[i - 1].level);

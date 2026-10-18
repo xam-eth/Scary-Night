@@ -5,20 +5,33 @@
  * tools/survival-bots.mjs and measures what a player FEELS rather than whether
  * the run is won:
  *   first       night clock (s) when the Hunter first has something to shoot
+ *   contact     night clock (s) of the first fight anywhere: a gate clawed, or a
+ *               guard / ballista shooting (BUILD 16, R6: ≤ 5 s)
  *   target%     share of the night with a target in reach
  *   longestQuiet  longest stretch (s) with nothing to shoot
- *   deadTail    seconds between the night's last kill and dawn (waiting on the clock)
+ *   deadTail    seconds between the night's last kill and dawn (waiting on the clock;
+ *               BUILD 16, R5: a cleared night's dawn comes NIGHT_CLEAR.delay s
+ *               after it, so ≤ 3 s whenever the night is cleared)
+ *   end@        when dawn came (s): the clock, or a cleared night's early dawn
+ *   cleared@    when the night was cleared (BUILD 16) and the gold it paid
  *   bins        kills per twelfth of the night (pacing)
  *   options     affordable actions at the start of a day (choice breadth)
  *   human≈      a day in human time: walk between circles at run speed (the bots
  *               buy in place) + build wait + 2 s per decision + START NIGHT
  *
- *   node tools/survival-uxprobe.mjs [--kinds=builder,tower,active,idle]
+ * Kinds: the balance bots (builder, tower, active, idle) and `rally`: the
+ * builder by day who, at nightfall, walks straight to the gate the first
+ * wave's call names (a player answering the call; BUILD 16, R6) instead of
+ * waiting at the keep until a gate is clawed, and who goes after the night's
+ * marked last few (LAST N!, R5) when nothing else is fighting.
+ *
+ *   node tools/survival-uxprobe.mjs [--kinds=builder,tower,active,idle,rally]
  *        [--seedlist=20261012,20268931,20276850,20261013,20261014] [--duration=72] [--json=out.json]
  *
  * A measurement tool, not a gate: it prints, it does not assert. Cinematics
  * are off (the node default), so Night 1 starts at clock 0 here; in the
- * browser the opening hands over at 4 % of the night.
+ * browser the opening hands over at the first wave's mark (1.5 % of the
+ * night since BUILD 16).
  */
 
 import { createCanvas } from '@napi-rs/canvas';
@@ -139,12 +152,18 @@ function runGamer(kind, seed) {
   };
   while (guard++ < 60 * 60 * 30) {
     if (mode.phase === 'night' && !game.uiPanel) {
-      if (!night) night = { day: mode.day, frames: 0, targetFrames: 0, firstTarget: null, quiet: 0, longestQuiet: 0, lastKillAt: 0, kills: 0, bins: new Array(12).fill(0), keepMin: 1, flares: 0, hurtMin: 1 };
+      if (!night) {
+        night = { day: mode.day, frames: 0, targetFrames: 0, firstTarget: null, contact: null, quiet: 0, longestQuiet: 0, lastKillAt: 0, kills: 0, bins: new Array(12).fill(0), keepMin: 1, flares: 0, hurtMin: 1 };
+        // the rally player answers the first wave's call at once
+        if (kind === 'rally') { const gate = mode.chooseTargetEntrance(0, 0, 0); state.rally = gate ? gate.id : null; state.hunt = true; }
+      }
+      if (state.rally && mode.besiegedDoors().length) state.rally = null;
       if (kind !== 'idle') botNight(game, state, { ROOM, ISO_CAMERA }); else release(game);
       const before = mode.nightStats.kills;
       game.update(step);
       if (mode.phase !== 'night') continue;
       night.frames++;
+      if (night.contact == null && (mode.besiegedDoors().length > 0 || (mode.nightStats.guardShots || 0) > 0 || (mode.nightStats.towerShots || 0) > 0)) night.contact = +mode.elapsed.toFixed(1);
       const has = !!mode.currentTarget;
       if (has) { night.targetFrames++; if (night.firstTarget == null) night.firstTarget = +mode.elapsed.toFixed(1); night.quiet = 0; }
       else { night.quiet += step; night.longestQuiet = Math.max(night.longestQuiet, night.quiet); }
@@ -158,7 +177,10 @@ function runGamer(kind, seed) {
     }
     if (night) {
       night.result = mode.phase === 'failed' ? 'FAIL' : 'OK';
-      night.endAt = night.result === 'OK' ? DURATION : +mode.elapsed.toFixed(1);
+      const lr = mode.lastRewards;
+      night.endAt = night.result === 'OK' ? +(lr && lr.endAt != null ? lr.endAt : DURATION).toFixed(1) : +mode.elapsed.toFixed(1);
+      night.cleared = night.result === 'OK' && lr && lr.cleared ? { at: +lr.cleared.at.toFixed(1), saved: lr.cleared.saved, bonus: lr.cleared.bonus } : null;
+      state.rally = null;
       night.targetPct = Math.round(100 * night.targetFrames / Math.max(1, night.frames));
       night.deadTail = +(night.endAt - night.lastKillAt).toFixed(1);
       night.longestQuiet = +night.longestQuiet.toFixed(1);
@@ -175,7 +197,7 @@ function runGamer(kind, seed) {
         const o = dayOptions(mode);
         day = { day: mode.day, gold: Math.floor(mode.gold), wood: Math.floor(mode.wood), options: o.n, kinds: o.kinds, buys: [], at: { x: game.player.x, y: game.player.y } };
       }
-      const started = botDay(game, kind === 'idle' || kind === 'active' ? 'idle' : kind);
+      const started = botDay(game, kind === 'idle' || kind === 'active' ? 'idle' : kind === 'rally' ? 'builder' : kind);
       if (started || mode.phase !== 'day') {
         let t = 0, prevJob = 0;
         for (const b of day.buys) { t += Math.max(b.walk, prevJob) + 2; prevJob = b.job; }
@@ -198,6 +220,6 @@ for (const kind of KINDS) for (const seed of SEEDLIST) all.push(runGamer(kind, s
 if (args.json) fs.writeFileSync(args.json, JSON.stringify(all, null, 1));
 for (const r of all) {
   console.log(`\n${r.kind} s${r.seed} -> ${r.result}`);
-  for (const n of r.nights) console.log(`  N${n.day} ${n.result} end@${n.endAt}s kills=${n.kills} target%=${n.targetPct} first@${n.firstTarget}s longestQuiet=${n.longestQuiet}s lastKill@${n.lastKillAt}s deadTail=${n.deadTail}s keepMin=${n.keepMin}% hpMin=${n.hurtMin}% flares=${n.flares} bins=${n.bins.join(',')}`);
+  for (const n of r.nights) console.log(`  N${n.day} ${n.result} end@${n.endAt}s${n.cleared ? ` cleared@${n.cleared.at}s(+${n.cleared.bonus}g)` : ''} kills=${n.kills} target%=${n.targetPct} contact@${n.contact}s first@${n.firstTarget}s longestQuiet=${n.longestQuiet}s lastKill@${n.lastKillAt}s deadTail=${n.deadTail}s keepMin=${n.keepMin}% hpMin=${n.hurtMin}% flares=${n.flares} bins=${n.bins.join(',')}`);
   for (const d of r.days) console.log(`  D${d.day} purse=${d.gold}g/${d.wood}w options=${d.options} [${d.kinds.join(' ')}] buys=${d.buys.map((b) => `${b.type}(walk${b.walk}s,job${b.job}s)`).join(' ')} human≈${d.humanSeconds}s`);
 }

@@ -611,6 +611,17 @@ S.fanfare = (t, o) => {
   osc(t + 0.52, 1.4, { out: o.out, gain: 0.09 * v, type: 'sine', freq: 98, pan: 0, rev: 0.6, attack: 0.04 });
 };
 
+/* BUILD 16 (R6): the horde's horn as a wave sets out — lower and rougher than
+ * the captain's, a tritone on top and a rasp under it. Played from the side
+ * of the screen its gate is on (survival.js _hornFrom). */
+S.hordeHorn = (t, o) => {
+  const v = o.vol ?? 1;
+  const pan = clamp(o.pan || 0, -0.8, 0.8);
+  brass(t, 1.5, 82.4, 0.12 * v, o, { rise: 0.18, open: 900, pan });
+  brass(t + 0.03, 1.35, 116.5, 0.05 * v, o, { rise: 0.22, open: 1100, pan: clamp(pan + 0.15, -1, 1), detune: -12 });
+  noise(t + 0.05, 1.1, { out: o.out, gain: 0.035 * v, type: 'bandpass', freq: 420, q: 2.2, pan, rev: 0.6, attack: 0.2 });
+};
+
 function distCurve(amount) {
   const n = 1024, curve = new Float32Array(n);
   for (let i = 0; i < n; i++) {

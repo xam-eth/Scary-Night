@@ -42,7 +42,7 @@ export function botNight(game, state, { ROOM, ISO_CAMERA }) {
   const keep = mode.keep();
   game.input.keys.interact = false;
   if (!keep) return;
-  const live = game.enemies.filter((e) => e._survivalType && !e.dead && !e.removeMe);
+  const live = game.enemies.filter((e) => e._survivalType && !e.dead && !e.removeMe && !e.fleeing);
   const inside = live.filter((e) => e._inHouse || (e.roomId && e.roomId !== ROOM.OUTSIDE));
   const home = mode.hunterHome();
   let goal = { x: home.x, y: home.y };
@@ -73,6 +73,22 @@ export function botNight(game, state, { ROOM, ISO_CAMERA }) {
     // steps back to get his breath (SORTIE.rest) and goes again.
     const spot = peekSpot(game, state, p);
     if (spot) goal = spot;
+    else if (state.rally) {
+      // survival-uxprobe's `rally` player only (BUILD 16, R6): he walks to
+      // the gate the first wave's call named as the night begins, instead of
+      // waiting at the keep until it is clawed. The balance bots never set it.
+      const door = gatesOf(game).find((e) => e.id === state.rally);
+      if (door) { const o = outward(door); goal = { x: door.x - o.x * 20, y: door.y - o.y * 20, tight: true }; }
+    } else if (state.hunt && mode.stragglers) {
+      // and goes after the night's marked last few (BUILD 16, R5), to a
+      // shot's length (his auto-shot reaches 540 px)
+      const last = live.slice().sort((a, b) => dist(a, p) - dist(b, p))[0];
+      if (last) {
+        const d = dist(last, p) || 1;
+        const k = Math.max(0, d - 300) / d;
+        goal = { x: p.x + (last.x - p.x) * k, y: p.y + (last.y - p.y) * k };
+      }
+    }
   } else state.peek = null;
   // in and out of the walls only by a gate (it opens for him)
   const leg = travel(game, p, goal, ROOM);

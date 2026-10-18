@@ -316,18 +316,20 @@ function drawPauseButton(game, ctx, w, h) {
 function drawPhasePill(game, ctx, w, phase) {
   const mode = game.survival;
   const night = phase === 'night';
+  // BUILD 16 (R5): a cleared night's pill is already the dawn's
+  const cleared = night && !!mode.cleared;
   const pillW = night ? Math.min(156, w - 216) : Math.min(212, w - 216);
   const pillH = night ? 68 : 46;
   const x = w / 2 - pillW / 2, y = 8;
   drawPanel(ctx, x, y, pillW, pillH, {
     radius: 22,
-    top: night ? '#4a51a8' : '#ffcf6a',
-    bottom: night ? '#262a66' : '#f08c2a',
+    top: night && !cleared ? '#4a51a8' : '#ffcf6a',
+    bottom: night && !cleared ? '#262a66' : '#f08c2a',
   });
-  drawSurvivalIcon(ctx, night ? 'moon' : 'sun', x + 24, y + 22, 32);
+  drawSurvivalIcon(ctx, night && !cleared ? 'moon' : 'sun', x + 24, y + 22, 32);
   if (night) {
-    drawLabel(ctx, `NIGHT ${mode.day}`, x + 48, y + 13, 11, '#d6dcff', { align: 'left', outline: 2.5 });
-    drawLabel(ctx, timeLabel(mode.nightDuration - mode.elapsed), x + 48, y + 30, 19, '#ffffff', { align: 'left' });
+    drawLabel(ctx, cleared ? 'CLEARED' : `NIGHT ${mode.day}`, x + 48, y + 13, 11, cleared ? '#fff6dc' : '#d6dcff', { align: 'left', outline: 2.5 });
+    drawLabel(ctx, cleared ? 'DAWN' : timeLabel(mode.nightDuration - mode.elapsed), x + 48, y + 30, 19, '#ffffff', { align: 'left' });
     drawTimeline(game, ctx, x + 12, y + 50, pillW - 46);
   } else {
     drawLabel(ctx, `DAY ${mode.day}`, x + 48, y + 15, 16, '#ffffff', { align: 'left' });
@@ -417,7 +419,9 @@ function drawHudPops(game, ctx, x, rows, gap, ch) {
 /** Night progress: wave/breaker pips on a bar that ends at the sun (dawn). */
 function drawTimeline(game, ctx, x, y, width) {
   const mode = game.survival;
-  const progress = clamp(mode.elapsed / Math.max(1, mode.nightDuration), 0, 1);
+  let progress = clamp(mode.elapsed / Math.max(1, mode.nightDuration), 0, 1);
+  // BUILD 16 (R5): a cleared night's bar runs on to the sun as dawn comes early
+  if (mode.cleared && mode.dawnBlend) progress += (1 - progress) * mode.dawnBlend();
   drawBar(ctx, x, y - 5, width, 10, progress, '#ffb84a');
   for (const mark of mode.nightSchedule()) {
     const mx = x + width * mark.at;
@@ -470,6 +474,7 @@ function onScreen(p, w, h, pad = 0) {
  * edge until it is clear of them.
  */
 let EDGE_AVOID = [];
+const EDGE_MARKS = [];
 function edgeAvoid(game, w, h) {
   const out = [];
   const input = game.input;
@@ -480,8 +485,33 @@ function edgeAvoid(game, w, h) {
   }
   const chip = recenterChipBox(game, w, h);
   if (chip) out.push({ kind: 'rect', ...chip });
+  if (h < 560) {
+    // BUILD 16: on a sideways phone the night's pointers run round the
+    // screen's edge (nightPointerBand), past the HUD that sits on it — the
+    // zoom buttons and FLARE on the right, the counters top right
+    const z = zoomButtonLayout(w, h);
+    out.push({ kind: 'circle', x: z.zoomIn.x, y: z.zoomIn.y, r: z.r + 4 }, { kind: 'circle', x: z.zoomOut.x, y: z.zoomOut.y, r: z.r + 4 });
+    const flare = input && input.buttons && input.buttons.interact;
+    if (flare && flare.r) out.push({ kind: 'circle', x: flare.x, y: flare.y, r: flare.r + 6 });
+    out.push({ kind: 'rect', x: w - 104, y: 0, w: 104, h: 118 });
+  }
   EDGE_AVOID = out;
+  // what the pointers drew this frame (QA: survival-plotsqa §8)
+  EDGE_MARKS.length = 0;
+  game._edgeMarks = EDGE_MARKS;
   return out;
+}
+
+/**
+ * Where the night's edge pointers run (their frame's top and bottom margins,
+ * px). A tall phone keeps BUILD 9's band under the night pill and above the
+ * thumbs. BUILD 16: a sideways phone's 390 px left that band 92 px tall
+ * round the middle of the screen — a pointer for a gate off to the side sat
+ * on the captain's head; now it runs round the edge, under the top HUD and
+ * above the thumbs (the HUD on the edge itself is in edgeAvoid).
+ */
+export function nightPointerBand(h) {
+  return h < 560 ? { top: 84, bottom: 100 } : { top: 128, bottom: 150 };
 }
 
 function edgeClear(x, y, pad = 24) {
@@ -516,6 +546,7 @@ function drawEdgeMarker(ctx, w, h, p, icon, color, top = 128, bottom = 150, coun
     if (best) { x = best.x; y = best.y; }
   }
   const a = Math.atan2(p.y - y, p.x - x);
+  EDGE_MARKS.push({ icon, x: Math.round(x), y: Math.round(y) });
   if (count > 0) {
     // how many are at that gate, on the screen-side of the pointer: the
     // number that says "go there now" (the idle loss's tip, R4)
@@ -673,6 +704,7 @@ function drawNightWorldLayer(game, ctx, w, h) {
   const p = game.player;
   const zoom = game.renderer.cam.zoom;
   edgeAvoid(game, w, h);
+  const band = nightPointerBand(h);
 
   // Gates: a wave marching on one (amber: where to go next — R6's marker),
   // one under siege (its HP), a fresh breach. Off screen each becomes a
@@ -699,7 +731,28 @@ function drawNightWorldLayer(game, ctx, w, h) {
       }
     } else {
       drawEdgeMarker(ctx, w, h, at, freshBreak ? 'doorBroken' : incoming ? 'swarm' : 'door',
-        freshBreak ? '#ff5a4d' : incoming ? '#ffcf4a' : '#ffb22e', 128, 150, crowd);
+        freshBreak ? '#ff5a4d' : incoming ? '#ffcf4a' : '#ffb22e', band.top, band.bottom, crowd);
+    }
+  }
+
+  // BUILD 16 (R5): the night's last few (LAST N!), each marked — a red skull
+  // chip over it on the screen, a red pointer at the edge off it
+  if (mode.stragglers && !mode.cleared) {
+    for (const e of game.enemies) {
+      if (!e || e.dead || e.removeMe || !e._survivalType || e.fleeing) continue;
+      const lift = (e._survivalType === 'breaker' ? 104 : e._survivalType === 'swarm' ? 66 : 84) * ACTOR + 34;
+      const at = project(game, e.x, e.y, lift);
+      if (onScreen(at, w, h, 20)) {
+        const r = 15 + Math.sin(t * 8) * 1.5;
+        ctx.save();
+        ctx.beginPath(); ctx.arc(at.x, at.y, r, 0, TAU);
+        ctx.fillStyle = '#e8322a'; ctx.fill();
+        ctx.lineWidth = 2.5; ctx.strokeStyle = INK; ctx.stroke();
+        ctx.restore();
+        drawSurvivalIcon(ctx, 'skull', at.x, at.y, 22);
+      } else {
+        drawEdgeMarker(ctx, w, h, at, 'skull', '#ff4d4d', band.top, band.bottom);
+      }
     }
   }
 
@@ -731,7 +784,7 @@ function drawNightWorldLayer(game, ctx, w, h) {
       ctx.stroke();
       ctx.restore();
     } else {
-      drawEdgeMarker(ctx, w, h, at, 'keep', '#ff5a4d');
+      drawEdgeMarker(ctx, w, h, at, 'keep', '#ff5a4d', band.top, band.bottom);
     }
   }
 
@@ -756,7 +809,7 @@ function drawNightWorldLayer(game, ctx, w, h) {
   for (const guard of mode.guards || []) {
     if (guard.down) {
       const at = project(game, guard.x, guard.y, 84 * ACTOR);
-      if (!onScreen(at, w, h, 16)) { drawEdgeMarker(ctx, w, h, at, 'medic', '#ff5a4d'); continue; }
+      if (!onScreen(at, w, h, 16)) { drawEdgeMarker(ctx, w, h, at, 'medic', '#ff5a4d', band.top, band.bottom); continue; }
       const help = clamp(guard.rescueT / GUARD.rescueTime, 0, 1);
       const left = clamp(1 - guard.downT / GUARD.bleedOut, 0, 1);
       const r = 18;
@@ -828,7 +881,7 @@ function drawBanner(game, ctx, w, h) {
   const alpha = t > life - 0.35 ? clamp((life - t) / 0.35, 0, 1) : 1;
   const palette = {
     wave: ['#a35bff', '#5a2bb0'], breaker: ['#ff6a52', '#b3261c'], breach: ['#ff6a52', '#b3261c'],
-    keepLow: ['#ff6a52', '#b3261c'], keep: ['#ff6a52', '#b3261c'], dawn: ['#ffd65a', '#f08c1a'],
+    keepLow: ['#ff6a52', '#b3261c'], keep: ['#ff6a52', '#b3261c'], dawn: ['#ffd65a', '#f08c1a'], cleared: ['#ffd65a', '#f08c1a'],
     build: ['#6ee77f', '#259a43'], guardDown: ['#ff6a52', '#b3261c'], guardLost: ['#9a3a3a', '#4a1414'],
     night: ['#5a62b8', '#343a7e'],
   }[ev.kind] || ['#5a62b8', '#343a7e'];
@@ -1387,6 +1440,8 @@ function drawRewardModal(game, ctx, w, h) {
     { icon: 'gold', value: `+${reward.gold || 0}`, color: '#1f8a3a' },
     { icon: 'wood', value: `+${reward.wood || 0}`, color: '#1f8a3a' },
   ];
+  // BUILD 16 (R5): the gold a cleared night's early dawn paid (a clock on the coin)
+  if (reward.cleared && reward.cleared.bonus > 0) rows.push({ icon: 'gold', value: `+${reward.cleared.bonus}`, color: '#1f8a3a', badge: 'clock' });
   if (reward.mined) rows.push({ icon: 'mine', value: `+${reward.mined}`, color: '#1f8a3a' });   // dug overnight
   if (reward.sawn) rows.push({ icon: 'sawmill', value: `+${reward.sawn}`, color: '#1f8a3a' });  // the sawmills' planks
   // what the ballistas and the guards brought down tonight (the building MVP)
@@ -1417,7 +1472,7 @@ function drawRewardModal(game, ctx, w, h) {
   ctx.restore();
   drawPanel(ctx, x, y, bw, bh, { radius: 22, top: '#fff6e0', bottom: '#ffdca0', lineWidth: 3 });
   drawSurvivalIcon(ctx, 'sun', w / 2, y + 2, short ? 60 : 76);
-  drawLabel(ctx, `NIGHT ${Math.max(1, mode.nightsCompleted)} SURVIVED!`, w / 2, y + (short ? 50 : 62), short ? 18 : 20, '#ffffff', { stroke: '#7a3a00' });
+  drawLabel(ctx, `NIGHT ${Math.max(1, mode.nightsCompleted)} ${reward.cleared ? 'CLEARED' : 'SURVIVED'}!`, w / 2, y + (short ? 50 : 62), short ? 18 : 20, '#ffffff', { stroke: '#7a3a00' });
   const cellW = (bw - 40) / cols2;
   const top = y + (short ? 72 : 92);
   rows.forEach((row, i) => {

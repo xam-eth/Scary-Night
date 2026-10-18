@@ -118,6 +118,39 @@ export const CAPTAIN_LOOK = Object.freeze({
   off: Object.freeze({ look: 0, rim: 0, lift: 0 }),
 });
 
+/** Survival's two light rigs (_survivalRig): warm sun, cool moon. Neither is ever black. */
+export const SURVIVAL_RIG = Object.freeze({
+  day: Object.freeze({
+    exposure: 1.18, lamp: 1.05, lampColor: 0xfff1da, hemi: 1.25, sky: 0xfff4e0, ground: 0x8c7a5e,
+    key: 1.1, keyColor: 0xffe7c4, rim: 0.45, rimColor: 0xbfd4ff,
+  }),
+  night: Object.freeze({
+    exposure: 1.08, lamp: 0.9, lampColor: 0xc9d8ff, hemi: 1.05, sky: 0xaec4ff, ground: 0x56483e,
+    key: 0.8, keyColor: 0xd6e2ff, rim: 0.55, rimColor: 0x8fb0ff,
+  }),
+});
+
+/** A colour `b` of the way from `a` to `c` (0xRRGGBB, per channel). */
+export function dawnHex(a, c, b) {
+  if (!(b > 0)) return a;
+  if (b >= 1) return c;
+  let out = 0;
+  for (const shift of [16, 8, 0]) {
+    const x = (a >> shift) & 255, y = (c >> shift) & 255;
+    out |= Math.round(x + (y - x) * b) << shift;
+  }
+  return out;
+}
+
+/** BUILD 16 (R5): the rig `b` of the way from night to day (a cleared night's dawn). */
+function blendRig(night, day, b) {
+  const out = {};
+  for (const key of Object.keys(night)) {
+    out[key] = /Color$|^sky$|^ground$/.test(key) ? dawnHex(night[key], day[key], b) : night[key] + (day[key] - night[key]) * b;
+  }
+  return out;
+}
+
 function mergeKitStatic(group) {
   group.updateMatrixWorld(true);
   const inverse = new THREE.Matrix4().copy(group.matrixWorld).invert();
@@ -639,19 +672,17 @@ class World3DRuntime {
     };
   }
 
-  /** Survival light rig: bright, readable, phase-tinted. */
+  /**
+   * Survival light rig: bright, readable, phase-tinted. BUILD 16 (R5): a
+   * cleared night warms toward the day rig as its early dawn comes
+   * (SurvivalMode.dawnBlend), so the dawn is seen coming.
+   */
   _survivalRig(game) {
-    const day = !!(game.survival && game.survival.daylight());
-    if (day) {
-      return {
-        exposure: 1.18, lamp: 1.05, lampColor: 0xfff1da, hemi: 1.25, sky: 0xfff4e0, ground: 0x8c7a5e,
-        key: 1.1, keyColor: 0xffe7c4, rim: 0.45, rimColor: 0xbfd4ff,
-      };
-    }
-    return {
-      exposure: 1.08, lamp: 0.9, lampColor: 0xc9d8ff, hemi: 1.05, sky: 0xaec4ff, ground: 0x56483e,
-      key: 0.8, keyColor: 0xd6e2ff, rim: 0.55, rimColor: 0x8fb0ff,
-    };
+    const mode = game.survival;
+    const b = mode ? (mode.dawnBlend ? mode.dawnBlend() : (mode.daylight() ? 1 : 0)) : 0;
+    if (b >= 1) return SURVIVAL_RIG.day;
+    if (b <= 0) return SURVIVAL_RIG.night;
+    return blendRig(SURVIVAL_RIG.night, SURVIVAL_RIG.day, b);
   }
 
   _syncLighting(game) {
@@ -2382,7 +2413,7 @@ class World3DRuntime {
     }
     const ud = this.fortressDressing.userData;
     const t = game.now || 0;
-    ud.yardMat.color.setHex(mode.daylight() ? 0x86a35a : 0x4b6448);
+    ud.yardMat.color.setHex(dawnHex(0x4b6448, 0x86a35a, mode.dawnBlend ? mode.dawnBlend() : (mode.daylight() ? 1 : 0)));
     for (const f of ud.flags) f.flag.rotation.y = Math.sin(t * 1.7 + f.seed) * 0.35;
   }
 
@@ -2850,7 +2881,7 @@ class World3DRuntime {
     if (!mode) return;
     if (!this.survivalYard) this.survivalYard = this._makeSurvivalYard();
     this.survivalYard.visible = true;
-    this.survivalYard.material.color.setHex(mode.daylight() ? 0x7c9a55 : 0x3f5a46);
+    this.survivalYard.material.color.setHex(dawnHex(0x3f5a46, 0x7c9a55, mode.dawnBlend ? mode.dawnBlend() : (mode.daylight() ? 1 : 0)));
 
     this._syncFortressDressing(game, mode);
     this._syncSurvivalKeep(game, mode);

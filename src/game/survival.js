@@ -59,10 +59,33 @@ export const SURVIVAL_CAMERA = Object.freeze({
  * arriving glides instead of jerking the view.
  */
 export const THREAT_FRAME = Object.freeze({ reach: 600, share: 0.7, max: 300, full: 3, ease: 2.4 });
+/**
+ * BUILD 16 (R5, docs/UX-REPLAY-RESEARCH.md §5 "NIGHT CLEARED"): a night with
+ * nothing left to fight ends early. Once every spawn of the night is out and
+ * none of it stands, NIGHT CLEARED! — dawn comes `delay` s later (the light
+ * warms meanwhile: dawnBlend), and each whole second it saved pays
+ * `goldPerSecond` gold. The mines are paid the shift they did not get to dig,
+ * so an early dawn never costs income. In BUILD 15 a third night won with
+ * 8–14 s still on the clock was spent waiting on it (survival-uxprobe).
+ * What kept those nights from ending was not an empty board but the last
+ * one to three slow walkers (a Breaker, an Individual) shambling round the
+ * walls toward a far gate, 1000 px and more from any fight. So once every
+ * spawn is out and `stragglers` or fewer still stand, the horde breaks: each
+ * one that is not in the fight (inside the walls, at a gate or the keep,
+ * within the captain's shot) turns and runs for the trees — `fleeSpeed`
+ * px/s, gone after `flee` s, not a kill — and the ones still fighting are
+ * marked on the HUD (LAST N!) until they fall.
+ */
+export const NIGHT_CLEAR = Object.freeze({ delay: 2, goldPerSecond: 1, stragglers: 3, flee: 1.5, fleeSpeed: 120 });
 const SAVE_EVERY = 2.5;
 // Night pacing: the first rank hits a door within seconds, so Night 1 has
-// action near the Hunter before the halfway mark.
+// action near the Hunter before the halfway mark. Night 1 opens on the
+// opening's last shot at its first wave mark (_startIntro). BUILD 16 (R6,
+// same §5): Nights 2 and 3 have no opening, so their first wave sets out
+// with the night (1.5 % in; it was 4 %) and its front rank is at its gate
+// inside 5 s; every wave is called with its gate and a horn (updateWaves).
 const WAVE_TIMES = Object.freeze([0.04, 0.3, 0.56]);
+const WAVE_TIMES_LATER = Object.freeze([0.015, 0.3, 0.56]);
 const BREAKER_TIMES = Object.freeze([0.2, 0.5]);
 const INDIVIDUAL_TIMES = Object.freeze([0.42, 0.7]);
 // Night 1–3 swarm sizes (×3 of the first M1 pass, capped per wave).
@@ -596,6 +619,26 @@ function commonPreamble(enemy, dt, game) {
   return false;
 }
 
+/**
+ * BUILD 16 (R5): the horde breaks. A routed straggler turns its back on the
+ * walls and runs for the trees (NIGHT_CLEAR.fleeSpeed), and is gone after
+ * NIGHT_CLEAR.flee s — taken off the board, not killed. Returns true while
+ * it runs (the update stops there).
+ */
+function fleeing(enemy, dt, game, marchState) {
+  if (!enemy.fleeing) return false;
+  const B = game.mansion.bailey;
+  const cx = B ? B.x + B.w / 2 : 0, cy = B ? B.y + B.h / 2 : 0;
+  const dx = enemy.x - cx, dy = enemy.y - cy;
+  const l = Math.hypot(dx, dy) || 1;
+  enemy.attackingKeep = false;
+  enemy.fleeT = (enemy.fleeT || 0) + dt;
+  stepDir(enemy, dt, game, { x: dx / l, y: dy / l }, NIGHT_CLEAR.fleeSpeed, 6);
+  enemy.state = marchState;
+  if (enemy.fleeT >= NIGHT_CLEAR.flee) enemy.removeMe = true;
+  return true;
+}
+
 /** A reduced-AI siege zombie that retains CrowdBody's rank/entrance identity. */
 class SurvivalCrowdZombie extends CrowdBody {
   constructor(x, y, entrance, index, day) {
@@ -646,6 +689,7 @@ class SurvivalCrowdZombie extends CrowdBody {
     this.t += dt;
     this.hurtFlash = Math.max(0, (this.hurtFlash || 0) - dt * 3.8);
     if (commonPreamble(this, dt, game)) return;
+    if (fleeing(this, dt, game, CROWD.MARCH)) return;
     const mode = game.survival;
     const entrance = mode.entranceById(this.entranceId) || this.entrance;
     this.entrance = entrance;
@@ -723,6 +767,7 @@ class SurvivalIndividualZombie extends Zombie {
     this.stateT += dt;
     this.hurtFlash = Math.max(0, this.hurtFlash - dt * 4);
     if (commonPreamble(this, dt, game)) return;
+    if (fleeing(this, dt, game, 'march')) return;
     const mode = game.survival;
     let entrance = mode.entranceById(this.entranceId);
     const inside = trackInside(this, game);
@@ -800,6 +845,7 @@ class SurvivalBreaker extends Zombie {
     this.stateT += dt;
     this.hurtFlash = Math.max(0, this.hurtFlash - dt * 4);
     if (commonPreamble(this, dt, game)) return;
+    if (fleeing(this, dt, game, 'march')) return;
     const mode = game.survival;
     const inside = trackInside(this, game);
     const speed = this.type.speed;
@@ -958,8 +1004,10 @@ class FlowField {
 export const KILL_SOURCES = Object.freeze(['captain', 'guard', 'tower', 'keep', 'flare']);
 const freshKillsBy = () => ({ captain: 0, guard: 0, tower: 0, keep: 0, flare: 0 });
 function freshNightStats() {
-  // breached: gate ids in the order they gave way tonight (R4's tip)
-  return { kills: 0, hits: 0, damageToWalls: 0, keepDamage: 0, mined: 0, by: freshKillsBy(), breached: [], flares: 0, keepMin: 1 };
+  // breached: gate ids in the order they gave way tonight (R4's tip);
+  // spawned: bodies tonight's spawners sent (BUILD 16: a night is cleared
+  // only once something came and none of it stands)
+  return { kills: 0, hits: 0, damageToWalls: 0, keepDamage: 0, mined: 0, by: freshKillsBy(), breached: [], flares: 0, keepMin: 1, spawned: 0 };
 }
 /**
  * The whole run (three nights): the end panel's numbers. keepMin is the
@@ -968,7 +1016,7 @@ function freshNightStats() {
  * seconds played (nights and days, pause excluded).
  */
 function freshRunStats() {
-  return { kills: 0, by: freshKillsBy(), mined: 0, sawn: 0, recruited: 0, nights: 0, keepMin: 1, lost: 0, towers: {}, time: 0 };
+  return { kills: 0, by: freshKillsBy(), mined: 0, sawn: 0, recruited: 0, nights: 0, keepMin: 1, lost: 0, towers: {}, time: 0, cleared: 0, saved: 0 };
 }
 /** A save-safe copy of a stats object (its nested tallies copied too). */
 function cloneStats(stats) {
@@ -1036,6 +1084,13 @@ function freshRecords() {
 }
 const SIDE_NAMES = Object.freeze({ north: 'NORTH', south: 'SOUTH', east: 'EAST', west: 'WEST', northwest: 'NW', southeast: 'SE' });
 const GATE_NAMES = Object.freeze({ northGate: 'NORTH', southGate: 'SOUTH', eastGate: 'EAST', westGate: 'WEST', posternNW: 'NW', posternSE: 'SE' });
+/** A door as the wave call-out names it: "NORTH GATE", "SE POSTERN" (BUILD 16, R6). */
+export function gateLabel(entrance) {
+  if (!entrance) return '';
+  const short = GATE_NAMES[entrance.id];
+  if (!short) return String(entrance.name || '').toUpperCase();
+  return /^postern/i.test(entrance.id) ? `${short} POSTERN` : `${short} GATE`;
+}
 /**
  * The run's MVP (R19): the part of the garrison the player raised that
  * brought down the most — one ballista by its circle, the keep's roof
@@ -1168,6 +1223,8 @@ export class SurvivalMode {
     this.individualIndex = 0;
     this.siegeTimers = Object.create(null);
     this.nightStats = freshNightStats();
+    this.cleared = null;           // BUILD 16 (R5): { at, dawnAt, saved, bonus } once tonight is cleared
+    this.stragglers = null;        // BUILD 16 (R5): { at, count } once tonight is down to its last few
     this.lastRewards = null;
     this.skillCooldown = 0;
     this.skillCooldownMax = this.tuning.skillCooldown;
@@ -1292,6 +1349,10 @@ export class SurvivalMode {
     this.nightKeepStart = Number.isFinite(Number(s.nightKeepStart)) && s.nightKeepStart != null ? Number(s.nightKeepStart) : null;
     this.siegeTimers = s.siegeTimers && typeof s.siegeTimers === 'object' ? { ...s.siegeTimers } : {};
     this.nightStats = { ...freshNightStats(), ...(s.nightStats || {}) };
+    const cl = s.cleared;
+    this.cleared = this.phase === 'night' && cl && Number.isFinite(Number(cl.at)) && Number.isFinite(Number(cl.dawnAt))
+      ? { at: Number(cl.at), dawnAt: Number(cl.dawnAt), saved: Math.max(0, Math.floor(Number(cl.saved) || 0)), bonus: Math.max(0, Math.floor(Number(cl.bonus) || 0)), fled: Math.max(0, Math.floor(Number(cl.fled) || 0)) }
+      : null;
     this.nightStats.by = { ...freshKillsBy(), ...((s.nightStats && s.nightStats.by) || {}) };
     this.nightStats.breached = Array.isArray(this.nightStats.breached) ? this.nightStats.breached.slice() : [];
     this.runStats = { ...freshRunStats(), ...(s.runStats || {}) };
@@ -1484,10 +1545,11 @@ export class SurvivalMode {
     s.introSeen = true;
     // The night opens on its first wave already at a gate — the state the
     // night reaches at its first wave mark, minus the empty seconds before.
-    this.elapsed = Math.max(this.elapsed, this.nightDuration * WAVE_TIMES[0]);
+    this.elapsed = Math.max(this.elapsed, this.nightDuration * this.waveTimes()[0]);
     g.time = this.elapsed;
     g.timeLeft = Math.max(0, this.nightDuration - this.elapsed);
-    this.updateWaves();
+    // the opening has its own horn (the captain's): the horde's waits
+    this.updateWaves(true);
     // the banners wait for the handover (the opening says it all first)
     this.banner = null;
     this.bannerQueue.length = 0;
@@ -1744,6 +1806,8 @@ export class SurvivalMode {
     this.individualIndex = 0;
     this.siegeTimers = Object.create(null);
     this.nightStats = freshNightStats();
+    this.cleared = null;
+    this.stragglers = null;
     this._resetNightFx();
     g.time = 0;
     g.timeLeft = this.nightDuration;
@@ -1911,6 +1975,98 @@ export class SurvivalMode {
     else if (g.player.blood <= 0 && g.player.state !== 'death') g.killPlayer('Hunter lost');
     else if (g.player.state === 'death' || g.player.state === 'dead') this.fail('Hunter lost');
     else if (this.elapsed >= this.nightDuration) this.completeNight();
+    else if (this.cleared && this.elapsed >= this.cleared.dawnAt) this.completeNight();
+    else if (!this.cleared && this.nightCleared()) this._clearNight();
+    else this._updateStragglers();
+  }
+
+  /**
+   * BUILD 16 (R5): tonight is over before its clock — every wave, Breaker and
+   * Individual of the night is out, and not one of them still stands.
+   */
+  nightCleared() {
+    if (this.phase !== 'night' || !(this.nightStats.spawned > 0) || !this.spawnsDone()) return false;
+    return this.aliveEnemies() === 0;
+  }
+
+  /** Every wave, Breaker and Individual tonight's schedule holds is out. */
+  spawnsDone() {
+    if (this.waveIndex < this.waveTimes().length || this.individualIndex < INDIVIDUAL_TIMES.length) return false;
+    return this.breakerIndex >= (this.day >= 3 ? 2 : this.day >= 2 ? 1 : 0);
+  }
+
+  /**
+   * BUILD 16 (R5): the night's last few (NIGHT_CLEAR.stragglers or fewer,
+   * every spawn out). The horde breaks: each one out of the fight runs for
+   * the trees (see fleeing); the ones still fighting are marked on the HUD
+   * (LAST N!, once a night) until they fall or leave the fight.
+   */
+  _updateStragglers() {
+    if (this.cleared || !(this.nightStats.spawned > 0) || !this.spawnsDone()) return;
+    const live = this.game.enemies.filter((e) => e._survivalType && !e.dead && !e.removeMe && !e.fleeing);
+    if (!live.length || live.length > NIGHT_CLEAR.stragglers) return;
+    if (!this.stragglers) this.stragglers = { at: +this.elapsed.toFixed(2), count: live.length, fled: 0 };
+    let fighting = 0;
+    for (const e of live) {
+      if (this._inTheFight(e)) { fighting++; continue; }
+      e.fleeing = true;
+      e.fleeT = 0;
+      this.stragglers.fled++;
+    }
+    if (fighting && !this.stragglers.called) {
+      this.stragglers.called = true;
+      this.pushEvent('stragglers', 'skull', `LAST ${fighting}!`, { sub: 'CLEAR THEM FOR AN EARLY DAWN', life: 2.2 });
+    }
+  }
+
+  /**
+   * Whether a body is in tonight's fight (BUILD 16): inside the walls, at the
+   * keep, clawing or knocked back, on the last stretch to a gate (its lane's
+   * DOOR_LANE_NEAR), or within the captain's shot.
+   */
+  _inTheFight(e) {
+    if (e._inHouse || e.attackingKeep) return true;
+    if (e.state === 'press' || e.state === 'strike' || e.state === 'stagger' || e.state === CROWD.PRESS) return true;
+    const p = this.game.player;
+    if (dist(e.x, e.y, p.x, p.y) <= this.tuning.autoAttackRange) return true;
+    for (const door of this.game.mansion.entrances) {
+      if (!door.exterior || door.kind !== 'door') continue;
+      const out = door.outside || door;
+      if (dist(e.x, e.y, out.x, out.y) <= DOOR_LANE_NEAR) return true;
+    }
+    return false;
+  }
+
+  /** NIGHT CLEARED!: dawn in NIGHT_CLEAR.delay s, every whole second saved paid in gold. */
+  _clearNight() {
+    const at = this.elapsed;
+    const dawnAt = Math.min(this.nightDuration, at + NIGHT_CLEAR.delay);
+    const saved = Math.max(0, Math.floor(this.nightDuration - dawnAt + 1e-6));
+    const bonus = Math.floor(saved * NIGHT_CLEAR.goldPerSecond);
+    this.cleared = { at, dawnAt, saved, bonus };
+    // the clear owns the banner: nothing else tonight has anything to say
+    this.bannerQueue.length = 0;
+    this.banner = null;
+    const fled = this.stragglers ? this.stragglers.fled : 0;
+    this.cleared.fled = fled;
+    this.pushEvent('cleared', 'sun', 'NIGHT CLEARED!', {
+      sub: `${fled > 0 ? 'THE REST FLED' : saved > 0 ? 'DAWN COMES EARLY' : 'DAWN IS HERE'}${bonus > 0 ? ` · +${bonus} GOLD` : ''}`,
+      life: NIGHT_CLEAR.delay + 0.6,
+    });
+    this.game.audio.play('dawnChime', { vol: 0.7 });
+    this._persist(true);
+  }
+
+  /**
+   * How far the light has come round to day: 0 by night, 1 by day. A cleared
+   * night (BUILD 16) warms from the clear to its early dawn, so the dawn is
+   * seen coming instead of cut to.
+   */
+  dawnBlend() {
+    if (this.daylight()) return 1;
+    if (this.phase !== 'night' || !this.cleared) return 0;
+    const span = Math.max(0.01, this.cleared.dawnAt - this.cleared.at);
+    return clamp((this.elapsed - this.cleared.at) / span, 0, 1);
   }
 
   /**
@@ -1988,23 +2144,29 @@ export class SurvivalMode {
     if (path.i >= path.points.length || path.t > 12) { this.walkPath = null; p.vx = 0; p.vy = 0; }
   }
 
-  updateWaves() {
+  updateWaves(quiet = false) {
     const duration = this.nightDuration;
-    const waveTimes = WAVE_TIMES;
+    const waveTimes = this.waveTimes();
     const counts = this.waveCounts();
     while (this.waveIndex < waveTimes.length && this.elapsed >= duration * waveTimes[this.waveIndex]) {
-      this.spawnSwarm(counts[this.waveIndex], this.waveIndex);
+      const sent = this.spawnSwarm(counts[this.waveIndex], this.waveIndex);
       this.waveIndex++;
-      this.pushEvent('wave', 'swarm', `WAVE ${this.waveIndex}/${waveTimes.length}`);
+      // BUILD 16 (R6): the call names the gate and how many, and the horde's
+      // horn sounds from that side of the screen
+      this.pushEvent('wave', 'swarm', `WAVE ${this.waveIndex}/${waveTimes.length}`,
+        sent && sent.entrance ? { sub: `${gateLabel(sent.entrance)} ×${sent.count}` } : {});
+      if (sent && sent.entrance && !quiet) this._hornFrom(sent.entrance);
     }
     const breakerAt = this.day >= 2 ? duration * BREAKER_TIMES[0] : Infinity;
     if (this.day >= 2 && this.breakerIndex === 0 && this.elapsed >= breakerAt) {
-      this.spawnBreaker(0);
+      const gate = this.spawnBreaker(0);
       this.breakerIndex = 1;
+      if (gate && !quiet) this._hornFrom(gate);
     }
     if (this.day >= 3 && this.breakerIndex === 1 && this.elapsed >= duration * BREAKER_TIMES[1]) {
-      this.spawnBreaker(1);
+      const gate = this.spawnBreaker(1);
       this.breakerIndex = 2;
+      if (gate && !quiet) this._hornFrom(gate);
     }
     const individualAt = INDIVIDUAL_TIMES;
     while (this.individualIndex < individualAt.length && this.elapsed >= duration * individualAt[this.individualIndex]) {
@@ -2033,6 +2195,15 @@ export class SurvivalMode {
       body.id = 1000000 + this.day * 10000 + wave * 100 + i;
       g.enemies.push(body);
     }
+    this.nightStats.spawned = (this.nightStats.spawned || 0) + total;
+    return { entrance, count: total };
+  }
+
+  /** The horde's horn (BUILD 16, R6), panned to the side its gate is on. */
+  _hornFrom(entrance) {
+    const g = this.game;
+    this.horns = (this.horns || 0) + 1;
+    g.audio.play('hordeHorn', { x: entrance.x, y: entrance.y, cam: g.renderer.cam, vol: 0.75 });
   }
 
   /**
@@ -2074,6 +2245,7 @@ export class SurvivalMode {
     const enemy = new SurvivalIndividualZombie(x, y, entrance, this.day, index);
     enemy.id = 2000000 + this.day * 100 + index;
     g.enemies.push(enemy);
+    this.nightStats.spawned = (this.nightStats.spawned || 0) + 1;
   }
 
   spawnBreaker(index = 0) {
@@ -2092,7 +2264,9 @@ export class SurvivalMode {
     breaker.targetKind = 'wall';
     breaker.targetEntranceId = entrance.id;
     g.enemies.push(breaker);
-    this.pushEvent('breaker', 'breaker', 'BREAKER!');
+    this.nightStats.spawned = (this.nightStats.spawned || 0) + 1;
+    this.pushEvent('breaker', 'breaker', 'BREAKER!', { sub: gateLabel(entrance) });
+    return entrance;
   }
 
   chooseTargetEntrance(_x, _y, offset = 0) {
@@ -2133,7 +2307,7 @@ export class SurvivalMode {
       return r;
     };
     const counts = this.waveCounts();
-    for (let w = 0; w < WAVE_TIMES.length; w++) {
+    for (let w = 0; w < this.waveTimes().length; w++) {
       const r = row(this.chooseTargetEntrance(0, 0, w));
       if (r) { r.swarm += clamp(Math.round(counts[w]), 1, SWARM_CAP); r.waves.push(w + 1); }
     }
@@ -3588,6 +3762,27 @@ export class SurvivalMode {
     this.runStats.sawn = (this.runStats.sawn || 0) + sawn;
     this.runStats.nights = Math.min(3, (this.runStats.nights || 0) + 1);
     this._sawmillPayout = sawmills;
+    // BUILD 16 (R5): a cleared night's early dawn. The mines are paid the
+    // shift they did not get to dig, and every whole second saved pays its
+    // NIGHT_CLEAR gold (shown on its own row of the dawn card).
+    const cleared = this.cleared;
+    const endAt = this.elapsed;
+    let clearBonus = 0;
+    if (cleared) {
+      const early = Math.max(0, this.nightDuration - this.elapsed);
+      const rest = this.goldRate() * early;
+      if (rest > 0) {
+        this.gold = Math.min(RESOURCE_CAP, this.gold + rest);
+        this.nightStats.mined = (this.nightStats.mined || 0) + rest;
+        this.runStats.mined = (this.runStats.mined || 0) + rest;
+      }
+      clearBonus = cleared.bonus || 0;
+      this.gold = Math.min(RESOURCE_CAP, this.gold + clearBonus);
+      this.runStats.cleared = (this.runStats.cleared || 0) + 1;
+      this.runStats.saved = (this.runStats.saved || 0) + (cleared.saved || 0);
+    }
+    this.cleared = null;
+    this.stragglers = null;
     const mined = Math.round(this.nightStats.mined || 0);
     // kills pay a little (guards shoot too, so this stays a trickle)
     const killGold = Math.floor(this.nightStats.kills / 6);
@@ -3610,6 +3805,9 @@ export class SurvivalMode {
       reinforcements: Math.max(0, 3 - this.nightsCompleted),
       sawn, killsBy: { ...freshKillsBy(), ...(this.nightStats.by || {}) },
       towerKills: (this.nightStats.by && this.nightStats.by.tower) || 0,
+      // BUILD 16: when the night ended on its clock, and a clear's saving
+      endAt: +endAt.toFixed(2),
+      cleared: cleared ? { at: cleared.at, saved: cleared.saved || 0, bonus: clearBonus, fled: cleared.fled || 0 } : null,
     };
     this._resetNightFx();
     g.enemies.length = 0;
@@ -3674,7 +3872,7 @@ export class SurvivalMode {
       buildings: {}, buildingLevels: {}, hunterLevel: 1, armsLevel: 1, gateBuilt: false,
       gateHp: 0, builderJob: null, selectedRoom: null, nightsCompleted: 0, waveIndex: 0,
       breakerIndex: 0, individualIndex: 0, siegeTimers: Object.create(null),
-      nightStats: freshNightStats(), runStats: freshRunStats(), lastRewards: null, skillCooldown: 0,
+      nightStats: freshNightStats(), runStats: freshRunStats(), lastRewards: null, skillCooldown: 0, cleared: null, stragglers: null,
       rewardAck: 0, dayFocus: null, nightKeepStart: this.tuning.keepHp[1], walkPath: null, lastBuilt: null,
       cine: null, reinforcements: null, runResult: null,
     });
@@ -4139,6 +4337,9 @@ export class SurvivalMode {
 
   waveCounts() { return WAVE_COUNTS[clamp(this.day, 1, 3) - 1].slice(); }
 
+  /** Tonight's wave marks (shares of the night): Nights 2–3 set out at once (BUILD 16, R6). */
+  waveTimes() { return this.day >= 2 ? WAVE_TIMES_LATER : WAVE_TIMES; }
+
   swarmSpeed(breached) {
     const base = 59 + Math.max(0, this.day - 1) * 5;
     // Inside the walls they rush; outside they shamble in ranks.
@@ -4216,7 +4417,7 @@ export class SurvivalMode {
   breachAge(id) { return this._breachAt[id] == null ? Infinity : this.uiClock - this._breachAt[id]; }
 
   nightSchedule() {
-    const marks = WAVE_TIMES.map((at, i) => ({ at, kind: 'wave', done: this.waveIndex > i }));
+    const marks = this.waveTimes().map((at, i) => ({ at, kind: 'wave', done: this.waveIndex > i }));
     if (this.day >= 2) marks.push({ at: BREAKER_TIMES[0], kind: 'breaker', done: this.breakerIndex >= 1 });
     if (this.day >= 3) marks.push({ at: BREAKER_TIMES[1], kind: 'breaker', done: this.breakerIndex >= 2 });
     return marks;
@@ -4224,7 +4425,8 @@ export class SurvivalMode {
 
   aliveEnemies() {
     let n = 0;
-    for (const e of this.game.enemies) if (e._survivalType && !e.dead && !e.removeMe) n++;
+    // a routed straggler (BUILD 16) is already gone from the night
+    for (const e of this.game.enemies) if (e._survivalType && !e.dead && !e.removeMe && !e.fleeing) n++;
     return n;
   }
 
@@ -4368,6 +4570,8 @@ export class SurvivalMode {
       territory: this.territoryPlots().map((slot) => slot.id),
       bannerReach: this.bannerReach(),
       enemies: this.game.enemies.filter((e) => !e.dead).length,
+      cleared: this.cleared ? { ...this.cleared } : null,
+      stragglers: this.stragglers ? { ...this.stragglers } : null,
       breakers: this.game.enemies.filter((e) => e._survivalType === 'breaker' && !e.dead).length,
       kills: this.nightStats.kills, gateHp: Math.round(this.gateHp),
       keepAttackers: this.keepAttackers, keepDamage: Math.round(this.nightStats.keepDamage || 0),
@@ -4394,7 +4598,7 @@ export class SurvivalMode {
   }
 
   _serializeEnemies() {
-    return this.game.enemies.filter((e) => e._survivalType).map((e) => ({
+    return this.game.enemies.filter((e) => e._survivalType && !e.fleeing).map((e) => ({
       kind: e._survivalType, id: e.id, x: e.x, y: e.y, hp: e.hp, hpMax: e.hpMax,
       state: e.state, stateT: e.stateT, angle: e.angle, vx: e.vx, vy: e.vy,
       alpha: e.alpha, dead: e.dead, deathT: e.deathT, attackCd: e.attackCd,
@@ -4421,6 +4625,7 @@ export class SurvivalMode {
     s.siegeTimers = { ...this.siegeTimers };
     s.nightKeepStart = this.nightKeepStart == null ? null : Math.round(Number(this.nightKeepStart));
     s.nightStats = cloneStats(this.nightStats); s.lastRewards = this.lastRewards ? { ...this.lastRewards } : null;
+    s.cleared = this.phase === 'night' && this.cleared ? { ...this.cleared } : null;
     s.runStats = cloneStats(this.runStats);
     s.records = { ...this.records };
     s.runResult = this.runResult ? cloneStats(this.runResult) : null;

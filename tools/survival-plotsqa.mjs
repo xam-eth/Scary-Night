@@ -9,7 +9,9 @@
  * This boots a fresh save at sideways-phone size (844 x 390), checks 1-4
  * against the running game and writes the frames that show them. Section 5
  * checks BUILD 13's visual pass (the bright captain, names only near,
- * tonight's gates by day).
+ * tonight's gates by day); 6 BUILD 14's guard bows; 7 BUILD 15's night fight
+ * in sight; 8 BUILD 16's night tempo (NIGHT CLEARED and its early dawn, the
+ * wave's call, the last few marked on the playfield's frame).
  *
  *   node tools/survival-plotsqa.mjs [--out=qa-evidence/survival-plots] [--dpr=1] [--port=8125]
  *
@@ -692,6 +694,170 @@ check('B15: holding the main gate from inside, the night frame leans onto the kn
   b15c);
 // clean up for anything after: the fake knot goes
 await page.evaluate(() => { const g = window.__LN; g.enemies.length = 0; g.survival._lean = null; });
+
+/* ---- 8. BUILD 16 (docs/UX-REPLAY-RESEARCH.md §5 R5 / R6): night tempo —
+ * a cleared night ends early (NIGHT CLEARED!, the light warming to an early
+ * dawn, the gold it saved on the dawn card), the last few marked while they
+ * still fight, every wave called with its gate. The rules are in
+ * tools/harness.mjs, the tempo in tools/survival-uxprobe.mjs ---- */
+await page.evaluate(async () => {
+  window.__pV = window.__pV || (await import('./src/game/valen3d.js')).Valen3D;
+  window.__pE = window.__pE || (await import('./src/game/envkit.js')).EnvKit;
+  window.__pS = await import('./src/game/survival.js');
+  const g = window.__LN;
+  // a night as the day's START NIGHT opens it
+  window.__pNight = (day) => {
+    const m = g.survival;
+    m.restart();
+    m.phase = 'day'; m.day = day; m.nightsCompleted = day - 1; m.rewardAck = day - 1;
+    g.screen = 'playing'; g.uiPanel = 'survival-day';
+    m.startNight();
+    if (m.cine) m.cine = null;
+    m.keepHp = 99999;
+    const home = m.hunterHome();
+    g.player.x = home.x; g.player.y = home.y; g.player.vx = 0; g.player.vy = 0;
+    m._userZoom = 1; m._zoomGoal = null; m.camPan.x = 0; m.camPan.y = 0;
+    m.recenterCamera(true); g.renderer.snapCamera(g.player.x, g.player.y);
+  };
+  // the mean colour of the ground in the 3D frame (a band across the lower middle)
+  window.__pGround = () => {
+    const E = window.__pE, W = window.__pW;
+    const gl = E.renderer.getContext(), width = E.canvas.width, height = E.canvas.height;
+    E.renderer.render(W.scene, E.camera); gl.finish();
+    const px = new Uint8Array(width * height * 4);
+    gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    let r = 0, gg = 0, b = 0, n = 0;
+    for (let y = Math.floor(height * 0.2); y < Math.floor(height * 0.45); y += 2) {
+      for (let x = Math.floor(width * 0.1); x < Math.floor(width * 0.9); x += 2) {
+        const i = (y * width + x) * 4; r += px[i]; gg += px[i + 1]; b += px[i + 2]; n++;
+      }
+    }
+    return { r: Math.round(r / n), g: Math.round(gg / n), b: Math.round(b / n), lum: Math.round((0.299 * r + 0.587 * gg + 0.114 * b) / n) };
+  };
+  // one pixel of the HUD (the 2D canvas over the 3D one), in CSS px
+  window.__pHud = (x, y) => {
+    const c = g.canvas; const k = c.width / g.renderer.w;
+    const d = c.getContext('2d').getImageData(Math.round(x * k), Math.round(y * k), 1, 1).data;
+    return [d[0], d[1], d[2]];
+  };
+});
+const b16a = await page.evaluate(() => {
+  const g = window.__LN; const m = g.survival;
+  const { SurvivalCrowdZombie: Crowd } = window.__pS;
+  window.__pNight(2);
+  m.buildings.north = 'mine'; m.buildingLevels.north = 1;
+  m.elapsed = 50; m.waveIndex = 3; m.breakerIndex = 1; m.individualIndex = 2;
+  m.nightStats.spawned = 40;
+  g.enemies.length = 0; g.bolts.length = 0;
+  const last = new Crowd(g.player.x + 150, g.player.y + 40, m.entranceById('southGate'), 0, 2);
+  last._inHouse = true; last.hp = last.hpMax = 40;
+  g.enemies.push(last);
+  window.__pStep(2);
+  // a spot of the night pill's own face (right of its clock, above its timeline)
+  const pillAt = [g.renderer.w / 2 + Math.min(156, g.renderer.w - 216) / 2 - 12, 38];
+  const night = { ground: window.__pGround(), pill: window.__pHud(...pillAt) };
+  let n = 0;
+  while (!m.cleared && n++ < 600) window.__pStep(1);
+  const cleared = m.cleared ? { ...m.cleared } : null;
+  window.__pStep(2);
+  const at = { ground: window.__pGround(), pill: window.__pHud(...pillAt), banner: m.banner && { kind: m.banner.kind, text: m.banner.text, sub: m.banner.sub } };
+  return { cleared, night, at };
+});
+await shot('b16-1-night-cleared');
+const b16a2 = await page.evaluate(() => {
+  const g = window.__LN; const m = g.survival;
+  for (let i = 0; i < 58; i++) window.__pStep(1);
+  return { blend: +m.dawnBlend().toFixed(2), ground: window.__pGround(), phase: m.phase };
+});
+await shot('b16-2-dawn-warming');
+const b16a3 = await page.evaluate(() => {
+  const g = window.__LN; const m = g.survival;
+  let n = 0;
+  while (m.phase === 'night' && n++ < 300) window.__pStep(1);
+  window.__pStep(30);
+  const rw = m.lastRewards || {};
+  return { phase: m.phase, panel: g.uiPanel, pending: m.rewardPending(), cleared: rw.cleared || null, endAt: rw.endAt, ground: window.__pGround() };
+});
+await shot('b16-3-dawn-card');
+check('B16: a cleared night ends early — NIGHT CLEARED! with the gold it saves, the night pill turns to DAWN, the light warms over the 2 s to the early dawn, and the dawn card says NIGHT 2 CLEARED with its clock-gold row',
+  b16a.cleared && b16a.at.banner && b16a.at.banner.kind === 'cleared' && b16a.at.banner.text === 'NIGHT CLEARED!'
+    && /^DAWN COMES EARLY · \+\d+ GOLD$/.test(b16a.at.banner.sub)
+    && b16a.night.pill[2] > b16a.night.pill[0] && b16a.at.pill[0] > 200 && b16a.at.pill[0] > b16a.at.pill[2] + 60
+    && Math.abs(b16a2.blend - 0.5) < 0.06 && b16a2.phase === 'night'
+    && b16a2.ground.lum > b16a.at.ground.lum + 4 && b16a3.ground.lum > b16a2.ground.lum
+    && b16a3.phase === 'day' && b16a3.panel === 'survival-day' && b16a3.pending && b16a3.cleared && b16a3.cleared.bonus === b16a.cleared.bonus
+    && Math.abs(b16a3.endAt - b16a.cleared.dawnAt) < 0.05,
+  { cleared: b16a.cleared, banner: b16a.at.banner, pill: [b16a.night.pill, b16a.at.pill], ground: [b16a.night.ground.lum, b16a.at.ground.lum, b16a2.ground.lum, b16a3.ground.lum], blend: b16a2.blend, card: b16a3 });
+// clear the card for what comes next
+await page.evaluate(() => { const m = window.__LN.survival; if (m.rewardPending()) m.ackRewards(); });
+
+const b16b = await page.evaluate(() => {
+  const g = window.__LN; const m = g.survival;
+  window.__pNight(2);
+  g.enemies.length = 0; g.bolts.length = 0;
+  let n = 0;
+  // the wave's call shows once the night's own banner has had its say
+  while (!(m.banner && m.banner.kind === 'wave') && n++ < 600) window.__pStep(1);
+  window.__pStep(12);
+  return { at: +m.elapsed.toFixed(2), wave: m.waveIndex, banner: m.banner && { kind: m.banner.kind, text: m.banner.text, sub: m.banner.sub }, horns: m.horns || 0 };
+});
+await shot('b16-4-wave-call');
+check('B16: Night 2 sends its first wave at once and calls it with its gate and count (WAVE 1/3 · WEST GATE ×24), the horde\'s horn blown',
+  b16b.wave >= 1 && b16b.banner && b16b.banner.text === 'WAVE 1/3' && b16b.banner.sub === 'WEST GATE ×24' && b16b.horns >= 1,
+  b16b);
+
+const b16c = await page.evaluate(() => {
+  const g = window.__LN; const m = g.survival;
+  const { SurvivalCrowdZombie: Crowd, SurvivalIndividualZombie: Ind } = window.__pS;
+  window.__pNight(3);
+  m.elapsed = 60; m.waveIndex = 3; m.breakerIndex = 2; m.individualIndex = 2;
+  m.nightStats.spawned = 90;
+  g.enemies.length = 0; g.bolts.length = 0;
+  const west = m.entranceById('westGate');
+  west.hp = west.hpMax = 99999;
+  const far1 = new Ind(1400, 900, m.entranceById('eastGate'), 3, 0);
+  const far2 = new Ind(-1300, -950, m.entranceById('northGate'), 3, 1);
+  const claw = new Crowd(west.outside.x - 40, west.outside.y, west, 0, 3);
+  claw.hp = claw.hpMax = 99999;
+  g.enemies.push(far1, far2, claw);
+  m.guards.length = 0; m.survivors = 0;
+  const flee = [];
+  for (let i = 0; i < 6; i++) { window.__pStep(1); }
+  flee.push(!!far1.fleeing, !!far2.fleeing, !!claw.fleeing);
+  // the night's own banner has its 2.6 s first; the call comes after it
+  for (let i = 0; i < 165; i++) window.__pStep(1);
+  const w = g.renderer.w, h = g.renderer.h;
+  // the clawing one is off the screen (the west gate: up and left on the
+  // screen): a red pointer on the playfield's frame (with the gate's), not
+  // over the captain
+  const cap = g.renderer.worldToScreen(g.player.x, g.player.y);
+  const sk = (g._edgeMarks || []).find((mk) => mk.icon === 'skull');
+  let red = 0;
+  if (sk) {
+    for (let y = sk.y - 22; y <= sk.y + 22; y += 2) for (let x = sk.x - 22; x <= sk.x + 22; x += 2) {
+      const [r, gg, b] = window.__pHud(x, y);
+      if (r > 200 && gg < 110 && b < 110) red++;
+    }
+  }
+  return {
+    fleeing: flee, alive: m.aliveEnemies(), stragglers: m.stragglers, gone: !g.enemies.includes(far1) && !g.enemies.includes(far2),
+    banner: m.banner && { kind: m.banner.kind, text: m.banner.text }, red, marks: (g._edgeMarks || []).slice(),
+    captain: { x: Math.round(cap.x), y: Math.round(cap.y) }, w, h,
+    onScreen: (() => { const s = g.renderer.worldToScreen(claw.x, claw.y); return s.x >= 0 && s.x <= w && s.y >= 0 && s.y <= h; })(),
+  };
+});
+await shot('b16-5-last-one');
+const skullMark = b16c.marks.find((mk) => mk.icon === 'skull');
+const gateMark = b16c.marks.find((mk) => mk.icon === 'door' || mk.icon === 'swarm');
+// on the frame the night's pointers run round (nightPointerBand: 84 px under
+// the top, 100 over the bottom, 28 in from the sides; BUILD 15's sat on a
+// 92 px band through the middle of a sideways phone, over the captain)
+const onFrame = (mk) => mk.x <= 30 || mk.x >= b16c.w - 30 || mk.y <= 84 + 12 || mk.y >= b16c.h - 100 - 12;
+check('B16: the night\'s last few — the two out of the fight run for the trees and are gone, the one clawing the west gate is called LAST 1! and pointed at by a red pointer on the playfield\'s frame (a sideways phone\'s night pointers run round its edge now, not over the captain)',
+  b16c.fleeing[0] && b16c.fleeing[1] && !b16c.fleeing[2] && b16c.gone && b16c.alive === 1 && b16c.stragglers && b16c.banner && b16c.banner.text === 'LAST 1!'
+    && !b16c.onScreen && b16c.red >= 20 && skullMark && gateMark && [skullMark, gateMark].every((mk) => onFrame(mk) && Math.hypot(mk.x - b16c.captain.x, mk.y - b16c.captain.y) > 140),
+  b16c);
+await page.evaluate(() => { const g = window.__LN; g.enemies.length = 0; });
 
 fs.writeFileSync(path.join(OUT, 'plotsqa.json'), JSON.stringify({ results, errors }, null, 2));
 console.log(`errors ${errors.length}`);
