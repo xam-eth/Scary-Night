@@ -1,7 +1,127 @@
 # Status Rebuild 3D & Survival Milestone 1
 
 **Pembaruan:** 2026-10-18 (Asia/Makassar)
-**Status keseluruhan: MASIH TERBUKA — bukan klaim siap rilis.** Inti rebuild dunia 3D dan loop Survival Milestone 1 sudah terimplementasi. Pada 2026-10-12 arah UI/UX dan threat model dikoreksi mengikuti feedback user; pada 2026-10-15 dilakukan pass analisis gap & bug (lihat bagian "Gap & bug pass 2026-10-15"), lalu pass progres Hunter + level bangunan (lihat "Progres Hunter & level bangunan"), lalu pass menara crossbow (lihat "Menara crossbow"), lalu pass guard yang bisa jatuh (lihat "Guard bisa jatuh"; termasuk perbaikan bug gelombang yang muncul di dalam rumah), dan seluruh gate otomatis dijalankan ulang. Setelah itu user memutuskan **game landscape only** dan meminta brainstorming + design system plan sebelum koding lagi (lihat "Arah desain & orientasi" dan `docs/DESIGN-SYSTEM-PLAN.md`; belum ada perubahan kode game untuk arah ini). Revisi 1 desain (konsep api) ditolak user. Di revisi 2 user memilih konsep **K1 "Benteng Terakhir"**, pola build **jalan ke lingkaran + BUILD**, dan nada **dark stylized**, lalu menyetujui semua rekomendasi aturan dan meminta "pastikan dunianya 3D". K1 kini **terimplementasi sebagai vertical slice** (lihat "K1 Benteng Terakhir — implementasi"); acceptance manusia/perangkat untuk K1 belum ada. Atas feedback user berikutnya, Survival kini dimainkan di **dunia benteng (bailey)** baru, bukan di dalam ruangan mansion (lihat "Dunia benteng untuk Survival"). Setelah itu kedua bookend cerita K1 dibuat: **intro sinematik** di malam pertama dan **adegan bala bantuan tiba** di fajar ke-3 (lihat "Bookend K1"); pemahaman pemain atas keduanya belum diuji. Lalu dibuat **riset UX & replay** dari review pemain (Play Store, Steam, Reddit, dan platform review lain) plus playtest bot "sebagai gamer" (lihat "Riset UX & replay" dan `docs/UX-REPLAY-RESEARCH.md`). Riset itu lalu diperdalam atas permintaan user agar tidak ada coding: v2 menambah review bintang 5, persona, peta perjalanan, dan protokol playtest; v3 menambah pemain Indonesia, analisis loop 3 lapis, dan uji HP kelas bawah. Setelah itu, atas feedback user, dibuat pass perbaikan: benteng diperkecil dan aktor diperbesar, pasukan memakai GLB (KayKit Knight, CC0), efek tembakan/damage diperkuat, kerja bangunan dibuat terlihat, dan UI dirapikan (NIGHT dipisah dari BUILD, panel fajar/akhir menghitung kontribusi). Dari rekomendasi riset, yang terbangun baru R1 sebagian, R18a, dan R19 (lihat "Perbaikan dari feedback user"). Lalu pesan "next" berikutnya dikerjakan sebagai P0 riset **"Momen akhir run"**: bintang 1–3, rekor + NEW BEST!, panel kalah "Ns TO DAWN" + satu tip dari penyebab nyata, dan MVP bangunan (R1–R4, R19; lihat "Momen akhir run"). R5 dan R6 belum. Lalu user melapor "tidak ada perubahan" (2026-10-17): dibuat **pass visual besar** — build yang benar sampai ke layar (service worker hanya di host rilis, preview tanpa cache, stempel BUILD 8), bailey setengah ukuran dengan aktor ×1,6 dan kamera lebih dekat, seluruh horde monster GLB (vertex animation texture), knight dimuat saat boot dengan helm biru berjambul, efek tembakan/damage lebih besar, ballista yang membunuh dan menandai kill-nya, koin mine di HUD, dan penanda gerbang dengan jumlah musuh (lihat "Pass visual besar"). Lalu user meminta lima perbaikan lagi (2026-10-17, "ada beberapa masih perlu di fix"): kamera dijauhkan sedikit dan bisa digeser, plot bangunan ditata rapi, bangunan memakai aset gratis yang diunduh (bukan prototipe), kartu diperkecil, dan trailer pembuka dipertahankan. Kelimanya terimplementasi di **BUILD 9** (lihat "Pass perbaikan BUILD 9"). Lalu user meminta gambar karakter manusia yang cerah dengan senjata terpisah (folder `ASSET_CHARACTER`, gambar konsep AI atas permintaan user) dan aturan gerbang yang benar. Di **BUILD 10** gerbang tertutup menahan tembakan, gerbang hanya terbuka untuk kapten, dan untuk melawan, kapten keluar ke mulut gerbang atau ke luar benteng (lihat "Pass BUILD 10"). Lalu user melapor kapten berjalan sendiri keluar benteng dan bailey terlihat terlalu padat. Di **BUILD 11** kapten tidak lagi digerakkan apa pun selain stick, gerbang hanya terbuka untuk arah stick, setiap jenis bangunan punya warna sendiri, plot terkunci dan tiang hantu disembunyikan, dan props dikurangi (lihat "Pass BUILD 11"). Lalu user melapor ukuran world dan tata letak bangunan masih sama, dan meminta riset visual dan UI/UX game sejenis tanpa coding. Riset itu ada di `docs/VISUAL-LAYOUT-RESEARCH.md` (lihat "Riset visual & tata letak"). User lalu memilih **Opsi B**, meminta peta Rise of Kingdoms dicek dulu, dan meminta kamera yang bisa diperbesar, diperkecil, dan digeser. Ketiganya dikerjakan di **BUILD 12**: bailey ×1,6 dengan distrik per fungsi dan plaza Keep, plus kamera dinamis (lihat "Pass BUILD 12"). Acceptance visual/manual di perangkat, playtest manusia, dan packaging Play masih terbuka. Hasil tiap skrip hanya berlaku untuk cakupan yang benar-benar diuji.
+**Status keseluruhan: MASIH TERBUKA — bukan klaim siap rilis.** Inti rebuild dunia 3D dan loop Survival Milestone 1 sudah terimplementasi. Pada 2026-10-12 arah UI/UX dan threat model dikoreksi mengikuti feedback user; pada 2026-10-15 dilakukan pass analisis gap & bug (lihat bagian "Gap & bug pass 2026-10-15"), lalu pass progres Hunter + level bangunan (lihat "Progres Hunter & level bangunan"), lalu pass menara crossbow (lihat "Menara crossbow"), lalu pass guard yang bisa jatuh (lihat "Guard bisa jatuh"; termasuk perbaikan bug gelombang yang muncul di dalam rumah), dan seluruh gate otomatis dijalankan ulang. Setelah itu user memutuskan **game landscape only** dan meminta brainstorming + design system plan sebelum koding lagi (lihat "Arah desain & orientasi" dan `docs/DESIGN-SYSTEM-PLAN.md`; belum ada perubahan kode game untuk arah ini). Revisi 1 desain (konsep api) ditolak user. Di revisi 2 user memilih konsep **K1 "Benteng Terakhir"**, pola build **jalan ke lingkaran + BUILD**, dan nada **dark stylized**, lalu menyetujui semua rekomendasi aturan dan meminta "pastikan dunianya 3D". K1 kini **terimplementasi sebagai vertical slice** (lihat "K1 Benteng Terakhir — implementasi"); acceptance manusia/perangkat untuk K1 belum ada. Atas feedback user berikutnya, Survival kini dimainkan di **dunia benteng (bailey)** baru, bukan di dalam ruangan mansion (lihat "Dunia benteng untuk Survival"). Setelah itu kedua bookend cerita K1 dibuat: **intro sinematik** di malam pertama dan **adegan bala bantuan tiba** di fajar ke-3 (lihat "Bookend K1"); pemahaman pemain atas keduanya belum diuji. Lalu dibuat **riset UX & replay** dari review pemain (Play Store, Steam, Reddit, dan platform review lain) plus playtest bot "sebagai gamer" (lihat "Riset UX & replay" dan `docs/UX-REPLAY-RESEARCH.md`). Riset itu lalu diperdalam atas permintaan user agar tidak ada coding: v2 menambah review bintang 5, persona, peta perjalanan, dan protokol playtest; v3 menambah pemain Indonesia, analisis loop 3 lapis, dan uji HP kelas bawah. Setelah itu, atas feedback user, dibuat pass perbaikan: benteng diperkecil dan aktor diperbesar, pasukan memakai GLB (KayKit Knight, CC0), efek tembakan/damage diperkuat, kerja bangunan dibuat terlihat, dan UI dirapikan (NIGHT dipisah dari BUILD, panel fajar/akhir menghitung kontribusi). Dari rekomendasi riset, yang terbangun baru R1 sebagian, R18a, dan R19 (lihat "Perbaikan dari feedback user"). Lalu pesan "next" berikutnya dikerjakan sebagai P0 riset **"Momen akhir run"**: bintang 1–3, rekor + NEW BEST!, panel kalah "Ns TO DAWN" + satu tip dari penyebab nyata, dan MVP bangunan (R1–R4, R19; lihat "Momen akhir run"). R5 dan R6 belum. Lalu user melapor "tidak ada perubahan" (2026-10-17): dibuat **pass visual besar** — build yang benar sampai ke layar (service worker hanya di host rilis, preview tanpa cache, stempel BUILD 8), bailey setengah ukuran dengan aktor ×1,6 dan kamera lebih dekat, seluruh horde monster GLB (vertex animation texture), knight dimuat saat boot dengan helm biru berjambul, efek tembakan/damage lebih besar, ballista yang membunuh dan menandai kill-nya, koin mine di HUD, dan penanda gerbang dengan jumlah musuh (lihat "Pass visual besar"). Lalu user meminta lima perbaikan lagi (2026-10-17, "ada beberapa masih perlu di fix"): kamera dijauhkan sedikit dan bisa digeser, plot bangunan ditata rapi, bangunan memakai aset gratis yang diunduh (bukan prototipe), kartu diperkecil, dan trailer pembuka dipertahankan. Kelimanya terimplementasi di **BUILD 9** (lihat "Pass perbaikan BUILD 9"). Lalu user meminta gambar karakter manusia yang cerah dengan senjata terpisah (folder `ASSET_CHARACTER`, gambar konsep AI atas permintaan user) dan aturan gerbang yang benar. Di **BUILD 10** gerbang tertutup menahan tembakan, gerbang hanya terbuka untuk kapten, dan untuk melawan, kapten keluar ke mulut gerbang atau ke luar benteng (lihat "Pass BUILD 10"). Lalu user melapor kapten berjalan sendiri keluar benteng dan bailey terlihat terlalu padat. Di **BUILD 11** kapten tidak lagi digerakkan apa pun selain stick, gerbang hanya terbuka untuk arah stick, setiap jenis bangunan punya warna sendiri, plot terkunci dan tiang hantu disembunyikan, dan props dikurangi (lihat "Pass BUILD 11"). Lalu user melapor ukuran world dan tata letak bangunan masih sama, dan meminta riset visual dan UI/UX game sejenis tanpa coding. Riset itu ada di `docs/VISUAL-LAYOUT-RESEARCH.md` (lihat "Riset visual & tata letak"). User lalu memilih **Opsi B**, meminta peta Rise of Kingdoms dicek dulu, dan meminta kamera yang bisa diperbesar, diperkecil, dan digeser. Ketiganya dikerjakan di **BUILD 12**: bailey ×1,6 dengan distrik per fungsi dan plaza Keep, plus kamera dinamis (lihat "Pass BUILD 12"). Lalu user menulis "lanjut": 7 senjata `ASSET_CHARACTER` yang tersisa dibuat (kini 18/18), dan empat usulan "murah tapi terlihat jelas" dari riset §7 dikerjakan di **BUILD 13**: kapten terang (V8), label hanya saat dekat (V4), angka damage kecil yang digabung (V9), dan gerbang malam ini terlihat di siang hari (V10) (lihat "Pass BUILD 13"). Acceptance visual/manual di perangkat, playtest manusia, dan packaging Play masih terbuka. Hasil tiap skrip hanya berlaku untuk cakupan yang benar-benar diuji.
+
+## Pass BUILD 13 — kapten terang, label dekat, angka damage, gerbang malam ini (2026-10-18)
+
+**Pesan user:** "lanjut". Saya baca sebagai: lanjutkan pekerjaan yang tertunda. Keputusan BUILD 12 yang saya ambil sendiri (riset §11.4) tidak ditolak, jadi tetap dipakai.
+
+Stempel di layar kini **BUILD 13**, service worker `duskhold-v13`.
+
+Pekerjaan ini terdiri dari dua bagian:
+1. **ASSET_CHARACTER:** 7 senjata yang tersisa sudah dibuat: kapak undead, palu Breaker, pedang Night Lord, crossbow kapten Lv2/Lv3, dan crossbow guard Lv2/Lv3. Folder kini lengkap **18/18** (6 karakter + 12 senjata), commit `e374747`. Semuanya tetap gambar konsep AI; belum ada GLB.
+2. **BUILD 13:** empat usulan "murah tapi terlihat jelas" dari riset §7, yaitu V8, V4, V9, dan V10.
+
+### V8 — kapten paling terang
+
+Tekstur GLB kapten (Tripo) hampir hitam. Atlas warnanya (2048×2048) punya luminansi rata-rata 0,107 dan 81 % pikselnya di bawah 0,15 (skala 0–1). Atlas itu juga terdiri dari ribuan pulau UV kecil, jadi tidak bisa diwarnai per bagian.
+
+Byte GLB tidak diubah. Sebagai gantinya, shader kapten memetakan terang-gelap teksturnya sendiri ke palet `ASSET_CHARACTER` opsi 1:
+
+| Bagian | Warna |
+|---|---|
+| Tabard/mantel | navy → biru kerajaan `#216aad` → biru langit |
+| Topi dan sepatu bot (dipilih dari tinggi badan di bind pose) | kulit cokelat `#68412d` |
+| Bagian tekstur yang hangat | emas `#e6b459`; di wajah menjadi warna kulit |
+| Rim light | biru-putih, lebih kuat di malam |
+
+Tampilannya dipasang per fase lewat `CAPTAIN_LOOK` (siang/malam), hanya di mode Survival. Di mode lain, termasuk `?legacy=1`, tampilan ini mati.
+
+**Hasil** (rata-rata luminansi piksel kapten saja, 0–255; frame dengan kapten dikurangi frame tanpa kapten; `survival-plotsqa`, 844×390, zoom 1,6×):
+
+| Fase | Tekstur asli (BUILD 12) | BUILD 13 |
+|---|---|---|
+| Malam | 19,5 | 86,0 |
+| Siang | 27,9 | 88,0 |
+
+Versi pertama shader (semua biru terang, rim kuat) saya tolak sendiri setelah melihat screenshot-nya: kapten tampak seperti hantu/hologram biru. Versi yang dipakai menjaga bayangan tetap gelap dan memberi warna kulit cokelat pada topi dan sepatu bot.
+
+File: `valen3d.js` (`setLook`, `lookState`), `world3d.js` (`CAPTAIN_LOOK`, `_syncLighting`, diagnostics `captainLook`).
+
+### V4 — label hanya saat dekat
+
+| Sebelum (BUILD 11–12) | Sekarang |
+|---|---|
+| 3 lingkaran kosong terdekat selalu menampilkan nama, sejauh apa pun | Nama **+ biaya** (merah kalau kurang) hanya untuk lingkaran ≤ 380 px dari kapten (± satu lingkaran). **Maksimal 2** sekaligus. Lingkaran lain hanya ikon di atas warnanya |
+| Pill status (emas / kayu / prajurit / kill) di semua bangunan di layar | Hanya untuk bangunan ≤ 560 px dari kapten, atau bangunan tempat kapten berdiri |
+| Label sama di semua zoom | Di zoom overview (≤ 0,62×) hanya ikon, tanpa nama dan pill |
+
+Panah upgrade tetap tampil di semua bangunan yang bisa di-upgrade.
+
+Tombol "lihat semua" dari riset tidak dibuat. Zoom overview (pinch keluar) sudah memperlihatkan semua titik sebagai ikon, dan pola FTUE yang dipilih user meminta tanpa tombol tambahan.
+
+File: `ui/survival.js` (`PLOT_NAME_REACH`, `PLOT_NAMES_MAX`, `STATUS_REACH`, `OVERVIEW_ZOOM`, `drawPlotLabel`, `drawDayWorldLayer`).
+
+### V9 — angka damage lebih kecil, di atas kepala, digabung
+
+| | BUILD 12 | BUILD 13 |
+|---|---|---|
+| Ukuran kill / heavy / di wilayah panji / biasa | 40 / 32 / 28 / 23 px | **26 / 22 / 18 / 16 px** |
+| Posisi | di dada | **di atas kepala** (tinggi dada ×1,55), ikut bergerak bersama tubuhnya |
+| Pukulan beruntun | satu angka per pukulan | pukulan ke tubuh yang sama dalam **0,38 detik** dijumlah jadi satu angka. Angka itu membesar lagi sesaat ("pop") dan memakai grade terkuat (kill > heavy > biasa) |
+
+Angka yang muncul di atas angka lain atau di atas bar HP kapten naik satu langkah (maksimal 3 langkah) dan tetap di langkah itu, jadi kerumunan di gerbang terbaca sebagai tumpukan pendek, bukan angka yang saling menimpa.
+
+Efek hit (kilat, cincin, percikan) tidak diubah. Jumlah angka acak yang diambil per pukulan juga tetap sama, jadi run balance ber-seed identik dengan BUILD 12.
+
+File: `game/survival.js` (`DMG_NUMBER`, `pushDamageNumber`, `_updateFx`), `ui/survival.js` (`drawFloaters`, `DMG_LANES`).
+
+### V10 — gerbang malam ini terlihat di siang hari
+
+`tonightPlan()` menghitung serangan malam berikutnya per gerbang. Rencananya sama dengan yang dipakai `updateWaves()`: gelombang swarm 1–3, 2 Individual, dan Breaker di gerbang utama (1 mulai malam 2, 2 di malam 3).
+
+Di siang hari:
+- gerbang yang ada di layar mendapat **badge merah** di atasnya: 🌙, ikon swarm ×N, ikon Individual, dan ikon Breaker;
+- gerbang di luar layar ditunjuk dengan **penunjuk merah di tepi layar**, lengkap dengan jumlah totalnya;
+- keduanya tidak tampil di bawah panel hadiah fajar.
+
+Contoh malam 2:
+- gerbang barat: 24;
+- postern NW: 27;
+- gerbang selatan: 27 + 1 Individual + 1 Breaker;
+- gerbang utara: 1 Individual.
+
+File: `game/survival.js` (`tonightPlan`), `ui/survival.js` (`drawTonightBadge`, `drawDayWorldLayer`).
+
+### Yang tidak dikerjakan di pass ini
+
+- **V2** (ballista tidak lagi merah): ballista tetap merah, sesuai keputusan BUILD 12 (riset §11.4).
+- **V5** (diet HUD): HUD siang sudah ringkas sejak BUILD 9–12.
+- **V1, V3, V6, V7**: butuh pass aset atau tata letak.
+- **ASSET_CHARACTER:** konversi gambar → GLB, socket senjata di tangan, dan upgrade senjata pasukan di game.
+
+### QA yang dijalankan (BUILD 13)
+
+| Perintah | Hasil |
+|---|---|
+| `node tools/harness.mjs` | **67/67 PASS** (+2 cek baru: V10 ramalan siang = spawn malam 2 dan 3 per gerbang; V9 tiga pukulan dalam 0,4 detik = satu angka "30", mulai di atas kepala, ikut tubuhnya) |
+| `node tools/survival-plotsqa.mjs` | **21/21 PASS** (+3 cek baru: V8 piksel kapten malam 86,0 vs tekstur asli 19,5 dan siang 88,0 vs 27,9; V4 tiga lingkaran dalam jangkauan → 2 nama, overview → 0 nama dan 0 pill; V10 keempat gerbang malam 2 ditandai, urutannya sama dengan rencana) |
+| `node tools/survival-map.mjs` | **220/220** (tata letak tidak berubah) |
+| `node tools/survival-devqa.mjs` | **25/25 PASS** |
+| `node tools/survival-intro.mjs` | **PASS** |
+| `node tools/envqa.mjs --mode=3d-smoke` | **PASS** (bukti FTUE `qa-evidence/survival-ftue-*` ikut diperbarui: kapten biru, stempel BUILD 13) |
+| `node tools/survival-fxshots.mjs` | **14/14 PASS** |
+
+Setelah angka damage dibuat bertumpuk (perubahan terakhir, hanya kode gambar), `devqa`, `envqa`, dan `fxshots` dijalankan lagi dan hasilnya tetap sama.
+| `node tools/layoutqa.mjs`, `glbtest.mjs`, `swtest.mjs` | **PASS** (`swtest` dengan `duskhold-v13`) |
+| `node tools/survivalshots.mjs --landscape` | 26 shot, 0 page error |
+| `node tools/survival-look.mjs` | 0 error (`day0`, `day`, `build`, `gate`, `fight`, `overview`, `closeup`) |
+| `node tools/bundlecheck.mjs` | hanya 1 FAIL lama (fingerprint signing release, menunggu kunci upload) |
+| `node tools/survival-balance.mjs --seeds=5 --duration=72` | **sama persis dengan BUILD 12** di 30 baris run dan SUMMARY (selain waktu proses): idle 0/5, active 0/5, builder 5/5 ★★★, tower-builder 5/5 ★★★, hunter-builder 5/5 ★★★, keep-builder 0/5. Aturan main tidak berubah |
+
+**Bukti** (`qa-evidence/survival-build13/`):
+- `captain-compare.png`: kapten BUILD 12 vs BUILD 13, malam dan siang, frame yang sama;
+- `compare-day0.png`, `compare-fight.png`, `compare-overview.png`: BUILD 12 vs BUILD 13 dari skrip `survival-look` di momen yang sama;
+- `captain-day.png`, `names-near.png` (2 nama + 1 ikon di distrik tambang), `overview-tonight.png` (badge gerbang malam ini): dari `survival-plotsqa`;
+- `day0.png`, `day.png`, `build.png`, `fight.png`, `overview.png`, `closeup.png`;
+- `balance-5seed-72s.txt`.
+
+**Belum / terbuka:**
+- Penilaian manusia di HP atas keempat perubahan: apakah kapten terbaca tanpa terlihat seperti hantu atau hologram, apakah nama yang hanya muncul saat dekat masih cukup untuk mengenali bangunan, apakah angka yang lebih kecil masih terasa kuat, dan apakah pemain bisa menyebut gerbang malam ini sebelum menekan NIGHT (uji riset §8).
+- Di layar landscape 844×390, penunjuk merah gerbang di tepi kiri bawah bisa berdekatan dengan cincin stick; di zoom overview penunjuk atas bisa menempel pada chip CAPTAIN.
+- Angka damage yang naik langkah bisa masuk ke bawah pill NIGHT saat gerbang ada di tepi atas layar.
+- Kapten masih model Tripo yang sama. Shader hanya mewarnai ulang teksturnya; detail seperti sabuk atau sarung tangan tidak bisa diberi warna sendiri.
 
 ## Pass BUILD 12 — tata letak Opsi B + kamera dinamis (2026-10-18)
 
@@ -92,7 +212,7 @@ Denah: `qa-evidence/survival-build12/plan.png`.
 - Jalan ke gerbang ±60 % lebih jauh. Bot tetap menang, tetapi apakah terasa lambat bagi pemain belum diuji. Lari +15 % disiapkan sebagai opsi, tidak dipasang.
 - Frame time zoom terjauh (seluruh bailey + hutan di layar) di HP kelas bawah belum diukur. Di Chromium headless (SwiftShader) 1 frame ±5–6 ms di kedua zoom.
 - Keputusan §9 yang saya ambil sendiri (×1,6, ballista di halaman, tanpa rumah warga, panji radius, warna V2 tetap) menunggu konfirmasi user (riset §11.4).
-- Kapten di game masih gelap (siluet hitam). Ini sudah begitu sejak BUILD 8 dan tidak diubah di pass ini (lihat acceptance 14).
+- Kapten di game masih gelap (siluet hitam). Ini sudah begitu sejak BUILD 8 dan tidak diubah di pass ini (lihat acceptance 14). *(Diperbarui: dicerahkan di BUILD 13, V8.)*
 
 ## Riset visual & tata letak (2026-10-17) — riset saja, belum ada kode
 
@@ -1093,9 +1213,10 @@ Ini screenshot checkpoint, bukan rekaman, dan bukan review di perangkat fisik.
 11. **Pass visual besar 2026-10-17 ("tidak ada perubahan"):** terimplementasi dan lolos gate otomatis (lihat "Pass visual besar"). Belum: konfirmasi dari user bahwa layar menampilkan "BUILD 8" dan kelima poin kini terlihat, penilaian rasa (ukuran benteng vs aktor, horde GLB, efek, kerja bangunan, penanda gerbang), dan frame time horde instanced + knight di HP kelas bawah.
 12. **Pass perbaikan BUILD 9 2026-10-17 (kamera, plot rapi, aset bangunan, kartu, trailer):** terimplementasi dan lolos gate otomatis (lihat "Pass perbaikan BUILD 9"). Belum: konfirmasi dari user bahwa layar menampilkan "BUILD 9"; penilaian di HP nyata atas jarak kamera dan rasa geser/pinch, kerapian denah, kecocokan aset KayKit dengan gaya benteng, ukuran dock, dan apakah intro tiap run mengganggu; frame time model kit di HP kelas bawah.
 13. **Pass BUILD 10 2026-10-17 (aturan gerbang):** gerbang tertutup menahan tembakan, gerbang terbuka hanya untuk kapten, musuh mengejar di luar, istirahat di balik tembok, guard di menara gerbang, dan tembakan melengkung lewat tembok. Semuanya terimplementasi dan lolos gate otomatis (lihat "Pass BUILD 10"). Belum: konfirmasi user bahwa layar menampilkan "BUILD 10"; rasa keluar benteng dan ritme gerbang/istirahat di HP nyata; keterbacaan guard di puncak menara.
-14. **ASSET_CHARACTER 2026-10-17:** 11 dari 18 gambar konsep sudah dibuat (6 karakter + 5 senjata). Masih terbuka: 7 senjata yang menyusul, konversi gambar → GLB, socket senjata di tangan, upgrade senjata pasukan di game, dan penggantian kapten gelap di game.
+14. **ASSET_CHARACTER 2026-10-17/18:** 18 dari 18 gambar konsep sudah dibuat (6 karakter + 12 senjata; 7 senjata terakhir di commit `e374747`). Kapten gelap di game kini dicerahkan lewat shader dengan palet opsi 1 (BUILD 13, V8). Modelnya tidak diganti. Masih terbuka: konversi gambar → GLB, socket senjata di tangan, upgrade senjata pasukan di game, dan penilaian manusia atas kecocokan gambar dengan gaya game.
 15. **Pass BUILD 11 2026-10-17 (bug kapten + bailey padat):** dorongan tanpa input dihapus, gerbang hanya terbuka untuk arah stick, warna per bangunan, plot terkunci dan tiang hantu disembunyikan, label nama di pad, props dikurangi. Semuanya lolos gate otomatis (lihat "Pass BUILD 11"). Belum: konfirmasi user bahwa bug tidak muncul lagi di perangkatnya dan layar menampilkan "BUILD 11"; penilaian manusia atas kepadatan dan keterbacaan bangunan.
 16. **Pass BUILD 12 2026-10-18 (Opsi B + kamera dinamis):** bailey ×1,6 dengan distrik per fungsi, plaza Keep, wilayah panji berupa radius, dekor distrik, dan kamera zoom 0,42–1,6× (pinch di mana saja, tombol +/−, roda, keyboard, geser + lemparan). Semuanya lolos gate otomatis (lihat "Pass BUILD 12"). Belum: konfirmasi user bahwa layar menampilkan "BUILD 12"; penilaian manusia atas kelapangan, keterbacaan distrik, jarak jalan, dan rasa kamera di HP nyata; frame time zoom terjauh di HP kelas bawah; konfirmasi keputusan §9 yang diambil sendiri.
+17. **Pass BUILD 13 2026-10-18 (V8, V4, V9, V10):** kapten terang, label hanya saat dekat, angka damage kecil yang digabung, dan gerbang malam ini terlihat di siang hari. Semuanya lolos gate otomatis (lihat "Pass BUILD 13"). Belum: konfirmasi user bahwa layar menampilkan "BUILD 13"; penilaian manusia apakah kapten kini terbaca tanpa terlihat seperti hantu atau hologram, apakah label dekat cukup untuk mengenali bangunan, apakah angka kecil masih terasa kuat, dan apakah pemain bisa menyebut gerbang malam ini sebelum menekan NIGHT (uji riset §8).
 
 ## Aturan laporan
 

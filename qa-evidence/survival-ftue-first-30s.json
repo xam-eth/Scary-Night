@@ -1,6 +1,6 @@
 {
   "title": "Survival FTUE — first 30 playable seconds",
-  "capturedAt": "2026-10-18T01:17:09.003Z",
+  "capturedAt": "2026-10-18T03:25:58.336Z",
   "viewport": {
     "width": 390,
     "height": 844,
@@ -121,8 +121,8 @@
         "primitiveCrowd": 0
       },
       "luma": {
-        "meanLuma": 88.7,
-        "darkPct": 7.6
+        "meanLuma": 89.2,
+        "darkPct": 7
       }
     },
     {

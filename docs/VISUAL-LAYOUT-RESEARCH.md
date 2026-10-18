@@ -4,6 +4,8 @@
 
 **Pembaruan 2026-10-18:** user memilih **Opsi B** dan meminta peta Rise of Kingdoms dicek dulu, plus kamera yang bisa diperbesar, diperkecil, dan digeser. Hasil cek RoK ada di **§11**. Opsi B + kamera dinamis dikerjakan di **BUILD 12** (lihat `docs/REBUILD-ROADMAP.md`, "Pass BUILD 12"). Isi §0–§10 di bawah ini dibiarkan seperti saat riset (angka "sekarang" = BUILD 11).
 
+**Pembaruan 2026-10-18 (2):** user menulis "lanjut". **V4, V8, V9, dan V10** dari §7 dikerjakan di **BUILD 13** (lihat `docs/REBUILD-ROADMAP.md`, "Pass BUILD 13", dan status di bawah tabel §7). V1, V2, V3, V5, V6, dan V7 belum.
+
 Permintaan user setelah BUILD 11: *"masih sama ukuran world nya, tata letak bangunan masih sama, coba kamu research dulu visual game building dan combat seperti ini jangan coding dulu, cari detail ui ux dan visual nya, bandingkan dengan game ini"*.
 
 Usulan di §6–§7 **belum dikerjakan**. Pengerjaan menunggu pilihan user (§9).
@@ -436,6 +438,18 @@ Keep berdiri di plaza batu r230. Empat jalan selebar 220 px menuju gerbang; seka
 
 **Prioritas murah tapi terlihat jelas:** V2, V4, V5, V8, V9. **Prioritas yang menyatu dengan opsi tata letak:** V6, V7, V10. V1 dan V3 perlu pass aset (KayKit punya variasi warna dan prop).
 
+**Status (BUILD 13, 2026-10-18):**
+
+| # | Status | Catatan |
+|---|---|---|
+| V8 | dikerjakan | Shader memetakan terang-gelap tekstur kapten ke palet opsi 1: tabard biru, topi + bot cokelat, rim light biru. Luminansi piksel kapten malam 19,5 → 86,0 dan siang 27,9 → 88,0 (dari 255). GLB tidak diubah |
+| V4 | dikerjakan | Nama + biaya hanya ≤ 380 px dari kapten, maksimal 2. Pill status ≤ 560 px. Zoom overview hanya ikon. Tombol "lihat semua" diganti zoom overview |
+| V9 | dikerjakan | Ukuran 26/22/18/16 px (dulu 40/32/28/23). Mulai di atas kepala dan ikut tubuhnya. Pukulan dalam 0,38 detik digabung. Angka yang menimpa angka lain naik satu langkah (maks. 3) |
+| V10 | dikerjakan (bagian info gelombang) | Badge merah per gerbang (swarm ×N, Individual, Breaker) atau penunjuk di tepi layar, di siang hari. Overview pinch-out sudah ada sejak BUILD 12 |
+| V2 | tidak | Ballista tetap merah (keputusan §11.4) |
+| V5 | tidak | HUD siang sudah ringkas |
+| V1, V3, V6, V7 | belum | Butuh pass aset atau tata letak |
+
 ---
 
 ## 8. Cara menilai setelah dikerjakan (usulan acceptance)
@@ -569,7 +583,7 @@ Tautan ada di §11.5.
 | — | Zoom pilihan pemain disimpan (`save.survival.camZoom`) | `survival.js` |
 
 **Yang tidak diambil:**
-- **Layer UI per level zoom:** label tetap sama di semua zoom. Ini kandidat lanjutan, bersama V4/V5 (label hanya saat dekat).
+- **Layer UI per level zoom:** label tetap sama di semua zoom. Ini kandidat lanjutan, bersama V4/V5 (label hanya saat dekat). *(Diperbarui: BUILD 13 menambah satu layer. Di zoom overview hanya ikon yang tampil.)*
 - **Menu radial zoom siap pakai:** diganti langkah ×1,35 per tap atau tombol.
 - **Kota yang bebas disusun:** posisi plot tetap, karena posisi = fungsi + jarak gerbang.
 - **Rumah warga:** tidak dibuat. Warna rumah KayKit (biru/hijau/merah/kuning) bentrok dengan kode warna bangunan, dan dalam cerita K1 warga berlindung di dalam Keep.
@@ -582,7 +596,7 @@ User hanya memilih "B". Pertanyaan §9 lainnya saya putuskan seperti ini:
 3. **Tanpa rumah warga** (alasan di §11.3).
 4. **Wilayah panji = radius dari Keep**, dipotong di dinding: 900 / 1100 / 1400 px per level Keep. Lv3 menutup seluruh bailey. Jumlah plot per level tetap 9 / 13 / 15.
 5. **Warna V2 tidak diubah:** ballista tetap merah.
-6. **Paket UI V4/V5 belum dikerjakan.**
+6. **Paket UI V4/V5 belum dikerjakan.** *(Diperbarui: V4 dikerjakan di BUILD 13. V5 tidak, karena HUD siang sudah ringkas.)*
 7. **Ballista atap Keep** dinaikkan dari 440/500 menjadi 600/700 px. Gerbang kini lebih jauh, 773 px utara/selatan dan 1053 px barat/timur.
 8. **Kapten mulai di 240 px timur Keep, di jalan timur.** Jangkauan kartu Keep dinaikkan ke 250 px (plaza + kerb), jadi kartu Keep tetap muncul pertama di pagi hari.
 
