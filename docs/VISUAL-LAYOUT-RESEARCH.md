@@ -6,6 +6,8 @@
 
 **Pembaruan 2026-10-18 (2):** user menulis "lanjut". **V4, V8, V9, dan V10** dari §7 dikerjakan di **BUILD 13** (lihat `docs/REBUILD-ROADMAP.md`, "Pass BUILD 13", dan status di bawah tabel §7). V1, V2, V3, V5, V6, dan V7 belum.
 
+**Pembaruan 2026-10-18 (3):** user menulis "next" setelah BUILD 14. **V6 dan V7** dikerjakan di **BUILD 15** ("pertarungan malam terlihat utuh"; lihat `docs/REBUILD-ROADMAP.md`, "Pass BUILD 15", dan status di bawah tabel §7). Yang tersisa: V1 dan V3 (butuh pass aset); V2 dan V5 tetap tidak dikerjakan (keputusan).
+
 Permintaan user setelah BUILD 11: *"masih sama ukuran world nya, tata letak bangunan masih sama, coba kamu research dulu visual game building dan combat seperti ini jangan coding dulu, cari detail ui ux dan visual nya, bandingkan dengan game ini"*.
 
 Usulan di §6–§7 **belum dikerjakan**. Pengerjaan menunggu pilihan user (§9).
@@ -438,17 +440,19 @@ Keep berdiri di plaza batu r230. Empat jalan selebar 220 px menuju gerbang; seka
 
 **Prioritas murah tapi terlihat jelas:** V2, V4, V5, V8, V9. **Prioritas yang menyatu dengan opsi tata letak:** V6, V7, V10. V1 dan V3 perlu pass aset (KayKit punya variasi warna dan prop).
 
-**Status (BUILD 13, 2026-10-18):**
+**Status (BUILD 13–15, 2026-10-18):**
 
 | # | Status | Catatan |
 |---|---|---|
+| V6 | dikerjakan (BUILD 15) | Menara gerbang selatan dan timur (sisi dekat kamera) kini bastion pendek: naik 20 px di atas tembok (dulu 88), dan jembatan di atas kedua gerbang itu dihapus. Menara sudut tenggara (paling bawah layar) naik 44 px (dulu 108). Menara utara dan barat tetap tinggi sebagai aksen di tepi atas. Data tinggi ada di `fortress.js` (`TOWER_RISE`); pos guard dan titik lepas baut ikut tinggi itu. **Tambahan di luar usulan:** di balik menara, pohon, bangunan, atau horde, kapten terlihat sebagai siluet biru tembus pandang. Tembok tidak dipudarkan. Ukuran (`survival-map`): kepala kapten terlihat dari 27/27 titik tempur di gerbang selatan, gerbang timur, dan postern tenggara (80 px di dalam; 80 dan 200 px di luar). Di BUILD 14, 4 titik tertutup. Tidak ada menara atau jembatan yang menutup > 10 % layar 844×390 di zoom malam (terburuk 5,0 %, menara sudut barat laut di tepi atas) |
+| V7 | dikerjakan (BUILD 15) | **Kill zone:** tidak ada pohon berdiri dalam 380 px dari titik kumpul di luar setiap gerbang, dan sisi selatan/timur punya glacis 460 px. 19 dari 316 pohon ditebang menjadi tunggul. Tunggul memakai jejak tabrakan batang yang sama, jadi simulasi tidak berubah (balance 35 run identik dengan BUILD 14). Batu dan semak (rendah) tetap. **Kamera malam** condong 0,7 dari jarak kapten ke pusat gerombolan dalam 600 px (maks. 300 px, penuh pada bobot gerombolan 3, ease 2,4/dtk). Bias utara lama memberi jalan selama ada pertarungan. Harness: menahan gerbang selatan/utara dari dalam, gerombolan dan kapten sama-sama di area main (di bawah pita HUD, di atas pita stick/FLARE) |
 | V8 | dikerjakan | Shader memetakan terang-gelap tekstur kapten ke palet opsi 1: tabard biru, topi + bot cokelat, rim light biru. Luminansi piksel kapten malam 19,5 → 86,0 dan siang 27,9 → 88,0 (dari 255). GLB tidak diubah |
 | V4 | dikerjakan | Nama + biaya hanya ≤ 380 px dari kapten, maksimal 2. Pill status ≤ 560 px. Zoom overview hanya ikon. Tombol "lihat semua" diganti zoom overview |
 | V9 | dikerjakan | Ukuran 26/22/18/16 px (dulu 40/32/28/23). Mulai di atas kepala dan ikut tubuhnya. Pukulan dalam 0,38 detik digabung. Angka yang menimpa angka lain naik satu langkah (maks. 3) |
 | V10 | dikerjakan (bagian info gelombang) | Badge merah per gerbang (swarm ×N, Individual, Breaker) atau penunjuk di tepi layar, di siang hari. Overview pinch-out sudah ada sejak BUILD 12 |
 | V2 | tidak | Ballista tetap merah (keputusan §11.4) |
 | V5 | tidak | HUD siang sudah ringkas |
-| V1, V3, V6, V7 | belum | Butuh pass aset atau tata letak |
+| V1, V3 | belum | Butuh pass aset |
 
 ---
 

@@ -73,6 +73,11 @@ const boot = async () => {
     g.update = () => {};
     window.__inStep = (n = 1) => { for (let i = 0; i < n; i++) window.__inOrig.call(g, 1 / 60); g.render(); };
   });
+  // the night (and its intro) holds until the 3D world has drawn once
+  // (game.js survivalWorldReady; the page's own frames keep rendering, the
+  // clock is ours): stepping before that measures a frozen t = 0.08 (BUILD 15
+  // chain: the first frame came in before the GLBs did)
+  await page.waitForFunction(() => window.__LN && window.__LN.survivalWorldReady === true, { timeout: 120000, polling: 100 });
 };
 await page.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'domcontentloaded', timeout: 180000 });
 await boot();

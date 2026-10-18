@@ -635,18 +635,21 @@ check('B15: the captain is seen through cover — behind the north gate\'s east 
 const b15b = await page.evaluate(() => {
   const g = window.__LN; const m = g.survival;
   const W = window.__pW;
-  // two guards up on their posts: the south gate's bastion, the north gate's tower
+  // two guards up on their posts: the south gate's bastion, the north gate's
+  // tower. The climb is the sim's (tools/harness.mjs BUILD 15 #2: they climb
+  // and their bolts leave from the bastion); here, how high World3D stands them
   const south = m.entranceById('southGate'), north = m.entranceById('northGate');
   m.guards.length = Math.min(2, m.guards.length);
   const posts = [m._doorPost(south, 0), m._doorPost(north, 0)];
-  m.guards.forEach((gd, i) => { const post = posts[i]; gd.x = post.x; gd.y = post.y + (i ? 6 : -6); m._setGuardPost(gd, post); });
+  m.guards.forEach((gd, i) => { const post = posts[i]; gd.x = post.x; gd.y = post.y; m._setGuardPost(gd, post); });
   m._guardAssignT = 99;
-  window.__pFast(() => { m._guardAssignT = 99; return m.guards.some((gd) => gd.lift < 1) && m.elapsed < 40; });
-  window.__pStep(2);
+  m.guards.forEach((gd, i) => { gd.lift = 1; gd.liftPost = posts[i].wall; gd.moving = false; gd.path = null; });
+  g.render(); g.render();
   const ys = m.guards.map((gd, i) => {
     const mesh = W.survivalGuardMeshes && W.survivalGuardMeshes[i];
     return mesh ? +mesh.position.y.toFixed(1) : null;
   });
+  const lifts = m.guards.map((gd) => gd.lift);
   const stumps = W.scene.getObjectByName('forest-felled-trunk-stumps-3d');
   const cuts = W.scene.getObjectByName('forest-felled-stump-cuts-3d');
   const d = W.diagnostics().sightlines;
@@ -654,7 +657,7 @@ const b15b = await page.evaluate(() => {
   const park = () => { g.player.x = south.x + 40; g.player.y = south.y - 90; g.player.vx = 0; g.player.vy = 0; m._userZoom = 1; m._zoomGoal = null; m.camPan.x = 0; m.camPan.y = 0; m._guardAssignT = 99; };
   park(); m.recenterCamera(true); g.renderer.snapCamera(g.player.x, g.player.y);
   for (let i = 0; i < 20; i++) { park(); window.__pStep(1); }
-  return { lifts: m.guards.map((gd) => gd.lift), ys, stumps: stumps ? stumps.count : 0, cuts: cuts ? cuts.count : 0, d };
+  return { lifts, ys, stumps: stumps ? stumps.count : 0, cuts: cuts ? cuts.count : 0, d };
 });
 await shot('b15-2-south-gate-bastions');
 check('B15: the south / east gates have squat bastions (no bridge over them; the north / west keep their towers and bridges), the south-east corner is cut down, the felled kill zones show stumps; a guard on the south bastion stands ~68 px lower than one on the north tower',
