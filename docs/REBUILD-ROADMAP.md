@@ -66,13 +66,14 @@ Denah: `qa-evidence/survival-build12/plan.png`.
 |---|---|
 | `node tools/harness.mjs` | **65/65 PASS** (titik uji panji, plot 9 → 13 → 15, skala, jangkauan ballista atap diperbarui) |
 | `node tools/survival-map.mjs` | **220/220** (cek B baru: ukuran, distrik, celah, dinding, panji, dekor) |
-| `node tools/survival-plotsqa.mjs` | lihat hasil di bawah (cek kamera baru: roda 0,42–1,6, zoom di titik kursor, pinch di mana saja, tombol/keyboard +/−, lemparan, overview seluruh bailey) |
+| `node tools/survival-plotsqa.mjs` | **18/18 PASS**. Cek kamera baru: roda 0,42–1,6; zoom di titik kursor (geser 2,7 px); pinch di mana saja tanpa kapten bergerak; tombol dan keyboard +/−; lemparan; zoom terjauh memuat keempat sudut bailey |
 | `node tools/survival-devqa.mjs` | **25/25 PASS** |
 | `node tools/survival-intro.mjs` | **PASS** |
 | `node tools/envqa.mjs --mode=3d-smoke` | **PASS** (panji 900 px, dekor 22 props dalam 1 mesh, HUD malam hanya PAUSE + tombol zoom, upgrade Keep membuka plot 9 → 13 dan panji 900 → 1100) |
 | `node tools/survival-fxshots.mjs` | **14/14 PASS** |
 | `node tools/layoutqa.mjs`, `glbtest.mjs`, `swtest.mjs` | **PASS** |
 | `node tools/survivalshots.mjs --landscape` | 26 shot, 0 page error |
+| `node tools/bundlecheck.mjs` | hanya 1 FAIL lama (fingerprint signing release, menunggu kunci upload) |
 | `node tools/survival-balance.mjs --seeds=5 --duration=72` | idle 0/5, active 0/5, builder **5/5 ★★★**, tower-builder **5/5 ★★★**, hunter-builder **5/5 ★★★**, keep-builder 0/5 (BUILD 11: 1/5) |
 
 **Balance:** bot yang membangun tetap ★★★ di kelima seed, sama dengan BUILD 11. keep-builder (hanya menaikkan Keep, strategi yang memang lemah) turun 1/5 → 0/5. Ketika kapten mulai di 190 px dari Keep, satu seed jatuh ke ★ di Malam 1; di 240 px kelimanya bertahan, jadi 240 yang dipakai. Lari kapten dan jangkauan menara **tidak** diubah.

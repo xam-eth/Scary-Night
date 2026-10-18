@@ -1,6 +1,6 @@
 {
   "title": "Survival FTUE — first 30 playable seconds",
-  "capturedAt": "2026-10-18T00:35:18.662Z",
+  "capturedAt": "2026-10-18T01:17:09.003Z",
   "viewport": {
     "width": 390,
     "height": 844,
@@ -47,8 +47,8 @@
         "decor": {
           "placed": 22,
           "missing": 0,
-          "merged": 12,
-          "meshes": 16
+          "merged": 22,
+          "meshes": 1
         },
         "fortressTowers": 12,
         "fortressMeshes": 16,
@@ -103,8 +103,8 @@
         "decor": {
           "placed": 22,
           "missing": 0,
-          "merged": 12,
-          "meshes": 16
+          "merged": 22,
+          "meshes": 1
         },
         "fortressTowers": 12,
         "fortressMeshes": 16,
@@ -121,7 +121,7 @@
         "primitiveCrowd": 0
       },
       "luma": {
-        "meanLuma": 88.8,
+        "meanLuma": 88.7,
         "darkPct": 7.6
       }
     },
@@ -150,9 +150,9 @@
         ],
         "coach": false,
         "narration": false,
-        "swarm": 33,
+        "swarm": 34,
         "riggedCrowd": 0,
-        "proxyCrowd": 33,
+        "proxyCrowd": 34,
         "keepHp": 600,
         "keepMesh": true,
         "banner": {
@@ -163,8 +163,8 @@
         "decor": {
           "placed": 22,
           "missing": 0,
-          "merged": 12,
-          "meshes": 16
+          "merged": 22,
+          "meshes": 1
         },
         "fortressTowers": 12,
         "fortressMeshes": 16,
