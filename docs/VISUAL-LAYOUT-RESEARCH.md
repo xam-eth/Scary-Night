@@ -2,6 +2,8 @@
 
 **Status (2026-10-17): riset saja. Belum ada perubahan kode game atau tools untuk isi dokumen ini.**
 
+**Pembaruan 2026-10-18:** user memilih **Opsi B** dan meminta peta Rise of Kingdoms dicek dulu, plus kamera yang bisa diperbesar, diperkecil, dan digeser. Hasil cek RoK ada di **§11**. Opsi B + kamera dinamis dikerjakan di **BUILD 12** (lihat `docs/REBUILD-ROADMAP.md`, "Pass BUILD 12"). Isi §0–§10 di bawah ini dibiarkan seperti saat riset (angka "sekarang" = BUILD 11).
+
 Permintaan user setelah BUILD 11: *"masih sama ukuran world nya, tata letak bangunan masih sama, coba kamu research dulu visual game building dan combat seperti ini jangan coding dulu, cari detail ui ux dan visual nya, bandingkan dengan game ini"*.
 
 Usulan di §6–§7 **belum dikerjakan**. Pengerjaan menunggu pilihan user (§9).
@@ -509,3 +511,92 @@ Keep berdiri di plaza batu r230. Empat jalan selebar 220 px menuju gerbang; seka
 - Ukuran karakter, r/gamedesign: https://www.reddit.com/r/gamedesign/comments/u86w7o/relationship_between_character_size_and_screen/
 - Ukuran karakter, GameDev Stack Exchange: https://gamedev.stackexchange.com/questions/19615/hero-character-sprite-size-in-comparison-to-tile-size
 - Kamera miring & tinggi objek, MY.GAMES (Little Big Robots, Zooba): https://medium.com/my-games-company/top-down-shooter-level-design-how-map-design-supports-game-mechanics-6ae39fdd095d
+
+---
+
+## 11. Rise of Kingdoms: peta kota & kamera (dicek 2026-10-17, sebelum BUILD 12)
+
+**Pesan user:** *"untuk opsi nya B tapi cek dulu peta ROK dan jarak kamera nya bisa di pebesar perkecil geser jadi camera dinamis"*.
+
+**Yang dicek:**
+- halaman resmi Lilith dan dev diary tentang *infinite zoom*;
+- halaman App Store dan Google Play;
+- panduan tata kota (PocketGamer, BlueStacks, heaven-guardian, AllClash, techgamesnews);
+- screenshot kota pemain (base City Hall 10, contoh layout PocketGamer), dilihat saja dan **tidak disimpan di repo** karena hak cipta;
+- diskusi pemain r/RiseofKingdoms tentang zoom.
+
+Tautan ada di §11.5.
+
+### 11.1 Peta kota RoK: pola yang terlihat
+
+| Pola | Detail |
+|---|---|
+| Dinding dengan cincin terbuka | Dinding kota bersudut dengan menara di sudut. Di antara dinding dan bangunan ada **cincin rumput lebar yang kosong**. |
+| Satu titik fokus di tengah | City Hall menjadi pusat, dibingkai jalan, pohon, dan patung, dengan **ruang kosong di sekelilingnya**. Jalan dari semua sektor bertemu di **plaza atau patung tengah**. |
+| Distrik per fungsi | Bangunan dikelompokkan: rumah sakit dengan rumah sakit, ladang dengan ladang, satu area latihan pasukan, distrik sumber daya. Antar-distrik dipisah jalan. |
+| Ruang negatif diisi hijau | Rumpun pohon dan pohon berbunga mengisi sela. Sudut tidak dibiarkan kosong, tetapi juga tidak dijejali. |
+| Keterbacaan | Bangunan penting tidak boleh tertutup objek yang lebih tinggi. Panduan menyarankan **mengecek tata letak di beberapa level zoom**: bangunan kecil yang tersembunyi, sudut kosong atau padat, titik fokus. |
+| Zoom jauh | Seluruh kota terlihat. Bangunan sekitar 4–5 % tinggi layar. |
+| Progres | City Hall adalah gerbang progres: tidak ada bangunan yang levelnya melebihi City Hall. Mirip Keep kita, yang membuka plot per level. |
+
+**Perbedaan penting:** di RoK susunan kota **murni dekorasi** dan tidak memengaruhi pertahanan. Pemain bebas memindah bangunan. Di DUSKHOLD, posisi plot menentukan jarak jalan, garis tembak ballista, dan pertahanan gerbang. Jadi yang kita ambil adalah **pola visualnya**, bukan kebebasan menyusun.
+
+### 11.2 Kamera RoK
+
+- **"Infinite zoom":** dengan dua jari pemain berpindah mulus dari kota (dekat) ke region lalu ke peta dunia, tanpa layar loading.
+  - Dikerjakan 90 hari; terinspirasi *diving drone shot* dan pinch-to-zoom Apple.
+  - Desainer UI-nya membuat 200 sketsa untuk **lima layer**, supaya di tiap level zoom pemain hanya melihat fungsi yang ia butuhkan.
+- **Store:** "smooth zooming in and out with just two fingers".
+- **Kota:** satu jari menggeser, dua jari zoom.
+- **Pemain mouse/PC** meminta tombol **(−/+)** di layar. Di PC tersedia Ctrl + roda mouse dan tombol panah.
+- **Forum resmi:** menahan tombol "kembali ke kota" membuka menu radial berisi level zoom siap pakai.
+
+### 11.3 Yang diambil untuk BUILD 12
+
+| Pola RoK | BUILD 12 | Di kode |
+|---|---|---|
+| Cincin terbuka di balik dinding | Bailey ×1,6 (2080×1520). Plot ekonomi **≥ 192 px** dari dinding (dulu 62), celah rumput antar-pad **≥ 134 px** | `fortress.js` (`FORT_SCALE` 0,8), `survival.js` (`PLOT`) |
+| City Hall sebagai fokus + plaza tempat jalan bertemu | Keep berdiri di **plaza batu r235** dengan kerb dan cincin dalam. Empat jalan selebar 260 px bertemu di plaza. Tiga pohon tunggal di sudut plaza; dua di antaranya membingkai Keep di layar | `fortress.js` (`PLAZA_R`, `ROAD_HALF`), `world3d.js` (plaza) |
+| Distrik per fungsi | NW **barak** (biru), NE **tambang** (kuning), SW **sawmill** (hijau), SE **armory + sumur**. Ballista di samping gerbangnya. Urutan unlock tetap 9 / 13 / 15 | `survival.js` (`SURVIVAL_SLOTS.level`, `PLOT`) |
+| Dekor yang menjelaskan distrik | Barak: boneka panah + rak senjata. Tambang: tumpukan batu + gerobak. Sawmill: tumpukan kayu. SE: peti, tong, karung di dekat sumur. Semua dari KayKit (CC0), digabung jadi **1 mesh** | `fortress.js` (`furnish`), `world3d.js` (`mergeKitStatic`) |
+| Hijau mengisi ruang negatif | 4 rumpun pohon di sudut bailey dan 3 pohon tunggal di sudut plaza. Semuanya di luar jalan, plaza, plot, dan garis tembak ballista (dicek `survival-map`) | `fortress.js`, `buildings3d.js` (7 model alam baru) |
+| Bangunan penting tidak tertutup | Dekor tinggi hanya di sudut bailey. Tidak ada pohon di depan Keep (sisi tenggara, sisi kamera) | `fortress.js` |
+| Cek di beberapa level zoom | Shot QA baru: `overview` (zoom terjauh, seluruh bailey) dan `closeup` (terdekat) | `tools/survival-look.mjs`, `tools/survival-plotsqa.mjs` |
+| Infinite zoom (dua jari) | **Zoom 0,42–1,6×** dari frame normal. Bukan "infinite" karena kita hanya punya satu bailey, tanpa peta dunia. Paling jauh, seluruh bailey (dinding ke dinding) muat di HP landscape. Paling dekat, satu distrik | `survival.js` (`SURVIVAL_CAMERA`) |
+| Pinch dua jari | Pinch **di mana saja**, juga kalau satu jari mendarat di sisi stick (≤ 320 ms, ≤ 18 px). Zoom berpusat di titik tengah jari, dan titik tengah itu ikut menggeser peta. Kapten tidak bergerak | `input.js` |
+| Tombol −/+ untuk mouse | Tombol **+ / −** di tepi kanan layar, siang dan malam. Tombol keyboard +/−. Roda mouse zoom di titik kursor | `ui/survival.js`, `input.js` |
+| Satu jari menggeser | Drag di sisi kanan menggeser peta. **Lemparan meluncur** lalu berhenti. Chip CAPTAIN atau tap di tanah mengembalikan kamera; kamera juga kembali pelan saat kapten berjalan | `survival.js` (`_steerCamera`) |
+| — | Zoom pilihan pemain disimpan (`save.survival.camZoom`) | `survival.js` |
+
+**Yang tidak diambil:**
+- **Layer UI per level zoom:** label tetap sama di semua zoom. Ini kandidat lanjutan, bersama V4/V5 (label hanya saat dekat).
+- **Menu radial zoom siap pakai:** diganti langkah ×1,35 per tap atau tombol.
+- **Kota yang bebas disusun:** posisi plot tetap, karena posisi = fungsi + jarak gerbang.
+- **Rumah warga:** tidak dibuat. Warna rumah KayKit (biru/hijau/merah/kuning) bentrok dengan kode warna bangunan, dan dalam cerita K1 warga berlindung di dalam Keep.
+
+### 11.4 Keputusan yang saya ambil sendiri (§9, menunggu konfirmasi user)
+
+User hanya memilih "B". Pertanyaan §9 lainnya saya putuskan seperti ini:
+1. **Ukuran ×1,6**, bukan ×1,4.
+2. **Ballista tetap plot di halaman, di samping gerbangnya.** Ballista utara/selatan 120 px dari poros jalan.
+3. **Tanpa rumah warga** (alasan di §11.3).
+4. **Wilayah panji = radius dari Keep**, dipotong di dinding: 900 / 1100 / 1400 px per level Keep. Lv3 menutup seluruh bailey. Jumlah plot per level tetap 9 / 13 / 15.
+5. **Warna V2 tidak diubah:** ballista tetap merah.
+6. **Paket UI V4/V5 belum dikerjakan.**
+7. **Ballista atap Keep** dinaikkan dari 440/500 menjadi 600/700 px. Gerbang kini lebih jauh, 773 px utara/selatan dan 1053 px barat/timur.
+8. **Kapten mulai di 240 px timur Keep, di jalan timur.** Jangkauan kartu Keep dinaikkan ke 250 px (plaza + kerb), jadi kartu Keep tetap muncul pertama di pagi hari.
+
+### 11.5 Sumber (RoK)
+
+- Situs resmi Rise of Kingdoms (infinite zoom, 90 hari, pinch-to-zoom): https://rok.lilith.com/
+- Dev diary Lilith (lima layer UI, 200 sketsa): http://forum.lilithgame.com/viewtopic.php?t=20680
+- App Store: https://apps.apple.com/us/app/rise-of-kingdoms/id1354260888
+- Google Play ("smooth zooming in and out with just two fingers"): https://play.google.com/store/apps/details?id=com.rok.gp.vn
+- r/RiseofKingdoms, "Zooming in & out" (permintaan tombol −/+, Ctrl+roda): https://www.reddit.com/r/RiseofKingdoms/comments/wkc0n1/
+- Forum resmi RoK Club (menu radial zoom): https://rok-club.lilith.com/ (thread tidak dicatat)
+- PocketGamer, best city layouts (kelompok bangunan, titik fokus, jalan, pohon): https://www.pocketgamer.com/rise-of-kingdoms/best-city-layouts/
+- BlueStacks, city building guide (sektor/distrik, plaza tengah): https://www.bluestacks.com/blog/game-guides/rise-of-kingdoms/rok-city-building-guide-en.html
+- heaven-guardian, City Editor guide (cek di beberapa level zoom, ruang kosong di sekitar bangunan besar): https://heaven-guardian.com/rise-of-kingdoms-ultimate-city-design-guide/
+- AllClash, city layout tips (simetri, titik tengah): https://www.allclash.com/city-layout-tips-beautiful-city-layout-for-rise-of-kingdoms/
+- techgamesnews (tata kota murni dekoratif): https://techgamesnews.com/rise-of-kingdoms/rok-city-layout/
+- BlueStacks, guide compilation (tidak ada bangunan melebihi level City Hall): https://www.bluestacks.com/blog/game-overview/rise-of-kingdoms/rok-best-guides-tips-compilation-en.html
