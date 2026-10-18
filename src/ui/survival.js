@@ -513,8 +513,24 @@ function drawEdgeMarker(ctx, w, h, p, icon, color, top = 128, bottom = 150, coun
  * further hit adds into it (game/survival.js pushDamageNumber), so its rise
  * and fade run on its own clock, not on its (growing) life.
  */
+const DMG_LANES = 3;   // steps a damage number may climb to keep clear
+
+function boxesOverlap(a, b) {
+  return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+}
+
 function drawFloaters(game, ctx) {
   const mode = game.survival;
+  // Damage numbers keep clear of each other and of the captain's bar (BUILD
+  // 13): a new number that would land on one already showing takes the next
+  // free step up (at most DMG_LANES) and keeps that step for its life, so a
+  // crowd at a gate reads as a short stack, not a pile.
+  const taken = [];
+  const p = game.player;
+  if (p) {
+    const head = project(game, p.x, p.y, 98 * ACTOR - 10);
+    taken.push({ x: head.x - 42, y: head.y - 10, w: 70, h: 20 });
+  }
   for (const f of mode.floaters) {
     const life = clamp(f.t / f.life, 0, 1);
     const dmg = !!f.target;
@@ -522,6 +538,17 @@ function drawFloaters(game, ctx) {
     const riseT = dmg ? clamp(f.t / 0.9, 0, 1) : life;
     const at = project(game, f.x, f.y, f.h + (1 - (1 - riseT) * (1 - riseT)) * rise);
     at.x += (f.drift || 0) * Math.min(1, riseT * 1.6);
+    if (dmg) {
+      const bw = measureLabel(ctx, f.text, f.size) + 6, bh = f.size * 0.92, step = f.size * 0.95;
+      const boxAt = (lane) => ({ x: at.x - bw / 2, y: at.y - lane * step - bh / 2, w: bw, h: bh });
+      if (f.lane == null) {
+        let lane = 0;
+        while (lane < DMG_LANES && taken.some((box) => boxesOverlap(box, boxAt(lane)))) lane++;
+        f.lane = lane;
+      }
+      at.y -= f.lane * step;
+      taken.push(boxAt(0));
+    }
     const peak = f.pop || 1.2;
     // overshoot to the peak in the first 12%, settle back to 1 by 40%
     const popT = dmg ? clamp((f.t - (f.bump || 0)) / 0.9, 0, 1) : life;
