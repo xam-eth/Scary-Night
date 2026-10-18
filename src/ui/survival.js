@@ -33,7 +33,7 @@
 
 import { clamp, writeSave } from '../core/util.js';
 import { SURVIVAL_ACTOR_SCALE } from '../core/config.js';
-import { SURVIVAL_BUILDINGS, BUILDING_MAX_LEVEL, HUNTER_MAX_LEVEL, GUARD, CINE, SURVIVAL_CAMERA } from '../game/survival.js';
+import { SURVIVAL_BUILDINGS, BUILDING_MAX_LEVEL, HUNTER_MAX_LEVEL, ARMS_MAX_LEVEL, GUARD, CINE, SURVIVAL_CAMERA } from '../game/survival.js';
 import { pauseButtonBox } from '../game/hud.js';
 import {
   drawSurvivalIcon, drawLabel, measureLabel, drawPanel, drawCounter, drawBar,
@@ -463,13 +463,59 @@ function onScreen(p, w, h, pad = 0) {
   return p.x >= pad && p.x <= w - pad && p.y >= pad && p.y <= h - pad;
 }
 
+/**
+ * Where an edge pointer must not sit (BUILD 14, a BUILD 13 note): the stick's
+ * ring (bottom left) and the CAPTAIN chip (top middle). Set once a frame by
+ * the world layers (edgeAvoid); drawEdgeMarker slides a pointer along its
+ * edge until it is clear of them.
+ */
+let EDGE_AVOID = [];
+function edgeAvoid(game, w, h) {
+  const out = [];
+  const input = game.input;
+  const s = input && input.stick;
+  if (s && input.gameplay) {
+    const hx = s.active ? s.ox : (s.homeX || w * 0.16), hy = s.active ? s.oy : (s.homeY || h - 120);
+    out.push({ kind: 'circle', x: hx, y: hy, r: (s.r || 52) + 4 });
+  }
+  const chip = recenterChipBox(game, w, h);
+  if (chip) out.push({ kind: 'rect', ...chip });
+  EDGE_AVOID = out;
+  return out;
+}
+
+function edgeClear(x, y, pad = 24) {
+  for (const ob of EDGE_AVOID) {
+    if (ob.kind === 'circle') { if (Math.hypot(x - ob.x, y - ob.y) < ob.r + pad) return false; continue; }
+    const nx = clamp(x, ob.x, ob.x + ob.w), ny = clamp(y, ob.y, ob.y + ob.h);
+    if (Math.hypot(x - nx, y - ny) < pad) return false;
+  }
+  return true;
+}
+
 function drawEdgeMarker(ctx, w, h, p, icon, color, top = 128, bottom = 150, count = 0) {
   const cx = w / 2, cy = (top + (h - bottom)) / 2;
   const dx = p.x - cx, dy = p.y - cy;
   const hw = w / 2 - 28, hh = (h - bottom - top) / 2 - 10;
   const k = Math.min(hw / Math.max(1e-3, Math.abs(dx)), hh / Math.max(1e-3, Math.abs(dy)));
-  const x = cx + dx * k, y = cy + dy * k;
-  const a = Math.atan2(dy, dx);
+  let x = cx + dx * k, y = cy + dy * k;
+  if (!edgeClear(x, y)) {
+    // slide along the edge it sits on, away from what it would cover, the
+    // shorter way round (a step at a time, never past the edge's ends)
+    const x0 = cx - hw, x1 = cx + hw, y0 = cy - hh, y1 = cy + hh;
+    const vertical = Math.abs(x - x0) < 0.5 || Math.abs(x - x1) < 0.5;
+    let best = null;
+    for (const dir of [-1, 1]) {
+      for (let step = 6; step <= 360; step += 6) {
+        const nx = vertical ? x : clamp(x + dir * step, x0, x1);
+        const ny = vertical ? clamp(y + dir * step, y0, y1) : y;
+        if (edgeClear(nx, ny)) { if (!best || step < best.step) best = { x: nx, y: ny, step }; break; }
+        if ((vertical && (ny === y0 || ny === y1)) || (!vertical && (nx === x0 || nx === x1))) break;
+      }
+    }
+    if (best) { x = best.x; y = best.y; }
+  }
+  const a = Math.atan2(p.y - y, p.x - x);
   if (count > 0) {
     // how many are at that gate, on the screen-side of the pointer: the
     // number that says "go there now" (the idle loss's tip, R4)
@@ -519,8 +565,34 @@ function boxesOverlap(a, b) {
   return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 }
 
-function drawFloaters(game, ctx) {
+/**
+ * The top HUD's boxes (BUILD 14, a BUILD 13 note): the pause button, the
+ * phase pill, the counters (and the builder chip under them by day) and, at
+ * night, the keep's bar. A damage number never climbs in under them.
+ */
+function hudBand(game, w, h) {
   const mode = game.survival;
+  if (!(w > 0 && h > 0) || !mode) return [];
+  const night = mode.phase === 'night';
+  const short = h < 560;
+  const out = [];
+  const pause = pauseButtonBox(w, h);
+  out.push({ x: 0, y: 0, w: pause.x + pause.w + 4, h: pause.y + pause.h + 4 });
+  const pillW = night ? Math.min(156, w - 216) : Math.min(212, w - 216);
+  out.push({ x: w / 2 - pillW / 2 - 4, y: 0, w: pillW + 8, h: 8 + (night ? 68 : 46) + 4 });
+  const gap = night ? 36 : short ? 34 : 40;
+  const chip = !night && mode.builderJob ? 24 + 4 : 0;
+  out.push({ x: w - 88 - 8 - 4, y: 0, w: 88 + 12, h: 10 + 2 * gap + 30 + 4 + (chip ? gap - 30 + chip : 0) });
+  if (night) {
+    const kw = short ? Math.min(210, w * 0.26) : Math.min(220, w - 220);
+    out.push(short ? { x: 60, y: 0, w: kw + 8, h: 14 + 28 + 4 } : { x: w / 2 - kw / 2 - 4, y: 78, w: kw + 8, h: 28 + 8 });
+  }
+  return out;
+}
+
+function drawFloaters(game, ctx, w = 0, h = 0) {
+  const mode = game.survival;
+  const band = hudBand(game, w, h);
   // Damage numbers keep clear of each other and of the captain's bar (BUILD
   // 13): a new number that would land on one already showing takes the next
   // free step up (at most DMG_LANES) and keeps that step for its life, so a
@@ -544,9 +616,16 @@ function drawFloaters(game, ctx) {
       if (f.lane == null) {
         let lane = 0;
         while (lane < DMG_LANES && taken.some((box) => boxesOverlap(box, boxAt(lane)))) lane++;
+        // a step up that would put it under the top HUD is not taken
+        while (lane > 0 && band.some((box) => boxesOverlap(box, boxAt(lane)))) lane--;
         f.lane = lane;
       }
       at.y -= f.lane * step;
+      // rising, it stops under the HUD's boxes instead of going in under them
+      for (let pass = 0; pass < 2; pass++) {
+        const hit = band.find((box) => boxesOverlap(box, boxAt(0)));
+        if (hit) at.y = hit.y + hit.h + bh / 2 + 2;
+      }
       taken.push(boxAt(0));
     }
     const peak = f.pop || 1.2;
@@ -593,6 +672,7 @@ function drawNightWorldLayer(game, ctx, w, h) {
   const t = clock(game);
   const p = game.player;
   const zoom = game.renderer.cam.zoom;
+  edgeAvoid(game, w, h);
 
   // Gates: a wave marching on one (amber: where to go next — R6's marker),
   // one under siege (its HP), a fresh breach. Off screen each becomes a
@@ -718,7 +798,7 @@ function drawNightWorldLayer(game, ctx, w, h) {
   }
 
   drawHunterBar(game, ctx, p);
-  drawFloaters(game, ctx);
+  drawFloaters(game, ctx, w, h);
 }
 
 /** Hunter HP over his hat, with his level on a gold chip. */
@@ -841,7 +921,7 @@ function dayAction(mode, here) {
     const next = mode.hunterStats(Math.min(HUNTER_MAX_LEVEL, level + 1));
     const tag = max ? (now.fan > 1 ? '×3' : '') : next.fan > now.fan ? '×3 FAN' : next.pierce > now.pierce ? 'PIERCE' : '';
     return {
-      icon: 'hunter', name: 'HUNTER', level, maxLevel: HUNTER_MAX_LEVEL, tag,
+      icon: 'hunter', name: 'CAPTAIN', level, maxLevel: HUNTER_MAX_LEVEL, tag,
       rows: [
         { icon: 'crossbow', now: `${now.damage}`, next: max ? null : `${next.damage}` },
         { icon: 'heart', now: `${now.hp}`, next: max ? null : `${next.hp}` },
@@ -849,6 +929,30 @@ function dayAction(mode, here) {
       main: max
         ? { label: 'MAX', icon: 'star', id: 'UPGRADE MAX', disabled: true, color: 'gold' }
         : { label: 'UPGRADE', icon: 'up', id: `UPGRADE HUNTER LV${level + 1}`, cost, color: 'gold', disabled: busy || !affordable(mode, cost), run: () => mode.startBuild('hunter') },
+    };
+  }
+  if (here.kind === 'arms') {
+    // BUILD 14: the garrison's crossbows — one level for every guard, seen
+    // on each of them (and on the rack) the moment it is done
+    const level = mode.armsLevel;
+    const max = level >= ARMS_MAX_LEVEL;
+    const cost = mode.armsUpgradeCost();
+    const now = mode.armsStats(level);
+    const next = mode.armsStats(Math.min(ARMS_MAX_LEVEL, level + 1));
+    const tag = max ? (now.pierce ? 'PIERCE' : '') : next.pierce > now.pierce ? 'PIERCE' : next.every < now.every ? 'FASTER' : '';
+    const job = mode.builderJob;
+    const pct = job && job.kind === 'arms' ? 1 - clamp(job.remaining / Math.max(0.01, job.duration), 0, 1) : null;
+    return {
+      icon: 'crossbow', name: 'GUARD BOWS', level, maxLevel: ARMS_MAX_LEVEL, tag,
+      rows: [
+        { icon: 'crossbow', now: `${now.damage}`, next: max ? null : `${next.damage}` },
+        { icon: 'guard', now: `×${mode.survivors}`, next: null },
+      ],
+      main: pct != null
+        ? { label: `UPGRADING ${Math.round(pct * 100)}%`, icon: 'up', id: 'UPGRADING ARMS', disabled: true, color: 'gold' }
+        : max
+          ? { label: 'MAX', icon: 'star', id: 'UPGRADE MAX', disabled: true, color: 'gold' }
+          : { label: 'UPGRADE', icon: 'up', id: `UPGRADE ARMS LV${level + 1}`, cost, color: 'gold', disabled: busy || !affordable(mode, cost), run: () => mode.startBuild('arms') },
     };
   }
   if (here.kind === 'gate') {
@@ -1113,6 +1217,7 @@ function drawDayWorldLayer(game, ctx, w, h, view) {
   const mode = game.survival;
   const t = clock(game);
   const p = game.player;
+  edgeAvoid(game, w, h);
   const here = mode.dayContext();
   let nearestOff = null, nearestD = Infinity;
   const overview = mode.userZoom() <= OVERVIEW_ZOOM;
@@ -1126,7 +1231,7 @@ function drawDayWorldLayer(game, ctx, w, h, view) {
   // bailey).
   const empty = [];
   for (const point of mode.dayPoints()) {
-    if (point.kind === 'keep' || point.kind === 'armory') continue;
+    if (point.kind === 'keep' || point.kind === 'armory' || point.kind === 'arms') continue;
     if (here && here.id === point.id) continue;
     if (point.locked) continue;
     const built = point.kind === 'slot' ? !!point.built : mode.gateBuilt;
@@ -1184,6 +1289,37 @@ function drawDayWorldLayer(game, ctx, w, h, view) {
     drawStatusPill(ctx, arrow ? at.x + 22 + pw / 2 : at.x, at.y + (arrow ? 0 : 2), { ...status, tint: meta && meta.color }, standing ? 1 : 0.94);
     shown.pills++;
   }
+  // BUILD 14: the two upgrade stations of the south-east district — the
+  // armory (the captain's crossbow) and the arms rack (every guard's) — each
+  // with its level as a pill when the captain is near, and the gold arrow
+  // whenever its next level is affordable (as over a building's roof)
+  shown.stations = [];
+  for (const point of mode.dayPoints()) {
+    if (point.kind !== 'armory' && point.kind !== 'arms') continue;
+    if (here && here.id === point.id) continue;
+    const arms = point.kind === 'arms';
+    const at = project(game, point.x, point.y, arms ? 112 : 104);
+    if (!(at.x > view.x0 && at.x < view.x1 && at.y > view.y0 && at.y < view.y1)) continue;
+    const cost = arms ? mode.armsUpgradeCost() : mode.hunterUpgradeCost();
+    const arrow = !!cost && !mode.builderJob && affordable(mode, cost);
+    const near = !overview && Math.hypot(point.x - p.x, point.y - p.y) <= STATUS_REACH;
+    const status = arms
+      ? { icon: 'crossbow', text: `Lv${mode.armsLevel}`, color: mode.armsLevel >= 3 ? '#ffd24a' : '#9fd0ff', tint: '#3e7bff' }
+      : { icon: 'hunter', text: `Lv${mode.hunterLevel}`, color: '#ffd24a', tint: '#ffd24a' };
+    const pw = near ? statusPillWidth(ctx, status) : 0;
+    if (near) { drawStatusPill(ctx, arrow ? at.x + 22 + pw / 2 : at.x, at.y + (arrow ? 0 : 2), status, 0.94); shown.pills++; }
+    if (arrow) {
+      const bob = Math.sin(t * 4 + point.x * 0.01) * 2;
+      ctx.save();
+      ctx.beginPath(); ctx.arc(at.x, at.y + bob, 15, 0, TAU);
+      ctx.fillStyle = '#fff3c4'; ctx.fill();
+      ctx.lineWidth = 2.2; ctx.strokeStyle = INK; ctx.stroke();
+      ctx.restore();
+      drawSurvivalIcon(ctx, 'up', at.x, at.y + bob, 21);
+      addHit(game, { x: at.x - 24, y: at.y + bob - 24, w: 48, h: 48 }, `walk:${point.id}`, () => mode.walkTo(point.x, point.y), false, true);
+    }
+    shown.stations.push({ id: point.id, near, arrow });
+  }
   // BUILD 13 (V10, research §7: "info gelombang sebelum malam"; Thronefall's
   // edge icons): tonight's attack by day — every gate it will hit, what comes
   // and how many (the plan the night plays: game/survival.js tonightPlan). In
@@ -1231,11 +1367,12 @@ function drawDayWorldLayer(game, ctx, w, h, view) {
       ctx.beginPath(); ctx.arc(at.x, at.y, 17, -Math.PI / 2, -Math.PI / 2 + TAU * pct);
       ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.strokeStyle = '#45d06a'; ctx.stroke();
       ctx.restore();
-      drawSurvivalIcon(ctx, job.kind === 'hunter' ? 'up' : 'hammer', at.x, at.y, 22, { rotate: job.kind === 'hunter' ? 0 : Math.sin(t * 10) * 0.3 });
+      const upgrade = job.kind === 'hunter' || job.kind === 'arms';
+      drawSurvivalIcon(ctx, upgrade ? 'up' : 'hammer', at.x, at.y, 22, { rotate: upgrade ? 0 : Math.sin(t * 10) * 0.3 });
     }
   }
   drawHunterBar(game, ctx, p);
-  drawFloaters(game, ctx);
+  drawFloaters(game, ctx, w, h);
 }
 
 function drawRewardModal(game, ctx, w, h) {
@@ -1334,7 +1471,8 @@ function drawDayScreen(game, ctx, w, h) {
   if (job && !reward) {
     const cw = 80, cx = w - cw - 8, cy = 10 + 3 * (short ? 34 : 40);
     drawPanel(ctx, cx, cy, cw, 24, { radius: 12, top: '#4a51a8', bottom: '#262a66', lineWidth: 2 });
-    drawSurvivalIcon(ctx, job.kind === 'hunter' ? 'hunter' : 'hammer', cx + 13, cy + 12, 18, { rotate: job.kind === 'hunter' ? 0 : Math.sin(clock(game) * 10) * 0.3 });
+    const chipIcon = job.kind === 'hunter' ? 'hunter' : job.kind === 'arms' ? 'crossbow' : 'hammer';
+    drawSurvivalIcon(ctx, chipIcon, cx + 13, cy + 12, 18, { rotate: chipIcon === 'hammer' ? Math.sin(clock(game) * 10) * 0.3 : 0 });
     drawBar(ctx, cx + 26, cy + 7, cw - 34, 10, 1 - clamp(job.remaining / Math.max(0.01, job.duration), 0, 1), '#45d06a');
   }
 
@@ -1438,13 +1576,21 @@ function drawZoomButtons(game, ctx, w, h) {
  * the top of the screen brings it back (so does walking, or a tap on free
  * ground).
  */
-function drawRecenterChip(game, ctx, w, h) {
+function recenterChipBox(game, w, h) {
   const mode = game.survival;
-  if (!mode || mode.cine || typeof mode.cameraOffset !== 'function' || mode.cameraOffset() < 90) return;
+  if (!mode || mode.cine || typeof mode.cameraOffset !== 'function' || mode.cameraOffset() < 90) return null;
   const short = h < 560;
   const bw = 96, bh = 30;
-  const x = w / 2 - bw / 2;
-  const y = short ? (mode.phase === 'night' ? 80 : 60) : (mode.phase === 'night' ? 112 : 92);
+  return { x: w / 2 - bw / 2, y: short ? (mode.phase === 'night' ? 80 : 60) : (mode.phase === 'night' ? 112 : 92), w: bw, h: bh };
+}
+
+function drawRecenterChip(game, ctx, w, h) {
+  const box = recenterChipBox(game, w, h);
+  if (!box) return;
+  const mode = game.survival;
+  const bw = box.w, bh = box.h;
+  const x = box.x;
+  const y = box.y;
   addHit(game, { x: x - 4, y: y - 4, w: bw + 8, h: bh + 8 }, 'RECENTER', () => mode.recenterCamera());
   drawPanel(ctx, x, y, bw, bh, { radius: 15, top: '#ffffff', bottom: '#e3e8ff', lineWidth: 2, highlight: false });
   drawSurvivalIcon(ctx, 'hunter', x + 16, y + bh / 2, 22);

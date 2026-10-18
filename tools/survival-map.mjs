@@ -81,6 +81,7 @@ const plots = SURVIVAL_SLOTS.map((slot) => {
   return { id: slot.id, type: slot.type, room: slot.room, level: slot.level, x: spot.x, y: spot.y, doorId: spot.doorId || null, face: spot.face == null ? null : spot.face };
 });
 const armory = mode.armorySpot();
+const arms = mode.armsSpot();   // BUILD 14: the garrison's crossbows
 const gateSpot = mode.gateSpot();
 const home = mode.hunterHome();
 
@@ -133,10 +134,19 @@ for (const p of plots.filter((q) => q.type === 'tower')) {
   check(`ballista ${p.id} guards a gate`, !!door, p.doorId || 'none');
   if (door) check(`ballista ${p.id} sees out of ${door.id}`, mode.boltPath(p.x, p.y, door.outside.x, door.outside.y));
 }
-for (const [name, q] of [['armory', armory], ['barricade', gateSpot], ['home', home]]) {
+for (const [name, q] of [['armory', armory], ['arms rack', arms], ['barricade', gateSpot], ['home', home]]) {
   const hit = plots.filter((p) => Math.hypot(p.x - q.x, p.y - q.y) < plotR + 40);
   check(`${name} clear of the plots`, hit.length === 0, hit.map((p) => p.id).join(','));
 }
+// BUILD 14: the two stations (the armory, the arms rack) stand on pads like
+// the plots: clear of the masonry and the props, 120+ px of grass apart
+for (const [name, q] of [['armory', armory], ['arms rack', arms]]) {
+  const hitWall = solids.filter((s) => rectCircle(s, q.x, q.y, plotR + 6));
+  const hitProp = props.filter((f) => rectCircle(f, q.x, q.y, plotR + 10));
+  check(`${name} pad clear of masonry and props`, hitWall.length === 0 && hitProp.length === 0, [...hitWall, ...hitProp].map((s) => s.type).join(','));
+}
+const stationGap = Math.hypot(arms.x - armory.x, arms.y - armory.y) - plotR * 2;
+check(`the arms rack is the armory's neighbour on its row (gap ${Math.round(stationGap)} >= 120)`, arms.y === armory.y && stationGap >= 120);
 // tidy: plots that share a yard pattern line up (same |x| or |y| as their mirror)
 const byId = new Map(plots.map((p) => [p.id, p]));
 const mirror = (a, b, axis) => {
@@ -158,6 +168,8 @@ for (const p of plots) check(`plot ${p.id} on a plan column (|x| in ${columns.jo
 // the plaza's edge
 const ward = byId.get('ward');
 check('armory is the ward barracks\' twin through the keep', ward && Math.abs((armory.x - keep.x) + (ward.x - keep.x)) <= 2 && Math.abs((armory.y - keep.y) + (ward.y - keep.y)) <= 2);
+const nw = byId.get('northwest');
+check('the arms rack is the north-west barracks\' twin through the keep', nw && Math.abs((arms.x - keep.x) + (nw.x - keep.x)) <= 2 && Math.abs((arms.y - keep.y) + (nw.y - keep.y)) <= 2);
 const homeD = Math.hypot(home.x - keep.x, home.y - keep.y);
 check('the captain starts on a road axis at the plaza\'s edge', (Math.abs(home.x - keep.x) <= 2 || Math.abs(home.y - keep.y) <= 2)
   && homeD > keep.r + 40 && homeD < PLAZA_R + 40, `${Math.round(homeD)} px from the keep`);
@@ -176,13 +188,13 @@ for (const p of economy) {
 check('each district (grass quarter) holds one trade', [...districts.values()].every((types) => types.size === 1),
   [...districts].map(([q, types]) => `${q}:${[...types].join('+')}`).join(' '));
 check('the trades are NW barracks, NE mines, SW sawmills; SE the armory', districts.get('NW')?.has('barracks') && districts.get('NE')?.has('mine')
-  && districts.get('SW')?.has('sawmill') && !districts.has('SE') && quarter(armory) === 'SE');
+  && districts.get('SW')?.has('sawmill') && !districts.has('SE') && quarter(armory) === 'SE' && quarter(arms) === 'SE');
 let econGap = Infinity;
 for (let i = 0; i < economy.length; i++) for (let j = i + 1; j < economy.length; j++) {
   econGap = Math.min(econGap, Math.hypot(economy[i].x - economy[j].x, economy[i].y - economy[j].y) - plotR * 2);
 }
 check(`economy plots keep 120+ px of grass between pads (min ${Math.round(econGap)})`, econGap >= 120);
-for (const p of [...economy, { id: 'armory', x: armory.x, y: armory.y }]) {
+for (const p of [...economy, { id: 'armory', x: armory.x, y: armory.y }, { id: 'arms rack', x: arms.x, y: arms.y }]) {
   const wall = Math.min(p.x - plotR - B0.x, B0.x + B0.w - p.x - plotR, p.y - plotR - B0.y, B0.y + B0.h - p.y - plotR);
   const offRoad = Math.abs(p.x - keep.x) - plotR >= ROAD_HALF && Math.abs(p.y - keep.y) - plotR >= ROAD_HALF;
   const offPlaza = Math.hypot(p.x - keep.x, p.y - keep.y) - plotR >= PLAZA_R;
@@ -295,7 +307,7 @@ for (const p of plots) {
   ctx.fillText(`${p.id} · Lv${p.level}`, X(p.x), Y(p.y) - plotR * S - 3);
   ctx.fillText(`(${p.x}, ${p.y})`, X(p.x), Y(p.y) + 3);
 }
-for (const [name, q, c] of [['ARMORY', armory, '#9b59b6'], ['GATE', gateSpot, '#16a085'], ['HOME', home, '#ffffff']]) {
+for (const [name, q, c] of [['ARMORY', armory, '#9b59b6'], ['ARMS', arms, '#3e7bff'], ['GATE', gateSpot, '#16a085'], ['HOME', home, '#ffffff']]) {
   ctx.fillStyle = c; ctx.beginPath(); ctx.arc(X(q.x), Y(q.y), 7, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = '#111'; ctx.font = 'bold 10px sans-serif'; ctx.fillText(name, X(q.x), Y(q.y) - 10);
 }
@@ -307,12 +319,12 @@ ctx.fillText(`Bailey plan — ${plots.length} plots, ${results.length - fails.le
 
 for (const r of results) if (!r.ok || args.verbose) console.log(`  ${r.ok ? 'PASS' : 'FAIL'}  ${r.name}${r.detail ? ` — ${r.detail}` : ''}`);
 console.log(`plots: ${plots.map((p) => `${p.id}@(${p.x},${p.y})`).join(' ')}`);
-console.log(`armory (${armory.x},${armory.y}) gate (${gateSpot.x},${gateSpot.y}) home (${home.x},${home.y})`);
+console.log(`armory (${armory.x},${armory.y}) arms (${arms.x},${arms.y}) gate (${gateSpot.x},${gateSpot.y}) home (${home.x},${home.y})`);
 console.log(`SUMMARY ${results.length - fails.length}/${results.length} layout checks pass`);
 if (OUT) {
   fs.mkdirSync(path.dirname(path.resolve(OUT)), { recursive: true });
   fs.writeFileSync(OUT, cv.toBuffer('image/png'));
   console.log(`wrote ${OUT}`);
 }
-if (JSON_OUT) fs.writeFileSync(JSON_OUT, JSON.stringify({ plots, armory, gateSpot, home, results }, null, 2));
+if (JSON_OUT) fs.writeFileSync(JSON_OUT, JSON.stringify({ plots, armory, arms, gateSpot, home, results }, null, 2));
 process.exit(fails.length ? 1 : 0);

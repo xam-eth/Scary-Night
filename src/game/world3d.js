@@ -39,6 +39,18 @@ const PLOT_PAD_ACROSS = 158;
 const FORT_WALL_FALLBACK = PIECE_METRES.wall;
 const GUARD_CHEST = 80;
 const GUARD_CLIMB_SHARE = 0.75;
+/**
+ * BUILD 14: a guard's bolt by the garrison's arms level (survival.js
+ * SURVIVAL_ARMS): Lv1 the cool blue tracer it always had, Lv2 a longer
+ * white-blue one, Lv3 a thick gold bolt (it runs on through a body).
+ */
+const GUARD_BOLT = Object.freeze({
+  guard: Object.freeze({ level: 1, color: 0xa8ecff, glow: 0x6fd6ff, trail: 0x7fd8ff, muzzle: 0x8fe3ff, sx: 3.8, length: 120, size: 46 }),
+  guard2: Object.freeze({ level: 2, color: 0xe6f4ff, glow: 0x5a96ff, trail: 0x79a8ff, muzzle: 0x9cc4ff, sx: 4.3, length: 145, size: 54 }),
+  guard3: Object.freeze({ level: 3, color: 0xfff1b0, glow: 0xffc23a, trail: 0xffcf5a, muzzle: 0xffd86a, sx: 4.9, length: 170, size: 62 }),
+});
+/** The arms rack's crossbow on show (BUILD 14): its width on the crate, world px. */
+const ARMS_DISPLAY_WIDTH = 96;
 const PARTICLE_VERTEX_SHADER = `
   attribute vec3 aColor;
   attribute float aAlpha;
@@ -1292,7 +1304,7 @@ class World3DRuntime {
     if (spot && job && mode.phase === 'day') {
       const pct = 1 - clamp(job.remaining / Math.max(0.01, job.duration), 0, 1);
       if (job.slotId) want = pct < 1 / 3 ? 'stageA' : pct < 2 / 3 ? 'stageB' : 'stageC';
-      else if (job.kind !== 'hunter') want = 'scaffold';
+      else if (job.kind !== 'hunter' && job.kind !== 'arms') want = 'scaffold';
     }
     for (const [key, holder] of Object.entries(stages)) {
       holder.visible = key === want;
@@ -1336,6 +1348,99 @@ class World3DRuntime {
     put('barrel', -46, 28, 190, 0.5);
     this.root.add(group);
     return group;
+  }
+
+  /**
+   * The arms rack (BUILD 14): the garrison's crossbows are bought here. A
+   * weapon rack, a barrel and a bucket of bolts behind a crate that carries,
+   * turning slowly, the crossbow every guard holds at the current arms level
+   * (troop3d.js TROOP_BOWS: plain, royal blue, the blue-and-gold arbalest),
+   * so the upgrade shows in the bailey and not only in a card.
+   */
+  _makeArmsStation(kit) {
+    const group = new THREE.Group();
+    group.name = 'survival-arms-3d';
+    group.userData.kit = !!kit;
+    const put = (key, x, z, scale, ry = 0) => {
+      const item = kit ? Buildings3D.clone(key) : null;
+      if (!item) return null;
+      item.position.set(x, 0, z);
+      item.scale.setScalar(scale);
+      item.rotation.y = ry;
+      group.add(item);
+      return item;
+    };
+    put('weaponrack', -26, -30, 230, 0);
+    put('barrel', 40, -30, 180, 0.4);
+    put('bucketArrows', 46, 26, 190, 0);
+    // the stand: the pack's crate sized to 50 px (a plain box before the kit)
+    let top = 34;
+    const box = kit ? Buildings3D.box('crate') : null;
+    const size = box ? box.getSize(new THREE.Vector3()) : null;
+    if (size && size.x > 0) {
+      const k = 50 / Math.max(size.x, size.z);
+      const crate = put('crate', 0, 0, k, 0.2);
+      if (crate) {
+        crate.position.y = -box.min.y * k;
+        top = size.y * k;
+      }
+    } else {
+      const crate = new THREE.Mesh(new THREE.BoxGeometry(48, 34, 40), new THREE.MeshStandardMaterial({ color: 0x8a6a44, roughness: 0.9, flatShading: true }));
+      crate.position.y = 17;
+      crate.castShadow = true;
+      group.add(crate);
+    }
+    const holder = new THREE.Group();
+    holder.name = 'survival-arms-display';
+    holder.position.set(0, top + 16, 0);
+    group.add(holder);
+    group.userData.holder = holder;
+    group.userData.top = top;
+    group.userData.level = 0;
+    this.root.add(group);
+    return group;
+  }
+
+  _syncSurvivalArms(game, mode, kit, t) {
+    if (this.survivalArms && kit && !this.survivalArms.userData.kit) {
+      this.root.remove(this.survivalArms);
+      this.survivalArms = null;
+    }
+    if (!this.survivalArms) this.survivalArms = this._makeArmsStation(kit);
+    const group = this.survivalArms;
+    const spot = mode.armsSpot();
+    group.visible = true;
+    group.position.set(spot.x, kit ? this._padTop() : 0, spot.y);
+    Troop3D.init();
+    const level = mode.armsLevel || 1;
+    const ud = group.userData;
+    if (Troop3D.ready && ud.level !== level) {
+      const rec = Troop3D.bow(level);
+      if (rec) {
+        const holder = ud.holder;
+        for (const child of [...holder.children]) holder.remove(child);
+        const bow = rec.model.clone(true);
+        bow.name = `survival-arms-bow-lv${level}`;
+        const bb = new THREE.Box3().setFromObject(rec.model);
+        const bs = bb.getSize(new THREE.Vector3());
+        const k = ARMS_DISPLAY_WIDTH / Math.max(0.01, bs.x);
+        bow.scale.setScalar(k);
+        // centred over the crate, lying with its stock toward the camera
+        bow.position.set(-(bb.min.x + bb.max.x) / 2 * k, -(bb.min.y + bb.max.y) / 2 * k, -(bb.min.z + bb.max.z) / 2 * k);
+        const tilt = new THREE.Group();
+        tilt.rotation.x = -0.35;
+        tilt.add(bow);
+        holder.add(tilt);
+        if (ud.level && level > ud.level) this._playFx({ kind: 'arm', x: spot.x, y: spot.y, h: ud.top + 20, color: level >= 3 ? 0xffd24a : 0x6fa8ff });
+        ud.level = level;
+      }
+    }
+    // a slow turn on show; a fast one (and a hop) while the smith works on it
+    const working = mode.builderJob && mode.builderJob.kind === 'arms' && mode.phase === 'day';
+    const dt = this._troopDt(game, 'arms');
+    ud.spin = (ud.spin || 0) + dt * (working ? 5.5 : 0.7);
+    ud.holder.rotation.y = ud.spin;
+    ud.holder.position.y = ud.top + 16 + (working ? Math.abs(Math.sin(t * 9)) * 6 : Math.sin(t * 1.6) * 2);
   }
 
   /** A see-through blue copy of a building: what a circle will build. */
@@ -1863,9 +1968,10 @@ class World3DRuntime {
       // night, so the bailey reads as laid out: the pack's dirt hex (the
       // armory has one). A locked plot's pad stays hidden until the banner
       // reaches its yard (BUILD 11: "terlihat sangat padat")
-      if (kit && (point.kind === 'slot' || point.kind === 'armory')) {
+      const station = point.kind === 'armory' || point.kind === 'arms';
+      if (kit && (point.kind === 'slot' || station)) {
         let pad = this.survivalPads.get(point.id);
-        if (!pad) { pad = this._makeKitPad(point.kind === 'armory' ? 136 : PLOT_PAD_ACROSS); this.survivalPads.set(point.id, pad); }
+        if (!pad) { pad = this._makeKitPad(station ? 136 : PLOT_PAD_ACROSS); this.survivalPads.set(point.id, pad); }
         if (pad) { pad.visible = !point.locked || !!point.built; pad.position.set(point.x, 0, point.y); }
       }
       // a ghost made before the kit arrived is rebuilt from it
@@ -1874,22 +1980,23 @@ class World3DRuntime {
         rec.ghost = null;
       }
       const near = here && here.id === point.id;
-      const built = point.kind === 'slot' ? !!point.built : point.kind === 'gate' ? mode.gateBuilt : point.kind === 'armory';
+      const built = point.kind === 'slot' ? !!point.built : point.kind === 'gate' ? mode.gateBuilt : station;
       const working = mode.builderJob && ((mode.builderJob.slotId && mode.builderJob.slotId === point.id)
-        || (point.kind === 'gate' && mode.builderJob.kind === 'gate') || (point.kind === 'armory' && mode.builderJob.kind === 'hunter'));
+        || (point.kind === 'gate' && mode.builderJob.kind === 'gate') || (point.kind === 'armory' && mode.builderJob.kind === 'hunter')
+        || (point.kind === 'arms' && mode.builderJob.kind === 'arms'));
       // BUILD 11: a circle in its building's colour (the same as the roof it
       // will get and its label); none over a locked plot
       const tint = point.kind === 'slot' ? (BUILDING_COLOR[point.type] || 0xffffff) : 0xffffff;
       const ring = rec.ring;
       ring.visible = day && (!built || near) && !working && !point.locked;
       if (ring.visible) {
-        ring.position.set(point.x, point.kind === 'slot' || point.kind === 'armory' ? this._padTop() + 1.6 : 2.4, point.y);
+        ring.position.set(point.x, point.kind === 'slot' || station ? this._padTop() + 1.6 : 2.4, point.y);
         const pulse = near ? 1 + 0.06 * Math.sin(t * 6) : 1;
         ring.scale.set(pulse, pulse, 1);
         ring.material.color.setHex(built ? 0xffd24a : tint);
         ring.material.opacity = near ? 1 : 0.7;
       }
-      if (point.kind === 'armory') continue;
+      if (station) continue;
       // the see-through model of what a circle builds only where the captain
       // stands (one, not fifteen: BUILD 11)
       const showGhost = day && !built && !working && near && !point.locked;
@@ -1944,6 +2051,8 @@ class World3DRuntime {
     const armory = mode.armorySpot();
     this.survivalArmory.visible = true;
     this.survivalArmory.position.set(armory.x, kit ? this._padTop() : 0, armory.y);
+    // BUILD 14: the arms rack beside it, the garrison's crossbow on show
+    this._syncSurvivalArms(game, mode, kit, t);
     // the job under way: the pack's construction stages / scaffolding, or
     // (before the kit arrives) the procedural scaffold and its builder
     if (!this.survivalScaffold) this.survivalScaffold = this._makeSurvivalScaffold();
@@ -2425,6 +2534,17 @@ class World3DRuntime {
       if (!show) continue;
       const ud = mesh.userData;
       const troop = this._dressSurvivalGuard(mesh);
+      // BUILD 14: the garrison's crossbow (arms level); a flash in the
+      // level's colour on each guard when it changes in play
+      const was = troop ? troop.armsLevel || 0 : 0;
+      if (troop && Troop3D.arm(troop, mode.armsLevel || 1)) {
+        // an upgrade only (a new run puts the plain bow back without a show)
+        const lv = mode.armsLevel || 1;
+        if (ud.armed && !guard.down && lv > was) {
+          this._playFx({ kind: 'arm', x: guard.x, y: guard.y, color: lv >= 3 ? 0xffd24a : 0x6fa8ff });
+        }
+        ud.armed = true;
+      }
       const down = !!guard.down;
       if (ud.down !== down) {
         // fallen: on its back across the ring, which turns red (the GLB
@@ -2980,7 +3100,7 @@ class World3DRuntime {
   _boltLook(bolt) {
     if (bolt.kind === 'knife') return 'knife';
     if (bolt.tower) return 'tower';
-    if (bolt.guard) return 'guard';
+    if (bolt.guard) return bolt.arms >= 3 ? 'guard3' : bolt.arms === 2 ? 'guard2' : 'guard';
     if (bolt.friendly) return 'tracer';
     return bolt.kit && bolt.kit.blessed ? 'blessed' : 'plain';
   }
@@ -2999,24 +3119,25 @@ class World3DRuntime {
       mesh.name = 'throwing-knife-3d';
       return mesh;
     }
-    if (look === 'tracer' || look === 'guard' || look === 'tower') {
+    if (look === 'tracer' || look === 'tower' || GUARD_BOLT[look]) {
       // Survival reads at phone zoom: a thick, unlit tracer with a glowing
       // head and an additive streak behind it, instead of a 1px wooden
       // shaft and a 1px line (playtest 2026-10-16: "demege animasi shot
       // juga kurang effect nya"). Warm for the Hunter, cool blue for the
       // guards, a fat red-orange ballista bolt for a tower. The group is
       // aligned so +Y is the flight direction.
-      const color = look === 'guard' ? 0xa8ecff : look === 'tower' ? 0xff7a3a : 0xffe08a;
-      const glowColor = look === 'guard' ? 0x6fd6ff : look === 'tower' ? 0xff6a1a : 0xffc04a;
+      const gb = GUARD_BOLT[look] || null;      // a guard's, by arms level (BUILD 14)
+      const color = gb ? gb.color : look === 'tower' ? 0xff7a3a : 0xffe08a;
+      const glowColor = gb ? gb.glow : look === 'tower' ? 0xff6a1a : 0xffc04a;
       const group = new THREE.Group();
       const shaft = new THREE.Mesh(this.boltGeometry, new THREE.MeshBasicMaterial({ color, toneMapped: false }));
       // sized for the x1.6 actors and the closer camera (2026-10-17)
-      const sx = look === 'tower' ? 6.5 : look === 'guard' ? 3.8 : 4.4;
+      const sx = look === 'tower' ? 6.5 : gb ? gb.sx : 4.4;
       const sy = look === 'tower' ? 3 : 2;
       shaft.scale.set(sx, sy, sx);
       shaft.name = 'bolt-shaft';
       const head = 13 * sy;                       // the shaft's tip, local +Y
-      const length = look === 'tower' ? 210 : look === 'guard' ? 120 : 150;
+      const length = look === 'tower' ? 210 : gb ? gb.length : 150;
       const radius = look === 'tower' ? 9.5 : 6;
       const streak = new THREE.Mesh(this._boltStreakGeometry(), new THREE.MeshBasicMaterial({
         color: glowColor, transparent: true, opacity: look === 'tower' ? 0.7 : 0.6, blending: THREE.AdditiveBlending,
@@ -3029,13 +3150,14 @@ class World3DRuntime {
       const glow = new THREE.Sprite(new THREE.SpriteMaterial({
         map: kit.glowTex, color: glowColor, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
       }));
-      const g = look === 'tower' ? 84 : look === 'guard' ? 46 : 56;
+      const g = look === 'tower' ? 84 : gb ? gb.size : 56;
       glow.scale.set(g, g, 1);
       glow.position.y = head;
       glow.name = 'bolt-glow';
       group.add(streak, shaft, glow);
       group.renderOrder = 6;
-      group.name = look === 'guard' ? 'guard-bolt-3d' : look === 'tower' ? 'tower-bolt-3d' : 'crossbow-bolt-3d';
+      group.name = gb ? 'guard-bolt-3d' : look === 'tower' ? 'tower-bolt-3d' : 'crossbow-bolt-3d';
+      if (gb) group.userData.armsLevel = gb.level;
       return group;
     }
     const blessed = look === 'blessed';
@@ -3115,7 +3237,7 @@ class World3DRuntime {
       coinMat: new THREE.MeshStandardMaterial({ color: 0xffd24a, emissive: 0x9a6a00, emissiveIntensity: 0.75, metalness: 0.55, roughness: 0.32, transparent: true }),
       logMat: new THREE.MeshStandardMaterial({ color: 0xa8743e, emissive: 0x2a1606, emissiveIntensity: 0.4, roughness: 0.85, flatShading: true, transparent: true }),
       live: [], spare: { sprite: [], star: [], ring: [], coin: [], log: [] },
-      played: { impact: 0, kill: 0, muzzle: 0, coin: 0, log: 0, rally: 0 },
+      played: { impact: 0, kill: 0, muzzle: 0, coin: 0, log: 0, rally: 0, arm: 0 },
     };
     return this.fxKit;
   }
@@ -3266,6 +3388,14 @@ class World3DRuntime {
       this._fx('ring', 'ring', ev.x, 3, ev.y, { color: 0x6fc8ff, s0: 28, s1: 200, life: 0.6, alpha: 0.95 });
       this._fx('ring', 'ring', ev.x, 3, ev.y, { color: 0xffffff, s0: 18, s1: 120, life: 0.4, alpha: 0.8, delay: 0.12 });
       this._fx('sprite', 'flash', ev.x, 80, ev.y, { color: 0x6fc8ff, s0: 50, s1: 200, life: 0.45, alpha: 0.85 });
+    } else if (ev.kind === 'arm') {
+      // BUILD 14: a guard's new crossbow (or the rack's): a ring and a glint
+      // in the level's colour at hand height
+      kit.played.arm++;
+      const color = ev.color || 0x6fa8ff;
+      this._fx('ring', 'ring', ev.x, 3, ev.y, { color, s0: 20, s1: 150, life: 0.55, alpha: 0.95 });
+      this._fx('sprite', 'flash', ev.x, ev.h || 70, ev.y, { color, s0: 40, s1: 170, life: 0.42, alpha: 0.9 });
+      this._fx('star', 'flash', ev.x, ev.h || 70, ev.y, { color: 0xffffff, s0: 24, s1: 110, life: 0.3, rot: Math.random() * Math.PI });
     }
     if (age > 0) {
       for (let i = start; i < kit.live.length; i++) {
@@ -3279,9 +3409,10 @@ class World3DRuntime {
   _makeBoltTrail(look) {
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(7 * 3), 3).setUsage(THREE.DynamicDrawUsage));
-    const bright = look === 'tracer' || look === 'guard' || look === 'tower';
+    const gb = GUARD_BOLT[look] || null;
+    const bright = look === 'tracer' || look === 'tower' || !!gb;
     const material = new THREE.LineBasicMaterial({
-      color: look === 'knife' ? 0xc4d4e0 : look === 'guard' ? 0x7fd8ff : look === 'tower' ? 0xff6a2a : look === 'tracer' ? 0xffc04a : look === 'blessed' ? 0xffe2a2 : 0x9b9aa9,
+      color: look === 'knife' ? 0xc4d4e0 : gb ? gb.trail : look === 'tower' ? 0xff6a2a : look === 'tracer' ? 0xffc04a : look === 'blessed' ? 0xffe2a2 : 0x9b9aa9,
       transparent: true, opacity: bright ? 0.8 : 0.42, depthWrite: false, toneMapped: false,
     });
     const line = new THREE.Line(geometry, material);
@@ -3328,8 +3459,9 @@ class World3DRuntime {
         if (game.mode === 'survival' && boltAge < 0.12) {
           const look = mesh.userData.boltLook;
           const muzzle0 = bolt.tower ? this._towerMuzzle(bolt) : 0;
-          const color = look === 'guard' ? 0x8fe3ff : look === 'tower' ? 0xff8a3a : 0xffd36a;
-          this._playFx({ kind: 'muzzle', x: bolt.ox, y: bolt.oy, h: 18 + muzzle0, color, size: look === 'tower' ? 86 : look === 'guard' ? 48 : 56, life: look === 'tower' ? 0.14 : 0.09 });
+          const gb = GUARD_BOLT[look] || null;
+          const color = gb ? gb.muzzle : look === 'tower' ? 0xff8a3a : 0xffd36a;
+          this._playFx({ kind: 'muzzle', x: bolt.ox, y: bolt.oy, h: 18 + muzzle0, color, size: look === 'tower' ? 86 : gb ? gb.size + 2 : 56, life: look === 'tower' ? 0.14 : 0.09 });
         }
       }
       // a tower's bolt leaves the ballista on the deck (a guard's, its post
@@ -4039,6 +4171,8 @@ class World3DRuntime {
         pads: [...this.survivalPads.values()].filter((pad) => pad && pad.visible).length,
         stage: this.survivalStage ? Object.entries(this.survivalStage).filter(([, holder]) => holder.visible).map(([key]) => key)[0] || null : null,
         armoryKit: !!(this.survivalArmory && this.survivalArmory.userData.kit),
+        armsKit: !!(this.survivalArms && this.survivalArms.userData.kit),
+        armsDisplay: this.survivalArms ? this.survivalArms.userData.level || 0 : 0,
         wells: (this.fortressWells || []).length,
         decor: this.fortressDecor ? { ...this.fortressDecor.userData } : null,
       },
@@ -4047,6 +4181,9 @@ class World3DRuntime {
         + (this.reliefTroops ? this.reliefTroops.filter((rec) => rec && rec.group.visible).length : 0),
       glbReliefTroops: this.reliefTroops ? this.reliefTroops.filter((rec) => rec && rec.group.visible).length : 0,
       glbGuards: (this.survivalGuardMeshes || []).filter((mesh) => mesh.visible && mesh.userData.troop).length,
+      // BUILD 14: the crossbow level in each visible guard's hand (and who holds it two-handed)
+      guardBows: (this.survivalGuardMeshes || []).filter((mesh) => mesh.visible && mesh.userData.troop).map((mesh) => mesh.userData.troop.armsLevel || 0),
+      guardTwoHanded: (this.survivalGuardMeshes || []).filter((mesh) => mesh.visible && mesh.userData.troop && mesh.userData.troop.twoHanded).length,
       troop3d: { ready: Troop3D.ready, failed: Troop3D.failed, error: Troop3D.error, made: Troop3D.made, livery: Troop3D.livery },
       fx: this.fxKit ? { live: this.fxKit.live.length, played: { ...this.fxKit.played } } : null,
       visibleVariants3D: [...this.variantRings.values()].filter((object) => object.visible).length,

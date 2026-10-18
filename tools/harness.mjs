@@ -1958,6 +1958,119 @@ async function runSurvivalMilestone() {
   }
   const b13Pass = b13Checks.length === 2 && b13Checks.every(Boolean);
 
+  // ---- BUILD 14 (2026-10-17: "senjata pasukan bisa di-upgrade"): the
+  // garrison's crossbows, bought by day at the arms rack beside the armory.
+  // The bow on every guard and on the rack is 3D (survival-plotsqa) ----
+  const b14Checks = [];
+  const b14Check = (name, ok, detail) => {
+    b14Checks.push(!!ok);
+    console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} (${detail})`);
+  };
+  {
+    const { SURVIVAL_ARMS, ARMS_MAX_LEVEL, PLOT, SURVIVAL_SLOTS: SLOTS, SurvivalCrowdZombie: Crowd, GUARD: GUARD_BASE } = await import('../src/game/survival.js');
+    window.localStorage.removeItem('lastnight.save.v1');
+    const ag = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+    const am = ag.survival;
+    const atick = (n = 1) => { for (let i = 0; i < n; i++) ag.update(step); };
+    const toDay = () => { am.phase = 'day'; ag.screen = 'playing'; ag.uiPanel = 'survival-day'; if (am.cine) am.cine = null; am.lastRewards = null; am.rewardAck = 1; };
+    // 1) the rack: a day point of its own in the south-east district, the
+    //    armory's neighbour on its row, clear of every plot
+    am.restart(); toDay();
+    const keep = am.keep();
+    const arms = am.dayPoints().find((pt) => pt.kind === 'arms');
+    const armory = am.armorySpot();
+    const plotR = PLOT.radius;
+    const clear = SLOTS.every((slot) => { const sp = am.buildingSpot(slot.id); return !sp || Math.hypot(sp.x - arms.x, sp.y - arms.y) >= plotR * 2 + 40; });
+    ag.player.x = arms.x; ag.player.y = arms.y + 10;
+    const here = am.dayContext();
+    b14Check('the arms rack is a day point of its own: south-east district, on the armory\'s row 270 px from it, clear of every plot; standing there gives its card',
+      !!arms && arms.x - keep.x === PLOT.arms[0] && arms.y - keep.y === PLOT.arms[1] && arms.y === armory.y && Math.abs(arms.x - armory.x) === 270
+        && arms.x > keep.x && arms.y > keep.y && clear && here && here.kind === 'arms',
+      `rack (${arms && arms.x - keep.x}, ${arms && arms.y - keep.y}) from the keep, armory (${armory.x - keep.x}, ${armory.y - keep.y}), clear ${clear}, here ${here && here.kind}`);
+    // 2) bought like the captain's track: one builder job at the rack, paid
+    //    up front; Lv3 is the last; each guard pops its new level
+    am.gold = 100; am.wood = 100;
+    const cost2 = am.armsUpgradeCost();
+    const q2 = am.startBuild('arms');
+    const job2 = am.builderJob ? { kind: am.builderJob.kind, at: am.jobSpot(), seconds: am.builderJob.duration } : null;
+    const paid2 = 100 - am.gold === 12 && 100 - am.wood === 10;
+    const busy = !am.startBuild('hunter');
+    am.floaters.length = 0;
+    let guard = 0;
+    while (am.builderJob && guard++ < 1200) atick();
+    const lv2 = am.armsLevel;
+    const pops = am.floaters.filter((f) => f.icon === 'crossbow' && f.text === 'Lv2').length;
+    const event2 = [am.banner, ...(am.bannerQueue || [])].some((e) => e && /GUARD BOWS Lv2/.test(e.text || ''));
+    toDay();
+    const cost3 = am.armsUpgradeCost();
+    am.startBuild('arms');
+    guard = 0;
+    while (am.builderJob && guard++ < 1200) atick();
+    toDay();
+    const lv3 = am.armsLevel;
+    const maxed = am.armsUpgradeCost() === null && !am.startBuild('arms');
+    b14Check('GUARD BOWS: Lv2 costs 12 gold + 10 wood (5 s), Lv3 18 + 14 (6 s), one builder job at the rack (the queue is busy meanwhile), every guard pops its new level; Lv3 is MAX',
+      cost2 && cost2.gold === 12 && cost2.wood === 10 && cost2.seconds === 5 && q2 && paid2 && job2 && job2.kind === 'arms'
+        && job2.at && job2.at.x === arms.x && job2.at.y === arms.y && busy && lv2 === 2 && pops === am.guards.length && pops > 0 && event2
+        && cost3 && cost3.gold === 18 && cost3.wood === 14 && cost3.seconds === 6 && lv3 === 3 && maxed,
+      `Lv2 ${cost2 && `${cost2.gold}g ${cost2.wood}w ${cost2.seconds}s`} paid ${paid2}, job ${job2 && job2.kind} at the rack ${!!(job2 && job2.at && job2.at.x === arms.x)}, queue busy ${busy}, pops ${pops}/${am.guards.length}, event ${event2}; Lv3 ${cost3 && `${cost3.gold}g ${cost3.wood}w ${cost3.seconds}s`} → Lv${lv3}, max ${maxed}`);
+    // 3) a guard's bolt by level: damage, time between shots, pierce (Lv3)
+    const shots = [];
+    for (const level of [1, 2, 3]) {
+      am.restart();
+      am.phase = 'night'; ag.screen = 'playing'; ag.uiPanel = null; if (am.cine) am.cine = null;
+      am.elapsed = 5; am.waveIndex = 99; am.breakerIndex = 99; am.individualIndex = 99;
+      ag.enemies.length = 0; ag.bolts.length = 0;
+      am.tuning = { ...am.tuning, autoAttackRange: 0 };
+      am.armsLevel = level;
+      const south = am.entranceById('southGate');
+      south.hp = south.hpMax = 99999;
+      const g0 = am.guards[0];
+      am.guards.length = 1; am.survivors = 1;
+      const post = am._doorPost(south, 0);
+      g0.x = post.x; g0.y = post.y + 6;
+      am._setGuardPost(g0, post);
+      for (let i = 0; i < 60 * 3 && g0.lift < 1; i++) { am._guardAssignT = 99; atick(); }
+      const target = new Crowd(south.x - 60, south.y + 150, south, 0, 1);
+      target.hp = target.hpMax = 9999; target.update = () => {};
+      ag.enemies.push(target);
+      g0.cd = 0;
+      let bolt = null, cd = null;
+      for (let i = 0; i < 60 * 2 && !bolt; i++) {
+        am._guardAssignT = 99;
+        atick();
+        const b = ag.bolts.find((x) => x.guard);
+        if (b) { bolt = { damage: b.damage, pierce: b.pierce || 0, arms: b.arms }; cd = g0.cd; }
+      }
+      am.tuning = SURVIVAL_TUNING;
+      const want = SURVIVAL_ARMS[level];
+      shots.push({ level, bolt, cd, ok: !!bolt && bolt.damage === want.damage && bolt.pierce === (want.pierce || 0) && bolt.arms === level
+        && cd != null && cd >= want.every - 0.12 - 0.05 && cd <= want.every + 0.18 });
+    }
+    b14Check('a guard\'s bolt by arms level: Lv1 10 damage every 1.6 s (GUARD\'s base), Lv2 14 every 1.4 s, Lv3 18 every 1.25 s and it runs on through a body',
+      shots.every((r) => r.ok) && SURVIVAL_ARMS[1].damage === GUARD_BASE.damage && SURVIVAL_ARMS[1].every === GUARD_BASE.every && ARMS_MAX_LEVEL === 3,
+      shots.map((r) => `Lv${r.level} ${r.bolt ? `${r.bolt.damage} dmg pierce ${r.bolt.pierce} (bolt.arms ${r.bolt.arms})` : 'no shot'}, next in ${r.cd == null ? '?' : r.cd.toFixed(2)} s`).join(' | '));
+    // 4) kept on reload, back to Lv1 on a new run, Lv1 for a save without it
+    am.restart(); toDay();
+    am.armsLevel = 3;
+    am._persist(true);
+    const saved = JSON.parse(window.localStorage.getItem('lastnight.save.v1') || 'null');
+    const reload = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+    const kept = reload.survival.armsLevel;
+    reload.survival.restart();
+    const fresh = reload.survival.armsLevel;
+    const old = JSON.parse(JSON.stringify(saved));
+    delete old.survival.armsLevel;
+    window.localStorage.setItem('lastnight.save.v1', JSON.stringify(old));
+    const oldGame = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+    const oldLevel = oldGame.survival.armsLevel;
+    b14Check('the garrison\'s bow level is saved (Lv3 after a reload), a new run starts at Lv1, a save from before BUILD 14 loads Lv1',
+      saved && saved.survival && saved.survival.armsLevel === 3 && kept === 3 && fresh === 1 && oldLevel === 1 && am.getNightSnapshot().armsLevel === 3,
+      `saved ${saved && saved.survival && saved.survival.armsLevel}, reloaded Lv${kept}, restart Lv${fresh}, old save Lv${oldLevel}`);
+    window.localStorage.removeItem('lastnight.save.v1');
+  }
+  const b14Pass = b14Checks.length === 4 && b14Checks.every(Boolean);
+
   console.log(`  idle Night 3: ${idle.nightThree.peakEnemies} peak enemies / ${idle.nightThree.peakBreakers} Breakers, ${idle.nightThree.kills} kills, ${idle.nightThree.wallDamage} wall damage, gate ${idle.nightThree.gateHp} HP, Hunter ${idle.nightThree.playerHp} HP; ${idle.phase}`);
   console.log(`  builder Night 3: ${builder.nightThree.peakEnemies} peak enemies / ${builder.nightThree.peakBreakers} Breakers, ${builder.nightThree.kills} kills, ${builder.nightThree.wallDamage} wall damage, gate ${builder.nightThree.gateHp} HP, Hunter ${builder.nightThree.playerHp} HP; keep Lv${builder.keepLevel} ${builder.keepHp} HP, soldiers ${builder.survivors}, buildings ${builder.buildings.join(',') || 'none'}, gateBuilt=${builder.gateBuilt}; ${builder.phase}`);
   // Balance target (M1 rebuild, K1): doing nothing must not win; an engaged
@@ -1970,7 +2083,7 @@ async function runSurvivalMilestone() {
     && hunterAutoShot && hunterRealLos && hunterSkill
     && idleLoses && builder.complete && builder.keepLevel === 3
     && builder.queueLockVerified && builder.sawmillBuilt && builder.gateBuilt && builder.barracksBuilt
-    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass && gateRulePass && b13Pass
+    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass && gateRulePass && b13Pass && b14Pass
     && builder.upgrades[0].level === 1 && builder.upgrades[0].plots === 9
     && builder.upgrades[builder.upgrades.length - 1].level === 3 && builder.upgrades[builder.upgrades.length - 1].plots === 15
     && builder.upgrades.every((item, i, all) => i === 0 || item.level >= all[i - 1].level);

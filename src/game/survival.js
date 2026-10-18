@@ -210,6 +210,12 @@ export const PLOT = Object.freeze({
   /** The armory (the captain's upgrades): the south-east district, the barracks' mirror image. */
   armory: Object.freeze([330, 260]),
   /**
+   * The arms rack (BUILD 14: the garrison's crossbows), the armory's
+   * neighbour on the same row, where the north-west barracks' outer plot is
+   * mirrored (270 px apart, like every district's inner pair).
+   */
+  arms: Object.freeze([600, 260]),
+  /**
    * Where the captain starts a run and every dawn: where the east road leaves
    * the keep's plaza, inside the keep's reach (keep.r + CIRCLE.keepReach =
    * 250, the plaza and its kerb), so the keep's card is the first thing a day
@@ -318,6 +324,22 @@ export const SURVIVAL_HUNTER = Object.freeze({
   3: Object.freeze({ gold: 20, wood: 12, seconds: 6, damage: 48, hp: 140, pierce: 1, fan: 3 }),
 });
 
+/**
+ * BUILD 14 (2026-10-17: "senjata terpisah ... senjata pasukan bisa di-
+ * upgrade"): the garrison's crossbows, bought by day at the arms rack beside
+ * the armory (one level for every guard on the walls). Each level shows on
+ * every guard (game/troop3d.js: Lv1 the pack's plain crossbow, Lv2 the same
+ * bow lacquered royal blue, Lv3 the two-handed arbalest in blue and gold)
+ * and in its bolts (white-blue, then gold). Lv1 is GUARD's base; a guard
+ * inside the banner's yards still hits x1.5.
+ */
+export const ARMS_MAX_LEVEL = 3;
+export const SURVIVAL_ARMS = Object.freeze({
+  1: Object.freeze({ damage: 10, every: 1.6, pierce: 0 }),
+  2: Object.freeze({ gold: 12, wood: 10, seconds: 5, damage: 14, every: 1.4, pierce: 0 }),
+  3: Object.freeze({ gold: 18, wood: 14, seconds: 6, damage: 18, every: 1.25, pierce: 1 }),
+});
+
 function freshProgress(duration = SURVIVAL_TUNING.nightSeconds) {
   return {
     initialized: true,
@@ -333,6 +355,7 @@ function freshProgress(duration = SURVIVAL_TUNING.nightSeconds) {
     buildings: {},
     buildingLevels: {},
     hunterLevel: 1,
+    armsLevel: 1,
     gateBuilt: false,
     gateHp: 0,
     builderJob: null,
@@ -1120,6 +1143,7 @@ export class SurvivalMode {
     this.buildings = {};
     this.buildingLevels = {};
     this.hunterLevel = 1;
+    this.armsLevel = 1;
     this.gateBuilt = false;
     this.gateHp = 0;
     this.builderJob = null;
@@ -1233,6 +1257,7 @@ export class SurvivalMode {
       }
     }
     this.hunterLevel = clamp(Math.round(Number(s.hunterLevel) || 1), 1, HUNTER_MAX_LEVEL);
+    this.armsLevel = clamp(Math.round(Number(s.armsLevel) || 1), 1, ARMS_MAX_LEVEL);
     this.gateBuilt = !!s.gateBuilt;
     this.gateHp = Math.max(0, Number(s.gateHp) || 0);
     let job = s.builderJob && typeof s.builderJob === 'object' ? { ...s.builderJob } : null;
@@ -2725,15 +2750,19 @@ export class SurvivalMode {
       guard.angle = Math.atan2(ty - guard.y, tx - guard.x);
       // from up on the wall the bolt flies over the merlons and drops on them
       const up = guard.lift >= 1 && guard.liftPost;
+      // the garrison's crossbows (BUILD 14): damage, rate and (Lv3) a bolt
+      // that runs on through a body
+      const arms = this.armsStats();
       const bolt = g.spawnBolt(guard, guard.angle, {
-        offset: 16, boltSpeed: GUARD.boltSpeed, damage: GUARD.damage, friendly: true,
-        over: !!up, dropFrom: up ? guard.liftPost.kind : null,
+        offset: 16, boltSpeed: GUARD.boltSpeed, damage: arms.damage, friendly: true,
+        over: !!up, dropFrom: up ? guard.liftPost.kind : null, boltPierce: arms.pierce || 0,
       });
       if (bolt) {
         bolt.guard = true;
+        bolt.arms = this.armsLevel;
         if (up) bolt.aimDist = Math.max(40, dist(guard.x, guard.y, target.x, target.y) - 10);
       }
-      guard.cd = GUARD.every + rand(-0.12, 0.18);
+      guard.cd = arms.every + rand(-0.12, 0.18);
       guard.shotT = 0.2;
       this.nightStats.guardShots = (this.nightStats.guardShots || 0) + 1;
       g.audio.play('crossbow', { x: guard.x, y: guard.y, cam: g.renderer.cam, vol: 0.3 });
@@ -3145,6 +3174,30 @@ export class SurvivalMode {
     return this._armory;
   }
 
+  /**
+   * BUILD 14: the arms rack (the garrison's crossbows), the armory's
+   * neighbour in the south-east district. A house layout puts it beside the
+   * armory, on the first free floor.
+   */
+  armsSpot() {
+    if (this._arms) return this._arms;
+    const keep = this.keep();
+    if (this.game.mansion.isFortress) {
+      this._arms = { x: Math.round(keep.x + PLOT.arms[0]), y: Math.round(keep.y + PLOT.arms[1]) };
+      return this._arms;
+    }
+    const a = this.armorySpot();
+    const m = this.game.mansion;
+    let best = { x: a.x, y: a.y + 120 };
+    for (const [dx, dy] of [[0, 120], [0, -120], [120, 0], [-120, 0], [96, 96], [-96, 96], [96, -96], [-96, -96]]) {
+      const x = a.x + dx, y = a.y + dy;
+      const free = !m.solidAt(x, y) && [0, 1, 2, 3, 4, 5, 6, 7].every((i) => !m.solidAt(x + Math.cos(i * Math.PI / 4) * 36, y + Math.sin(i * Math.PI / 4) * 36));
+      if (free && dist(x, y, keep.x, keep.y) > keep.r + CIRCLE.radius + 30) { best = { x, y }; break; }
+    }
+    this._arms = { x: Math.round(best.x), y: Math.round(best.y) };
+    return this._arms;
+  }
+
   /** Inside the front door: where the barricade circle sits. */
   gateSpot() {
     const gate = this.mainGate();
@@ -3185,6 +3238,8 @@ export class SurvivalMode {
     out.push({ id: 'keep', kind: 'keep', x: keep.x, y: keep.y, reach: keep.r + CIRCLE.keepReach });
     const armory = this.armorySpot();
     out.push({ id: 'armory', kind: 'armory', x: armory.x, y: armory.y, reach: CIRCLE.reach });
+    const arms = this.armsSpot();
+    out.push({ id: 'arms', kind: 'arms', x: arms.x, y: arms.y, reach: CIRCLE.reach, level: this.armsLevel });
     const gate = this.gateSpot();
     if (gate) out.push({ id: 'gate', kind: 'gate', x: gate.x, y: gate.y, reach: CIRCLE.reach });
     for (const slot of SURVIVAL_SLOTS) {
@@ -3219,6 +3274,7 @@ export class SurvivalMode {
     if (type === 'repair') return this.startKeepRepair();
     if (type === 'gate') return this.startGateBuild();
     if (type === 'hunter') return this.startHunterUpgrade();
+    if (type === 'arms') return this.startArmsUpgrade();
     if (type === 'upgrade') return this.startUpgrade(slotId);
     const spec = SURVIVAL_BUILDINGS[type];
     const slot = SLOT_BY_ID.get(slotId);
@@ -3356,6 +3412,28 @@ export class SurvivalMode {
     return true;
   }
 
+  /** The garrison's crossbows at a level (BUILD 14; Lv1 = GUARD's base). */
+  armsStats(level = this.armsLevel) {
+    return SURVIVAL_ARMS[clamp(Math.round(level) || 1, 1, ARMS_MAX_LEVEL)];
+  }
+
+  armsUpgradeCost() {
+    if (this.armsLevel >= ARMS_MAX_LEVEL) return null;
+    const next = this.armsStats(this.armsLevel + 1);
+    return { gold: next.gold || 0, wood: next.wood || 0, seconds: next.seconds || 5 };
+  }
+
+  startArmsUpgrade() {
+    if (this.phase !== 'day' || this.builderJob) return false;
+    const cost = this.armsUpgradeCost();
+    if (!cost || !this.canAfford(cost)) return false;
+    this.gold -= cost.gold; this.wood -= cost.wood;
+    this.builderJob = { kind: 'arms', type: 'arms', targetLevel: this.armsLevel + 1, remaining: cost.seconds, duration: cost.seconds };
+    this.game.audio.play('uiConfirm', { vol: 0.55 });
+    this._persist(true);
+    return true;
+  }
+
   /** Survival owns the Hunter's health bar (legacy meta upgrades stay legacy). */
   applyHunterStats(heal = false) {
     const p = this.game.player;
@@ -3371,6 +3449,7 @@ export class SurvivalMode {
     if (job.kind === 'keep' || job.kind === 'repair') { const keep = this.keep(); return { x: keep.x, y: keep.y + keep.r }; }
     if (job.kind === 'gate') return this.gateSpot();
     if (job.kind === 'hunter') return this.armorySpot();
+    if (job.kind === 'arms') return this.armsSpot();
     return job.slotId ? this.buildingSpot(job.slotId) : null;
   }
 
@@ -3397,7 +3476,15 @@ export class SurvivalMode {
     } else if (job.kind === 'hunter') {
       this.hunterLevel = clamp(job.targetLevel, 1, HUNTER_MAX_LEVEL);
       this.applyHunterStats(true);
-      icon = 'hunter'; text = `HUNTER Lv${this.hunterLevel}`;
+      icon = 'hunter'; text = `CAPTAIN Lv${this.hunterLevel}`;
+    } else if (job.kind === 'arms') {
+      this.armsLevel = clamp(job.targetLevel, 1, ARMS_MAX_LEVEL);
+      // every guard gets the new bow at once: a pop over each, where he
+      // stands (world3d swaps the bow in his hand the same frame)
+      for (const guard of this.guards || []) {
+        this.pushFloater(guard.x, guard.y, `Lv${this.armsLevel}`, this.armsLevel >= 3 ? '#ffd24a' : '#9fd0ff', { h: 120, size: 18, icon: 'crossbow', life: 1.5, pop: 1.3, kind: 'income' });
+      }
+      icon = 'crossbow'; text = `GUARD BOWS Lv${this.armsLevel}`;
     } else if (job.kind === 'building' || job.kind === 'upgrade') {
       const before = job.kind === 'upgrade' ? this.buildingLevel(job.slotId) : 0;
       const level = job.kind === 'upgrade' ? clamp(job.targetLevel, 1, BUILDING_MAX_LEVEL) : 1;
@@ -3568,7 +3655,7 @@ export class SurvivalMode {
     Object.assign(this, {
       phase: 'night', day: 1, elapsed: 0, gold: this.tuning.startGold, wood: this.tuning.startWood,
       survivors: this.tuning.startSurvivors, keepLevel: 1, keepHp: this.tuning.keepHp[1],
-      buildings: {}, buildingLevels: {}, hunterLevel: 1, gateBuilt: false,
+      buildings: {}, buildingLevels: {}, hunterLevel: 1, armsLevel: 1, gateBuilt: false,
       gateHp: 0, builderJob: null, selectedRoom: null, nightsCompleted: 0, waveIndex: 0,
       breakerIndex: 0, individualIndex: 0, siegeTimers: Object.create(null),
       nightStats: freshNightStats(), runStats: freshRunStats(), lastRewards: null, skillCooldown: 0,
@@ -3690,13 +3777,15 @@ export class SurvivalMode {
     if (type === 'repair') return this.keepRepairCost();
     if (type === 'gate') return this.tuning.gateCost;
     if (type === 'hunter') return this.hunterUpgradeCost();
+    if (type === 'arms') return this.armsUpgradeCost();
     return SURVIVAL_BUILDINGS[type] || null;
   }
 
   buildingName(type) {
     if (type === 'keep') return `KEEP LV${this.keepLevel}`;
     if (type === 'gate') return 'BARRICADE';
-    if (type === 'hunter') return `HUNTER LV${this.hunterLevel}`;
+    if (type === 'hunter') return `CAPTAIN LV${this.hunterLevel}`;
+    if (type === 'arms') return `GUARD BOWS LV${this.armsLevel}`;
     return SURVIVAL_BUILDINGS[type] ? SURVIVAL_BUILDINGS[type].label : 'EMPTY';
   }
 
@@ -4199,7 +4288,7 @@ export class SurvivalMode {
       phase: this.phase, day: this.day, elapsed: +this.elapsed.toFixed(2),
       duration: this.nightDuration, gold: +this.gold.toFixed(1), wood: this.wood,
       survivors: this.survivors, keepLevel: this.keepLevel, keepHp: Math.round(this.keepHp), keepHpMax: this.keepHpMax(),
-      keepState: this.keepState(), hunterLevel: this.hunterLevel,
+      keepState: this.keepState(), hunterLevel: this.hunterLevel, armsLevel: this.armsLevel,
       buildings: { ...this.buildings }, buildingLevels: { ...this.buildingLevels },
       territory: this.territoryPlots().map((slot) => slot.id),
       bannerReach: this.bannerReach(),
@@ -4250,7 +4339,7 @@ export class SurvivalMode {
     delete s.oil; delete s.perapianLevel; delete s.oilBurned; delete s.nightOilStart;
     s.survivors = this.survivors; s.keepLevel = this.keepLevel; s.keepHp = Math.round(this.keepHp * 10) / 10;
     s.buildings = { ...this.buildings }; s.buildingLevels = { ...this.buildingLevels };
-    s.hunterLevel = this.hunterLevel; s.gateBuilt = this.gateBuilt;
+    s.hunterLevel = this.hunterLevel; s.armsLevel = this.armsLevel; s.gateBuilt = this.gateBuilt;
     s.gateHp = Math.round(this.gateHp); s.builderJob = this.builderJob ? { ...this.builderJob } : null;
     s.selectedRoom = this.selectedRoom; s.nightsCompleted = this.nightsCompleted;
     s.waveIndex = this.waveIndex; s.breakerIndex = this.breakerIndex; s.individualIndex = this.individualIndex;
