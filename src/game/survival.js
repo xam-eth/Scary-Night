@@ -210,10 +210,13 @@ export const PLOT = Object.freeze({
   /** The armory (the captain's upgrades): the south-east district, the barracks' mirror image. */
   armory: Object.freeze([330, 260]),
   /**
-   * Where the captain starts a run and every dawn: on the east road just off
-   * the keep's plaza, between the armory and the gold mines. (South of the
-   * keep, before its door, the engaged bot's night anchor ended Night 1 with
-   * the keep at 43% in BUILD 9 — one star; on the east road it held.)
+   * Where the captain starts a run and every dawn: where the east road leaves
+   * the keep's plaza, inside the keep's reach (keep.r + CIRCLE.keepReach =
+   * 250, the plaza and its kerb), so the keep's card is the first thing a day
+   * shows. (South of the keep, before its door, the engaged bot's night
+   * anchor ended Night 1 with the keep at 43% in BUILD 9 — one star; on the
+   * east road it held. At 190 px in layout B one seed in five fell to one
+   * star on Night 1; at 240 all five held.)
    */
   home: Object.freeze([240, 0]),
   /**
@@ -232,7 +235,9 @@ export function survivalSlot(id) { return SLOT_BY_ID.get(id) || null; }
 /** Pre-K1 saves: the old building ids. */
 const TYPE_MIGRATE = Object.freeze({ extractor: 'mine', shelter: 'barracks' });
 /** How close the Hunter stands to a circle (or the keep) to act on it. */
-export const CIRCLE = Object.freeze({ radius: 68, reach: 80, keepReach: 100 });
+// keepReach: BUILD 12's keep stands on a plaza (fortress.js PLAZA_R 235), and
+// anywhere on it (with its kerb) is "at the keep" — 150 past its wall
+export const CIRCLE = Object.freeze({ radius: 68, reach: 80, keepReach: 150 });
 const NIGHT_PHASE = { id: 'survival-night', label: 'NIGHT', danger: 0.24, ambient: [108, 114, 132] };
 const DAY_PHASE = { id: 'survival-day', label: 'DAY', danger: 0.02, ambient: [186, 174, 150] };
 

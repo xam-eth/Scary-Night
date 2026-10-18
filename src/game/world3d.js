@@ -97,15 +97,29 @@ const PARTICLE_FRAGMENT_SHADER = `
 function mergeKitStatic(group) {
   group.updateMatrixWorld(true);
   const inverse = new THREE.Matrix4().copy(group.matrixWorld).invert();
+  // each kit file loads its own copy of the pack's one atlas material: pieces
+  // whose materials look the same (type, colour, the atlas image) share a mesh
+  const signature = (material) => {
+    if (Array.isArray(material)) return material;
+    const map = material.map;
+    const image = map && map.source && map.source.data;
+    const src = image && (image.currentSrc || image.src);
+    const key = [material.type, material.color ? material.color.getHex() : '', material.transparent ? 't' : '',
+      material.side, src || (map ? map.uuid : 'nomap'), material.vertexColors ? 'vc' : ''].join('|');
+    return src || !map ? key : material;
+  };
   const buckets = new Map();
   group.traverse((obj) => {
     if (!obj.isMesh || obj.isInstancedMesh || obj.isSkinnedMesh) return;
-    if (!buckets.has(obj.material)) buckets.set(obj.material, []);
-    buckets.get(obj.material).push(obj);
+    const key = signature(obj.material);
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(obj);
   });
   let merged = 0;
-  for (const [material, list] of buckets) {
-    if (Array.isArray(material) || list.length < 2 || !list.every((obj) => obj.geometry.attributes.uv && obj.geometry.attributes.normal)) continue;
+  for (const list of buckets.values()) {
+    const material = list[0].material;
+    if (Array.isArray(material) || material.vertexColors || list.length < 2
+      || !list.every((obj) => obj.geometry.attributes.uv && obj.geometry.attributes.normal)) continue;
     const geos = list.map((obj) => {
       const geo = obj.geometry.index ? obj.geometry.toNonIndexed() : obj.geometry.clone();
       geo.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inverse, obj.matrixWorld));

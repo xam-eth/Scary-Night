@@ -318,7 +318,7 @@ export class Fortress extends Mansion {
   /** The house shrinks its oversized sprite furniture; the bailey is drawn to scale. */
   dressFurniture() {}
 
-  /** Where the captain stands when a run starts: on the east road by the keep (survival.js PLOT.home). */
+  /** Where the captain stands when a run starts: where the east road leaves the plaza (survival.js PLOT.home). */
   startPoint() {
     return { x: this.keepSpot.x + 240, y: this.keepSpot.y };
   }
