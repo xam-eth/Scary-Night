@@ -7,7 +7,9 @@
  *   4 smaller cards ("card juga masih besar");
  *   5 the opening trailer kept (tools/survival-intro.mjs checks that one).
  * This boots a fresh save at sideways-phone size (844 x 390), checks 1-4
- * against the running game and writes the frames that show them.
+ * against the running game and writes the frames that show them. Section 5
+ * checks BUILD 13's visual pass (the bright captain, names only near,
+ * tonight's gates by day).
  *
  *   node tools/survival-plotsqa.mjs [--out=qa-evidence/survival-plots] [--dpr=1] [--port=8125]
  *
@@ -371,6 +373,107 @@ const dock2 = await page.evaluate(() => {
 });
 check('cards: the keep\'s two actions (UPGRADE + REPAIR) share the same one-row dock', dock2.here === 'keep' && dock2.items.length === 2 && dock2.items.every((i) => i.h <= 56 && Math.abs(i.y - dock2.items[0].y) < 1), dock2);
 await shot('cards-2-dock-keep');
+
+/* ---- 5. BUILD 13 (docs/VISUAL-LAYOUT-RESEARCH.md §7, the cheap-but-visible
+ * pass): the captain the brightest thing on the field (V8), names only near
+ * the captain (V4), the coming night's gates shown by day (V10). V9 (the
+ * merged damage numbers) is a rule, checked in tools/harness.mjs ---- */
+await page.evaluate(async () => {
+  window.__pV = (await import('./src/game/valen3d.js')).Valen3D;
+  window.__pE = (await import('./src/game/envkit.js')).EnvKit;
+});
+// the captain's own pixels: the frame with him minus the frame without him
+const captainLum = () => page.evaluate(() => {
+  const g = window.__LN, W = window.__pW, V = window.__pV, E = window.__pE;
+  const gl = E.renderer.getContext(), width = E.canvas.width, height = E.canvas.height;
+  const frame = () => {
+    E.renderer.render(W.scene, E.camera); gl.finish();
+    const px = new Uint8Array(width * height * 4);
+    gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    return px;
+  };
+  g.render();
+  const look = V.lookState();
+  const mean = (A, B) => {
+    let n = 0, sum = 0;
+    for (let i = 0; i < A.length; i += 4) {
+      if (Math.abs(A[i] - B[i]) + Math.abs(A[i + 1] - B[i + 1]) + Math.abs(A[i + 2] - B[i + 2]) > 18) {
+        n++; sum += 0.2126 * A[i] + 0.7152 * A[i + 1] + 0.0722 * A[i + 2];
+      }
+    }
+    return { px: n, mean: n ? +(sum / n).toFixed(1) : 0 };
+  };
+  const pass = (state) => { V.setLook(state); const A = frame(); V.model.visible = false; const B = frame(); V.model.visible = true; return mean(A, B); };
+  const on = pass(look);
+  const bare = pass({ look: 0, rim: 0, lift: 0 });
+  V.setLook(look);
+  g.render();
+  return { phase: g.survival.phase, look, on, bare, diag: W.diagnostics().captainLook || null };
+});
+const lumNight = await page.evaluate(() => {
+  const g = window.__LN; const m = g.survival;
+  m.restart(); m._userZoom = 1.6; m._zoomGoal = null; m.recenterCamera(true);
+  g.renderer.snapCamera(g.player.x, g.player.y);
+  window.__pStep(60);
+  return true;
+}).then(captainLum);
+const lumDay = await page.evaluate(() => {
+  const g = window.__LN; const m = g.survival;
+  m.completeNight(); window.__pStep(2);
+  if (m.rewardPending && m.rewardPending()) m.ackRewards();
+  const home = m.hunterHome(); g.player.x = home.x; g.player.y = home.y;
+  m.recenterCamera(true); g.renderer.snapCamera(g.player.x, g.player.y);
+  window.__pStep(60);
+  return true;
+}).then(captainLum);
+await shot('b13-1-captain-day');
+check('V8: the captain is bright — his own pixels average >= 70/255 by night and by day and >= 3x the bare Tripo texture (royal-blue tabard, leather hat and boots, rim light; the GLB untouched)',
+  [lumNight, lumDay].every((r) => r.on.px > 400 && r.on.mean >= 70 && r.on.mean >= 3 * r.bare.mean && r.look.look === 1)
+    && lumNight.look.rim > lumDay.look.rim,
+  { night: { on: lumNight.on, bare: lumNight.bare, look: lumNight.look }, day: { on: lumDay.on, bare: lumDay.bare, look: lumDay.look } });
+
+// V4: in the middle of the mines' yard (three empty circles ~160 px away;
+// keep Lv2 opens the third)
+const near = await page.evaluate(() => {
+  const g = window.__LN; const m = g.survival;
+  for (const id of Object.keys(m.buildings)) delete m.buildings[id];
+  m.keepLevel = 2;
+  g.survivalBakeDirty = true;
+  m._userZoom = 1; m._zoomGoal = null;
+  const spots = ['north', 'east', 'southeast'].map((id) => m.buildingSpot(id));
+  g.player.x = spots.reduce((a, q) => a + q.x, 0) / 3; g.player.y = spots.reduce((a, q) => a + q.y, 0) / 3;
+  m.recenterCamera(true); g.renderer.snapCamera(g.player.x, g.player.y);
+  window.__pStep(40);
+  const L = g._survivalLabels || {};
+  const reach = spots.map((q) => Math.round(Math.hypot(q.x - g.player.x, q.y - g.player.y)));
+  return { names: L.names, icons: L.icons, pills: L.pills, overview: L.overview, reach, here: m.dayContext() && m.dayContext().id };
+});
+await shot('b13-2-names-near');
+const far = await page.evaluate(() => {
+  const g = window.__LN; const m = g.survival;
+  m.buildings.north = 'mine'; m.buildingLevels.north = 1;
+  m.buildings.ward = 'barracks'; m.buildingLevels.ward = 1;
+  m.buildings.south = 'sawmill'; m.buildingLevels.south = 1;
+  g.survivalBakeDirty = true;
+  const keep = m.keep(); const home = m.hunterHome();
+  g.player.x = home.x; g.player.y = home.y;
+  m._userZoom = 0.42; m._zoomGoal = null;
+  m.camPan.x = keep.x - home.x; m.camPan.y = keep.y - home.y + 40;
+  g.renderer.snapCamera(keep.x, keep.y);
+  window.__pStep(60);
+  const L = g._survivalLabels || {};
+  return { names: L.names, icons: L.icons, pills: L.pills, overview: L.overview, user: m.userZoom(), tonight: L.tonight, plan: m.tonightPlan().map((r) => `${r.id} ${r.swarm}/${r.individuals}/${r.breakers}`) };
+});
+await shot('b13-3-overview-tonight');
+check('V4: a circle spells its name and cost only near the captain — never more than 2 at once (3 empty circles within reach: 2 names), and the overview shows icons only (0 names, 0 pills)',
+  near.names === 2 && near.icons >= 1 && !near.overview && near.reach.every((d) => d <= 380)
+    && far.overview && far.names === 0 && far.pills === 0 && far.icons >= 4,
+  { near, far: { names: far.names, icons: far.icons, pills: far.pills, user: far.user } });
+const plannedIds = far.plan.map((r) => r.split(' ')[0]);
+check('V10: by day every gate the coming night will hit is marked (a red badge in view, a red edge pointer with the count out of view), the same gates as the night\'s plan',
+  far.tonight && far.tonight.length === plannedIds.length && plannedIds.length >= 3
+    && far.tonight.every((row, i) => row.id === plannedIds[i] && row.total > 0) && far.tonight.some((row) => row.inView),
+  { plan: far.plan, drawn: far.tonight });
 
 fs.writeFileSync(path.join(OUT, 'plotsqa.json'), JSON.stringify({ results, errors }, null, 2));
 console.log(`errors ${errors.length}`);

@@ -1169,7 +1169,7 @@ function drawDayWorldLayer(game, ctx, w, h, view) {
     const inView = at.x > view.x0 && at.x < view.x1 && at.y > view.y0 && at.y < view.y1;
     const total = row.swarm + row.individuals + row.breakers;
     if (inView) drawTonightBadge(ctx, at.x, at.y + Math.sin(t * 3 + e.x * 0.01) * 2, row);
-    else drawEdgeMarker(ctx, w, h, at, row.breakers ? 'breaker' : 'swarm', '#ff5a4d', view.y0 + 10, h - view.y1 + 10, total);
+    else drawEdgeMarker(ctx, w, h, at, row.breakers ? 'breaker' : row.swarm ? 'swarm' : 'zombie', '#ff5a4d', view.y0 + 10, h - view.y1 + 10, total);
     tonight.push({ id: row.id, total, inView });
   }
   shown.tonight = tonight;
