@@ -39,6 +39,9 @@ const args = Object.fromEntries(process.argv.slice(2).map((a) => {
 const OUT = path.resolve(ROOT, args.out || 'tools/shots-browser/survival');
 const TAG = args.tag ? `${args.tag}-` : '';
 const PORT = Number(args.port || 8103);
+// BUILD 17 (R8): a run's gate rotation comes from a seed. Fixed here so a
+// check measures the same run every time and an evidence shot replays.
+const SEED = Number(args.seed || 20261007);   // the base whose rotation is BUILD 16's
 fs.mkdirSync(OUT, { recursive: true });
 
 const server = spawn('python3', ['-m', 'http.server', String(PORT), '--bind', '127.0.0.1'], { cwd: ROOT, stdio: 'ignore' });
@@ -65,7 +68,7 @@ const VIEW = args.landscape ? { width: 844, height: 390 } : { width: 390, height
 await page.setViewport({ ...VIEW, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
 await page.evaluateOnNewDocument(() => { try { localStorage.clear(); } catch (_) { /* ignore */ } });
 // the scripted captures start from the night's first second (no K1 opening)
-await page.goto(`http://127.0.0.1:${PORT}/?cine=0`, { waitUntil: 'domcontentloaded', timeout: 180000 });
+await page.goto(`http://127.0.0.1:${PORT}/?cine=0&seed=${SEED}`, { waitUntil: 'domcontentloaded', timeout: 180000 });
 await page.waitForFunction(() => {
   const g = window.__LN;
   return !!(g && g.mode === 'survival' && g.screen === 'playing' && g.survival && g.survival.phase === 'night');

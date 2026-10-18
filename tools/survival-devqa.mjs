@@ -45,6 +45,9 @@ const args = Object.fromEntries(process.argv.slice(2).map((a) => {
   return [k, v === undefined ? true : v];
 }));
 const PORT = Number(args.port || 8112);
+// BUILD 17 (R8): a run's gate rotation comes from a seed. Fixed here so a
+// check measures the same run every time and an evidence shot replays.
+const SEED = Number(args.seed || 20261007);   // the base whose rotation is BUILD 16's
 // A full run takes ~6 min on software WebGL (three page loads + ~100 renders).
 const HARD_LIMIT_MS = 15 * 60 * 1000;
 let server = null;
@@ -98,7 +101,7 @@ try {
   await page.evaluateOnNewDocument(() => {
     try { if (sessionStorage.getItem('devqaKeep') !== '1') localStorage.clear(); } catch (_) { /* ignore */ }
   });
-  await withTimeout(page.goto(`http://127.0.0.1:${PORT}/?cine=0`, { waitUntil: 'domcontentloaded', timeout: 120000 }), 130000, 'goto');
+  await withTimeout(page.goto(`http://127.0.0.1:${PORT}/?cine=0&seed=${SEED}`, { waitUntil: 'domcontentloaded', timeout: 120000 }), 130000, 'goto');
 
   // ---------------- boot: no night before the world ----------------
   let firstWorld = null;

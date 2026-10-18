@@ -1,0 +1,63 @@
+DUSKHOLD BUILD 17 — the measurements behind the Night 3 rotation table (R8)
+tools/survival-balance.mjs grew two measurement flags for this pass:
+  --rot=<N2>,<N3>    force the rotation indices a run plays (into NIGHT_ROTATIONS)
+  --plan3=<gates>    force the Night 3 gate order itself, to measure a round the table does not carry
+Every row is 3 seeds (20261012,20268931,20276850) x 72 s nights, Night 2 = BUILD 16's plan unless
+the row says otherwise. The archetype that decides these limits is arms-builder (a barracks and
+the guards' crossbows, no ballistas, no towers): the weakest defence that still wins BUILD 16's
+nights 5/5.
+
+# 1. Night 3 orders taken apart (--plan3), arms-builder + builder
+
+Night 3 order (wave1>wave2>wave3>runner)       | postern at | step w1->w2 | arms-builder         | builder
+posternSE,northGate,southGate,westGate         | wave 1     | 135 deg     | 3/3 stars [3, 1, 3]  | 3/3 stars [3, 3, 3]   [SHIPPED N3 variant 0 (BUILD 16 plan)]
+posternNW,northGate,southGate,eastGate         | wave 1     | 45 deg      | 3/3 stars [3, 3, 3]  | 3/3 stars [3, 3, 3]   [SHIPPED N3 variant 1]
+posternSE,eastGate,southGate,westGate          | wave 1     | 45 deg      | 3/3 stars [1, 3, 3]  | 3/3 stars [3, 3, 3]   [SHIPPED N3 variant 2]
+northGate,westGate,southGate,eastGate          | none       | 90 deg      | 3/3 stars [1, 1, 1]  | 3/3 stars [3, 3, 3]   [first table, DROPPED (no postern)]
+posternNW,eastGate,southGate,westGate          | wave 1     | 135 deg     | 0/3 stars [0, 0, 0]  | 3/3 stars [3, 3, 3]  tip: BUILD A BALLISTA AT THE NW GATE   [first table, DROPPED (135 deg step)]
+westGate,posternSE,southGate,northGate         | wave 2     | 135 deg     | 0/3 stars [0, 0, 0]  | 3/3 stars [3, 3, 3]  tip: BUILD A BALLISTA AT THE WEST GATE   [first table, DROPPED (postern wave 2)]
+northGate,posternNW,southGate,eastGate         | wave 2     | 45 deg      | 0/3 stars [0, 0, 0]  | 3/3 stars [3, 3, 3]  tip: BUILD A BALLISTA AT THE NW GATE   [first table, DROPPED (postern wave 2)]
+posternNW,northGate,southGate,westGate         | wave 1     | 45 deg      | 3/3 stars [3, 3, 3]  | 3/3 stars [3, 3, 3]   [dissection: postern first, 45 deg]
+posternSE,westGate,southGate,northGate         | wave 1     | 135 deg     | 1/3 stars [0, 1, 0]  | 3/3 stars [3, 3, 3]  tip: BUILD A BALLISTA AT THE SE GATE   [dissection: postern first, 135 deg]
+posternSE,northGate,southGate,eastGate         | wave 1     | 135 deg     | 2/3 stars [3, 0, 3]  | 3/3 stars [3, 3, 3]  tip: BUILD A BALLISTA AT THE SE GATE   [dissection: runner gate east]
+
+Two limits fall out of that table:
+  * a 110-HP postern as wave 2 lost 0/3 twice (northGate>posternNW..., westGate>posternSE...).
+    The same postern as wave 1 holds 3/3: the first wave arrives while the garrison is still whole,
+    and 30 bodies through a broken postern at 10% of the night are answerable; at 30%, with the
+    defence committed to wave 1's gate on the far side of the bailey, they are not.
+  * a step of more than a quarter of the wall circuit between wave 1 and wave 2 lost too
+    (posternNW>eastGate and posternSE>westGate, both 135 deg: 0/3 and 1/3), while every 45/90 deg
+    step measured held 3/3.
+And one shape was dropped outright: four 30-body waves at four big gates (no postern). arms-builder
+only survived it when Night 2 happened to prep it — 3/3 behind Night 2 variant 0, but 1/5 behind
+variant 2 and 3/5 behind variant 3 (--rot=2,3 / 3,3 with the first table, 5 seeds). It is not in
+the shipped table.
+Night 2 keeps its wider shapes: 24/27/27 bodies with a postern as wave 2 measured 3/3 there (the
+rot 0,0 and 1,0 rows below), so the limit is Night 3's (30 per wave, two Breakers).
+
+# 2. Every reachable pair of the shipped table (--rot=<N2>,<N3>), arms-builder + builder
+
+N2,N3 | Night 2 order                                 | Night 3 order                                 | arms-builder        | builder
+0,0   | westGate>posternNW>southGate>northGate (B16)    | posternSE>northGate>southGate>westGate (B16)    | 3/3 stars [3, 1, 3]  | 3/3 stars [3, 3, 3]
+0,1   | westGate>posternNW>southGate>northGate (B16)    | posternNW>northGate>southGate>eastGate          | 3/3 stars [3, 3, 3]  | 3/3 stars [3, 3, 3]
+0,2   | westGate>posternNW>southGate>northGate (B16)    | posternSE>eastGate>southGate>westGate           | 3/3 stars [1, 3, 3]  | 3/3 stars [3, 3, 3]
+1,0   | eastGate>posternSE>southGate>northGate          | posternSE>northGate>southGate>westGate (B16)    | 3/3 stars [3, 1, 3]  | 3/3 stars [3, 3, 3]
+1,1   | eastGate>posternSE>southGate>northGate          | posternNW>northGate>southGate>eastGate          | 3/3 stars [3, 1, 3]  | 3/3 stars [3, 3, 3]
+1,2   | eastGate>posternSE>southGate>northGate          | posternSE>eastGate>southGate>westGate           | 3/3 stars [1, 1, 1]  | 3/3 stars [3, 3, 3]
+2,0   | northGate>westGate>southGate>eastGate (no postern) | posternSE>northGate>southGate>westGate (B16)    | 3/3 stars [3, 3, 1]  | 3/3 stars [1, 1, 3]
+2,1   | northGate>westGate>southGate>eastGate (no postern) | posternNW>northGate>southGate>eastGate          | 3/3 stars [3, 3, 3]  | 3/3 stars [1, 1, 3]
+2,2   | northGate>westGate>southGate>eastGate (no postern) | posternSE>eastGate>southGate>westGate           | 3/3 stars [1, 1, 1]  | 3/3 stars [1, 1, 3]
+3,0   | posternSE>eastGate>southGate>westGate           | posternSE>northGate>southGate>westGate (B16)    | 3/3 stars [3, 3, 1]  | 3/3 stars [3, 3, 3]
+3,1   | posternSE>eastGate>southGate>westGate           | posternNW>northGate>southGate>eastGate          | 3/3 stars [3, 3, 3]  | 3/3 stars [3, 3, 3]
+3,2   | posternSE>eastGate>southGate>westGate           | posternSE>eastGate>southGate>westGate           | 3/3 stars [3, 3, 1]  | 3/3 stars [3, 3, 3]
+
+All twelve pairs hold: arms-builder 3/3 and builder 3/3 everywhere. The pairs that carry a
+no-postern night (N2 variant 2) hold at 1 star on some seeds for the bots with fixed build plans —
+they cover fewer of four big gates — but nothing loses.
+
+# 3. The shipped table over the balance probe's five seeds
+node tools/survival-balance.mjs --seeds=5 --duration=72 with all 7 bots — see balance-5seed-72s.txt:
+arms-builder 5/5 [3,1,3,3,3] (BUILD 16's exact profile), builder 5/5 [1,3,3,3,3], tower-builder and
+hunter-builder 5/5 [3,3,3,3,3], idle / active / keep-builder 0/5 as designed. Which round each of
+the five seeds plays is in rotation-5seed.txt.

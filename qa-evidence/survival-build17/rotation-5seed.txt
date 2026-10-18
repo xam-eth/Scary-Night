@@ -1,0 +1,43 @@
+DUSKHOLD BUILD 17 — which round each probe seed plays (the seeded gate rotation, R8)
+nightDoors(day): i = mixSeed(runSeed ^ imul(day, 0x9e3779b9)) % variants; Night 3 shifts +1 if it would open on the gate Night 2 opened on. runSeed = mixSeed(seed base or ?seed=).
+
+# the pinned probe base (every tool's default seed): replays BUILD 16's two nights exactly
+base 20261007: runSeed 3901008293 | N2 variant 0: WEST GATE > NW POSTERN > SOUTH GATE > NORTH GATE | N3 variant 0: SE POSTERN > NORTH GATE > SOUTH GATE > WEST GATE
+
+# the balance / tempo probe seeds (the five the reports use)
+seed 20261012: runSeed 661817431 | N2 variant 2: NORTH GATE > WEST GATE > SOUTH GATE > EAST GATE | N3 variant 0: SE POSTERN > NORTH GATE > SOUTH GATE > WEST GATE
+seed 20268931: runSeed 1119114832 | N2 variant 0: WEST GATE > NW POSTERN > SOUTH GATE > NORTH GATE | N3 variant 0: SE POSTERN > NORTH GATE > SOUTH GATE > WEST GATE
+seed 20276850: runSeed 2116789399 | N2 variant 3: SE POSTERN > EAST GATE > SOUTH GATE > WEST GATE | N3 variant 1: NW POSTERN > NORTH GATE > SOUTH GATE > EAST GATE
+seed 20261013: runSeed 2247229766 | N2 variant 2: NORTH GATE > WEST GATE > SOUTH GATE > EAST GATE | N3 variant 2: SE POSTERN > EAST GATE > SOUTH GATE > WEST GATE
+seed 20261014: runSeed 843158513 | N2 variant 2: NORTH GATE > WEST GATE > SOUTH GATE > EAST GATE | N3 variant 1: NW POSTERN > NORTH GATE > SOUTH GATE > EAST GATE
+
+# the plotsqa B17 chip seeds (three different TONIGHT orders on one day-2 screen)
+chip 20261007: runSeed 3901008293 | N2 variant 0: WEST GATE > NW POSTERN > SOUTH GATE > NORTH GATE | N3 variant 0: SE POSTERN > NORTH GATE > SOUTH GATE > WEST GATE
+chip 20276850: runSeed 2116789399 | N2 variant 3: SE POSTERN > EAST GATE > SOUTH GATE > WEST GATE | N3 variant 1: NW POSTERN > NORTH GATE > SOUTH GATE > EAST GATE
+chip 20261013: runSeed 2247229766 | N2 variant 2: NORTH GATE > WEST GATE > SOUTH GATE > EAST GATE | N3 variant 2: SE POSTERN > EAST GATE > SOUTH GATE > WEST GATE
+
+# spread over ten arbitrary seeds (research measure: >= 3 distinct orders per night)
+seed 20261012: runSeed 661817431 | N2 variant 2: NORTH GATE > WEST GATE > SOUTH GATE > EAST GATE | N3 variant 0: SE POSTERN > NORTH GATE > SOUTH GATE > WEST GATE
+seed 20268931: runSeed 1119114832 | N2 variant 0: WEST GATE > NW POSTERN > SOUTH GATE > NORTH GATE | N3 variant 0: SE POSTERN > NORTH GATE > SOUTH GATE > WEST GATE
+seed 20276850: runSeed 2116789399 | N2 variant 3: SE POSTERN > EAST GATE > SOUTH GATE > WEST GATE | N3 variant 1: NW POSTERN > NORTH GATE > SOUTH GATE > EAST GATE
+seed 20261013: runSeed 2247229766 | N2 variant 2: NORTH GATE > WEST GATE > SOUTH GATE > EAST GATE | N3 variant 2: SE POSTERN > EAST GATE > SOUTH GATE > WEST GATE
+seed 20261014: runSeed 843158513 | N2 variant 2: NORTH GATE > WEST GATE > SOUTH GATE > EAST GATE | N3 variant 1: NW POSTERN > NORTH GATE > SOUTH GATE > EAST GATE
+seed 7: runSeed 4077748631 | N2 variant 3: SE POSTERN > EAST GATE > SOUTH GATE > WEST GATE | N3 variant 0: SE POSTERN > NORTH GATE > SOUTH GATE > WEST GATE
+seed 123456: runSeed 1543280703 | N2 variant 1: EAST GATE > SE POSTERN > SOUTH GATE > NORTH GATE | N3 variant 2: SE POSTERN > EAST GATE > SOUTH GATE > WEST GATE
+seed 999331: runSeed 146257499 | N2 variant 3: SE POSTERN > EAST GATE > SOUTH GATE > WEST GATE | N3 variant 1: NW POSTERN > NORTH GATE > SOUTH GATE > EAST GATE
+seed 20260009: runSeed 1302910261 | N2 variant 0: WEST GATE > NW POSTERN > SOUTH GATE > NORTH GATE | N3 variant 2: SE POSTERN > EAST GATE > SOUTH GATE > WEST GATE
+seed 424242: runSeed 1163608123 | N2 variant 3: SE POSTERN > EAST GATE > SOUTH GATE > WEST GATE | N3 variant 1: NW POSTERN > NORTH GATE > SOUTH GATE > EAST GATE
+distinct over those ten: Night 2 = 4 variants [0,1,2,3], Night 3 = 3 variants [0,1,2]
+
+# the authored tables (src/game/survival.js NIGHT_ROTATIONS)
+Night 1:
+  variant 0: northGate > eastGate > southGate > westGate
+Night 2:
+  variant 0: westGate > posternNW > southGate > northGate
+  variant 1: eastGate > posternSE > southGate > northGate
+  variant 2: northGate > westGate > southGate > eastGate
+  variant 3: posternSE > eastGate > southGate > westGate
+Night 3:
+  variant 0: posternSE > northGate > southGate > westGate
+  variant 1: posternNW > northGate > southGate > eastGate
+  variant 2: posternSE > eastGate > southGate > westGate

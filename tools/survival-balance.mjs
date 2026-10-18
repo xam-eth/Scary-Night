@@ -46,6 +46,17 @@ const args = Object.fromEntries(process.argv.slice(2).map((a) => {
 const SEEDS = Math.max(1, parseInt(args.seeds || '3', 10));
 const DURATION = parseInt(args.duration || '72', 10);
 const BOTS = String(args.bots || 'idle,active,builder').split(',');
+// BUILD 17 (R8): --rot=<N2>,<N3> forces the rotation indices a run plays
+// (into NIGHT_ROTATIONS), so one round can be measured on purpose — which
+// rotation an archetype holds, and which the table should not offer.
+const ROT = args.rot ? String(args.rot).split(',').map((n) => parseInt(n, 10)) : null;
+// --plan2=a,b,c,d / --plan3=a,b,c,d force the gate order itself (door ids),
+// to measure one round the table does not carry — which side of an
+// asymmetric bailey an archetype can hold.
+const PLAN = {
+  2: args.plan2 ? String(args.plan2).split(',') : null,
+  3: args.plan3 ? String(args.plan3).split(',') : null,
+};
 
 /* ---------------- minimal browser shims (same contract as harness) -------- */
 class StubParam { constructor(v = 0) { this.value = v; } setValueAtTime() { return this; } linearRampToValueAtTime() { return this; } exponentialRampToValueAtTime() { return this; } setTargetAtTime() { return this; } cancelScheduledValues() { return this; } setValueCurveAtTime() { return this; } }
@@ -68,6 +79,12 @@ const stubDoc = {
   documentElement: { requestFullscreen() { } }, fullscreenElement: null, exitFullscreen() { },
 };
 const win = {
+  // BUILD 17 (R8): a run's gate rotation comes from a seed. This base is the
+  // one whose rotation is BUILD 16's (Night 2 west → NW postern → south,
+  // Night 3 SE postern → north → south), so these checks measure the same run
+  // they measured before the rotation existed. The rotation itself is checked
+  // over many seeds (harness §BUILD 17, survival-balance, survival-uxprobe).
+  DUSKHOLD_SEED: 20261007,
   innerWidth: 390, innerHeight: 844, devicePixelRatio: 1, addEventListener() { }, removeEventListener() { },
   AudioContext: StubAudioContext, requestAnimationFrame() { return 0; },
   localStorage: { _d: {}, getItem(k) { return this._d[k] ?? null; }, setItem(k, v) { this._d[k] = String(v); }, removeItem(k) { delete this._d[k]; } },
@@ -103,6 +120,7 @@ function makeCanvas() {
 }
 
 const { botNight, botDay, releaseControls } = await import('./survival-bots.mjs');
+const { NIGHT_ROTATIONS } = await import('../src/game/survival.js');
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const release = releaseControls;
 
@@ -143,11 +161,20 @@ function traceEconomy(mode, kind, seed) {
 function runOne(kind, seed) {
   reseed(seed);
   win.localStorage._d = {};
-  const game = new Game(makeCanvas(), { mode: 'survival', nightDuration: DURATION });
+  // BUILD 17 (R8): the run's own gate rotation comes from this seed
+  const game = new Game(makeCanvas(), { mode: 'survival', nightDuration: DURATION, seed });
   game.input.touchSeen = true;
   game.input.layout(390, 844);
   const mode = game.survival;
   mode.restart();
+  if (ROT || PLAN[2] || PLAN[3]) {
+    mode.nightDoors = (day = mode.day) => {
+      const d = Math.min(Math.max(Math.round(Number(day) || 1), 1), NIGHT_ROTATIONS.length);
+      if (PLAN[d]) return PLAN[d];
+      const sets = NIGHT_ROTATIONS[d - 1];
+      return sets[d === 1 ? 0 : ((ROT ? (ROT[d - 2] || 0) : 0) % sets.length)];
+    };
+  }
   if (args.economy) traceEconomy(mode, kind, seed);
   // the pre-2026-10-15 rule: guards are never hunted and never hurt
   if (args['no-guard-damage']) { mode.hurtGuard = () => false; mode.guardToHunt = () => null; }

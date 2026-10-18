@@ -64,6 +64,12 @@ const stubDoc = {
   documentElement: { requestFullscreen() { } }, fullscreenElement: null, exitFullscreen() { },
 };
 const win = {
+  // BUILD 17 (R8): a run's gate rotation comes from a seed. This base is the
+  // one whose rotation is BUILD 16's (Night 2 west → NW postern → south,
+  // Night 3 SE postern → north → south), so these checks measure the same run
+  // they measured before the rotation existed. The rotation itself is checked
+  // over many seeds (harness §BUILD 17, survival-balance, survival-uxprobe).
+  DUSKHOLD_SEED: 20261007,
   innerWidth: 390, innerHeight: 844, devicePixelRatio: 1, addEventListener() { }, removeEventListener() { },
   AudioContext: StubAudioContext, requestAnimationFrame() { return 0; },
   localStorage: { _d: {}, getItem(k) { return this._d[k] ?? null; }, setItem(k, v) { this._d[k] = String(v); }, removeItem(k) { delete this._d[k]; } },
@@ -99,6 +105,7 @@ function makeCanvas() {
 }
 
 const { botNight, botDay, releaseControls } = await import('./survival-bots.mjs');
+const { gateShort } = await import('../src/game/survival.js');
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
 /* ---------------- measurement ---------------- */
@@ -126,7 +133,8 @@ function dayOptions(mode) {
 function runGamer(kind, seed) {
   reseed(seed);
   win.localStorage._d = {};
-  const game = new Game(makeCanvas(), { mode: 'survival', nightDuration: DURATION });
+  // BUILD 17 (R8): the run's own gate rotation comes from this seed
+  const game = new Game(makeCanvas(), { mode: 'survival', nightDuration: DURATION, seed });
   game.input.touchSeen = true;
   game.input.layout(390, 844);
   const mode = game.survival;
@@ -153,7 +161,10 @@ function runGamer(kind, seed) {
   while (guard++ < 60 * 60 * 30) {
     if (mode.phase === 'night' && !game.uiPanel) {
       if (!night) {
-        night = { day: mode.day, frames: 0, targetFrames: 0, firstTarget: null, contact: null, quiet: 0, longestQuiet: 0, lastKillAt: 0, kills: 0, bins: new Array(12).fill(0), keepMin: 1, flares: 0, hurtMin: 1 };
+        night = { day: mode.day, frames: 0, targetFrames: 0, firstTarget: null, contact: null, quiet: 0, longestQuiet: 0, lastKillAt: 0, kills: 0, bins: new Array(12).fill(0), keepMin: 1, flares: 0, hurtMin: 1,
+          // BUILD 17 (R8): the round this run plays — the gates in the order
+          // the night comes at them, and the seed it came from
+          gates: mode.nightDoors().slice(0, 3).map((id) => gateShort(mode.entranceById(id), 'short')).join('>'), seed: mode.runSeed };
         // the rally player answers the first wave's call at once
         if (kind === 'rally') { const gate = mode.chooseTargetEntrance(0, 0, 0); state.rally = gate ? gate.id : null; state.hunt = true; }
       }
@@ -220,6 +231,6 @@ for (const kind of KINDS) for (const seed of SEEDLIST) all.push(runGamer(kind, s
 if (args.json) fs.writeFileSync(args.json, JSON.stringify(all, null, 1));
 for (const r of all) {
   console.log(`\n${r.kind} s${r.seed} -> ${r.result}`);
-  for (const n of r.nights) console.log(`  N${n.day} ${n.result} end@${n.endAt}s${n.cleared ? ` cleared@${n.cleared.at}s(+${n.cleared.bonus}g)` : ''} kills=${n.kills} target%=${n.targetPct} contact@${n.contact}s first@${n.firstTarget}s longestQuiet=${n.longestQuiet}s lastKill@${n.lastKillAt}s deadTail=${n.deadTail}s keepMin=${n.keepMin}% hpMin=${n.hurtMin}% flares=${n.flares} bins=${n.bins.join(',')}`);
+  for (const n of r.nights) console.log(`  N${n.day} ${n.result} gates=${n.gates} end@${n.endAt}s${n.cleared ? ` cleared@${n.cleared.at}s(+${n.cleared.bonus}g)` : ''} kills=${n.kills} target%=${n.targetPct} contact@${n.contact}s first@${n.firstTarget}s longestQuiet=${n.longestQuiet}s lastKill@${n.lastKillAt}s deadTail=${n.deadTail}s keepMin=${n.keepMin}% hpMin=${n.hurtMin}% flares=${n.flares} bins=${n.bins.join(',')}`);
   for (const d of r.days) console.log(`  D${d.day} purse=${d.gold}g/${d.wood}w options=${d.options} [${d.kinds.join(' ')}] buys=${d.buys.map((b) => `${b.type}(walk${b.walk}s,job${b.job}s)`).join(' ')} human≈${d.humanSeconds}s`);
 }

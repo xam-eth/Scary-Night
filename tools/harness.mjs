@@ -93,6 +93,12 @@ const stubDoc = {
 };
 
 const win = {
+  // BUILD 17 (R8): a run's gate rotation comes from a seed. This base is the
+  // one whose rotation is BUILD 16's (Night 2 west → NW postern → south,
+  // Night 3 SE postern → north → south), so these checks measure the same run
+  // they measured before the rotation existed. The rotation itself is checked
+  // over many seeds (harness §BUILD 17, survival-balance, survival-uxprobe).
+  DUSKHOLD_SEED: 20261007,
   innerWidth: 1280, innerHeight: 720, devicePixelRatio: 1,
   addEventListener(t, f) { listeners.push([t, f]); },
   removeEventListener() { },
@@ -2385,6 +2391,164 @@ async function runSurvivalMilestone() {
   }
   const b16Pass = b16Checks.length === 3 && b16Checks.every(Boolean);
 
+  // ---- BUILD 17 (R8, docs/UX-REPLAY-RESEARCH.md §5): the gates a run is
+  // attacked from rotate. One table per night meant every run was the same
+  // round; Nights 2–3 now pick one of four authored rotations from the run's
+  // seed, the day says which in order (TONIGHT chip + the wave pip on each
+  // gate's badge), and Night 1 keeps the opening's. The pictures are in the
+  // browser (survival-plotsqa §9), what the rotation does to a run's feel is
+  // in tools/survival-uxprobe.mjs and tools/survival-balance.mjs ----
+  const b17Checks = [];
+  const b17Check = (name, ok, detail) => {
+    b17Checks.push(!!ok);
+    console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} (${detail})`);
+  };
+  {
+    const { NIGHT_ROTATIONS, gateLabel, mixSeed } = await import('../src/game/survival.js');
+    // the seeds the balance and UX probes play (tools/survival-uxprobe.mjs)
+    const SEEDS = [20261012, 20268931, 20276850, 20261013, 20261014];
+    window.localStorage.removeItem('lastnight.save.v1');
+    const rg = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 72 });
+    const rm = rg.survival;
+    const rtick = (n = 1) => { for (let i = 0; i < n; i++) rg.update(step); };
+    const setSeed = (seed) => { rm.seedBase = seed; rm.runSeed = rm.newRunSeed(); };
+    const mainId = rm.mainGate().id;
+    const postern = (id) => /^postern/.test(id);
+    const plans = {};
+    for (const seed of SEEDS) {
+      setSeed(seed);
+      plans[seed] = { 1: rm.nightDoors(1), 2: rm.nightDoors(2), 3: rm.nightDoors(3) };
+    }
+    // 1) the rotations are the authored ones, Night 1 never turns, and five
+    //    seeds give five different rounds (R8's measure: ≥ 3 orders in 5 seeds)
+    const night1Fixed = NIGHT_ROTATIONS[0].length === 1;
+    const shapesOk = SEEDS.every((seed) => [1, 2, 3].every((day) => {
+      const plan = plans[seed][day];
+      const authored = NIGHT_ROTATIONS[day - 1].some((p) => p.join() === plan.join());
+      const distinct = new Set(plan).size === plan.length;
+      const finale = plan[2] === mainId;
+      const runnersApart = plan[2] !== plan[3];
+      const notBothPosterns = !(postern(plan[0]) && postern(plan[1]));
+      return authored && distinct && finale && runnersApart && notBothPosterns;
+    }));
+    const n1Same = SEEDS.every((seed) => plans[seed][1].join() === NIGHT_ROTATIONS[0][0].join());
+    const opensApart = SEEDS.every((seed) => plans[seed][3][0] !== plans[seed][2][0]);
+    const orders = (day) => new Set(SEEDS.map((seed) => plans[seed][day].join('>'))).size;
+    const replayed = (() => { setSeed(SEEDS[0]); const a = rm.nightDoors(2).join() + rm.nightDoors(3).join(); setSeed(SEEDS[0]); return a === rm.nightDoors(2).join() + rm.nightDoors(3).join(); })();
+    b17Check(`R8: Nights 2–3 come at the gates in a rotation of their own per run — ${NIGHT_ROTATIONS[1].length} authored orders on Night 2 and ${NIGHT_ROTATIONS[2].length} on Night 3, wave 3 and the Breakers still at the main gate, no gate twice a night, the two runners at two gates, never two posterns first, Night 3 not opening where Night 2 did — while Night 1 keeps the opening's one order; 5 probe seeds give ${orders(2)} different Night 2 orders and ${orders(3)} Night 3 orders (research measure: ≥ 3)`,
+      night1Fixed && shapesOk && n1Same && opensApart && replayed && orders(2) >= 3 && orders(3) >= 3,
+      SEEDS.map((seed) => `s${seed}: N2 ${plans[seed][2].map((id) => gateLabel(rm.entranceById(id))).join(' → ')}, N3 ${plans[seed][3].map((id) => gateLabel(rm.entranceById(id))).join(' → ')}`).join(' | ')
+        + ` | N1 ${plans[SEEDS[0]][1].map((id) => gateLabel(rm.entranceById(id))).join(' → ')} for every seed | replays ${replayed}`);
+
+    // 2) the night really plays what the day announced: every wave, runner and
+    //    Breaker stands at the gate the plan names, and the call the HUD reads
+    //    (tonightCall / tonightPlan) is that plan
+    setSeed(SEEDS[1]);
+    const played = {};
+    for (const day of [2, 3]) {
+      rm.restart();
+      rm.phase = 'day'; rm.day = day; rm.nightsCompleted = day - 1; rm.rewardAck = day - 1;
+      rg.screen = 'playing'; rg.uiPanel = 'survival-day';
+      // the day's announcement, read before the night is started
+      const call = rm.tonightCall();
+      const plan = rm.nightDoors().slice();
+      const rows = rm.tonightPlan().map((r) => ({ id: r.id, order: r.order, swarm: r.swarm, individuals: r.individuals, breakers: r.breakers }));
+      const counts = rm.waveCounts();
+      rm.startNight();
+      if (rm.cine) rm.cine = null;
+      // Where each body was SENT, read at the spawn itself: a runner that
+      // finds a gate already broken legitimately turns to the nearest breach
+      // (SurvivalIndividualZombie.update), so its entranceId a second later is
+      // not the gate the plan named for it.
+      const sent = { swarm: [], individual: [], breaker: [] };
+      const swarm0 = rm.spawnSwarm.bind(rm);
+      const individual0 = rm.spawnIndividual.bind(rm);
+      const breaker0 = rm.spawnBreaker.bind(rm);
+      rm.spawnSwarm = (count, wave, forced) => { const r = swarm0(count, wave, forced); sent.swarm[wave] = r && r.entrance ? r.entrance.id : null; return r; };
+      rm.spawnIndividual = (index) => { const r = individual0(index); const last = rg.enemies[rg.enemies.length - 1]; sent.individual[index] = last ? last.entranceId : null; return r; };
+      rm.spawnBreaker = (index) => { const r = breaker0(index); sent.breaker[index] = r ? r.id : null; return r; };
+      let guard17 = 0;
+      const home = rm.hunterHome();
+      while (rm.phase === 'night' && rm.elapsed < rm.nightDuration * 0.78 && guard17++ < 60 * 80) {
+        // the captain waits at the keep, and neither the keep nor he can fall:
+        // this measures where the night sends its bodies, not whether it is won
+        // (a flood through a broken postern otherwise claws him down by 30 s
+        // on some rotations, and the night ends with waves still to come)
+        rg.player.x = home.x; rg.player.y = home.y;
+        rm.keepHp = 99999;
+        rg.player.blood = rg.player.bloodMax;
+        rtick();
+      }
+      delete rm.spawnSwarm; delete rm.spawnIndividual; delete rm.spawnBreaker;
+      played[day] = {
+        plan, call, rows, counts,
+        waves: sent.swarm.slice(0, 3),
+        runners: sent.individual.slice(0, 2),
+        breakers: sent.breaker.filter(Boolean),
+        diag: { at: +rm.elapsed.toFixed(1), waveIndex: rm.waveIndex, individualIndex: rm.individualIndex, breakerIndex: rm.breakerIndex, alive: rm.aliveEnemies(), phase: rm.phase, sentRaw: { swarm: sent.swarm, individual: sent.individual, breaker: sent.breaker } },
+      };
+    }
+    const playedOk = [2, 3].every((day) => {
+      const p = played[day];
+      const wavesRight = p.waves.every((gate, w) => gate === p.plan[w]);
+      const runnersRight = p.runners.length === 2 && p.runners.every((gate, i) => gate === p.plan[i + 2]);
+      const breakersRight = p.breakers.length === (day === 3 ? 2 : 1) && p.breakers.every((gate) => gate === mainId);
+      const callRight = p.call.first === gateLabel(rm.entranceById(p.plan[0]))
+        && p.call.order.join() === p.plan.slice(0, 3).map((id) => gateLabel(rm.entranceById(id))).join()
+        && p.call.breakers === (day === 3 ? 2 : 1) && p.call.breakerGate === gateLabel(rm.mainGate())
+        && p.call.runners === 2 && p.call.swarm === p.counts.reduce((a, b) => a + b, 0);
+      // the day's badges: one row per gate the night comes at, each with the
+      // wave that reaches it first, and the counts the night really sends
+      const want = new Map();
+      p.plan.slice(0, 3).forEach((id, w) => { const r = want.get(id) || { id, order: w + 1, swarm: 0, individuals: 0, breakers: 0 }; r.swarm += p.counts[w]; want.set(id, r); });
+      const r0 = want.get(p.plan[2]) || { id: p.plan[2], order: 3, swarm: 0, individuals: 0, breakers: 0 };
+      r0.individuals += 1; r0.breakers += day === 3 ? 2 : 1; want.set(p.plan[2], r0);
+      const r1 = want.get(p.plan[3]) || { id: p.plan[3], order: 0, swarm: 0, individuals: 0, breakers: 0 };
+      r1.individuals += 1; want.set(p.plan[3], r1);
+      const rowsRight = p.rows.length === want.size && p.rows.every((r) => {
+        const wrow = want.get(r.id);
+        return !!wrow && r.order === wrow.order && r.swarm === wrow.swarm && r.individuals === wrow.individuals && r.breakers === wrow.breakers;
+      });
+      p.flags = { wavesRight, runnersRight, breakersRight, callRight, rowsRight };
+      return wavesRight && runnersRight && breakersRight && callRight && rowsRight;
+    });
+    b17Check('the night plays the announced rotation: waves 1–3, both runners and the Breakers spawn at the gate the day named, in that order, and the call the HUD reads (tonightCall, and the badge rows with the wave that reaches each gate first) is that same plan',
+      playedOk,
+      [2, 3].map((day) => {
+        const p = played[day];
+        return `N${day}: plan ${p.plan.map((id) => gateLabel(rm.entranceById(id))).join(' → ')}, waves ${p.waves.map((id) => gateLabel(rm.entranceById(id))).join(' → ')}, runners ${p.runners.map((id) => gateLabel(rm.entranceById(id))).join('/')} at ${mainId === p.plan[2] ? 'wave 3\'s gate' : '?'}/${gateLabel(rm.entranceById(p.plan[3]))}, Breakers ${p.breakers.map((id) => gateLabel(rm.entranceById(id))).join('/')}, call "${p.call.first} · ${p.call.breakers} × ${p.call.breakerGate}" (swarm ${p.call.swarm}, runners ${p.call.runners}), badges ${p.rows.map((r) => `${r.id}[${r.order}]${r.swarm}/${r.individuals}/${r.breakers}`).join(' ')}, flags ${JSON.stringify(p.flags)}, diag ${JSON.stringify(p.diag)}`;
+      }).join(' | '));
+
+    // 3) a run keeps the rotation it announced (a reload mid-run), and a new
+    //    run turns it: a player's PLAY AGAIN comes at a new side, a probe that
+    //    fixed its seed replays the same round
+    rm.restart();
+    rm.phase = 'day'; rm.day = 2; rm.nightsCompleted = 1; rm.rewardAck = 1;
+    const beforeReload = { seed: rm.runSeed, n2: rm.nightDoors(2).join(), n3: rm.nightDoors(3).join() };
+    rm._persist(true);
+    const reloaded = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 72 }).survival;
+    const reloadedSeed = reloaded.runSeed;
+    const keptSeed = reloadedSeed === beforeReload.seed;
+    const keptPlan = reloaded.nightDoors(2).join() === beforeReload.n2 && reloaded.nightDoors(3).join() === beforeReload.n3;
+    // a player's browser: no seed fixed, so two runs of one session differ
+    reloaded.seedBase = null;
+    const a = reloaded.newRunSeed();
+    const b = reloaded.newRunSeed();
+    const turnsFree = a !== b && mixSeed(a) !== mixSeed(b);
+    // a probe: the same base replays the same round, run after run
+    reloaded.seedBase = SEEDS[2];
+    const c = reloaded.newRunSeed();
+    reloaded.runSeed = c;
+    const d = reloaded.newRunSeed();
+    reloaded.runSeed = d;
+    const replaysFixed = c === d && reloaded.nightDoors(2).join() === plans[SEEDS[2]][2].join();
+    b17Check('a run keeps the rotation it announced — the seed is in the save and a reload mid-run comes back to the same gates — and a new run turns it: with no seed fixed (a player) two runs of one session get two rotations, with one fixed (a probe) every run replays the same',
+      keptSeed && keptPlan && turnsFree && replaysFixed,
+      `reload seed ${reloadedSeed} (wanted ${beforeReload.seed}), plans kept ${keptPlan}; free runs differ ${turnsFree} (${a} vs ${b}); fixed base replays ${replaysFixed} (${c} = ${d})`);
+    window.localStorage.removeItem('lastnight.save.v1');
+  }
+  const b17Pass = b17Checks.length === 3 && b17Checks.every(Boolean);
+
   console.log(`  idle Night 3: ${idle.nightThree.peakEnemies} peak enemies / ${idle.nightThree.peakBreakers} Breakers, ${idle.nightThree.kills} kills, ${idle.nightThree.wallDamage} wall damage, gate ${idle.nightThree.gateHp} HP, Hunter ${idle.nightThree.playerHp} HP; ${idle.phase}`);
   console.log(`  builder Night 3: ${builder.nightThree.peakEnemies} peak enemies / ${builder.nightThree.peakBreakers} Breakers, ${builder.nightThree.kills} kills, ${builder.nightThree.wallDamage} wall damage, gate ${builder.nightThree.gateHp} HP, Hunter ${builder.nightThree.playerHp} HP; keep Lv${builder.keepLevel} ${builder.keepHp} HP, soldiers ${builder.survivors}, buildings ${builder.buildings.join(',') || 'none'}, gateBuilt=${builder.gateBuilt}; ${builder.phase}`);
   // Balance target (M1 rebuild, K1): doing nothing must not win; an engaged
@@ -2397,7 +2561,7 @@ async function runSurvivalMilestone() {
     && hunterAutoShot && hunterRealLos && hunterSkill
     && idleLoses && builder.complete && builder.keepLevel === 3
     && builder.queueLockVerified && builder.sawmillBuilt && builder.gateBuilt && builder.barracksBuilt
-    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass && gateRulePass && b13Pass && b14Pass && b15Pass && b16Pass
+    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass && gateRulePass && b13Pass && b14Pass && b15Pass && b16Pass && b17Pass
     && builder.upgrades[0].level === 1 && builder.upgrades[0].plots === 9
     && builder.upgrades[builder.upgrades.length - 1].level === 3 && builder.upgrades[builder.upgrades.length - 1].plots === 15
     && builder.upgrades.every((item, i, all) => i === 0 || item.level >= all[i - 1].level);

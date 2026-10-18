@@ -24,6 +24,9 @@ const args = Object.fromEntries(process.argv.slice(2).map((a) => {
 }));
 const OUT = path.resolve(ROOT, args.out || '/tmp/intro');
 const PORT = Number(args.port || 8124);
+// BUILD 17 (R8): a run's gate rotation comes from a seed. Fixed here so a
+// check measures the same run every time and an evidence shot replays.
+const SEED = Number(args.seed || 20261007);   // the base whose rotation is BUILD 16's
 const DPR = Number(args.dpr || 1);
 fs.mkdirSync(OUT, { recursive: true });
 
@@ -79,7 +82,7 @@ const boot = async () => {
   // chain: the first frame came in before the GLBs did)
   await page.waitForFunction(() => window.__LN && window.__LN.survivalWorldReady === true, { timeout: 120000, polling: 100 });
 };
-await page.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'domcontentloaded', timeout: 180000 });
+await page.goto(`http://127.0.0.1:${PORT}/?seed=${SEED}`, { waitUntil: 'domcontentloaded', timeout: 180000 });
 await boot();
 const first = await page.evaluate(() => {
   const m = window.__LN.survival;

@@ -33,7 +33,7 @@
 
 import { clamp, writeSave } from '../core/util.js';
 import { SURVIVAL_ACTOR_SCALE } from '../core/config.js';
-import { SURVIVAL_BUILDINGS, BUILDING_MAX_LEVEL, HUNTER_MAX_LEVEL, ARMS_MAX_LEVEL, GUARD, CINE, SURVIVAL_CAMERA } from '../game/survival.js';
+import { SURVIVAL_BUILDINGS, BUILDING_MAX_LEVEL, HUNTER_MAX_LEVEL, ARMS_MAX_LEVEL, GUARD, CINE, SURVIVAL_CAMERA, gateShort } from '../game/survival.js';
 import { pauseButtonBox } from '../game/hud.js';
 import {
   drawSurvivalIcon, drawLabel, measureLabel, drawPanel, drawCounter, drawBar,
@@ -485,6 +485,10 @@ function edgeAvoid(game, w, h) {
   }
   const chip = recenterChipBox(game, w, h);
   if (chip) out.push({ kind: 'rect', ...chip });
+  // BUILD 17 (R8): the day's TONIGHT chip sits in the top band, so a gate's
+  // edge pointer must not land under it
+  const tonight = tonightChipBox(game, w, h);
+  if (tonight) out.push({ kind: 'rect', ...tonight });
   if (h < 560) {
     // BUILD 16: on a sideways phone the night's pointers run round the
     // screen's edge (nightPointerBand), past the HUD that sits on it — the
@@ -611,6 +615,9 @@ function hudBand(game, w, h) {
   out.push({ x: 0, y: 0, w: pause.x + pause.w + 4, h: pause.y + pause.h + 4 });
   const pillW = night ? Math.min(156, w - 216) : Math.min(212, w - 216);
   out.push({ x: w / 2 - pillW / 2 - 4, y: 0, w: pillW + 8, h: 8 + (night ? 68 : 46) + 4 });
+  // BUILD 17 (R8): the day's TONIGHT chip is part of the top band
+  const tonight = !night ? tonightChipBox(game, w, h) : null;
+  if (tonight) out.push({ x: tonight.x - 4, y: 0, w: tonight.w + 8, h: tonight.y + tonight.h + 4 });
   const gap = night ? 36 : short ? 34 : 40;
   const chip = !night && mode.builderJob ? 24 + 4 : 0;
   out.push({ x: w - 88 - 8 - 4, y: 0, w: 88 + 12, h: 10 + 2 * gap + 30 + 4 + (chip ? gap - 30 + chip : 0) });
@@ -1263,7 +1270,89 @@ function drawTonightBadge(ctx, x, y, row) {
     }
     cx += 6;
   }
+  // BUILD 17 (R8): which wave comes at this gate first, as a pip on the
+  // badge's corner — the badges by day were a set of gates, and a set does
+  // not say where to stand when the night starts
+  if (row.order) {
+    const r = 9, cx = left + 2, cy = y - ph / 2 + 1;
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, TAU);
+    ctx.fillStyle = '#1b1530'; ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = '#ffffff'; ctx.stroke();
+    drawLabel(ctx, String(row.order), cx, cy + 1, 11, '#ffffff', { align: 'center', outline: 0 });
+    ctx.restore();
+  }
   return { x: left, y: y - ph / 2, w: pw, h: ph };
+}
+
+/**
+ * BUILD 17 (R8, docs/UX-REPLAY-RESEARCH.md §5: "sifat horde per malam
+ * diumumkan di senja"): the day's TONIGHT chip. The badges over the gates
+ * (BUILD 13, V10) say *which* gates tonight comes at and how many; the chip
+ * says it in one read, in order, before the player commits the day's build
+ * to a side of the bailey — and it sits in the top band, between PAUSE and
+ * the DAY pill, so it costs no world (DESIGN-SYSTEM-PLAN §8.8: the top bar
+ * stays ≤ 48 px, the middle stays the world).
+ * Null when it does not apply: night, a bookend, the dawn card, or a screen
+ * too narrow to fit it clear of the pill (then the badges carry it alone).
+ */
+export function tonightChipBox(game, w, h) {
+  const mode = game && game.survival;
+  if (!mode || !(w > 0 && h > 0) || mode.phase !== 'day' || mode.cine) return null;
+  if (typeof mode.rewardPending === 'function' && mode.rewardPending()) return null;
+  const pause = pauseButtonBox(w, h);
+  const pillW = Math.min(212, w - 216);
+  const x = pause.x + pause.w + 8;
+  const right = w / 2 - pillW / 2 - 8;
+  const avail = right - x;
+  if (!(avail >= 118)) return null;
+  return { x, y: 8, w: avail, h: 46 };
+}
+
+function drawTonightChip(game, ctx, w, h) {
+  const box = tonightChipBox(game, w, h);
+  if (!box) return null;
+  const mode = game.survival;
+  const call = mode.tonightCall();
+  const plan = mode.nightDoors();
+  const pad = 10;
+  const inner = box.w - pad * 2;
+  // the order line, in the longest wording that fits this screen
+  let order = null, tier = 'tiny';
+  for (const t of ['wide', 'short', 'tiny']) {
+    const text = plan.slice(0, 3).map((id) => gateShort(mode.entranceById(id), t)).join(' → ');
+    tier = t; order = text;
+    if (measureLabel(ctx, text, 12) <= inner) break;
+  }
+  // the title line: TONIGHT + what the night sends (icons, as everywhere else)
+  const counts = [];
+  if (call.swarm) counts.push({ icon: 'swarm', text: `${call.swarm}` });
+  if (call.runners) counts.push({ icon: 'zombie', text: `${call.runners}` });
+  if (call.breakers) counts.push({ icon: 'breaker', text: `${call.breakers}` });
+  const titleSize = 10, countSize = 12, iconSize = 16;
+  const titleW = measureLabel(ctx, 'TONIGHT', titleSize);
+  const countW = (list) => list.reduce((n, it) => n + iconSize + 3 + measureLabel(ctx, it.text, countSize) + 8, 0);
+  let shown = counts.slice();
+  while (shown.length && titleW + 10 + countW(shown) > inner) shown.pop();
+  const line1 = titleW + (shown.length ? 10 + countW(shown) : 0);
+  const cw = Math.min(box.w, Math.max(line1, measureLabel(ctx, order, 12)) + pad * 2);
+  const x = box.x, y = box.y, ch = box.h;
+  drawPanel(ctx, x, y, cw, ch, { radius: 12, top: '#4a51a8', bottom: '#262a66', lineWidth: 2.2 });
+  drawLabel(ctx, 'TONIGHT', x + pad, y + 12, titleSize, '#c3caff', { align: 'left', outline: 0 });
+  let cx = x + pad + titleW + 10;
+  for (const it of shown) {
+    drawSurvivalIcon(ctx, it.icon, cx + iconSize / 2, y + 12, iconSize);
+    cx += iconSize + 3;
+    drawLabel(ctx, it.text, cx, y + 13, countSize, '#ffffff', { align: 'left', outline: 2 });
+    cx += measureLabel(ctx, it.text, countSize) + 8;
+  }
+  drawLabel(ctx, order, x + pad, y + 31, 12, '#ffffff', { align: 'left', outline: 2.5 });
+  const drawn = {
+    box: { x, y, w: cw, h: ch }, order, tier,
+    counts: shown.map((it) => `${it.icon}×${it.text}`),
+    breakers: call.breakers, breakerGate: call.breakerGate, first: call.first,
+  };
+  return drawn;
 }
 
 function drawDayWorldLayer(game, ctx, w, h, view) {
@@ -1386,7 +1475,7 @@ function drawDayWorldLayer(game, ctx, w, h, view) {
     const total = row.swarm + row.individuals + row.breakers;
     if (inView) drawTonightBadge(ctx, at.x, at.y + Math.sin(t * 3 + e.x * 0.01) * 2, row);
     else drawEdgeMarker(ctx, w, h, at, row.breakers ? 'breaker' : row.swarm ? 'swarm' : 'zombie', '#ff5a4d', view.y0 + 10, h - view.y1 + 10, total);
-    tonight.push({ id: row.id, total, inView });
+    tonight.push({ id: row.id, total, inView, order: row.order || 0, swarm: row.swarm, individuals: row.individuals, breakers: row.breakers });
   }
   shown.tonight = tonight;
   game._survivalLabels = shown;   // QA (survival-plotsqa): what the day layer wrote
@@ -1557,6 +1646,11 @@ function drawDayScreen(game, ctx, w, h) {
   const nightBtn = { x: pad, y: pad + (short ? 50 : 58), w: short ? 112 : 124, h: short ? 38 : 42 };
   drawButton(game, ctx, nightBtn, `NIGHT ${mode.day}`,
     () => mode.startNight(), { id: 'START NIGHT', icon: 'moon', color: 'purple', disabled: !!job, fontSize: short ? 14 : 15 });
+
+  // BUILD 17 (R8): what tonight is, read in one line before the day's builds
+  // are committed — the gates in order and what the night sends
+  const tonightChip = !reward ? drawTonightChip(game, ctx, w, h) : null;
+  if (game._survivalLabels) game._survivalLabels.tonightChip = tonightChip;
 
   drawZoomButtons(game, ctx, w, h);
   drawRecenterChip(game, ctx, w, h);
@@ -2084,6 +2178,15 @@ export function drawSurvivalControls(game, ctx, w, h) {
 
 export function drawSurvivalScreen(game, ctx, w, h, worldReady = true) {
   game.ui.length = 0;
+  // BUILD 17: the day layer owns game._survivalLabels — the record QA reads
+  // off the screen. On a frame that does not draw it (night, the cine, the
+  // pause panel, an end panel) the day's labels must go with it, or a probe
+  // reads last day's TONIGHT chip while the night HUD is up.
+  const mode0 = game.survival;
+  if (game._survivalLabels && (!mode0 || mode0.phase !== 'day' || mode0.cine || game.screen === 'paused')) {
+    game._survivalLabels.tonightChip = null;
+    game._survivalLabels.tonight = [];
+  }
   if (!worldReady) {
     ctx.save();
     const g = ctx.createLinearGradient(0, 0, 0, h);

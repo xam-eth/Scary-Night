@@ -30,7 +30,12 @@ const nightDuration = Number.isFinite(requestedNight) && requestedNight > 0 ? re
 // K1's opening and the reinforcements' arrival play in a real run; QA tools
 // that script the night from its first second pass `?cine=0`.
 const cinematics = query.get('cine') !== '0';
-const game = new Game(canvas, { mode: gameMode, nightDuration, cinematics });
+// BUILD 17 (R8): a run's gate rotation comes from a seed. A player never
+// passes one (each run rotates on the clock); QA tools do, so a run they
+// measured can be measured again — and a phone screenshot can be reproduced.
+const requestedSeed = Number(query.get('seed'));
+const seed = Number.isFinite(requestedSeed) && requestedSeed > 0 ? requestedSeed : undefined;
+const game = new Game(canvas, { mode: gameMode, nightDuration, cinematics, seed });
 const input = game.input;
 World3D.bindStage(canvas.parentElement);
 Ads.init(game);

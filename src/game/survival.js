@@ -95,14 +95,69 @@ const WAVE_COUNTS = Object.freeze([
   Object.freeze([30, 30, 30]),
 ]);
 const SWARM_CAP = 30;
-// Gates per night: waves 1-3, then the two Individuals (src/game/fortress.js).
-// Night 1 opens at the north gate, across the bailey from the camera, so the
-// first contact is a gate the Hunter has time to walk to and the main gate
-// is pressed only by the third wave. The posterns open from Night 2.
-const NIGHT_DOORS = Object.freeze([
-  Object.freeze(['northGate', 'eastGate', 'southGate', 'westGate', 'eastGate']),
-  Object.freeze(['westGate', 'posternNW', 'southGate', 'northGate', 'posternNW']),
-  Object.freeze(['posternSE', 'northGate', 'southGate', 'westGate', 'posternSE']),
+/**
+ * The gates a night comes at, in the order it comes at them (doors of
+ * src/game/fortress.js): wave 1, wave 2, wave 3, then the second
+ * Individual's gate (the first one shares wave 3's). The Breakers always
+ * come at the main gate.
+ *
+ * BUILD 17 (R8, docs/UX-REPLAY-RESEARCH.md §5): one table per night meant
+ * every run was the same round — the complaint research found most often in
+ * the games measured against it ("same round… rotate the direction"). Nights
+ * 2 and 3 now carry several authored rotations and a run picks one of each
+ * from its `runSeed` (`nightDoors`), so the direction changes from run to
+ * run while the night's shape stays authored:
+ *   - wave 3, the biggest, still ends at the main gate, where the Breakers
+ *     come and where the barricade the captain pays for stands;
+ *   - the posterns only open from Night 2;
+ *   - no gate takes two waves in the same night, and the two runners come at
+ *     two different gates;
+ *   - Night 3 never opens on the gate Night 2 opened on;
+ *   - the first two waves are never both at a postern (a postern is 110 HP
+ *     and stands further from the keep than a gate);
+ *   - Night 3 also obeys two limits measured with the fragile archetype
+ *     (arms-builder: barracks + arms, no ballistas — 3 seeds a plan,
+ *     `tools/survival-balance.mjs --plan3=<gates>`):
+ *       * a postern never takes wave 2. northGate→posternNW and
+ *         westGate→posternSE lost 0/3: 30 bodies break a 110-HP postern
+ *         while the garrison is committed to wave 1's gate on the far side.
+ *         The same postern as wave 1 holds 3/3 — it arrives while the
+ *         defence is still whole;
+ *       * wave 2 sits within a quarter of the wall circuit of wave 1.
+ *         posternNW→eastGate and posternSE→westGate (both 135°) lost 0/3 and
+ *         1/3; every 45°/90° step measured held 3/3.
+ *     Night 2 keeps the wider shapes: 24/27/27 bodies at a postern as wave 2
+ *     measured 3/3 there;
+ *   - Night 3 offers three rounds, not four. A first table carried a fourth,
+ *     postern-less order (northGate→westGate→southGate→eastGate): four 30-body
+ *     waves at four big gates is a round the fragile archetype only survives
+ *     when Night 2 happened to prep it — arms-builder held it 3/3 behind
+ *     Night 2's variants 0/1 but lost 1/5 behind variant 2 and 3/5 behind
+ *     variant 3 (--rot=2,3 / 3,3, 5 seeds). It is not in the table; the three
+ *     that are each hold 3/3 behind every Night 2 variant measured.
+ * Night 1 keeps the one rotation it has always had: the opening hands the
+ * player over at its first wave and the FTUE walks that gate
+ * (tools/survival-intro.mjs), so the first night of a first run is identical
+ * to BUILD 16.
+ *
+ * What does NOT vary yet: the night's make-up (swarm sizes, two runners,
+ * one Breaker on Night 2 and two on Night 3) is still authored per night.
+ * Announcing "RUNNERS TONIGHT" the way R8 sketches it needs a new body type
+ * and a retune, so the call names the direction and the Breakers instead.
+ */
+export const NIGHT_ROTATIONS = Object.freeze([
+  Object.freeze([Object.freeze(['northGate', 'eastGate', 'southGate', 'westGate'])]),
+  Object.freeze([
+    Object.freeze(['westGate', 'posternNW', 'southGate', 'northGate']),
+    Object.freeze(['eastGate', 'posternSE', 'southGate', 'northGate']),
+    Object.freeze(['northGate', 'westGate', 'southGate', 'eastGate']),
+    Object.freeze(['posternSE', 'eastGate', 'southGate', 'westGate']),
+  ]),
+  Object.freeze([
+    Object.freeze(['posternSE', 'northGate', 'southGate', 'westGate']),
+    Object.freeze(['posternNW', 'northGate', 'southGate', 'eastGate']),
+    Object.freeze(['posternSE', 'eastGate', 'southGate', 'westGate']),
+  ]),
 ]);
 /**
  * K1's two bookends (DESIGN-SYSTEM-PLAN §4): the opening shot — the keep and
@@ -401,6 +456,8 @@ function freshProgress(duration = SURVIVAL_TUNING.nightSeconds) {
     waveIndex: 0,
     breakerIndex: 0,
     individualIndex: 0,
+    runSeed: 0,          // BUILD 17 (R8): the run's gate rotation
+    runCount: 0,
     siegeTimers: {},
     nightStats: freshNightStats(), runStats: freshRunStats(),
     lastRewards: null,
@@ -1092,6 +1149,34 @@ export function gateLabel(entrance) {
   return /^postern/i.test(entrance.id) ? `${short} POSTERN` : `${short} GATE`;
 }
 /**
+ * The same door in as few words as the space allows (BUILD 17, R8's dusk
+ * call): `wide` keeps the wave call's wording ("NW POSTERN"), `short` drops
+ * "GATE" ("NW POSTERN" stays, a postern needs the word), `tiny` is the side
+ * alone ("NW"). The chip in the day HUD picks the first that fits.
+ */
+export function gateShort(entrance, tier = 'wide') {
+  if (!entrance) return '';
+  const side = GATE_NAMES[entrance.id];
+  if (!side) return String(entrance.name || '').toUpperCase();
+  if (/^postern/i.test(entrance.id)) return tier === 'tiny' ? side : `${side} POSTERN`;
+  if (tier === 'wide') return `${side} GATE`;
+  return side;
+}
+/**
+ * A run's rotation is chosen from a seed, never from `Math.random`
+ * (BUILD 17, R8): drawing from the game's random stream would shift every
+ * roll after it, so a seeded balance run would no longer be the same run.
+ * The seed is stored in the save, so a reload mid-run keeps the rotation the
+ * day HUD promised, and the tools pass their own (`?seed=`, or
+ * `window.DUSKHOLD_SEED` in node) to measure a run again.
+ */
+export function mixSeed(n) {
+  let x = Math.round(Number(n)) || 1;
+  x = Math.imul(x ^ (x >>> 15), 0x2545f491) >>> 0;
+  x = Math.imul(x ^ (x >>> 13), 0x9e3779b1) >>> 0;
+  return (x ^ (x >>> 16)) >>> 0;
+}
+/**
  * The run's MVP (R19): the part of the garrison the player raised that
  * brought down the most — one ballista by its circle, the keep's roof
  * ballista, or the guards. The captain is the player, never the MVP (his
@@ -1223,6 +1308,15 @@ export class SurvivalMode {
     this.individualIndex = 0;
     this.siegeTimers = Object.create(null);
     this.nightStats = freshNightStats();
+    // BUILD 17 (R8): the run's own rotation seed. Set here from the caller
+    // (?seed=, or window.DUSKHOLD_SEED in node), then overwritten by the save
+    // in _restore so a reload keeps the rotation the day HUD promised.
+    this.seedBase = Number.isFinite(Number(options.seed)) && options.seed != null
+      ? Math.round(Number(options.seed))
+      : (typeof window !== 'undefined' && Number.isFinite(Number(window.DUSKHOLD_SEED)) && window.DUSKHOLD_SEED != null
+        ? Math.round(Number(window.DUSKHOLD_SEED)) : null);
+    this.runSeed = 0;
+    this.runCount = 0;             // how many runs this mode has opened (a restart rotates)
     this.cleared = null;           // BUILD 16 (R5): { at, dawnAt, saved, bonus } once tonight is cleared
     this.stragglers = null;        // BUILD 16 (R5): { at, count } once tonight is down to its last few
     this.lastRewards = null;
@@ -1359,6 +1453,12 @@ export class SurvivalMode {
     this.runStats.by = { ...freshKillsBy(), ...((s.runStats && s.runStats.by) || {}) };
     this.runStats.towers = { ...((s.runStats && s.runStats.towers) || {}) };
     this.records = { ...freshRecords(), ...(s.records && typeof s.records === 'object' ? s.records : {}) };
+    // BUILD 17 (R8): the run's gate rotation. A save that has one keeps it —
+    // a reload mid-run must come back to the night the day HUD announced; a
+    // save from before the rotation (or a fresh one) opens a run of its own.
+    this.runCount = Math.max(0, Math.floor(Number(s.runCount) || 0));
+    const savedSeed = Math.round(Number(s.runSeed));
+    this.runSeed = Number.isFinite(savedSeed) && savedSeed > 0 ? savedSeed : this.newRunSeed();
     this.runResult = (this.phase === 'complete' || this.phase === 'failed') && s.runResult && typeof s.runResult === 'object'
       ? cloneStats(s.runResult) : null;
     this.lastRewards = s.lastRewards || null;
@@ -2274,10 +2374,10 @@ export class SurvivalMode {
     if (!doors.length) return this.mainGate();
     // Every night tests a different side, and the nights get *closer*: the
     // old rotation sent Night 3 to the three doors furthest from the fire, so
-    // its biggest waves never reached the Perapian before dawn. Night 3 now
-    // opens with the chapel (near), presses the palisade, and ends with its
-    // largest wave on the front gate beside both Breakers.
-    const plan = NIGHT_DOORS[clamp(this.day - 1, 0, NIGHT_DOORS.length - 1)];
+    // its biggest waves never reached the Perapian before dawn. Since BUILD 17
+    // (R8) the rotation a night plays is the run's own (`nightDoors`): Nights
+    // 2–3 come from a different side every run, Night 1 keeps the opening's.
+    const plan = this.nightDoors();
     const wanted = plan[offset % plan.length];
     const exact = doors.find((e) => e.id === wanted);
     if (exact) return exact;
@@ -2291,12 +2391,77 @@ export class SurvivalMode {
   }
 
   /**
+   * A run's rotation seed (BUILD 17, R8). Three cases:
+   *   - `from` given: that seed (a tool measuring one rotation on purpose);
+   *   - a base was fixed (`?seed=`, or `window.DUSKHOLD_SEED` under node):
+   *     every run of that process plays the same rotation, so a seeded probe
+   *     replays exactly and two bots started from one random stream really do
+   *     face the same night;
+   *   - nothing fixed (a player's browser): the clock, mixed with the runs
+   *     opened and finished, so PLAY AGAIN comes at the gates from a new side.
+   */
+  newRunSeed(from) {
+    this.runCount = (this.runCount || 0) + 1;
+    const given = Number.isFinite(Number(from)) && from != null ? Math.round(Number(from)) : null;
+    const base = given != null ? given
+      : this.seedBase != null ? this.seedBase
+        : (Date.now() >>> 0) ^ Math.imul(this.runCount, 0x6d2b79f5) ^ Math.imul((this.records.runs || 0) + 1, 7919);
+    return mixSeed(base) || 1;
+  }
+
+  /**
+   * The gates tonight comes at, in order (BUILD 17, R8): this run's rotation
+   * for night `day`. Night 1 has one; Nights 2 and 3 pick one of four from
+   * the run's seed, and Night 3 never opens on the gate Night 2 opened on —
+   * the same opening two nights running is the repetition the research
+   * measured against. Pure arithmetic on `runSeed`: no `Math.random`, so a
+   * seeded run replays exactly.
+   */
+  nightDoors(day = this.day) {
+    const d = clamp(Math.round(Number(day) || 1), 1, NIGHT_ROTATIONS.length);
+    const sets = NIGHT_ROTATIONS[d - 1];
+    if (sets.length === 1) return sets[0];
+    let i = mixSeed((this.runSeed || 0) ^ Math.imul(d, 0x9e3779b9)) % sets.length;
+    if (d === 3 && sets[i][0] === this.nightDoors(2)[0]) i = (i + 1) % sets.length;
+    return sets[i];
+  }
+
+  /**
+   * Tonight in words (R8: "sifat horde per malam diumumkan di senja"): the
+   * gate the first wave comes at, the run of gates after it, and what the
+   * night sends besides the swarm. The day HUD's TONIGHT chip reads this;
+   * `tools/harness.mjs` asserts it against the plan the night really plays.
+   */
+  tonightCall() {
+    const plan = this.nightDoors();
+    const gate = (id) => this.entranceById(id);
+    const breakers = this.day >= 3 ? BREAKER_TIMES.length : this.day >= 2 ? 1 : 0;
+    const counts = this.waveCounts();
+    const swarm = counts.reduce((n, c) => n + clamp(Math.round(c), 1, SWARM_CAP), 0);
+    const runners = INDIVIDUAL_TIMES.length;
+    const main = this.mainGate();
+    const order = plan.slice(0, 3).map((id) => gateLabel(gate(id)));
+    return {
+      first: gateLabel(gate(plan[0])),
+      order,
+      breakers,
+      runners,
+      swarm,
+      breakerGate: breakers ? gateLabel(main) : null,
+      // the two lines the chip draws: who comes, and where they come first
+      what: `${swarm} STRONG`,
+      text: `${order.join(' → ')}`,
+    };
+  }
+
+  /**
    * BUILD 13 (V10, docs/VISUAL-LAYOUT-RESEARCH.md §7: "info gelombang
    * sebelum malam"): the coming night's attack gate by gate, known by day —
-   * the plan updateWaves() will play (NIGHT_DOORS for the swarm waves and the
-   * Individuals, the Breakers at the main gate from Night 2). By day
+   * the plan updateWaves() will play (`nightDoors` for the swarm waves and
+   * the Individuals, the Breakers at the main gate from Night 2). By day
    * `this.day` is the night to come. Rows in first-contact order:
-   * { id, entrance, swarm, waves: [1..3], individuals, breakers }.
+   * { id, entrance, swarm, waves: [1..3], individuals, breakers, order }
+   * (`order` since BUILD 17: the wave that reaches this gate first).
    */
   tonightPlan() {
     const rows = new Map();
@@ -2317,6 +2482,9 @@ export class SurvivalMode {
     }
     const breakers = this.day >= 3 ? BREAKER_TIMES.length : this.day >= 2 ? 1 : 0;
     if (breakers) { const r = row(this.mainGate()); if (r) r.breakers += breakers; }
+    // BUILD 17 (R8): which wave reaches a gate first, so the day's badges can
+    // be read as an order and not only as a set
+    for (const r of rows.values()) r.order = r.waves.length ? Math.min(...r.waves) : 0;
     return [...rows.values()];
   }
 
@@ -3876,6 +4044,8 @@ export class SurvivalMode {
       rewardAck: 0, dayFocus: null, nightKeepStart: this.tuning.keepHp[1], walkPath: null, lastBuilt: null,
       cine: null, reinforcements: null, runResult: null,
     });
+    // BUILD 17 (R8): a new run comes at the gates from a new side
+    this.runSeed = this.newRunSeed();
     this._resetNightFx();
     this._fields.clear();
     for (const e of g.mansion.entrances) {
@@ -4622,6 +4792,7 @@ export class SurvivalMode {
     s.gateHp = Math.round(this.gateHp); s.builderJob = this.builderJob ? { ...this.builderJob } : null;
     s.selectedRoom = this.selectedRoom; s.nightsCompleted = this.nightsCompleted;
     s.waveIndex = this.waveIndex; s.breakerIndex = this.breakerIndex; s.individualIndex = this.individualIndex;
+    s.runSeed = this.runSeed; s.runCount = this.runCount;
     s.siegeTimers = { ...this.siegeTimers };
     s.nightKeepStart = this.nightKeepStart == null ? null : Math.round(Number(this.nightKeepStart));
     s.nightStats = cloneStats(this.nightStats); s.lastRewards = this.lastRewards ? { ...this.lastRewards } : null;

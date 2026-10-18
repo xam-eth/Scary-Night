@@ -32,6 +32,9 @@ const args = Object.fromEntries(process.argv.slice(2).map((a) => {
 }));
 const OUT = path.resolve(ROOT, args.out || '/tmp/plotsqa');
 const PORT = Number(args.port || 8125);
+// BUILD 17 (R8): a run's gate rotation comes from a seed. Fixed here so a
+// check measures the same run every time and an evidence shot replays.
+const SEED = Number(args.seed || 20261007);   // the base whose rotation is BUILD 16's
 const DPR = Number(args.dpr || 1);
 fs.mkdirSync(OUT, { recursive: true });
 
@@ -66,7 +69,7 @@ const check = (name, ok, detail) => {
   if (!ok) failures++;
 };
 const t0 = Date.now();
-await page.goto(`http://127.0.0.1:${PORT}/?cine=0`, { waitUntil: 'domcontentloaded', timeout: 180000 });
+await page.goto(`http://127.0.0.1:${PORT}/?cine=0&seed=${SEED}`, { waitUntil: 'domcontentloaded', timeout: 180000 });
 await page.waitForFunction(() => {
   const g = window.__LN;
   return !!(g && g.mode === 'survival' && g.screen === 'playing' && g.survival && g.survival.phase === 'night');
@@ -868,6 +871,104 @@ check('B16: the night\'s last few — the two out of the fight run for the trees
     && !b16c.onScreen && b16c.red >= 20 && skullMark && gateMark && [skullMark, gateMark].every((mk) => onFrame(mk) && Math.hypot(mk.x - b16c.captain.x, mk.y - b16c.captain.y) > 140),
   b16c);
 await page.evaluate(() => { const g = window.__LN; g.enemies.length = 0; });
+
+/* ---- 9. BUILD 17 (docs/UX-REPLAY-RESEARCH.md §5 R8): the round rotates and
+ * the day says which round it is. Nights 2–3 come at the gates in an order of
+ * their own per run; the TONIGHT chip in the day's top band reads that order
+ * and what the night sends, and each gate's badge carries the wave that
+ * reaches it first. The rules (authored rotations, the seed in the save, the
+ * night really playing what the day announced) are in tools/harness.mjs ---- */
+const b17day = await page.evaluate(() => {
+  const g = window.__LN; const m = g.survival;
+  // a real day 2: the run restarted, its first night survived, its card taken
+  m.restart();
+  m.completeNight(); window.__pStep(2);
+  if (m.rewardPending && m.rewardPending()) m.ackRewards();
+  m.gold = 60; m.wood = 40;
+  const keep = m.keep(); const home = m.hunterHome();
+  g.player.x = home.x; g.player.y = home.y;
+  m._userZoom = 0.42; m._zoomGoal = null;
+  m.camPan.x = keep.x - home.x; m.camPan.y = keep.y - home.y + 40;
+  g.renderer.snapCamera(keep.x, keep.y);
+  window.__pStep(60);
+  const L = g._survivalLabels || {};
+  const w = g.renderer.w, h = g.renderer.h;
+  const chip = L.tonightChip || null;
+  // the band it must sit in: clear of PAUSE, the DAY pill and the counters
+  const pillW = Math.min(212, w - 216);
+  const band = { pauseRight: 8 + 44, pillLeft: w / 2 - pillW / 2, countersLeft: w - 88 - 8, top: 48 };
+  // is it really painted? sample its own face and its text line
+  const face = chip ? window.__pHud(chip.box.x + 8, chip.box.y + chip.box.h / 2) : null;
+  let ink = 0;
+  if (chip) {
+    // the order line is 12 px centred on box.y + 31: sample the band it lives
+    // in, not one pixel row a glyph may straddle
+    for (let y = chip.box.y + 26; y <= chip.box.y + 36; y += 2) {
+      for (let x = Math.round(chip.box.x) + 6; x < Math.round(chip.box.x + chip.box.w) - 6; x += 2) {
+        const [r, gg, b] = window.__pHud(x, y);
+        if (r > 200 && gg > 200 && b > 200) ink++;
+      }
+    }
+  }
+  return {
+    day: m.day, phase: m.phase, w, h, chip, band, face, ink,
+    plan: m.nightDoors().slice(), call: m.tonightCall(),
+    badges: (L.tonight || []).slice(),
+    seed: m.runSeed,
+  };
+});
+await shot('b17-1-tonight-chip');
+// the same screen with two other runs' seeds: the round turns
+const b17turn = [];
+for (const seed of [20276850, 20261013]) {
+  const row = await page.evaluate((sd) => {
+    const g = window.__LN; const m = g.survival;
+    m.seedBase = sd; m.runSeed = m.newRunSeed();
+    window.__pStep(3);
+    const L = g._survivalLabels || {};
+    return { seed: sd, runSeed: m.runSeed, chip: L.tonightChip || null, plan: m.nightDoors().slice(), badges: (L.tonight || []).slice() };
+  }, seed);
+  b17turn.push(row);
+  await shot(`b17-2-tonight-chip-s${seed}`);
+}
+// and at night the chip is gone: the night HUD is BUILD 16's
+const b17night = await page.evaluate(() => {
+  const g = window.__LN; const m = g.survival;
+  window.__pNight(2);
+  window.__pStep(4);
+  const L = g._survivalLabels || {};
+  return { phase: m.phase, chip: L.tonightChip || null, key: 'tonightChip' in L };
+});
+const chipOk = b17day.chip;
+const chipInBand = chipOk && chipOk.box.y >= 8 && chipOk.box.y + chipOk.box.h <= b17day.band.top + 8
+  && chipOk.box.x >= b17day.band.pauseRight && chipOk.box.x + chipOk.box.w <= b17day.band.pillLeft
+  && chipOk.box.h <= 48;
+// named, so a FAIL says which part of the chip did not hold
+const b17flags = {
+  drawn: !!chipOk,
+  inBand: !!chipInBand,
+  day2: b17day.phase === 'day' && b17day.day === 2,
+  order: !!(chipOk && chipOk.order.replace(/\s+/g, '').length),
+  counts: !!(chipOk && chipOk.counts.length >= 2),
+  callMatches: !!(chipOk && chipOk.first === b17day.call.first && chipOk.breakers === b17day.call.breakers),
+  painted: !!(b17day.face && b17day.face[2] > b17day.face[0] + 20),
+  legible: b17day.ink >= 8,
+  badges: b17day.badges.length >= 3 && b17day.badges.filter((r) => r.order >= 1).length === 3,
+  goneAtNight: b17night.phase === 'night' && !b17night.chip,
+};
+const S = await page.evaluate(() => window.__pS.gateShort(window.__LN.survival.entranceById('westGate'), 'wide'));
+const wantOrder = b17day.plan.slice(0, 3).join(' → ');
+check('B17: the day announces tonight in the top band — a TONIGHT chip naming the gates in the order the night comes at them and what it sends, inside the 48 px band, clear of PAUSE, the DAY pill and the counters, painted and legible; each gate\'s badge carries the wave that reaches it first; at night the chip is gone (the night HUD is BUILD 16\'s)',
+  Object.values(b17flags).every(Boolean),
+  { flags: b17flags, chip: chipOk, band: b17day.band, plan: b17day.plan, call: { first: b17day.call.first, breakers: b17day.call.breakers }, face: b17day.face, ink: b17day.ink, badges: b17day.badges.map((b) => `${b.id}[${b.order}]`), night: b17night, sample: S, wantOrder });
+const orders = [b17day, ...b17turn].map((r) => (r.chip && r.chip.order) || '');
+const distinct = new Set(orders).size;
+check(`B17: the round turns with the run — three seeds on the same day 2 screen give ${distinct} different TONIGHT orders (${orders.join(' | ')}), each the plan its night plays, and each badge's wave pip follows it`,
+  distinct >= 3 && orders.every(Boolean)
+    && [b17day, ...b17turn].every((r) => r.chip && r.chip.order.replace(/\s+/g, ' ').length > 0
+      && r.badges.filter((b) => b.order >= 1).length === 3
+      && r.badges.every((b) => b.order === 0 || r.plan.slice(0, 3).includes(b.id))),
+  { orders, plans: [b17day, ...b17turn].map((r) => r.plan.join(' → ')), runSeeds: [b17day, ...b17turn].map((r) => r.seed || r.runSeed) });
 
 fs.writeFileSync(path.join(OUT, 'plotsqa.json'), JSON.stringify({ results, errors }, null, 2));
 console.log(`errors ${errors.length}`);

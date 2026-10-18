@@ -47,6 +47,9 @@ const args = Object.fromEntries(process.argv.slice(2).map((a) => {
 }));
 const OUT = path.resolve(ROOT, args.out || 'qa-evidence/survival-fixes');
 const PORT = Number(args.port || 8106);
+// BUILD 17 (R8): a run's gate rotation comes from a seed. Fixed here so a
+// check measures the same run every time and an evidence shot replays.
+const SEED = Number(args.seed || 20261007);   // the base whose rotation is BUILD 16's
 const DPR = Number(args.dpr || 1);
 fs.mkdirSync(OUT, { recursive: true });
 
@@ -75,7 +78,7 @@ page.on('console', (m) => { if (m.type() === 'error') consoleErrors.push(m.text(
 const VIEW = { width: 844, height: 390 };
 await page.setViewport({ ...VIEW, deviceScaleFactor: DPR, isMobile: true, hasTouch: true });
 await page.evaluateOnNewDocument(() => { try { localStorage.clear(); } catch (_) { /* ignore */ } });
-await page.goto(`http://127.0.0.1:${PORT}/?cine=0`, { waitUntil: 'domcontentloaded', timeout: 180000 });
+await page.goto(`http://127.0.0.1:${PORT}/?cine=0&seed=${SEED}`, { waitUntil: 'domcontentloaded', timeout: 180000 });
 await page.waitForFunction(() => {
   const g = window.__LN;
   return !!(g && g.mode === 'survival' && g.screen === 'playing' && g.survival && g.survival.phase === 'night');

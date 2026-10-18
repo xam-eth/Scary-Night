@@ -1,0 +1,71 @@
+DUSKHOLD survival-uxprobe — night tempo, BUILD 16 (e988ecb, worktree) vs BUILD 17 (R8 seeded gate rotation, final table)
+node tools/survival-uxprobe.mjs --kinds=builder,tower,active,idle,rally (5 seeds 20261012,20268931,20276850,20261013,20261014; 72 s nights; cinematics off, so Night 1 starts at clock 0 — in the browser the opening hands over at its first wave mark)
+contact = first gate clawed or guard / ballista shot; first = the captain's first target; deadTail = last kill -> dawn; end@ = dawn (the clock, or a cleared night's early dawn); cleared = NIGHT CLEARED nights; gold = the early dawn's bonus
+rally = probe-only player: the builder by day who walks straight to the first wave's gate at nightfall and hunts the marked last few (the balance bots never do)
+BUILD 17 change under test: Nights 2-3 pick their gate rotation from the run's seed, so the same
+probe now measures a different round per seed. gates= is the round that run played (the probe
+prints it since this pass); rotation-5seed.txt lists them.
+
+# BUILD 16
+kind night | runs ok | end@ | cleared | gold | deadTail | contact | first | target%
+builder N1 | 5/5 | 72.0–72.0 | 0/5 | — | 0.1–0.8 | 4.9–5.4 | 12.1–12.6 | 47.0–51.0
+builder N2 | 5/5 | 60.7–69.0 | 5/5 | 3.0–11.0 | 2.0–2.1 | 2.9–3.2 | 14.3–14.7 | 36.0–64.0
+builder N3 | 5/5 | 65.3–66.5 | 5/5 | 5.0–6.0 | 2.0–2.0 | 2.7–2.9 | 12.3–12.5 | 40.0–42.0
+tower N1 | 5/5 | 72.0–72.0 | 0/5 | — | 0.1–0.8 | 4.9–5.4 | 12.1–12.6 | 47.0–51.0
+tower N2 | 5/5 | 66.5–67.7 | 5/5 | 4.0–5.0 | 2.0–2.1 | 2.9–3.2 | 14.4–14.7 | 52.0–58.0
+tower N3 | 5/5 | 59.1–62.2 | 5/5 | 9.0–12.0 | 1.4–2.1 | 2.6–2.9 | 12.2–12.6 | 47.0–51.0
+active N1 | 5/5 | 72.0–72.0 | 0/5 | — | 0.1–0.8 | 4.9–5.4 | 12.1–12.6 | 47.0–51.0
+active N2 | 0/5 | — | 0/0 | — | — | 3.0–3.2 | 14.5–14.7 | 54.0–65.0
+idle N1 | 0/5 | — | 0/0 | — | — | 4.9–5.4 | 26.8–28.7 | 13.0–16.0
+rally N1 | 5/5 | 70.3–72.0 | 5/5 | 0.0–1.0 | 1.2–3.2 | 4.7–5.2 | 7.2–8.7 | 34.0–52.0
+rally N2 | 5/5 | 66.2–69.2 | 5/5 | 2.0–5.0 | 2.0–2.1 | 3.0–3.1 | 11.5–11.5 | 55.0–59.0
+rally N3 | 5/5 | 65.8–70.4 | 5/5 | 1.0–6.0 | 2.0–2.1 | 2.6–3.2 | 9.6–9.7 | 44.0–46.0
+
+# BUILD 17
+kind night | runs ok | end@ | cleared | gold | deadTail | contact | first | target%
+builder N1 | 5/5 | 72 | 0/5 | — | 0.1–0.8 | 4.9–5.4 | 12.1–12.6 | 47–51
+builder N2 | 5/5 | 65.1–72.0 | 4/5 | 4–6 | 0.0–2.1 | 2.9–3.2 | 10.0–14.7 | 41–52
+builder N3 | 5/5 | 65.3–71.8 | 5/5 | 0–6 | 2 | 2.7–3.0 | 12.3–14.1 | 34–49
+tower N1 | 5/5 | 72 | 0/5 | — | 0.1–0.8 | 4.9–5.4 | 12.1–12.6 | 47–51
+tower N2 | 5/5 | 64.7–67.3 | 5/5 | 4–7 | 2.0–2.1 | 1.2–3.2 | 10.3–14.7 | 41–58
+tower N3 | 5/5 | 60.0–63.4 | 5/5 | 8–12 | 2.0–3.5 | 2.7–2.9 | 12.3–14.4 | 47–52
+active N1 | 5/5 | 72 | 0/5 | — | 0.1–0.8 | 4.9–5.4 | 12.1–12.6 | 47–51
+active N2 | 0/5 | — | 0/0 | — | — | 3.0–3.4 | 10.2–14.7 | 53–65
+idle N1 | 0/5 | — | 0/0 | — | — | 4.9–5.4 | 26.8–28.7 | 13–16
+rally N1 | 5/5 | 70.3–72.0 | 5/5 | 0–1 | 1.2–3.2 | 4.7–5.2 | 7.2–8.7 | 34–52
+rally N2 | 5/5 | 69.2–72.0 | 1/5 | 2 | 0.1–2.0 | 2.7–3.1 | 7.2–11.5 | 48–56
+rally N3 | 5/5 | 66.2–71.9 | 5/5 | 0–5 | 2.0–2.1 | 2.6–3.2 | 9.6–14.1 | 39–52
+
+# rotations played (gates= per night, distinct across the 5 probe seeds)
+builder N2: 3 distinct -> NORTH>WEST>SOUTH ×3 | WEST>NW POSTERN>SOUTH ×1 | SE POSTERN>EAST>SOUTH ×1
+builder N3: 3 distinct -> SE POSTERN>NORTH>SOUTH ×2 | NW POSTERN>NORTH>SOUTH ×2 | SE POSTERN>EAST>SOUTH ×1
+tower N2: 3 distinct -> NORTH>WEST>SOUTH ×3 | WEST>NW POSTERN>SOUTH ×1 | SE POSTERN>EAST>SOUTH ×1
+tower N3: 3 distinct -> SE POSTERN>NORTH>SOUTH ×2 | NW POSTERN>NORTH>SOUTH ×2 | SE POSTERN>EAST>SOUTH ×1
+active N2: 3 distinct -> NORTH>WEST>SOUTH ×3 | WEST>NW POSTERN>SOUTH ×1 | SE POSTERN>EAST>SOUTH ×1
+rally N2: 3 distinct -> NORTH>WEST>SOUTH ×3 | WEST>NW POSTERN>SOUTH ×1 | SE POSTERN>EAST>SOUTH ×1
+rally N3: 3 distinct -> SE POSTERN>NORTH>SOUTH ×2 | NW POSTERN>NORTH>SOUTH ×2 | SE POSTERN>EAST>SOUTH ×1
+
+# What moved, and what did not
+Night 1 is line-for-line the same as BUILD 16 for every kind: end@ 72.0, 0/5 cleared, deadTail
+0.1-0.8, contact 4.9-5.4, first 12.1-12.6, target% 47-51. Night 1 keeps its single authored
+rotation (the opening trailer hands the player over at its first wave), so the FTUE and every
+Night 1 measure are untouched by this pass.
+
+BUILD 16's tempo work (R5 early dawn, R6 first contact) survives the rotation:
+  builder N2  deadTail 0.0-2.1 (BUILD 16: 2.0-2.1), contact 2.9-3.2 (2.9-3.2), cleared 4/5 (5/5)
+  builder N3  deadTail 2.0 (2.0-2.0), contact 2.7-3.0 (2.7-2.9), cleared 5/5 (5/5)
+  tower   N2  deadTail 2.0-2.1 (2.0-2.1), contact 1.2-3.2 (2.9-3.2), cleared 5/5 (5/5)
+  tower   N3  deadTail 2.0-3.5 (1.4-2.1), contact 2.7-2.9 (2.6-2.9), cleared 5/5 (5/5)
+  rally   N1  unchanged 70.3-72.0, cleared 5/5, first 7.2-8.7
+The ranges are wider now because the five seeds play three different Night 2 rounds and three
+different Night 3 rounds instead of one. builder N2 end@ 65.1-72.0 with 4/5 cleared: the three
+seeds that play northGate>westGate>southGate>eastGate (no postern) run to the clock, the others
+clear early. One tower N2 contact of 1.2 s is the same spread the other way: a wave that reaches a
+gate the garrison is already standing at.
+
+R6's research target ("the captain's first target within 5 s on every night") is still NOT met and
+this pass does not claim it: first@ stays 10.0-14.7 s for builder/tower and 7.2-14.1 s for rally.
+What dominates it is unchanged — walking from the keep to the gate (6-8 s at 196 px/s run speed),
+not the wave. The rotation makes it seed-dependent, because the first gate is now further away on
+some rounds: rally's first@ on Night 3 is 9.6 s when the round opens at the SE postern and 14.1 s
+when it opens at the NW postern.

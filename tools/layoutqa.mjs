@@ -453,7 +453,7 @@ const desktopErrors = [];
 desktopPage.on('pageerror', (e) => desktopErrors.push(`page: ${e.message}`));
 desktopPage.on('console', (message) => { if (message.type() === 'error') desktopErrors.push(`console: ${message.text()}`); });
 await desktopPage.setViewport({ width: 1280, height: 720, deviceScaleFactor: 1, isMobile: false, hasTouch: false });
-await desktopPage.goto(`http://127.0.0.1:${PORT}/?cine=0`, { waitUntil: 'domcontentloaded', timeout: 180000 });
+await desktopPage.goto(`http://127.0.0.1:${PORT}/?cine=0&seed=20261007`, { waitUntil: 'domcontentloaded', timeout: 180000 });
 for (let i = 0; i < 200; i++) {
   const ready = await desktopPage.evaluate(() => !!window.__LN_API);
   if (ready) break;

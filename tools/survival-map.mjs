@@ -45,6 +45,12 @@ const stubDoc = {
   documentElement: { requestFullscreen() { } }, fullscreenElement: null, exitFullscreen() { },
 };
 const win = {
+  // BUILD 17 (R8): a run's gate rotation comes from a seed. This base is the
+  // one whose rotation is BUILD 16's (Night 2 west → NW postern → south,
+  // Night 3 SE postern → north → south), so these checks measure the same run
+  // they measured before the rotation existed. The rotation itself is checked
+  // over many seeds (harness §BUILD 17, survival-balance, survival-uxprobe).
+  DUSKHOLD_SEED: 20261007,
   innerWidth: 844, innerHeight: 390, devicePixelRatio: 1, addEventListener() { }, removeEventListener() { },
   AudioContext: StubAudioContext, requestAnimationFrame() { return 0; },
   localStorage: { _d: {}, getItem(k) { return this._d[k] ?? null; }, setItem(k, v) { this._d[k] = String(v); }, removeItem(k) { delete this._d[k]; } },

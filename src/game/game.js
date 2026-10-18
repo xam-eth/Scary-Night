@@ -237,7 +237,11 @@ export class Game {
     this.player.applyUpgrades(this.save);
     this.applySettings();
     if (this.mode === 'survival') {
-      this.survival = new SurvivalMode(this, { nightDuration: options.nightDuration, cinematics: options.cinematics === true });
+      this.survival = new SurvivalMode(this, {
+        nightDuration: options.nightDuration,
+        cinematics: options.cinematics === true,
+        seed: options.seed,   // BUILD 17 (R8): the run's gate rotation
+      });
     } else this.survival = null;
     this.decals.canvas.getContext('2d');
     window.__LN = this;   // used by the automated playtest harness
