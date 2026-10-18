@@ -15,6 +15,27 @@ function rectDistance(x, y, rect) {
   return Math.hypot(dx, dy);
 }
 
+/**
+ * BUILD 15 (V7, docs/VISUAL-LAYOUT-RESEARCH.md §7): the fortress keeps its
+ * ground clear where the fight is. Every gate has a kill zone (KILL_ZONE px
+ * round the point the horde gathers on outside it) and the two faces nearest
+ * the camera, south and east, have a glacis GLACIS px deep: a conifer there
+ * stood between the camera and a crowd at the gate. Those trees are felled,
+ * not removed — the stump keeps the trunk's footprint in the collision grid,
+ * so nothing about the fight moves; only the crown that hid it is gone.
+ */
+export const KILL_ZONE = 380;
+export const GLACIS = 460;
+
+function felledByFortress(x, y, fortress, gates) {
+  if (!fortress) return false;
+  if (gates.some((e) => Math.hypot(x - e.outside.x, y - e.outside.y) < KILL_ZONE)) return true;
+  const b = fortress.bailey;
+  const south = y > b.y + b.h && y < b.y + b.h + GLACIS && x > b.x - GLACIS && x < b.x + b.w + GLACIS;
+  const east = x > b.x + b.w && x < b.x + b.w + GLACIS && y > b.y - GLACIS && y < b.y + b.h + GLACIS;
+  return south || east;
+}
+
 function overlapsSolid(x, y, solids, pad = 8) {
   return solids.some((s) => x >= s.x - pad && x <= s.x + s.w + pad && y >= s.y - pad && y <= s.y + s.h + pad);
 }
@@ -31,6 +52,9 @@ export function makeExterior(mansion) {
   const brush = [];
   const blockers = [];
   const step = 245;
+  // BUILD 15: the fortress's kill zones and glacis (felledByFortress)
+  const fortress = mansion.isFortress && mansion.bailey ? mansion : null;
+  const gates = fortress ? entrances.filter((e) => e.exterior && e.gate && e.outside) : [];
   const cols = Math.ceil(bounds.w / step);
   const rows = Math.ceil(bounds.h / step);
 
@@ -62,6 +86,7 @@ export function makeExterior(mansion) {
           phase: hashRange(gx, gy, 48, 0, Math.PI * 2),
           shade: hash2(gx, gy, 49),
         };
+        if (felledByFortress(x, y, fortress, gates)) tree.felled = true;
         trees.push(tree);
         if (inPlayableBounds) blockers.push({ x: x - radius, y: y - radius, w: radius * 2, h: radius * 2, type: 'exteriorTree', solid: true });
       } else if (roll < 0.82) {

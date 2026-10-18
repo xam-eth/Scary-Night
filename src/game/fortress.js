@@ -98,6 +98,22 @@ const POSTERN_DECK = 40;    // px square: the plank platform behind the wall bes
 const POSTERN_DECK_IN = 33; // px from the wall's line into the yard to the deck's middle
 const LADDER_FOOT = 18;     // px from the masonry's (or the deck's) yard edge to where a ladder stands
 
+/**
+ * BUILD 15 (V6, docs/VISUAL-LAYOUT-RESEARCH.md §7): how far a tower's
+ * masonry rises over the top of the curtain wall, px (World3D builds the
+ * towers from it; the guards on a gate tower stand on it). The camera looks
+ * from the south-east, so a tower on the south or east side stands between
+ * it and a fight at that side's gate: in BUILD 14 the main gate's east tower
+ * hid the captain whole while he held the gate from inside. Those are squat
+ * bastions now, a merlon row over the wall-walk, and the south-east corner
+ * (the bottom of the frame) is cut down too. The tall towers keep to the
+ * north and west edge, the top of the frame, with the keep.
+ */
+export const TOWER_RISE = Object.freeze({ corner: 108, gate: 88, bastion: 20, cornerLow: 44 });
+/** The sides of the bailey between the camera and the yard (BUILD 15). */
+export const NEAR_SIDES = Object.freeze(['south', 'east']);
+const nearCamera = (side) => NEAR_SIDES.includes(side);
+
 export class Fortress extends Mansion {
   /*
    * Note: no class fields here. Mansion's constructor calls build() before
@@ -215,15 +231,20 @@ export class Fortress extends Mansion {
     for (const [x, y] of [
       [wallPos.west, wallPos.north], [wallPos.east, wallPos.north],
       [wallPos.west, wallPos.south], [wallPos.east, wallPos.south],
-    ]) tower(x, y, CORNER_TOWER, 'corner');
+    ]) {
+      // BUILD 15 (V6): the south-east corner is the one nearest the camera
+      const low = x > 0 && y > 0;
+      tower(x, y, CORNER_TOWER, 'corner', { low, rise: low ? TOWER_RISE.cornerLow : TOWER_RISE.corner });
+    }
     for (const g of GATES) {
       if (!g.big) continue;
       const axis = g.side === 'north' || g.side === 'south' ? 'h' : 'v';
+      const low = nearCamera(g.side);
       for (const s of [-1, 1]) {
         const along = g.at + s * (g.width / 2 + GATE_TOWER / 2);
         const x = axis === 'h' ? along : wallPos[g.side];
         const y = axis === 'h' ? wallPos[g.side] : along;
-        tower(x, y, GATE_TOWER, 'gate', { gate: g.id, side: g.side, flank: s });
+        tower(x, y, GATE_TOWER, 'gate', { gate: g.id, side: g.side, flank: s, low, rise: low ? TOWER_RISE.bastion : TOWER_RISE.gate });
       }
     }
 
@@ -248,6 +269,8 @@ export class Fortress extends Mansion {
         this.wallPosts.push(Object.freeze({
           gate: g.id, slot: s < 0 ? 0 : 1, kind: g.big ? 'tower' : 'wall', side: g.side,
           towerSize: g.big ? GATE_TOWER : 0, deck: g.big ? 0 : POSTERN_DECK,
+          // BUILD 15: the top a guard stands on (a bastion on the near sides)
+          rise: g.big ? (nearCamera(g.side) ? TOWER_RISE.bastion : TOWER_RISE.gate) : 0,
           x, y, foot: Object.freeze({ x: x + inward.x * depth, y: y + inward.y * depth }), inward,
         }));
       }

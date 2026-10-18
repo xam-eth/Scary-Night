@@ -32,6 +32,14 @@ const PITCH_DZ = 2.65;
 const PLAY_DZ = 2.35;
 const PLAY_DY = Math.tan(38 * Math.PI / 180) * PLAY_DZ; // ~38° — coat and skull, not a map token
 
+/**
+ * BUILD 15 (V6 / V7): the captain seen through cover (setXray). His twin is
+ * drawn just before him — opaque objects draw in renderOrder — so his own
+ * body paints over it wherever he is in plain sight.
+ */
+const XRAY_ORDER = 30;
+const XRAY_COLOR = 0x4f9dff;
+
 const wrap01 = (value) => ((value % 1) + 1) % 1;
 const clamp01 = (value) => Math.max(0, Math.min(1, value));
 const smoothstep = (a, b, value) => {
@@ -289,7 +297,7 @@ class ValenRuntime {
       // hat and the boots are leather, the rest the captain's tabard
       let lo = 0, hi = 1;
       this.model.traverse((object) => {
-        if (!object.isMesh || !object.geometry) return;
+        if (!object.isMesh || !object.geometry || object.userData.xray) return;
         object.geometry.computeBoundingBox();
         const box = object.geometry.boundingBox;
         if (box) { lo = box.min.y; hi = box.max.y; }
@@ -354,7 +362,7 @@ if (uCapRim > 0.0 || uCapLift > 0.0) {
 }`);
       };
       this.model.traverse((object) => {
-        if (!object.isMesh) return;
+        if (!object.isMesh || object.userData.xray) return;
         for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
           material.onBeforeCompile = patch;
           material.customProgramCacheKey = () => 'duskhold-captain-look-v2';
@@ -368,6 +376,60 @@ if (uCapRim > 0.0 || uCapLift > 0.0) {
     u.uCapRim.value = rim;
     u.uCapLift.value = lift;
     return true;
+  }
+
+  /**
+   * BUILD 15 (V6 / V7, docs/VISUAL-LAYOUT-RESEARCH.md §7): the captain is
+   * never lost behind what he defends. Where a gate tower, a tree, a
+   * building, the keep or the horde stands between him and the camera, his
+   * figure shows through it as a flat blue silhouette (BUILD 14: holding the
+   * main gate from inside, the gate's east tower hid him whole). Each skinned
+   * mesh gets a twin — the same geometry, the same skeleton, so it moves with
+   * every clip — that draws only where something nearer the camera has
+   * already been drawn (GreaterDepth) and adds its blue there. The walls are
+   * not faded; the GLB is not touched. Survival only (World3D).
+   */
+  setXray(on) {
+    if (!this.model) return false;
+    if (!this._xray) {
+      if (!on) return false;
+      const material = new THREE.MeshBasicMaterial({
+        color: XRAY_COLOR, transparent: false, blending: THREE.AdditiveBlending, opacity: 0.55,
+        depthTest: true, depthWrite: false, depthFunc: THREE.GreaterDepth, fog: false, toneMapped: false,
+      });
+      const sources = [];
+      this.model.traverse((object) => { if (object.isSkinnedMesh && !object.userData.xray) sources.push(object); });
+      const twins = [];
+      for (const src of sources) {
+        if (!src.parent || !src.skeleton) continue;
+        const twin = new THREE.SkinnedMesh(src.geometry, material);
+        twin.name = `${src.name || 'captain'}-xray`;
+        twin.userData.xray = true;
+        twin.bind(src.skeleton, src.bindMatrix);
+        twin.bindMode = src.bindMode;
+        twin.position.copy(src.position);
+        twin.quaternion.copy(src.quaternion);
+        twin.scale.copy(src.scale);
+        twin.frustumCulled = false;
+        twin.castShadow = false;
+        twin.receiveShadow = false;
+        twin.renderOrder = XRAY_ORDER;
+        src.renderOrder = XRAY_ORDER + 1;
+        src.parent.add(twin);
+        twins.push(twin);
+      }
+      this._xray = { material, twins, on: false };
+    }
+    const xray = this._xray;
+    xray.on = !!on && xray.twins.length > 0;
+    for (const twin of xray.twins) twin.visible = xray.on;
+    return xray.on;
+  }
+
+  /** The see-through silhouette in use (QA). */
+  xrayState() {
+    const xray = this._xray;
+    return xray ? { on: xray.on, twins: xray.twins.length } : { on: false, twins: 0 };
   }
 
   /** The look in use (QA). */

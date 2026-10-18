@@ -45,6 +45,20 @@ export const SURVIVAL_CAMERA = Object.freeze({
   glide: 4.5,         // 1/s a flicked view slows down
   flick: 120,         // world px/s: a released drag slower than this just stops
 });
+/**
+ * BUILD 15 (V7, docs/VISUAL-LAYOUT-RESEARCH.md §7): at night the frame leans
+ * onto the fight. In BUILD 14 it sat on the captain and leaned a little
+ * north, so a crowd at the main gate (south: the bottom of the frame) was
+ * pressed against the stick and FLARE, and one at the north gate under the
+ * top HUD band. `reach`: how far from the captain the horde counts (px);
+ * `share`: how far toward its weighted middle the view centre goes (0.7: the
+ * knot near the middle of the playfield, the captain beside it); `max`: the
+ * longest lean (px); `full`: the weight of horde (threatFocus) that leans the
+ * whole way — one straggler at the edge of reach barely moves the view;
+ * `ease`: 1/s the lean eases in and out, so a knot dying or a new one
+ * arriving glides instead of jerking the view.
+ */
+export const THREAT_FRAME = Object.freeze({ reach: 600, share: 0.7, max: 300, full: 3, ease: 2.4 });
 const SAVE_EVERY = 2.5;
 // Night pacing: the first rank hits a door within seconds, so Night 1 has
 // action near the Hunter before the halfway mark.
@@ -2760,6 +2774,8 @@ export class SurvivalMode {
       if (bolt) {
         bolt.guard = true;
         bolt.arms = this.armsLevel;
+        // BUILD 15: the post it leaves from (a south / east bastion is low)
+        if (up) bolt.dropPost = guard.liftPost;
         if (up) bolt.aimDist = Math.max(40, dist(guard.x, guard.y, target.x, target.y) - 10);
       }
       guard.cd = arms.every + rand(-0.12, 0.18);
@@ -3873,15 +3889,15 @@ export class SurvivalMode {
     if (r.setZoomMul) r.setZoomMul(this.frameMul(night) * this.userZoom(), this._zoomSnap ? undefined : dt);
     this._zoomSnap = false;
     let lookX = clamp(p.vx * 0.18, -56, 56);
+    // BUILD 15 (V7): at night the frame leans onto the fight (THREAT_FRAME)
+    const lean = this._threatLean(dt, night);
     // a phone held sideways is short and its top band is HUD: frame a little
-    // north of the Hunter so what stands above him is not under the HUD
-    let lookY = clamp(p.vy * 0.18, -56, 56) - ((r.h || 720) < 560 ? (night ? 90 : 70) : 0);
-    // lean toward what the Hunter is shooting so a crowd at a door is on screen
-    const t = this.currentTarget;
-    if (night && t && !t.dead) {
-      lookX += clamp((t.x - p.x) * 0.3, -130, 130);
-      lookY += clamp((t.y - p.y) * 0.3, -130, 130);
-    }
+    // north of the Hunter so what stands above him is not under the HUD (the
+    // fight frame takes over from it while there is a fight to frame)
+    const north = (r.h || 720) < 560 ? (night ? 90 : 70) : 0;
+    let lookY = clamp(p.vy * 0.18, -56, 56) - north * (1 - lean.w);
+    lookX += lean.x;
+    lookY += lean.y;
     if (!night) {
       const here = this.dayContext();
       if (here) { lookX += clamp((here.x - p.x) * 0.5, -80, 80); lookY += clamp((here.y - p.y) * 0.5, -80, 80); }
@@ -3893,6 +3909,65 @@ export class SurvivalMode {
       lookY = lookY * this._panLook() + pan.y;
     }
     r.followCamera(p.x, p.y, dt, lookX, lookY, g.mansion.camBounds);
+  }
+
+  /**
+   * BUILD 15 (V7): where the fight round the captain is — the weighted middle
+   * of the horde within THREAT_FRAME.reach of him. The near ones weigh most
+   * (the far edge still counts 0.4), a Breaker twice, one clawing the keep
+   * half again. Shut gates do not matter: a crowd at the gate he holds from
+   * inside is the fight. null when nothing is in reach.
+   */
+  threatFocus() {
+    const g = this.game;
+    const p = g.player;
+    const reach = THREAT_FRAME.reach;
+    let sx = 0, sy = 0, sw = 0, n = 0;
+    for (const e of g.enemies || []) {
+      if (!e || e.dead || e.removeMe || !(e.hp > 0)) continue;
+      const d = Math.hypot(e.x - p.x, e.y - p.y);
+      if (d > reach) continue;
+      let w = 1 - 0.6 * (d / reach);
+      if (e._survivalType === 'breaker') w *= 2;
+      if (e.attackingKeep) w *= 1.5;
+      sx += e.x * w; sy += e.y * w; sw += w; n++;
+    }
+    return sw > 0 ? { x: sx / sw, y: sy / sw, n, weight: sw } : null;
+  }
+
+  /**
+   * The night frame's lean onto the fight (BUILD 15, V7): THREAT_FRAME.share
+   * of the way from the captain to threatFocus(), at most THREAT_FRAME.max,
+   * all of it once the knot weighs THREAT_FRAME.full, eased at
+   * THREAT_FRAME.ease both ways. { x, y } world px; w 0..1, how much of a
+   * fight frame is on (it hands the frame back as it fades).
+   */
+  _threatLean(dt, night) {
+    const lean = this._lean || (this._lean = { x: 0, y: 0, w: 0 });
+    const focus = night ? this.threatFocus() : null;
+    let gx = 0, gy = 0, gw = 0;
+    if (focus) {
+      const p = this.game.player;
+      const strength = clamp(focus.weight / THREAT_FRAME.full, 0, 1);
+      gx = (focus.x - p.x) * THREAT_FRAME.share;
+      gy = (focus.y - p.y) * THREAT_FRAME.share;
+      const len = Math.hypot(gx, gy);
+      if (len > THREAT_FRAME.max) { gx *= THREAT_FRAME.max / len; gy *= THREAT_FRAME.max / len; }
+      gx *= strength; gy *= strength;
+      gw = strength;
+    }
+    const k = dt > 0 ? 1 - Math.exp(-THREAT_FRAME.ease * dt) : 0;
+    lean.x += (gx - lean.x) * k;
+    lean.y += (gy - lean.y) * k;
+    lean.w += (gw - lean.w) * k;
+    lean.focus = focus;
+    return lean;
+  }
+
+  /** The night frame's lean in use (QA / harness). */
+  threatLean() {
+    const lean = this._lean || { x: 0, y: 0, w: 0 };
+    return { x: +lean.x.toFixed(1), y: +lean.y.toFixed(1), w: +lean.w.toFixed(3), focus: lean.focus ? { x: Math.round(lean.focus.x), y: Math.round(lean.focus.y), n: lean.focus.n } : null };
   }
 
   /** The look-ahead fades while the view is dragged away (it would fight the drag). */

@@ -12,7 +12,7 @@ import { Enemy3D, ENEMY_HEIGHT } from './enemy3d.js';
 import { Troop3D } from './troop3d.js';
 import { Crowd3D } from './crowd3d.js';
 import { Buildings3D, BUILDING_MODEL, BUILDING_COLOR, SAW_NODE, KIT_DECOR } from './buildings3d.js';
-import { PLAZA_R } from './fortress.js';
+import { PLAZA_R, TOWER_RISE, NEAR_SIDES } from './fortress.js';
 import { ROOM_MARKS } from './narrative.js';
 import { ROOM } from './mansion.js';
 import { weaponById } from './weapons.js';
@@ -518,7 +518,34 @@ class World3DRuntime {
     const rockMaterial = new THREE.MeshStandardMaterial({ color: 0x66666a, roughness: 1, metalness: 0, flatShading: true });
     const grassMaterial = new THREE.MeshStandardMaterial({ color: 0x59634d, roughness: 1, metalness: 0, flatShading: true, side: THREE.DoubleSide });
 
-    const trees = field.trees || [];
+    // BUILD 15 (V7): a tree in a gate's kill zone or on the near glacis was
+    // felled (exterior.js): its stump stands where the trunk stood (the same
+    // footprint in the collision grid), the crown that hid the crowd is gone
+    const allTrees = field.trees || [];
+    const trees = allTrees.filter((tree) => !tree.felled);
+    const felled = allTrees.filter((tree) => tree.felled);
+    this.exteriorFelled = felled.length;
+    if (felled.length) {
+      const stumpGeometry = new THREE.CylinderGeometry(0.82, 1, 1, 7, 1);
+      const cutGeometry = new THREE.CylinderGeometry(0.8, 0.8, 1, 7, 1);
+      const cutMaterial = new THREE.MeshStandardMaterial({ color: 0xd9b98a, roughness: 0.95, metalness: 0, flatShading: true });
+      const stumpHeight = (tree) => 14 + tree.shade * 12;
+      addInstances('forest-felled-trunk-stumps-3d', stumpGeometry, trunkMaterial, felled,
+        (d, tree) => {
+          const h = stumpHeight(tree);
+          d.position.set(tree.x, h * 0.5, tree.y);
+          d.rotation.set(0, tree.phase, 0);
+          d.scale.set(tree.trunk * 1.2, h, tree.trunk * 1.2);
+        },
+        (tree) => new THREE.Color(0x765b3c).multiplyScalar(0.7 + tree.shade * 0.52));
+      // the pale cut face on top, so a stump reads as cut, not as a post
+      addInstances('forest-felled-stump-cuts-3d', cutGeometry, cutMaterial, felled,
+        (d, tree) => {
+          d.position.set(tree.x, stumpHeight(tree) + 0.6, tree.y);
+          d.rotation.set(0, tree.phase, 0);
+          d.scale.set(tree.trunk * 1.0, 1.2, tree.trunk * 1.0);
+        });
+    }
     addInstances('forest-tree-trunks-3d', trunkGeometry, trunkMaterial, trees,
       (d, tree) => {
         const trunkHeight = tree.height * 0.38;
@@ -680,8 +707,11 @@ class World3DRuntime {
       // BUILD 13 (V8): the captain in his own colours, outlined, never black
       const daylight = !!(game.survival && game.survival.daylight && game.survival.daylight());
       Valen3D.setLook(daylight ? CAPTAIN_LOOK.day : CAPTAIN_LOOK.night);
+      // BUILD 15: and seen through whatever stands between him and the camera
+      Valen3D.setXray(true);
     } else {
       Valen3D.setLook(CAPTAIN_LOOK.off);
+      Valen3D.setXray(false);
       lamp.intensity = (0.76 + light.level * 1.05) * ambientFactor + lightning * 2.1;
       lamp.color.setRGB(light.color[0] / 255, light.color[1] / 255, light.color[2] / 255);
       if (Valen3D.hemi) {
@@ -2179,9 +2209,11 @@ class World3DRuntime {
     const flags = [];
     const flagSpots = [];
     for (const t of towers) {
+      // BUILD 15 (V6): fortress.js says how far each tower rises over the
+      // wall — the south and east ones (nearest the camera) are squat
       if (t.kind === 'corner') {
         const r = t.size / 2;
-        const h = wallTop + 108;
+        const h = wallTop + (Number.isFinite(t.rise) ? t.rise : TOWER_RISE.corner);
         add(new THREE.CylinderGeometry(r + 8, r + 12, 16, 16), stoneDark, t.x, 8, t.y);
         add(new THREE.CylinderGeometry(r - 4, r, h, 16), stone, t.x, h / 2, t.y);
         add(new THREE.CylinderGeometry(r + 1, r + 1, 7, 16), stoneLight, t.x, h * 0.55, t.y);
@@ -2199,7 +2231,7 @@ class World3DRuntime {
         flagSpots.push({ x: t.x, y: h + 86, z: t.y });
       } else {
         const sz = t.size;
-        const h = wallTop + 88;
+        const h = wallTop + (Number.isFinite(t.rise) ? t.rise : TOWER_RISE.gate);
         add(new THREE.BoxGeometry(sz + 10, 14, sz + 10), stoneDark, t.x, 7, t.y);
         add(new THREE.BoxGeometry(sz, h, sz), stone, t.x, h / 2, t.y);
         add(new THREE.BoxGeometry(sz + 10, 10, sz + 10), stoneLight, t.x, h + 3, t.y);
@@ -2210,17 +2242,24 @@ class World3DRuntime {
         const horiz = t.side === 'north' || t.side === 'south';
         for (const dir of [-1, 1]) {
           const fx = horiz ? 0 : dir, fz = horiz ? dir : 0;
-          add(new THREE.BoxGeometry(horiz ? 8 : 4, 30, horiz ? 4 : 8), slit, t.x + fx * (sz / 2 + 1), h * 0.8, t.y + fz * (sz / 2 + 1));
-          const banner = add(new THREE.PlaneGeometry(34, 64), blue, t.x + fx * (sz / 2 + 2), h * 0.44, t.y + fz * (sz / 2 + 2), Math.atan2(fx, fz));
+          // a bastion (BUILD 15) is too short for a slit over its banner
+          if (!t.low) add(new THREE.BoxGeometry(horiz ? 8 : 4, 30, horiz ? 4 : 8), slit, t.x + fx * (sz / 2 + 1), h * 0.8, t.y + fz * (sz / 2 + 1));
+          const bannerY = t.low ? Math.max(40, h - 46) : h * 0.44;
+          const banner = add(new THREE.PlaneGeometry(34, 64), blue, t.x + fx * (sz / 2 + 2), bannerY, t.y + fz * (sz / 2 + 2), Math.atan2(fx, fz));
           banner.castShadow = false;
-          add(new THREE.BoxGeometry(horiz ? 40 : 4, 4, horiz ? 4 : 40), gold, t.x + fx * (sz / 2 + 3), h * 0.44 + 33, t.y + fz * (sz / 2 + 3));
+          add(new THREE.BoxGeometry(horiz ? 40 : 4, 4, horiz ? 4 : 40), gold, t.x + fx * (sz / 2 + 3), bannerY + 33, t.y + fz * (sz / 2 + 3));
         }
       }
     }
 
     // a crenellated bridge over every big gate, tower to tower
+    const bridges = [];
     for (const e of m.entrances) {
       if (!e.gate || !e.big) continue;
+      // BUILD 15 (V6): no bridge over a south or east gate — between its
+      // bastions it stood over the gate's mouth, in front of whoever held it
+      if (NEAR_SIDES.includes(e.facing)) continue;
+      bridges.push(e.id);
       const horiz = e.axis === 'h';
       const span = (horiz ? e.w : e.h) + 20;
       add(new THREE.BoxGeometry(horiz ? span : WALL_T + 16, 24, horiz ? WALL_T + 16 : span), stoneLight, e.x, gateTop + 8, e.y);
@@ -2247,7 +2286,7 @@ class World3DRuntime {
       for (let y = 16; y < top + 8; y += 18) add(new THREE.BoxGeometry(22, 3, 3), wood, lx, y, lz, ry);
     };
     for (const post of posts) {
-      const top = this._postTop(post.kind, m);
+      const top = this._postTop(post, m);
       if (post.kind === 'wall') {
         const d = post.deck;
         add(new THREE.BoxGeometry(d, 6, d), wood, post.x, top - 3, post.y);
@@ -2271,7 +2310,12 @@ class World3DRuntime {
     }
     let meshes = 0;
     group.traverse((obj) => { if (obj.isMesh) meshes++; });
-    group.userData = { flags, yardMat, towers: towers.length, merlons: spots.length, meshes, posts: posts.length };
+    group.userData = {
+      flags, yardMat, towers: towers.length, merlons: spots.length, meshes, posts: posts.length,
+      // BUILD 15 (V6): the squat south / east towers and the gates still bridged
+      lowTowers: towers.filter((t) => t.low).map((t) => (t.kind === 'corner' ? 'corner' : `${t.gate}:${t.flank}`)),
+      bridges,
+    };
     this.root.add(group);
     return group;
   }
@@ -2281,9 +2325,13 @@ class World3DRuntime {
    * gate's tower, or on the plank deck on the wall-walk beside a postern.
    * Matches _makeFortressDressing's masonry.
    */
-  _postTop(kind, m = null) {
+  _postTop(post, m = null) {
     const wallTop = ((m && m.wallMetres) || FORT_WALL_FALLBACK) * PX_PER_METRE;
-    return kind === 'tower' ? wallTop + 88 + 8 : wallTop - 2;
+    const kind = post && typeof post === 'object' ? post.kind : post;
+    if (kind !== 'tower') return wallTop - 2;
+    // BUILD 15: a post knows its tower's rise (a south / east bastion is low)
+    const rise = post && typeof post === 'object' && Number.isFinite(post.rise) && post.rise > 0 ? post.rise : TOWER_RISE.gate;
+    return wallTop + rise + 8;
   }
 
   _syncFortressDressing(game, mode) {
@@ -2590,7 +2638,7 @@ class World3DRuntime {
       const stride = guard.moving ? Math.sin(guard.walkT * 11) : 0;
       // up a ladder / on a wall post (BUILD 10): the climb is most of the lift
       const post = guard.liftPost;
-      const lift = post ? this._postTop(post.kind, game.mansion) * Math.min(1, (guard.lift || 0) / GUARD_CLIMB_SHARE) : 0;
+      const lift = post ? this._postTop(post, game.mansion) * Math.min(1, (guard.lift || 0) / GUARD_CLIMB_SHARE) : 0;
       mesh.position.set(guard.x, (guard.moving && !troop ? Math.abs(stride) * 2.4 : 0) + lift, guard.y);
       mesh.rotation.y = Math.PI / 2 - guard.angle;
       mesh.userData.legL.rotation.x = stride * 0.6;
@@ -3087,7 +3135,11 @@ class World3DRuntime {
         const x = ox + ca * d, y = oy + sa * d;
         const solid = m.solidAt(x, y);
         let need = 0;
-        if (solid && solid.type === 'tower') need = wallTop + (solid.tower && solid.tower.kind === 'corner' ? 138 : 116) + 10;
+        if (solid && solid.type === 'tower') {
+          const t = solid.tower;
+          const rise = t && Number.isFinite(t.rise) ? t.rise : (t && t.kind === 'corner' ? TOWER_RISE.corner : TOWER_RISE.gate);
+          need = wallTop + rise + (t && t.kind === 'corner' ? 30 : 28) + 10;
+        }
         else if (solid && solid.type === 'wall') need = wallTop + 40;
         else if (m.entrances.some((e) => e.gate && Math.abs(x - e.x) < e.w / 2 + 2 && Math.abs(y - e.y) < e.h / 2 + 2)) need = wallTop + 40;
         if (!need) continue;
@@ -3473,7 +3525,7 @@ class World3DRuntime {
       // arc that clears the wall when it flies over (BUILD 10: elevated
       // shots go over, nothing goes through a shut gate); everything else
       // flies at 18
-      const muzzle = bolt.tower ? this._towerMuzzle(bolt) : bolt.dropFrom ? this._postTop(bolt.dropFrom, game.mansion) + GUARD_CHEST : 0;
+      const muzzle = bolt.tower ? this._towerMuzzle(bolt) : bolt.dropFrom ? this._postTop(bolt.dropPost || bolt.dropFrom, game.mansion) + GUARD_CHEST : 0;
       const aim = Math.max(1, bolt.aimDist || 1);
       const arc = muzzle > 0 && bolt.over ? this._boltArc(bolt, muzzle, aim, game.mansion) : 0;
       const heightAt = (x, y) => {
@@ -4188,6 +4240,14 @@ class World3DRuntime {
       // BUILD 14: the crossbow level in each visible guard's hand (and who holds it two-handed)
       guardBows: (this.survivalGuardMeshes || []).filter((mesh) => mesh.visible && mesh.userData.troop).map((mesh) => mesh.userData.troop.armsLevel || 0),
       guardTwoHanded: (this.survivalGuardMeshes || []).filter((mesh) => mesh.visible && mesh.userData.troop && mesh.userData.troop.twoHanded).length,
+      // BUILD 15 (V6 / V7): what keeps the fight in sight — felled trees in
+      // the kill zones, squat near towers, the captain seen through cover
+      sightlines: {
+        felled: this.exteriorFelled || 0,
+        lowTowers: this.fortressDressing ? this.fortressDressing.userData.lowTowers : null,
+        bridges: this.fortressDressing ? this.fortressDressing.userData.bridges : null,
+        xray: Valen3D.xrayState ? Valen3D.xrayState() : null,
+      },
       troop3d: { ready: Troop3D.ready, failed: Troop3D.failed, error: Troop3D.error, made: Troop3D.made, livery: Troop3D.livery },
       fx: this.fxKit ? { live: this.fxKit.live.length, played: { ...this.fxKit.played } } : null,
       visibleVariants3D: [...this.variantRings.values()].filter((object) => object.visible).length,

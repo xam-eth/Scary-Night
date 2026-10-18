@@ -2071,6 +2071,151 @@ async function runSurvivalMilestone() {
   }
   const b14Pass = b14Checks.length === 4 && b14Checks.every(Boolean);
 
+  // ---- BUILD 15 (V6 / V7, docs/VISUAL-LAYOUT-RESEARCH.md §7): the night
+  // fight in sight — kill zones and a glacis cleared of conifers, squat
+  // towers on the camera's side, a frame that leans onto the fight. The
+  // captain's see-through silhouette and the pictures are 3D
+  // (survival-plotsqa §7, survival-look) ----
+  const b15Checks = [];
+  const b15Check = (name, ok, detail) => {
+    b15Checks.push(!!ok);
+    console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} (${detail})`);
+  };
+  {
+    const { KILL_ZONE, GLACIS } = await import('../src/game/exterior.js');
+    const { TOWER_RISE, NEAR_SIDES } = await import('../src/game/fortress.js');
+    const { Mansion } = await import('../src/game/mansion.js');
+    const { THREAT_FRAME, SurvivalCrowdZombie: Crowd } = await import('../src/game/survival.js');
+    window.localStorage.removeItem('lastnight.save.v1');
+    // a phone held sideways: the frame is judged on the screen it is for
+    const phone = createCanvas(844, 390);
+    phone.addEventListener = () => { }; phone.removeEventListener = () => { };
+    phone.getBoundingClientRect = () => ({ left: 0, top: 0, width: 844, height: 390 });
+    phone.clientWidth = 844; phone.clientHeight = 390; phone.style = {};
+    const fg = new Game(phone, { mode: 'survival', nightDuration: 60 });
+    fg.renderer.resize(844, 390, 1);
+    const fm = fg.survival;
+    const fmap = fg.mansion;
+    const ftick = (n = 1) => { for (let i = 0; i < n; i++) fg.update(step); };
+    // 1) the kill zones and the glacis: no standing conifer within KILL_ZONE
+    //    of a gate's outside, none on the south / east glacis; a felled one
+    //    keeps its trunk's footprint (nothing about the fight moves); the
+    //    house (legacy) fells nothing
+    const ext = fmap.exterior;
+    const B = fmap.bailey;
+    const gatesOut = fmap.entrances.filter((e) => e.exterior && e.gate && e.outside);
+    const standing = ext.trees.filter((t) => !t.felled);
+    const felled = ext.trees.filter((t) => t.felled);
+    const inZone = standing.filter((t) => gatesOut.some((e) => Math.hypot(t.x - e.outside.x, t.y - e.outside.y) < KILL_ZONE)).length;
+    const onGlacis = standing.filter((t) => (t.y > B.y + B.h && t.y < B.y + B.h + GLACIS && t.x > B.x - GLACIS && t.x < B.x + B.w + GLACIS)
+      || (t.x > B.x + B.w && t.x < B.x + B.w + GLACIS && t.y > B.y - GLACIS && t.y < B.y + B.h + GLACIS)).length;
+    const P = fmap.bounds;
+    const inPlay = (t) => t.x >= P.x + 24 && t.x <= P.x + P.w - 24 && t.y >= P.y + 24 && t.y <= P.y + P.h - 24;
+    const kept = felled.filter(inPlay).every((t) => fmap.solids.some((sd) => sd.type === 'exteriorTree' && Math.abs(sd.x + sd.w / 2 - t.x) < 0.5 && Math.abs(sd.y + sd.h / 2 - t.y) < 0.5));
+    const house = new Mansion();
+    const houseFelled = house.exterior.trees.filter((t) => t.felled).length;
+    b15Check(`the kill zones (${KILL_ZONE} px round every gate's outside) and the south / east glacis (${GLACIS} px) hold no standing conifer; a felled one keeps its trunk's footprint; the house fells nothing`,
+      felled.length >= 10 && inZone === 0 && onGlacis === 0 && kept && gatesOut.length === 6 && houseFelled === 0,
+      `${felled.length} felled of ${ext.trees.length}, standing in a kill zone ${inZone}, on the glacis ${onGlacis}, footprints kept ${kept}, house felled ${houseFelled}`);
+    // 2) squat towers on the camera's side: the south and east gates'
+    //    towers are bastions and the south-east corner is cut down; the
+    //    north and west keep their height; a guard on a bastion stands on it
+    //    and his bolt leaves from it
+    const towers = fmap.towers;
+    const near = towers.filter((t) => t.kind === 'gate' && NEAR_SIDES.includes(t.side));
+    const far = towers.filter((t) => t.kind === 'gate' && !NEAR_SIDES.includes(t.side));
+    const corners = towers.filter((t) => t.kind === 'corner');
+    const se = corners.find((t) => t.x > 0 && t.y > 0);
+    const towersOk = near.length === 4 && near.every((t) => t.low && t.rise === TOWER_RISE.bastion)
+      && far.length === 4 && far.every((t) => !t.low && t.rise === TOWER_RISE.gate)
+      && se && se.low && se.rise === TOWER_RISE.cornerLow && corners.filter((t) => t !== se).every((t) => !t.low && t.rise === TOWER_RISE.corner);
+    const postsOk = fmap.wallPosts.every((pt) => (pt.kind === 'tower' ? pt.rise === (NEAR_SIDES.includes(pt.side) ? TOWER_RISE.bastion : TOWER_RISE.gate) : pt.rise === 0));
+    const shotFrom = {};
+    for (const gateId of ['southGate', 'northGate']) {
+      fm.restart();
+      fm.phase = 'night'; fg.screen = 'playing'; fg.uiPanel = null; if (fm.cine) fm.cine = null;
+      fm.elapsed = 5; fm.waveIndex = 99; fm.breakerIndex = 99; fm.individualIndex = 99;
+      fg.enemies.length = 0; fg.bolts.length = 0;
+      fm.tuning = { ...fm.tuning, autoAttackRange: 0 };
+      const door = fm.entranceById(gateId);
+      door.hp = door.hpMax = 99999;
+      const g0 = fm.guards[0];
+      fm.guards.length = 1; fm.survivors = 1;
+      const post = fm._doorPost(door, 0);
+      g0.x = post.x; g0.y = post.y + (gateId === 'southGate' ? -6 : 6);
+      fm._setGuardPost(g0, post);
+      for (let i = 0; i < 60 * 3 && g0.lift < 1; i++) { fm._guardAssignT = 99; ftick(); }
+      const out = door.outside;
+      const target = new Crowd(out.x - 40, out.y + (gateId === 'southGate' ? 70 : -70), door, 0, 1);
+      target.hp = target.hpMax = 9999; target.update = () => {};
+      fg.enemies.push(target);
+      g0.cd = 0;
+      let bolt = null;
+      for (let i = 0; i < 60 * 2 && !bolt; i++) {
+        fm._guardAssignT = 99; ftick();
+        const b = fg.bolts.find((x) => x.guard);
+        if (b) bolt = { from: b.dropFrom, rise: b.dropPost ? b.dropPost.rise : null, side: b.dropPost ? b.dropPost.side : null };
+      }
+      fm.tuning = SURVIVAL_TUNING;
+      shotFrom[gateId] = bolt;
+    }
+    const shotsOk = shotFrom.southGate && shotFrom.southGate.from === 'tower' && shotFrom.southGate.rise === TOWER_RISE.bastion
+      && shotFrom.northGate && shotFrom.northGate.from === 'tower' && shotFrom.northGate.rise === TOWER_RISE.gate;
+    b15Check(`squat towers on the camera's side: the south / east gate towers rise ${TOWER_RISE.bastion} px over the wall (north / west ${TOWER_RISE.gate}), the south-east corner ${TOWER_RISE.cornerLow} (the others ${TOWER_RISE.corner}); the guards' posts and their bolts go by them`,
+      towersOk && postsOk && shotsOk,
+      `towers ${towersOk}, posts ${postsOk}, south bolt ${shotFrom.southGate ? `${shotFrom.southGate.from} rise ${shotFrom.southGate.rise}` : 'none'}, north bolt ${shotFrom.northGate ? `${shotFrom.northGate.from} rise ${shotFrom.northGate.rise}` : 'none'}`);
+    // 3) the night frame leans onto the fight: the captain holds a gate from
+    //    inside, a knot of the horde claws it from outside; after 3 s the
+    //    view centre has gone halfway to the knot and both stand in the
+    //    playfield (clear of the HUD band on top and the stick / FLARE band
+    //    at the bottom of the 844 x 390 screen). By day nothing leans.
+    const frames = {};
+    for (const gateId of ['southGate', 'northGate']) {
+      fm.restart();
+      fm.phase = 'night'; fg.screen = 'playing'; fg.uiPanel = null; if (fm.cine) fm.cine = null;
+      fm.elapsed = 5; fm.waveIndex = 99; fm.breakerIndex = 99; fm.individualIndex = 99;
+      fg.enemies.length = 0; fg.bolts.length = 0;
+      fm.guards.length = 0; fm.survivors = 0;
+      fm.tuning = { ...fm.tuning, autoAttackRange: 0 };
+      const door = fm.entranceById(gateId);
+      door.hp = door.hpMax = 99999;
+      const sgn = gateId === 'southGate' ? 1 : -1;     // outward, along y
+      fg.player.x = door.inside.x; fg.player.y = door.inside.y - sgn * 60;
+      fm.camPan.x = 0; fm.camPan.y = 0;
+      for (let i = 0; i < 10; i++) {
+        const z = new Crowd(door.outside.x - 90 + (i % 5) * 45, door.outside.y + sgn * (70 + Math.floor(i / 5) * 60), door, 0, 1);
+        z.hp = z.hpMax = 9999; z.update = () => {};
+        fg.enemies.push(z);
+      }
+      fg.renderer.snapCamera(fg.player.x, fg.player.y);
+      ftick(180);
+      const lean = fm.threatLean();
+      const r = fg.renderer;
+      const knot = fg.enemies.reduce((a, e) => ({ x: a.x + e.x / fg.enemies.length, y: a.y + e.y / fg.enemies.length }), { x: 0, y: 0 });
+      const sk = r.worldToScreen(knot.x, knot.y);
+      const sc = r.worldToScreen(fg.player.x, fg.player.y);
+      const toward = ((r.cam.x - fg.player.x) * (knot.x - fg.player.x) + (r.cam.y - fg.player.y) * (knot.y - fg.player.y)) / Math.max(1, Math.hypot(knot.x - fg.player.x, knot.y - fg.player.y));
+      const half = Math.hypot(knot.x - fg.player.x, knot.y - fg.player.y) * THREAT_FRAME.share;
+      frames[gateId] = { lean, toward, half, knotY: sk.y, capY: sc.y, h: r.h,
+        ok: r.h === 390 && lean.w > 0.95 && toward > Math.min(half, THREAT_FRAME.max) * 0.85 && sk.y > 85 && sk.y < r.h - 105 && sc.y > 85 && sc.y < r.h - 95 };
+      fm.tuning = SURVIVAL_TUNING;
+    }
+    fm.restart();
+    fm.phase = 'day'; fg.screen = 'playing'; fg.uiPanel = 'survival-day'; if (fm.cine) fm.cine = null;
+    fg.enemies.length = 0;
+    const z = new Crowd(fg.player.x + 120, fg.player.y + 60, fm.entranceById('southGate'), 0, 1);
+    z.update = () => {};
+    fg.enemies.push(z);
+    ftick(120);
+    const dayLean = fm.threatLean();
+    fg.enemies.length = 0;
+    b15Check(`the night frame leans onto the fight: holding the south / north gate from inside, the view centre goes ${THREAT_FRAME.share} of the way to the knot outside (at most ${THREAT_FRAME.max} px); knot and captain both in the playfield; by day nothing leans`,
+      frames.southGate.ok && frames.northGate.ok && dayLean.w < 0.05,
+      Object.entries(frames).map(([id, f]) => `${id}: lean ${f.lean.x},${f.lean.y} (w ${f.lean.w}), toward ${Math.round(f.toward)}/${Math.round(f.half)} px, knot at screen y ${Math.round(f.knotY)}, captain ${Math.round(f.capY)} of ${f.h}`).join(' | ') + ` | day w ${dayLean.w}`);
+    window.localStorage.removeItem('lastnight.save.v1');
+  }
+  const b15Pass = b15Checks.length === 3 && b15Checks.every(Boolean);
+
   console.log(`  idle Night 3: ${idle.nightThree.peakEnemies} peak enemies / ${idle.nightThree.peakBreakers} Breakers, ${idle.nightThree.kills} kills, ${idle.nightThree.wallDamage} wall damage, gate ${idle.nightThree.gateHp} HP, Hunter ${idle.nightThree.playerHp} HP; ${idle.phase}`);
   console.log(`  builder Night 3: ${builder.nightThree.peakEnemies} peak enemies / ${builder.nightThree.peakBreakers} Breakers, ${builder.nightThree.kills} kills, ${builder.nightThree.wallDamage} wall damage, gate ${builder.nightThree.gateHp} HP, Hunter ${builder.nightThree.playerHp} HP; keep Lv${builder.keepLevel} ${builder.keepHp} HP, soldiers ${builder.survivors}, buildings ${builder.buildings.join(',') || 'none'}, gateBuilt=${builder.gateBuilt}; ${builder.phase}`);
   // Balance target (M1 rebuild, K1): doing nothing must not win; an engaged
@@ -2083,7 +2228,7 @@ async function runSurvivalMilestone() {
     && hunterAutoShot && hunterRealLos && hunterSkill
     && idleLoses && builder.complete && builder.keepLevel === 3
     && builder.queueLockVerified && builder.sawmillBuilt && builder.gateBuilt && builder.barracksBuilt
-    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass && gateRulePass && b13Pass && b14Pass
+    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass && gateRulePass && b13Pass && b14Pass && b15Pass
     && builder.upgrades[0].level === 1 && builder.upgrades[0].plots === 9
     && builder.upgrades[builder.upgrades.length - 1].level === 3 && builder.upgrades[builder.upgrades.length - 1].plots === 15
     && builder.upgrades.every((item, i, all) => i === 0 || item.level >= all[i - 1].level);
