@@ -266,6 +266,116 @@ class ValenRuntime {
     this.render({ state: 'idle', angle: Math.PI / 2, speed: 0, stepPhase: 0, attackProgress: 0 });
   }
 
+  /**
+   * BUILD 13 (V8, docs/VISUAL-LAYOUT-RESEARCH.md §7): in Survival the captain
+   * is the brightest figure on the field, never a black shape. The Tripo
+   * texture is a near-black gunslinger atlas (mean luminance 0.11, thousands
+   * of tiny UV islands, so no part can be recoloured on its own). A shader
+   * grade maps its luminance onto the captain's palette from ASSET_CHARACTER
+   * (royal-blue tabard #216aad, gold #e6b459 where the texture is warm,
+   * brown leather #68412d for the hat and boots by their height in the bind
+   * pose), a lift keeps him off black in shade and a blue-white rim outlines
+   * him against any ground. The GLB and its texture stay as
+   * shipped; look 0 / rim 0 / lift 0 is the original (legacy mode).
+   *   look  0..1 the palette grade
+   *   rim   strength of the outline light
+   *   lift  self-light, a share of his own colour
+   */
+  setLook({ look = 0, rim = 0, lift = 0 } = {}) {
+    if (!this.model) return false;
+    if (!this._look) {
+      if (!(look || rim || lift)) return false;
+      // the body's height in its bind pose (the GLB stands 1 unit tall): the
+      // hat and the boots are leather, the rest the captain's tabard
+      let lo = 0, hi = 1;
+      this.model.traverse((object) => {
+        if (!object.isMesh || !object.geometry) return;
+        object.geometry.computeBoundingBox();
+        const box = object.geometry.boundingBox;
+        if (box) { lo = box.min.y; hi = box.max.y; }
+      });
+      const uniforms = {
+        uCapLook: { value: 0 }, uCapRim: { value: 0 }, uCapLift: { value: 0 },
+        uCapSpan: { value: new THREE.Vector2(lo, hi) },
+        uCapNavy: { value: new THREE.Color(0x0f2a5c) },
+        uCapRoyal: { value: new THREE.Color(0x216aad) },
+        uCapSky: { value: new THREE.Color(0xa9c3e6) },
+        uCapGold: { value: new THREE.Color(0xe6b459) },
+        uCapLeather: { value: new THREE.Color(0x68412d) },
+        uCapLeatherDark: { value: new THREE.Color(0x2e1a10) },
+        uCapSkin: { value: new THREE.Color(0xe2b08a) },
+        uCapRimColor: { value: new THREE.Color(0xb4dcff) },
+      };
+      const patch = (shader) => {
+        Object.assign(shader.uniforms, uniforms);
+        shader.vertexShader = shader.vertexShader
+          .replace('#include <common>', `#include <common>
+uniform vec2 uCapSpan;
+varying float vCapH;`)
+          .replace('#include <begin_vertex>', `#include <begin_vertex>
+vCapH = clamp((position.y - uCapSpan.x) / max(1e-4, uCapSpan.y - uCapSpan.x), 0.0, 1.0);`);
+        shader.fragmentShader = shader.fragmentShader
+          .replace('#include <common>', `#include <common>
+uniform float uCapLook;
+uniform float uCapRim;
+uniform float uCapLift;
+uniform vec3 uCapNavy;
+uniform vec3 uCapRoyal;
+uniform vec3 uCapSky;
+uniform vec3 uCapGold;
+uniform vec3 uCapLeather;
+uniform vec3 uCapLeatherDark;
+uniform vec3 uCapSkin;
+uniform vec3 uCapRimColor;
+varying float vCapH;`)
+          .replace('#include <map_fragment>', `#include <map_fragment>
+if (uCapLook > 0.0) {
+  vec3 capSrc = diffuseColor.rgb;
+  float capL = dot(capSrc, vec3(0.2126, 0.7152, 0.0722));
+  // the texture's own light and shade, spread over the palette (linear: the
+  // atlas sits around 0.002-0.05)
+  float capT = clamp(pow(capL / 0.045, 0.6), 0.0, 1.0);
+  vec3 cloth = capT < 0.6 ? mix(uCapNavy, uCapRoyal, capT / 0.6) : mix(uCapRoyal, uCapSky, (capT - 0.6) / 0.4);
+  vec3 leather = mix(uCapLeatherDark, uCapLeather, smoothstep(0.0, 0.8, capT)) * (0.85 + 0.5 * capT);
+  float capWarm = smoothstep(0.45, 0.8, (capSrc.r - capSrc.b) / max(capSrc.r, 1e-4)) * smoothstep(0.004, 0.02, capSrc.r);
+  float hat = smoothstep(0.865, 0.885, vCapH);
+  float boots = 1.0 - smoothstep(0.1, 0.13, vCapH);
+  float face = smoothstep(0.78, 0.8, vCapH) * (1.0 - smoothstep(0.85, 0.87, vCapH));
+  vec3 capOut = mix(cloth, leather, max(hat, boots));
+  capOut = mix(capOut, uCapGold * (0.6 + 0.6 * capT), capWarm * (1.0 - face));
+  capOut = mix(capOut, uCapSkin * (0.7 + 0.4 * capT), capWarm * face);
+  diffuseColor.rgb = mix(capSrc, capOut, uCapLook);
+}`)
+          .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+if (uCapRim > 0.0 || uCapLift > 0.0) {
+  vec3 capView = isOrthographic ? vec3(0.0, 0.0, 1.0) : normalize(vViewPosition);
+  float capFres = pow(1.0 - clamp(abs(dot(normal, capView)), 0.0, 1.0), 3.0);
+  totalEmissiveRadiance += uCapRimColor * capFres * uCapRim + diffuseColor.rgb * uCapLift;
+}`);
+      };
+      this.model.traverse((object) => {
+        if (!object.isMesh) return;
+        for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+          material.onBeforeCompile = patch;
+          material.customProgramCacheKey = () => 'duskhold-captain-look-v2';
+          material.needsUpdate = true;
+        }
+      });
+      this._look = uniforms;
+    }
+    const u = this._look;
+    u.uCapLook.value = look;
+    u.uCapRim.value = rim;
+    u.uCapLift.value = lift;
+    return true;
+  }
+
+  /** The look in use (QA). */
+  lookState() {
+    const u = this._look;
+    return u ? { look: u.uCapLook.value, rim: u.uCapRim.value, lift: u.uCapLift.value } : { look: 0, rim: 0, lift: 0 };
+  }
+
   _fail(error) {
     this.loading = false;
     this.failed = true;

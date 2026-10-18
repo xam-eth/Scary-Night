@@ -94,6 +94,18 @@ const PARTICLE_FRAGMENT_SHADER = `
  * one mesh per material, like mergeStaticByMaterial but keeping their UVs.
  * A material whose pieces do not all carry UVs is left as it was.
  */
+/**
+ * BUILD 13 (V8, docs/VISUAL-LAYOUT-RESEARCH.md §7): the captain's look in
+ * Survival (Valen3D.setLook): the ASSET_CHARACTER palette, a blue-white rim
+ * (stronger under the moon) and a little self-light. Legacy keeps the GLB's
+ * own colours.
+ */
+export const CAPTAIN_LOOK = Object.freeze({
+  day: Object.freeze({ look: 1, rim: 0.32, lift: 0.04 }),
+  night: Object.freeze({ look: 1, rim: 0.7, lift: 0.14 }),
+  off: Object.freeze({ look: 0, rim: 0, lift: 0 }),
+});
+
 function mergeKitStatic(group) {
   group.updateMatrixWorld(true);
   const inverse = new THREE.Matrix4().copy(group.matrixWorld).invert();
@@ -653,7 +665,11 @@ class World3DRuntime {
       if (Valen3D.key) { Valen3D.key.intensity = rig.key; Valen3D.key.color.setHex(rig.keyColor); }
       if (Valen3D.rim) { Valen3D.rim.intensity = rig.rim; Valen3D.rim.color.setHex(rig.rimColor); }
       this.exposure = rig.exposure;
+      // BUILD 13 (V8): the captain in his own colours, outlined, never black
+      const daylight = !!(game.survival && game.survival.daylight && game.survival.daylight());
+      Valen3D.setLook(daylight ? CAPTAIN_LOOK.day : CAPTAIN_LOOK.night);
     } else {
+      Valen3D.setLook(CAPTAIN_LOOK.off);
       lamp.intensity = (0.76 + light.level * 1.05) * ambientFactor + lightning * 2.1;
       lamp.color.setRGB(light.color[0] / 255, light.color[1] / 255, light.color[2] / 255);
       if (Valen3D.hemi) {
@@ -3993,6 +4009,7 @@ class World3DRuntime {
       detailPropCounts3D: EnvKit.detailCounts || null,
       unmappedDetailTypes: EnvKit.unmappedDetailTypes || [],
       riggedPlayer: !!(Valen3D.model && Valen3D.model.visible && Valen3D.model.parent),
+      captainLook: Valen3D.lookState ? Valen3D.lookState() : null,
       visibleRiggedEnemies: Enemy3D.slots.filter((slot) => slot.model.visible).length,
       proxyActors: [...this.proxies.values()].filter((object) => object.visible).length,
       visibleSurvivalCrowdProxies: [...this.survivalCrowdProxies.values()].filter((object) => object.visible).length,
