@@ -13,7 +13,7 @@
  *                 circle under the banner, the keep and ballista levels
  *
  *   node tools/survival-balance.mjs [--seeds=3] [--duration=72] [--bots=idle,active,builder] [--json=out.json] [--economy]
- *   bots: idle, active, flare, builder, passive-builder, keep-builder, hunter-builder, tower-builder
+ *   bots: idle, active, flare, builder, passive-builder, keep-builder, hunter-builder, tower-builder, arms-builder
  *
  * --economy prints every day decision with the purse before/after.
  * --panels=dir writes each run's end panel (the real 2D UI, drawn 2 s after
@@ -160,7 +160,7 @@ function runOne(kind, seed) {
   while (guard++ < 60 * 60 * 30) {
     if (mode.phase === 'night' && !game.uiPanel) {
       if (!night) night = { day: mode.day, spawned: 0, peakAlive: 0, peakFeeders: 0, minHp: game.player.bloodMax, hpMax: game.player.bloodMax, hunter: mode.hunterLevel || 1, seen: new Set() };
-      if (kind === 'active' || kind === 'builder' || kind === 'keep-builder' || kind === 'hunter-builder' || kind === 'tower-builder') botNight(game, state, { ROOM, ISO_CAMERA });
+      if (kind === 'active' || kind === 'builder' || kind === 'keep-builder' || kind === 'hunter-builder' || kind === 'tower-builder' || kind === 'arms-builder') botNight(game, state, { ROOM, ISO_CAMERA });
       else if (kind === 'flare') {
         // stands still, only taps Flare when three or more are in reach
         release(game);
@@ -199,7 +199,7 @@ function runOne(kind, seed) {
       release(game);
     }
     if (mode.phase === 'day') {
-      botDay(game, kind === 'builder' || kind === 'passive-builder' ? 'builder' : kind === 'keep-builder' ? 'keep' : kind === 'hunter-builder' ? 'hunter' : kind === 'tower-builder' ? 'tower' : 'idle');
+      botDay(game, kind === 'builder' || kind === 'passive-builder' ? 'builder' : kind === 'keep-builder' ? 'keep' : kind === 'hunter-builder' ? 'hunter' : kind === 'tower-builder' ? 'tower' : kind === 'arms-builder' ? 'arms' : 'idle');
       game.update(step);
       continue;
     }
@@ -223,7 +223,7 @@ function runOne(kind, seed) {
   return {
     kind, seed, complete: mode.phase === 'complete', phase: mode.phase,
     failure: mode.phase === 'failed' ? mode.failureReason : null,
-    perapian: mode.keepLevel, hunter: mode.hunterLevel || 1, survivors: mode.survivors,
+    perapian: mode.keepLevel, hunter: mode.hunterLevel || 1, arms: mode.armsLevel || 1, survivors: mode.survivors,
     buildings: { ...mode.buildings }, buildingLevels: { ...(mode.buildingLevels || {}) }, gate: mode.gateBuilt,
     // the end panel's reading (R2 stars, R4 tip, R19 MVP)
     result: mode.runResult ? {

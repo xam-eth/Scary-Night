@@ -12,7 +12,7 @@ import {
   ENEMY_GLB_CAP, ENEMY_MODELS, ENEMY_CLIP_CONTRACT, FORBIDDEN_STANDINS,
   SlotBook, behaviorReady, enemyClipForState, requiredClips, selectGlbSlots, standinViolation,
 } from '../src/game/enemy3d.js';
-import { TROOP_ASSETS, TROOP_CLIPS, TROOP_LOADOUTS } from '../src/game/troop3d.js';
+import { TROOP_ASSETS, TROOP_CLIPS, TROOP_CLIPS_2H, TROOP_LOADOUTS, TROOP_BOWS } from '../src/game/troop3d.js';
 import { BUILDING_KIT, BUILDING_CORE, BUILDING_MODEL, SAW_NODE } from '../src/game/buildings3d.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -485,6 +485,17 @@ console.log('\ngarrison troops (KayKit, CC0):');
     (bow.meshes || []).length > 0 && bowFiles.length >= 2
       && bowFiles.every((uri) => !/^(data:|https?:)/.test(uri) && fs.existsSync(path.join(path.dirname(path.join(ROOT, TROOP_ASSETS.crossbow)), decodeURIComponent(uri)))),
     bowFiles.join(', '));
+  // BUILD 14: the garrison's Lv3 bow is the pack's two-handed crossbow, aimed
+  // and shot with the Knight's two-handed ranged clips; Lv2/Lv3 repaint the
+  // same atlas at runtime (troop3d.js paintBowAtlas), the PNG is untouched
+  const big = JSON.parse(fs.readFileSync(path.join(ROOT, TROOP_ASSETS.arbalest), 'utf8'));
+  const bigFiles = [...(big.buffers || []), ...(big.images || [])].map((item) => item.uri).filter(Boolean);
+  const missing2H = Object.values(TROOP_CLIPS_2H).filter((name) => !clipNames.has(name));
+  ok('the Lv3 arbalest (crossbow_2handed) has a mesh, its buffer and the shared atlas sit next to it, and the Knight carries the two-handed ranged clips',
+    (big.meshes || []).length > 0 && bigFiles.length >= 2 && (big.images || []).some((img) => img.uri === (bow.images || [])[0]?.uri)
+      && bigFiles.every((uri) => !/^(data:|https?:)/.test(uri) && fs.existsSync(path.join(path.dirname(path.join(ROOT, TROOP_ASSETS.arbalest)), decodeURIComponent(uri))))
+      && missing2H.length === 0 && TROOP_BOWS[3].model === 'arbalest' && TROOP_BOWS[3].twoHanded,
+    `${bigFiles.join(', ')}; clips ${Object.values(TROOP_CLIPS_2H).join(', ')}${missing2H.length ? ` (missing ${missing2H.join(', ')})` : ''}`);
 }
 
 /* Survival's buildings (src/game/buildings3d.js): the KayKit Medieval Hexagon

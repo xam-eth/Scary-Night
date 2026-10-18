@@ -47,7 +47,7 @@ Dengan begitu senjata bisa dibuat jadi model terpisah dan ditempel ke tangan kar
 | Pemilik | Lv1 | Lv2 | Lv3 | Lainnya |
 |---|---|---|---|---|
 | Kapten (Armory: Hunter Lv1–3) | `captain-crossbow-lv1` ✅ | `captain-crossbow-lv2` ✅ (Lv2: baut tembus) | `captain-crossbow-lv3` ✅ (Lv3: kipas 3 baut) | `captain-sword` ✅ (jarak dekat, klip `sword`) |
-| Prajurit (usulan: ikut level Barracks) | `guard-crossbow-lv1` ✅ | `guard-crossbow-lv2` ✅ | `guard-crossbow-lv3` ✅ | `guard-shield` ✅ (tangan kiri) |
+| Prajurit (BUILD 14: rak senjata, GUARD BOWS Lv1–3, satu level untuk semua guard) | `guard-crossbow-lv1` ✅ | `guard-crossbow-lv2` ✅ | `guard-crossbow-lv3` ✅ | `guard-shield` ✅ (tangan kiri; disimpan saat Lv3 dipegang dua tangan) |
 | Musuh | `ghoul-cleaver` ✅ (Ghoul) | `undead-soldier-axe` ✅ (Prajurit Mayat) | `breaker-maul` ✅ (Pendobrak) | `night-lord-greatsword` ✅ (Raja Malam) |
 
 ✅ sudah dibuat. Semua **12 senjata** kini ada: 5 dibuat 2026-10-17, 7 sisanya 2026-10-18 (prompt di `prompts.json`, tidak diubah dari rencana). Lv2 dan Lv3 dibuat dari gambar Lv1 sebagai referensi, supaya bentuk dasarnya sama dan hanya bertambah detail.
@@ -99,7 +99,7 @@ Kawan memakai biru, emas, dan baja. Musuh memakai hijau pucat, merah tua, dan ka
    | Palu godam | ±150 cm |
    | Pedang besar | ±170 cm |
 
-6. **Upgrade:** game cukup mengganti mesh senjata di socket yang sama (Lv1 → Lv2 → Lv3). Model karakternya tidak perlu diganti. Pola ini sudah dipakai: guard KayKit memegang `crossbow_1handed.gltf` sebagai file terpisah.
+6. **Upgrade:** game cukup mengganti mesh senjata di socket yang sama (Lv1 → Lv2 → Lv3). Model karakternya tidak perlu diganti. Pola ini sudah dipakai sejak BUILD 14: guard KayKit memegang crossbow sebagai file terpisah di socket `handslot.r` dan menggantinya per level (sebelum BUILD 14 crossbow itu tidak pernah sampai ke tangan karena nama node-nya diubah GLTFLoader menjadi `handslotr`).
 
 ## Status di game
 
@@ -110,6 +110,13 @@ Gambar ini **belum dimuat oleh game**. Game masih memakai model lama sampai GLB 
 - Monster Quaternius untuk musuh.
 
 Begitu GLB-nya ada, karakter bisa diganti per peran tanpa mengubah aturan game.
+
+**BUILD 14 (2026-10-18):** tiga level crossbow prajurit kini ada di game, **mengikuti** gambar `guard-crossbow-lv1..3` tetapi memakai mesh KayKit (bukan gambar ini):
+- Lv1: `crossbow_1handed` KayKit apa adanya (kayu + besi);
+- Lv2: mesh yang sama, salinan atlasnya diwarnai ulang saat runtime: popor biru kerajaan, besi lebih terang;
+- Lv3: `crossbow_2handed` KayKit sebagai arbalest biru tua dengan fitting emas, dipegang dua tangan.
+
+Byte file KayKit tidak diubah (`assets/troops/kaykit/CREDITS.txt`). Gambar di folder ini tetap tidak dimuat oleh build game.
 
 ## Provenance
 

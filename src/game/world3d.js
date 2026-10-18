@@ -1370,29 +1370,33 @@ class World3DRuntime {
       group.add(item);
       return item;
     };
-    put('weaponrack', -26, -30, 230, 0);
-    put('barrel', 40, -30, 180, 0.4);
-    put('bucketArrows', 46, 26, 190, 0);
+    // the crate with the bow on show stands north-east of the pad's middle,
+    // so the captain standing at the rack (the middle, seen from the south-
+    // east) does not hide it; the rack and the stores behind and beside it
+    const CX = 30, CZ = -30;
+    put('weaponrack', -34, -22, 230, 0);
+    put('barrel', -40, 30, 180, 0.4);
+    put('bucketArrows', 50, 24, 190, 0);
     // the stand: the pack's crate sized to 50 px (a plain box before the kit)
     let top = 34;
     const box = kit ? Buildings3D.box('crate') : null;
     const size = box ? box.getSize(new THREE.Vector3()) : null;
     if (size && size.x > 0) {
       const k = 50 / Math.max(size.x, size.z);
-      const crate = put('crate', 0, 0, k, 0.2);
+      const crate = put('crate', CX, CZ, k, 0.2);
       if (crate) {
         crate.position.y = -box.min.y * k;
         top = size.y * k;
       }
     } else {
       const crate = new THREE.Mesh(new THREE.BoxGeometry(48, 34, 40), new THREE.MeshStandardMaterial({ color: 0x8a6a44, roughness: 0.9, flatShading: true }));
-      crate.position.y = 17;
+      crate.position.set(CX, 17, CZ);
       crate.castShadow = true;
       group.add(crate);
     }
     const holder = new THREE.Group();
     holder.name = 'survival-arms-display';
-    holder.position.set(0, top + 16, 0);
+    holder.position.set(CX, top + 16, CZ);
     group.add(holder);
     group.userData.holder = holder;
     group.userData.top = top;

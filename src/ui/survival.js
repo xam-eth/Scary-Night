@@ -476,7 +476,7 @@ function edgeAvoid(game, w, h) {
   const s = input && input.stick;
   if (s && input.gameplay) {
     const hx = s.active ? s.ox : (s.homeX || w * 0.16), hy = s.active ? s.oy : (s.homeY || h - 120);
-    out.push({ kind: 'circle', x: hx, y: hy, r: (s.r || 52) + 4 });
+    out.push({ kind: 'circle', x: hx, y: hy, r: (s.r || 52) + 16 });
   }
   const chip = recenterChipBox(game, w, h);
   if (chip) out.push({ kind: 'rect', ...chip });
@@ -1304,7 +1304,7 @@ function drawDayWorldLayer(game, ctx, w, h, view) {
     const arrow = !!cost && !mode.builderJob && affordable(mode, cost);
     const near = !overview && Math.hypot(point.x - p.x, point.y - p.y) <= STATUS_REACH;
     const status = arms
-      ? { icon: 'crossbow', text: `Lv${mode.armsLevel}`, color: mode.armsLevel >= 3 ? '#ffd24a' : '#9fd0ff', tint: '#3e7bff' }
+      ? { icon: 'guard', text: `Lv${mode.armsLevel}`, color: mode.armsLevel >= 3 ? '#ffd24a' : '#9fd0ff', tint: '#3e7bff' }
       : { icon: 'hunter', text: `Lv${mode.hunterLevel}`, color: '#ffd24a', tint: '#ffd24a' };
     const pw = near ? statusPillWidth(ctx, status) : 0;
     if (near) { drawStatusPill(ctx, arrow ? at.x + 22 + pw / 2 : at.x, at.y + (arrow ? 0 : 2), status, 0.94); shown.pills++; }

@@ -17,6 +17,15 @@ blue: at load, a canvas COPY of the Knight's embedded atlas has its saturated
 reds (the cape and tabard) shifted to blue (troop3d.js, blueLivery); the GLB's
 bytes and its embedded texture stay as shipped.
 
+BUILD 14 (2026-10-18) — the guards' crossbow upgrades: Lv1 is the one-handed
+crossbow as shipped; Lv2 the same mesh with a canvas COPY of rogue_texture.png
+whose two wood swatches are repainted royal blue and whose steel swatch is
+brightened; Lv3 the two-handed crossbow with a copy repainted deep blue with
+gold fittings (troop3d.js, paintBowAtlas). The PNG, the glTFs and their
+buffers stay byte-for-byte as shipped. (Until BUILD 14 the bow was looked up
+under the GLB's node name "handslot.r", which GLTFLoader renames
+"handslotr", so it never reached the guard's hand.)
+
   Knight.glb                Characters/gltf/Knight.glb
     sha256 60428e3abc09ba83e595d256e3af8c5c976b46cdae599f0802fc82b4a3445168
   crossbow_1handed.gltf     Assets/gltf/crossbow_1handed.gltf
@@ -31,6 +40,8 @@ bytes and its embedded texture stay as shipped.
     swivel on top of the Medieval Hexagon Pack's stone tower base, is the
     tower's ballista — it turns to what it shoots and kicks back on a shot.
     It shares rogue_texture.png with the one-handed crossbow above.)
+    (2026-10-18, BUILD 14: also the garrison's Lv3 bow — the guards' arms
+    upgrade puts it in their hands as a two-handed arbalest.)
   rogue_texture.png         Assets/gltf/rogue_texture.png (the crossbow's atlas)
     sha256 a4032e877c3b91939f5cdbb630349c1998fdbc3211bbd587c111125500fe4cc5
   LICENSE.txt               LICENSE.txt

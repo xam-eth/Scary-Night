@@ -172,6 +172,7 @@ function peekSpot(game, state, p) {
  * the typed circles directly (the walk between circles costs no clock).
  *   keep     only ever raises the keep
  *   hunter   the Hunter's track first, then the keep
+ *   arms     a barracks, then the guards' crossbows (BUILD 14), the keep
  *   tower    a mine, then a ballista on every ballista circle under the
  *            banner, the keep, and ballista levels
  *   builder  the balanced queue (keep, mine, barricade, sawmill, ...)
@@ -194,6 +195,13 @@ export function botDay(game, plan) {
     return mode.startNight();
   }
   const built = Object.entries(mode.buildings);
+  if (plan === 'arms') {
+    if (repair()) return false;
+    if (!built.some(([, t]) => t === 'barracks') && tryBuild('barracks')) return false;
+    if (mode.armsLevel < 3 && mode.startBuild('arms')) return false;
+    if (mode.keepLevel < 3 && mode.startBuild('keep')) return false;
+    return mode.startNight();
+  }
   if (plan === 'tower') {
     if (repair()) return false;
     if (mode.keepLevel < 2 && mode.startBuild('keep')) return false;

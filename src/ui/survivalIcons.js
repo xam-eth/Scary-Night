@@ -221,9 +221,15 @@ const ICONS = {
     shine(ctx, -0.18, -0.86, 0.12, 0.05, 0.5);
   },
   /** Crossbow (bolt damage). */
+  /**
+   * A crossbow seen from above, pointing up: the bow's arc across the top,
+   * the stock down the middle (BUILD 14: tilted 35° it read as a pickaxe
+   * next to the mine's).
+   */
   crossbow(ctx) {
     ctx.save();
-    ctx.rotate(-0.62);
+    ctx.rotate(-Math.PI / 2);
+    ctx.translate(-0.06, 0);
     rr(ctx, -0.95, -0.16, 1.66, 0.32, 0.12);
     fillStroke(ctx, '#b4733a');
     ctx.beginPath();

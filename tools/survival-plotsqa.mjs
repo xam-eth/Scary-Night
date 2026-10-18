@@ -307,8 +307,9 @@ const kit = await page.evaluate(() => {
 });
 check('assets: the KayKit kit is loaded and every placed building is a kit model (0 procedural)',
   kit.kit.ready && kit.kit.models >= 22 && kit.kit.kitBuildings === kit.meshes.length && kit.kit.proceduralBuildings === 0 && kit.meshes.length === 7, kit);
-check('assets: every plot stands on its pad, the armory is the pack\'s racks, the yard has its well',
-  kit.kit.pads === kit.plots + 1 && kit.plots === 15 && kit.kit.armoryKit && kit.kit.wells === 1, { pads: kit.kit.pads, plots: kit.plots, armory: kit.kit.armoryKit, wells: kit.kit.wells });
+check('assets: every plot stands on its pad, so do the armory and the arms rack (the pack\'s racks), the yard has its well',
+  kit.kit.pads === kit.plots + 2 && kit.plots === 15 && kit.kit.armoryKit && kit.kit.armsKit && kit.kit.wells === 1,
+  { pads: kit.kit.pads, plots: kit.plots, armory: kit.kit.armoryKit, arms: kit.kit.armsKit, wells: kit.kit.wells });
 check('assets: a levelled building shows it (Lv2/Lv3 flags and stock from the pack)',
   kit.meshes.filter((m) => m.level >= 2).every((m) => m.dressed) && kit.meshes.some((m) => m.level >= 2), kit.meshes);
 await shot('plots-1-day-town');
@@ -474,6 +475,103 @@ check('V10: by day every gate the coming night will hit is marked (a red badge i
   far.tonight && far.tonight.length === plannedIds.length && plannedIds.length >= 3
     && far.tonight.every((row, i) => row.id === plannedIds[i] && row.total > 0) && far.tonight.some((row) => row.inView),
   { plan: far.plan, drawn: far.tonight });
+
+/* ---- 6. BUILD 14 (2026-10-17: "senjata pasukan bisa di-upgrade"): the
+ * garrison's crossbows, bought at the arms rack, on every guard and in
+ * their bolts. The rules (cost, damage, rate, pierce, save) are in
+ * tools/harness.mjs ---- */
+const b14a = await page.evaluate(() => {
+  const g = window.__LN; const m = g.survival;
+  m.restart();
+  m.completeNight(); window.__pStep(2);
+  if (m.rewardPending && m.rewardPending()) m.ackRewards();
+  m.gold = 99; m.wood = 99;
+  m._userZoom = 1; m._zoomGoal = null;
+  const keep = m.keep();
+  // between the two stations: both show their level, both their arrow
+  g.player.x = keep.x + 465; g.player.y = keep.y + 150;
+  m.recenterCamera(true); g.renderer.snapCamera(g.player.x, g.player.y);
+  window.__pStep(30);
+  const stations = (g._survivalLabels && g._survivalLabels.stations) || [];
+  const arms = m.armsSpot();
+  g.player.x = arms.x; g.player.y = arms.y + 10;
+  g.renderer.snapCamera(g.player.x, g.player.y);
+  window.__pStep(30);
+  const pick = (re) => { const u = g.ui.find((item) => re.test(item.label || '')); return u ? { x: u.x, y: u.y, w: u.w, h: u.h, label: u.label, disabled: !!u.disabled } : null; };
+  const d = window.__pW.diagnostics();
+  return { stations, here: m.dayContext() && m.dayContext().kind, button: pick(/^survival:UPGRADE ARMS/), display: d.buildingKit.armsDisplay, bows: d.guardBows };
+});
+await shot('b14-1-arms-card');
+check('B14: the arms rack beside the armory — both stations show their level near the captain with the gold arrow when affordable; at the rack one UPGRADE ARMS LV2 button in the dock, the rack shows the Lv1 bow, every guard holds it',
+  b14a.stations.length === 2 && b14a.stations.every((st) => st.near && st.arrow) && b14a.here === 'arms'
+    && b14a.button && b14a.button.label === 'survival:UPGRADE ARMS LV2' && b14a.button.h <= 56 && !b14a.button.disabled
+    && b14a.display === 1 && b14a.bows.length >= 1 && b14a.bows.every((lv) => lv === 1), b14a);
+const b14b = await page.evaluate(() => {
+  const g = window.__LN; const m = g.survival;
+  const fx0 = (window.__pW.diagnostics().fx || { played: {} }).played.arm || 0;
+  const u = g.ui.find((item) => /^survival:UPGRADE ARMS LV2/.test(item.label || ''));
+  if (u && u.run) u.run(); else m.startBuild('arms');
+  const job = m.builderJob && m.builderJob.kind;
+  window.__pStep(30);
+  const working = g.ui.some((item) => /UPGRADING ARMS/.test(item.label || ''));
+  window.__pFast(() => !!m.builderJob);
+  m.floaters.length = m.floaters.length; // the pops are pushed on completion
+  const pops = m.floaters.filter((f) => f.icon === 'crossbow' && f.text === 'Lv2').length;
+  window.__pStep(4);
+  const d2 = window.__pW.diagnostics();
+  m.gold = 99; m.wood = 99;
+  m.startBuild('arms');
+  window.__pFast(() => !!m.builderJob);
+  // the guards up close (they stand by the keep by day)
+  const a = m.guards[0], b = m.guards[1] || a;
+  m._userZoom = 1.6; m._zoomGoal = null;
+  g.player.x = 260; g.player.y = 30;
+  m.camPan.x = (a.x + b.x) / 2 - g.player.x; m.camPan.y = (a.y + b.y) / 2 - 10 - g.player.y;
+  g.renderer.snapCamera((a.x + b.x) / 2, (a.y + b.y) / 2);
+  window.__pStep(40);
+  const d3 = window.__pW.diagnostics();
+  return { job, working, pops, guards: m.guards.length, lv2: { bows: d2.guardBows, display: d2.buildingKit.armsDisplay }, lv3: { level: m.armsLevel, bows: d3.guardBows, twoHanded: d3.guardTwoHanded, display: d3.buildingKit.armsDisplay }, armFx: ((d3.fx || { played: {} }).played.arm || 0) - fx0 };
+});
+await shot('b14-2-guards-lv3');
+check('B14: bought, the rack works on it (UPGRADING ARMS), then every guard holds the Lv2 royal-blue bow (a "Lv2" pop over each, a flash on each) and the rack shows it; Lv3 is the blue-and-gold arbalest held two-handed',
+  b14b.job === 'arms' && b14b.working && b14b.pops === b14b.guards && b14b.pops > 0
+    && b14b.lv2.bows.length >= 1 && b14b.lv2.bows.every((lv) => lv === 2) && b14b.lv2.display === 2
+    && b14b.lv3.level === 3 && b14b.lv3.bows.every((lv) => lv === 3) && b14b.lv3.twoHanded === b14b.lv3.bows.length && b14b.lv3.display === 3
+    && b14b.armFx >= b14b.guards * 2, b14b);
+const b14c = await page.evaluate(async () => {
+  const g = window.__LN; const m = g.survival;
+  const { SurvivalCrowdZombie: Crowd } = await import('./src/game/survival.js');
+  m.startNight();
+  m.armsLevel = 3;
+  m.keepHp = 99999;
+  if (m.cine) m.cine = null;
+  m.waveIndex = 99; m.breakerIndex = 99; m.individualIndex = 99;
+  g.enemies.length = 0; g.bolts.length = 0;
+  const south = m.entranceById('southGate');
+  south.hp = south.hpMax = 99999;
+  m.guards.length = Math.min(2, m.guards.length);
+  m.guards.forEach((gd, i) => { const post = m._doorPost(south, i); gd.x = post.x; gd.y = post.y + 6; m._setGuardPost(gd, post); });
+  m._guardAssignT = 99;
+  const park = () => { g.player.x = south.x - 20; g.player.y = south.y - 130; g.player.vx = 0; g.player.vy = 0; m._userZoom = 1.5; m._zoomGoal = null; m.camPan.x = 0; m.camPan.y = 0; m._guardAssignT = 99; };
+  park(); g.renderer.snapCamera(g.player.x, g.player.y);
+  window.__pFast(() => { park(); return m.guards.some((gd) => gd.lift < 1) && m.elapsed < 20; });
+  for (let k = 0; k < 7; k++) {
+    const z = new Crowd(south.x - 150 + k * 50, south.y + 150 + (k % 2) * 40, south, 0, 1);
+    z.hp = z.hpMax = 99999; z.update = () => {};
+    g.enemies.push(z);
+  }
+  const until = Math.max(m.elapsed + 1.2, 6);
+  window.__pFast(() => { park(); return m.elapsed < until; });
+  m.guards.forEach((gd, i) => { gd.cd = 0.02 + i * 0.05; });
+  for (let i = 0; i < 9; i++) { park(); window.__pStep(1); }
+  const meshes = [...window.__pW.bolts.values()].filter((mesh) => mesh.visible && mesh.name === 'guard-bolt-3d');
+  return { up: m.guards.filter((gd) => gd.lift === 1).length, bolts: g.bolts.filter((b) => b.guard).map((b) => ({ arms: b.arms, pierce: b.pierce || 0, damage: b.damage })), meshLevels: meshes.map((mesh) => mesh.userData.armsLevel) };
+});
+await shot('b14-3-night-gold-bolts');
+check('B14: at night a Lv3 guard up on its tower shoots the gold bolt (18 damage, runs on through a body), drawn as the Lv3 bolt',
+  // (a bolt that has already run through one body has pierce 0 left)
+  b14c.up >= 1 && b14c.bolts.length >= 1 && b14c.bolts.every((b) => b.arms === 3 && b.pierce <= 1 && b.damage === 18) && b14c.bolts.some((b) => b.pierce === 1)
+    && b14c.meshLevels.length >= 1 && b14c.meshLevels.every((lv) => lv === 3), b14c);
 
 fs.writeFileSync(path.join(OUT, 'plotsqa.json'), JSON.stringify({ results, errors }, null, 2));
 console.log(`errors ${errors.length}`);
