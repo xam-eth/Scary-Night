@@ -367,8 +367,14 @@ class CrowdStage {
     return mesh;
   }
 
-  /** The kind a body is drawn as: fixed by its id, falling back to the demon. */
+  /**
+   * The kind a body is drawn as: the one the siege gave it (BUILD 17,
+   * survival.js sets `crowdKind` from its id and the siege's mix: Siege 1 is
+   * mostly blobs, the top of the ladder mostly demons), else fixed by its id;
+   * falling back to the demon.
+   */
   kindFor(enemy) {
+    if (enemy.crowdKind && this.kinds.get(enemy.crowdKind)) return this.kinds.get(enemy.crowdKind);
     const roll = hash(enemy.id);
     let acc = 0;
     for (const spec of CROWD_KINDS) {

@@ -75,7 +75,7 @@ page.on('console', (m) => { if (m.type() === 'error') consoleErrors.push(m.text(
 const VIEW = { width: 844, height: 390 };
 await page.setViewport({ ...VIEW, deviceScaleFactor: DPR, isMobile: true, hasTouch: true });
 await page.evaluateOnNewDocument(() => { try { localStorage.clear(); } catch (_) { /* ignore */ } });
-await page.goto(`http://127.0.0.1:${PORT}/?cine=0`, { waitUntil: 'domcontentloaded', timeout: 180000 });
+await page.goto(`http://127.0.0.1:${PORT}/?cine=0&siege=3`, { waitUntil: 'domcontentloaded', timeout: 180000 });
 await page.waitForFunction(() => {
   const g = window.__LN;
   return !!(g && g.mode === 'survival' && g.screen === 'playing' && g.survival && g.survival.phase === 'night');

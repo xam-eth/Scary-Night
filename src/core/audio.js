@@ -238,6 +238,20 @@ S.build = (t, o) => {
     noise(t + dt, 0.13, { out: o.out, gain: 0.18 * v, type: 'bandpass', freq: rand(400, 1200), q: 2.5, pan: o.pan, rev: 0.4, attack: 0.001 });
   }
 };
+// BUILD 17: a kill's coin landing in the purse — a short, bright ching
+S.coin = (t, o) => {
+  const v = o.vol ?? 1;
+  osc(t, 0.1, { out: o.out, gain: 0.12 * v, type: 'triangle', freq: 1568, to: 1568, pan: o.pan, rev: 0.2, attack: 0.001 });
+  osc(t + 0.055, 0.22, { out: o.out, gain: 0.11 * v, type: 'sine', freq: 2093, to: 2093, pan: o.pan, rev: 0.32, attack: 0.001 });
+};
+// BUILD 17: a siege opened / a perk earned on the end panel — three rising notes
+S.unlock = (t, o) => {
+  const v = o.vol ?? 1;
+  [784, 988, 1319].forEach((f, i) => {
+    osc(t + i * 0.11, 0.34, { out: o.out, gain: 0.13 * v, type: 'triangle', freq: f, to: f, pan: o.pan, rev: 0.5, attack: 0.004 });
+    osc(t + i * 0.11, 0.3, { out: o.out, gain: 0.05 * v, type: 'sine', freq: f * 2, to: f * 2, pan: o.pan, rev: 0.5, attack: 0.004 });
+  });
+};
 S.crossbow = (t, o) => {
   const v = o.vol ?? 1;
   noise(t, 0.09, { out: o.out, gain: 0.3 * v, type: 'bandpass', freq: 2400, q: 3, pan: o.pan, rev: 0.25, attack: 0.001, sweep: 0.35 });

@@ -11,7 +11,9 @@
  * checks BUILD 13's visual pass (the bright captain, names only near,
  * tonight's gates by day); 6 BUILD 14's guard bows; 7 BUILD 15's night fight
  * in sight; 8 BUILD 16's night tempo (NIGHT CLEARED and its early dawn, the
- * wave's call, the last few marked on the playfield's frame).
+ * wave's call, the last few marked on the playfield's frame); 9 BUILD 17's
+ * panels on a short sideways phone, no + / - buttons, the siege ladder's
+ * horde, the kill's coin and the run's opening at the north gate.
  *
  *   node tools/survival-plotsqa.mjs [--out=qa-evidence/survival-plots] [--dpr=1] [--port=8125]
  *
@@ -66,7 +68,7 @@ const check = (name, ok, detail) => {
   if (!ok) failures++;
 };
 const t0 = Date.now();
-await page.goto(`http://127.0.0.1:${PORT}/?cine=0`, { waitUntil: 'domcontentloaded', timeout: 180000 });
+await page.goto(`http://127.0.0.1:${PORT}/?cine=0&siege=3`, { waitUntil: 'domcontentloaded', timeout: 180000 });
 await page.waitForFunction(() => {
   const g = window.__LN;
   return !!(g && g.mode === 'survival' && g.screen === 'playing' && g.survival && g.survival.phase === 'night');
@@ -215,30 +217,23 @@ const pinchAny = await page.evaluate(() => {
 check('camera: two fingers anywhere pinch (one each side: zoom out; both on the stick side: zoom in) and the captain stays put',
   pinchAny.split.z1 < pinchAny.split.z0 * 0.8 && pinchAny.left.z1 > pinchAny.left.z0 * 1.2 && pinchAny.split.moved < 4 && pinchAny.left.moved < 4 && !pinchAny.left.stick, pinchAny);
 await reset();
-// the + / - buttons on the right edge, and the + / - keys
+// BUILD 17 (playtest 2026-10-18: "ada bug visual yaitu tanda +- yg harus
+// tidak perlu ada hapus itu di visual"): no + / - buttons on the screen any
+// more, by day or by night; the + / - keys still zoom a step each, eased
 const buttons = await page.evaluate(() => {
   const g = window.__LN; const m = g.survival;
   window.__pStep(2);
   const pick = (label) => { const u = g.ui.find((item) => item.label === label); return u ? { x: u.x, y: u.y, w: u.w, h: u.h } : null; };
-  return { zin: pick('survival:ZOOM IN'), zout: pick('survival:ZOOM OUT'), w: g.renderer.w, h: g.renderer.h, z0: m.userZoom() };
+  return { zin: pick('survival:ZOOM IN'), zout: pick('survival:ZOOM OUT'), w: g.renderer.w, h: g.renderer.h, z0: m.userZoom(), ui: g.ui.map((u) => u.label) };
 });
-let zoomSteps = null;
-if (buttons.zin && buttons.zout) {
-  await page.touchscreen.tap(buttons.zin.x + buttons.zin.w / 2, buttons.zin.y + buttons.zin.h / 2);
-  const zIn = await page.evaluate(() => { window.__pStep(40); return window.__LN.survival.userZoom(); });
-  await page.touchscreen.tap(buttons.zout.x + buttons.zout.w / 2, buttons.zout.y + buttons.zout.h / 2);
-  await page.evaluate(() => window.__pStep(40));
-  await page.touchscreen.tap(buttons.zout.x + buttons.zout.w / 2, buttons.zout.y + buttons.zout.h / 2);
-  const zOut = await page.evaluate(() => { window.__pStep(40); return window.__LN.survival.userZoom(); });
-  await page.keyboard.press('Equal');
-  const zKey = await page.evaluate(() => { window.__pStep(40); return window.__LN.survival.userZoom(); });
-  const moved = await page.evaluate(() => Math.round(window.__LN.survival.cameraOffset()));
-  zoomSteps = { zIn: +zIn.toFixed(3), zOut: +zOut.toFixed(3), zKey: +zKey.toFixed(3), offset: moved };
-}
-check('camera: + / - on the right edge (between the counters and the thumb corner) zoom a step each, eased; the + key too',
-  zoomSteps && Math.abs(zoomSteps.zIn - 1.35) < 0.01 && Math.abs(zoomSteps.zOut - 1 / 1.35) < 0.01 && Math.abs(zoomSteps.zKey - 1) < 0.01
-    && buttons.zin.x > buttons.w - 70 && buttons.zin.y > 120 && buttons.zout.y + buttons.zout.h < buttons.h - 96,
-  { ...buttons, steps: zoomSteps });
+await page.keyboard.press('Equal');
+const zKeyIn = await page.evaluate(() => { window.__pStep(40); return window.__LN.survival.userZoom(); });
+await page.keyboard.press('Minus');
+const zKeyOut = await page.evaluate(() => { window.__pStep(40); return window.__LN.survival.userZoom(); });
+const zoomSteps = { zKeyIn: +zKeyIn.toFixed(3), zKeyOut: +zKeyOut.toFixed(3) };
+check('camera: no + / - buttons on the screen (BUILD 17 took them away); the + / - keys still zoom a step each, eased (the pinch and the wheel: the checks above and below)',
+  !buttons.zin && !buttons.zout && !buttons.ui.some((l) => /ZOOM/.test(l)) && Math.abs(zoomSteps.zKeyIn - 1.35) < 0.01 && Math.abs(zoomSteps.zKeyOut - 1) < 0.01,
+  { zin: buttons.zin, zout: buttons.zout, steps: zoomSteps });
 await reset();
 // a flick glides on after the finger lifts, then stops
 const flick = await (async () => {
@@ -868,6 +863,224 @@ check('B16: the night\'s last few — the two out of the fight run for the trees
     && !b16c.onScreen && b16c.red >= 20 && skullMark && gateMark && [skullMark, gateMark].every((mk) => onFrame(mk) && Math.hypot(mk.x - b16c.captain.x, mk.y - b16c.captain.y) > 140),
   b16c);
 await page.evaluate(() => { const g = window.__LN; g.enemies.length = 0; });
+
+
+/* ---- 9. BUILD 17 (2026-10-18: "perbaiki bug pada ui saat kalah itu tombol
+ * nya tidak terlihat pada mode lanscape ... game belum punya hook yg kuat di
+ * awal ... harus di buat mudah di awal baru terasa sulit sampai level level
+ * tinggi dan resource mulai sulit di dapatkan ... musuh terlihat kuat ...
+ * tanda +- ... hapus itu di visual"): the end, dawn and pause panels on a
+ * short sideways phone (a real tap on their buttons), no + / - on the
+ * screen, Siege 1's small horde of blobs against Siege 7's blood moon, the
+ * kill's coin, the run's opening at the north gate and the day's WAVE 1
+ * tag. The rules are in tools/harness.mjs, the curve in
+ * tools/survival-balance.mjs --siege=1..10 ---- */
+const settle = async (ms = 1200, frames = 60) => {
+  await new Promise((r) => setTimeout(r, ms));
+  await page.evaluate((n) => window.__pStep(n), frames);
+};
+const resizeTo = async (w, h) => {
+  await page.setViewport({ width: w, height: h, deviceScaleFactor: DPR, isMobile: true, hasTouch: true });
+  await page.waitForFunction((ww, hh) => window.__LN.renderer.w === ww && window.__LN.renderer.h === hh, { timeout: 10000, polling: 50 }, w, h);
+  await new Promise((r) => setTimeout(r, 300));
+  await page.evaluate(() => window.__pStep(3));
+};
+const uiItem = (label) => page.evaluate((l) => { const u = window.__LN.ui.find((it) => it.label === l); return u ? { x: u.x, y: u.y, w: u.w, h: u.h } : null; }, label);
+const tapItem = async (item) => { await page.touchscreen.tap(item.x + item.w / 2, item.y + item.h / 2); await page.evaluate(() => window.__pStep(3)); };
+const whole = (it, w, h) => !!it && it.x >= 0 && it.y >= 0 && it.x + it.w <= w + 0.5 && it.y + it.h <= h + 0.5;
+
+// 9a) the loss panel on a short sideways phone, then a real tap on TRY AGAIN
+await page.evaluate(() => {
+  const g = window.__LN; const m = g.survival;
+  m.records.ladder.best = { 1: 3 }; m.records.ladder.unlocked = 2;
+  m.startSiege(2); if (m.cine) m.endCine();
+  m.day = 2; m.nightsCompleted = 1; m.elapsed = 49;
+  m.fail('THE KEEP FELL');
+});
+await settle(1500, 90);
+const lossFit = {};
+for (const [w, h] of [[740, 280], [667, 260], [844, 390]]) {
+  await resizeTo(w, h);
+  const again = await uiItem('survival:PLAY AGAIN');
+  const easier = await uiItem('survival:EASIER SIEGE');
+  lossFit[`${w}x${h}`] = { again, easier, whole: whole(again, w, h) && whole(easier, w, h) };
+  if (w !== 844) await shot(`b17-1-loss-${w}x${h}`);
+}
+await resizeTo(740, 280);
+const againAt = await uiItem('survival:PLAY AGAIN');
+await tapItem(againAt);
+const afterAgain = await page.evaluate(() => { const g = window.__LN; const m = g.survival; if (m.cine) m.endCine(); window.__pStep(2); return { phase: m.phase, day: m.day, siege: m.siege, result: m.runResult, panel: g.uiPanel }; });
+check('B17: the loss panel fits a short sideways phone — TRY AGAIN and the siege below lie whole on the screen at 740 x 280 and 667 x 260 (BUILD 16 put PLAY AGAIN 296 px down on a 280 px screen), and a real tap on TRY AGAIN starts the siege again',
+  Object.values(lossFit).every((f) => f.whole) && afterAgain.phase === 'night' && afterAgain.day === 1 && afterAgain.siege === 2 && afterAgain.result === null,
+  { lossFit, afterAgain });
+
+// 9b) a won siege: NEXT SIEGE on a short screen, a real tap starts the next siege
+await page.evaluate(() => {
+  const g = window.__LN; const m = g.survival;
+  m.day = 3; m.nightsCompleted = 2; m.phase = 'night'; m.runStats.keepMin = 0.9; g.enemies.length = 0;
+  m.completeNight(); if (m.cine) m.endCine();
+});
+await settle(1500, 150);
+const winRes = await page.evaluate(() => { const m = window.__LN.survival; return { siege: m.runResult.siege, unlocked: m.runResult.unlocked, perks: m.runResult.perks, stars: m.runResult.stars, total: m.runResult.starsTotal }; });
+await resizeTo(844, 390);
+await page.evaluate(() => window.__pStep(30));
+await shot('b17-2-win-844x390');
+await resizeTo(667, 260);
+const nextAt = await uiItem('survival:NEXT SIEGE');
+const replayAt = await uiItem('survival:PLAY AGAIN');
+await shot('b17-2-win-667x260');
+await tapItem(nextAt);
+const afterNext = await page.evaluate(() => { const g = window.__LN; const m = g.survival; if (m.cine) m.endCine(); window.__pStep(2); return { phase: m.phase, day: m.day, siege: m.siege, gold: m.gold, banner: m.banner && m.banner.text }; });
+check('B17: a won siege opens the next one — the panel names it with its new rule (and a perk the stars opened); NEXT SIEGE and REPLAY lie whole on a 667 x 260 screen and a real tap on NEXT SIEGE starts it',
+  winRes.unlocked === 3 && winRes.siege === 2 && whole(nextAt, 667, 260) && whole(replayAt, 667, 260)
+    && afterNext.siege === 3 && afterNext.phase === 'night' && afterNext.day === 1 && /^SIEGE 3/.test(afterNext.banner || ''),
+  { winRes, nextAt, replayAt, afterNext });
+
+// 9c) the dawn card with every row it can have, on a short screen; a real tap collects
+await resizeTo(740, 280);
+await page.evaluate(() => {
+  const g = window.__LN; const m = g.survival;
+  m.lastRewards = { gold: 16, wood: 16, loot: 9, kills: 52, cleared: { at: 50, saved: 20, bonus: 20 }, mined: 6, sawn: 7, towerKills: 12, killsBy: { guard: 6 }, survivors: 1, keepDamage: 120, keepPatched: 42, lost: 1, reinforcements: 2 };
+  m.phase = 'day'; m.day = 2; m.nightsCompleted = 1; m.rewardAck = 0; g.screen = 'playing'; g.uiPanel = 'survival-day';
+});
+await settle(1200, 30);
+const collectAt = await uiItem('survival:COLLECT');
+await shot('b17-3-dawn-740x280');
+await tapItem(collectAt);
+const collected = await page.evaluate(() => !window.__LN.survival.rewardPending());
+check('B17: the dawn card with all 13 of its rows (the kill loot row among them) keeps COLLECT whole on a 740 x 280 screen, and a real tap collects',
+  whole(collectAt, 740, 280) && collectAt.h >= 28 && collected, { collectAt, collected });
+
+// 9d) PAUSE on a short screen: the siege, its rule and the perks; a pick of
+//     another open siege turns RESTART into START SIEGE n
+await page.evaluate(() => { const g = window.__LN; g.togglePause(true); window.__pStep(3); });
+const pauseA = { resume: await uiItem('survival:RESUME'), restart: await uiItem('survival:RESTART 3-DAY RUN'), prev: await uiItem('survival:SIEGE PREV') };
+await tapItem(pauseA.prev);
+await page.evaluate(() => window.__pStep(3));
+const pauseB = { start: await uiItem('survival:START SIEGE'), pick: await page.evaluate(() => window.__LN._siegePick), siege: await page.evaluate(() => window.__LN.survival.siege) };
+await shot('b17-4-pause-740x280');
+await page.evaluate(() => { const g = window.__LN; g._siegePick = null; g.resumeSurvival(); window.__pStep(2); });
+check('B17: PAUSE on a 740 x 280 screen shows the run\'s siege, its rule and the perks; its buttons lie whole on the screen; the arrows pick another open siege and RESTART turns into START SIEGE n',
+  whole(pauseA.resume, 740, 280) && whole(pauseA.restart, 740, 280) && !!pauseA.prev && pauseB.pick === pauseB.siege - 1 && whole(pauseB.start, 740, 280), { pauseA, pauseB });
+await resizeTo(844, 390);
+
+// 9e) no + / - on the screen by night or by day: the HUD's own canvas is
+//     clear where BUILD 12-16 drew the two white buttons
+const zoomSpots = await page.evaluate(() => {
+  const g = window.__LN; const m = g.survival;
+  const probe = () => {
+    const w = g.renderer.w, h = g.renderer.h, r = 18, x = w - 12 - r, mid = Math.round(h * 0.5);
+    const c = g.canvas; const k = c.width / w; const ctx = c.getContext('2d');
+    const read = (yy) => ctx.getImageData(Math.round(x * k), Math.round(yy * k), 1, 1).data;
+    return [read(mid - 22), read(mid + 22)].map((d) => d[3]);
+  };
+  window.__pNight(1); window.__pStep(4);
+  const night = { alpha: probe(), labels: g.ui.map((u) => u.label).filter((l) => /ZOOM/.test(l)) };
+  m.phase = 'day'; m.day = 2; m.nightsCompleted = 1; m.rewardAck = 1; g.uiPanel = 'survival-day'; window.__pStep(4);
+  const day = { alpha: probe(), labels: g.ui.map((u) => u.label).filter((l) => /ZOOM/.test(l)) };
+  return { night, day };
+});
+await shot('b17-5-no-zoom-buttons-day');
+check('B17: no + / - zoom buttons by night or by day — no ZOOM tap targets, and the HUD canvas is clear (alpha 0) where BUILD 12-16 drew the two white buttons on the right edge',
+  zoomSpots.night.labels.length === 0 && zoomSpots.day.labels.length === 0 && [...zoomSpots.night.alpha, ...zoomSpots.day.alpha].every((a) => a === 0), zoomSpots);
+
+// 9f) the horde as each end of the ladder draws it: Siege 1, a small horde of
+//     small blobs; Siege 7, the blood moon's demons (the pill turns red)
+const hordeAt = async (siege, name) => {
+  const info = await page.evaluate((lv) => {
+    const g = window.__LN; const m = g.survival;
+    m.records.ladder.unlocked = Math.max(m.records.ladder.unlocked, lv);
+    m.startSiege(lv); if (m.cine) m.endCine();
+    window.__pNight(2);
+    m.updateWaves = () => {};
+    g.enemies.length = 0;
+    // the main gate faces the camera: its horde stands in front of the wall
+    const gate = m.entranceById('southGate');
+    m.spawnSwarm(m.waveCounts()[0], 0, gate);
+    for (const e of g.enemies) if (e._crowd) e.alpha = 1;
+    window.__pFast(() => g.enemies.some((e) => e._crowd && e.state !== 'press') && m.elapsed < 9);
+    // the captain a step inside the gate, the view on the horde in front of it
+    g.player.x = gate.x + 40; g.player.y = gate.y - 90;
+    let cx = 0, cy = 0, k = 0;
+    for (const e of g.enemies) if (e._crowd && !e.dead) { cx += e.x; cy += e.y; k++; }
+    cx = (cx / Math.max(1, k) + g.player.x) / 2; cy = (cy / Math.max(1, k) + g.player.y) / 2;
+    m._userZoom = 1.2; m._zoomGoal = null;
+    m.camPan.x = cx - g.player.x; m.camPan.y = cy - g.player.y;
+    g.renderer.snapCamera(cx, cy);
+    window.__pStep(3);
+    const kinds = {};
+    let size = 0, n = 0;
+    for (const e of g.enemies) if (e._crowd && !e.dead) { kinds[e.crowdKind] = (kinds[e.crowdKind] || 0) + 1; size += e.sizeMul; n++; }
+    const walker = g.enemies.find((e) => e._crowd && !e.runner);
+    return { siege: m.siege, n, kinds, size: +(size / Math.max(1, n)).toFixed(2), hp: walker ? walker.hpMax : 0, blood: !!m.rules.bloodMoon, drawn: window.__pW.diagnostics().horde.byKind };
+  }, siege);
+  await settle(600, 4);
+  await shot(name);
+  delete info.drawn;
+  return info;
+};
+const h1 = await hordeAt(1, 'b17-6-horde-siege1');
+const h7 = await hordeAt(7, 'b17-6-horde-siege7');
+await page.evaluate(() => { const m = window.__LN.survival; delete m.updateWaves; m._userZoom = 1; m.camPan.x = 0; m.camPan.y = 0; });
+check('B17: the horde as the ladder draws it — Siege 1 a small horde, mostly blobs, smaller (x0.86) and weak; Siege 7 mostly demons, bigger and more than twice as tough (Night 2: 31 HP against 73), under a red blood-moon pill',
+  h1.n > 0 && h1.n < h7.n && (h1.kinds.crawler || 0) > (h1.kinds.zombie || 0) && (h7.kinds.zombie || 0) > (h7.kinds.crawler || 0) && h1.size < h7.size && h7.hp >= h1.hp * 2.2 && h7.blood,
+  { h1, h7 });
+
+// 9g) a kill's coin: Siege 1 pays a coin per two kills at the kill — a coin
+//     out of the body (3D), "+1" over it, the purse counts it with a skull pop
+const loot = await page.evaluate(() => {
+  const g = window.__LN; const m = g.survival;
+  m.startSiege(1); if (m.cine) m.endCine();
+  window.__pNight(1);
+  m.updateWaves = () => {};
+  g.enemies.length = 0;
+  const gate = m.entranceById('northGate');
+  m.spawnSwarm(6, 0, gate);
+  window.__pFast(() => m.elapsed < 3);
+  g.player.x = gate.x; g.player.y = gate.y + 160;
+  m.recenterCamera(true); g.renderer.snapCamera(gate.x, gate.y - 40);
+  const coin0 = window.__pW.diagnostics().fx.played.coin;
+  const gold0 = m.gold;
+  for (const e of g.enemies.filter((b) => b._crowd).slice(0, 4)) { e._lastHitBy = g.player; e.hurt(e.hp, g, g.player.x, g.player.y); }
+  window.__pStep(8);
+  return { gold: +(m.gold - gold0).toFixed(2), loot: m.nightStats.loot, coins: window.__pW.diagnostics().fx.played.coin - coin0, pops: (m.hudPops || []).filter((p) => p.from === 'skull').length };
+});
+await shot('b17-7-loot');
+await page.evaluate(() => { const m = window.__LN.survival; delete m.updateWaves; });
+check('B17: kills pay on the spot — on Siege 1 four kills drop two coins: two 3D coins hop off the bodies, the purse counts +2 with a skull pop beside it',
+  loot.gold === 2 && loot.loot === 2 && loot.coins >= 2 && loot.pops >= 2, loot);
+
+// 9h) the run's opening: the captain a step inside the north gate, the first
+//     wave outside it (R6), on the siege's banner; by day WAVE 1 over the gate
+const opening = await page.evaluate(() => {
+  const g = window.__LN; const m = g.survival;
+  m.startSiege(1); if (m.cine) m.endCine();
+  m._userZoom = 1; m.camPan.x = 0; m.camPan.y = 0; m.recenterCamera(true); g.renderer.snapCamera(g.player.x, g.player.y);
+  const banner = m.banner && { text: m.banner.text, sub: m.banner.sub };
+  window.__pFast(() => m.waveIndex < 1 && m.elapsed < 6);
+  window.__pStep(40);
+  const gate = m.entranceById('northGate');
+  return { d: Math.round(Math.hypot(g.player.x - gate.x, g.player.y - gate.y)), banner, wave: m.waveIndex, target: !!m.currentTarget };
+});
+await shot('b17-8-opening');
+const wave1 = await page.evaluate(() => {
+  const g = window.__LN; const m = g.survival;
+  g.enemies.length = 0; m.nightStats.spawned = 0;
+  m.completeNight(); m.ackRewards();
+  const plan = m.tonightPlan();
+  const first = plan.find((r) => r.waves.includes(1));
+  const e = first.entrance;
+  m._userZoom = 0.62; m.camPan.x = 0; m.camPan.y = 0;
+  g.player.x = e.x * 0.55; g.player.y = e.y * 0.55;
+  m.recenterCamera(true); g.renderer.snapCamera(g.player.x, g.player.y);
+  window.__pStep(40);
+  return { gate: first.id, swarm: first.swarm, labels: (g._survivalLabels && g._survivalLabels.tonight) || [] };
+});
+await settle(500, 20);
+await shot('b17-9-day-wave1');
+check('B17: a run opens with the captain a step inside the north gate (the first wave outside it), on the siege\'s banner; by day the gate the next night\'s first wave hits wears WAVE 1 over its badge',
+  opening.d < 260 && opening.banner && /^SIEGE 1: FIRST WATCH$/.test(opening.banner.text) && opening.wave >= 1
+    && wave1.labels.some((t) => t.id === wave1.gate && t.inView), { opening, wave1 });
 
 fs.writeFileSync(path.join(OUT, 'plotsqa.json'), JSON.stringify({ results, errors }, null, 2));
 console.log(`errors ${errors.length}`);

@@ -33,7 +33,8 @@
 
 import { clamp, writeSave } from '../core/util.js';
 import { SURVIVAL_ACTOR_SCALE } from '../core/config.js';
-import { SURVIVAL_BUILDINGS, BUILDING_MAX_LEVEL, HUNTER_MAX_LEVEL, ARMS_MAX_LEVEL, GUARD, CINE, SURVIVAL_CAMERA } from '../game/survival.js';
+import { SURVIVAL_BUILDINGS, BUILDING_MAX_LEVEL, HUNTER_MAX_LEVEL, ARMS_MAX_LEVEL, GUARD, CINE } from '../game/survival.js';
+import { SIEGE_MAX, SIEGES, PERKS, nextPerk, totalStars, siegeSpec } from '../game/siege.js';
 import { pauseButtonBox } from '../game/hud.js';
 import {
   drawSurvivalIcon, drawLabel, measureLabel, drawPanel, drawCounter, drawBar,
@@ -114,11 +115,43 @@ function project(game, x, y, height = 0) {
   return { x: p.x, y: p.y - height * r.cam.zoom * VERT };
 }
 
+/**
+ * BUILD 17 (2026-10-18: "perbaiki bug pada ui saat kalah itu tombol nya
+ * tidak terlihat pada mode lanscape"): a phone held sideways with the
+ * browser's bars showing leaves 260–340 px of height, and the loss panel was
+ * 332 px tall from 30 px down — PLAY AGAIN sat under the bottom edge. A modal
+ * panel is now drawn on a virtual screen big enough to hold it and scaled
+ * down to the real one (fitModal); HIT_SCALE carries the scale into the hit
+ * boxes, so a tap lands on the button where it is drawn.
+ */
+let HIT_SCALE = 1;
+
 /** `passive` items take taps but never block the movement stick (world chips). */
 function addHit(game, box, id, onClick, disabled = false, passive = false) {
-  const item = { x: box.x, y: box.y, w: box.w, h: box.h, idx: game.ui.length, label: `survival:${id}`, onClick, disabled: !!disabled, passive };
+  const k = HIT_SCALE;
+  const item = { x: box.x * k, y: box.y * k, w: box.w * k, h: box.h * k, idx: game.ui.length, label: `survival:${id}`, onClick, disabled: !!disabled, passive };
   game.ui.push(item);
   return item;
+}
+
+/**
+ * Draw a modal that needs `needW` x `needH` (virtual px, its margins in) at
+ * the largest scale that fits the screen, up to `maxScale`. `draw(vw, vh, s)`
+ * lays the panel out on the virtual screen vw x vh.
+ */
+function fitModal(ctx, w, h, needW, needH, draw, maxScale = 1) {
+  const s = Math.min(maxScale, w / needW, h / needH);
+  if (Math.abs(s - 1) < 1e-3) return draw(w, h, 1);
+  ctx.save();
+  ctx.scale(s, s);
+  const prev = HIT_SCALE;
+  HIT_SCALE = prev * s;
+  try { return draw(w / s, h / s, s); } finally { HIT_SCALE = prev; ctx.restore(); }
+}
+
+/** The fit scale a modal of `needW` x `needH` gets on this screen (QA reads it). */
+export function modalScale(w, h, needW, needH, maxScale = 1) {
+  return Math.min(maxScale, w / needW, h / needH);
 }
 
 function drawButton(game, ctx, box, label, onClick, opts = {}) {
@@ -209,7 +242,8 @@ const HINTS = Object.freeze({
   rescue: { icon: 'medic', text: 'STAND BY A FALLEN GUARD TO HELP', life: 6 },
   pan: { icon: 'pan', text: 'DRAG THE RIGHT SIDE TO LOOK AROUND', life: 6 },
   // BUILD 12: the dynamic camera (a new id, so players who saw 'pan' see it)
-  zoom: { icon: 'zoom', text: 'PINCH OR TAP + / - TO ZOOM', life: 6 },
+  // (BUILD 17: the + / - buttons are gone; two fingers or the wheel zoom)
+  zoom: { icon: 'zoom', text: 'PINCH TO ZOOM IN AND OUT', mouse: 'SCROLL TO ZOOM IN AND OUT', life: 6 },
 });
 
 function hintStore(game) {
@@ -259,7 +293,9 @@ export function updateSurvivalHints(game, dt) {
     if (mode.guards && mode.guards.some((guard) => guard.down)) offerSurvivalHint(game, 'rescue');
     // a gate is being clawed and the captain has nothing to shoot: send him
     // out (a shut gate stops his bolts since BUILD 10)
-    if (mode.elapsed > 12 && !mode.currentTarget && mode.besiegedDoors().length > 0) offerSurvivalHint(game, 'door');
+    // (BUILD 17: Night 1 starts the captain beside the gate it hits, so he
+    // is told at once — right after DRAG TO MOVE — not 12 s in)
+    if (mode.elapsed > (mode.day <= 1 ? 4 : 12) && !mode.currentTarget && mode.besiegedDoors().length > 0) offerSurvivalHint(game, 'door');
     // the first time he stands outside at night: the horde comes for him
     if (mode.captainExposed && !mode.captainInGate) offerSurvivalHint(game, 'out');
   } else if (mode.phase === 'day' && !mode.rewardPending()) {
@@ -276,8 +312,10 @@ export function updateSurvivalHints(game, dt) {
 function drawHint(game, ctx, w, y, cx = w / 2, maxW = w - 24, size = 14) {
   const state = game._survivalHint;
   if (!state) return;
-  const spec = HINTS[state.id];
-  if (!spec) return;
+  const base = HINTS[state.id];
+  if (!base) return;
+  // (a hint can word itself for the mouse: no fingers to pinch with)
+  const spec = base.mouse && game.input && !game.input.touchSeen ? { ...base, text: base.mouse } : base;
   const fadeIn = clamp(state.t / 0.25, 0, 1);
   const fadeOut = clamp((state.life - state.t) / 0.35, 0, 1);
   const alpha = Math.min(fadeIn, fadeOut);
@@ -321,12 +359,17 @@ function drawPhasePill(game, ctx, w, phase) {
   const pillW = night ? Math.min(156, w - 216) : Math.min(212, w - 216);
   const pillH = night ? 68 : 46;
   const x = w / 2 - pillW / 2, y = 8;
+  // BUILD 17: a blood-moon siege's night is red in its pill too
+  const blood = night && !cleared && mode.rules && mode.rules.bloodMoon;
   drawPanel(ctx, x, y, pillW, pillH, {
     radius: 22,
-    top: night && !cleared ? '#4a51a8' : '#ffcf6a',
-    bottom: night && !cleared ? '#262a66' : '#f08c2a',
+    top: night && !cleared ? (blood ? '#8a3a5a' : '#4a51a8') : '#ffcf6a',
+    bottom: night && !cleared ? (blood ? '#3a1530' : '#262a66') : '#f08c2a',
   });
-  drawSurvivalIcon(ctx, night && !cleared ? 'moon' : 'sun', x + 24, y + 22, 32);
+  drawSurvivalIcon(ctx, night && !cleared ? (blood ? 'bloodMoon' : 'moon') : 'sun', x + 24, y + 22, 32);
+  // the run's siege, a shield pinned to the pill's right edge (the ladder's
+  // badge; on the left it met the keep's bar on a 640 px wide phone)
+  if (mode.siege) drawSiegeShield(ctx, x + pillW + 6, y + pillH / 2 + 2, 26, mode.siege, 'open', {});
   if (night) {
     drawLabel(ctx, cleared ? 'CLEARED' : `NIGHT ${mode.day}`, x + 48, y + 13, 11, cleared ? '#fff6dc' : '#d6dcff', { align: 'left', outline: 2.5 });
     drawLabel(ctx, cleared ? 'DAWN' : timeLabel(mode.nightDuration - mode.elapsed), x + 48, y + 30, 19, '#ffffff', { align: 'left' });
@@ -487,10 +530,8 @@ function edgeAvoid(game, w, h) {
   if (chip) out.push({ kind: 'rect', ...chip });
   if (h < 560) {
     // BUILD 16: on a sideways phone the night's pointers run round the
-    // screen's edge (nightPointerBand), past the HUD that sits on it — the
-    // zoom buttons and FLARE on the right, the counters top right
-    const z = zoomButtonLayout(w, h);
-    out.push({ kind: 'circle', x: z.zoomIn.x, y: z.zoomIn.y, r: z.r + 4 }, { kind: 'circle', x: z.zoomOut.x, y: z.zoomOut.y, r: z.r + 4 });
+    // screen's edge (nightPointerBand), past the HUD that sits on it — FLARE
+    // on the right, the counters top right (BUILD 17 took the zoom buttons)
     const flare = input && input.buttons && input.buttons.interact;
     if (flare && flare.r) out.push({ kind: 'circle', x: flare.x, y: flare.y, r: flare.r + 6 });
     out.push({ kind: 'rect', x: w - 104, y: 0, w: 104, h: 118 });
@@ -897,7 +938,9 @@ function drawBanner(game, ctx, w, h) {
   ctx.translate(w / 2, y + bh / 2);
   ctx.scale(scale, scale);
   drawPanel(ctx, -bw / 2, -bh / 2, bw, bh, { radius: 18, top: palette[0], bottom: palette[1], lineWidth: 3 });
-  drawSurvivalIcon(ctx, ev.icon, -bw / 2 + 30, 0, 36);
+  // BUILD 17: the run's opening banner wears the siege's shield
+  if (ev.siege) drawSiegeShield(ctx, -bw / 2 + 30, 0, 38, ev.siege, 'open', {});
+  else drawSurvivalIcon(ctx, ev.icon, -bw / 2 + 30, 0, 36);
   drawLabel(ctx, ev.text, -bw / 2 + 56, 1, size, '#ffffff', { align: 'left' });
   if (ev.sub) drawLabel(ctx, ev.sub, 0, bh / 2 + 13, 13, '#ffffff', { alpha: 0.95 });
   ctx.restore();
@@ -927,7 +970,6 @@ function drawNightHud(game, ctx, w, h) {
   if (h < 560) drawKeepBar(game, ctx, 64 + Math.min(210, w * 0.26) / 2, 14, Math.min(210, w * 0.26));
   else drawKeepBar(game, ctx, w / 2, 82, Math.min(220, w - 220));
   drawBanner(game, ctx, w, h);
-  drawZoomButtons(game, ctx, w, h);
   drawRecenterChip(game, ctx, w, h);
   drawHint(game, ctx, w, h < 560 ? h - 52 : 126);
 }
@@ -1263,6 +1305,13 @@ function drawTonightBadge(ctx, x, y, row) {
     }
     cx += 6;
   }
+  // BUILD 17 (R6): the gate the night's first wave comes to says so by day —
+  // a captain who waits there when he starts the night is in the fight at once
+  if (row.waves && row.waves.includes(1)) {
+    const tw = measureLabel(ctx, 'WAVE 1', 11) + 16;
+    drawPanel(ctx, x - tw / 2, y - ph / 2 - 19, tw, 17, { radius: 8.5, top: '#ffe27a', bottom: '#f0b21e', lineWidth: 1.8, highlight: false, shadow: false });
+    drawLabel(ctx, 'WAVE 1', x, y - ph / 2 - 10, 11, INK, { outline: 0, weight: 900 });
+  }
   return { x: left, y: y - ph / 2, w: pw, h: ph };
 }
 
@@ -1429,17 +1478,26 @@ function drawDayWorldLayer(game, ctx, w, h, view) {
 }
 
 function drawRewardModal(game, ctx, w, h) {
-  const mode = game.survival;
-  const reward = mode.lastRewards || { gold: 0, wood: 0, kills: 0 };
   ctx.save();
   ctx.fillStyle = 'rgba(12,10,30,0.62)';
   ctx.fillRect(0, 0, w, h);
   ctx.restore();
+  const rows = rewardRows(game.survival.lastRewards || { gold: 0, wood: 0, kills: 0 });
+  const L = rewardLayout(rows.length, h < 560);
+  // BUILD 17: the card fits a sideways phone with its bars showing (COLLECT
+  // on the screen at 260 px tall), like the end panel
+  fitModal(ctx, w, h, L.bw + 24, L.bh + 64, (vw, vh) => drawRewardCard(game, ctx, vw, vh, rows, L), 1);
+}
+
+/** The dawn card's rows: what the night paid, who killed, what it cost. */
+function rewardRows(reward) {
   const rows = [
     { icon: 'skull', value: `${reward.kills || 0}`, color: '#3a2a50' },
     { icon: 'gold', value: `+${reward.gold || 0}`, color: '#1f8a3a' },
     { icon: 'wood', value: `+${reward.wood || 0}`, color: '#1f8a3a' },
   ];
+  // BUILD 17: the gold the kills dropped through the night (a skull on the coin)
+  if (reward.loot > 0) rows.push({ icon: 'gold', value: `+${reward.loot}`, color: '#1f8a3a', badge: 'skull' });
   // BUILD 16 (R5): the gold a cleared night's early dawn paid (a clock on the coin)
   if (reward.cleared && reward.cleared.bonus > 0) rows.push({ icon: 'gold', value: `+${reward.cleared.bonus}`, color: '#1f8a3a', badge: 'clock' });
   if (reward.mined) rows.push({ icon: 'mine', value: `+${reward.mined}`, color: '#1f8a3a' });   // dug overnight
@@ -1448,18 +1506,35 @@ function drawRewardModal(game, ctx, w, h) {
   if (reward.towerKills) rows.push({ icon: 'tower', value: `${reward.towerKills}`, color: '#3a2a50', badge: 'skull' });
   if (reward.killsBy && reward.killsBy.guard) rows.push({ icon: 'guard', value: `${reward.killsBy.guard}`, color: '#3a2a50', badge: 'skull' });
   if (reward.survivors > 0) rows.push({ icon: 'guard', value: `+${reward.survivors}`, color: '#1f8a3a' });
-  if (reward.keepDamage) rows.push({ icon: 'keep', value: `-${reward.keepDamage}`, color: '#d23a2a' });
-  if (reward.keepPatched) rows.push({ icon: 'hammer', value: `+${reward.keepPatched}`, color: '#1f8a3a' });
+  if (reward.keepDamage > 0) rows.push({ icon: 'keep', value: `-${reward.keepDamage}`, color: '#d23a2a' });
+  if (reward.keepPatched > 0) rows.push({ icon: 'hammer', value: `+${reward.keepPatched}`, color: '#1f8a3a' });
   // a guard nobody helped up by dawn: one soldier fewer
-  if (reward.lost) rows.push({ icon: 'guard', value: `-${reward.lost}`, color: '#d23a2a' });
-  const cols = 2;
-  const short = h < 560;
-  const cellH = short ? 36 : 44;
-  const gap = short ? 6 : 8;
-  const bw = Math.min(short ? 420 : 330, w - 32);
-  const cols2 = short ? 3 : cols;
-  const bh = (short ? 84 : 92) + Math.ceil(rows.length / cols2) * (cellH + gap) + 34 + (short ? 62 : 74);
-  const x = (w - bw) / 2, y = Math.max(28, (h - bh) / 2 + 10);
+  if (reward.lost > 0) rows.push({ icon: 'guard', value: `-${reward.lost}`, color: '#d23a2a' });
+  return rows;
+}
+
+/**
+ * The dawn card's size. A sideways phone gets the wide card (three rows of
+ * cells across, four when the night had more than nine things to say), so it
+ * grows sideways before it grows down.
+ */
+function rewardLayout(n, short) {
+  const cols = short ? (n > 9 ? 4 : 3) : 2;
+  const cellH = short ? 34 : 44;
+  const gap = short ? 5 : 8;
+  const bw = short ? (cols === 4 ? 520 : 420) : 330;
+  const head = short ? 70 : 92;
+  const foot = short ? 26 : 34;
+  const bh = head + Math.ceil(n / cols) * (cellH + gap) + foot + (short ? 58 : 74);
+  return { short, cols, cellH, gap, bw, head, foot, bh };
+}
+
+function drawRewardCard(game, ctx, w, h, rows, L) {
+  const mode = game.survival;
+  const reward = mode.lastRewards || { gold: 0, wood: 0, kills: 0 };
+  const { short, cellH, gap, bw, bh } = L;
+  const cols2 = L.cols;
+  const x = (w - bw) / 2, y = Math.max(36, (h - bh) / 2 + 12);
   const t = clock(game);
   ctx.save();
   ctx.translate(w / 2, y + 4);
@@ -1471,10 +1546,10 @@ function drawRewardModal(game, ctx, w, h) {
   }
   ctx.restore();
   drawPanel(ctx, x, y, bw, bh, { radius: 22, top: '#fff6e0', bottom: '#ffdca0', lineWidth: 3 });
-  drawSurvivalIcon(ctx, 'sun', w / 2, y + 2, short ? 60 : 76);
-  drawLabel(ctx, `NIGHT ${Math.max(1, mode.nightsCompleted)} ${reward.cleared ? 'CLEARED' : 'SURVIVED'}!`, w / 2, y + (short ? 50 : 62), short ? 18 : 20, '#ffffff', { stroke: '#7a3a00' });
+  drawSurvivalIcon(ctx, 'sun', w / 2, y + 2, short ? 56 : 76);
+  drawLabel(ctx, `NIGHT ${Math.max(1, mode.nightsCompleted)} ${reward.cleared ? 'CLEARED' : 'SURVIVED'}!`, w / 2, y + (short ? 44 : 62), short ? 18 : 20, '#ffffff', { stroke: '#7a3a00' });
   const cellW = (bw - 40) / cols2;
-  const top = y + (short ? 72 : 92);
+  const top = y + L.head;
   rows.forEach((row, i) => {
     const cx = x + 20 + (i % cols2) * cellW;
     const cy = top + Math.floor(i / cols2) * (cellH + gap);
@@ -1485,10 +1560,10 @@ function drawRewardModal(game, ctx, w, h) {
   });
   // the goal, one night closer
   const left = reward.reinforcements != null ? reward.reinforcements : Math.max(0, 3 - mode.nightsCompleted);
-  const gy = top + Math.ceil(rows.length / cols2) * (cellH + gap) + 12;
+  const gy = top + Math.ceil(rows.length / cols2) * (cellH + gap) + (short ? 9 : 12);
   drawSurvivalIcon(ctx, 'banner', w / 2 - 70, gy, 24);
   drawLabel(ctx, left > 0 ? `REINFORCEMENTS IN ${left}` : 'REINFORCEMENTS AT DAWN', w / 2 - 54, gy + 1, 13, '#3a2a50', { align: 'left', outline: 0 });
-  drawButton(game, ctx, { x: x + 40, y: y + bh - (short ? 58 : 66), w: bw - 80, h: short ? 44 : 50 }, 'COLLECT',
+  drawButton(game, ctx, { x: x + 40, y: y + bh - (short ? 54 : 66), w: bw - 80, h: short ? 44 : 50 }, 'COLLECT',
     () => mode.ackRewards(), { id: 'COLLECT', icon: 'check', color: 'green' });
 }
 
@@ -1558,7 +1633,6 @@ function drawDayScreen(game, ctx, w, h) {
   drawButton(game, ctx, nightBtn, `NIGHT ${mode.day}`,
     () => mode.startNight(), { id: 'START NIGHT', icon: 'moon', color: 'purple', disabled: !!job, fontSize: short ? 14 : 15 });
 
-  drawZoomButtons(game, ctx, w, h);
   drawRecenterChip(game, ctx, w, h);
   // FTUE chip: a sideways phone puts it at the foot of the screen between the
   // stick and the dock (the top band shows the keep); a tall screen under
@@ -1569,62 +1643,12 @@ function drawDayScreen(game, ctx, w, h) {
   } else drawHint(game, ctx, w, 136, w / 2, Math.min(w - 24, 420));
 }
 
-/**
- * BUILD 12, the dynamic camera (SURVIVAL_CAMERA): + and - on the right edge,
- * between the counters and the thumb's corner, by day and by night — beside
- * the pinch, as Rise of Kingdoms players asked for on-screen zoom buttons.
- * A button at its end of the range dims. Where they sit: zoomButtonLayout.
+/*
+ * BUILD 12 drew the camera's + and - as two white buttons on the right edge.
+ * BUILD 17 took them away (playtest 2026-10-18: "ada bug visual yaitu tanda
+ * +- yg harus tidak perlu ada hapus itu di visual"): the camera still zooms
+ * by the pinch, the mouse wheel and the + / - keys (SURVIVAL_CAMERA).
  */
-export function zoomButtonLayout(w, h) {
-  const short = h < 560;
-  const r = short ? 18 : 21;
-  const x = w - (short ? 12 : 16) - r;
-  const mid = Math.round(h * (short ? 0.5 : 0.48));
-  const gap = short ? 22 : 26;
-  return { r, x, zoomIn: { x, y: mid - gap }, zoomOut: { x, y: mid + gap } };
-}
-
-function drawZoomButtons(game, ctx, w, h) {
-  const mode = game.survival;
-  if (!mode || mode.cine || typeof mode.zoomStep !== 'function') return;
-  const L = zoomButtonLayout(w, h);
-  const [lo, hi] = SURVIVAL_CAMERA.zoom;
-  const goal = mode.zoomGoal();
-  for (const row of [
-    { id: 'ZOOM IN', at: L.zoomIn, dir: 1, end: goal >= hi - 1e-3 },
-    { id: 'ZOOM OUT', at: L.zoomOut, dir: -1, end: goal <= lo + 1e-3 },
-  ]) {
-    const { x, y } = row.at;
-    const r = L.r;
-    addHit(game, { x: x - r - 4, y: y - r - 4, w: r * 2 + 8, h: r * 2 + 8 }, row.id, () => mode.zoomStep(row.dir));
-    ctx.save();
-    ctx.globalAlpha = row.end ? 0.45 : 0.94;
-    ctx.beginPath();
-    ctx.arc(x, y + 3, r, 0, TAU);
-    ctx.fillStyle = 'rgba(20,16,40,0.45)';
-    ctx.fill();
-    const g = ctx.createLinearGradient(0, y - r, 0, y + r);
-    g.addColorStop(0, '#ffffff');
-    g.addColorStop(1, '#dde4ff');
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, TAU);
-    ctx.fillStyle = g;
-    ctx.fill();
-    ctx.lineWidth = 2.5;
-    ctx.strokeStyle = INK;
-    ctx.stroke();
-    // the glyph: a fat plus / minus in ink
-    ctx.lineCap = 'round';
-    ctx.lineWidth = Math.max(3, r * 0.22);
-    ctx.strokeStyle = '#2a2350';
-    const k = r * 0.46;
-    ctx.beginPath();
-    ctx.moveTo(x - k, y); ctx.lineTo(x + k, y);
-    if (row.dir > 0) { ctx.moveTo(x, y - k); ctx.lineTo(x, y + k); }
-    ctx.stroke();
-    ctx.restore();
-  }
-}
 
 /**
  * The view has been dragged off the captain: a small chip with his face at
@@ -1667,21 +1691,77 @@ function drawBuildStamp(ctx, x, y, align = 'left', size = 9) {
   drawLabel(ctx, `BUILD ${BUILD}`, x, y, size, 'rgba(255,255,255,0.72)', { align, outline: 2 });
 }
 
+/** The pause panel's design size (virtual px, margins in). */
+export const PAUSE_PANEL = Object.freeze({ w: 330, h: 334, needW: 346, needH: 350 });
+
+/**
+ * PAUSED (BUILD 17): the run's siege and its rule, the perks (earned ones lit,
+ * the rest locked with their star count), RESUME, and RESTART — or, after
+ * the arrows picked another open siege, START SIEGE n. Fits a short screen.
+ */
 function drawPausePanel(game, ctx, w, h) {
   ctx.save();
   ctx.fillStyle = 'rgba(12,10,30,0.62)';
   ctx.fillRect(0, 0, w, h);
   ctx.restore();
-  const bw = Math.min(300, w - 32), bh = 230;
+  fitModal(ctx, w, h, PAUSE_PANEL.needW, PAUSE_PANEL.needH, (vw, vh) => drawPauseBody(game, ctx, vw, vh), h >= 560 ? 1.15 : 1);
+}
+
+function drawPauseBody(game, ctx, w, h) {
+  const mode = game.survival;
+  const P = PAUSE_PANEL;
+  const bw = P.w, bh = P.h;
   const x = (w - bw) / 2, y = (h - bh) / 2;
   drawPanel(ctx, x, y, bw, bh, { radius: 22, top: '#3a4190', bottom: '#20244f', lineWidth: 3 });
-  drawSurvivalIcon(ctx, 'pause', w / 2, y + 36, 34);
-  drawLabel(ctx, 'PAUSED', w / 2, y + 74, 22, '#ffffff');
-  drawButton(game, ctx, { x: x + 28, y: y + 100, w: bw - 56, h: 50 }, 'RESUME',
-    () => game.resumeSurvival(), { id: 'RESUME', icon: 'play', color: 'green' });
-  drawButton(game, ctx, { x: x + 28, y: y + 162, w: bw - 56, h: 44 }, 'RESTART',
-    () => game.survival.restart(), { id: 'RESTART 3-DAY RUN', icon: 'restart', color: 'red' });
-  drawBuildStamp(ctx, w / 2, y + bh - 10, 'center', 10);
+  drawSurvivalIcon(ctx, 'pause', w / 2, y + 28, 28);
+  drawLabel(ctx, 'PAUSED', w / 2, y + 58, 20, '#ffffff');
+  const ladder = (mode.ladder && mode.ladder()) || { unlocked: 1, best: {} };
+  const pick = clamp(Math.round(game._siegePick || mode.siege || 1), 1, ladder.unlocked);
+  const spec = siegeSpec(pick);
+  // the siege row: [<] shield + name + rule [>]
+  const sy = y + 100;
+  drawPanel(ctx, x + 16, sy - 26, bw - 32, 52, { radius: 14, top: '#2a2f6e', bottom: '#1b1f4a', lineWidth: 2, highlight: false, shadow: false });
+  drawSiegeShield(ctx, x + 64, sy, 34, pick, siegeState(ladder, pick), { current: pick === mode.siege });
+  let ns = 14;
+  const name = `SIEGE ${pick}: ${spec.name}`;
+  while (ns > 10 && measureLabel(ctx, name, ns) > bw - 150) ns--;
+  drawLabel(ctx, name, x + 88, sy - 8, ns, '#ffd24a', { align: 'left', outline: 2.5, weight: 900 });
+  let rs = 11;
+  while (rs > 8 && measureLabel(ctx, spec.rule.text, rs) > bw - 150) rs--;
+  drawLabel(ctx, spec.rule.text, x + 88, sy + 10, rs, '#ffffff', { align: 'left', outline: 2.2 });
+  if (ladder.unlocked > 1) {
+    const arrow = (bx, dir, id, enabled) => {
+      drawButton(game, ctx, { x: bx, y: sy - 15, w: 24, h: 30 }, '', () => { game._siegePick = clamp(pick + dir, 1, ladder.unlocked); },
+        { id, icon: dir < 0 ? 'back' : 'arrow', color: 'blue', disabled: !enabled, iconSize: 14, radius: 9 });
+    };
+    arrow(x + 20, -1, 'SIEGE PREV', pick > 1);
+    arrow(x + bw - 44, 1, 'SIEGE NEXT', pick < ladder.unlocked);
+  }
+  // the perks: earned ones lit, the next ones grey with the stars they need
+  const stars = mode.starsTotal ? mode.starsTotal() : totalStars(ladder);
+  const py = y + 163;
+  const pw = (bw - 40) / PERKS.length;
+  PERKS.forEach((perk, i) => {
+    const px = x + 20 + i * pw + pw / 2;
+    const own = stars >= perk.stars;
+    ctx.save();
+    ctx.beginPath(); ctx.arc(px, py, 17, 0, TAU);
+    ctx.fillStyle = own ? 'rgba(255,214,90,0.32)' : 'rgba(0,0,0,0.3)';
+    ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = own ? '#ffcf3a' : 'rgba(255,255,255,0.25)'; ctx.stroke();
+    ctx.restore();
+    drawSurvivalIcon(ctx, perk.icon, px, py, 22, { gray: !own, alpha: own ? 1 : 0.55 });
+    if (!own) drawLabel(ctx, `${perk.stars}★`, px, py + 25, 10, '#c8ccff', { outline: 2 });
+    else drawSurvivalIcon(ctx, 'check', px + 12, py + 12, 12);
+  });
+  drawLabel(ctx, `PERKS · ★ ${stars}`, w / 2, py - 27, 11, '#c8ccff', { outline: 2 });
+  drawButton(game, ctx, { x: x + 28, y: y + 204, w: bw - 56, h: 50 }, 'RESUME',
+    () => { game._siegePick = null; game.resumeSurvival(); }, { id: 'RESUME', icon: 'play', color: 'green' });
+  const other = pick !== mode.siege;
+  drawButton(game, ctx, { x: x + 28, y: y + 264, w: bw - 56, h: 44 }, other ? `START SIEGE ${pick}` : 'RESTART',
+    () => { game._siegePick = null; if (other) mode.startSiege(pick); else mode.restart(); },
+    { id: other ? 'START SIEGE' : 'RESTART 3-DAY RUN', icon: other ? 'play' : 'restart', color: other ? 'purple' : 'red' });
+  drawBuildStamp(ctx, w / 2, y + bh - 12, 'center', 10);
 }
 
 /** m:ss for the end panel's run clock. */
@@ -1693,101 +1773,212 @@ function runTime(seconds) {
 /** When each closed run's panel first showed (its stars pop in from there). */
 const END_SHOWN = new WeakMap();
 
+/* ---------------- BUILD 17: the siege ladder in the UI ---------------- */
+
+/** A heraldic shield (the siege badge): flat top, sides curving to a point. */
+function shieldPath(ctx, x, y, w, h) {
+  const r = w * 0.18;
+  ctx.beginPath();
+  ctx.moveTo(x - w / 2 + r, y - h / 2);
+  ctx.lineTo(x + w / 2 - r, y - h / 2);
+  ctx.quadraticCurveTo(x + w / 2, y - h / 2, x + w / 2, y - h / 2 + r);
+  ctx.lineTo(x + w / 2, y);
+  ctx.quadraticCurveTo(x + w / 2, y + h * 0.32, x, y + h / 2);
+  ctx.quadraticCurveTo(x - w / 2, y + h * 0.32, x - w / 2, y);
+  ctx.lineTo(x - w / 2, y - h / 2 + r);
+  ctx.quadraticCurveTo(x - w / 2, y - h / 2, x - w / 2 + r, y - h / 2);
+  ctx.closePath();
+}
+
+const SHIELD_COLORS = Object.freeze({
+  won: ['#ffe27a', '#f0b21e', '#3a2400'],
+  open: ['#8cc4ff', '#3b7be8', '#ffffff'],
+  locked: ['#a3a8ba', '#5c6178', '#ffffff'],
+  blood: ['#ff8f80', '#b3261c', '#ffffff'],
+});
+
 /**
- * The end panel's rows, top to bottom (offsets from the panel's top), so the
- * panel's height is known before anything is drawn: icon + title, the band
- * (stars on a win, the dawn track on a loss), the run's numbers, the crew row
- * and the MVP line, the foot (records on a win, the tip on a loss), PLAY AGAIN.
+ * One siege's badge: its number on a shield — gold once won (and its best
+ * stars under it), blue when open, grey with a lock when not yet. `current`
+ * rings it. Shared by the end panel's ladder, the pause panel and the HUD.
  */
-function endLayout(short, failed, boxRows) {
-  const k = short ? 1 : 1.16;
-  const o = { k };
-  o.title = Math.round(48 * k);
-  o.band = o.title + Math.round(18 * k);
-  o.boxes = o.band + Math.round((failed ? 50 : 62) * k);
-  o.boxH = Math.round(50 * k);
-  const below = o.boxes + boxRows * (o.boxH + 8) + 2;
-  o.crew = below + Math.round(12 * k);
-  o.mvp = o.crew + Math.round(26 * k);
-  o.foot = o.mvp + Math.round(28 * k);
-  o.button = o.foot + Math.round(24 * k);
-  o.buttonH = short ? 48 : 54;
-  o.h = o.button + o.buttonH + Math.round(18 * k);
-  return o;
+export function drawSiegeShield(ctx, x, y, size, level, state = 'open', opts = {}) {
+  const w = size * 0.86, h = size;
+  const c = SHIELD_COLORS[state] || SHIELD_COLORS.open;
+  ctx.save();
+  if (opts.alpha != null) ctx.globalAlpha *= opts.alpha;
+  if (opts.current) {
+    ctx.beginPath();
+    ctx.arc(x, y, size * 0.7, 0, TAU);
+    ctx.fillStyle = 'rgba(255,214,90,0.42)';
+    ctx.fill();
+  }
+  shieldPath(ctx, x, y + 3, w, h);
+  ctx.fillStyle = 'rgba(20,16,40,0.4)';
+  ctx.fill();
+  shieldPath(ctx, x, y, w, h);
+  const g = ctx.createLinearGradient(0, y - h / 2, 0, y + h / 2);
+  g.addColorStop(0, c[0]); g.addColorStop(1, c[1]);
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.lineWidth = Math.max(2, size * 0.07);
+  ctx.strokeStyle = opts.current ? '#ffffff' : INK;
+  ctx.stroke();
+  ctx.restore();
+  if (state === 'locked') drawSurvivalIcon(ctx, 'lock', x, y - size * 0.04, size * 0.5, { alpha: opts.alpha });
+  else drawLabel(ctx, `${level}`, x, y - size * 0.04, Math.round(size * (level >= 10 ? 0.4 : 0.48)), c[2], { outline: state === 'won' ? 0 : Math.max(2, size * 0.08), alpha: opts.alpha, weight: 900 });
+  if (opts.stars != null && state !== 'locked') {
+    const ss = Math.max(8, size * 0.3);
+    for (let i = 0; i < 3; i++) drawSurvivalIcon(ctx, i < opts.stars ? 'star' : 'starEmpty', x + (i - 1) * ss * 0.95, y + h / 2 + ss * 0.62, ss, { alpha: opts.alpha });
+  }
+}
+
+/** A siege's badge state on this save's ladder. */
+function siegeState(ladder, level) {
+  if (level > ladder.unlocked) return 'locked';
+  return ladder.best[level] > 0 ? 'won' : 'open';
 }
 
 /**
- * The end of a run (UX-REPLAY-RESEARCH §5 P0). A win: up to three stars (the
- * next one's goal under them), the run's numbers, the crew and the MVP
- * building, the records. A loss: how close dawn was on the night's track, the
- * same numbers and one tip read off what happened. "NEW BEST!" when a record
- * fell. The numbers are the whole run's, never the last night's.
+ * Five rungs of the ladder round `around` (the run's siege, or the one just
+ * opened): won, open, locked, the run's own ringed; small dots say there are
+ * more rungs either side.
+ */
+function drawLadder(ctx, cx, y, ladder, around, current, size = 34, opts = {}) {
+  const span = 5;
+  const first = clamp(around - 2, 1, SIEGE_MAX - span + 1);
+  const gap = size * 1.18;
+  for (let i = 0; i < span; i++) {
+    const level = first + i;
+    const x = cx + (i - (span - 1) / 2) * gap;
+    const state = siegeState(ladder, level);
+    const fresh = opts.fresh === level;
+    const pop = fresh && opts.age != null ? 1 + 0.35 * Math.max(0, 1 - opts.age / 0.4) : 1;
+    drawSiegeShield(ctx, x, y, size * pop, level, state, { current: level === current, stars: ladder.best[level] || 0 });
+    if (fresh) {
+      ctx.save();
+      roundRectPath(ctx, x - 17, y - size / 2 - 15, 34, 15, 7.5);
+      ctx.fillStyle = '#ff5a3c'; ctx.fill();
+      ctx.lineWidth = 1.8; ctx.strokeStyle = INK; ctx.stroke();
+      ctx.restore();
+      drawLabel(ctx, 'NEW', x, y - size / 2 - 7, 10, '#ffffff', { outline: 0, weight: 900 });
+    }
+  }
+  const dot = (x) => { ctx.save(); ctx.fillStyle = 'rgba(255,255,255,0.7)'; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.arc(x + k * 5 - 5, y, 1.8, 0, TAU); ctx.fill(); } ctx.restore(); };
+  if (first > 1) dot(cx - ((span - 1) / 2) * gap - gap * 0.72);
+  if (first + span - 1 < SIEGE_MAX) dot(cx + ((span - 1) / 2) * gap + gap * 0.72);
+}
+
+/** "★ 7 · NEXT PERK 8★: OAK GATES" with a bar to it, or the line that all are open. */
+function drawPerkTrack(ctx, x, y, width, stars, dark) {
+  const next = nextPerk(stars);
+  const ink = dark ? '#ffffff' : '#3a2a50';
+  drawSurvivalIcon(ctx, 'star', x + 9, y, 18);
+  drawLabel(ctx, `${stars}`, x + 21, y + 1, 14, dark ? '#ffd24a' : '#8a5a00', { align: 'left', outline: dark ? 3 : 0 });
+  if (!next) { drawLabel(ctx, 'EVERY PERK OPEN', x + 48, y + 1, 12, ink, { align: 'left', outline: dark ? 2.5 : 0 }); return; }
+  const prev = PERKS.filter((p) => p.stars <= stars).reduce((m, p) => Math.max(m, p.stars), 0);
+  const bx = x + 46, bw = width - 46;
+  drawLabel(ctx, `NEXT PERK ${next.stars}★: ${next.name}`, bx, y - 7, 11, ink, { align: 'left', outline: dark ? 2.5 : 0 });
+  drawBar(ctx, bx, y + 3, bw, 8, clamp((stars - prev) / Math.max(1, next.stars - prev), 0, 1), '#ffcf3a', { lineWidth: 1.6 });
+}
+
+/** A highlighted "what you just opened" row: icon, headline, the line under it. */
+function drawUnlockRow(ctx, x, y, width, height, icon, head, line, opts = {}) {
+  const p = opts.p == null ? 1 : opts.p;
+  if (p <= 0) return;
+  ctx.save();
+  ctx.globalAlpha *= Math.min(1, p * 1.5);
+  const sc = 1 + 0.18 * (1 - p);
+  ctx.translate(x + width / 2, y + height / 2);
+  ctx.scale(sc, sc);
+  ctx.translate(-(x + width / 2), -(y + height / 2));
+  drawPanel(ctx, x, y, width, height, { radius: 14, top: opts.top || '#fff3c4', bottom: opts.bottom || '#ffd66a', lineWidth: 2.2, highlight: false, shadow: false });
+  ctx.restore();
+  if (opts.shield) drawSiegeShield(ctx, x + 24, y + height / 2, 30, opts.shield, 'open', { alpha: Math.min(1, p * 1.5) });
+  else drawSurvivalIcon(ctx, icon, x + 24, y + height / 2, 28, { alpha: Math.min(1, p * 1.5) });
+  if (opts.badge) drawSurvivalIcon(ctx, opts.badge, x + 37, y + height / 2 + 10, 17, { alpha: Math.min(1, p * 1.5) });
+  let size = 14;
+  while (size > 10 && measureLabel(ctx, head, size) > width - 56) size--;
+  drawLabel(ctx, head, x + 46, y + height / 2 - 8, size, opts.headColor || '#8a3a00', { align: 'left', outline: 0, alpha: Math.min(1, p * 1.5), weight: 900 });
+  let ls = 11;
+  while (ls > 8 && measureLabel(ctx, line, ls) > width - 56) ls--;
+  drawLabel(ctx, line, x + 46, y + height / 2 + 9, ls, opts.lineColor || '#3a2a50', { align: 'left', outline: opts.lineColor ? 2.2 : 0, alpha: Math.min(1, p * 1.5) });
+}
+
+/** The end panel's design size (virtual px, margins in): fitModal scales it to the screen. */
+export const END_PANEL = Object.freeze({ w: 620, h: 330, needW: 640, needH: 372 });
+
+/**
+ * The end of a run (UX-REPLAY-RESEARCH §5 P0; BUILD 17 for the siege ladder
+ * and the sideways phone). Left: up to three stars (a win) or how close dawn
+ * was (a loss), the run's numbers, the crew with the MVP, the records or one
+ * tip. Right: the siege ladder — what this run opened (the next siege and its
+ * new rule, a perk) and the next perk's star count. Under both the way on:
+ * the next siege, the same one again, or (a loss) the one below it.
+ * Landscape first: the panel is wide, not tall, and fitModal shrinks it until
+ * its buttons are on the screen however short the screen is.
  */
 function drawEndPanel(game, ctx, w, h, failed) {
-  const mode = game.survival;
   ctx.save();
   ctx.fillStyle = 'rgba(12,10,30,0.66)';
   ctx.fillRect(0, 0, w, h);
   ctx.restore();
+  const tall = h >= 560;
+  fitModal(ctx, w, h, END_PANEL.needW, END_PANEL.needH, (vw, vh) => drawEndPanelBody(game, ctx, vw, vh, failed), tall ? 1.2 : 1);
+}
+
+function drawEndPanelBody(game, ctx, w, h, failed) {
+  const mode = game.survival;
   const run = mode.runStats || { kills: 0, by: {} };
   const by = run.by || {};
   const res = (mode.endSummary && mode.endSummary()) || { stars: 0, nights: 0, kills: run.kills || 0, built: 0, time: 0, keepLeft: 0, toDawn: 0, progress: 0, night: mode.day };
   const t = clock(game);
-  if (!END_SHOWN.has(res)) END_SHOWN.set(res, t);
+  if (!END_SHOWN.has(res)) {
+    END_SHOWN.set(res, t);
+    if (res.unlocked || (res.perks && res.perks.length)) { try { game.audio.play('unlock', { vol: 0.7 }); } catch (_) { /* audio optional */ } }
+  }
   const age = t - END_SHOWN.get(res);
-  const short = h < 560;
-  const bw = Math.min(short ? 480 : 520, w - 32);
-  const cols = bw >= 440 ? 5 : 3;
-  const stats = [
-    { icon: 'moon', value: `${res.nights}/3` },
-    { icon: 'skull', value: `${res.kills}` },
-    failed ? { icon: 'keep', value: `Lv${mode.keepLevel}` } : { icon: 'keep', value: `${res.keepLeft}%` },
-    { icon: 'hammer', value: `${res.built}` },
-    { icon: 'clock', value: runTime(res.time) },
-  ];
-  const L = endLayout(short, failed, Math.ceil(stats.length / cols));
-  const bh = L.h;
-  const x = (w - bw) / 2, y = Math.max(short ? 30 : 40, (h - bh) / 2 + 8);
+  const ladder = (mode.ladder && mode.ladder()) || { unlocked: 1, best: {} };
+  const siege = res.siege || mode.siege || 1;
+  const P = END_PANEL;
+  const x = (w - P.w) / 2;
+  const y = Math.max(34, (h - P.h) / 2 + 12);
   const light = !failed;
   const ink = light ? '#3a2a50' : '#ffffff';
-  drawPanel(ctx, x, y, bw, bh, failed
+  drawPanel(ctx, x, y, P.w, P.h, failed
     ? { radius: 22, top: '#4a3a6a', bottom: '#241a3a', lineWidth: 3 }
     : { radius: 22, top: '#fff6e0', bottom: '#ffd890', lineWidth: 3 });
   const reason = String(mode.failureReason || '');
   const keepFell = /KEEP/i.test(reason);
   const icon = failed ? (keepFell ? 'keep' : 'skull') : 'trophy';
-  drawSurvivalIcon(ctx, icon, w / 2, y + 2, Math.round(62 * L.k), { gray: failed && keepFell });
+  drawSurvivalIcon(ctx, icon, w / 2, y + 2, 58, { gray: failed && keepFell });
   const title = failed ? (keepFell ? 'THE KEEP FELL' : 'THE CAPTAIN FELL') : 'REINFORCEMENTS ARRIVED!';
-  drawLabel(ctx, title, w / 2, y + L.title, Math.round(20 * L.k), '#ffffff', { stroke: failed ? INK : '#7a3a00' });
-  // the reveal, in order: the earned stars slam in one by one, then the line
-  // under them, then NEW BEST! (a loss opens straight on its numbers)
-  const landed = failed ? 0.3 : 0.2 + Math.max(1, res.stars) * 0.28 + 0.1;
+  drawLabel(ctx, title, w / 2, y + 42, 21, '#ffffff', { stroke: failed ? INK : '#7a3a00' });
+  const spec = siegeSpec(siege);
+  const sub = failed ? `SIEGE ${siege} · NIGHT ${res.night}` : `SIEGE ${siege} HELD!`;
+  drawLabel(ctx, sub, w / 2, y + 64, 13, failed ? '#d6dcff' : '#8a5a00', { outline: failed ? 2.5 : 0, weight: 900 });
 
+  // ---- the left column: the run ----
+  const lx = x + 18, lw = 320;
+  const cy0 = y + 80;
+  const landed = failed ? 0.3 : 0.2 + Math.max(1, res.stars) * 0.28 + 0.1;
   if (!failed) {
-    // the stars: earned ones pop in one by one, the middle one raised
-    const size = Math.round(36 * L.k), gap = Math.round(48 * L.k);
     for (let i = 0; i < 3; i++) {
-      const sx = w / 2 + (i - 1) * gap;
-      const sy = y + L.band + Math.round(18 * L.k) - (i === 1 ? 6 : 0);
-      const earned = i < res.stars;
-      // each earned star slams in (big → its slot) 0.28 s after the last
+      const sx = lx + lw / 2 + (i - 1) * 46;
+      const sy = cy0 + 18 - (i === 1 ? 5 : 0);
       const p = clamp((age - 0.2 - i * 0.28) / 0.26, 0, 1);
-      drawSurvivalIcon(ctx, 'starEmpty', sx, sy, size);
-      if (earned && p > 0) drawSurvivalIcon(ctx, 'star', sx, sy, size * (1 + 0.35 * (1 - p)), { alpha: Math.min(1, p * 1.6) });
+      drawSurvivalIcon(ctx, 'starEmpty', sx, sy, 34);
+      if (i < res.stars && p > 0) drawSurvivalIcon(ctx, 'star', sx, sy, 34 * (1 + 0.35 * (1 - p)), { alpha: Math.min(1, p * 1.6) });
     }
     const next = res.stars >= 3 ? 'FLAWLESS DEFENCE!' : (res.stars === 2 ? 'NEXT STAR: LOSE NO GUARDS' : 'NEXT STAR: KEEP ABOVE HALF HP');
-    drawLabel(ctx, next, w / 2, y + L.band + Math.round(48 * L.k), Math.round(13 * L.k), res.stars >= 3 ? '#1f8a3a' : '#7a5a2a',
-      { outline: 0, alpha: clamp((age - landed) / 0.25, 0, 1) });
+    drawLabel(ctx, next, lx + lw / 2, cy0 + 46, 12, res.stars >= 3 ? '#1f8a3a' : '#7a5a2a', { outline: 0, alpha: clamp((age - landed) / 0.25, 0, 1) });
   } else {
-    // the near miss: how far into the night the keep held, and how close dawn was
+    // the near miss: how far into the night the keep held, how close dawn was
     const close = res.toDawn <= 10;
-    const label = close ? `SO CLOSE! ${res.toDawn}s TO DAWN` : `NIGHT ${res.night} · ${res.toDawn}s TO DAWN`;
-    drawLabel(ctx, label, w / 2, y + L.band + Math.round(6 * L.k), Math.round(15 * L.k), close ? '#ffd24a' : '#ffffff', { stroke: INK });
-    const ty = y + L.band + Math.round(30 * L.k);
-    const tx0 = x + 64, tx1 = x + bw - 64;
-    const bar = Math.round(10 * L.k);
-    drawSurvivalIcon(ctx, 'moon', tx0 - 22, ty, Math.round(22 * L.k));
-    drawSurvivalIcon(ctx, 'sun', tx1 + 22, ty, Math.round(24 * L.k));
+    drawLabel(ctx, close ? `SO CLOSE! ${res.toDawn}s TO DAWN` : `${res.toDawn}s TO DAWN`, lx + lw / 2, cy0 + 9, 15, close ? '#ffd24a' : '#ffffff', { stroke: INK });
+    const ty = cy0 + 33, tx0 = lx + 40, tx1 = lx + lw - 40, bar = 10;
+    drawSurvivalIcon(ctx, 'moon', tx0 - 20, ty, 22);
+    drawSurvivalIcon(ctx, 'sun', tx1 + 20, ty, 24);
     ctx.save();
     roundRectPath(ctx, tx0, ty - bar / 2, tx1 - tx0, bar, bar / 2);
     ctx.fillStyle = 'rgba(0,0,0,0.38)';
@@ -1803,24 +1994,25 @@ function drawEndPanel(game, ctx, w, h, failed) {
     roundRectPath(ctx, tx0, ty - bar / 2, tx1 - tx0, bar, bar / 2);
     ctx.lineWidth = 2; ctx.strokeStyle = INK; ctx.stroke();
     ctx.restore();
-    drawSurvivalIcon(ctx, keepFell ? 'keep' : 'skull', fx, ty - 1, Math.round(24 * L.k), { gray: true });
+    drawSurvivalIcon(ctx, keepFell ? 'keep' : 'skull', fx, ty - 1, 22, { gray: true });
   }
-
-  // the run in numbers: nights held, every kill of the run, the keep (HP
-  // left at dawn on a win, its level on a loss), buildings standing, time
-  const cellW = (bw - 40) / cols;
+  // the run in numbers: nights held, kills, the keep (HP left at dawn on a
+  // win, its level on a loss), buildings standing, time
+  const stats = [
+    { icon: 'moon', value: `${res.nights}/3` },
+    { icon: 'skull', value: `${res.kills}` },
+    failed ? { icon: 'keep', value: `Lv${mode.keepLevel}` } : { icon: 'keep', value: `${res.keepLeft}%` },
+    { icon: 'hammer', value: `${res.built}` },
+    { icon: 'clock', value: runTime(res.time) },
+  ];
+  const cellW = lw / stats.length, boxY = cy0 + 60, boxH = 44;
   stats.forEach((row, i) => {
-    const r = Math.floor(i / cols);
-    const inRow = Math.min(cols, stats.length - r * cols);
-    const cx = x + 20 + (bw - 40 - inRow * cellW) / 2 + (i % cols) * cellW;
-    const cy = y + L.boxes + r * (L.boxH + 8);
-    drawPanel(ctx, cx + 4, cy, cellW - 8, L.boxH, { radius: 14, top: failed ? '#5a4a80' : '#ffffff', bottom: failed ? '#3a2d5a' : '#f3ead8', lineWidth: 2, highlight: false, shadow: false });
-    drawSurvivalIcon(ctx, row.icon, cx + cellW / 2, cy + Math.round(16 * L.k), Math.round(24 * L.k));
-    drawLabel(ctx, row.value, cx + cellW / 2, cy + L.boxH - Math.round(13 * L.k), Math.round(15 * L.k), ink, { outline: failed ? 3 : 0 });
+    const cx = lx + i * cellW;
+    drawPanel(ctx, cx + 3, boxY, cellW - 6, boxH, { radius: 12, top: failed ? '#5a4a80' : '#ffffff', bottom: failed ? '#3a2d5a' : '#f3ead8', lineWidth: 2, highlight: false, shadow: false });
+    drawSurvivalIcon(ctx, row.icon, cx + cellW / 2, boxY + 14, 21);
+    drawLabel(ctx, row.value, cx + cellW / 2, boxY + boxH - 11, 14, ink, { outline: failed ? 3 : 0 });
   });
-
-  // who held the walls: the captain, the guards, the ballistas (+ keep roof);
-  // the MVP's group wears the gold tag and the line under it names the MVP
+  // who held the walls (the MVP's group wears the gold tag)
   const mvp = res.mvp || null;
   const mvpGroup = mvp ? (mvp.id === 'guard' ? 'guard' : 'tower') : null;
   const crew = [
@@ -1828,38 +2020,72 @@ function drawEndPanel(game, ctx, w, h, failed) {
     { id: 'guard', icon: 'guard', value: by.guard || 0 },
     { id: 'tower', icon: 'tower', value: (by.tower || 0) + (by.keep || 0) },
   ];
-  const crewW = (bw - 40) / 3;
-  const ry = y + L.crew;
+  const ry = cy0 + 125, crewW = lw / 3;
   crew.forEach((row, i) => {
-    const cx = x + 20 + i * crewW + crewW / 2;
+    const cx = lx + i * crewW + crewW / 2;
     if (row.id === mvpGroup) {
       ctx.save();
-      roundRectPath(ctx, cx - 44, ry - 15, 88, 30, 15);
+      roundRectPath(ctx, cx - 40, ry - 14, 80, 28, 14);
       ctx.fillStyle = light ? 'rgba(255,196,60,0.45)' : 'rgba(255,196,60,0.28)';
       ctx.fill();
       ctx.lineWidth = 2; ctx.strokeStyle = '#e0a020'; ctx.stroke();
-      ctx.restore();
-      ctx.save();
-      roundRectPath(ctx, cx + 22, ry - 25, 38, 18, 9);
+      roundRectPath(ctx, cx + 18, ry - 24, 36, 17, 8.5);
       ctx.fillStyle = '#ffcf3a'; ctx.fill();
       ctx.lineWidth = 2; ctx.strokeStyle = INK; ctx.stroke();
       ctx.restore();
-      drawLabel(ctx, 'MVP', cx + 41, ry - 16, 11, INK, { outline: 0, weight: 900 });
+      drawLabel(ctx, 'MVP', cx + 36, ry - 15, 10, INK, { outline: 0, weight: 900 });
     }
-    drawSurvivalIcon(ctx, row.icon, cx - 20, ry, Math.round(24 * L.k));
-    drawSurvivalIcon(ctx, 'skull', cx - 8, ry + 8, 12);
-    drawLabel(ctx, `${row.value}`, cx + 4, ry + 1, Math.round(17 * L.k), ink, { align: 'left', outline: failed ? 3 : 0 });
+    drawSurvivalIcon(ctx, row.icon, cx - 18, ry, 22);
+    drawSurvivalIcon(ctx, 'skull', cx - 7, ry + 8, 11);
+    drawLabel(ctx, `${row.value}`, cx + 4, ry + 1, 16, ink, { align: 'left', outline: failed ? 3 : 0 });
   });
-  if (mvp) {
-    drawLabel(ctx, `MVP: ${mvp.name} · ${mvp.kills} KILLS`, w / 2, y + L.mvp, Math.round(13 * L.k), light ? '#8a5a00' : '#ffd24a', { outline: light ? 0 : 3 });
+  const fy = cy0 + 158;
+  if (failed && res.tip) {
+    let size = 13;
+    while (size > 9 && measureLabel(ctx, res.tip.text, size) + 52 > lw) size--;
+    const pw = Math.min(lw, measureLabel(ctx, res.tip.text, size) + 52);
+    drawPanel(ctx, lx + lw / 2 - pw / 2, fy - 14, pw, 28, { radius: 14, top: '#fff6e0', bottom: '#f1dfb8', lineWidth: 2, highlight: false, shadow: false });
+    drawSurvivalIcon(ctx, res.tip.icon, lx + lw / 2 - pw / 2 + 20, fy, 20);
+    drawLabel(ctx, res.tip.text, lx + lw / 2 - pw / 2 + 36, fy + 1, size, '#3a2a50', { align: 'left', outline: 0 });
+  } else if (!failed) {
+    const rec = mode.records || {};
+    const line = mvp ? `MVP: ${mvp.name} · ${mvp.kills} KILLS` : `WINS ${rec.wins || 0}/${rec.runs || 0} · TOTAL KILLS ${rec.totalKills || 0}`;
+    drawLabel(ctx, line, lx + lw / 2, fy, 12, '#8a5a00', { outline: 0 });
+  }
+
+  // ---- the right column: the siege ladder ----
+  const rx = x + P.w - 18 - 262, rw = 262;
+  drawPanel(ctx, rx, cy0 - 4, rw, 176, failed
+    ? { radius: 16, top: '#3a2d5a', bottom: '#2a2046', lineWidth: 2, highlight: false, shadow: false }
+    : { radius: 16, top: '#ffffff', bottom: '#f6ead0', lineWidth: 2, highlight: false, shadow: false });
+  const fresh = res.unlocked || null;
+  drawLadder(ctx, rx + rw / 2, cy0 + 30, ladder, fresh || siege, siege, 34, { fresh, age: Math.max(0, age - landed) });
+  const rowY = cy0 + 70, rowH = 46;
+  const perkId = res.perks && res.perks.length ? res.perks[res.perks.length - 1] : null;
+  const perk = perkId ? PERKS.find((p) => p.id === perkId) : null;
+  const pOpen = clamp((age - landed - 0.1) / 0.3, 0, 1);
+  if (!failed && fresh) {
+    const nspec = siegeSpec(fresh);
+    drawUnlockRow(ctx, rx + 10, rowY, rw - 20, rowH, nspec.rule.icon, `SIEGE ${fresh} UNLOCKED!`, `NEW: ${nspec.rule.text}`, { p: pOpen, shield: fresh, badge: nspec.rule.icon });
+  } else if (!failed && siege >= SIEGE_MAX) {
+    drawUnlockRow(ctx, rx + 10, rowY, rw - 20, rowH, 'trophy', 'EVERY SIEGE HELD!', 'BEAT YOUR BEST STARS', { p: pOpen });
+  } else {
+    // this siege and its rule (a loss, or a won siege played again)
+    drawUnlockRow(ctx, rx + 10, rowY, rw - 20, rowH, spec.rule.icon, `SIEGE ${siege}: ${spec.name}`, spec.rule.text,
+      { p: 1, top: failed ? '#5a4a80' : '#ffffff', bottom: failed ? '#3a2d5a' : '#f3ead8', headColor: failed ? '#ffd24a' : '#8a3a00', lineColor: failed ? '#ffffff' : null, shield: siege, badge: spec.rule.icon });
+  }
+  if (perk) {
+    drawUnlockRow(ctx, rx + 10, rowY + rowH + 8, rw - 20, rowH, perk.icon, `PERK: ${perk.name}`, perk.text,
+      { p: clamp((age - landed - 0.45) / 0.3, 0, 1), top: '#d9f7c8', bottom: '#8fe07a', headColor: '#1f6a2a' });
+  } else {
+    drawPerkTrack(ctx, rx + 14, rowY + rowH + 30, rw - 28, res.starsTotal != null ? res.starsTotal : (mode.starsTotal ? mode.starsTotal() : 0), failed);
   }
 
   const bestP = res.newBest ? clamp((age - landed - 0.15) / 0.25, 0, 1) : 0;
   if (bestP > 0) {
-    // the record fell: a gold tag stamps onto the panel's corner, then breathes
     ctx.save();
     ctx.globalAlpha *= bestP;
-    ctx.translate(x + bw - 52, y + 18);
+    ctx.translate(x + P.w - 56, y + 20);
     ctx.rotate(0.2);
     const sc = (1 + 0.4 * (1 - bestP)) * (1 + 0.05 * Math.sin(t * 5));
     ctx.scale(sc, sc);
@@ -1872,23 +2098,20 @@ function drawEndPanel(game, ctx, w, h, failed) {
     ctx.restore();
   }
 
-  const fy = y + L.foot;
-  if (failed && res.tip) {
-    // one tip, read off what happened (R4); on a narrow panel the words
-    // shrink to fit the pill rather than run out of it
-    let size = Math.round(14 * L.k);
-    while (size > 10 && measureLabel(ctx, res.tip.text, size) + 58 > bw - 40) size--;
-    const pw = Math.min(bw - 40, measureLabel(ctx, res.tip.text, size) + 58);
-    drawPanel(ctx, w / 2 - pw / 2, fy - 15, pw, 30, { radius: 15, top: '#fff6e0', bottom: '#f1dfb8', lineWidth: 2, highlight: false, shadow: false });
-    drawSurvivalIcon(ctx, res.tip.icon, w / 2 - pw / 2 + 22, fy, 22);
-    drawLabel(ctx, res.tip.text, w / 2 - pw / 2 + 40, fy + 1, size, '#3a2a50', { align: 'left', outline: 0 });
-  } else if (!failed) {
-    const rec = mode.records || {};
-    drawLabel(ctx, `WINS ${rec.wins || 0}/${rec.runs || 0} · TOTAL KILLS ${rec.totalKills || 0}`, w / 2, fy, Math.round(13 * L.k), '#7a5a2a', { outline: 0 });
+  // ---- the way on ----
+  const by0 = y + P.h - 62, bh = 48;
+  const next = !failed && siege < SIEGE_MAX && mode.siegeUnlocked && mode.siegeUnlocked(siege + 1) ? siege + 1 : null;
+  const easier = failed && siege > 1 ? siege - 1 : null;
+  const again = () => mode.restart();
+  if (next) {
+    drawButton(game, ctx, { x: x + 24, y: by0, w: 352, h: bh }, `SIEGE ${next}`, () => mode.startSiege(next), { id: 'NEXT SIEGE', icon: 'play', color: 'green' });
+    drawButton(game, ctx, { x: x + 392, y: by0, w: P.w - 416, h: bh }, 'REPLAY', again, { id: 'PLAY AGAIN', icon: 'restart', color: 'blue' });
+  } else if (easier) {
+    drawButton(game, ctx, { x: x + 24, y: by0, w: 352, h: bh }, 'TRY AGAIN', again, { id: 'PLAY AGAIN', icon: 'restart', color: 'green' });
+    drawButton(game, ctx, { x: x + 392, y: by0, w: P.w - 416, h: bh }, `SIEGE ${easier}`, () => mode.startSiege(easier), { id: 'EASIER SIEGE', icon: 'back', color: 'blue' });
+  } else {
+    drawButton(game, ctx, { x: x + 24, y: by0, w: P.w - 48, h: bh }, failed ? 'TRY AGAIN' : 'PLAY AGAIN', again, { id: 'PLAY AGAIN', icon: 'restart', color: 'green' });
   }
-
-  drawButton(game, ctx, { x: x + 30, y: y + L.button, w: bw - 60, h: L.buttonH }, 'PLAY AGAIN',
-    () => mode.restart(), { id: 'PLAY AGAIN', icon: 'restart', color: 'green' });
 }
 
 /* ------------------------------------------------------------------ */

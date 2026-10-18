@@ -128,6 +128,12 @@ export const SURVIVAL_RIG = Object.freeze({
     exposure: 1.08, lamp: 0.9, lampColor: 0xc9d8ff, hemi: 1.05, sky: 0xaec4ff, ground: 0x56483e,
     key: 0.8, keyColor: 0xd6e2ff, rim: 0.55, rimColor: 0x8fb0ff,
   }),
+  // BUILD 17: a blood-moon siege's night (Siege 7 on) — as bright as any
+  // night, tinted red instead of blue (night is a tint, never darkness)
+  blood: Object.freeze({
+    exposure: 1.08, lamp: 0.9, lampColor: 0xffd2c8, hemi: 1.05, sky: 0xffb4a6, ground: 0x5a3e38,
+    key: 0.8, keyColor: 0xffd0c4, rim: 0.6, rimColor: 0xff8a76,
+  }),
 });
 
 /** A colour `b` of the way from `a` to `c` (0xRRGGBB, per channel). */
@@ -680,9 +686,10 @@ class World3DRuntime {
   _survivalRig(game) {
     const mode = game.survival;
     const b = mode ? (mode.dawnBlend ? mode.dawnBlend() : (mode.daylight() ? 1 : 0)) : 0;
+    const night = mode && mode.rules && mode.rules.bloodMoon ? SURVIVAL_RIG.blood : SURVIVAL_RIG.night;
     if (b >= 1) return SURVIVAL_RIG.day;
-    if (b <= 0) return SURVIVAL_RIG.night;
-    return blendRig(SURVIVAL_RIG.night, SURVIVAL_RIG.day, b);
+    if (b <= 0) return night;
+    return blendRig(night, SURVIVAL_RIG.day, b);
   }
 
   _syncLighting(game) {

@@ -773,6 +773,83 @@ const ICONS = {
     ctx.closePath();
     fillStroke(ctx, '#ffffff');
   },
+  /** BUILD 17: back / down a rung (the end panel's easier siege): a left arrow. */
+  back(ctx) {
+    ctx.beginPath();
+    ctx.moveTo(-0.95, 0); ctx.lineTo(0.3, -0.72); ctx.lineTo(0.1, 0); ctx.lineTo(0.3, 0.72);
+    ctx.closePath();
+    fillStroke(ctx, '#ffffff');
+  },
+  /** BUILD 17, Siege 4 RUNNERS: a flying skull with speed lines behind it. */
+  runner(ctx) {
+    ctx.save();
+    ctx.lineWidth *= 1.6;
+    ctx.strokeStyle = '#7fd0ff';
+    ctx.beginPath();
+    for (const [y, l] of [[-0.42, 0.5], [0, 0.7], [0.42, 0.5]]) { ctx.moveTo(-0.95, y); ctx.lineTo(-0.95 + l, y); }
+    ctx.stroke();
+    ctx.restore();
+    ctx.save();
+    ctx.translate(0.22, 0);
+    ctx.scale(0.78, 0.78);
+    ctx.beginPath();
+    ctx.arc(0, -0.16, 0.74, Math.PI * 0.82, Math.PI * 2.18);
+    ctx.lineTo(0.44, 0.78);
+    ctx.lineTo(-0.44, 0.78);
+    ctx.closePath();
+    fillStroke(ctx, '#e9f6ff');
+    ctx.fillStyle = INK;
+    ctx.beginPath(); ctx.ellipse(-0.3, -0.12, 0.2, 0.23, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(0.3, -0.12, 0.2, 0.23, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  },
+  /** BUILD 17, Siege 5 TWO GATES: two small gates side by side. */
+  split(ctx) {
+    for (const ox of [-0.45, 0.45]) {
+      ctx.save();
+      ctx.translate(ox, 0.06);
+      ctx.scale(0.5, 0.82);
+      ctx.beginPath();
+      ctx.moveTo(-0.78, -0.82); ctx.lineTo(0.78, -0.82); ctx.lineTo(0.78, 0);
+      ctx.bezierCurveTo(0.78, 0.5, 0.32, 0.8, 0, 0.96);
+      ctx.bezierCurveTo(-0.32, 0.8, -0.78, 0.5, -0.78, 0);
+      ctx.closePath();
+      ctx.restore();
+      fillStroke(ctx, '#c4823f');
+    }
+    ctx.fillStyle = '#ff5a3c';
+    ctx.beginPath(); ctx.arc(0, -0.72, 0.2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  },
+  /** BUILD 17, Siege 6 LEAN TIMES: a coin with a red arrow down. */
+  lean(ctx) {
+    ctx.save();
+    ctx.translate(-0.18, 0);
+    ctx.scale(0.8, 0.8);
+    ctx.beginPath(); ctx.ellipse(0, 0, 0.82, 0.82, 0, 0, Math.PI * 2);
+    const g = ctx.createLinearGradient(0, -0.9, 0, 0.8);
+    g.addColorStop(0, '#ffe680'); g.addColorStop(1, '#f2b21e');
+    fillStroke(ctx, g);
+    ctx.restore();
+    ctx.beginPath();
+    ctx.moveTo(0.5, -0.2); ctx.lineTo(0.9, -0.2); ctx.lineTo(0.9, 0.3); ctx.lineTo(1.05, 0.3);
+    ctx.lineTo(0.7, 0.85); ctx.lineTo(0.35, 0.3); ctx.lineTo(0.5, 0.3);
+    ctx.closePath();
+    fillStroke(ctx, '#ff4d4d');
+  },
+  /** BUILD 17, Siege 7 BLOOD MOON: the moon, red. */
+  bloodMoon(ctx) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(-1.2, -1.2, 2.4, 2.4);
+    ctx.arc(0.42, -0.3, 0.66, 0, Math.PI * 2, true);
+    ctx.clip('evenodd');
+    circle(ctx, 0, 0, 0.82, '#ff5a4a');
+    ctx.restore();
+    ctx.beginPath();
+    ctx.arc(0.42, -0.3, 0.66, Math.PI * 0.62, Math.PI * 1.47);
+    ctx.stroke();
+    circle(ctx, -0.32, 0.18, 0.1, '#c22a1e', false);
+  },
   /** Zoom (BUILD 12's dynamic camera): a magnifying glass with a plus. */
   zoom(ctx) {
     ctx.save();

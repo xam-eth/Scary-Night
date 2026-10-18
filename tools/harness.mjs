@@ -163,7 +163,7 @@ game.applySettings();
 async function runSurvivalMilestone() {
   console.log('\n=== SURVIVAL MILESTONE 1 — deterministic three-day probe ===');
   window.localStorage.removeItem('lastnight.save.v1');
-  const survivalGame = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+  const survivalGame = new Game(makeHarnessCanvas(), { mode: 'survival', siege: 3, nightDuration: 60 });
   const sInput = survivalGame.input;
   sInput.touchSeen = false;
   sInput.layout(1280, 720);
@@ -698,7 +698,7 @@ async function runSurvivalMilestone() {
   insideBody._inHouse = true;
   survivalGame.enemies.push(insideBody);
   reloadMode._persist(true);
-  const reloadedGame = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+  const reloadedGame = new Game(makeHarnessCanvas(), { mode: 'survival', siege: 3, nightDuration: 60 });
   const reloadedBody = reloadedGame.enemies.find((e) => e._survivalType === 'swarm');
   const inHousePass = !!(reloadedBody && reloadedBody._inHouse === true && reloadedGame.survival.guards.length === reloadedGame.survival.survivors);
   console.log(`  ${inHousePass ? 'PASS' : 'FAIL'}  reload keeps an invader inside (_inHouse=${reloadedBody && reloadedBody._inHouse}) and rebuilds ${reloadedGame.survival.guards.length} guards`);
@@ -800,7 +800,7 @@ async function runSurvivalMilestone() {
     tick();
   }
   const storedSave = JSON.parse(window.localStorage.getItem('lastnight.save.v1') || 'null');
-  const resumedGame = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+  const resumedGame = new Game(makeHarnessCanvas(), { mode: 'survival', siege: 3, nightDuration: 60 });
   const saveProgressPass = !!(storedSave?.survival?.day === 2 && storedSave.survival.phase === 'day'
     && storedSave.survival.nightsCompleted === 1 && storedSave.survival.nightDuration === 60
     && resumedGame.survival.day === 2 && resumedGame.survival.phase === 'day'
@@ -952,7 +952,7 @@ async function runSurvivalMilestone() {
     // building onto a free circle of its type in the bailey, banner first
     mode._persist(true);
     const saved = JSON.parse(window.localStorage.getItem('lastnight.save.v1') || 'null');
-    const reloaded = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+    const reloaded = new Game(makeHarnessCanvas(), { mode: 'survival', siege: 3, nightDuration: 60 });
     const rs = reloaded.survival;
     const levelsKept = rs.buildingLevel(pumpRoom.id) === 3 && rs.buildingLevel(shelterRoom.id) === 3
       && rs.buildingLevel(millRoom.id) === 2 && rs.hunterLevel === 3 && reloaded.player.bloodMax === 140
@@ -963,7 +963,7 @@ async function runSurvivalMilestone() {
     delete legacySave.survival.buildingLevels;
     delete legacySave.survival.hunterLevel;
     window.localStorage.setItem('lastnight.save.v1', JSON.stringify(legacySave));
-    const oldGame = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+    const oldGame = new Game(makeHarnessCanvas(), { mode: 'survival', siege: 3, nightDuration: 60 });
     const os = oldGame.survival;
     const oldDefaults = os.gold === 77 && os.keepLevel === 2 && os.keepHp === os.keepHpMax()
       && os.buildings.north === 'mine' && os.buildings.ward === 'barracks' && os.buildings.south === 'sawmill'
@@ -973,13 +973,13 @@ async function runSurvivalMilestone() {
       && os.hunterLevel === 1 && oldGame.player.bloodMax === 100;
     // a mid-night reload keeps the Hunter's absolute health on his own bar
     window.localStorage.setItem('lastnight.save.v1', JSON.stringify(saved));
-    const nightGame = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+    const nightGame = new Game(makeHarnessCanvas(), { mode: 'survival', siege: 3, nightDuration: 60 });
     const ns = nightGame.survival;
     ns.startNight();
     for (let i = 0; i < 90; i++) nightGame.update(step);
     nightGame.player.blood = 60;
     ns._persist(true);
-    const nightReload = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+    const nightReload = new Game(makeHarnessCanvas(), { mode: 'survival', siege: 3, nightDuration: 60 });
     const midNightHp = `${Math.round(nightReload.player.blood)}/${nightReload.player.bloodMax}`;
     progCheck('save/reload keeps building + Hunter + keep levels (gold, no oil); a pre-K1 save migrates onto the typed circles; a mid-night reload keeps 60/140 HP',
       saved && saved.survival && saved.survival.hunterLevel === 3 && saved.survival.buildingLevels
@@ -1172,7 +1172,7 @@ async function runSurvivalMilestone() {
     mode.phase = 'day';
     survivalGame.enemies.length = 0; survivalGame.bolts.length = 0;
     mode._persist(true);
-    const reloaded = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+    const reloaded = new Game(makeHarnessCanvas(), { mode: 'survival', siege: 3, nightDuration: 60 });
     reloaded.update(step);
     const rs = reloaded.survival;
     const rt = rs.towers[0];
@@ -1359,7 +1359,7 @@ async function runSurvivalMilestone() {
     ga.downT = 6.5;
     gb.hp = 23;
     mode._persist(true);
-    const reloaded = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+    const reloaded = new Game(makeHarnessCanvas(), { mode: 'survival', siege: 3, nightDuration: 60 });
     const [ra, rb] = reloaded.survival.guards;
     fallCheck('a mid-night reload keeps a fallen guard down where it fell (with its clock) and a hurt one\'s HP',
       reloaded.survival.phase === 'night' && ra && ra.down && ra.hp === 0 && Math.abs(ra.x - dark.x) < 1 && Math.abs(ra.y - dark.y) < 1
@@ -1430,7 +1430,7 @@ async function runSurvivalMilestone() {
     const step = 1 / 60;
     const run = (game, seconds) => { for (let i = 0; i < Math.round(seconds * 60); i++) game.update(step); };
     window.localStorage.removeItem('lastnight.save.v1');
-    const a = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60, cinematics: true });
+    const a = new Game(makeHarnessCanvas(), { mode: 'survival', siege: 3, nightDuration: 60, cinematics: true });
     a.renderer.resize(844, 390, 1);
     const am = a.survival;
     a.beginNight();
@@ -1442,17 +1442,17 @@ async function runSurvivalMilestone() {
       intro.kind === 'intro' && intro.panel === 'survival-cine' && !intro.gameplay && intro.wave === 1 && intro.bodies === 21 && !intro.banner && intro.seen
         && am.elapsed === intro.elapsed && still && am.cineCaption() && am.cineCaption().title === 'PROTECT THE KEEP',
       `wave ${intro.wave}, ${intro.bodies} bodies, clock ${intro.elapsed.toFixed(1)} s → ${am.elapsed.toFixed(1)} s, horde still ${still}, introSeen ${intro.seen}`);
-    const refused = (() => { const b = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60, cinematics: true }); b.survival.restart(); b.save.survival.introSeen = false; b.survival.phase = 'night'; b.survival.elapsed = 0; b.survival.enter(); b.update(step); return b.survival.skipCine() === false && !!b.survival.cine; })();
+    const refused = (() => { const b = new Game(makeHarnessCanvas(), { mode: 'survival', siege: 3, nightDuration: 60, cinematics: true }); b.survival.restart(); b.save.survival.introSeen = false; b.survival.phase = 'night'; b.survival.elapsed = 0; b.survival.enter(); b.update(step); return b.survival.skipCine() === false && !!b.survival.cine; })();
     const skipped = am.skipCine();
     run(a, 1);
-    cineCheck('intro: SKIP is refused in the first beat, then hands over: HOLD THE KEEP, the night clock runs, the play frame',
-      refused && skipped && !am.cine && a.uiPanel === null && a.input.gameplay && am.banner && am.banner.text === 'HOLD THE KEEP' && am.elapsed > intro.elapsed + 0.9
+    cineCheck('intro: SKIP is refused in the first beat, then hands over: the siege\'s banner (BUILD 17: SIEGE 3: BREAKERS, it was HOLD THE KEEP), the night clock runs, the play frame',
+      refused && skipped && !am.cine && a.uiPanel === null && a.input.gameplay && am.banner && am.banner.text === 'SIEGE 3: BREAKERS' && am.banner.siege === 3 && am.elapsed > intro.elapsed + 0.9
         && Math.abs(a.renderer.zoomMul - am.frameMul(true)) < 0.06,
       `refused early ${refused}, clock ${am.elapsed.toFixed(1)} s, zoomMul ${a.renderer.zoomMul.toFixed(3)} / ${am.frameMul(true).toFixed(3)}`);
     am.restart();
-    const again = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60, cinematics: true });
+    const again = new Game(makeHarnessCanvas(), { mode: 'survival', siege: 3, nightDuration: 60, cinematics: true });
     again.beginNight();
-    const off = (() => { window.localStorage.removeItem('lastnight.save.v1'); const c = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 }); c.beginNight(); return !c.survival.cine && c.survival.elapsed === 0 && c.survival.waveIndex === 0; })();
+    const off = (() => { window.localStorage.removeItem('lastnight.save.v1'); const c = new Game(makeHarnessCanvas(), { mode: 'survival', siege: 3, nightDuration: 60 }); c.beginNight(); return !c.survival.cine && c.survival.elapsed === 0 && c.survival.waveIndex === 0; })();
     // 2026-10-17: the opening is kept for every run ("tralier toturial ...
     // hilang, harusnya itu di pertahan kan") — RESTART / PLAY AGAIN open on
     // it again; a reload part-way into a night (the clock past 0.5 s) does not
@@ -1460,7 +1460,7 @@ async function runSurvivalMilestone() {
     cineCheck('intro: every run opens on it (restart replays it); a new session mid-night plays straight on; cinematics off starts the night at 0 s',
       replayed && !again.survival.cine && off, `restart replays ${replayed}, new session ${!again.survival.cine}, off ${off}`);
     window.localStorage.removeItem('lastnight.save.v1');
-    const d = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60, cinematics: true });
+    const d = new Game(makeHarnessCanvas(), { mode: 'survival', siege: 3, nightDuration: 60, cinematics: true });
     d.renderer.resize(844, 390, 1);
     const dm = d.survival;
     d.beginNight(); dm.endCine();
@@ -1475,7 +1475,7 @@ async function runSurvivalMilestone() {
       start.kind === 'arrival' && start.panel === 'survival-cine' && start.gate && start.troops === 9 && start.outside === 9 && marching > 0
         && !dm.cine && d.uiPanel === 'survival-complete' && lined && dm.daylight(),
       `gate open ${start.gate}, ${start.outside}/9 start outside, ${marching} marching at 3 s, in line ${lined}, panel ${d.uiPanel}`);
-    const e = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60, cinematics: true });
+    const e = new Game(makeHarnessCanvas(), { mode: 'survival', siege: 3, nightDuration: 60, cinematics: true });
     e.beginNight();
     const reloadOk = e.survival.phase === 'complete' && !e.survival.cine && e.uiPanel === 'survival-complete' && e.survival.reinforcements && e.survival.reinforcements.every((t) => t.i === t.path.length);
     e.survival.restart();
@@ -1524,7 +1524,7 @@ async function runSurvivalMilestone() {
       `night ${ir.night}, keep fell at ${idle.elapsed.toFixed(1)} s → ${ir.toDawn}s to dawn, tip "${ir.tip && ir.tip.text}"`);
     // R4: each cause gets its own tip
     window.localStorage.removeItem('lastnight.save.v1');
-    const tg = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+    const tg = new Game(makeHarnessCanvas(), { mode: 'survival', siege: 3, nightDuration: 60 });
     const tm = tg.survival;
     const lose = (setup, reason = 'THE KEEP FELL') => { tm.restart(); setup(); tm.fail(reason); return tm.runResult.tip; };
     const tips = {
@@ -1543,7 +1543,7 @@ async function runSurvivalMilestone() {
 
     // R3: records across runs
     window.localStorage.removeItem('lastnight.save.v1');
-    const rg = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+    const rg = new Game(makeHarnessCanvas(), { mode: 'survival', siege: 3, nightDuration: 60 });
     const rm = rg.survival;
     rm.restart(); rm.fail('THE KEEP FELL');
     const first = { ...rm.runResult };
@@ -1551,7 +1551,7 @@ async function runSurvivalMilestone() {
     const second = { ...rm.runResult };
     rm.restart(); rm.day = 3; rm.nightsCompleted = 2; rm.runStats.kills = 40; rm.runStats.keepMin = 0.8; rm.completeNight();
     const third = { ...rm.runResult };
-    const back = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 }).survival;
+    const back = new Game(makeHarnessCanvas(), { mode: 'survival', siege: 3, nightDuration: 60 }).survival;
     const kept = back.phase === 'complete' && !!back.runResult && back.runResult.stars === third.stars && back.records.runs === 3 && back.records.wins === 1;
     back.restart();
     const cleared = back.runResult === null && back.records.runs === 3;
@@ -1569,7 +1569,7 @@ async function runSurvivalMilestone() {
     const mvpB = survivalMvp({ by: { captain: 140, guard: 12, keep: 3 }, towers: { 'east:tower': 9 } });
     const mvpC = survivalMvp({ by: { captain: 140 }, towers: {} });
     window.localStorage.removeItem('lastnight.save.v1');
-    const mg = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+    const mg = new Game(makeHarnessCanvas(), { mode: 'survival', siege: 3, nightDuration: 60 });
     const mm = mg.survival;
     const mtick = (n = 1) => { for (let i = 0; i < n; i++) mg.update(step); };
     mm.restart();
@@ -1617,7 +1617,7 @@ async function runSurvivalMilestone() {
     const { SURVIVAL_ACTOR_SCALE } = await import('../src/core/config.js');
     const { KEEP, SURVIVAL_BUILDING_LEVELS } = await import('../src/game/survival.js');
     window.localStorage.removeItem('lastnight.save.v1');
-    const vg = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+    const vg = new Game(makeHarnessCanvas(), { mode: 'survival', siege: 3, nightDuration: 60 });
     const vm = vg.survival;
     const vtick = (n = 1) => { for (let i = 0; i < n; i++) vg.update(step); };
     const keep = vm.keep();
@@ -1693,7 +1693,7 @@ async function runSurvivalMilestone() {
     const { steerStick } = await import('./survival-bots.mjs');
     const { ISO_CAMERA: ISO } = await import('../src/core/util.js');
     window.localStorage.removeItem('lastnight.save.v1');
-    const gg = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+    const gg = new Game(makeHarnessCanvas(), { mode: 'survival', siege: 3, nightDuration: 60 });
     gg.input.touchSeen = true;
     gg.input.layout(390, 844);
     const gm = gg.survival;
@@ -1890,7 +1890,7 @@ async function runSurvivalMilestone() {
     const { DMG_NUMBER, SurvivalCrowdZombie: Crowd } = await import('../src/game/survival.js');
     const { SURVIVAL_ACTOR_SCALE: ACTOR_SCALE } = await import('../src/core/config.js');
     window.localStorage.removeItem('lastnight.save.v1');
-    const bg = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+    const bg = new Game(makeHarnessCanvas(), { mode: 'survival', siege: 3, nightDuration: 60 });
     const bm = bg.survival;
     const btick = (n = 1) => { for (let i = 0; i < n; i++) bg.update(step); };
     // V10: what the day forecasts is what the night sends, gate by gate
@@ -1972,7 +1972,7 @@ async function runSurvivalMilestone() {
   {
     const { SURVIVAL_ARMS, ARMS_MAX_LEVEL, PLOT, SURVIVAL_SLOTS: SLOTS, SurvivalCrowdZombie: Crowd, GUARD: GUARD_BASE } = await import('../src/game/survival.js');
     window.localStorage.removeItem('lastnight.save.v1');
-    const ag = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+    const ag = new Game(makeHarnessCanvas(), { mode: 'survival', siege: 3, nightDuration: 60 });
     const am = ag.survival;
     const atick = (n = 1) => { for (let i = 0; i < n; i++) ag.update(step); };
     const toDay = () => { am.phase = 'day'; ag.screen = 'playing'; ag.uiPanel = 'survival-day'; if (am.cine) am.cine = null; am.lastRewards = null; am.rewardAck = 1; };
@@ -2058,14 +2058,14 @@ async function runSurvivalMilestone() {
     am.armsLevel = 3;
     am._persist(true);
     const saved = JSON.parse(window.localStorage.getItem('lastnight.save.v1') || 'null');
-    const reload = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+    const reload = new Game(makeHarnessCanvas(), { mode: 'survival', siege: 3, nightDuration: 60 });
     const kept = reload.survival.armsLevel;
     reload.survival.restart();
     const fresh = reload.survival.armsLevel;
     const old = JSON.parse(JSON.stringify(saved));
     delete old.survival.armsLevel;
     window.localStorage.setItem('lastnight.save.v1', JSON.stringify(old));
-    const oldGame = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+    const oldGame = new Game(makeHarnessCanvas(), { mode: 'survival', siege: 3, nightDuration: 60 });
     const oldLevel = oldGame.survival.armsLevel;
     b14Check('the garrison\'s bow level is saved (Lv3 after a reload), a new run starts at Lv1, a save from before BUILD 14 loads Lv1',
       saved && saved.survival && saved.survival.armsLevel === 3 && kept === 3 && fresh === 1 && oldLevel === 1 && am.getNightSnapshot().armsLevel === 3,
@@ -2095,7 +2095,7 @@ async function runSurvivalMilestone() {
     phone.addEventListener = () => { }; phone.removeEventListener = () => { };
     phone.getBoundingClientRect = () => ({ left: 0, top: 0, width: 844, height: 390 });
     phone.clientWidth = 844; phone.clientHeight = 390; phone.style = {};
-    const fg = new Game(phone, { mode: 'survival', nightDuration: 60 });
+    const fg = new Game(phone, { mode: 'survival', siege: 3, nightDuration: 60 });
     fg.renderer.resize(844, 390, 1);
     const fm = fg.survival;
     const fmap = fg.mansion;
@@ -2235,7 +2235,7 @@ async function runSurvivalMilestone() {
     const { NIGHT_CLEAR, SurvivalCrowdZombie: Crowd, SurvivalIndividualZombie: Ind, gateLabel } = await import('../src/game/survival.js');
     const { World3D, SURVIVAL_RIG, dawnHex } = await import('../src/game/world3d.js');
     window.localStorage.removeItem('lastnight.save.v1');
-    const hg = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 72 });
+    const hg = new Game(makeHarnessCanvas(), { mode: 'survival', siege: 3, nightDuration: 72 });
     const hm = hg.survival;
     const htick = (n = 1) => { for (let i = 0; i < n; i++) hg.update(step); };
     // the horde's horn: SurvivalMode counts each one it blows (_hornFrom)
@@ -2276,7 +2276,7 @@ async function runSurvivalMilestone() {
     const rig1 = World3D._survivalRig(hg).exposure;
     // a reload in the middle of the clear keeps its dawn
     hm._persist(true);
-    const reloadedClear = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 72 }).survival.cleared;
+    const reloadedClear = new Game(makeHarnessCanvas(), { mode: 'survival', siege: 3, nightDuration: 72 }).survival.cleared;
     let endElapsed = hm.elapsed;
     guard16 = 0;
     while (hm.phase === 'night' && guard16++ < 600) { endElapsed = hm.elapsed; htick(); }
@@ -2385,6 +2385,231 @@ async function runSurvivalMilestone() {
   }
   const b16Pass = b16Checks.length === 3 && b16Checks.every(Boolean);
 
+  // ---- BUILD 17 (2026-10-18: "perbaiki bug pada ui saat kalah itu tombol nya
+  // tidak terlihat pada mode lanscape ... game belum punya hook yg kuat di
+  // awal ... harus di buat mudah di awal baru terasa sulit sampai level level
+  // tinggi dan resource mulai sulit di dapatkan ... musuh terlihat kuat ...
+  // tanda +- ... hapus"): the siege ladder (src/game/siege.js), kill loot,
+  // perks, the end/dawn/pause panels that fit a sideways phone, no + / -
+  // buttons. The pictures are in the browser (survival-plotsqa §9), the
+  // curve in tools/survival-balance.mjs --siege=1..10 ----
+  const b17Checks = [];
+  const b17Check = (name, ok, detail) => {
+    b17Checks.push(!!ok);
+    console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} (${detail})`);
+  };
+  {
+    const S = await import('../src/game/siege.js');
+    const { BUILD_TIME } = await import('../src/game/survival.js');
+    const UI = await import('../src/ui/survival.js');
+    const tickOf = (g) => (n = 1) => { for (let i = 0; i < n; i++) g.update(step); };
+    const fresh = (opts = {}) => { window.localStorage.removeItem('lastnight.save.v1'); return new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 72, ...opts }); };
+
+    // 1) a fresh save is Siege 1: half the horde, weak and small, mostly
+    //    blobs, a sturdier keep, a richer purse; Siege 3 is BUILD 16's night
+    const g1 = fresh();
+    const m1 = g1.survival;
+    const counts1 = [1, 2, 3].map((d) => { m1.day = d; return m1.waveCounts(); });
+    m1.day = 1;
+    const body1 = new (await import('../src/game/survival.js')).SurvivalCrowdZombie(0, -1200, m1.entranceById('northGate'), 0, 1, m1.spawnRules(), 1000123);
+    m1.spawnSwarm(12, 0);
+    const kinds1 = g1.enemies.filter((e) => e._crowd).reduce((a, e) => { a[e.crowdKind] = (a[e.crowdKind] || 0) + 1; return a; }, {});
+    g1.enemies.length = 0;
+    const g3 = fresh({ siege: 3 });
+    const m3 = g3.survival;
+    const counts3 = [1, 2, 3].map((d) => { m3.day = d; return m3.waveCounts(); });
+    const brk3 = [1, 2, 3].map((d) => { m3.day = d; return m3.breakerTimes().length; });
+    const ind3 = [1, 2, 3].map((d) => { m3.day = d; return m3.individualTimes().length; });
+    m3.day = 1;
+    b17Check('a fresh save plays Siege 1 (FIRST WATCH): half the horde, 28 HP bodies that the captain\'s 32 drops in one, mostly blobs and smaller, a 1.4x keep and a richer purse; Siege 3 is BUILD 16\'s night exactly',
+      m1.siege === 1 && JSON.stringify(counts1) === '[[11,11,12],[12,14,14],[15,15,15]]' && body1.hpMax === 28 && body1.hpMax <= 32
+        && (kinds1.crawler || 0) > (kinds1.zombie || 0) && body1.sizeMul >= 0.9 * 0.86 - 1e-9 && body1.sizeMul <= 1.12 * 0.86 + 1e-9
+        && m1.keepHpMax() === 840 && m1.gold === 52 && m1.wood === 38
+        && m3.siege === 3 && JSON.stringify(counts3) === '[[21,21,24],[24,27,27],[30,30,30]]' && JSON.stringify(brk3) === '[0,1,2]' && JSON.stringify(ind3) === '[2,2,2]'
+        && m3.keepHpMax() === 600 && m3.gold === 38 && m3.wood === 26 && m3.incomeMul() === 1 && m3.enemyAttackMul() === 1,
+      `S1 counts ${JSON.stringify(counts1)}, body ${body1.hpMax} HP x${body1.sizeMul.toFixed(2)} tall, kinds ${JSON.stringify(kinds1)}, keep ${m1.keepHpMax()}, purse ${m1.gold}/${m1.wood}; S3 counts ${JSON.stringify(counts3)}, Breakers ${brk3}, Individuals ${ind3}, keep ${m3.keepHpMax()}, purse ${m3.gold}/${m3.wood}`);
+
+    // 2) the ladder climbs: every siege harder than the one before it, the
+    //    purse thinner; Night 1 takes only part of a hard siege's extra
+    const specs = [];
+    for (let lv = 1; lv <= S.SIEGE_MAX; lv++) specs.push(S.siegeSpec(lv));
+    const rising = specs.every((sp, i) => i === 0 || (sp.hp >= specs[i - 1].hp && sp.count >= specs[i - 1].count && sp.income <= specs[i - 1].income && sp.start.gold <= specs[i - 1].start.gold));
+    const g8 = fresh({ siege: 8 });
+    const m8 = g8.survival;
+    const n1 = m8.waveCounts()[0];
+    m8.day = 2; const n2 = m8.waveCounts()[0]; m8.day = 1;
+    const rules = specs.map((sp) => [sp.runners ? 'R' : '', sp.split ? 'T' : '', sp.bloodMoon ? 'B' : '', sp.bitter ? 'D' : ''].join(''));
+    b17Check('ten sieges, each as hard or harder than the last and paying less (HP, horde, income, purse); a rule you can see joins at 4 (runners), 5 (two gates), 7 (blood moon), 9 (no dawn repairs) and stays; Night 1 takes 35% of a hard siege\'s extra',
+      specs.length === 10 && rising && rules.join(',') === ',,,R,RT,RT,RTB,RTB,RTBD,RTBD' && n1 === 22 && n2 === 29 && specs.every((sp) => sp.rule && sp.rule.text && sp.rule.text.split(/\s+/).length <= 7),
+      `rules ${rules.join(',')}, Siege 8 Night 1 wave 1 ${n1} (Night 2 ${n2}), lines ${specs.map((sp) => sp.rule.text).join(' | ')}`);
+
+    // 3) kills pay their gold on the spot (1 coin per 2 kills on Siege 1, per
+    //    6 on Siege 3), the coin flies to the purse; dawn adds no kill gold
+    const kill = (g, n) => {
+      const m = g.survival;
+      for (let i = 0; i < n; i++) {
+        const e = new (body1.constructor)(g.player.x + 60, g.player.y, m.entranceById('northGate'), i, m.day, m.spawnRules(), 1001000 + i);
+        g.enemies.push(e); e._lastHitBy = g.player; e.hurt(9999, g, g.player.x, g.player.y);
+      }
+    };
+    const gl = fresh();
+    const ml = gl.survival;
+    ml.phase = 'night'; gl.screen = 'playing'; gl.uiPanel = null;
+    const goldA = ml.gold;
+    kill(gl, 6);
+    const live = { gold: +(ml.gold - goldA).toFixed(2), loot: ml.nightStats.loot, pops: (ml.hudPops || []).filter((p) => p.icon === 'gold' && p.from === 'skull').length,
+      coins: ml.fx.filter((f) => f.kind === 'coin' && f.loot).length, floaters: ml.floaters.filter((f) => f.icon === 'gold' && f.kind === 'income').length };
+    gl.enemies.length = 0;
+    ml.nightStats.spawned = 0;
+    const goldB = ml.gold;
+    ml.completeNight();
+    const dawn = { gold: ml.lastRewards.gold, loot: ml.lastRewards.loot, purse: +(ml.gold - goldB).toFixed(2) };
+    const gk = fresh({ siege: 3 });
+    const mk = gk.survival;
+    mk.phase = 'night';
+    const goldK = mk.gold;
+    kill(gk, 12);
+    const parity = +(mk.gold - goldK).toFixed(2);
+    b17Check('kills pay their gold on the spot: Siege 1 one coin per 2 kills (a coin pops off the body with "+1", flies to the purse with a skull pop), Siege 3 one per 6 — BUILD 16\'s dawn pay of kills / 6 to the coin; the dawn card shows it as its own row and pays no kill gold again',
+      live.gold === 3 && live.loot === 3 && live.pops === 3 && live.coins === 3 && live.floaters >= 3
+        && dawn.loot === 3 && dawn.gold === Math.round(14 * 1.3) && Math.abs(dawn.purse - dawn.gold) < 1e-6 && parity === 2,
+      `S1 6 kills → +${live.gold} gold (${live.pops} HUD pops, ${live.coins} coins), dawn +${dawn.gold} night pay (purse +${dawn.purse}), loot row ${dawn.loot}; S3 12 kills → +${parity}`);
+
+    // 4) the ladder: a win opens the next siege and banks its best stars, the
+    //    stars open perks; a siege not yet open cannot be started
+    const gw = fresh();
+    const mw = gw.survival;
+    const locked = mw.startSiege(2) === false;
+    mw.day = 3; mw.nightsCompleted = 2; mw.phase = 'night'; mw.runStats.keepMin = 0.9;
+    mw.completeNight();
+    const won = { ...mw.runResult };
+    const ladder = JSON.parse(JSON.stringify(mw.ladder()));
+    const next = mw.startSiege(2);
+    const s2 = { siege: mw.siege, gold: mw.gold, wood: mw.wood, survivors: mw.survivors, perks: mw.perks.slice(), phase: mw.phase, day: mw.day };
+    mw.fail('THE KEEP FELL');
+    const lost = { ...mw.runResult };
+    b17Check('the ladder: Siege 2 is shut until Siege 1 is won; the win banks Siege 1\'s 3 stars, opens Siege 2 and the WAR CHEST perk (2 stars), and Siege 2 starts with its own purse + 15; a loss opens nothing',
+      locked && won.won && won.siege === 1 && won.unlocked === 2 && won.stars === 3 && JSON.stringify(won.perks) === '["chest"]' && won.starsTotal === 3
+        && ladder.unlocked === 2 && ladder.best[1] === 3 && next && s2.siege === 2 && s2.gold === 44 + 15 && s2.wood === 31 && s2.survivors === 2
+        && s2.phase === 'night' && s2.day === 1 && lost.unlocked === null && lost.perks.length === 0 && lost.siege === 2,
+      `locked ${locked}; won ${JSON.stringify({ siege: won.siege, unlocked: won.unlocked, stars: won.stars, perks: won.perks, total: won.starsTotal })}; ladder ${JSON.stringify(ladder)}; Siege 2 run ${JSON.stringify(s2)}; loss opened ${lost.unlocked}/${lost.perks.length}`);
+
+    // 5) the perks, each where it acts
+    const gp = fresh({ siege: 3 });
+    const mp = gp.survival;
+    mp.records.ladder.best = { 1: 3, 2: 3, 3: 3, 4: 3, 5: 3, 6: 3, 7: 3 };
+    mp.records.ladder.unlocked = 8;
+    mp.startSiege(3);
+    mp.buildings.north = 'mine'; mp.buildingLevels.north = 1;
+    mp.applyBuildingEffects(false);
+    const gateP = mp.mainGate();
+    const perk = { perks: mp.perks.join(','), gold: mp.gold, survivors: mp.survivors, keep: mp.keepHpMax(), bolt: mp.hunterDamage(), mine: +mp.goldPerNight().toFixed(2), gate: gateP.hpMax, base: gateP.baseHpMax };
+    b17Check('perks by the ladder\'s stars (21: all six): WAR CHEST +15 gold, VETERANS +1 guard, OAK GATES +25% gate HP, SHARP BOLTS +15% captain damage, STONE KEEP +20% keep HP, RICH MINES +30% gold',
+      perk.perks === 'chest,veterans,oak,bolts,stone,mines' && perk.gold === 38 + 15 && perk.survivors === 3 && perk.keep === 720 && perk.bolt === 37
+        && Math.abs(perk.mine - 6 * 1.3) < 1e-6 && perk.gate === Math.round(perk.base * 1.25),
+      JSON.stringify(perk));
+
+    // 6) R8: a run takes the next gate plan (Night 1's first wave always the
+    //    north gate); TWO GATES splits waves 2-3 from Night 2 and the day's
+    //    plan says so; runners from Siege 4
+    const plans = [0, 1, 2, 3].map((runs) => { m3.records.runs = runs; m3.restart(); m3.day = 2; const a = m3.chooseTargetEntrance(0, 0, 0).id; m3.day = 1; return { n1: m3.chooseTargetEntrance(0, 0, 0).id, n2: a, plan: m3.gatePlan }; });
+    const g5 = fresh({ siege: 5 });
+    const m5 = g5.survival;
+    m5.restart();
+    m5.phase = 'day'; m5.day = 2; m5.nightsCompleted = 1; m5.rewardAck = 1; g5.screen = 'playing'; g5.uiPanel = 'survival-day';
+    const plan5 = {};
+    for (const r of m5.tonightPlan()) plan5[r.id] = r.swarm;
+    m5.startNight(); if (m5.cine) m5.cine = null;
+    m5.keepHp = 99999;
+    const t5 = tickOf(g5);
+    let n5 = 0;
+    while (m5.waveIndex < 3 && n5++ < 60 * 60) t5();
+    const spawned5 = {};
+    for (const e of g5.enemies) if (e._crowd) spawned5[e.entranceId] = (spawned5[e.entranceId] || 0) + 1;
+    const call5 = [m5.banner, ...m5.bannerQueue].filter((ev) => ev && ev.kind === 'wave').map((ev) => ev.sub);
+    m5.day = 1; const n1split = m5.splitGate(1); m5.day = 2;
+    const g4 = fresh({ siege: 4 });
+    const m4 = g4.survival;
+    m4.spawnSwarm(30, 0);
+    const runners = g4.enemies.filter((e) => e._crowd && e.runner);
+    const walkers = g4.enemies.filter((e) => e._crowd && !e.runner);
+    b17Check('R8: each run takes the next gate plan (4 plans, Night 1 always opens at the north gate); TWO GATES (Siege 5) splits waves 2-3 over two gates from Night 2 (never Night 1), the day\'s plan counts both and the call names both; RUNNERS (Siege 4): the skulls sprint x1.5 with 70% HP',
+      new Set(plans.map((p) => p.n2)).size === 4 && plans.every((p) => p.n1 === 'northGate') && plans.map((p) => p.plan).join('') === '0123'
+        && Object.keys(spawned5).length >= 3 && Object.entries(plan5).every(([id, n]) => (spawned5[id] || 0) <= n + 1) && call5.some((sub) => / \+ /.test(sub || ''))
+        && n1split === null && runners.length > 0 && runners.every((e) => e.crowdKind === 'ghoul' && e.speedMul === 1.5 && e.hpMax === Math.round(48 * m4.tonightMul('hp') * 0.7))
+        && walkers.every((e) => e.speedMul === 1),
+      `plans ${JSON.stringify(plans)}; Siege 5 Night 2 plan ${JSON.stringify(plan5)} vs spawned ${JSON.stringify(spawned5)}, calls ${JSON.stringify(call5)}; Night 1 split ${n1split}; Siege 4 runners ${runners.length}/${runners.length + walkers.length}`);
+
+    // 7) the opening and the day: the captain starts the run a step inside the
+    //    north gate (R6), the run opens on the siege's banner, a later night on
+    //    its trait; jobs take half their listed time (R13); the day marks WAVE 1
+    const go = fresh({ siege: 3 });
+    const mo = go.survival;
+    mo.restart();
+    const north = mo.entranceById('northGate');
+    const startD = Math.hypot(go.player.x - north.x, go.player.y - north.y);
+    const banner1 = mo.banner && { text: mo.banner.text, sub: mo.banner.sub, siege: mo.banner.siege };
+    mo.phase = 'day'; mo.day = 2; mo.nightsCompleted = 1; mo.rewardAck = 1; go.screen = 'playing'; go.uiPanel = 'survival-day';
+    mo.gold = 200; mo.wood = 200;
+    mo.startBuild('mine', 'north');
+    const job = mo.builderJob && { ...mo.builderJob };
+    while (mo.builderJob) tickOf(go)();
+    mo.startNight(); if (mo.cine) mo.cine = null;
+    const banner2 = [mo.banner, ...mo.bannerQueue].find((ev) => ev && ev.kind === 'night');
+    b17Check('the run starts with the captain a step inside the north gate (Night 1\'s first fight in front of him; he moves only by the stick), on the siege\'s banner; Night 2 opens on its trait (A BREAKER AT THE SOUTH GATE); a mine takes 3.5 s (half of 7, R13)',
+      startD < 260 && go.player.y > north.y && banner1 && banner1.text === 'SIEGE 3: BREAKERS' && banner1.siege === 3 && banner1.sub === 'TWO BREAKERS ON NIGHT 3'
+        && banner2 && banner2.sub === 'A BREAKER AT THE SOUTH GATE' && job && job.duration === 3.5 && BUILD_TIME === 0.5,
+      `captain ${Math.round(startD)} px from the north gate; banner ${JSON.stringify(banner1)}; Night 2 ${banner2 && banner2.sub}; mine job ${job && job.duration}s`);
+
+    // 8) the screens: no + / - buttons by day or night; the end panel (win
+    //    and loss), the dawn card and the pause panel keep every button on a
+    //    sideways phone down to 640 x 260
+    const gu = fresh({ siege: 2 });
+    const mu = gu.survival;
+    mu.records.ladder.unlocked = 3;
+    const sizes = [[844, 390], [800, 340], [740, 300], [740, 280], [667, 260], [640, 260], [1280, 720]];
+    const inside = (g, w, h, labels) => labels.every((label) => { const it = g.ui.find((u) => u.label === label); return it && it.x >= 0 && it.y >= 0 && it.x + it.w <= w + 0.5 && it.y + it.h <= h + 0.5 && it.h >= 28 && it.w >= 90; });
+    const drawAt = (g, w, h) => { g.renderer.resize(w, h, 1); const c = createCanvas(w, h); UI.drawSurvivalScreen(g, c.getContext('2d'), w, h, true); };
+    const zoomless = [];
+    mu.restart(); if (mu.cine) mu.endCine();
+    drawAt(gu, 844, 390); zoomless.push(gu.ui.map((u) => u.label).join(','));
+    mu.phase = 'day'; mu.day = 2; mu.nightsCompleted = 1; mu.rewardAck = 1; gu.uiPanel = 'survival-day';
+    drawAt(gu, 844, 390); zoomless.push(gu.ui.map((u) => u.label).join(','));
+    const noZoom = zoomless.every((l) => !/ZOOM/.test(l));
+    const fit = {};
+    mu.phase = 'night'; mu.day = 2; mu.nightsCompleted = 1; mu.fail('THE KEEP FELL');
+    for (const [w, h] of sizes) { drawAt(gu, w, h); fit[`loss ${w}x${h}`] = inside(gu, w, h, ['survival:PLAY AGAIN', 'survival:EASIER SIEGE']); }
+    mu.restart(); mu.day = 3; mu.nightsCompleted = 2; mu.phase = 'night'; mu.runStats.keepMin = 0.9; mu.completeNight(); if (mu.cine) mu.endCine();
+    for (const [w, h] of sizes) { drawAt(gu, w, h); fit[`win ${w}x${h}`] = inside(gu, w, h, ['survival:NEXT SIEGE', 'survival:PLAY AGAIN']); }
+    mu.startSiege(3); if (mu.cine) mu.endCine();
+    mu.lastRewards = { gold: 16, wood: 16, loot: 9, kills: 40, cleared: { at: 50, saved: 20, bonus: 20 }, mined: 6, sawn: 7, towerKills: 12, killsBy: { guard: 6 }, survivors: 1, keepDamage: 120, keepPatched: 42, lost: 1, reinforcements: 2 };
+    mu.phase = 'day'; mu.day = 2; mu.nightsCompleted = 1; mu.rewardAck = 0; gu.uiPanel = 'survival-day';
+    for (const [w, h] of sizes) { drawAt(gu, w, h); fit[`dawn ${w}x${h}`] = inside(gu, w, h, ['survival:COLLECT']); }
+    mu.rewardAck = 1; gu.screen = 'playing'; gu.togglePause(true);
+    for (const [w, h] of sizes) { drawAt(gu, w, h); fit[`pause ${w}x${h}`] = inside(gu, w, h, ['survival:RESUME', 'survival:RESTART 3-DAY RUN']); }
+    gu.resumeSurvival();
+    const bad = Object.entries(fit).filter(([, ok]) => !ok).map(([k]) => k);
+    b17Check('no + / - zoom buttons on the night or day HUD; the end panel (win: NEXT SIEGE + REPLAY, loss: TRY AGAIN + the siege below), the dawn card\'s COLLECT and the pause panel\'s RESUME / RESTART lie whole on the screen (28 px tall at least) from 1280 x 720 down to a 640 x 260 sideways phone — the dawn card with all 13 of its rows',
+      noZoom && bad.length === 0,
+      `UI night/day: ${zoomless.map((l) => l.split(',').length + ' items').join(' / ')}${noZoom ? '' : ' (ZOOM found)'}; ${Object.keys(fit).length} panel x size cases, off-screen: ${bad.join(', ') || 'none'}`);
+
+    // 9) save: the siege, the ladder, the gate plan and the loot bank survive
+    //    a reload; ?siege on a save of another siege starts a fresh run of it
+    const gs = fresh({ siege: 4 });
+    const ms = gs.survival;
+    ms.records.ladder.best = { 1: 2, 2: 1, 3: 3 }; ms.records.ladder.unlocked = 4; ms.gatePlan = 2; ms._lootBank = 4;
+    ms._persist(true);
+    const rs = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 72 }).survival;
+    const reload = { siege: rs.siege, ladder: rs.ladder(), plan: rs.gatePlan, bank: rs._lootBank, stars: rs.starsTotal(), perks: rs.perks.join(',') };
+    const forced = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 72, siege: 2 }).survival;
+    b17Check('a reload keeps the siege, the ladder (best stars, what is open), the run\'s gate plan and the loot bank; ?siege=N on a save of another siege starts a fresh run of siege N and keeps the ladder',
+      reload.siege === 4 && reload.ladder.unlocked === 4 && reload.ladder.best[3] === 3 && reload.plan === 2 && reload.bank === 4 && reload.stars === 6 && reload.perks === 'chest,veterans'
+        && forced.siege === 2 && forced.day === 1 && forced.phase === 'night' && forced.gold === 44 + 15 && forced.ladder().best[3] === 3,
+      `reload ${JSON.stringify(reload)}; forced siege ${forced.siege} day ${forced.day} purse ${forced.gold}`);
+    window.localStorage.removeItem('lastnight.save.v1');
+  }
+  const b17Pass = b17Checks.length === 9 && b17Checks.every(Boolean);
+
   console.log(`  idle Night 3: ${idle.nightThree.peakEnemies} peak enemies / ${idle.nightThree.peakBreakers} Breakers, ${idle.nightThree.kills} kills, ${idle.nightThree.wallDamage} wall damage, gate ${idle.nightThree.gateHp} HP, Hunter ${idle.nightThree.playerHp} HP; ${idle.phase}`);
   console.log(`  builder Night 3: ${builder.nightThree.peakEnemies} peak enemies / ${builder.nightThree.peakBreakers} Breakers, ${builder.nightThree.kills} kills, ${builder.nightThree.wallDamage} wall damage, gate ${builder.nightThree.gateHp} HP, Hunter ${builder.nightThree.playerHp} HP; keep Lv${builder.keepLevel} ${builder.keepHp} HP, soldiers ${builder.survivors}, buildings ${builder.buildings.join(',') || 'none'}, gateBuilt=${builder.gateBuilt}; ${builder.phase}`);
   // Balance target (M1 rebuild, K1): doing nothing must not win; an engaged
@@ -2397,7 +2622,7 @@ async function runSurvivalMilestone() {
     && hunterAutoShot && hunterRealLos && hunterSkill
     && idleLoses && builder.complete && builder.keepLevel === 3
     && builder.queueLockVerified && builder.sawmillBuilt && builder.gateBuilt && builder.barracksBuilt
-    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass && gateRulePass && b13Pass && b14Pass && b15Pass && b16Pass
+    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass && gateRulePass && b13Pass && b14Pass && b15Pass && b16Pass && b17Pass
     && builder.upgrades[0].level === 1 && builder.upgrades[0].plots === 9
     && builder.upgrades[builder.upgrades.length - 1].level === 3 && builder.upgrades[builder.upgrades.length - 1].plots === 15
     && builder.upgrades.every((item, i, all) => i === 0 || item.level >= all[i - 1].level);

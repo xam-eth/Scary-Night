@@ -225,9 +225,9 @@ async function survivalFtueSection() {
   const final = checkpoints[checkpoints.length - 1].state;
   check(final.mode === 'survival' && final.screen === 'playing' && final.day === 1 && final.phase === 'night',
     'the default route reaches playable Night 1 directly (no menu, intro or narration)');
-  // BUILD 12: the dynamic camera's + / - sit on the right edge by night too
-  check(final.ui.join(',') === 'PAUSE,survival:ZOOM IN,survival:ZOOM OUT' && !final.coach && !final.narration,
-    `Night-1 icon HUD registers only PAUSE and the camera's + / - as tap targets (gold/guard/enemy counters, night clock and the keep's bar are read-only; legacy coach/narration hidden; UI=${final.ui.join(',')})`);
+  // BUILD 17: the camera's on-screen + / - are gone (pinch, wheel and keys zoom)
+  check(final.ui.join(',') === 'PAUSE' && !final.coach && !final.narration,
+    `Night-1 icon HUD registers only PAUSE as a tap target (no + / - since BUILD 17; gold/guard/enemy counters, night clock and the keep's bar are read-only; legacy coach/narration hidden; UI=${final.ui.join(',')})`);
   const readable = await playfieldLuma(path.join(evidenceDir, 'survival-ftue-15s.png'));
   checkpoints.find((row) => row.seconds === 15).luma = readable;
   check(readable.meanLuma >= 40 && readable.darkPct <= 45,

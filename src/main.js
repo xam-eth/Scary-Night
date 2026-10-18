@@ -30,7 +30,11 @@ const nightDuration = Number.isFinite(requestedNight) && requestedNight > 0 ? re
 // K1's opening and the reinforcements' arrival play in a real run; QA tools
 // that script the night from its first second pass `?cine=0`.
 const cinematics = query.get('cine') !== '0';
-const game = new Game(canvas, { mode: gameMode, nightDuration, cinematics });
+// BUILD 17: `?siege=N` plays siege N of the ladder (QA and a deep link); a
+// player opens them one by one by winning (src/game/siege.js)
+const requestedSiege = Number(query.get('siege'));
+const siege = Number.isFinite(requestedSiege) && requestedSiege >= 1 ? requestedSiege : undefined;
+const game = new Game(canvas, { mode: gameMode, nightDuration, cinematics, siege });
 const input = game.input;
 World3D.bindStage(canvas.parentElement);
 Ads.init(game);

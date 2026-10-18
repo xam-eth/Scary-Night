@@ -49,7 +49,8 @@ import { SurvivalMode } from './survival.js';
 import { drawSurvivalScreen, updateSurvivalHints } from '../ui/survival.js';
 
 /** HUD chips that take a tap in play, day or night (survival.js camera). */
-const CAMERA_CHIPS = Object.freeze(['survival:RECENTER', 'survival:ZOOM IN', 'survival:ZOOM OUT']);
+// (BUILD 17 took the on-screen + / - zoom buttons away; RECENTER is the one chip)
+const CAMERA_CHIPS = Object.freeze(['survival:RECENTER']);
 
 /* ================= pickups ================= */
 
@@ -237,7 +238,7 @@ export class Game {
     this.player.applyUpgrades(this.save);
     this.applySettings();
     if (this.mode === 'survival') {
-      this.survival = new SurvivalMode(this, { nightDuration: options.nightDuration, cinematics: options.cinematics === true });
+      this.survival = new SurvivalMode(this, { nightDuration: options.nightDuration, cinematics: options.cinematics === true, siege: options.siege });
     } else this.survival = null;
     this.decals.canvas.getContext('2d');
     window.__LN = this;   // used by the automated playtest harness
@@ -442,6 +443,7 @@ export class Game {
     this.pauseConfirm = false;
     if (this.screen === 'playing' && on !== false) {
       this.paused = true; this.uiPanel = null; this.screen = 'paused'; this.ui = []; this.uiIndex = 0;
+      this._siegePick = null;   // BUILD 17: the pause panel's siege arrows start on the run's siege
     } else if (this.screen === 'paused') {
       this.paused = false; this.screen = 'playing';
     }
@@ -1763,7 +1765,8 @@ export class Game {
         // the Hunter's level sets the bolt (Survival's own track, bought by
         // day): Lv2 runs on through a body, Lv3 fires a fan of three
         const st = this.survival && this.survival.hunterStats ? this.survival.hunterStats() : null;
-        const damage = st ? st.damage : tool.damage;
+        // (SHARP BOLTS, a BUILD 17 perk, rides on his level's bolt)
+        const damage = st ? (this.survival.hunterDamage ? this.survival.hunterDamage() : st.damage) : tool.damage;
         const fan = st ? Math.max(1, st.fan || 1) : 1;
         const base = player.swingAngle || player.angle || 0;
         for (let i = 0; i < fan; i++) {

@@ -491,8 +491,8 @@ try {
     window.__step(60);
     return { cine: !!m.cine, panel: g.uiPanel, banner: m.banner && m.banner.text, gameplay: g.input.gameplay, labels: g.ui.map((u) => u.label).filter((l) => /PAUSE|SKIP/.test(l)), ran: +(m.elapsed - elapsed0).toFixed(2), zoom: +(g.renderer.cam.zoom / (m.frameMul(true) * g.renderer.baseZoom)).toFixed(2) };
   });
-  check('cine: a real tap skips to the hand-over — HOLD THE KEEP, the night clock runs, the HUD and the stick are back',
-    !handover.cine && handover.panel === null && handover.banner === 'HOLD THE KEEP' && handover.gameplay && handover.labels.includes('PAUSE')
+  check('cine: a real tap skips to the hand-over — the siege\'s banner (BUILD 17: SIEGE 1: FIRST WATCH on a fresh save), the night clock runs, the HUD and the stick are back',
+    !handover.cine && handover.panel === null && handover.banner === 'SIEGE 1: FIRST WATCH' && handover.gameplay && handover.labels.includes('PAUSE')
       && !handover.labels.includes('survival:SKIP') && handover.ran > 0.9 && Math.abs(handover.zoom - 1) < 0.08, handover);
   await cine.evaluate(() => { window.__LN.survival._persist(true); sessionStorage.setItem('devqaKeep', '1'); });
   await withTimeout(cine.reload({ waitUntil: 'domcontentloaded', timeout: 120000 }), 130000, 'reload cine');

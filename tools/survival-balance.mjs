@@ -13,6 +13,9 @@
  *                 circle under the banner, the keep and ballista levels
  *
  *   node tools/survival-balance.mjs [--seeds=3] [--duration=72] [--bots=idle,active,builder] [--json=out.json] [--economy]
+ *        [--siege=1..10] [--stars=0..30]
+ *   --siege: which siege of the ladder (BUILD 17, src/game/siege.js; default 3,
+ *     BUILD 16's numbers); --stars: ladder stars the save holds (the perks).
  *   bots: idle, active, flare, builder, passive-builder, keep-builder, hunter-builder, tower-builder, arms-builder
  *
  * --economy prints every day decision with the purse before/after.
@@ -140,14 +143,26 @@ function traceEconomy(mode, kind, seed) {
   wrap('startNight', () => 'START NIGHT');
 }
 
+// BUILD 17: which siege of the ladder (src/game/siege.js; 3 = BUILD 16's
+// numbers) and how many ladder stars the save holds (they open the perks)
+const SIEGE = Math.max(1, Math.min(10, parseInt(args.siege || '3', 10)));
+const STARS = Math.max(0, Math.min(30, parseInt(args.stars || '0', 10)));
+function giveStars(mode, n) {
+  const best = {};
+  for (let lv = 1; lv <= 10 && n > 0; lv++) { best[lv] = Math.min(3, n); n -= best[lv]; }
+  mode.records.ladder.best = best;
+  mode.records.ladder.unlocked = 10;
+}
+
 function runOne(kind, seed) {
   reseed(seed);
   win.localStorage._d = {};
-  const game = new Game(makeCanvas(), { mode: 'survival', nightDuration: DURATION });
+  const game = new Game(makeCanvas(), { mode: 'survival', nightDuration: DURATION, siege: SIEGE });
   game.input.touchSeen = true;
   game.input.layout(390, 844);
   const mode = game.survival;
-  mode.restart();
+  if (STARS) giveStars(mode, STARS);
+  mode.startSiege(SIEGE);
   if (args.economy) traceEconomy(mode, kind, seed);
   // the pre-2026-10-15 rule: guards are never hunted and never hurt
   if (args['no-guard-damage']) { mode.hurtGuard = () => false; mode.guardToHunt = () => null; }

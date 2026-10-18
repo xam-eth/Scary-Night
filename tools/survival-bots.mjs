@@ -95,7 +95,12 @@ export function botNight(game, state, { ROOM, ISO_CAMERA }) {
   const final = leg.goal === goal;
   if (dist(p, leg.goal) > (final ? (goal.tight ? 8 : 46) : 10)) {
     const path = leg.path ? game.mansion.navPath(p.x, p.y, leg.goal.x, leg.goal.y) : null;
-    const wp = path && path.length ? (path.length > 1 && dist(p, path[0]) < 30 ? path[1] : path[0]) : leg.goal;
+    // (BUILD 17: within 60 px of the path's first point he heads for the
+    // next one — standing on a grid cell the nav counts as blocked, by a
+    // prop against the wall, the first point is a free cell behind him, and
+    // at 30 he stepped back and forth between the two for the rest of the
+    // night: Siege 2, the south-east stores)
+    const wp = path && path.length ? (path.length > 1 && dist(p, path[0]) < 60 ? path[1] : path[0]) : leg.goal;
     steerStick(game, wp.x - p.x, wp.y - p.y, ISO_CAMERA);
   } else {
     game.input.stick.active = false;
@@ -194,8 +199,15 @@ function peekSpot(game, state, p) {
  *   builder  the balanced queue (keep, mine, barricade, sawmill, ...)
  * Every builder patches a badly hurt keep first (wood).
  */
-export function botDay(game, plan) {
+export function botDay(game, plan, opts = {}) {
   const mode = game.survival;
+  // (BUILD 17: survival-uxprobe's `prepared` player buys like the builder
+  // but walks to the WAVE 1 gate before he starts the night himself)
+  if (opts.noNight) {
+    const start = mode.startNight;
+    mode.startNight = () => false;
+    try { return botDay(game, plan) && false; } finally { mode.startNight = start; }
+  }
   if (mode.rewardPending()) mode.ackRewards();
   if (mode.builderJob) return false;
   const free = (type) => mode.buildableSlots().find((slot) => slot.type === type);

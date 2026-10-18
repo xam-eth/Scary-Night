@@ -25,8 +25,12 @@
  * waiting at the keep until a gate is clawed, and who goes after the night's
  * marked last few (LAST N!, R5) when nothing else is fighting.
  *
- *   node tools/survival-uxprobe.mjs [--kinds=builder,tower,active,idle,rally]
- *        [--seedlist=20261012,20268931,20276850,20261013,20261014] [--duration=72] [--json=out.json]
+ *   node tools/survival-uxprobe.mjs [--kinds=builder,tower,active,idle,rally,prepared]
+ *        [--seedlist=20261012,20268931,20276850,20261013,20261014] [--duration=72] [--json=out.json] [--siege=1..10]
+ *
+ * BUILD 17: `prepared` is the rally player who also, by day, ends his turn at
+ * the gate the coming night's first wave is marked on (WAVE 1, R6) before he
+ * taps NIGHT — the captain still only moves by the stick.
  *
  * A measurement tool, not a gate: it prints, it does not assert. Cinematics
  * are off (the node default), so Night 1 starts at clock 0 here; in the
@@ -98,7 +102,7 @@ function makeCanvas() {
   return canvas;
 }
 
-const { botNight, botDay, releaseControls } = await import('./survival-bots.mjs');
+const { botNight, botDay, releaseControls, steerStick } = await import('./survival-bots.mjs');
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
 /* ---------------- measurement ---------------- */
@@ -123,10 +127,12 @@ function dayOptions(mode) {
   }
   return { n, kinds: [...new Set(kinds)] };
 }
+// BUILD 17: which siege of the ladder (src/game/siege.js; 3 = BUILD 16's numbers)
+const SIEGE = Math.max(1, Math.min(10, parseInt(args.siege || '3', 10)));
 function runGamer(kind, seed) {
   reseed(seed);
   win.localStorage._d = {};
-  const game = new Game(makeCanvas(), { mode: 'survival', nightDuration: DURATION });
+  const game = new Game(makeCanvas(), { mode: 'survival', nightDuration: DURATION, siege: SIEGE });
   game.input.touchSeen = true;
   game.input.layout(390, 844);
   const mode = game.survival;
@@ -155,7 +161,7 @@ function runGamer(kind, seed) {
       if (!night) {
         night = { day: mode.day, frames: 0, targetFrames: 0, firstTarget: null, contact: null, quiet: 0, longestQuiet: 0, lastKillAt: 0, kills: 0, bins: new Array(12).fill(0), keepMin: 1, flares: 0, hurtMin: 1 };
         // the rally player answers the first wave's call at once
-        if (kind === 'rally') { const gate = mode.chooseTargetEntrance(0, 0, 0); state.rally = gate ? gate.id : null; state.hunt = true; }
+        if (kind === 'rally' || kind === 'prepared') { const gate = mode.chooseTargetEntrance(0, 0, 0); state.rally = gate ? gate.id : null; state.hunt = true; }
       }
       if (state.rally && mode.besiegedDoors().length) state.rally = null;
       if (kind !== 'idle') botNight(game, state, { ROOM, ISO_CAMERA }); else release(game);
@@ -197,7 +203,24 @@ function runGamer(kind, seed) {
         const o = dayOptions(mode);
         day = { day: mode.day, gold: Math.floor(mode.gold), wood: Math.floor(mode.wood), options: o.n, kinds: o.kinds, buys: [], at: { x: game.player.x, y: game.player.y } };
       }
-      const started = botDay(game, kind === 'idle' || kind === 'active' ? 'idle' : kind === 'rally' ? 'builder' : kind);
+      // the prepared player walks (by the stick) to just inside tonight's
+      // WAVE 1 gate once his builds are done, then starts the night there
+      let started = false;
+      if (kind === 'prepared') {
+        botDay(game, 'builder', { noNight: true });
+        if (!mode.builderJob && mode.phase === 'day' && !mode.rewardPending()) {
+          const gate = mode.chooseTargetEntrance(0, 0, 0);
+          const out = { x: gate.outside.x - gate.x, y: gate.outside.y - gate.y };
+          const l = Math.hypot(out.x, out.y) || 1;
+          const spot = { x: gate.x - out.x / l * 60, y: gate.y - out.y / l * 60 };
+          const p = game.player;
+          if (Math.hypot(spot.x - p.x, spot.y - p.y) > 40) {
+            const path = game.mansion.navPath(p.x, p.y, spot.x, spot.y);
+            const wp = path && path.length ? (path.length > 1 && Math.hypot(path[0].x - p.x, path[0].y - p.y) < 60 ? path[1] : path[0]) : spot;
+            steerStick(game, wp.x - p.x, wp.y - p.y, ISO_CAMERA);
+          } else { release(game); started = mode.startNight(); }
+        }
+      } else started = botDay(game, kind === 'idle' || kind === 'active' ? 'idle' : kind === 'rally' ? 'builder' : kind);
       if (started || mode.phase !== 'day') {
         let t = 0, prevJob = 0;
         for (const b of day.buys) { t += Math.max(b.walk, prevJob) + 2; prevJob = b.job; }

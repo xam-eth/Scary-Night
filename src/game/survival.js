@@ -11,6 +11,10 @@ import { SURVIVAL_TUNING, SURVIVAL_ACTOR_SCALE } from '../core/config.js';
 import { CrowdBody, Zombie, outwardOf, CROWD, ESTATE } from './enemies.js';
 import { ROOM } from './mansion.js';
 import { FORT } from './fortress.js';
+import {
+  SIEGE_MAX, RUNNER, SIEGE_SWARM_CAP, PERK_EFFECT, GATE_PLANS, clampSiege, siegeSpec, cleanLadder,
+  totalStars, perksFor, recordRun, gatePlanFor, crowdKindFor, freshLadder,
+} from './siege.js';
 
 const RESOURCE_CAP = 999;
 /**
@@ -27,8 +31,10 @@ const FRAME_CLOSER = 1.1;
  *   - a drag on the free half of the screen slides the view 1:1 and a flick
  *     glides on and slows (`glide`);
  *   - two fingers anywhere pinch it, about the point between them, and pan
- *     with it; the mouse wheel zooms about the cursor; the + / - buttons on
- *     the right edge (and the + / - keys) zoom a `step`, eased;
+ *     with it; the mouse wheel zooms about the cursor; the + / - keys zoom
+ *     a `step`, eased (BUILD 17 took the on-screen + / - buttons away,
+ *     playtest 2026-10-18: "tanda +- yg harus tidak perlu ada hapus itu di
+ *     visual");
  *   - `zoom` is the range on top of the play framing: 0.42 shows the whole
  *     bailey on a sideways phone, 1.6 a close-up of a building or a fight;
  *   - walking eases the view back onto the captain (`recenter`), so the
@@ -86,24 +92,29 @@ const SAVE_EVERY = 2.5;
 // inside 5 s; every wave is called with its gate and a horn (updateWaves).
 const WAVE_TIMES = Object.freeze([0.04, 0.3, 0.56]);
 const WAVE_TIMES_LATER = Object.freeze([0.015, 0.3, 0.56]);
-const BREAKER_TIMES = Object.freeze([0.2, 0.5]);
-const INDIVIDUAL_TIMES = Object.freeze([0.42, 0.7]);
-// Night 1–3 swarm sizes (×3 of the first M1 pass, capped per wave).
+// BUILD 17: the siege says how many Breakers and Individuals come each night
+// (src/game/siege.js); their marks by how many come. Two of each on their
+// nights is BUILD 16's plan (Siege 3).
+const BREAKER_TIMES = Object.freeze([
+  Object.freeze([]), Object.freeze([0.2]), Object.freeze([0.2, 0.5]), Object.freeze([0.2, 0.45, 0.7]),
+]);
+const INDIVIDUAL_TIMES = Object.freeze([
+  Object.freeze([]), Object.freeze([0.5]), Object.freeze([0.42, 0.7]),
+  Object.freeze([0.3, 0.52, 0.74]), Object.freeze([0.24, 0.42, 0.6, 0.78]),
+]);
+// Night 1–3 swarm sizes (×3 of the first M1 pass) — Siege 3's; every other
+// siege multiplies them (SIEGES[n].count), capped per wave and gate.
 const WAVE_COUNTS = Object.freeze([
   Object.freeze([21, 21, 24]),
   Object.freeze([24, 27, 27]),
   Object.freeze([30, 30, 30]),
 ]);
-const SWARM_CAP = 30;
-// Gates per night: waves 1-3, then the two Individuals (src/game/fortress.js).
+// Gates per night: waves 1-3, then the Individuals (src/game/fortress.js),
+// from the run's gate plan (siege.js GATE_PLANS, R8; plan 0 is BUILD 16's).
 // Night 1 opens at the north gate, across the bailey from the camera, so the
-// first contact is a gate the Hunter has time to walk to and the main gate
-// is pressed only by the third wave. The posterns open from Night 2.
-const NIGHT_DOORS = Object.freeze([
-  Object.freeze(['northGate', 'eastGate', 'southGate', 'westGate', 'eastGate']),
-  Object.freeze(['westGate', 'posternNW', 'southGate', 'northGate', 'posternNW']),
-  Object.freeze(['posternSE', 'northGate', 'southGate', 'westGate', 'posternSE']),
-]);
+// first contact is a gate the captain stands beside at the start of a run
+// (BUILD 17) and the main gate is pressed only by a later wave. The posterns
+// open from Night 2.
 /**
  * K1's two bookends (DESIGN-SYSTEM-PLAN §4): the opening shot — the keep and
  * its people, the horde at a gate, then the captain and the three nights —
@@ -329,6 +340,15 @@ export const SURVIVAL_BUILDING_LEVELS = Object.freeze({
   }),
 });
 const DOOR_BONUS_CAP = 0.6;
+/**
+ * BUILD 17 (UX-REPLAY-RESEARCH R13, "the build is a wait"): every job takes
+ * half its listed seconds (2 at least). The day is not timed, so this costs
+ * the balance nothing and gives the player back the waiting.
+ */
+export const BUILD_TIME = 0.5;
+/** Night 1's share of a hard siege's extra (SurvivalMode.tonightMul). */
+const NIGHT1_SHARE = 0.35;
+function jobTime(seconds) { return Math.max(2, Math.round((Number(seconds) || 5) * BUILD_TIME * 10) / 10); }
 
 /**
  * A ballista is the house fighting back on its own. It is built on its own
@@ -639,14 +659,25 @@ function fleeing(enemy, dt, game, marchState) {
   return true;
 }
 
-/** A reduced-AI siege zombie that retains CrowdBody's rank/entrance identity. */
+/**
+ * A reduced-AI siege zombie that retains CrowdBody's rank/entrance identity.
+ * BUILD 17: the siege (src/game/siege.js) sets its HP, what it is drawn as
+ * (crowdKind, by its id: no random draw) and how big it stands (sizeMul);
+ * from Siege 4 a skull is a runner (RUNNER): faster and frailer.
+ */
 class SurvivalCrowdZombie extends CrowdBody {
-  constructor(x, y, entrance, index, day) {
+  constructor(x, y, entrance, index, day, spec = null, id = null) {
     super('zombie', x, y, entrance);
     this._survivalType = 'swarm';
     this._crowd = true;
     this.index = index;
-    this.hpMax = Math.round(48 * (1 + Math.max(0, day - 1) * 0.12));
+    if (id != null) this.id = id;
+    const rules = spec || siegeSpec(3);
+    this.crowdKind = crowdKindFor(rules, this.id);
+    this.runner = !!rules.runners && this.crowdKind === 'ghoul';
+    this.speedMul = this.runner ? RUNNER.speed : 1;
+    this.sizeMul = (this.sizeMul || 1) * (rules.size || 1);
+    this.hpMax = Math.round(48 * (1 + Math.max(0, day - 1) * 0.12) * (rules.hp || 1) * (this.runner ? RUNNER.hp : 1));
     this.hp = this.hpMax;
     this.radius = 13;
     this.hurtFlash = 0;
@@ -697,15 +728,16 @@ class SurvivalCrowdZombie extends CrowdBody {
     const broken = !!(entrance && entrance.broken);
     this.alpha = Math.min(1, this.alpha + dt * 0.8);
 
+    const run = this.speedMul || 1;
     if (broken || inside) {
       // The keep's field routes through whichever gap is open.
       this.press = damp(this.press || 0, 0, 5, dt);
-      invade(this, dt, game, mode, mode.swarmSpeed(true), 5.2, false, entrance && (entrance.outside || entrance));
+      invade(this, dt, game, mode, mode.swarmSpeed(true) * run, 5.2, false, entrance && (entrance.outside || entrance));
       return;
     }
 
     if (!entrance) { this.state = CROWD.LEAVE; return; }
-    if (goForCaptain(this, dt, game, mode, mode.swarmSpeed(false) * this.gait * SORTIE.chaseMul, 5.2)) {
+    if (goForCaptain(this, dt, game, mode, mode.swarmSpeed(false) * this.gait * run * SORTIE.chaseMul, 5.2)) {
       this.press = damp(this.press, 0, 5, dt);
       return;
     }
@@ -713,7 +745,7 @@ class SurvivalCrowdZombie extends CrowdBody {
     const targetX = spot.x + this.jx * 0.25;
     const targetY = spot.y + this.jy * 0.25;
     const d = dist(this.x, this.y, targetX, targetY);
-    const speed = mode.swarmSpeed(false) * this.gait;
+    const speed = mode.swarmSpeed(false) * this.gait * run;
     if (d > 10) {
       this.state = CROWD.MARCH;
       if (d > 120) approachDoor(this, dt, game, mode, entrance, { x: targetX, y: targetY }, speed, 4.8);
@@ -735,11 +767,16 @@ class SurvivalCrowdZombie extends CrowdBody {
 
 /** Individual, durable zombie: hunts the Hunter outside the banner, else the keep. */
 class SurvivalIndividualZombie extends Zombie {
-  constructor(x, y, entrance, day, index = 0) {
+  constructor(x, y, entrance, day, index = 0, spec = null) {
     super(x, y, { entranceId: entrance && entrance.id });
     this._survivalType = 'individual';
     this._crowd = false;
-    this.type = { ...this.type, name: 'ZOMBIE', hp: 118 + day * 14, speed: 58, huntSpeed: 72, contactDamage: 12 + day * 2, doorDamage: 8 };
+    const rules = spec || siegeSpec(3);
+    const pace = rules.speed || 1;
+    this.type = {
+      ...this.type, name: 'ZOMBIE', hp: Math.round((118 + day * 14) * (rules.hp || 1)), speed: 58 * pace, huntSpeed: 72 * pace,
+      contactDamage: 12 + day * 2, doorDamage: 8,
+    };
     this.hp = this.hpMax = this.type.hp;
     this.radius = 15;
     this.entranceId = entrance && entrance.id;
@@ -809,12 +846,16 @@ class SurvivalIndividualZombie extends Zombie {
 
 /** Day-2 wall specialist: doors first (next intact one after a breach), then the keep. */
 class SurvivalBreaker extends Zombie {
-  constructor(x, y, entrance, day, index = 0) {
+  constructor(x, y, entrance, day, index = 0, spec = null) {
     super(x, y, { entranceId: entrance && entrance.id });
     this._survivalType = 'breaker';
     this._crowd = false;
     this.key = 'zombie'; // uses the authored demon.glb zombie role
-    this.type = { ...this.type, name: 'BREAKER', hp: 250 + Math.max(0, day - 2) * 55, speed: 48, doorDamage: 31 + day * 3 };
+    const rules = spec || siegeSpec(3);
+    this.type = {
+      ...this.type, name: 'BREAKER', hp: Math.round((250 + Math.max(0, day - 2) * 55) * (rules.hp || 1)),
+      speed: 48 * (rules.speed || 1), doorDamage: 31 + day * 3,
+    };
     this.hp = this.hpMax = this.type.hp;
     this.radius = 19;
     this.entranceId = entrance && entrance.id;
@@ -1267,7 +1308,24 @@ export class SurvivalMode {
     this.reinforcements = null;    // the relief column (victory)
     this.records = freshRecords();  // best results across runs (R3)
     this.runResult = null;          // how the last run ended (stars, MVP, tip)
+    // BUILD 17: the siege this run is (src/game/siege.js), its rules, the
+    // perks the ladder's stars opened, the run's gate plan (R8) and the
+    // kill loot not yet paid as a whole coin
+    this.siege = 1;
+    this.rules = siegeSpec(1);
+    this.perks = [];
+    this.gatePlan = 0;
+    this._lootBank = 0;
+    const fresh = !(game.save.survival && game.save.survival.initialized);
     this._restore(game.save.survival || freshProgress(this.nightDuration));
+    // ?siege=N / { siege } (QA, and a deep link): play that siege. A saved
+    // run of another siege is set aside for a fresh run of this one.
+    const forced = options.siege != null && Number.isFinite(Number(options.siege)) ? clampSiege(options.siege) : null;
+    if (forced) {
+      this.records.ladder.unlocked = Math.max(this.records.ladder.unlocked, forced);
+      if (forced !== this.siege) { this._setSiege(forced); this._freshRunState(); }
+    }
+    if (fresh && !forced) this._freshRunState();
     this.applyHunterStats(false);
     this._configureMansion();
     this._applyEntranceState();
@@ -1298,6 +1356,16 @@ export class SurvivalMode {
     const level = saved && saved.keepLevel == null && saved.perapianLevel != null ? saved.perapianLevel : s.keepLevel;
     this.keepLevel = clamp(Math.round(Number(level) || 1), 1, 3);
     const hp = saved && saved.keepHp != null ? Number(saved.keepHp) : NaN;
+    // (the keep's max needs the siege and the perks: read them first)
+    this.records = { ...freshRecords(), ...(s.records && typeof s.records === 'object' ? s.records : {}) };
+    this.records.ladder = cleanLadder(this.records.ladder);
+    // a save from before the ladder: BUILD 16 played Siege 3's numbers, so
+    // its wins count as Siege 3's (best stars and all) and Siege 4 is open
+    if (!(s.records && s.records.ladder) && (this.records.wins || 0) > 0) {
+      this.records.ladder.best[3] = clamp(Math.round(Number(this.records.bestStars) || 1), 1, 3);
+      this.records.ladder.unlocked = Math.max(this.records.ladder.unlocked, 4);
+    }
+    this._setSiege(s.siege || 1);
     this.keepHp = Number.isFinite(hp) ? clamp(hp, 0, this.keepHpMax()) : this.keepHpMax();
     this.buildings = {};
     this.buildingLevels = {};
@@ -1358,7 +1426,8 @@ export class SurvivalMode {
     this.runStats = { ...freshRunStats(), ...(s.runStats || {}) };
     this.runStats.by = { ...freshKillsBy(), ...((s.runStats && s.runStats.by) || {}) };
     this.runStats.towers = { ...((s.runStats && s.runStats.towers) || {}) };
-    this.records = { ...freshRecords(), ...(s.records && typeof s.records === 'object' ? s.records : {}) };
+    this.gatePlan = clamp(Math.floor(Number(s.gatePlan) || 0), 0, GATE_PLANS.length - 1);
+    this._lootBank = Math.max(0, Math.floor(Number(s.lootBank) || 0));
     this.runResult = (this.phase === 'complete' || this.phase === 'failed') && s.runResult && typeof s.runResult === 'object'
       ? cloneStats(s.runResult) : null;
     this.lastRewards = s.lastRewards || null;
@@ -1419,7 +1488,7 @@ export class SurvivalMode {
     g.enemies.length = 0;
     for (const row of rows) {
       if (!row || !Number.isFinite(row.x) || !Number.isFinite(row.y)) continue;
-      const e = this._makeEnemy(row.kind, row.x, row.y, row.entranceId, row.index || 0);
+      const e = this._makeEnemy(row.kind, row.x, row.y, row.entranceId, row.index || 0, row.id);
       if (!e) continue;
       for (const key of ['id', 'hp', 'hpMax', 'state', 'stateT', 'angle', 'vx', 'vy', 'alpha', 'dead', 'deathT', 'attackCd', 'press', 't']) {
         if (row[key] != null) e[key] = row[key];
@@ -1865,9 +1934,26 @@ export class SurvivalMode {
 
   _nightIntro() {
     const left = 3 - this.nightsCompleted;
-    // the first night says who you are and what you hold (shown once a run)
-    if (this.day === 1) this.pushEvent('night', 'keep', 'HOLD THE KEEP', { sub: 'REINFORCEMENTS IN 3 NIGHTS', life: 3.2 });
-    else this.pushEvent('night', 'moon', `NIGHT ${this.day}`, { sub: left > 1 ? `REINFORCEMENTS IN ${left} NIGHTS` : 'REINFORCEMENTS AT DAWN', life: 2.6 });
+    // the first night says which siege this is and what is new in it (the
+    // rule you will see tonight or soon), then the night is about the keep;
+    // the later nights say what tonight brings (R8: the horde's trait)
+    if (this.day === 1) this.pushEvent('night', this.rules.rule.icon, `SIEGE ${this.siege}: ${this.rules.name}`, { sub: this.rules.rule.text, life: 3.2, siege: this.siege });
+    else this.pushEvent('night', 'moon', `NIGHT ${this.day}`, { sub: this.tonightTrait() || (left > 1 ? `REINFORCEMENTS IN ${left} NIGHTS` : 'REINFORCEMENTS AT DAWN'), life: 2.8 });
+  }
+
+  /**
+   * What tonight brings, in a line (R8, called at dusk): its Breakers and
+   * where, two gates at once, sprinting skulls — the first that applies.
+   */
+  tonightTrait() {
+    const breakers = this.breakerTimes().length;
+    const gate = this.mainGate();
+    const where = gate ? gateLabel(gate) : 'THE MAIN GATE';
+    if (breakers > 1) return `${breakers} BREAKERS AT THE ${where}`;
+    if (breakers === 1) return `A BREAKER AT THE ${where}`;
+    if (this.rules.split) return 'WAVES HIT TWO GATES AT ONCE';
+    if (this.rules.runners) return 'FLYING SKULLS SPRINT';
+    return null;
   }
 
   update(dt) {
@@ -1991,8 +2077,8 @@ export class SurvivalMode {
 
   /** Every wave, Breaker and Individual tonight's schedule holds is out. */
   spawnsDone() {
-    if (this.waveIndex < this.waveTimes().length || this.individualIndex < INDIVIDUAL_TIMES.length) return false;
-    return this.breakerIndex >= (this.day >= 3 ? 2 : this.day >= 2 ? 1 : 0);
+    if (this.waveIndex < this.waveTimes().length || this.individualIndex < this.individualTimes().length) return false;
+    return this.breakerIndex >= this.breakerTimes().length;
   }
 
   /**
@@ -2149,40 +2235,54 @@ export class SurvivalMode {
     const waveTimes = this.waveTimes();
     const counts = this.waveCounts();
     while (this.waveIndex < waveTimes.length && this.elapsed >= duration * waveTimes[this.waveIndex]) {
-      const sent = this.spawnSwarm(counts[this.waveIndex], this.waveIndex);
+      const w = this.waveIndex;
+      // BUILD 17 (Siege 5, TWO GATES): waves 2 and 3 come at two gates at
+      // once — the planned one and the next wave's — half each
+      const partner = this.splitGate(w);
+      const sent = partner ? this.spawnSwarm(Math.ceil(counts[w] / 2), w) : this.spawnSwarm(counts[w], w);
+      const also = partner ? this.spawnSwarm(Math.floor(counts[w] / 2), w, partner, 50) : null;
       this.waveIndex++;
       // BUILD 16 (R6): the call names the gate and how many, and the horde's
       // horn sounds from that side of the screen
-      this.pushEvent('wave', 'swarm', `WAVE ${this.waveIndex}/${waveTimes.length}`,
-        sent && sent.entrance ? { sub: `${gateLabel(sent.entrance)} ×${sent.count}` } : {});
+      let sub = sent && sent.entrance ? `${gateLabel(sent.entrance)} ×${sent.count}` : null;
+      if (sub && also && also.entrance) sub = `${GATE_NAMES[sent.entrance.id] || gateLabel(sent.entrance)} + ${GATE_NAMES[also.entrance.id] || gateLabel(also.entrance)} ×${sent.count + also.count}`;
+      this.pushEvent('wave', 'swarm', `WAVE ${this.waveIndex}/${waveTimes.length}`, sub ? { sub } : {});
       if (sent && sent.entrance && !quiet) this._hornFrom(sent.entrance);
     }
-    const breakerAt = this.day >= 2 ? duration * BREAKER_TIMES[0] : Infinity;
-    if (this.day >= 2 && this.breakerIndex === 0 && this.elapsed >= breakerAt) {
-      const gate = this.spawnBreaker(0);
-      this.breakerIndex = 1;
+    const breakers = this.breakerTimes();
+    while (this.breakerIndex < breakers.length && this.elapsed >= duration * breakers[this.breakerIndex]) {
+      const gate = this.spawnBreaker(this.breakerIndex);
+      this.breakerIndex++;
       if (gate && !quiet) this._hornFrom(gate);
     }
-    if (this.day >= 3 && this.breakerIndex === 1 && this.elapsed >= duration * BREAKER_TIMES[1]) {
-      const gate = this.spawnBreaker(1);
-      this.breakerIndex = 2;
-      if (gate && !quiet) this._hornFrom(gate);
-    }
-    const individualAt = INDIVIDUAL_TIMES;
+    const individualAt = this.individualTimes();
     while (this.individualIndex < individualAt.length && this.elapsed >= duration * individualAt[this.individualIndex]) {
       this.spawnIndividual(this.individualIndex);
       this.individualIndex++;
     }
   }
 
-  spawnSwarm(count, wave, forced = null) {
+  /**
+   * TWO GATES (BUILD 17, Siege 5 on): the second gate wave `w` also comes
+   * to, or null. Only waves 2 and 3, only from Night 2 — Night 1 has no day
+   * before it, nothing built to hold the other gate.
+   */
+  splitGate(w) {
+    if (!this.rules.split || w < 1 || this.day < 2) return null;
+    const own = this.chooseTargetEntrance(0, 0, w);
+    const other = this.chooseTargetEntrance(0, 0, (w + 1) % 3);
+    return other && own && other.id !== own.id ? other : null;
+  }
+
+  spawnSwarm(count, wave, forced = null, idFrom = 0) {
     const g = this.game;
     const entrance = forced || this.chooseTargetEntrance(g.player.x, g.player.y, wave);
     if (!entrance) return;
     const out = outwardOf(entrance);
     const along = { x: -out.y, y: out.x };
-    const total = clamp(Math.round(count), 1, SWARM_CAP);
+    const total = clamp(Math.round(count), 1, SIEGE_SWARM_CAP);
     const queued = this.crowdAt(entrance.id).length;
+    const rules = this.spawnRules();
     for (let i = 0; i < total; i++) {
       const row = Math.floor(i / 7);
       const col = i % 7;
@@ -2191,8 +2291,8 @@ export class SurvivalMode {
       const { x, y } = this._outsideSpot(entrance, out, along, lateral, depth);
       // Ranks count from the front of *this* door's crowd: a wave that joins
       // an existing crowd queues behind it, a fresh door starts at rank 0.
-      const body = new SurvivalCrowdZombie(x, y, entrance, queued + i, this.day);
-      body.id = 1000000 + this.day * 10000 + wave * 100 + i;
+      // (The id is the body's for good: its kind and size come from it.)
+      const body = new SurvivalCrowdZombie(x, y, entrance, queued + i, this.day, rules, 1000000 + this.day * 10000 + wave * 100 + idFrom + i);
       g.enemies.push(body);
     }
     this.nightStats.spawned = (this.nightStats.spawned || 0) + total;
@@ -2242,7 +2342,7 @@ export class SurvivalMode {
     const jx = rand(-42, 42), jy = rand(-42, 42);
     const depth = 180 + index * 54 + (out.x * jx + out.y * jy);
     const { x, y } = this._outsideSpot(entrance, out, along, along.x * jx + along.y * jy, depth);
-    const enemy = new SurvivalIndividualZombie(x, y, entrance, this.day, index);
+    const enemy = new SurvivalIndividualZombie(x, y, entrance, this.day, index, this.spawnRules());
     enemy.id = 2000000 + this.day * 100 + index;
     g.enemies.push(enemy);
     this.nightStats.spawned = (this.nightStats.spawned || 0) + 1;
@@ -2257,7 +2357,7 @@ export class SurvivalMode {
     const jx = rand(-20, 20), jy = rand(-20, 20);
     const depth = 330 + index * 80 + (out.x * jx + out.y * jy);
     const { x, y } = this._outsideSpot(entrance, out, along, along.x * jx + along.y * jy, depth);
-    const breaker = new SurvivalBreaker(x, y, entrance, this.day, index);
+    const breaker = new SurvivalBreaker(x, y, entrance, this.day, index, this.spawnRules());
     breaker.id = 3000000 + this.day * 10 + index;
     // Preserve a permanent structure target even if the hero is the nearest
     // visible actor. This is also surfaced to QA diagnostics.
@@ -2277,7 +2377,8 @@ export class SurvivalMode {
     // its biggest waves never reached the Perapian before dawn. Night 3 now
     // opens with the chapel (near), presses the palisade, and ends with its
     // largest wave on the front gate beside both Breakers.
-    const plan = NIGHT_DOORS[clamp(this.day - 1, 0, NIGHT_DOORS.length - 1)];
+    const nights = GATE_PLANS[this.gatePlan] || GATE_PLANS[0];
+    const plan = nights[clamp(this.day - 1, 0, nights.length - 1)];
     const wanted = plan[offset % plan.length];
     const exact = doors.find((e) => e.id === wanted);
     if (exact) return exact;
@@ -2293,7 +2394,7 @@ export class SurvivalMode {
   /**
    * BUILD 13 (V10, docs/VISUAL-LAYOUT-RESEARCH.md §7: "info gelombang
    * sebelum malam"): the coming night's attack gate by gate, known by day —
-   * the plan updateWaves() will play (NIGHT_DOORS for the swarm waves and the
+   * the plan updateWaves() will play (the run's gate plan for the swarm waves and the
    * Individuals, the Breakers at the main gate from Night 2). By day
    * `this.day` is the night to come. Rows in first-contact order:
    * { id, entrance, swarm, waves: [1..3], individuals, breakers }.
@@ -2308,14 +2409,18 @@ export class SurvivalMode {
     };
     const counts = this.waveCounts();
     for (let w = 0; w < this.waveTimes().length; w++) {
+      const partner = this.splitGate(w);
       const r = row(this.chooseTargetEntrance(0, 0, w));
-      if (r) { r.swarm += clamp(Math.round(counts[w]), 1, SWARM_CAP); r.waves.push(w + 1); }
+      const n = partner ? Math.ceil(counts[w] / 2) : counts[w];
+      if (r) { r.swarm += clamp(Math.round(n), 1, SIEGE_SWARM_CAP); r.waves.push(w + 1); }
+      const r2 = partner ? row(partner) : null;
+      if (r2) { r2.swarm += clamp(Math.round(Math.floor(counts[w] / 2)), 1, SIEGE_SWARM_CAP); r2.waves.push(w + 1); }
     }
-    for (let i = 0; i < INDIVIDUAL_TIMES.length; i++) {
+    for (let i = 0; i < this.individualTimes().length; i++) {
       const r = row(this.chooseTargetEntrance(0, 0, i + 2));
       if (r) r.individuals += 1;
     }
-    const breakers = this.day >= 3 ? BREAKER_TIMES.length : this.day >= 2 ? 1 : 0;
+    const breakers = this.breakerTimes().length;
     if (breakers) { const r = row(this.mainGate()); if (r) r.breakers += breakers; }
     return [...rows.values()];
   }
@@ -2472,7 +2577,8 @@ export class SurvivalMode {
 
   /** Claws are never blunted or blocked: the banner only strengthens the garrison. */
   enemyCanAttack() { return true; }
-  enemyAttackMul() { return 1; }
+  /** Their claws on the captain and the guards: the siege's (BUILD 17; 1 at Siege 3). */
+  enemyAttackMul() { return this.tonightMul('bite'); }
 
   /**
    * BUILD 10: the gates open for the captain. Walking into a gate's mouth (or
@@ -3221,7 +3327,12 @@ export class SurvivalMode {
     return this._keep;
   }
 
-  keepHpMax(level = this.keepLevel) { return this.tuning.keepHp[clamp(Math.round(level) || 1, 1, 3)] || 600; }
+  /** The keep's HP at a level: the siege's share of it, and STONE KEEP (BUILD 17). */
+  keepHpMax(level = this.keepLevel) {
+    const base = this.tuning.keepHp[clamp(Math.round(level) || 1, 1, 3)] || 600;
+    const k = ((this.rules && this.rules.keep) || 1) * (1 + this.perkValue('stone'));
+    return k === 1 ? base : Math.round(base * k);
+  }
 
   /**
    * What the keep shows (tower, townsfolk, HUD), most urgent first:
@@ -3246,7 +3357,7 @@ export class SurvivalMode {
   /** A body at the keep's wall claws it. At 0 HP the run is lost. */
   hitKeep(enemy) {
     if (this.phase !== 'night' || this.keepHp <= 0) return;
-    const amount = KEEP.damage[enemy._survivalType] || KEEP.damage.swarm;
+    const amount = (KEEP.damage[enemy._survivalType] || KEEP.damage.swarm) * this.tonightMul('claw');
     const before = this.keepHp;
     this.keepHp = Math.max(0, this.keepHp - amount);
     const lost = before - this.keepHp;
@@ -3473,7 +3584,7 @@ export class SurvivalMode {
     if (!this.canAfford(spec)) return false;
     this.gold -= spec.gold; this.wood -= spec.wood;
     this.selectedRoom = slotId;
-    this.builderJob = { kind: 'building', type, slotId, roomId: slot.room, remaining: spec.seconds, duration: spec.seconds };
+    this.builderJob = { kind: 'building', type, slotId, roomId: slot.room, remaining: jobTime(spec.seconds), duration: jobTime(spec.seconds) };
     g.audio.play('woodPickup', { vol: 0.45 });
     this._persist(true);
     return true;
@@ -3484,7 +3595,7 @@ export class SurvivalMode {
     const cost = this.tuning.gateCost;
     if (!this.canAfford(cost)) return false;
     this.gold -= cost.gold; this.wood -= cost.wood;
-    this.builderJob = { kind: 'gate', type: 'gate', remaining: cost.seconds, duration: cost.seconds };
+    this.builderJob = { kind: 'gate', type: 'gate', remaining: jobTime(cost.seconds), duration: jobTime(cost.seconds) };
     this.game.audio.play('woodPickup', { vol: 0.45 });
     this._persist(true);
     return true;
@@ -3499,7 +3610,7 @@ export class SurvivalMode {
     const cost = this.tuning.keepUpgrade[target];
     if (!cost || !this.canAfford(cost)) return false;
     this.gold -= cost.gold; this.wood -= cost.wood;
-    this.builderJob = { kind: 'keep', type: 'keep', targetLevel: target, remaining: cost.seconds, duration: cost.seconds };
+    this.builderJob = { kind: 'keep', type: 'keep', targetLevel: target, remaining: jobTime(cost.seconds), duration: jobTime(cost.seconds) };
     this.game.audio.play('uiConfirm', { vol: 0.55 });
     this._persist(true);
     return true;
@@ -3516,7 +3627,7 @@ export class SurvivalMode {
     const cost = this.keepRepairCost();
     if (!cost || !this.canAfford(cost)) return false;
     this.wood -= cost.wood;
-    this.builderJob = { kind: 'repair', type: 'repair', remaining: cost.seconds, duration: cost.seconds };
+    this.builderJob = { kind: 'repair', type: 'repair', remaining: jobTime(cost.seconds), duration: jobTime(cost.seconds) };
     this.game.audio.play('woodPickup', { vol: 0.45 });
     this._persist(true);
     return true;
@@ -3553,7 +3664,7 @@ export class SurvivalMode {
     this.selectedRoom = slotId;
     const targetLevel = this.buildingLevel(slotId) + 1;
     const slot = SLOT_BY_ID.get(slotId);
-    this.builderJob = { kind: 'upgrade', type, slotId, roomId: slot ? slot.room : null, targetLevel, remaining: cost.seconds, duration: cost.seconds };
+    this.builderJob = { kind: 'upgrade', type, slotId, roomId: slot ? slot.room : null, targetLevel, remaining: jobTime(cost.seconds), duration: jobTime(cost.seconds) };
     this.game.audio.play('woodPickup', { vol: 0.45 });
     this._persist(true);
     return true;
@@ -3565,7 +3676,27 @@ export class SurvivalMode {
     for (const [slotId, type] of Object.entries(this.buildings)) {
       if (type === 'mine') total += this.buildingStats(type, this.buildingLevel(slotId)).yield || 0;
     }
-    return total;
+    // BUILD 17: thinner at the top of the ladder, RICH MINES on top
+    return total * this.incomeMul() * (1 + this.perkValue('mines'));
+  }
+
+  /** How much of BUILD 16's pay a siege gives (night pay, mines, sawmills, kill wood). */
+  incomeMul() { return (this.rules && this.rules.income) || 1; }
+
+  /**
+   * Tonight's share of a siege multiplier (count, hp, bite, claw, speed).
+   * Night 1 has no day before it — nothing built, one captain and his two
+   * guards — so above Siege 3 it takes only NIGHT1_SHARE of the siege's
+   * extra; the ladder's weight falls on Nights 2 and 3 and on the purse.
+   */
+  tonightMul(key) {
+    const k = (this.rules && this.rules[key]) || 1;
+    return this.day <= 1 && k > 1 ? 1 + (k - 1) * NIGHT1_SHARE : k;
+  }
+
+  /** The rules a body spawned tonight is made with (its HP and pace tonight). */
+  spawnRules() {
+    return { ...this.rules, hp: this.tonightMul('hp'), speed: this.tonightMul('speed') };
   }
 
   goldRate() { return this.goldPerNight() / Math.max(1, this.nightDuration); }
@@ -3583,7 +3714,12 @@ export class SurvivalMode {
     return SURVIVAL_HUNTER[clamp(Math.round(level) || 1, 1, HUNTER_MAX_LEVEL)];
   }
 
-  hunterDamage() { return this.hunterStats().damage; }
+  /** The captain's bolt: his level's, SHARP BOLTS on top (BUILD 17). */
+  hunterDamage(level = this.hunterLevel) {
+    const base = this.hunterStats(level).damage;
+    const k = 1 + this.perkValue('bolts');
+    return k === 1 ? base : Math.round(base * k);
+  }
 
   hunterUpgradeCost() {
     if (this.hunterLevel >= HUNTER_MAX_LEVEL) return null;
@@ -3596,7 +3732,7 @@ export class SurvivalMode {
     const cost = this.hunterUpgradeCost();
     if (!cost || !this.canAfford(cost)) return false;
     this.gold -= cost.gold; this.wood -= cost.wood;
-    this.builderJob = { kind: 'hunter', type: 'hunter', targetLevel: this.hunterLevel + 1, remaining: cost.seconds, duration: cost.seconds };
+    this.builderJob = { kind: 'hunter', type: 'hunter', targetLevel: this.hunterLevel + 1, remaining: jobTime(cost.seconds), duration: jobTime(cost.seconds) };
     this.game.audio.play('uiConfirm', { vol: 0.55 });
     this._persist(true);
     return true;
@@ -3618,7 +3754,7 @@ export class SurvivalMode {
     const cost = this.armsUpgradeCost();
     if (!cost || !this.canAfford(cost)) return false;
     this.gold -= cost.gold; this.wood -= cost.wood;
-    this.builderJob = { kind: 'arms', type: 'arms', targetLevel: this.armsLevel + 1, remaining: cost.seconds, duration: cost.seconds };
+    this.builderJob = { kind: 'arms', type: 'arms', targetLevel: this.armsLevel + 1, remaining: jobTime(cost.seconds), duration: jobTime(cost.seconds) };
     this.game.audio.play('uiConfirm', { vol: 0.55 });
     this._persist(true);
     return true;
@@ -3727,7 +3863,9 @@ export class SurvivalMode {
       if (!e.exterior || e.kind !== 'door') continue;
       const base = e.baseHpMax || e.hpMax || 100;
       const extra = e === gate && this.gateBuilt ? this.tuning.gateHpBonus : 0;
-      e.hpMax = Math.round(base * (1 + bonus)) + extra;
+      // BUILD 17: the siege's gates (sturdier on the first two), OAK GATES
+      const k = (this.rules.gates || 1) * (1 + this.perkValue('oak'));
+      e.hpMax = Math.round(base * (1 + bonus) * k) + extra;
       if (!Number.isFinite(e.hp)) e.hp = e.hpMax;
       if (e === gate && repairGate) { e.hp = e.hpMax; e.broken = false; e.open = false; }
       else if (!night && !e.broken) e.hp = e.hpMax;
@@ -3742,8 +3880,10 @@ export class SurvivalMode {
     g._survivalHint = null;   // a night's hint chip never runs on into the day
     this.recenterCamera(true);
     const dayIndex = clamp(this.day - 1, 0, 2);
-    let gold = this.tuning.nightRewards.gold[dayIndex];
-    let wood = this.tuning.nightRewards.wood[dayIndex];
+    // BUILD 17: the siege's share of the night's pay (thinner up the ladder)
+    const income = this.incomeMul();
+    let gold = Math.round(this.tuning.nightRewards.gold[dayIndex] * income);
+    let wood = Math.round(this.tuning.nightRewards.wood[dayIndex] * income);
     // guards lost during the night are already gone from the roster; anyone
     // still down gets up at dawn (the snap below heals the garrison)
     const lost = this.nightStats.lost || 0;
@@ -3754,7 +3894,7 @@ export class SurvivalMode {
     const sawmills = [];
     for (const [slotId, type] of Object.entries(this.buildings)) {
       if (type !== 'sawmill') continue;
-      const planks = this.buildingStats(type, this.buildingLevel(slotId)).dawnWood || 0;
+      const planks = Math.round((this.buildingStats(type, this.buildingLevel(slotId)).dawnWood || 0) * income);
       sawn += planks;
       sawmills.push({ slotId, wood: planks });
     }
@@ -3784,10 +3924,12 @@ export class SurvivalMode {
     this.cleared = null;
     this.stragglers = null;
     const mined = Math.round(this.nightStats.mined || 0);
-    // kills pay a little (guards shoot too, so this stays a trickle)
-    const killGold = Math.floor(this.nightStats.kills / 6);
-    const killWood = Math.floor(this.nightStats.kills / 4);
-    gold += killGold; wood += killWood;
+    // kills pay a little (guards shoot too, so this stays a trickle). BUILD
+    // 17: the gold came at the kills themselves, a coin at a time (the loot
+    // row of the dawn card, _payLoot); the wood still comes at dawn
+    const loot = Math.round(this.nightStats.loot || 0);
+    const killWood = Math.floor(this.nightStats.kills / 4 * income);
+    wood += killWood;
     this.gold = clamp(this.gold + gold, 0, RESOURCE_CAP);
     this.wood = clamp(this.wood + wood, 0, RESOURCE_CAP);
     this.nightsCompleted = Math.min(3, this.nightsCompleted + 1);
@@ -3795,11 +3937,12 @@ export class SurvivalMode {
     this._keepAtDawn = this.keepHp / Math.max(1, this.keepHpMax());
     // the townsfolk patch part of the keep for free; the rest is wood by day
     const missing = Math.max(0, this.keepHpMax() - this.keepHp);
-    const patched = Math.round(missing * this.tuning.keepDawnHeal);
+    // (BITTER DAWN, Siege 9: the townsfolk patch nothing)
+    const patched = this.rules.bitter ? 0 : Math.round(missing * this.tuning.keepDawnHeal);
     this.keepHp = Math.min(this.keepHpMax(), this.keepHp + patched);
     this.repairDoors();
     this.lastRewards = {
-      gold, wood, kills: this.nightStats.kills, walls: this.nightStats.damageToWalls,
+      gold, wood, loot, kills: this.nightStats.kills, walls: this.nightStats.damageToWalls,
       survivors: this.survivors - survivorsBefore, keepDamage: Math.round(this.nightStats.keepDamage || 0),
       keepPatched: patched, mined, lost, rescued: this.nightStats.rescued || 0,
       reinforcements: Math.max(0, 3 - this.nightsCompleted),
@@ -3863,17 +4006,87 @@ export class SurvivalMode {
     this._persist(true);
   }
 
+  /* ---------------- BUILD 17: the siege ladder (src/game/siege.js) ---------------- */
+
+  /** Make `level` this run's siege: its rules, and the perks the ladder's stars opened. */
+  _setSiege(level) {
+    this.siege = clampSiege(level);
+    this.rules = siegeSpec(this.siege);
+    if (!this.records.ladder) this.records.ladder = freshLadder();
+    this.perks = perksFor(totalStars(this.records.ladder));
+    return this.siege;
+  }
+
+  hasPerk(id) { return this.perks.includes(id); }
+  perkValue(id) { return this.hasPerk(id) ? PERK_EFFECT[id] || 0 : 0; }
+  ladder() { return this.records.ladder; }
+  starsTotal() { return totalStars(this.records.ladder); }
+  siegeUnlocked(level) { return clampSiege(level) <= this.records.ladder.unlocked; }
+
+  /**
+   * A run's first state: the siege's purse (+ WAR CHEST), the garrison
+   * (+ VETERANS), the keep at full (its siege and STONE KEEP), the gate plan
+   * this run takes (R8: the save's run count), no loot banked, and the
+   * captain at the gate the first wave comes to (R6: the opening frames him
+   * there and Night 1's first fight is in front of him, not across the
+   * bailey; he still only ever moves by the stick).
+   */
+  _freshRunState() {
+    this._setSiege(this.siege);
+    const start = this.rules.start || { gold: this.tuning.startGold, wood: this.tuning.startWood };
+    this.gold = start.gold + this.perkValue('chest');
+    this.wood = start.wood;
+    this.survivors = this.tuning.startSurvivors + this.perkValue('veterans');
+    this.keepLevel = 1;
+    this.keepHp = this.keepHpMax(1);
+    this.nightKeepStart = this.keepHp;
+    this.gatePlan = gatePlanFor(this.records.runs || 0);
+    this._lootBank = 0;
+    const p = this.game.player;
+    const spot = this.runStartSpot();
+    if (p && spot) { p.x = spot.x; p.y = spot.y; p.vx = 0; p.vy = 0; p.angle = spot.angle; }
+  }
+
+  /**
+   * Where a run starts the captain: a step inside the gate Night 1's first
+   * wave comes to, facing it (the north gate in every gate plan). Falls back
+   * to his home by the keep.
+   */
+  runStartSpot() {
+    const m = this.game.mansion;
+    const plan = GATE_PLANS[this.gatePlan] || GATE_PLANS[0];
+    const gate = m.isFortress ? this.entranceById(plan[0][0]) : null;
+    if (!gate || !gate.inside) { const home = this.hunterHome(); return { x: home.x, y: home.y, angle: -Math.PI / 2 }; }
+    const out = outwardOf(gate);
+    for (const back of [150, 190, 230, 120]) {
+      const x = gate.x - out.x * back + out.y * 34, y = gate.y - out.y * back - out.x * 34;
+      if (!m.solidAt || (!m.solidAt(x, y) && !m.solidAt(x + 16, y) && !m.solidAt(x - 16, y) && !m.solidAt(x, y + 16) && !m.solidAt(x, y - 16))) {
+        return { x, y, angle: Math.atan2(out.y, out.x) };
+      }
+    }
+    const home = this.hunterHome();
+    return { x: home.x, y: home.y, angle: -Math.PI / 2 };
+  }
+
+  /** Start a fresh run of an open siege (the end panel's NEXT / easier, the pause panel). */
+  startSiege(level) {
+    const lv = clampSiege(level);
+    if (!this.siegeUnlocked(lv)) return false;
+    this._setSiege(lv);
+    this.restart();
+    return true;
+  }
+
   restart() {
     const g = this.game;
     const duration = this.nightDuration;
     Object.assign(this, {
-      phase: 'night', day: 1, elapsed: 0, gold: this.tuning.startGold, wood: this.tuning.startWood,
-      survivors: this.tuning.startSurvivors, keepLevel: 1, keepHp: this.tuning.keepHp[1],
-      buildings: {}, buildingLevels: {}, hunterLevel: 1, armsLevel: 1, gateBuilt: false,
+      phase: 'night', day: 1, elapsed: 0,
+      keepLevel: 1, buildings: {}, buildingLevels: {}, hunterLevel: 1, armsLevel: 1, gateBuilt: false,
       gateHp: 0, builderJob: null, selectedRoom: null, nightsCompleted: 0, waveIndex: 0,
       breakerIndex: 0, individualIndex: 0, siegeTimers: Object.create(null),
       nightStats: freshNightStats(), runStats: freshRunStats(), lastRewards: null, skillCooldown: 0, cleared: null, stragglers: null,
-      rewardAck: 0, dayFocus: null, nightKeepStart: this.tuning.keepHp[1], walkPath: null, lastBuilt: null,
+      rewardAck: 0, dayFocus: null, walkPath: null, lastBuilt: null,
       cine: null, reinforcements: null, runResult: null,
     });
     this._resetNightFx();
@@ -3883,8 +4096,9 @@ export class SurvivalMode {
       e.flash = 0; e.attackers = 0;
     }
     g.enemies.length = 0; g.bolts.length = 0;
-    const home = this.hunterHome();
-    g.player.x = home.x; g.player.y = home.y;
+    // the siege's purse and garrison, the perks, the run's gate plan, and the
+    // captain at the gate the first wave comes to (_freshRunState)
+    this._freshRunState();
     this.applyHunterStats(true);
     g.player.weapon = 'shot'; g.player.state = 'idle';
     this.nightDuration = duration;
@@ -3911,6 +4125,11 @@ export class SurvivalMode {
     const stars = survivalStars(won, rs);
     const prev = { ...freshRecords(), ...(this.records || {}) };
     const kills = rs.kills || 0;
+    // BUILD 17: the siege ladder — the best stars of this siege, the next
+    // siege opened by a win, and the perks the new star total opens
+    const ladder = cleanLadder(prev.ladder);
+    const opened = recordRun(ladder, this.siege, won, stars);
+    this.perks = perksFor(opened.stars);
     this.records = {
       runs: prev.runs + 1,
       wins: prev.wins + (won ? 1 : 0),
@@ -3918,6 +4137,7 @@ export class SurvivalMode {
       bestNights: Math.max(prev.bestNights, nights),
       bestKills: Math.max(prev.bestKills, kills),
       totalKills: prev.totalKills + kills,
+      ladder,
     };
     this.runResult = {
       won, stars, nights, kills,
@@ -3931,6 +4151,13 @@ export class SurvivalMode {
       time: Math.round(rs.time || 0),
       mvp: survivalMvp(rs),
       tip: won ? null : this._lossTip(),
+      // BUILD 17: which siege, what the run opened, the loot it took
+      siege: this.siege,
+      unlocked: opened.unlocked,
+      perks: opened.perks.slice(),
+      starsTotal: opened.stars,
+      starsGained: opened.gained,
+      loot: Math.round(rs.loot || 0),
     };
     return this.runResult;
   }
@@ -3940,9 +4167,13 @@ export class SurvivalMode {
     if (this.runResult) return this.runResult;
     if (this.phase !== 'complete' && this.phase !== 'failed') return null;
     const records = this.records;
+    const ladder = cleanLadder(records.ladder);
     const result = this._finishRun(this.phase === 'complete');
     this.records = records;          // reading an old save is not a new run
+    this.records.ladder = ladder;
+    this.perks = perksFor(totalStars(ladder));
     result.newBest = false;
+    result.unlocked = null; result.perks = []; result.starsGained = 0; result.starsTotal = totalStars(ladder);
     return result;
   }
 
@@ -4015,6 +4246,7 @@ export class SurvivalMode {
     this.nightStats.by[src] = (this.nightStats.by[src] || 0) + 1;
     this.runStats.kills++;
     this.runStats.by[src] = (this.runStats.by[src] || 0) + 1;
+    this._payLoot(enemy);
     if (src === 'tower' && enemy._lastHitBy) {
       const tower = enemy._lastHitBy;
       tower.kills = (tower.kills || 0) + 1;
@@ -4060,6 +4292,31 @@ export class SurvivalMode {
       // a busy gate stutter and stretched the night)
       g.renderer.shake(this._streak >= 3 ? 0.08 : 0.05);
     } else if (this._streak >= 3) g.renderer.shake(0.05);
+  }
+
+  /**
+   * BUILD 17 (the hook): kills pay their gold on the spot. Every kill banks
+   * the siege's share of a coin (SIEGES[n].loot: one coin per two kills on
+   * Siege 1, per six on Siege 3 — BUILD 16's dawn pay of kills / 6 — fewer
+   * up the ladder); a whole coin pops off the body, flies to the purse and
+   * the purse counts it. Integer banking: Siege 3 pays exactly what BUILD 16
+   * paid at dawn.
+   */
+  _payLoot(enemy) {
+    const [coins, per] = this.rules.loot || [1, 6];
+    this._lootBank = (this._lootBank || 0) + coins;
+    if (this._lootBank < per) return;
+    const n = Math.floor(this._lootBank / per);
+    this._lootBank -= n * per;
+    this.gold = Math.min(RESOURCE_CAP, this.gold + n);
+    this.nightStats.loot = (this.nightStats.loot || 0) + n;
+    this.runStats.loot = (this.runStats.loot || 0) + n;
+    if (enemy && Number.isFinite(enemy.x)) {
+      this.pushFx('coin', enemy.x, enemy.y, { loot: true });
+      this.pushFloater(enemy.x, enemy.y, `+${n}`, '#ffd24a', { h: 96, size: 20, icon: 'gold', life: 1.0, pop: 1.35, kind: 'income' });
+    }
+    this.pushHudPop('gold', `+${n}`, 'skull');
+    this.game.audio.play('coin', { vol: 0.32 });
   }
 
   onPlayerHurt(amount) {
@@ -4335,15 +4592,32 @@ export class SurvivalMode {
 
   /* ---------------- threat model helpers ---------------- */
 
-  waveCounts() { return WAVE_COUNTS[clamp(this.day, 1, 3) - 1].slice(); }
+  /** Tonight's waves, body counts: BUILD 16's times the siege's (capped per gate). */
+  waveCounts() {
+    const k = this.tonightMul('count');
+    return WAVE_COUNTS[clamp(this.day, 1, 3) - 1].map((n) => clamp(Math.round(n * k), 1, SIEGE_SWARM_CAP));
+  }
 
-  /** Tonight's wave marks (shares of the night): Nights 2–3 set out at once (BUILD 16, R6). */
-  waveTimes() { return this.day >= 2 ? WAVE_TIMES_LATER : WAVE_TIMES; }
+  /**
+   * Tonight's wave marks (shares of the night): Nights 2–3 set out at once
+   * (BUILD 16, R6). A small siege squeezes its marks toward the night's
+   * start (`pace`) so its few bodies come close together, and the night is
+   * cleared early instead of waiting through empty stretches.
+   */
+  waveTimes() { return this._paced(this.day >= 2 ? WAVE_TIMES_LATER : WAVE_TIMES); }
+  breakerTimes() { return this._paced(BREAKER_TIMES[clamp(this._tonight('breakers'), 0, BREAKER_TIMES.length - 1)]); }
+  individualTimes() { return this._paced(INDIVIDUAL_TIMES[clamp(this._tonight('individuals'), 0, INDIVIDUAL_TIMES.length - 1)]); }
+  _tonight(key) { const row = this.rules[key]; return row ? Math.max(0, Math.floor(row[clamp(this.day, 1, 3) - 1] || 0)) : 0; }
+  _paced(marks) {
+    const k = this.rules.pace || 1;
+    return k === 1 ? marks : marks.map((at, i) => (i === 0 && at < 0.05 ? at : at * k));
+  }
 
   swarmSpeed(breached) {
     const base = 59 + Math.max(0, this.day - 1) * 5;
+    const k = this.tonightMul('speed');
     // Inside the walls they rush; outside they shamble in ranks.
-    return breached ? 92 * (1 + (this.day - 1) * 0.08) : base;
+    return (breached ? 92 * (1 + (this.day - 1) * 0.08) : base) * k;
   }
 
   _field(key) {
@@ -4418,8 +4692,7 @@ export class SurvivalMode {
 
   nightSchedule() {
     const marks = this.waveTimes().map((at, i) => ({ at, kind: 'wave', done: this.waveIndex > i }));
-    if (this.day >= 2) marks.push({ at: BREAKER_TIMES[0], kind: 'breaker', done: this.breakerIndex >= 1 });
-    if (this.day >= 3) marks.push({ at: BREAKER_TIMES[1], kind: 'breaker', done: this.breakerIndex >= 2 });
+    this.breakerTimes().forEach((at, i) => marks.push({ at, kind: 'breaker', done: this.breakerIndex > i }));
     return marks;
   }
 
@@ -4468,7 +4741,7 @@ export class SurvivalMode {
   /* ---------------- banners + floating numbers ---------------- */
 
   pushEvent(kind, icon, text, opts = {}) {
-    const ev = { kind, icon, text, sub: opts.sub || null, life: opts.life || 1.9, age: 0 };
+    const ev = { kind, icon, text, sub: opts.sub || null, life: opts.life || 1.9, age: 0, siege: opts.siege || null };
     const urgent = kind === 'breach' || kind === 'keep' || kind === 'breaker' || kind === 'keepLow';
     // a guard alarm is next in line (its clock is running), once per kind:
     // two guards falling together raise one banner, the HUD counts them
@@ -4586,14 +4859,18 @@ export class SurvivalMode {
         inLine: this.reinforcements.filter((s) => s.i >= s.path.length).length,
       } : null,
       introSeen: !!(this.game.save.survival && this.game.save.survival.introSeen),
+      // BUILD 17: the siege ladder
+      siege: this.siege, unlocked: this.records.ladder.unlocked, stars: this.starsTotal(), perks: this.perks.slice(),
+      gatePlan: this.gatePlan, loot: Math.round(this.nightStats.loot || 0),
     };
   }
 
-  _makeEnemy(kind, x, y, entranceId, index) {
+  _makeEnemy(kind, x, y, entranceId, index, id = null) {
     const entrance = this.entranceById(entranceId) || this.mainGate();
-    if (kind === 'swarm') return new SurvivalCrowdZombie(x, y, entrance, index, this.day);
-    if (kind === 'individual') return new SurvivalIndividualZombie(x, y, entrance, this.day, index);
-    if (kind === 'breaker') return new SurvivalBreaker(x, y, entrance, this.day, index);
+    const rules = this.spawnRules();
+    if (kind === 'swarm') return new SurvivalCrowdZombie(x, y, entrance, index, this.day, rules, id);
+    if (kind === 'individual') return new SurvivalIndividualZombie(x, y, entrance, this.day, index, rules);
+    if (kind === 'breaker') return new SurvivalBreaker(x, y, entrance, this.day, index, rules);
     return null;
   }
 
@@ -4627,7 +4904,8 @@ export class SurvivalMode {
     s.nightStats = cloneStats(this.nightStats); s.lastRewards = this.lastRewards ? { ...this.lastRewards } : null;
     s.cleared = this.phase === 'night' && this.cleared ? { ...this.cleared } : null;
     s.runStats = cloneStats(this.runStats);
-    s.records = { ...this.records };
+    s.records = { ...this.records, ladder: cleanLadder(this.records.ladder) };
+    s.siege = this.siege; s.gatePlan = this.gatePlan; s.lootBank = this._lootBank;
     s.runResult = this.runResult ? cloneStats(this.runResult) : null;
     s.rewardAck = this.rewardAck;
     s.player = { x: g.player.x, y: g.player.y, angle: g.player.angle, blood: g.player.blood };
