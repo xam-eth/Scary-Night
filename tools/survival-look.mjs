@@ -8,7 +8,7 @@
  * each frame (horde kinds, GLB guards, effects).
  *
  * Usage: node tools/survival-look.mjs [--out=/tmp/look] [--dpr=2]
- *        [--port=8123] [--only=gate,fight,outside,posts,wide,south,day0,day,build]
+ *        [--port=8123] [--only=gate,fight,outside,posts,wide,south,day0,day,build,overview,closeup]
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -198,6 +198,29 @@ await shot('build', () => {
   g.renderer.snapCamera && g.renderer.snapCamera(g.player.x, g.player.y);
   window.__lkReal(12);
   return { here: m.dayContext && m.dayContext(), ...window.__lkDiag() };
+});
+// BUILD 12: the dynamic camera — all the way out (the whole bailey, wall to
+// wall, on a sideways phone) and all the way in (one district up close)
+await shot('overview', () => {
+  const g = window.__LN; const m = g.survival;
+  if (m.phase === 'night') m.completeNight();
+  if (m.rewardPending && m.rewardPending()) m.ackRewards();
+  const keep = m.keep(); const home = m.hunterHome();
+  g.player.x = home.x; g.player.y = home.y;
+  m._userZoom = 0.42; m._zoomGoal = null;
+  m.camPan.x = keep.x - home.x; m.camPan.y = keep.y - home.y + 40;
+  g.renderer.snapCamera && g.renderer.snapCamera(keep.x, keep.y);
+  window.__lkReal(60);
+  return { zoom: +g.renderer.cam.zoom.toFixed(3), user: m.userZoom(), ...window.__lkDiag() };
+});
+await shot('closeup', () => {
+  const g = window.__LN; const m = g.survival;
+  const spot = m.buildingSpot('ward');
+  g.player.x = spot.x + 90; g.player.y = spot.y + 90;
+  m._userZoom = 1.6; m._zoomGoal = null; m.recenterCamera(true);
+  g.renderer.snapCamera && g.renderer.snapCamera(g.player.x, g.player.y);
+  window.__lkReal(60);
+  return { zoom: +g.renderer.cam.zoom.toFixed(3), ...window.__lkDiag() };
 });
 console.log(`errors ${errors.length}`);
 await browser.close();

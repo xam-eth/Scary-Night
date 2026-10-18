@@ -1,6 +1,6 @@
 {
   "title": "Survival FTUE — first 30 playable seconds",
-  "capturedAt": "2026-10-17T11:55:53.324Z",
+  "capturedAt": "2026-10-18T00:35:18.662Z",
   "viewport": {
     "width": 390,
     "height": 844,
@@ -28,7 +28,9 @@
           "wood": 26
         },
         "ui": [
-          "PAUSE"
+          "PAUSE",
+          "survival:ZOOM IN",
+          "survival:ZOOM OUT"
         ],
         "coach": false,
         "narration": false,
@@ -37,12 +39,22 @@
         "proxyCrowd": 0,
         "keepHp": 600,
         "keepMesh": true,
-        "territoryPlanes": 5,
+        "banner": {
+          "visible": true,
+          "reach": 900,
+          "edgeSegments": 92
+        },
+        "decor": {
+          "placed": 22,
+          "missing": 0,
+          "merged": 12,
+          "meshes": 16
+        },
         "fortressTowers": 12,
-        "fortressMeshes": 13,
-        "fortressMerlons": 52,
-        "curtainRun": 3614,
-        "curtainSlots": 74,
+        "fortressMeshes": 16,
+        "fortressMerlons": 108,
+        "curtainRun": 6314,
+        "curtainSlots": 132,
         "renderMode": "webgl-3d",
         "hordeDrawn": 0,
         "hordeKinds": [
@@ -72,21 +84,33 @@
           "wood": 26
         },
         "ui": [
-          "PAUSE"
+          "PAUSE",
+          "survival:ZOOM IN",
+          "survival:ZOOM OUT"
         ],
         "coach": false,
         "narration": false,
-        "swarm": 19,
+        "swarm": 21,
         "riggedCrowd": 0,
-        "proxyCrowd": 19,
+        "proxyCrowd": 21,
         "keepHp": 600,
         "keepMesh": true,
-        "territoryPlanes": 5,
+        "banner": {
+          "visible": true,
+          "reach": 900,
+          "edgeSegments": 92
+        },
+        "decor": {
+          "placed": 22,
+          "missing": 0,
+          "merged": 12,
+          "meshes": 16
+        },
         "fortressTowers": 12,
-        "fortressMeshes": 13,
-        "fortressMerlons": 52,
-        "curtainRun": 3614,
-        "curtainSlots": 74,
+        "fortressMeshes": 16,
+        "fortressMerlons": 108,
+        "curtainRun": 6314,
+        "curtainSlots": 132,
         "renderMode": "webgl-3d",
         "hordeDrawn": 21,
         "hordeKinds": [
@@ -97,8 +121,8 @@
         "primitiveCrowd": 0
       },
       "luma": {
-        "meanLuma": 87.5,
-        "darkPct": 12.2
+        "meanLuma": 88.8,
+        "darkPct": 7.6
       }
     },
     {
@@ -120,23 +144,35 @@
           "wood": 26
         },
         "ui": [
-          "PAUSE"
+          "PAUSE",
+          "survival:ZOOM IN",
+          "survival:ZOOM OUT"
         ],
         "coach": false,
         "narration": false,
-        "swarm": 31,
+        "swarm": 33,
         "riggedCrowd": 0,
-        "proxyCrowd": 31,
+        "proxyCrowd": 33,
         "keepHp": 600,
         "keepMesh": true,
-        "territoryPlanes": 5,
+        "banner": {
+          "visible": true,
+          "reach": 900,
+          "edgeSegments": 92
+        },
+        "decor": {
+          "placed": 22,
+          "missing": 0,
+          "merged": 12,
+          "meshes": 16
+        },
         "fortressTowers": 12,
-        "fortressMeshes": 13,
-        "fortressMerlons": 52,
-        "curtainRun": 3614,
-        "curtainSlots": 74,
+        "fortressMeshes": 16,
+        "fortressMerlons": 108,
+        "curtainRun": 6314,
+        "curtainSlots": 132,
         "renderMode": "webgl-3d",
-        "hordeDrawn": 33,
+        "hordeDrawn": 36,
         "hordeKinds": [
           "zombie",
           "crawler",
@@ -153,9 +189,9 @@
     "hp": "900/900",
     "before": 1,
     "after": 2,
-    "roomsBefore": 5,
-    "roomsAfter": 7,
-    "planesBefore": 5,
-    "planesAfter": 7
+    "roomsBefore": 9,
+    "roomsAfter": 13,
+    "planesBefore": 900,
+    "planesAfter": 1100
   }
 }

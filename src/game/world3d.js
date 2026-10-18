@@ -97,16 +97,16 @@ const PARTICLE_FRAGMENT_SHADER = `
 function mergeKitStatic(group) {
   group.updateMatrixWorld(true);
   const inverse = new THREE.Matrix4().copy(group.matrixWorld).invert();
-  // each kit file loads its own copy of the pack's one atlas material: pieces
-  // whose materials look the same (type, colour, the atlas image) share a mesh
+  // each kit file loads its own copy of the pack's one atlas material (every
+  // KayKit Medieval Hexagon file names it 'hexagons_medieval' and points at
+  // hexagons_medieval.png): pieces whose materials match by name, type,
+  // colour and atlas size share a mesh; an unnamed material only its own
   const signature = (material) => {
-    if (Array.isArray(material)) return material;
+    if (Array.isArray(material) || !material.name) return material;
     const map = material.map;
-    const image = map && map.source && map.source.data;
-    const src = image && (image.currentSrc || image.src);
-    const key = [material.type, material.color ? material.color.getHex() : '', material.transparent ? 't' : '',
-      material.side, src || (map ? map.uuid : 'nomap'), material.vertexColors ? 'vc' : ''].join('|');
-    return src || !map ? key : material;
+    const image = map && map.image;
+    return [material.name, material.type, material.color ? material.color.getHex() : '', material.transparent ? 't' : '',
+      material.side, map ? `${image && image.width}x${image && image.height}` : 'nomap', material.vertexColors ? 'vc' : ''].join('|');
   };
   const buckets = new Map();
   group.traverse((obj) => {

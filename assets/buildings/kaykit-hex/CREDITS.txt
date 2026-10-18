@@ -39,11 +39,11 @@ against the upstream tree; vendored byte-for-byte like the rest.
   barrel.bin                     decoration/props/barrel.bin
     sha256 ff1b034f1ac95b063a2baa3d72a0ad0b33f25337f776e7a25fbc811d9c77dee8
   barrel.gltf                    decoration/props/barrel.gltf
-    sha256 24673663eb53ffab6c8db612654856f051c4877bfc02ea25fee89cd95ee4d100   — barracks stores (Lv2+), the armory, a Lv2 ballista
+    sha256 24673663eb53ffab6c8db612654856f051c4877bfc02ea25fee89cd95ee4d100   — barracks stores (Lv2+), the armory, a Lv2 ballista; BUILD 12: stores by the well (south-east)
   bucket_arrows.bin              decoration/props/bucket_arrows.bin
     sha256 374d4ba50d81d78443ac181e861f94640e902152f69e0a01bd09f32094864966
   bucket_arrows.gltf             decoration/props/bucket_arrows.gltf
-    sha256 7b01b94f11ee20c38f712197012dde3a48449f61d8d5831a787ab48c686ca1c2   — the armory; a Lv3 ballista
+    sha256 7b01b94f11ee20c38f712197012dde3a48449f61d8d5831a787ab48c686ca1c2   — the armory; a Lv3 ballista; BUILD 12: also the barracks district's training ground
   building_barracks_blue.bin     buildings/blue/building_barracks_blue.bin
     sha256 e3613795eeb9a6366920771b7b1c2b67b2b1df8c39b3ac82edc22d816c18499e
   building_barracks_blue.gltf    buildings/blue/building_barracks_blue.gltf
@@ -83,11 +83,11 @@ against the upstream tree; vendored byte-for-byte like the rest.
   building_well_blue.bin         buildings/blue/building_well_blue.bin
     sha256 5c50811c6666df2a9b43afc1a83ccccf19678c0f8e40c3ca0bf341722dc5133f
   building_well_blue.gltf        buildings/blue/building_well_blue.gltf
-    sha256 66305823322b2e6a7f1cb8d8bf0d91ed9b94b8d96f61d0f7af77bd0d09f6463e   — the well in the northeast yard
+    sha256 66305823322b2e6a7f1cb8d8bf0d91ed9b94b8d96f61d0f7af77bd0d09f6463e   — the well (BUILD 12: in the south-east district, by the armory)
   crate_A_big.bin                decoration/props/crate_A_big.bin
     sha256 600d29bdf010f891dcabfb014b6271789e7b45fec7317989a13ccca92908c5c8
   crate_A_big.gltf               decoration/props/crate_A_big.gltf
-    sha256 a96ce5522e45104b5a04cf9605ca30b9572cc79c7633d41f3434b9843010a225   — barracks / sawmill stores (Lv3)
+    sha256 a96ce5522e45104b5a04cf9605ca30b9572cc79c7633d41f3434b9843010a225   — barracks / sawmill stores (Lv3); BUILD 12: stores by the well (south-east)
   flag_blue.bin                  decoration/props/flag_blue.bin
     sha256 2ff9fa2caea9c02a2eda8092c203e378ef92dca7741d41110627740211fc03a7
   flag_blue.gltf                 decoration/props/flag_blue.gltf
@@ -101,27 +101,27 @@ against the upstream tree; vendored byte-for-byte like the rest.
   resource_lumber.bin            decoration/props/resource_lumber.bin
     sha256 90bb1e1f23dbc3de372059b45ae289ec414b1fb50b49852ce0a3b30dc370db8b
   resource_lumber.gltf           decoration/props/resource_lumber.gltf
-    sha256 601a69f44f0c4a9b5070a80bd4a20887960e01f1523a6125c1edc8ba19168f1f   — sawmill stock (Lv2+)
+    sha256 601a69f44f0c4a9b5070a80bd4a20887960e01f1523a6125c1edc8ba19168f1f   — sawmill stock (Lv2+); BUILD 12: lumber piles in the sawmill district (south-west)
   resource_stone.bin             decoration/props/resource_stone.bin
     sha256 8af67e8fb7272c0d5e439361f9ebb33f55406bb65a4dcf0d7156fc2959ddb744
   resource_stone.gltf            decoration/props/resource_stone.gltf
-    sha256 427a22daaec3934ac85cd7e538415157264b96527577a3c9bbf793c1b5df8dca   — mine spoil (Lv2+)
+    sha256 427a22daaec3934ac85cd7e538415157264b96527577a3c9bbf793c1b5df8dca   — mine spoil (Lv2+); BUILD 12: the quarry heap by the gold mines (north-east)
   sack.bin                       decoration/props/sack.bin
     sha256 5c3e6f5c63f8c4420ed3dfb2027beffc981740b5af9c89be148b56c19b993e02
   sack.gltf                      decoration/props/sack.gltf
-    sha256 b61929d6161907aff4f1fd211cd0a8300d002d1a686ba43d07c4aff171fbd9f0   — mine stores (Lv3)
+    sha256 b61929d6161907aff4f1fd211cd0a8300d002d1a686ba43d07c4aff171fbd9f0   — mine stores (Lv3); BUILD 12: stores by the well (south-east)
   target.bin                     decoration/props/target.bin
     sha256 783dc41050451fb43efafc97b60bf486a50679bac07a782c0beb7af9d05bbe2e
   target.gltf                    decoration/props/target.gltf
-    sha256 e92374d50c46b5816a1c118260d27ac49d3e52e8d7de6b0b7a9326a69c43cc44   — the armory
+    sha256 e92374d50c46b5816a1c118260d27ac49d3e52e8d7de6b0b7a9326a69c43cc44   — the armory; BUILD 12: also the training ground of the barracks district (north-west)
   weaponrack.bin                 decoration/props/weaponrack.bin
     sha256 3773a0eab3da0c7526a13880b3dc7f2c8c42f97e5b8970d5bf5a522f0ea7f0ea
   weaponrack.gltf                decoration/props/weaponrack.gltf
-    sha256 e6985e05285ae219a0a6317522debb9d48c8b39334820e0c9694f195f1519be5   — the armory (captain upgrades)
+    sha256 e6985e05285ae219a0a6317522debb9d48c8b39334820e0c9694f195f1519be5   — the armory (captain upgrades); BUILD 12: also the barracks district's training ground
   wheelbarrow.bin                decoration/props/wheelbarrow.bin
     sha256 72ca612b0dc940c856ed5abbbb9df9562c09bff52cfb2258375b16cbaad29e12
   wheelbarrow.gltf               decoration/props/wheelbarrow.gltf
-    sha256 bb037662a3e5be1f4fe597ffc4927d2a6ad88d307da10388cfb178ca5fdae63d   — the mine cart that rolls while it digs
+    sha256 bb037662a3e5be1f4fe597ffc4927d2a6ad88d307da10388cfb178ca5fdae63d   — the mine cart that rolls while it digs; BUILD 12: also parked in the mine and sawmill districts
   rock_single_A.bin              decoration/nature/rock_single_A.bin
     sha256 0f038d45b8df2c9efa034e5d3c3635a475a2683e2e741aa9a0cd197c5689e2ce
   rock_single_A.gltf             decoration/nature/rock_single_A.gltf
