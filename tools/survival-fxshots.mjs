@@ -304,24 +304,31 @@ const end = await shot('fx-end', () => {
   return {
     started, natural, phase: m.phase, run: m.runStats, sum: Object.values(by).reduce((a, b) => a + b, 0),
     result: { night: r.night, toDawn: r.toDawn, nights: r.nights, kills: r.kills, tip: r.tip, mvp: r.mvp, newBest: r.newBest },
+    unlock: g._survivalLabels.endUnlock || null,
     ui: g.ui.map((u) => u.label).filter(Boolean),
   };
 });
 check('end: a loss counts every kill of the run by source, shows the night\'s track with the seconds to dawn and one tip (R1, R4)',
   end.phase === 'failed' && end.run.kills > 0 && end.sum === end.run.kills && end.result.kills === end.run.kills && end.result.night === 2
     && end.result.toDawn > 0 && end.result.tip && end.result.tip.text.split(/\s+/).length <= 8 && end.result.newBest === false
-    && end.ui.includes('survival:PLAY AGAIN'), { natural: end.natural, kills: end.run.kills, by: end.run.by, result: end.result });
+    && end.unlock && /3★ TO IRON WATCH/.test(end.unlock.text) && end.unlock.total === 0
+    && end.ui.includes('survival:PLAY AGAIN'), { natural: end.natural, kills: end.run.kills, by: end.run.by, result: end.result, unlock: end.unlock && end.unlock.text });
 
 // 8. a real three-night win: the builder bot plays it in the page, fast
 await page.evaluate(async () => {
+  window.__fxValen = (await import('./src/game/valen3d.js')).Valen3D;
   window.__fxBots = await import('./tools/survival-bots.mjs');
   window.__fxRoom = (await import('./src/game/mansion.js')).ROOM;
   window.__fxIso = (await import('./src/core/util.js')).ISO_CAMERA;
 });
-const win = await shot('fx-win', () => {
+const win = await shot('fx-win', async () => {
   const g = window.__LN; const m = g.survival;
+  const W = (await import('./src/game/world3d.js')).World3D;
+  const V = (await import('./src/game/valen3d.js')).Valen3D;
   const { botNight, botDay, releaseControls } = window.__fxBots;
   m.restart();
+  m.records.totalStars = 2;   // BUILD 19: banked earlier, so this win crosses IRON
+  m._newBanner = null;
   g.input.touchSeen = true;
   const state = { flareHeld: false, rescue: true };
   const nightKills = [];
@@ -343,15 +350,44 @@ const win = await shot('fx-win', () => {
   return {
     frames, phase: m.phase, nightKills, run: { kills: m.runStats.kills, by: m.runStats.by, towers: m.runStats.towers, keepMin: m.runStats.keepMin, lost: m.runStats.lost },
     result: { stars: r.stars, kills: r.kills, keepLeft: r.keepLeft, built: r.built, time: r.time, mvp: r.mvp, newBest: r.newBest },
-    records: m.records, ui: g.ui.map((u) => u.label).filter(Boolean),
+    records: m.records, unlock: g._survivalLabels.endUnlock || null,
+    bannerSet: V.bannerHex(),
+    bannerHex: V._lookUniforms && V._lookUniforms.uCapRoyal ? '#' + V._lookUniforms.uCapRoyal.value.getHexString() : null,
+    ui: g.ui.map((u) => u.label).filter(Boolean),
   };
 });
 check('win: the builder\'s real three nights end on stars from the keep\'s lowest point, the run\'s numbers, the MVP building, the records and NEW BEST! over the loss (R1-R3, R19)',
   win.phase === 'complete' && win.nightKills.length === 3 && win.result.kills === win.nightKills.reduce((a, b) => a + b, 0)
     && win.result.stars >= 1 && win.result.stars === (win.run.keepMin < 0.5 ? 1 : (win.run.lost > 0 ? 2 : 3))
     && win.result.newBest === true && win.records.runs === 2 && win.records.wins === 1 && win.records.bestStars === win.result.stars
-    && (!win.result.mvp || win.result.mvp.name !== 'CAPTAIN') && win.ui.includes('survival:PLAY AGAIN'),
-  { frames: win.frames, nightKills: win.nightKills, result: win.result, records: win.records, by: win.run.by, towers: win.run.towers });
+    && (!win.result.mvp || win.result.mvp.name !== 'CAPTAIN') && win.ui.includes('survival:PLAY AGAIN')
+    && win.unlock && win.unlock.unlocked === 'IRON WATCH' && /★ TO CRIMSON WATCH/.test(win.unlock.text)
+    && win.bannerHex === '#9aa7b4',
+  { frames: win.frames, nightKills: win.nightKills, result: win.result, records: win.records, by: win.run.by, towers: win.run.towers, unlock: win.unlock && win.unlock.text, bannerHex: win.bannerHex });
+
+// BUILD 19 (R9): the crossed tier is explained once, on the next day
+const watchHint = await page.evaluate(() => {
+  const g = window.__LN; const m = g.survival;
+  m.restart();
+  window.__fxRealtime(10);
+  if (m.cine) m.skipCine();
+  m.completeNight();                       // the first morning of the new run
+  window.__fxRealtime(20);
+  if (m.rewardPending && m.rewardPending()) m.ackRewards();
+  window.__fxRealtime(30);
+  return { hint: g._survivalHint && g._survivalHint.id, saved: !!(g.save.survival && g.save.survival.hints && g.save.survival.hints.watch), phase: m.phase };
+});
+check('watch: the morning after a crossed tier says once what the stars now earn (a narrator hint, saved so it never repeats)',
+  watchHint.phase === 'day' && watchHint.hint === 'watch' && watchHint.saved, watchHint);
+// the earned colour on the captain, in the daylight of the new run
+const watchDay = await shot('fx-watch-iron', () => {
+  const g = window.__LN; const m = g.survival;
+  const V = window.__fxValen;
+  window.__fxRealtime(40);
+  return { tier: m.unlockTier().id, total: m.records.totalStars, hex: V && V.bannerHex() };
+});
+check('watch: the banked tier repaints the captain in the world — the daylight frame shows the earned watch colour, not the stock blue',
+  watchDay.tier === 'iron' && watchDay.hex === 0x9aa7b4, watchDay);
 
 check('health: 0 page errors, 0 console errors', !pageErrors.length && !consoleErrors.length, { pageErrors: pageErrors.slice(0, 3), consoleErrors: consoleErrors.slice(0, 3) });
 const passed = checks.filter((c) => c.ok).length;

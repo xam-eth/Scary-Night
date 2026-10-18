@@ -1135,9 +1135,26 @@ export function survivalStars(won, stats) {
   if (keepMin < RUN_STARS.keepMin) return 1;
   return stats && stats.lost > 0 ? 2 : 3;
 }
+/** BUILD 19 (R9): the watch ladder — earned star totals colour the captain.
+ * Cumulative on purpose: every closed run banks its stars (win or lose), so
+ * the end panel always names a next thing to work toward. A fixed ladder,
+ * never a draw of cards: the panel says the colour and the stars to it. */
+export const UNLOCK_TIERS = [
+  { stars: 0, id: 'azure', name: 'AZURE WATCH', royal: 0x216aad },
+  { stars: 3, id: 'iron', name: 'IRON WATCH', royal: 0x9aa7b4 },
+  { stars: 6, id: 'crimson', name: 'CRIMSON WATCH', royal: 0xc03444 },
+  { stars: 9, id: 'gold', name: 'GOLD WATCH', royal: 0xe0b04f },
+];
+/** The tier a cumulative star total has reached (never null). */
+export const unlockTierFor = (total) => {
+  let tier = UNLOCK_TIERS[0];
+  for (const t of UNLOCK_TIERS) if ((total || 0) >= t.stars) tier = t;
+  return tier;
+};
+
 /** Best results across runs (save.survival.records); PLAY AGAIN keeps them. */
 function freshRecords() {
-  return { runs: 0, wins: 0, bestStars: 0, bestNights: 0, bestKills: 0, totalKills: 0 };
+  return { runs: 0, wins: 0, bestStars: 0, bestNights: 0, bestKills: 0, totalKills: 0, totalStars: 0 };
 }
 const SIDE_NAMES = Object.freeze({ north: 'NORTH', south: 'SOUTH', east: 'EAST', west: 'WEST', northwest: 'NW', southeast: 'SE' });
 const GATE_NAMES = Object.freeze({ northGate: 'NORTH', southGate: 'SOUTH', eastGate: 'EAST', westGate: 'WEST', posternNW: 'NW', posternSE: 'SE' });
@@ -1360,6 +1377,7 @@ export class SurvivalMode {
     this.cine = null;              // { kind: 'intro' | 'arrival', t, dur, keys, night }
     this.reinforcements = null;    // the relief column (victory)
     this.records = freshRecords();  // best results across runs (R3)
+    this._newBanner = null;         // R9: the tier this run just crossed
     this.runResult = null;          // how the last run ended (stars, MVP, tip)
     this._restore(game.save.survival || freshProgress(this.nightDuration));
     this.applyHunterStats(false);
@@ -4088,7 +4106,11 @@ export class SurvivalMode {
       bestNights: Math.max(prev.bestNights, nights),
       bestKills: Math.max(prev.bestKills, kills),
       totalKills: prev.totalKills + kills,
+      totalStars: (prev.totalStars || 0) + stars,
     };
+    // R9: a crossed tier is announced on exactly the run that crossed it
+    this._newBanner = unlockTierFor(this.records.totalStars).stars > unlockTierFor(prev.totalStars).stars
+      ? unlockTierFor(this.records.totalStars) : null;
     this.runResult = {
       won, stars, nights, kills,
       newBest: prev.runs > 0 && (stars > prev.bestStars || nights > prev.bestNights),
@@ -4776,6 +4798,23 @@ export class SurvivalMode {
       entranceId: e.entranceId, targetEntranceId: e.targetEntranceId,
       inHouse: !!e._inHouse, keepCd: e.keepCd, staggerT: e.staggerT || 0, targetKind: e.targetKind || null,
     }));
+  }
+
+  /** BUILD 19 (R9): the watch tier the banked stars have reached. */
+  unlockTier() { return unlockTierFor(this.records && this.records.totalStars); }
+
+  /** The end panel's ladder line (R9): what is earned, what is next, how far.
+   *  Reads the same on a win and on a loss — every closed run shows it. */
+  unlockSummary() {
+    const total = (this.records && this.records.totalStars) || 0;
+    const tier = this.unlockTier();
+    const next = UNLOCK_TIERS.find((t) => t.stars > total) || null;
+    const unlocked = this._newBanner || null;
+    let text;
+    if (unlocked) text = next ? `NEW: ${unlocked.name} — ${next.stars - total}★ TO ${next.name}` : `NEW: ${unlocked.name} — ALL EARNED`;
+    else if (next) text = `CAPTAIN'S WATCH ★${total} — ${next.stars - total}★ TO ${next.name}`;
+    else text = `ALL WATCH COLOURS EARNED — ★${total}`;
+    return { total, tier: tier.id, unlocked: unlocked ? unlocked.name : null, next: next ? next.name : null, text };
   }
 
   _persist(force) {

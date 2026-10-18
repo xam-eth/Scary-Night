@@ -289,6 +289,27 @@ class ValenRuntime {
    *   rim   strength of the outline light
    *   lift  self-light, a share of his own colour
    */
+  /** BUILD 19 (R9): the captain's earned watch colour. One hex grades the
+   *  whole tabard ramp (navy shade below, sky light above), so a banked star
+   *  total repaints him without touching the shipped GLB or its atlas. */
+  setBanner(royalHex) {
+    this._bannerHex = royalHex;
+    if (this._lookUniforms) this._applyBanner();
+    return true;
+  }
+
+  /** The hex the tabard ramp is currently graded from (null = stock blue). */
+  bannerHex() { return this._bannerHex == null ? null : this._bannerHex; }
+
+  _applyBanner() {
+    const u = this._lookUniforms;
+    if (!u) return;
+    const royal = new THREE.Color(this._bannerHex);
+    u.uCapRoyal.value.copy(royal);
+    u.uCapNavy.value.copy(royal).multiplyScalar(0.42);
+    u.uCapSky.value.copy(royal).lerp(new THREE.Color(0xffffff), 0.45);
+  }
+
   setLook({ look = 0, rim = 0, lift = 0 } = {}) {
     if (!this.model) return false;
     if (!this._look) {
@@ -314,6 +335,8 @@ class ValenRuntime {
         uCapSkin: { value: new THREE.Color(0xe2b08a) },
         uCapRimColor: { value: new THREE.Color(0xb4dcff) },
       };
+      this._lookUniforms = uniforms;
+      if (this._bannerHex != null) this._applyBanner();
       const patch = (shader) => {
         Object.assign(shader.uniforms, uniforms);
         shader.vertexShader = shader.vertexShader

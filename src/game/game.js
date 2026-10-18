@@ -806,6 +806,9 @@ export class Game {
     // attack control can still force a shot and the Interact control is Flare.
     this.input.dashPressed = false;
     this.input.runDown = false;
+    // BUILD 19 (R9): banked stars repaint the captain's watch colours
+    const tier = this.survival.unlockTier();
+    if (this._bannerId !== tier.id) { this._bannerId = tier.id; Valen3D.setBanner(tier.royal); }
     this.handleUIInput(dt);
 
     if (worldHeld) this.player.anim(dt);

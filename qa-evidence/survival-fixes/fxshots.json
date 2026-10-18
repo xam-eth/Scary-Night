@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-10-18T20:36:36.975Z",
+  "capturedAt": "2026-10-18T23:25:08.059Z",
   "view": {
     "width": 844,
     "height": 390,
@@ -22,11 +22,11 @@
         },
         "glbGuards": 2,
         "fx": {
-          "live": 0,
+          "live": 5,
           "played": {
             "impact": 5,
-            "kill": 1,
-            "muzzle": 0,
+            "kill": 3,
+            "muzzle": 1,
             "coin": 0,
             "log": 0,
             "rally": 0,
@@ -42,8 +42,8 @@
         "live": 1,
         "played": {
           "impact": 5,
-          "kill": 1,
-          "muzzle": 1,
+          "kill": 3,
+          "muzzle": 2,
           "coin": 0,
           "log": 0,
           "rally": 0,
@@ -55,10 +55,10 @@
       "name": "kills: every kill is credited to a source (captain / guard / ballista / keep / flare)",
       "ok": true,
       "detail": {
-        "kills": 8,
+        "kills": 9,
         "by": {
           "captain": 8,
-          "guard": 0,
+          "guard": 1,
           "tower": 0,
           "keep": 0,
           "flare": 0
@@ -112,8 +112,8 @@
             "helmet": true
           }
         ],
-        "build": "18",
-        "page": "18"
+        "build": "19",
+        "page": "19"
       }
     },
     {
@@ -123,12 +123,12 @@
         "sawn": 7,
         "killsBy": {
           "captain": 9,
-          "guard": 6,
+          "guard": 7,
           "tower": 3,
           "keep": 0,
           "flare": 0
         },
-        "runKills": 18
+        "runKills": 19
       }
     },
     {
@@ -195,9 +195,9 @@
       "ok": true,
       "detail": {
         "natural": true,
-        "kills": 35,
+        "kills": 34,
         "by": {
-          "captain": 22,
+          "captain": 21,
           "guard": 9,
           "tower": 4,
           "keep": 0,
@@ -207,7 +207,7 @@
           "night": 2,
           "toDawn": 33,
           "nights": 1,
-          "kills": 35,
+          "kills": 34,
           "tip": {
             "icon": "tower",
             "text": "BUILD A BALLISTA AT THE WEST GATE"
@@ -219,30 +219,31 @@
             "kills": 9
           },
           "newBest": false
-        }
+        },
+        "unlock": "CAPTAIN'S WATCH ★0 — 3★ TO IRON WATCH"
       }
     },
     {
       "name": "win: the builder's real three nights end on stars from the keep's lowest point, the run's numbers, the MVP building, the records and NEW BEST! over the loss (R1-R3, R19)",
       "ok": true,
       "detail": {
-        "frames": 15723,
+        "frames": 15256,
         "nightKills": [
-          65,
-          79,
+          62,
+          78,
           92
         ],
         "result": {
           "stars": 3,
-          "kills": 236,
-          "keepLeft": 95,
+          "kills": 232,
+          "keepLeft": 97,
           "built": 3,
-          "time": 262,
+          "time": 254,
           "mvp": {
-            "id": "keep",
-            "icon": "keep",
-            "name": "KEEP BALLISTA",
-            "kills": 15
+            "id": "guard",
+            "icon": "guard",
+            "name": "GUARDS",
+            "kills": 14
           },
           "newBest": true
         },
@@ -251,17 +252,38 @@
           "wins": 1,
           "bestStars": 3,
           "bestNights": 3,
-          "bestKills": 236,
-          "totalKills": 271
+          "bestKills": 232,
+          "totalKills": 266,
+          "totalStars": 5
         },
         "by": {
-          "captain": 161,
-          "guard": 9,
+          "captain": 172,
+          "guard": 14,
           "tower": 0,
-          "keep": 15,
-          "flare": 51
+          "keep": 3,
+          "flare": 43
         },
-        "towers": {}
+        "towers": {},
+        "unlock": "NEW: IRON WATCH — 1★ TO CRIMSON WATCH",
+        "bannerHex": "#9aa7b4"
+      }
+    },
+    {
+      "name": "watch: the morning after a crossed tier says once what the stars now earn (a narrator hint, saved so it never repeats)",
+      "ok": true,
+      "detail": {
+        "hint": "watch",
+        "saved": true,
+        "phase": "day"
+      }
+    },
+    {
+      "name": "watch: the banked tier repaints the captain in the world — the daylight frame shows the earned watch colour, not the stock blue",
+      "ok": true,
+      "detail": {
+        "tier": "iron",
+        "total": 5,
+        "hex": 10135476
       }
     },
     {
@@ -290,11 +312,11 @@
         },
         "glbGuards": 2,
         "fx": {
-          "live": 0,
+          "live": 5,
           "played": {
             "impact": 5,
-            "kill": 1,
-            "muzzle": 0,
+            "kill": 3,
+            "muzzle": 1,
             "coin": 0,
             "log": 0,
             "rally": 0,
@@ -307,10 +329,10 @@
       "name": "fx-gate-b",
       "file": "qa-evidence/survival-fixes/fx-gate-b.png",
       "state": {
-        "kills": 8,
+        "kills": 9,
         "by": {
           "captain": 8,
-          "guard": 0,
+          "guard": 1,
           "tower": 0,
           "keep": 0,
           "flare": 0
@@ -327,8 +349,8 @@
           "live": 1,
           "played": {
             "impact": 5,
-            "kill": 1,
-            "muzzle": 1,
+            "kill": 3,
+            "muzzle": 2,
             "coin": 0,
             "log": 0,
             "rally": 0,
@@ -395,7 +417,7 @@
           },
           "failed": [],
           "error": null,
-          "bakeMs": 317,
+          "bakeMs": 263,
           "drawn": 50,
           "byKind": {
             "zombie": 26,
@@ -417,7 +439,7 @@
             "helmet": true
           }
         ],
-        "build": "18"
+        "build": "19"
       }
     },
     {
@@ -428,10 +450,10 @@
         "rewards": {
           "gold": 17,
           "wood": 25,
-          "kills": 18,
-          "walls": 421.3,
+          "kills": 19,
+          "walls": 429.30000000000007,
           "survivors": 0,
-          "keepDamage": 288,
+          "keepDamage": 180,
           "keepPatched": 0,
           "mined": 3,
           "lost": 0,
@@ -440,7 +462,7 @@
           "sawn": 7,
           "killsBy": {
             "captain": 9,
-            "guard": 6,
+            "guard": 7,
             "tower": 3,
             "keep": 0,
             "flare": 0
@@ -450,10 +472,10 @@
           "cleared": null
         },
         "run": {
-          "kills": 18,
+          "kills": 19,
           "by": {
             "captain": 9,
-            "guard": 6,
+            "guard": 7,
             "tower": 3,
             "keep": 0,
             "flare": 0
@@ -532,15 +554,15 @@
         "natural": true,
         "phase": "failed",
         "run": {
-          "kills": 35,
+          "kills": 34,
           "by": {
-            "captain": 22,
+            "captain": 21,
             "guard": 9,
             "tower": 4,
             "keep": 0,
             "flare": 0
           },
-          "mined": 6.118055555556192,
+          "mined": 6.094444444445077,
           "sawn": 7,
           "recruited": 1,
           "nights": 1,
@@ -549,16 +571,16 @@
           "towers": {
             "south:tower": 4
           },
-          "time": 97.36666666666243,
+          "time": 97.08333333332911,
           "cleared": 0,
           "saved": 0
         },
-        "sum": 35,
+        "sum": 34,
         "result": {
           "night": 2,
           "toDawn": 33,
           "nights": 1,
-          "kills": 35,
+          "kills": 34,
           "tip": {
             "icon": "tower",
             "text": "BUILD A BALLISTA AT THE WEST GATE"
@@ -571,6 +593,13 @@
           },
           "newBest": false
         },
+        "unlock": {
+          "total": 0,
+          "tier": "azure",
+          "unlocked": null,
+          "next": "IRON WATCH",
+          "text": "CAPTAIN'S WATCH ★0 — 3★ TO IRON WATCH"
+        },
         "ui": [
           "survival:PLAY AGAIN"
         ]
@@ -580,37 +609,37 @@
       "name": "fx-win",
       "file": "qa-evidence/survival-fixes/fx-win.png",
       "state": {
-        "frames": 15723,
+        "frames": 15256,
         "phase": "complete",
         "nightKills": [
-          65,
-          79,
+          62,
+          78,
           92
         ],
         "run": {
-          "kills": 236,
+          "kills": 232,
           "by": {
-            "captain": 161,
-            "guard": 9,
+            "captain": 172,
+            "guard": 14,
             "tower": 0,
-            "keep": 15,
-            "flare": 51
+            "keep": 3,
+            "flare": 43
           },
           "towers": {},
-          "keepMin": 0.92,
+          "keepMin": 0.86,
           "lost": 0
         },
         "result": {
           "stars": 3,
-          "kills": 236,
-          "keepLeft": 95,
+          "kills": 232,
+          "keepLeft": 97,
           "built": 3,
-          "time": 262,
+          "time": 254,
           "mvp": {
-            "id": "keep",
-            "icon": "keep",
-            "name": "KEEP BALLISTA",
-            "kills": 15
+            "id": "guard",
+            "icon": "guard",
+            "name": "GUARDS",
+            "kills": 14
           },
           "newBest": true
         },
@@ -619,12 +648,31 @@
           "wins": 1,
           "bestStars": 3,
           "bestNights": 3,
-          "bestKills": 236,
-          "totalKills": 271
+          "bestKills": 232,
+          "totalKills": 266,
+          "totalStars": 5
         },
+        "unlock": {
+          "total": 5,
+          "tier": "iron",
+          "unlocked": "IRON WATCH",
+          "next": "CRIMSON WATCH",
+          "text": "NEW: IRON WATCH — 1★ TO CRIMSON WATCH"
+        },
+        "bannerSet": 10135476,
+        "bannerHex": "#9aa7b4",
         "ui": [
           "survival:PLAY AGAIN"
         ]
+      }
+    },
+    {
+      "name": "fx-watch-iron",
+      "file": "qa-evidence/survival-fixes/fx-watch-iron.png",
+      "state": {
+        "tier": "iron",
+        "total": 5,
+        "hex": 10135476
       }
     }
   ],

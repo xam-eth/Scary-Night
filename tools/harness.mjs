@@ -2623,6 +2623,58 @@ async function runSurvivalMilestone() {
     b18Pass = b18Checks.length === 3 && b18Checks.every(Boolean);
   }
 
+  // BUILD 19 (R9, docs/UX-REPLAY-RESEARCH.md §5 P1): banked stars unlock the
+  // captain's watch colours on a fixed ladder, and every end panel — win or
+  // loss — names the next colour and the stars still owed to it.
+  let b19Pass = false;
+  {
+    const b19Checks = [];
+    const b19Check = (name, ok, detail) => {
+      b19Checks.push(!!ok);
+      console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} — ${detail}`);
+    };
+    const { UNLOCK_TIERS, unlockTierFor } = await import('../src/game/survival.js');
+    const lum = (hex) => { const r = (hex >> 16) & 255, g = (hex >> 8) & 255, b = hex & 255; return (r + g + b) / 3; };
+    window.localStorage.removeItem('lastnight.save.v1');
+    const ug = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 72, seed: 20261007 });
+    const um = ug.survival;
+    // 1) the ladder is fixed and ordered; the panel line reads at 0 / mid / max
+    const ordered = UNLOCK_TIERS.every((t, i) => i === 0 || t.stars > UNLOCK_TIERS[i - 1].stars);
+    const distinct = new Set(UNLOCK_TIERS.map((t) => t.name)).size === UNLOCK_TIERS.length
+      && new Set(UNLOCK_TIERS.map((t) => t.royal)).size === UNLOCK_TIERS.length;
+    const bright = UNLOCK_TIERS.every((t) => lum(t.royal) >= 90);   // V8 keeps the captain lit
+    um.records.totalStars = 0; const s0 = um.unlockSummary();
+    um.records.totalStars = 4; const s4 = um.unlockSummary();
+    um.records.totalStars = 9; const s9 = um.unlockSummary();
+    b19Check('R9: a fixed ladder (no draw of cards), ordered, distinct and bright enough for the dark bailey; the end-panel line names the next colour and the stars owed at 0★, mid-ladder and all-earned',
+      ordered && distinct && bright && UNLOCK_TIERS.length >= 4
+        && /3★ TO IRON WATCH/.test(s0.text) && s0.tier === 'azure' && s0.unlocked === null
+        && /2★ TO CRIMSON WATCH/.test(s4.text) && s4.tier === 'iron'
+        && /ALL WATCH COLOURS EARNED/.test(s9.text) && s9.next === null,
+      `0★ "${s0.text}" | 4★ "${s4.text}" | 9★ "${s9.text}"`);
+    // 2) closing a run banks its stars; a crossed tier is announced once
+    um.records = { ...um.records, runs: 3, totalStars: 2 };
+    um._newBanner = null;
+    um._finishRun(true);                       // a win banks >= 1 star
+    const banked = um.records.totalStars > 2;
+    const crossed = !!um._newBanner && um._newBanner.id === 'iron';
+    const sumU = um.unlockSummary();
+    um._finishRun(false);                      // the next run crosses nothing new
+    const quiet = um._newBanner === null;
+    b19Check('R9: closing a run banks its stars into the run records and a crossed tier is announced on exactly the run that crossed it (the next run is quiet again)',
+      banked && crossed && sumU.unlocked === 'IRON WATCH' && quiet,
+      `total ${um.records.totalStars}, crossed ${um._newBanner === null ? 'iron (then quiet)' : um._newBanner.id}, line "${sumU.text}"`);
+    // 3) the banked total rides the save into a fresh game
+    um._persist(true);
+    const ng = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 72, seed: 20261007 });
+    const kept = ng.survival.records.totalStars === um.records.totalStars;
+    const tierKept = ng.survival.unlockTier().id === unlockTierFor(um.records.totalStars).id;
+    b19Check('R9: the banked star total is part of the save — a fresh game on the same save keeps it and stands on the same tier',
+      kept && tierKept, `saved total ${ng.survival.records.totalStars}, tier ${ng.survival.unlockTier().id}`);
+    window.localStorage.removeItem('lastnight.save.v1');
+    b19Pass = b19Checks.length === 3 && b19Checks.every(Boolean);
+  }
+
   console.log(`  idle Night 3: ${idle.nightThree.peakEnemies} peak enemies / ${idle.nightThree.peakBreakers} Breakers, ${idle.nightThree.kills} kills, ${idle.nightThree.wallDamage} wall damage, gate ${idle.nightThree.gateHp} HP, Hunter ${idle.nightThree.playerHp} HP; ${idle.phase}`);
   console.log(`  builder Night 3: ${builder.nightThree.peakEnemies} peak enemies / ${builder.nightThree.peakBreakers} Breakers, ${builder.nightThree.kills} kills, ${builder.nightThree.wallDamage} wall damage, gate ${builder.nightThree.gateHp} HP, Hunter ${builder.nightThree.playerHp} HP; keep Lv${builder.keepLevel} ${builder.keepHp} HP, soldiers ${builder.survivors}, buildings ${builder.buildings.join(',') || 'none'}, gateBuilt=${builder.gateBuilt}; ${builder.phase}`);
   // Balance target (M1 rebuild, K1): doing nothing must not win; an engaged
@@ -2635,7 +2687,7 @@ async function runSurvivalMilestone() {
     && hunterAutoShot && hunterRealLos && hunterSkill
     && idleLoses && builder.complete && builder.keepLevel === 3
     && builder.queueLockVerified && builder.sawmillBuilt && builder.gateBuilt && builder.barracksBuilt
-    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass && gateRulePass && b13Pass && b14Pass && b15Pass && b16Pass && b17Pass && b18Pass
+    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass && gateRulePass && b13Pass && b14Pass && b15Pass && b16Pass && b17Pass && b18Pass && b19Pass
     && builder.upgrades[0].level === 1 && builder.upgrades[0].plots === 9
     && builder.upgrades[builder.upgrades.length - 1].level === 3 && builder.upgrades[builder.upgrades.length - 1].plots === 15
     && builder.upgrades.every((item, i, all) => i === 0 || item.level >= all[i - 1].level);

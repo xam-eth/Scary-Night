@@ -231,6 +231,7 @@ const HINTS = Object.freeze({
   rescue: { icon: 'medic', text: 'STAND BY A FALLEN GUARD TO HELP', life: 6 },
   // BUILD 18 (R18b): the one time the night chip shrugs off a tap
   holdnight: { icon: 'moon', text: 'HOLD THE NIGHT CHIP TO START', life: 3.5 },
+  watch: { icon: 'star', text: 'STARS EARN THE CAPTAIN NEW COLOURS', life: 3.5 },
   pan: { icon: 'pan', text: 'DRAG THE RIGHT SIDE TO LOOK AROUND', life: 6 },
   // BUILD 12: the dynamic camera (a new id, so players who saw 'pan' see it)
   zoom: { icon: 'zoom', text: 'PINCH OR TAP + / - TO ZOOM', life: 6 },
@@ -1697,6 +1698,7 @@ function drawDayScreen(game, ctx, w, h) {
   const holdNote = holdT > 0 ? unspentNote(mode) : null;
   const miss = game._uiHoldMiss && game._uiHoldMiss.label === nightItem.label ? game._uiHoldMiss : null;
   if (miss) offerSurvivalHint(game, 'holdnight');
+  if (mode._newBanner) offerSurvivalHint(game, 'watch');
   if (!reward && (holdNote || miss)) {
     drawLabel(ctx, holdNote || 'HOLD TO START', nightBtn.x + nightBtn.w / 2, nightBtn.y + nightBtn.h + 11,
       10, holdNote ? '#ffd76a' : '#fff3c4', { align: 'center', outline: 2.5 });
@@ -1860,7 +1862,8 @@ function endLayout(short, failed, boxRows) {
   o.crew = below + Math.round(12 * k);
   o.mvp = o.crew + Math.round(26 * k);
   o.foot = o.mvp + Math.round(28 * k);
-  o.button = o.foot + Math.round(24 * k);
+  o.unlock = o.foot + Math.round(22 * k);   // BUILD 19 (R9): the watch ladder line
+  o.button = o.unlock + Math.round(22 * k);
   o.buttonH = short ? 48 : 54;
   o.h = o.button + o.buttonH + Math.round(18 * k);
   return o;
@@ -2035,6 +2038,14 @@ function drawEndPanel(game, ctx, w, h, failed) {
   } else if (!failed) {
     const rec = mode.records || {};
     drawLabel(ctx, `WINS ${rec.wins || 0}/${rec.runs || 0} · TOTAL KILLS ${rec.totalKills || 0}`, w / 2, fy, Math.round(13 * L.k), '#7a5a2a', { outline: 0 });
+  }
+  // BUILD 19 (R9): every closed run names the watch ladder — what the banked
+  // stars earned, the next colour and the stars still owed to it
+  const us = mode.unlockSummary ? mode.unlockSummary() : null;
+  if (us) {
+    drawLabel(ctx, us.text, w / 2, y + L.unlock, Math.round(12 * L.k), us.unlocked ? '#b8860b' : (failed ? '#ffd8a8' : '#7a5a2a'),
+      { outline: failed ? 2.5 : 0, alpha: clamp((age - landed) / 0.25, 0, 1) });
+    if (game._survivalLabels) game._survivalLabels.endUnlock = us;
   }
 
   drawButton(game, ctx, { x: x + 30, y: y + L.button, w: bw - 60, h: L.buttonH }, 'PLAY AGAIN',

@@ -26,7 +26,7 @@
  * first. index.html registers this worker on the shipped host only.
  */
 
-const VERSION = 'duskhold-v18';
+const VERSION = 'duskhold-v19';
 const CACHE = VERSION;
 
 /* The shell: what has to be there for the first paint on a cold start.
