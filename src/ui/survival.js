@@ -62,8 +62,18 @@ const BUILD_META = Object.freeze({
   barracks: { icon: 'barracks', name: 'BARRACKS', color: '#3e7bff' },// houses soldiers = gate guards
   tower: { icon: 'tower', name: 'BALLISTA', color: '#ff5640' },     // shoots over the wall
 });
-/** How many of the nearest empty circles show their name (the rest: the icon). */
-const PLOT_NAMES_NEAR = 3;
+/**
+ * BUILD 13 (V4, docs/VISUAL-LAYOUT-RESEARCH.md §7: "label hanya saat dekat"):
+ * an empty circle spells its name and cost only within about one circle of
+ * the captain (world px; the yards' circles stand ~270 apart), two at most;
+ * every other circle is its icon on its colour. A built building's status
+ * pill shows within STATUS_REACH (or where you stand). Zoomed out to the
+ * overview the world shows icons only: the plan of the fort, no words.
+ */
+const PLOT_NAME_REACH = 380;
+const PLOT_NAMES_MAX = 2;
+const STATUS_REACH = 560;
+const OVERVIEW_ZOOM = 0.62;
 
 /**
  * What a building does at one level, as icon rows (main row first), each
@@ -495,23 +505,29 @@ function drawEdgeMarker(ctx, w, h, p, icon, color, top = 128, bottom = 150, coun
 
 /**
  * Floating numbers. A hit pops in with an overshoot, drifts aside as it
- * rises and fades; a heavy hit (ballista, Flare) is orange and bigger; the
- * killing blow is bigger still with a hot outline and a little wobble; an
- * income pop (a mine's coin, a sawmill's planks, a barracks' soldier) sits
- * on a dark pill with its icon so it reads over any floor.
+ * rises and fades; a heavy hit (ballista, Flare) is orange-rimmed; the
+ * killing blow is bigger with a hot outline and a little wobble; an income
+ * pop (a mine's coin, a sawmill's planks, a barracks' soldier) sits on a dark
+ * pill with its icon so it reads over any floor. A damage number (BUILD 13,
+ * V9) starts over the head, rides with its body, and pops again each time a
+ * further hit adds into it (game/survival.js pushDamageNumber), so its rise
+ * and fade run on its own clock, not on its (growing) life.
  */
 function drawFloaters(game, ctx) {
   const mode = game.survival;
   for (const f of mode.floaters) {
     const life = clamp(f.t / f.life, 0, 1);
-    const rise = f.kind === 'income' ? 34 : 52;
-    const at = project(game, f.x, f.y, f.h + (1 - (1 - life) * (1 - life)) * rise);
-    at.x += (f.drift || 0) * Math.min(1, life * 1.6);
+    const dmg = !!f.target;
+    const rise = f.kind === 'income' ? 34 : dmg ? 34 : 52;
+    const riseT = dmg ? clamp(f.t / 0.9, 0, 1) : life;
+    const at = project(game, f.x, f.y, f.h + (1 - (1 - riseT) * (1 - riseT)) * rise);
+    at.x += (f.drift || 0) * Math.min(1, riseT * 1.6);
     const peak = f.pop || 1.2;
     // overshoot to the peak in the first 12%, settle back to 1 by 40%
-    const pop = life < 0.12 ? 0.55 + life / 0.12 * (peak - 0.55)
-      : life < 0.4 ? peak - (life - 0.12) / 0.28 * (peak - 1) : 1;
-    const alpha = life > 0.72 ? 1 - (life - 0.72) / 0.28 : 1;
+    const popT = dmg ? clamp((f.t - (f.bump || 0)) / 0.9, 0, 1) : life;
+    const pop = popT < 0.12 ? 0.55 + popT / 0.12 * (peak - 0.55)
+      : popT < 0.4 ? peak - (popT - 0.12) / 0.28 * (peak - 1) : 1;
+    const alpha = dmg ? clamp((f.life - f.t) / 0.25, 0, 1) : life > 0.72 ? 1 - (life - 0.72) / 0.28 : 1;
     const size = Math.round(f.size * pop);
     if (f.kind === 'income') {
       const tw = measureLabel(ctx, f.text, size) + (f.icon ? size * 1.15 : 0) + 18;
@@ -1004,9 +1020,10 @@ function drawStatusPill(ctx, x, y, status, alpha = 1) {
 
 /**
  * An empty circle's label, on its pad (BUILD 11): the building's icon on its
- * own colour, and its name when `full`. Returns the box it covers.
+ * own colour, and when `full` its name and what it costs (red where short;
+ * BUILD 13). Returns the box it covers.
  */
-function drawPlotLabel(ctx, x, y, icon, name, color, full) {
+function drawPlotLabel(ctx, x, y, icon, name, color, full, cost = null, mode = null) {
   if (!full) {
     ctx.save();
     ctx.beginPath(); ctx.arc(x, y, 12, 0, TAU);
@@ -1017,7 +1034,10 @@ function drawPlotLabel(ctx, x, y, icon, name, color, full) {
     return { x: x - 18, y: y - 18, w: 36, h: 36 };
   }
   const size = 11;
-  const pw = measureLabel(ctx, name, size) + 36, ph = 24;
+  const costSize = 13;
+  const nameW = measureLabel(ctx, name, size);
+  const cw = cost && mode && (cost.gold || cost.wood) ? costWidth(ctx, cost, costSize) : 0;
+  const pw = nameW + 36 + (cw ? cw + 8 : 0), ph = 24;
   const left = x - pw / 2;
   drawPanel(ctx, left, y - ph / 2, pw, ph, { radius: 12, top: '#2e2b58', bottom: '#1a1736', lineWidth: 2, stroke: INK, highlight: false, shadow: false });
   ctx.save();
@@ -1027,6 +1047,38 @@ function drawPlotLabel(ctx, x, y, icon, name, color, full) {
   ctx.restore();
   drawSurvivalIcon(ctx, icon, left + 13, y, 15);
   drawLabel(ctx, name, left + 27, y + 1, size, '#ffffff', { align: 'left', outline: 2 });
+  if (cw) costRow(ctx, left + 27 + nameW + 8, y, cost, mode, costSize);
+  return { x: left, y: y - ph / 2, w: pw, h: ph };
+}
+
+/**
+ * Tonight at one gate, by day (BUILD 13, V10): a red pill with the moon, then
+ * the swarm and its count, an Individual's head and a Breaker's helm where
+ * they come. Icons and numbers, no words.
+ */
+function drawTonightBadge(ctx, x, y, row) {
+  const items = [];
+  if (row.swarm) items.push({ icon: 'swarm', text: `×${row.swarm}` });
+  if (row.individuals) items.push({ icon: 'zombie', text: row.individuals > 1 ? `×${row.individuals}` : '' });
+  if (row.breakers) items.push({ icon: 'breaker', text: row.breakers > 1 ? `×${row.breakers}` : '' });
+  const size = 14, icon = 20, ph = 28;
+  let pw = 10 + 18 + 6 + 4;
+  for (const it of items) pw += icon + (it.text ? 3 + measureLabel(ctx, it.text, size) : 0) + 6;
+  const left = x - pw / 2;
+  drawPanel(ctx, left, y - ph / 2, pw, ph, { radius: ph / 2, top: '#ff6a52', bottom: '#b3261c', lineWidth: 2.2, highlight: false, shadow: false });
+  let cx = left + 10;
+  drawSurvivalIcon(ctx, 'moon', cx + 9, y, 18);
+  cx += 18 + 6;
+  for (const it of items) {
+    drawSurvivalIcon(ctx, it.icon, cx + icon / 2, y, icon);
+    cx += icon;
+    if (it.text) {
+      cx += 3;
+      drawLabel(ctx, it.text, cx, y + 1, size, '#ffffff', { align: 'left', outline: 2.5 });
+      cx += measureLabel(ctx, it.text, size);
+    }
+    cx += 6;
+  }
   return { x: left, y: y - ph / 2, w: pw, h: ph };
 }
 
@@ -1036,12 +1088,15 @@ function drawDayWorldLayer(game, ctx, w, h, view) {
   const p = game.player;
   const here = mode.dayContext();
   let nearestOff = null, nearestD = Infinity;
+  const overview = mode.userZoom() <= OVERVIEW_ZOOM;
+  const shown = { names: 0, icons: 0, pills: 0, overview };
   // BUILD 11 (playtest 2026-10-17: "lebar benteng dengan component di dalam
   // terlihat sangat padat ... tidak tau build yg mana"): only the circles
   // under the keep's banner show, each with a small label ON its pad in its
-  // building's colour; the few nearest the captain spell the name, the rest
-  // show the icon. A locked circle shows nothing until the banner reaches
-  // its yard (no lock badges over the bailey).
+  // building's colour; the two nearest within reach of the captain spell the
+  // name and cost (BUILD 13), the rest show the icon. A locked circle shows
+  // nothing until the banner reaches its yard (no lock badges over the
+  // bailey).
   const empty = [];
   for (const point of mode.dayPoints()) {
     if (point.kind === 'keep' || point.kind === 'armory') continue;
@@ -1068,7 +1123,7 @@ function drawDayWorldLayer(game, ctx, w, h, view) {
     addHit(game, { x: at.x - 24, y: at.y + bob - 24, w: 48, h: 48 }, `walk:${point.id}`, () => mode.walkTo(point.x, point.y), false, true);
   }
   empty.sort((a, b) => a.d - b.d);
-  empty.forEach((row, i) => {
+  empty.forEach((row) => {
     const { point, meta } = row;
     const at = project(game, point.x, point.y, point.kind === 'gate' ? 60 : 16);
     const inView = at.x > view.x0 && at.x < view.x1 && at.y > view.y0 && at.y < view.y1;
@@ -1076,7 +1131,10 @@ function drawDayWorldLayer(game, ctx, w, h, view) {
       if (row.d < nearestD) { nearestD = row.d; nearestOff = { point, at, icon: meta.icon }; }
       return;
     }
-    const box = drawPlotLabel(ctx, at.x, at.y, meta.icon, meta.name, meta.color, i < PLOT_NAMES_NEAR);
+    const full = !overview && shown.names < PLOT_NAMES_MAX && row.d <= PLOT_NAME_REACH;
+    if (full) shown.names++; else shown.icons++;
+    const cost = point.kind === 'gate' ? mode.tuning.gateCost : SURVIVAL_BUILDINGS[point.type];
+    const box = drawPlotLabel(ctx, at.x, at.y, meta.icon, meta.name, meta.color, full, cost, mode);
     addHit(game, { x: box.x - 4, y: box.y - 8, w: box.w + 8, h: box.h + 16 }, `walk:${point.id}`, () => mode.walkTo(point.x, point.y), false, true);
   });
   // what every built building does, at a glance (R19; playtest 2026-10-16:
@@ -1085,6 +1143,9 @@ function drawDayWorldLayer(game, ctx, w, h, view) {
   // kills — icon + number, no words
   for (const point of mode.dayPoints()) {
     if (point.kind !== 'slot' || !point.built) continue;
+    // near the captain only (V4), never in the overview, always where he stands
+    const standing = !!(here && here.id === point.id);
+    if (!standing && (overview || Math.hypot(point.x - p.x, point.y - p.y) > STATUS_REACH)) continue;
     const status = buildingStatus(mode, point);
     if (!status) continue;
     // at the bubble's height; beside the upgrade arrow when one is showing
@@ -1093,8 +1154,26 @@ function drawDayWorldLayer(game, ctx, w, h, view) {
     const arrow = !(here && here.id === point.id) && point.level < BUILDING_MAX_LEVEL && affordable(mode, mode.upgradeCost(point.id));
     const pw = statusPillWidth(ctx, status);
     const meta = BUILD_META[point.type];
-    drawStatusPill(ctx, arrow ? at.x + 22 + pw / 2 : at.x, at.y + (arrow ? 0 : 2), { ...status, tint: meta && meta.color }, here && here.id === point.id ? 1 : 0.94);
+    drawStatusPill(ctx, arrow ? at.x + 22 + pw / 2 : at.x, at.y + (arrow ? 0 : 2), { ...status, tint: meta && meta.color }, standing ? 1 : 0.94);
+    shown.pills++;
   }
+  // BUILD 13 (V10, research §7: "info gelombang sebelum malam"; Thronefall's
+  // edge icons): tonight's attack by day — every gate it will hit, what comes
+  // and how many (the plan the night plays: game/survival.js tonightPlan). In
+  // view a red badge over the gate; out of view a red pointer on the edge
+  // with the count. Not under the dawn reward (this layer isn't drawn then).
+  const tonight = [];
+  for (const row of mode.tonightPlan()) {
+    const e = row.entrance;
+    const at = project(game, e.x, e.y, 120);
+    const inView = at.x > view.x0 && at.x < view.x1 && at.y > view.y0 && at.y < view.y1;
+    const total = row.swarm + row.individuals + row.breakers;
+    if (inView) drawTonightBadge(ctx, at.x, at.y + Math.sin(t * 3 + e.x * 0.01) * 2, row);
+    else drawEdgeMarker(ctx, w, h, at, row.breakers ? 'breaker' : 'swarm', '#ff5a4d', view.y0 + 10, h - view.y1 + 10, total);
+    tonight.push({ id: row.id, total, inView });
+  }
+  shown.tonight = tonight;
+  game._survivalLabels = shown;   // QA (survival-plotsqa): what the day layer wrote
   // nothing to build in view: one pointer to the nearest empty circle
   if (nearestOff && !here) {
     drawEdgeMarker(ctx, w, h, nearestOff.at, nearestOff.icon, '#ffffff', view.y0 + 10, h - view.y1 + 10);

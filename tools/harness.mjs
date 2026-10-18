@@ -1874,6 +1874,90 @@ async function runSurvivalMilestone() {
   }
   const gateRulePass = gateChecks.length === 6 && gateChecks.every(Boolean);
 
+  // ---- BUILD 13, the cheap-but-visible pass (docs/VISUAL-LAYOUT-RESEARCH.md
+  // §7): damage numbers that add up over the head (V9), the coming night's
+  // gates known by day (V10). V8 (the bright captain) and V4 (names only
+  // near) are pixels and labels: tools/survival-plotsqa.mjs ----
+  const b13Checks = [];
+  const b13Check = (name, ok, detail) => {
+    b13Checks.push(!!ok);
+    console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} (${detail})`);
+  };
+  {
+    const { DMG_NUMBER, SurvivalCrowdZombie: Crowd } = await import('../src/game/survival.js');
+    const { SURVIVAL_ACTOR_SCALE: ACTOR_SCALE } = await import('../src/core/config.js');
+    window.localStorage.removeItem('lastnight.save.v1');
+    const bg = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
+    const bm = bg.survival;
+    const btick = (n = 1) => { for (let i = 0; i < n; i++) bg.update(step); };
+    // V10: what the day forecasts is what the night sends, gate by gate
+    const forecasts = [];
+    for (const day of [2, 3]) {
+      bm.restart();
+      bm.phase = 'day'; bm.day = day; bg.screen = 'playing'; bg.uiPanel = 'survival-day';
+      const want = {};
+      for (const r of bm.tonightPlan()) want[r.id] = `${r.swarm}/${r.individuals}/${r.breakers}`;
+      bm.startNight();
+      bg.enemies.length = 0;
+      bm.elapsed = bm.nightDuration * 0.99;
+      bm.updateWaves();
+      const got = {};
+      for (const e of bg.enemies) {
+        const k = e._survivalType === 'swarm' ? 0 : e._survivalType === 'individual' ? 1 : e._survivalType === 'breaker' ? 2 : -1;
+        if (k < 0) continue;
+        const id = k === 2 ? (e.targetEntranceId || e.entranceId) : e.entranceId;
+        (got[id] || (got[id] = [0, 0, 0]))[k]++;
+      }
+      const gotRows = Object.entries(got).map(([id, row]) => [id, row.join('/')]).sort();
+      const wantRows = Object.entries(want).sort();
+      forecasts.push({ day, want, got: Object.fromEntries(gotRows), same: JSON.stringify(gotRows) === JSON.stringify(wantRows) });
+      bg.enemies.length = 0;
+    }
+    b13Check('V10: by day the coming night is known — tonightPlan() names every gate the night then hits, with the same swarm / Individual / Breaker counts (Nights 2 and 3)',
+      forecasts.every((f) => f.same) && Object.keys(forecasts[0].want).length >= 3 && Object.keys(forecasts[1].want).length >= 3,
+      forecasts.map((f) => `N${f.day} ${Object.entries(f.want).map(([id, v]) => `${id} ${v}`).join(', ')}${f.same ? ' = spawned' : ` ≠ spawned ${JSON.stringify(f.got)}`}`).join(' | '));
+
+    // V9: hits on one body within DMG_NUMBER.merge are one number (summed, the
+    // killing blow's grade); a hit after that starts a new one; it starts over
+    // the head and rides with the body; the sizes are ~2/3 of BUILD 12's
+    bm.restart();
+    bm.phase = 'day'; bm.day = 2; bg.screen = 'playing'; bg.uiPanel = 'survival-day';
+    bm.startNight();
+    bm.waveIndex = 99; bm.breakerIndex = 99; bm.individualIndex = 99;
+    bg.enemies.length = 0; bm.guards.length = 0; bm.survivors = 0;
+    bm.tuning = { ...bm.tuning, autoAttackRange: 0 };
+    const gate = bm.entranceById('northGate');
+    const body = new Crowd(gate.x, gate.y - 420, gate, 0, 2);
+    body.hp = 500; body.vx = 0; body.vy = 0; body.update = () => {};
+    bg.enemies.push(body);
+    bm.floaters.length = 0;
+    const held = bm.inTerritory(body.x, body.y);
+    bm.enemyDamageTaken(body, 10);
+    btick(12);
+    bm.enemyDamageTaken(body, 10);
+    btick(12);
+    body.hp = 8;
+    bm.enemyDamageTaken(body, 10);
+    const merged = bm.floaters.filter((f) => f.target === body);
+    const one = merged[0] || {};
+    body.x += 60;
+    btick(2);
+    const rode = Math.abs(one.x - (body.x + one.ox)) < 0.5;
+    btick(36);
+    body.hp = 500;
+    bm.enemyDamageTaken(body, 7);
+    const after = bm.floaters.filter((f) => f.target === body);
+    bm.tuning = SURVIVAL_TUNING;
+    const headH = 60 * ACTOR_SCALE * DMG_NUMBER.head;
+    b13Check('V9: three hits in 0.4 s on one body are ONE number (10+10+10 = "30", the kill\'s grade and size), it starts over the head and rides with the body; a hit 0.6 s later is a new number; sizes kill/heavy/held/hit 26/22/18/16 (were 40/32/28/23)',
+      !held && merged.length === 1 && one.text === '30' && one.hits === 3 && one.kind === 'kill' && one.size === DMG_NUMBER.size.kill
+        && Math.abs(one.h - headH) < 0.5 && rode && after.length === 2 && after[1].text === '7' && after[1].kind === 'hit'
+        && DMG_NUMBER.size.kill === 26 && DMG_NUMBER.size.heavy === 22 && DMG_NUMBER.size.held === 18 && DMG_NUMBER.size.hit === 16,
+      `numbers ${merged.length} "${one.text}" ×${one.hits} ${one.kind} ${one.size}px at h ${Math.round(one.h || 0)} (head ${Math.round(headH)}), rode ${rode}; later: ${after.map((f) => `"${f.text}" ${f.kind}`).join(', ')}`);
+    window.localStorage.removeItem('lastnight.save.v1');
+  }
+  const b13Pass = b13Checks.length === 2 && b13Checks.every(Boolean);
+
   console.log(`  idle Night 3: ${idle.nightThree.peakEnemies} peak enemies / ${idle.nightThree.peakBreakers} Breakers, ${idle.nightThree.kills} kills, ${idle.nightThree.wallDamage} wall damage, gate ${idle.nightThree.gateHp} HP, Hunter ${idle.nightThree.playerHp} HP; ${idle.phase}`);
   console.log(`  builder Night 3: ${builder.nightThree.peakEnemies} peak enemies / ${builder.nightThree.peakBreakers} Breakers, ${builder.nightThree.kills} kills, ${builder.nightThree.wallDamage} wall damage, gate ${builder.nightThree.gateHp} HP, Hunter ${builder.nightThree.playerHp} HP; keep Lv${builder.keepLevel} ${builder.keepHp} HP, soldiers ${builder.survivors}, buildings ${builder.buildings.join(',') || 'none'}, gateBuilt=${builder.gateBuilt}; ${builder.phase}`);
   // Balance target (M1 rebuild, K1): doing nothing must not win; an engaged
@@ -1886,7 +1970,7 @@ async function runSurvivalMilestone() {
     && hunterAutoShot && hunterRealLos && hunterSkill
     && idleLoses && builder.complete && builder.keepLevel === 3
     && builder.queueLockVerified && builder.sawmillBuilt && builder.gateBuilt && builder.barracksBuilt
-    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass && gateRulePass
+    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass && gateRulePass && b13Pass
     && builder.upgrades[0].level === 1 && builder.upgrades[0].plots === 9
     && builder.upgrades[builder.upgrades.length - 1].level === 3 && builder.upgrades[builder.upgrades.length - 1].plots === 15
     && builder.upgrades.every((item, i, all) => i === 0 || item.level >= all[i - 1].level);

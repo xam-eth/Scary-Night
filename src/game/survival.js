@@ -949,6 +949,31 @@ function killSource(game, by) {
   return 'captain';
 }
 /** The colour of a hit by source: warm for the captain, cool for guards, hot for ballistas. */
+/**
+ * BUILD 13 (V9, docs/VISUAL-LAYOUT-RESEARCH.md §7: "angka damage lebih
+ * kecil, naik di atas kepala, angka berurutan digabung"): about two thirds of
+ * BUILD 12's sizes, starting over the head instead of at the chest, and the
+ * hits one body takes within `merge` seconds add up in one number that pops
+ * again. The hit itself (flash, ring, sparks, knockback) carries the impact.
+ */
+export const DMG_NUMBER = Object.freeze({
+  size: Object.freeze({ kill: 26, heavy: 22, held: 18, hit: 16 }),
+  pop: Object.freeze({ kill: 1.45, heavy: 1.35, hit: 1.25 }),
+  head: 1.55,   // × the chest height
+  merge: 0.38,  // s since the number's last hit
+  life: 0.9,
+  linger: 0.7,  // s a merged number stays after its last hit
+});
+const DMG_RANK = Object.freeze({ hit: 0, held: 1, heavy: 2, kill: 3 });
+
+function styleDamageNumber(f) {
+  f.kind = f.grade === 'kill' ? 'kill' : f.grade === 'heavy' ? 'heavy' : 'hit';
+  f.color = f.grade === 'kill' ? '#ff9a3c' : f.held ? '#ffd24a' : '#ffffff';
+  f.size = DMG_NUMBER.size[f.grade];
+  f.pop = DMG_NUMBER.pop[f.kind];
+  f.text = `${Math.round(f.sum)}`;
+}
+
 const HIT_COLOR = Object.freeze({ captain: '#ffd36a', guard: '#8fe3ff', tower: '#ff8a3a', keep: '#ff8a3a', flare: '#fff2b0' });
 
 /**
@@ -2052,6 +2077,36 @@ export class SurvivalMode {
     return doors[0];
   }
 
+  /**
+   * BUILD 13 (V10, docs/VISUAL-LAYOUT-RESEARCH.md §7: "info gelombang
+   * sebelum malam"): the coming night's attack gate by gate, known by day —
+   * the plan updateWaves() will play (NIGHT_DOORS for the swarm waves and the
+   * Individuals, the Breakers at the main gate from Night 2). By day
+   * `this.day` is the night to come. Rows in first-contact order:
+   * { id, entrance, swarm, waves: [1..3], individuals, breakers }.
+   */
+  tonightPlan() {
+    const rows = new Map();
+    const row = (entrance) => {
+      if (!entrance) return null;
+      let r = rows.get(entrance.id);
+      if (!r) { r = { id: entrance.id, entrance, swarm: 0, waves: [], individuals: 0, breakers: 0 }; rows.set(entrance.id, r); }
+      return r;
+    };
+    const counts = this.waveCounts();
+    for (let w = 0; w < WAVE_TIMES.length; w++) {
+      const r = row(this.chooseTargetEntrance(0, 0, w));
+      if (r) { r.swarm += clamp(Math.round(counts[w]), 1, SWARM_CAP); r.waves.push(w + 1); }
+    }
+    for (let i = 0; i < INDIVIDUAL_TIMES.length; i++) {
+      const r = row(this.chooseTargetEntrance(0, 0, i + 2));
+      if (r) r.individuals += 1;
+    }
+    const breakers = this.day >= 3 ? BREAKER_TIMES.length : this.day >= 2 ? 1 : 0;
+    if (breakers) { const r = row(this.mainGate()); if (r) r.breakers += breakers; }
+    return [...rows.values()];
+  }
+
   /** Dawn: survivors patch every exterior door (the gate keeps its bonus). */
   repairDoors() {
     for (const e of this.game.mansion.entrances) {
@@ -2185,8 +2240,7 @@ export class SurvivalMode {
       const kill = (enemy.hp || 0) - dealt <= 0;
       const src = killSource(this.game, enemy._lastHitBy);
       const heavy = src === 'tower' || src === 'keep' || src === 'flare' || dealt >= 28;
-      this.pushFloater(enemy.x + rand(-12, 12), enemy.y, `${Math.round(dealt)}`, kill ? '#ff9a3c' : held ? '#ffd24a' : '#ffffff',
-        { h, size: kill ? 40 : heavy ? 32 : held ? 28 : 23, pop: kill ? 1.7 : heavy ? 1.55 : 1.4, drift: rand(-30, 30), kind: kill ? 'kill' : heavy ? 'heavy' : 'hit' });
+      this.pushDamageNumber(enemy, dealt, kill ? 'kill' : heavy ? 'heavy' : held ? 'held' : 'hit', h * DMG_NUMBER.head, held);
       // the hit lands: a flash and a ring at the body (world3d) and sparks
       // thrown back along the shot
       const color = HIT_COLOR[src] || '#ffffff';
@@ -4076,6 +4130,37 @@ export class SurvivalMode {
     this.hudPops.push({ icon, text, from, t0: this.uiClock });
   }
 
+  /**
+   * A damage number over a body (V9): a hit within DMG_NUMBER.merge of the
+   * last one on the same body adds into that number (it pops again and takes
+   * the stronger grade); otherwise a new one. It follows the body while that
+   * lives.
+   */
+  pushDamageNumber(enemy, dealt, grade, h, held = false) {
+    // drawn on every hit, merged or not: the seeded runs (survival-balance)
+    // see the same random stream as before the merge
+    const ox = rand(-12, 12), drift = rand(-22, 22);
+    const prev = this.floaters.find((f) => f.target === enemy && f.t - f.bump <= DMG_NUMBER.merge);
+    if (prev) {
+      prev.sum += dealt;
+      prev.hits += 1;
+      prev.bump = prev.t;
+      prev.life = Math.max(prev.life, prev.t + DMG_NUMBER.linger);
+      prev.held = prev.held || held;
+      if (DMG_RANK[grade] > DMG_RANK[prev.grade]) prev.grade = grade;
+      styleDamageNumber(prev);
+      return prev;
+    }
+    if (this.floaters.length > 48) this.floaters.shift();
+    const f = {
+      x: enemy.x + ox, y: enemy.y, ox, h, icon: null, t: 0, life: DMG_NUMBER.life, drift,
+      target: enemy, sum: dealt, hits: 1, bump: 0, grade, held,
+    };
+    styleDamageNumber(f);
+    this.floaters.push(f);
+    return f;
+  }
+
   pushFloater(x, y, text, color, opts = {}) {
     if (this.floaters.length > 48) this.floaters.shift();
     this.floaters.push({
@@ -4099,7 +4184,9 @@ export class SurvivalMode {
     for (let i = this.floaters.length - 1; i >= 0; i--) {
       const f = this.floaters[i];
       f.t += dt;
-      if (f.t >= f.life) this.floaters.splice(i, 1);
+      if (f.t >= f.life) { this.floaters.splice(i, 1); continue; }
+      // a damage number rides over its body while that lives (V9)
+      if (f.target && !f.target.dead && f.t < f.life - 0.25) { f.x = f.target.x + f.ox; f.y = f.target.y; }
     }
     if (this.banner) {
       this.banner.age += dt;
