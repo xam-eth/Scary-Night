@@ -48,6 +48,9 @@ import * as UI from '../ui/screens.js';
 import { SurvivalMode } from './survival.js';
 import { drawSurvivalScreen, updateSurvivalHints } from '../ui/survival.js';
 
+/** HUD chips that take a tap in play, day or night (survival.js camera). */
+const CAMERA_CHIPS = Object.freeze(['survival:RECENTER', 'survival:ZOOM IN', 'survival:ZOOM OUT']);
+
 /* ================= pickups ================= */
 
 /** Bare-handed repair rate: slow, and capped at half of a door's health. */
@@ -2869,10 +2872,11 @@ export class Game {
       }
     }
 
-    // the RECENTER chip works by night too (no panel takes taps then)
+    // the RECENTER chip and the camera's + / - (BUILD 12) work by night too
+    // (no panel takes taps then)
     if (this.screen === 'playing' && input.uiTap) {
       const tap = input.uiTap;
-      const chip = this.ui.find((item) => item.label === 'survival:RECENTER'
+      const chip = this.ui.find((item) => CAMERA_CHIPS.includes(item.label)
         && tap.x > item.x && tap.x < item.x + item.w && tap.y > item.y && tap.y < item.y + item.h);
       if (chip) { input.uiTap = null; chip.onClick(); return; }
     }

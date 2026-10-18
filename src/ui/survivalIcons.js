@@ -767,6 +767,23 @@ const ICONS = {
     ctx.closePath();
     fillStroke(ctx, '#ffffff');
   },
+  /** Zoom (BUILD 12's dynamic camera): a magnifying glass with a plus. */
+  zoom(ctx) {
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineWidth *= 3.2;
+    ctx.beginPath(); ctx.moveTo(0.3, 0.3); ctx.lineTo(0.84, 0.84); ctx.stroke();
+    ctx.restore();
+    circle(ctx, -0.14, -0.14, 0.62, '#d6e4ff');
+    ctx.save();
+    ctx.lineWidth *= 2.2;
+    ctx.strokeStyle = '#2f5bff';
+    ctx.beginPath();
+    ctx.moveTo(-0.44, -0.14); ctx.lineTo(0.16, -0.14);
+    ctx.moveTo(-0.14, -0.44); ctx.lineTo(-0.14, 0.16);
+    ctx.stroke();
+    ctx.restore();
+  },
 };
 
 export function hasSurvivalIcon(name) { return Object.prototype.hasOwnProperty.call(ICONS, name); }

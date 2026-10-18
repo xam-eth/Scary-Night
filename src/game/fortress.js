@@ -43,15 +43,21 @@ export const FORT = Object.freeze({
  * The bailey's scale. The first fortress (scale 1: 2600 x 1900 px, ~50 x 37 m)
  * read as a huge empty courtyard with small pieces in it (playtest
  * 2026-10-16: "benteng awal terlalu besar luas sedangkan component game nya
- * kecil"). 0.7 was not enough to change that on a phone (2026-10-17: "tidak
- * ada perubahan"), so it is now 0.5: 1300 x 950 px (~25 x 18 m), while the
- * actors stand x1.6 (SURVIVAL_ACTOR_SCALE) and the camera frames 1.3x closer
- * (SurvivalMode.frameMul) — the captain, a guard and a demon each fill about
- * a quarter of a sideways phone's height, and from the keep most of the
- * bailey is in one screen. The yards, roads and gate positions keep their
- * proportions; gate widths and props keep their size.
+ * kecil"); 0.7 changed nothing on a phone, and 0.5 (1300 x 950 px, BUILD 8-11)
+ * went the other way: 15 plots, the keep and the gates in 0.8 of a screen read
+ * as crammed (2026-10-17: "lebar benteng dengan component di dalam terlihat
+ * sangat padat"), and colours and labels alone did not change that.
+ *
+ * BUILD 12 is layout option B of docs/VISUAL-LAYOUT-RESEARCH.md (chosen
+ * 2026-10-17: "untuk opsi nya B"): the same 15 plots in a bailey 1.6x the
+ * size, 0.8: 2080 x 1520 px (~40 x 29 m), about two phone screens at the play
+ * framing, laid out like a Rise of Kingdoms city — the keep on a stone plaza
+ * in the middle, narrow paved roads to the four gates, each grass quarter one
+ * district of one building type, open ground between the districts and the
+ * wall. The camera zooms out far enough to see the whole bailey
+ * (SURVIVAL_CAMERA). Gate widths, towers and props keep their size.
  */
-export const FORT_SCALE = 0.5;
+export const FORT_SCALE = 0.8;
 const S = (v) => Math.round(v * FORT_SCALE);
 /**
  * The curtain wall is low, ~2 m (the house's walls are 2.6): with the actors
@@ -61,10 +67,19 @@ const S = (v) => Math.round(v * FORT_SCALE);
  * merlons; the towers and the gatehouses stay tall.
  */
 export const FORT_WALL_METRES = 2.0;
-/** The courtyard inside the curtain wall: 1300 x 950 px at FORT_SCALE 0.5. */
+/** The courtyard inside the curtain wall: 2080 x 1520 px at FORT_SCALE 0.8. */
 export const BAILEY = Object.freeze({ x: S(-1300), y: S(-950), w: S(2600), h: S(1900) });
-const COLS = Object.freeze([-1300, -450, 450, 1300].map(S));
-const ROWS = Object.freeze([-950, -320, 320, 950].map(S));
+/**
+ * Half the width of a paved road (BUILD 12): the four gate roads are 260 px
+ * wide streets between the districts, not a third of the bailey each (at
+ * BUILD 11's proportions they would be 720 px of bare stone). The inner ward
+ * is the square where they cross; World3D lays the keep's round plaza on it.
+ */
+export const ROAD_HALF = 130;
+const COLS = Object.freeze([BAILEY.x, -ROAD_HALF, ROAD_HALF, BAILEY.x + BAILEY.w]);
+const ROWS = Object.freeze([BAILEY.y, -ROAD_HALF, ROAD_HALF, BAILEY.y + BAILEY.h]);
+/** The stone plaza round the keep (World3D), px from the keep's centre. */
+export const PLAZA_R = 235;
 
 /** The gates, clockwise from the main gate that faces the camera. */
 export const GATES = Object.freeze([
@@ -245,29 +260,53 @@ export class Fortress extends Mansion {
   }
 
   /**
-   * The bailey's life: a pile of stores by the main gate and its twin by
-   * the north gate, and a well (BUILD 11: the rest went, it read as
-   * clutter). Laid out with the build plots (survival.js PLOT, checked by
-   * tools/survival-map.mjs): against the wall between the plots, in the same
-   * point symmetry through the keep, never on a plot, a gate's way in or a
-   * ballista's line of fire (playtest 2026-10-17: "letak build bangunan
-   * masih belum rapi" — barrels stood on the plots).
+   * The bailey's dressing (BUILD 12, layout B): each grass quarter is one
+   * district, and its corner (the open ground between the plots and the
+   * corner tower) carries that district's stock, so the trade reads from
+   * across the bailey — targets and a weapon rack by the barracks (north-
+   * west), stone and rocks by the gold mines (north-east), log piles by the
+   * sawmills (south-west), the well and the stores by the armory (south-
+   * east) — with a clump of trees in every corner and three single trees
+   * framing the keep's plaza from behind, the way a Rise of Kingdoms city
+   * frames its city hall. Everything is low (about the captain's height),
+   * laid out with the plots (survival.js PLOT, checked by
+   * tools/survival-map.mjs): never on a plot, a road, the plaza, a gate's
+   * way in or a ballista's line of fire. KayKit models (`kit:<key>`,
+   * buildings3d.js KIT_DECOR) that World3D stands on each footprint; `fit`
+   * is how wide the model is drawn when it is wider than what blocks.
    */
   furnish() {
-    const put = (cx, cy, w, h, type) => this.addF(cx - w / 2, cy - h / 2, w, h, type, { room: this.findRoom(cx, cy) });
-    const barrel = (x, y) => put(x, y, 32, 32, 'barrel');
-    const crates = (x, y) => put(x, y, 60, 50, 'crates');
-    // s = 1: the south and west walls; s = -1: their twins on the north and
-    // east walls (x, y -> -x, -y)
-    // BUILD 11 (playtest 2026-10-17: "lebar benteng dengan component di
-    // dalam terlihat sangat padat"): the stores along the walls (16 barrels
-    // and crates) and the market table are gone; one pile stays by the main
-    // gate and its twin by the north gate, and the well
-    for (const s of [1, -1]) {
-      // beside the main gate's west tower / the north gate's east tower
-      barrel(-230 * s, 425 * s); crates(-300 * s, 416 * s);
-    }
-    put(300, -250, 96, 96, 'well');           // the well (KayKit), in the northeast yard
+    const put = (cx, cy, w, h, type, o = {}) => this.addF(cx - w / 2, cy - h / 2, w, h, type, { room: this.findRoom(cx, cy), ...o });
+    const kit = (key, x, y, w, h, o = {}) => put(x, y, w, h, `kit:${key}`, o);
+    // north-west: the barracks' training ground
+    kit('target', -700, -662, 46, 30, { rot: 0.25 });
+    kit('target', -606, -676, 46, 30, { rot: -0.15 });
+    kit('weaponrack', -796, -606, 52, 30, { rot: 0.5 });
+    kit('bucketArrows', -742, -566, 30, 30);
+    // north-east: the gold mines' stone and spoil
+    kit('stone', 700, -648, 84, 70, { rot: 0.3 });
+    kit('rockE', 806, -562, 60, 44, { rot: 1.1 });
+    kit('rockC', 612, -700, 44, 44);
+    kit('wheelbarrow', 770, -682, 50, 92, { rot: 2.2 });
+    // south-west: the sawmills' log piles
+    kit('lumber', -700, 652, 124, 60, { rot: 0.12 });
+    kit('lumber', -572, 690, 124, 60, { rot: -0.1 });
+    kit('wheelbarrow', -800, 584, 50, 92, { rot: 0.9 });
+    // south-east: the well and the stores, by the armory
+    put(640, 560, 96, 96, 'well');
+    kit('crate', 532, 640, 44, 44, { rot: 0.3 });
+    kit('barrel', 578, 676, 36, 36);
+    kit('sack', 492, 604, 34, 40, { rot: 0.6 });
+    // a clump of trees in every corner, inside the corner tower
+    kit('treesA', -890, -655, 90, 90, { fit: 132, rot: 0.4 });
+    kit('treesB', 890, -655, 90, 90, { fit: 132, rot: 2.1 });
+    kit('treesB', -890, 655, 90, 90, { fit: 132, rot: -1.2 });
+    kit('treesA', 890, 655, 90, 90, { fit: 132, rot: 3.3 });
+    // single trees framing the plaza from behind and the sides (none in
+    // front of the keep: the camera looks from the south-east)
+    kit('treeA', -212, -212, 40, 40, { fit: 74 });
+    kit('treeB', 212, -212, 40, 40, { fit: 80, rot: 1.3 });
+    kit('treeB', -212, 212, 40, 40, { fit: 80, rot: 2.6 });
   }
 
   /** Lighting is the survival mode's (the keep's lamp); no house fixtures. */
@@ -279,8 +318,8 @@ export class Fortress extends Mansion {
   /** The house shrinks its oversized sprite furniture; the bailey is drawn to scale. */
   dressFurniture() {}
 
-  /** Where the captain stands when a run starts: beside the keep. */
+  /** Where the captain stands when a run starts: on the east road by the keep (survival.js PLOT.home). */
   startPoint() {
-    return { x: this.keepSpot.x + 200, y: this.keepSpot.y + 40 };
+    return { x: this.keepSpot.x + 240, y: this.keepSpot.y };
   }
 }

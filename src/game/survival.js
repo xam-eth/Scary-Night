@@ -21,15 +21,29 @@ const RESOURCE_CAP = 999;
  */
 const FRAME_CLOSER = 1.1;
 /**
- * The player's own hand on the camera: a drag on the free half of the screen
- * (the stick lives on the other half) slides the view, a pinch or the mouse
- * wheel zooms it within `zoom`, and it eases back onto the captain once he
- * walks. `reach`: how far past the bailey's edge the view centre may go.
+ * The player's own hand on the camera — a dynamic camera like Rise of
+ * Kingdoms' city view (BUILD 12, playtest 2026-10-17: "jarak kamera nya bisa
+ * di pebesar perkecil geser jadi camera dinamis"):
+ *   - a drag on the free half of the screen slides the view 1:1 and a flick
+ *     glides on and slows (`glide`);
+ *   - two fingers anywhere pinch it, about the point between them, and pan
+ *     with it; the mouse wheel zooms about the cursor; the + / - buttons on
+ *     the right edge (and the + / - keys) zoom a `step`, eased;
+ *   - `zoom` is the range on top of the play framing: 0.42 shows the whole
+ *     bailey on a sideways phone, 1.6 a close-up of a building or a fight;
+ *   - walking eases the view back onto the captain (`recenter`), so the
+ *     camera never costs him the fight; a tap on free ground or the CAPTAIN
+ *     chip brings it back at once.
+ * `reach`: how far past the bailey's edge the view centre may go.
  */
 export const SURVIVAL_CAMERA = Object.freeze({
-  zoom: Object.freeze([0.8, 1.3]),
+  zoom: Object.freeze([0.42, 1.6]),
+  step: 1.35,         // one tap on + / - (or a key press)
+  ease: 10,           // 1/s a step's zoom eases in
   reach: 160,
   recenter: 3.2,      // 1/s the pan eases out while the captain walks
+  glide: 4.5,         // 1/s a flicked view slows down
+  flick: 120,         // world px/s: a released drag slower than this just stops
 });
 const SAVE_EVERY = 2.5;
 // Night pacing: the first rank hits a door within seconds, so Night 1 has
@@ -95,28 +109,28 @@ export const KEEP = Object.freeze({
   damage: Object.freeze({ swarm: 12, individual: 36, breaker: 72 }),
   alarmRange: 460,       // a body this close (and inside) threatens the keep
   attackedFor: 1.6,      // s the keep reads "under attack" after a claw
-  // the roof ballista reaches the gate roads of the half-size bailey (the
-  // north and south gates stand 475 px from the keep): at 360 it only ever
-  // covered the inner ward and seldom fired
+  // the roof ballista reaches out along the gate roads (at 360 it only ever
+  // covered the inner ward and seldom fired). BUILD 12's bailey is 1.6x the
+  // size (the north and south gates stand 773 px from the keep, not 488):
+  // Lv2 covers the districts round the plaza, Lv3 most of the way to the
+  // north and south gates, never past the wall
   ballista: Object.freeze({
-    2: Object.freeze({ damage: 18, every: 1.1, range: 440 }),
-    3: Object.freeze({ damage: 26, every: 0.9, range: 500 }),
+    2: Object.freeze({ damage: 18, every: 1.1, range: 600 }),
+    3: Object.freeze({ damage: 26, every: 0.9, range: 700 }),
   }),
 });
 
 /**
- * The keep's banner: the yards of the bailey you may build in, by keep level
- * (the inner ward is the keep's own; Lv1 adds the four gate roads, Lv2 the
- * postern yards, Lv3 the last two corners). Inside them the garrison hits
- * harder (SURVIVAL_TUNING.territoryDamageTakenMul) — the banner never slows
- * a body.
+ * The keep's banner (BUILD 12): a circle round the keep that grows with its
+ * level, clipped to the bailey's wall — Lv1 (900 px, three quarters of the
+ * bailey) reaches every Lv1 plot including the side gates' ballistas, Lv2
+ * (1100) all but the far corners, Lv3 all of it. Inside it the garrison hits
+ * harder (SURVIVAL_TUNING.territoryDamageTakenMul); it never slows a body.
+ * Which plot may be built is no longer the banner's yard but each plot's own
+ * keep level (SURVIVAL_SLOTS `level`): layout B gives every district plots
+ * of more than one level, so a later plot can stand on blue ground already.
  */
-const TERRITORY_LV1 = [FORT.WARD, FORT.NORTH, FORT.SOUTH, FORT.EAST, FORT.WEST];
-export const TERRITORY = Object.freeze({
-  1: Object.freeze(TERRITORY_LV1.slice()),
-  2: Object.freeze([...TERRITORY_LV1, FORT.NW, FORT.SE]),
-  3: Object.freeze([...TERRITORY_LV1, FORT.NW, FORT.SE, FORT.NE, FORT.SW]),
-});
+export const BANNER = Object.freeze({ 1: 900, 2: 1100, 3: 1400 });
 
 /**
  * Typed build circles (P1, "walk into a circle, tap BUILD"). Every circle is
@@ -127,83 +141,89 @@ export const TERRITORY = Object.freeze({
  * Where each one stands is PLOT below (the old `at` yard fractions are gone).
  */
 export const SURVIVAL_SLOTS = Object.freeze([
-  Object.freeze({ id: 'south:tower', room: FORT.SOUTH, type: 'tower' }),
-  Object.freeze({ id: FORT.WARD, room: FORT.WARD, type: 'barracks' }),
-  Object.freeze({ id: FORT.SOUTH, room: FORT.SOUTH, type: 'sawmill' }),
-  Object.freeze({ id: FORT.NORTH, room: FORT.NORTH, type: 'mine' }),
-  Object.freeze({ id: 'north:tower', room: FORT.NORTH, type: 'tower' }),
-  Object.freeze({ id: FORT.WEST, room: FORT.WEST, type: 'sawmill' }),
-  Object.freeze({ id: 'west:tower', room: FORT.WEST, type: 'tower' }),
-  Object.freeze({ id: FORT.EAST, room: FORT.EAST, type: 'mine' }),
-  Object.freeze({ id: 'east:tower', room: FORT.EAST, type: 'tower' }),
-  Object.freeze({ id: FORT.NW, room: FORT.NW, type: 'barracks' }),
-  Object.freeze({ id: 'northwest:tower', room: FORT.NW, type: 'tower' }),
-  Object.freeze({ id: FORT.SE, room: FORT.SE, type: 'mine' }),
-  Object.freeze({ id: 'southeast:tower', room: FORT.SE, type: 'tower' }),
-  Object.freeze({ id: FORT.NE, room: FORT.NE, type: 'sawmill' }),
-  Object.freeze({ id: FORT.SW, room: FORT.SW, type: 'barracks' }),
+  Object.freeze({ id: 'south:tower', room: FORT.SOUTH, type: 'tower', level: 1 }),
+  Object.freeze({ id: FORT.WARD, room: FORT.WARD, type: 'barracks', level: 1 }),
+  Object.freeze({ id: FORT.SOUTH, room: FORT.SOUTH, type: 'sawmill', level: 1 }),
+  Object.freeze({ id: FORT.NORTH, room: FORT.NORTH, type: 'mine', level: 1 }),
+  Object.freeze({ id: 'north:tower', room: FORT.NORTH, type: 'tower', level: 1 }),
+  Object.freeze({ id: FORT.WEST, room: FORT.WEST, type: 'sawmill', level: 1 }),
+  Object.freeze({ id: 'west:tower', room: FORT.WEST, type: 'tower', level: 1 }),
+  Object.freeze({ id: FORT.EAST, room: FORT.EAST, type: 'mine', level: 1 }),
+  Object.freeze({ id: 'east:tower', room: FORT.EAST, type: 'tower', level: 1 }),
+  Object.freeze({ id: FORT.NW, room: FORT.NW, type: 'barracks', level: 2 }),
+  Object.freeze({ id: 'northwest:tower', room: FORT.NW, type: 'tower', level: 2 }),
+  Object.freeze({ id: FORT.SE, room: FORT.SE, type: 'mine', level: 2 }),
+  Object.freeze({ id: 'southeast:tower', room: FORT.SE, type: 'tower', level: 2 }),
+  Object.freeze({ id: FORT.NE, room: FORT.NE, type: 'sawmill', level: 3 }),
+  Object.freeze({ id: FORT.SW, room: FORT.SW, type: 'barracks', level: 3 }),
 ]);
 /**
- * WHERE EVERY PLOT STANDS — a laid-out bailey (playtest 2026-10-17: "letak
- * build bangunan masih belum rapi").
+ * WHERE EVERY PLOT STANDS — layout B (BUILD 12, docs/VISUAL-LAYOUT-RESEARCH.md
+ * §6; chosen 2026-10-17: "untuk opsi nya B tapi cek dulu peta ROK").
  *
- * The plots used to be searched for at run time from yard fractions, so they
- * landed wherever the search found floor: a ballista between the west gate's
- * towers, the ward's barracks against the keep, plots on top of the stores.
- * They are now a fixed plan, offsets from the keep in world px, drawn and
- * checked by tools/survival-map.mjs:
- *   - the plan is point-symmetric through the keep, like the fortress itself
- *     (the NW postern answers the SE one): every plot has a twin at -x, -y;
- *   - the main and north gate roads each have their pair either side of the
- *     road, mirrored (x = +-130, 160 px inside the wall): a street to the
- *     gate, its ballista on the side its twin gate's is not; the side gates'
- *     ballistas stand 115 px off their road, 170 px in;
- *   - the plots stand in columns (x = +-130, +-165, +-340, +-480) and keep
- *     30+ px between pads, 60+ px from the curtain wall, 24+ px from the keep;
- *   - every ballista sees out of its gate through the opening (boltPath),
- *     close enough to the road to see the crowd at the gate: at 150 px off
- *     the road its view through the opening narrowed and the ballista-only
- *     bot fell from 5/5 three-star wins to 4/5 (survival-balance, 5 seeds);
- *   - the ward's barracks and the armory flank the road from the keep's door
- *     to the main gate; the captain starts on the east road by the keep.
- * Every building faces south (the main gate, the camera), so the bailey
- * reads as one planned town rather than a scatter.
+ * The plots are a fixed plan, offsets from the keep in world px, drawn and
+ * checked by tools/survival-map.mjs. Like a Rise of Kingdoms city, the bailey
+ * is zoned: the keep on its plaza in the middle, roads to the four gates, and
+ * each grass quarter one district of one trade, so a player reads "the blue
+ * quarter is the barracks" instead of hunting a mix of fifteen pads:
+ *   - north-west BARRACKS, north-east GOLD MINES, south-west SAWMILLS, each
+ *     three plots in a triangle (inner pair 270 px apart beside the plaza,
+ *     the third further out); south-east the ARMORY, the well and the stores;
+ *   - the ballistas stand where they always did relative to their gates
+ *     (BUILD 11: 170-183 px inside the wall, 115-130 px off the gate's axis,
+ *     85 px off a postern's), so each one sees out of its gate through the
+ *     opening exactly as before (boltPath; at 150 px off the road the view
+ *     narrowed and the ballista-only bot lost a win in five);
+ *   - the economy plots keep 130+ px of grass between pads (BUILD 11: 36-62),
+ *     190+ px from the wall, and stay off the roads and the plaza;
+ *   - the ballistas are point-symmetric through the keep (each gate's twin),
+ *     the districts mirror across the north-south road.
+ * The keep levels (SURVIVAL_SLOTS `level`) are BUILD 11's per plot id: 9
+ * plots at Lv1, 4 more at Lv2, the last 2 at Lv3; in each district the Lv1
+ * plots stand nearest the plaza. Every building faces south (the main gate,
+ * the camera).
  */
 export const PLOT = Object.freeze({
   radius: 68,
   at: Object.freeze({
-    ward: Object.freeze([165, 120]),
-    south: Object.freeze([-130, 315]),
-    'south:tower': Object.freeze([130, 315]),
-    north: Object.freeze([130, -315]),
-    'north:tower': Object.freeze([-130, -315]),
-    west: Object.freeze([-340, -125]),
-    'west:tower': Object.freeze([-480, 115]),
-    east: Object.freeze([340, 125]),
-    'east:tower': Object.freeze([480, -115]),
-    northwest: Object.freeze([-340, -345]),
-    'northwest:tower': Object.freeze([-480, -235]),
-    southeast: Object.freeze([340, 345]),
-    'southeast:tower': Object.freeze([480, 235]),
-    northeast: Object.freeze([480, -320]),
-    southwest: Object.freeze([-480, 320]),
+    // the ballistas, by their gates
+    'south:tower': Object.freeze([130, 600]),
+    'north:tower': Object.freeze([-130, -600]),
+    'west:tower': Object.freeze([-870, 115]),
+    'east:tower': Object.freeze([870, -115]),
+    'northwest:tower': Object.freeze([-870, -427]),
+    'southeast:tower': Object.freeze([870, 427]),
+    // north-west: the barracks
+    ward: Object.freeze([-330, -260]),
+    northwest: Object.freeze([-600, -260]),
+    southwest: Object.freeze([-465, -500]),
+    // north-east: the gold mines
+    north: Object.freeze([330, -260]),
+    east: Object.freeze([600, -260]),
+    southeast: Object.freeze([465, -500]),
+    // south-west: the sawmills
+    south: Object.freeze([-330, 260]),
+    west: Object.freeze([-600, 260]),
+    northeast: Object.freeze([-465, 500]),
   }),
-  /** The armory (the captain's upgrades): the ward barracks' mirror image. */
-  armory: Object.freeze([-165, 120]),
+  /** The armory (the captain's upgrades): the south-east district, the barracks' mirror image. */
+  armory: Object.freeze([330, 260]),
   /**
    * Where the captain starts a run and every dawn: on the east road just off
-   * the keep, between the ward's barracks and the east gate. (South of the
+   * the keep's plaza, between the armory and the gold mines. (South of the
    * keep, before its door, the engaged bot's night anchor ended Night 1 with
-   * the keep at 43% — one star; here it holds 94%, as the old start did.)
+   * the keep at 43% in BUILD 9 — one star; on the east road it held.)
    */
-  home: Object.freeze([190, 0]),
-  /** Twins the plan keeps (p: through the keep; x: across the north-south axis). */
+  home: Object.freeze([240, 0]),
+  /**
+   * Twins the plan keeps (p: through the keep; x: across the north-south
+   * road; y: across the east-west road).
+   */
   mirrors: Object.freeze([
-    ['south', 'north', 'p'], ['south:tower', 'north:tower', 'p'],
-    ['west', 'east', 'p'], ['west:tower', 'east:tower', 'p'],
-    ['northwest', 'southeast', 'p'], ['northwest:tower', 'southeast:tower', 'p'],
-    ['northeast', 'southwest', 'p'],
-    ['south', 'south:tower', 'x'], ['north', 'north:tower', 'x'],
+    ['south:tower', 'north:tower', 'p'], ['west:tower', 'east:tower', 'p'],
+    ['northwest:tower', 'southeast:tower', 'p'],
+    ['ward', 'north', 'x'], ['northwest', 'east', 'x'], ['southwest', 'southeast', 'x'],
+    ['ward', 'south', 'y'], ['northwest', 'west', 'y'], ['southwest', 'northeast', 'y'],
   ].map((row) => Object.freeze(row))),
 });
 const SLOT_BY_ID = new Map(SURVIVAL_SLOTS.map((slot) => [slot.id, slot]));
@@ -1127,7 +1147,6 @@ export class SurvivalMode {
     this._applyEntranceState();
     this.applyBuildingEffects(false);
     this.game.mansion.buildNav();
-    this._syncTerritory();
     this.game.survivalBakeDirty = true;
     this._syncGuardRoster(true);
     this._applyGuardState();
@@ -1173,8 +1192,8 @@ export class SurvivalMode {
         this.buildings[id] = type;
         this.buildingLevels[id] = level;
       }
-      const banner = TERRITORY[this.keepLevel] || TERRITORY[1];
-      const order = [...SURVIVAL_SLOTS].sort((a, b) => (banner.includes(b.room) ? 1 : 0) - (banner.includes(a.room) ? 1 : 0));
+      const open = (slot) => (slot.level <= this.keepLevel ? 1 : 0);
+      const order = [...SURVIVAL_SLOTS].sort((a, b) => open(b) - open(a));
       for (const old of homeless) {
         const slot = order.find((c) => c.type === old.type && !this.buildings[c.id]);
         if (!slot) continue;
@@ -1467,7 +1486,8 @@ export class SurvivalMode {
       { t: 3.3, ...along(0.45, 0.9) },
       { t: 4.7, ...along(0.52, 1.0) },
       { t: 5.7, x: p.x - 30, y: p.y - 30, z: 1.4 },
-      { t: CINE.intro.dur, x: play.x, y: play.y, z: 1 },
+      // the hand-over lands on the player's own zoom (BUILD 12), no jump
+      { t: CINE.intro.dur, x: play.x, y: play.y, z: this.userZoom() },
     ];
   }
 
@@ -3008,20 +3028,26 @@ export class SurvivalMode {
     this.game.audio.play('crossbow', { x: keep.x, y: keep.y, cam: this.game.renderer.cam, vol: 0.36 });
   }
 
-  /** Rooms under the keep's banner (by keep level). */
-  territoryRooms(level = this.keepLevel) {
-    const ids = TERRITORY[level] || TERRITORY[1];
-    return this.game.mansion.roomList.filter((room) => ids.includes(room.id));
+  /** How far the keep's banner reaches (px from the keep's centre) at a keep level. */
+  bannerReach(level = this.keepLevel) {
+    return BANNER[clamp(Math.round(level) || 1, 1, 3)];
   }
 
-  _syncTerritory() {
-    this._territoryLevel = this.keepLevel;
-    this._territory = new Set(TERRITORY[this.keepLevel] || TERRITORY[1]);
+  /** The plots a keep level opens (built or not). */
+  territoryPlots(level = this.keepLevel) {
+    return SURVIVAL_SLOTS.filter((slot) => slot.level <= level);
   }
 
+  /**
+   * Under the keep's banner: within its reach of the keep and inside the
+   * bailey's wall (a fortress; elsewhere the reach alone).
+   */
   inTerritory(x, y) {
-    if (this._territoryLevel !== this.keepLevel) this._syncTerritory();
-    return this._territory.has(this.game.mansion.findRoom(x, y));
+    const keep = this.keep();
+    const reach = this.bannerReach();
+    if ((x - keep.x) ** 2 + (y - keep.y) ** 2 > reach * reach) return false;
+    const B = this.game.mansion.bailey;
+    return !B || (x >= B.x && x <= B.x + B.w && y >= B.y && y <= B.y + B.h);
   }
 
   /**
@@ -3068,23 +3094,19 @@ export class SurvivalMode {
     return { x: Math.round(base.x - out.x * 24), y: Math.round(base.y - out.y * 24) };
   }
 
-  /** Circles the banner reaches (built or not), and the ones still locked. */
+  /** Circles the keep's level opens (built or not), and the ones still locked. */
   slotsInTerritory() {
-    const ids = TERRITORY[this.keepLevel] || TERRITORY[1];
-    return SURVIVAL_SLOTS.filter((slot) => ids.includes(slot.room));
+    return this.territoryPlots(this.keepLevel);
   }
 
   lockedSlots() {
-    const ids = TERRITORY[this.keepLevel] || TERRITORY[1];
-    return SURVIVAL_SLOTS.filter((slot) => !ids.includes(slot.room));
+    return SURVIVAL_SLOTS.filter((slot) => slot.level > this.keepLevel);
   }
 
-  /** The keep level whose banner first reaches this circle (1-3). */
+  /** The keep level that opens this circle (1-3). */
   slotUnlockLevel(slotId) {
     const slot = SLOT_BY_ID.get(slotId);
-    if (!slot) return 3;
-    for (let level = 1; level <= 3; level++) if (TERRITORY[level].includes(slot.room)) return level;
-    return 3;
+    return slot ? slot.level : 3;
   }
 
   /** Empty circles the Hunter can build on now. */
@@ -3105,13 +3127,12 @@ export class SurvivalMode {
     out.push({ id: 'armory', kind: 'armory', x: armory.x, y: armory.y, reach: CIRCLE.reach });
     const gate = this.gateSpot();
     if (gate) out.push({ id: 'gate', kind: 'gate', x: gate.x, y: gate.y, reach: CIRCLE.reach });
-    const ids = TERRITORY[this.keepLevel] || TERRITORY[1];
     for (const slot of SURVIVAL_SLOTS) {
       const spot = this.buildingSpot(slot.id);
       if (!spot) continue;
       out.push({
         id: slot.id, kind: 'slot', slot, type: slot.type, x: spot.x, y: spot.y, reach: CIRCLE.reach,
-        built: this.buildings[slot.id] || null, level: this.buildingLevel(slot.id), locked: !ids.includes(slot.room),
+        built: this.buildings[slot.id] || null, level: this.buildingLevel(slot.id), locked: slot.level > this.keepLevel,
       });
     }
     return out;
@@ -3304,7 +3325,6 @@ export class SurvivalMode {
       // the new storey comes with its stone: the new HP share is added
       const before = this.tuning.keepHp[this.keepLevel - 1] || this.keepHpMax();
       this.keepHp = Math.min(this.keepHpMax(), this.keepHp + (this.keepHpMax() - before));
-      this._syncTerritory();
       icon = 'keep'; text = `KEEP Lv${this.keepLevel}`;
     } else if (job.kind === 'repair') {
       const heal = Math.min(this.tuning.keepRepair.hp, this.keepHpMax() - this.keepHp);
@@ -3495,7 +3515,6 @@ export class SurvivalMode {
       rewardAck: 0, dayFocus: null, nightKeepStart: this.tuning.keepHp[1], walkPath: null, lastBuilt: null,
       cine: null, reinforcements: null, runResult: null,
     });
-    this._syncTerritory();
     this._resetNightFx();
     this._fields.clear();
     for (const e of g.mansion.entrances) {
@@ -3700,7 +3719,10 @@ export class SurvivalMode {
     const r = g.renderer;
     const night = this.phase !== 'day';
     this._steerCamera(dt);
-    if (r.setZoomMul) r.setZoomMul(this.frameMul(night) * this.userZoom(), dt);
+    // the player's own zoom lands at once (the ground under the fingers has
+    // to stay there); the day / night framing eases in
+    if (r.setZoomMul) r.setZoomMul(this.frameMul(night) * this.userZoom(), this._zoomSnap ? undefined : dt);
+    this._zoomSnap = false;
     let lookX = clamp(p.vx * 0.18, -56, 56);
     // a phone held sideways is short and its top band is HUD: frame a little
     // north of the Hunter so what stands above him is not under the HUD
@@ -3740,8 +3762,63 @@ export class SurvivalMode {
     return this._userZoom;
   }
 
+  /** Where the zoom is heading (a + / - step in flight), else where it is. */
+  zoomGoal() { return this._zoomGoal != null ? this._zoomGoal : this.userZoom(); }
+
+  /** 0 (all the way out, the whole bailey) .. 1 (all the way in). */
+  zoomShare() {
+    const [lo, hi] = SURVIVAL_CAMERA.zoom;
+    return clamp(Math.log(this.zoomGoal() / lo) / Math.log(hi / lo), 0, 1);
+  }
+
+  /** One + / - step (the buttons, the keys), eased in by _steerCamera. */
+  zoomStep(dir) {
+    const [lo, hi] = SURVIVAL_CAMERA.zoom;
+    const from = this.zoomGoal();
+    const to = clamp(from * Math.pow(SURVIVAL_CAMERA.step, Math.sign(dir) || 0), lo, hi);
+    if (Math.abs(to - from) < 1e-4) return false;
+    this._zoomGoal = to;
+    this._panUsed = true;
+    this._zoomUsed = true;
+    return true;
+  }
+
+  _saveZoom() {
+    const s = this.game.save && this.game.save.survival;
+    if (s) s.camZoom = +this.zoomGoal().toFixed(3);
+  }
+
+  /**
+   * Zoom by `k` now (a pinch, the wheel). `anchor` (screen px): the ground
+   * under it stays under it, as under the fingers in a map app; without one
+   * the zoom is about the middle of the screen.
+   */
+  _zoomBy(k, anchor = null) {
+    const g = this.game;
+    const r = g.renderer;
+    const [lo, hi] = SURVIVAL_CAMERA.zoom;
+    const before = this.userZoom();
+    const after = clamp(before * k, lo, hi);
+    this._zoomGoal = null;
+    if (Math.abs(after - before) < 1e-5) return;
+    if (anchor && r && r.cam && typeof r.screenToWorld === 'function' && r.cam.zoom > 0) {
+      const at = r.screenToWorld(anchor.x, anchor.y);
+      const f = 1 - before / after;
+      const dx = (at.x - r.cam.x) * f, dy = (at.y - r.cam.y) * f;
+      this.camPan.x += dx; this.camPan.y += dy;
+      r.cam.x += dx; r.cam.y += dy;
+      this._recenter = false;
+    }
+    this._userZoom = after;
+    this._zoomSnap = true;
+    this._panUsed = true;
+    this._zoomUsed = true;
+    this._saveZoom();
+  }
+
   /** Drop the drag: the view goes back onto the captain (snap: at once). */
   recenterCamera(snap = false) {
+    if (this._panVel) { this._panVel.x = 0; this._panVel.y = 0; }
     if (snap) { this.camPan.x = 0; this.camPan.y = 0; this._recenter = false; return; }
     this._recenter = Math.hypot(this.camPan.x, this.camPan.y) > 1;
   }
@@ -3750,12 +3827,12 @@ export class SurvivalMode {
   cameraOffset() { return Math.hypot(this.camPan.x, this.camPan.y); }
 
   /**
-   * The player's hand on the camera (playtest 2026-10-17: "camera terlalu
-   * dekat ... dan bisa di geser"). A drag on the free half moves the ground
-   * with the finger, 1:1 (the camera jumps with it, so it never lags); a
-   * pinch or the wheel zooms within SURVIVAL_CAMERA.zoom. Walking eases the
-   * view back onto the captain, so the drag never costs him the fight; a tap
-   * on free ground (or the RECENTER chip) brings it back at once.
+   * The player's hand on the camera (SURVIVAL_CAMERA). A drag on the free
+   * half moves the ground with the finger, 1:1 (the camera jumps with it, so
+   * it never lags), and a flick glides on; a pinch or the wheel zooms about
+   * the fingers / the cursor; the + / - buttons and keys zoom a step. Walking
+   * eases the view back onto the captain, so the drag never costs him the
+   * fight; a tap on free ground (or the CAPTAIN chip) brings it back at once.
    */
   _steerCamera(dt) {
     const g = this.game;
@@ -3763,7 +3840,11 @@ export class SurvivalMode {
     const r = g.renderer;
     const pan = this.camPan;
     if (!input || !r || !r.cam) return;
+    if (!this._panVel) this._panVel = { x: 0, y: 0 };
+    const vel = this._panVel;
+    const walking = !!(input.moving || this.walkPath);
     const d = input.panDelta;
+    let moved = false;
     if (d && (d.x || d.y) && r.cam.zoom > 0) {
       const u = d.x / (r.cam.zoom * ISO_CAMERA.horizontal);
       const q = d.y / (r.cam.zoom * ISO_CAMERA.vertical);
@@ -3773,13 +3854,36 @@ export class SurvivalMode {
       r.cam.x += wx; r.cam.y += wy;
       this._recenter = false;
       this._panUsed = true;
+      moved = true;
+      if (dt > 1e-4) {
+        // the flick: a running average of the drag's speed
+        vel.x = lerp(vel.x, wx / dt, 0.4);
+        vel.y = lerp(vel.y, wy / dt, 0.4);
+      }
     }
+    if (!moved) {
+      if (input.panning) {
+        // a finger held still on the glass: no glide when it lifts
+        const k = Math.exp(-14 * dt);
+        vel.x *= k; vel.y *= k;
+      } else if (!walking && !this._recenter && Math.hypot(vel.x, vel.y) > SURVIVAL_CAMERA.flick) {
+        pan.x += vel.x * dt; pan.y += vel.y * dt;
+        r.cam.x += vel.x * dt; r.cam.y += vel.y * dt;
+        const k = Math.exp(-SURVIVAL_CAMERA.glide * dt);
+        vel.x *= k; vel.y *= k;
+      } else { vel.x = 0; vel.y = 0; }
+    }
+    // pinch / wheel: about the fingers or the cursor, at once
     const z = input.zoomDelta;
-    if (z && Math.abs(z - 1) > 1e-4) {
-      this._userZoom = clamp(this.userZoom() * z, SURVIVAL_CAMERA.zoom[0], SURVIVAL_CAMERA.zoom[1]);
-      const s = g.save && g.save.survival;
-      if (s) s.camZoom = +this._userZoom.toFixed(3);
-      this._panUsed = true;
+    if (z && Math.abs(z - 1) > 1e-4) this._zoomBy(z, input.zoomAt);
+    // + / - keys; the buttons call zoomStep themselves
+    if (input.zoomStep) this.zoomStep(input.zoomStep);
+    if (this._zoomGoal != null) {
+      const now = this.userZoom();
+      const next = lerp(now, this._zoomGoal, 1 - Math.exp(-SURVIVAL_CAMERA.ease * dt));
+      this._userZoom = Math.abs(next - this._zoomGoal) < 1e-3 ? this._zoomGoal : next;
+      this._zoomSnap = true;
+      if (this._userZoom === this._zoomGoal) { this._zoomGoal = null; this._saveZoom(); }
     }
     if (typeof input.takePanTap === 'function' && input.takePanTap() && this.cameraOffset() > 40) this._recenter = true;
     // the view centre stays over the bailey (+ reach)
@@ -3787,10 +3891,12 @@ export class SurvivalMode {
     const B = g.mansion.bailey || g.mansion.bounds;
     if (B && p) {
       const reach = SURVIVAL_CAMERA.reach;
-      pan.x = clamp(p.x + pan.x, B.x - reach, B.x + B.w + reach) - p.x;
-      pan.y = clamp(p.y + pan.y, B.y - reach, B.y + B.h + reach) - p.y;
+      const cx = clamp(p.x + pan.x, B.x - reach, B.x + B.w + reach) - p.x;
+      const cy = clamp(p.y + pan.y, B.y - reach, B.y + B.h + reach) - p.y;
+      if (cx !== pan.x) vel.x = 0;
+      if (cy !== pan.y) vel.y = 0;
+      pan.x = cx; pan.y = cy;
     }
-    const walking = !!(input.moving || this.walkPath);
     if (this._recenter || walking) {
       const k = Math.exp(-(this._recenter ? 7 : SURVIVAL_CAMERA.recenter) * dt);
       pan.x *= k; pan.y *= k;
@@ -3798,16 +3904,6 @@ export class SurvivalMode {
     }
   }
 
-  /**
-   * Survival frames by the screen's short side, so a portrait phone and the
-   * same phone turned sideways see the same depth of house around the Hunter
-   * (landscape used to clamp to a much tighter zoom). Night pulls back far
-   * enough that a crowd at the nearest door is in frame; day shows the base.
-   * The half-size bailey (FORT_SCALE 0.5) lets the camera sit 1.3x closer
-   * again (FRAME_CLOSER), so the captain, his guards and the horde read as
-   * the pieces of the game rather than specks in a yard: a body stands ~90
-   * px tall on a 390 px sideways phone (it was ~54).
-   */
   frameMul(night) {
     const r = this.game.renderer;
     const short = Math.min(r.w || 390, r.h || 844);
@@ -4012,7 +4108,8 @@ export class SurvivalMode {
       survivors: this.survivors, keepLevel: this.keepLevel, keepHp: Math.round(this.keepHp), keepHpMax: this.keepHpMax(),
       keepState: this.keepState(), hunterLevel: this.hunterLevel,
       buildings: { ...this.buildings }, buildingLevels: { ...this.buildingLevels },
-      territory: this.territoryRooms().map((r) => r.id),
+      territory: this.territoryPlots().map((slot) => slot.id),
+      bannerReach: this.bannerReach(),
       enemies: this.game.enemies.filter((e) => !e.dead).length,
       breakers: this.game.enemies.filter((e) => e._survivalType === 'breaker' && !e.dead).length,
       kills: this.nightStats.kills, gateHp: Math.round(this.gateHp),

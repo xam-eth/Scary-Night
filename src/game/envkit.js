@@ -1528,7 +1528,8 @@ class EnvKitRuntime {
           box(cx + dx, 34, cz + dz, 5, 66, 5, 0x3a2a1d, rotation);
         }
         f.env3d = true;
-      } else if (!knownFurniture.has(f.type)) {
+      } else if (!knownFurniture.has(f.type) && !String(f.type).startsWith('kit:')) {
+        // 'kit:<key>': the bailey's KayKit dressing, placed by World3D
         missing.push(`furniture:${f.type}`);
       }
     }

@@ -20,7 +20,13 @@ const KEYMAP = {
   Escape: 'pause', Enter: 'confirm', KeyP: 'pause',
   KeyM: 'map',
   F1: 'debug',
+  // Survival's camera (BUILD 12): + / - zoom a step, like its on-screen buttons
+  Equal: 'zoomIn', NumpadAdd: 'zoomIn',
+  Minus: 'zoomOut', NumpadSubtract: 'zoomOut',
 };
+/** ms / px: two fingers landing this close together are a pinch, not a stick and a pan. */
+const PINCH_GRACE_MS = 320;
+const PINCH_GRACE_PX = 18;
 
 export class Input {
   constructor(canvas) {
@@ -30,7 +36,7 @@ export class Input {
     this.mouse = { x: 0, y: 0, wx: 0, wy: 0, down: false, clicked: false, moved: false, right: false, rightClick: false };
     this.move = { x: 0, y: 0 };
     this.runToggled = false;
-    this.stick = { active: false, id: -1, ox: 0, oy: 0, x: 0, y: 0, r: 54, dx: 0, dy: 0, mag: 0, pointer: false, homeX: 96, homeY: 0 };
+    this.stick = { active: false, id: -1, ox: 0, oy: 0, x: 0, y: 0, r: 54, dx: 0, dy: 0, mag: 0, pointer: false, homeX: 96, homeY: 0, t0: 0 };
     this.buttons = {
       attack: { x: 0, y: 0, r: 32, down: false, pulse: 0, hidden: false },
       run: { x: 0, y: 0, r: 22, hitR: 22, down: false, toggled: false, id: -1, pulse: 0, hidden: false },
@@ -52,11 +58,16 @@ export class Input {
     this.panEnabled = false;
     this.panSplit = 0.5;
     this.pan = { active: false, id: -1, pointer: false, x: 0, y: 0, ox: 0, oy: 0, dx: 0, dy: 0, travel: 0, t0: 0 };
-    this.pinch = { active: false, a: -1, b: -1, d: 0, k: 1 };
+    this.pinch = { active: false, a: -1, b: -1, d: 0, k: 1, mx: 0, my: 0 };
     this.touchPoints = new Map();
     this.wheelZoom = 1;
     this.panDelta = { x: 0, y: 0 };
     this.zoomDelta = 1;
+    // BUILD 12: where on the screen a zoom is centred (the pinch's midpoint,
+    // the cursor under the wheel; null: the middle) and the + / - key steps
+    this.zoomAt = null;
+    this._wheelAt = null;
+    this.zoomStep = 0;
     this.panTap = null;
     this.panBlock = null;    // (p) => true over any HUD item, a world chip included
     this.firstGesture = [];
@@ -99,6 +110,23 @@ export class Input {
   _panZone(p, c) {
     return this.panEnabled && p.x >= c.clientWidth * this.panSplit && p.y > Math.min(this.stickTopBand, c.clientHeight * 0.3) * 0.6;
   }
+
+  /** Two fingers on the glass: pinch (zoom about their midpoint) and pan with it. */
+  _startPinch(aId, a, bId, b) {
+    this.touchPoints.set(aId, { x: a.x, y: a.y });
+    this.touchPoints.set(bId, { x: b.x, y: b.y });
+    const pinch = this.pinch;
+    pinch.active = true; pinch.a = aId; pinch.b = bId;
+    pinch.d = Math.max(12, Math.hypot(b.x - a.x, b.y - a.y));
+    pinch.mx = (a.x + b.x) / 2; pinch.my = (a.y + b.y) / 2;
+    if (!this.pan.active) this._startPan(a, aId, false);
+    this.pan.travel = 99;   // a pinch is never a tap
+  }
+
+  /** Is the camera in the player's hand right now (a drag or a pinch)? */
+  get panning() { return this.pan.active || this.pinch.active; }
+
+  _now() { return typeof performance !== 'undefined' ? performance.now() : Date.now(); }
 
   _startPan(p, id, pointer) {
     const pan = this.pan;
@@ -191,6 +219,7 @@ export class Input {
       if (!this.panEnabled || !this.gameplay) return;
       // one notch (~100) zooms ~10%; trackpads send many small deltas
       this.wheelZoom *= Math.exp(-clamp(e.deltaY, -240, 240) * 0.001);
+      this._wheelAt = this._local(e);
       e.preventDefault();
     }, { passive: false });
     // A fast drag that leaves the canvas used to freeze the stick, so the
@@ -240,6 +269,7 @@ export class Input {
         this.stick.active = true;
         this.stick.pointer = true;
         this.stick.id = -1;
+        this.stick.t0 = this._now();
         this.stick.ox = p.x; this.stick.oy = p.y;
         this.stick.x = p.x; this.stick.y = p.y;
         this.mouse.down = false;
@@ -270,22 +300,38 @@ export class Input {
         const b = this._hitButton(p);
         if (b) { this.buttons[b].down = true; this.buttons[b].pulse = 1; this.buttons[b].id = t.identifier; continue; }
         const blocked = !!(this.stickBlock && this.stickBlock(p));
+        const panBlocked = blocked || !!(this.panBlock && this.panBlock(p));
+        const now = this._now();
+        if (this.panEnabled && !panBlocked && !this.pinch.active) {
+          // BUILD 12 ("kamera ... bisa di perbesar perkecil geser"): a pinch
+          // works with the two fingers anywhere, not only both on the free
+          // half. A second finger joins a drag on the free half (or one
+          // just begun anywhere), or two fingers landing together turn a
+          // stick that has not moved yet into the pinch.
+          const panFinger = this.pan.active && !this.pan.pointer && this.touchPoints.get(this.pan.id);
+          if (panFinger && (this._panZone(p, c) || now - this.pan.t0 < PINCH_GRACE_MS)) {
+            this._startPinch(this.pan.id, panFinger, t.identifier, p);
+            continue;
+          }
+          const s = this.stick;
+          if (s.active && !s.pointer && now - s.t0 < PINCH_GRACE_MS && Math.hypot(s.x - s.ox, s.y - s.oy) < PINCH_GRACE_PX) {
+            const first = { x: s.x, y: s.y };
+            const id = s.id;
+            s.active = false; s.id = -1; s.dx = 0; s.dy = 0; s.mag = 0;
+            this._startPinch(id, first, t.identifier, p);
+            continue;
+          }
+        }
         if (!this.stick.active && this._stickZone(p, c, 0.5, 0.18) && !blocked) {
           this.stick.active = true; this.stick.pointer = false; this.stick.id = t.identifier;
+          this.stick.t0 = now;
           this.stick.ox = p.x; this.stick.oy = p.y;
           this.stick.x = p.x; this.stick.y = p.y;
           continue;
         }
-        if (blocked || (this.panBlock && this.panBlock(p)) || !this._panZone(p, c)) continue;
+        if (panBlocked || !this._panZone(p, c)) continue;
         this.touchPoints.set(t.identifier, { x: p.x, y: p.y });
         if (!this.pan.active && !this.pinch.active) this._startPan(p, t.identifier, false);
-        else if (this.pan.active && !this.pinch.active && this.touchPoints.has(this.pan.id)) {
-          // a second finger on the free half: pinch to zoom
-          const a = this.touchPoints.get(this.pan.id);
-          this.pinch.active = true; this.pinch.a = this.pan.id; this.pinch.b = t.identifier;
-          this.pinch.d = Math.max(12, Math.hypot(p.x - a.x, p.y - a.y));
-          this.pan.travel = 99;   // a pinch is never a tap
-        }
       }
       e.preventDefault();
     };
@@ -301,6 +347,10 @@ export class Input {
               const d = Math.max(12, Math.hypot(a.x - b2.x, a.y - b2.y));
               this.pinch.k *= d / this.pinch.d;
               this.pinch.d = d;
+              // the midpoint carries the view with it, like one finger
+              const mx = (a.x + b2.x) / 2, my = (a.y + b2.y) / 2;
+              this.pan.dx += mx - this.pinch.mx; this.pan.dy += my - this.pinch.my;
+              this.pinch.mx = mx; this.pinch.my = my;
             }
           } else if (this.pan.active && t.identifier === this.pan.id) this._movePan(p);
         }
@@ -391,7 +441,9 @@ export class Input {
     this.panDelta.x = this.pan.dx; this.panDelta.y = this.pan.dy;
     this.pan.dx = 0; this.pan.dy = 0;
     this.zoomDelta = this.pinch.k * this.wheelZoom;
+    this.zoomAt = this.pinch.active ? { x: this.pinch.mx, y: this.pinch.my } : this.wheelZoom !== 1 ? this._wheelAt : null;
     this.pinch.k = 1; this.wheelZoom = 1;
+    this.zoomStep = (k.zoomIn && !this.prevKeys.zoomIn ? 1 : 0) - (k.zoomOut && !this.prevKeys.zoomOut ? 1 : 0);
     if (!this.gameplay) { this.pan.active = false; this.pinch.active = false; this.touchPoints.clear(); }
     Object.assign(this.prevKeys, k);
   }

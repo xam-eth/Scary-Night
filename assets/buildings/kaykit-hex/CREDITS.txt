@@ -26,6 +26,14 @@ blue, GOLD MINE yellow, SAWMILL green, BALLISTA red. The blue mine, lumbermill
 and tower base were removed; their yellow / green / red twins were fetched
 from the same commit, blob hashes checked the same way.
 
+
+2026-10-18, BUILD 12 (layout option B, "untuk opsi nya B tapi cek dulu peta
+ROK"): the bigger bailey's districts and open ground are dressed like a Rise
+of Kingdoms city — tree clumps in the corners, single trees in the open,
+rocks by the gold mines. Seven more nature models from the same commit
+(decoration/nature/), fetched through the GitHub API, git blob hashes checked
+against the upstream tree; vendored byte-for-byte like the rest.
+
   LICENSE.txt                    LICENSE.txt (repository root)
     sha256 881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360
   barrel.bin                     decoration/props/barrel.bin
@@ -114,3 +122,31 @@ from the same commit, blob hashes checked the same way.
     sha256 72ca612b0dc940c856ed5abbbb9df9562c09bff52cfb2258375b16cbaad29e12
   wheelbarrow.gltf               decoration/props/wheelbarrow.gltf
     sha256 bb037662a3e5be1f4fe597ffc4927d2a6ad88d307da10388cfb178ca5fdae63d   — the mine cart that rolls while it digs
+  rock_single_A.bin              decoration/nature/rock_single_A.bin
+    sha256 0f038d45b8df2c9efa034e5d3c3635a475a2683e2e741aa9a0cd197c5689e2ce
+  rock_single_A.gltf             decoration/nature/rock_single_A.gltf
+    sha256 ddf307987fb18aa8e7594bb399de3943e497b50bc01aae0e7292a38418944915   — BUILD 12 district dressing: rocks by the gold mines (northeast)
+  rock_single_C.bin              decoration/nature/rock_single_C.bin
+    sha256 7d63c76a9f576bda17a63c77d8f7c9f617e11ed57e3459d9c8d5da7ebdf0b8f1
+  rock_single_C.gltf             decoration/nature/rock_single_C.gltf
+    sha256 4cbf4a67fa176d2374b4863348fddf7879b892e612dd455ad14173f17172d45b   — BUILD 12 district dressing: rocks by the gold mines (northeast)
+  rock_single_E.bin              decoration/nature/rock_single_E.bin
+    sha256 0fa8bf98327c31018642bebc06fbaba3476564c76d8c3a036c49ff58dea0a57b
+  rock_single_E.gltf             decoration/nature/rock_single_E.gltf
+    sha256 09e77f8cca93237863a1c6bac262bb473eb2706c0781035b01b031d1207e6d29   — BUILD 12 district dressing: rocks by the gold mines (northeast)
+  tree_single_A.bin              decoration/nature/tree_single_A.bin
+    sha256 437deac68f35338bb309b01e4d346dd4be37557d7a2f033d04765f63e1b88825
+  tree_single_A.gltf             decoration/nature/tree_single_A.gltf
+    sha256 ac913af6eaed6f15d26a2b75a877aa8dd10de90f26298f3f953abad86a4b4606   — BUILD 12: single trees in the open ground of the bailey
+  tree_single_B.bin              decoration/nature/tree_single_B.bin
+    sha256 c6a7423ce62f61216f7d8c77e1bd1d8665cbbee59718e59e0e42485f9acfca36
+  tree_single_B.gltf             decoration/nature/tree_single_B.gltf
+    sha256 1c038591301947c485937e9fdbab182c813ef32df48c02fad3daeb2f1f0421e0   — BUILD 12: single trees in the open ground of the bailey
+  trees_A_small.bin              decoration/nature/trees_A_small.bin
+    sha256 3f968cff82e97d88c13dc73379606aea406cd2c1c98690e59ef64c5b884da507
+  trees_A_small.gltf             decoration/nature/trees_A_small.gltf
+    sha256 5065a925666cc65caad857bcdebe5dda33aa19dab465504f809a17f6526bfbb4   — BUILD 12: tree clumps in the bailey corners (Rise of Kingdoms-style green between the districts)
+  trees_B_small.bin              decoration/nature/trees_B_small.bin
+    sha256 82879711b21f0135129abdfe8f1d89d93f88cec35b2f7d63922d871fea46fdd7
+  trees_B_small.gltf             decoration/nature/trees_B_small.gltf
+    sha256 f9a491097a116f98a11022b1b1adb563946ba28751f9184d689a8019ef4d7e41   — BUILD 12: tree clumps in the bailey corners

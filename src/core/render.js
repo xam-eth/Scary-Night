@@ -114,9 +114,14 @@ export class Renderer {
     this.cam.viewH = worldSpan;
   }
 
-  /** Ease toward a zoom multiplier (1 = default framing). dt omitted snaps. */
+  /**
+   * Ease toward a zoom multiplier (1 = default framing). dt omitted snaps.
+   * Survival's dynamic camera (BUILD 12) pulls back to the whole bailey and
+   * in to a close-up (SURVIVAL_CAMERA.zoom on top of its framing), so the
+   * guard rails are wide; the modes clamp their own ranges.
+   */
   setZoomMul(mul, dt) {
-    const target = clamp(Number(mul) || 1, 0.5, 1.5);
+    const target = clamp(Number(mul) || 1, 0.2, 3);
     const current = this.zoomMul || 1;
     const next = dt == null ? target : damp(current, target, 4.5, dt);
     if (Math.abs(next - current) < 1e-4 && current === target) return;

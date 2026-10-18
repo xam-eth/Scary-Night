@@ -33,7 +33,7 @@
 
 import { clamp, writeSave } from '../core/util.js';
 import { SURVIVAL_ACTOR_SCALE } from '../core/config.js';
-import { SURVIVAL_BUILDINGS, BUILDING_MAX_LEVEL, HUNTER_MAX_LEVEL, GUARD, CINE } from '../game/survival.js';
+import { SURVIVAL_BUILDINGS, BUILDING_MAX_LEVEL, HUNTER_MAX_LEVEL, GUARD, CINE, SURVIVAL_CAMERA } from '../game/survival.js';
 import { pauseButtonBox } from '../game/hud.js';
 import {
   drawSurvivalIcon, drawLabel, measureLabel, drawPanel, drawCounter, drawBar,
@@ -198,6 +198,8 @@ const HINTS = Object.freeze({
   level: { icon: 'up', text: 'STAND BY A BUILDING TO LEVEL IT UP', life: 6 },
   rescue: { icon: 'medic', text: 'STAND BY A FALLEN GUARD TO HELP', life: 6 },
   pan: { icon: 'pan', text: 'DRAG THE RIGHT SIDE TO LOOK AROUND', life: 6 },
+  // BUILD 12: the dynamic camera (a new id, so players who saw 'pan' see it)
+  zoom: { icon: 'zoom', text: 'PINCH OR TAP + / - TO ZOOM', life: 6 },
 });
 
 function hintStore(game) {
@@ -229,6 +231,7 @@ export function updateSurvivalHints(game, dt) {
     state.t += dt;
     if (state.id === 'move' && mode._movedSinceStart > 80) state.t = Math.max(state.t, state.life - 0.35);
     if (state.id === 'pan' && mode._panUsed) state.t = Math.max(state.t, state.life - 0.35);
+    if (state.id === 'zoom' && mode._zoomUsed) state.t = Math.max(state.t, state.life - 0.35);
     if (state.id === 'flare' && mode.skillCooldown > 0) state.t = Math.max(state.t, state.life - 0.35);
     if ((state.id === 'build' || state.id === 'level') && mode.builderJob) state.t = Math.max(state.t, state.life - 0.35);
     if (state.id === 'build' && mode.phase === 'day' && mode.dayContext()) state.t = Math.max(state.t, state.life - 0.35);
@@ -253,6 +256,8 @@ export function updateSurvivalHints(game, dt) {
     offerSurvivalHint(game, 'build');
     // once the first build is under way: the view can be dragged around
     if (hintStore(game).build && !mode._panUsed && (mode.builderJob || Object.keys(mode.buildings).length)) offerSurvivalHint(game, 'pan');
+    // then the zoom (BUILD 12): the whole bailey is two screens wide
+    if (hintStore(game).pan && !mode._zoomUsed && (mode.builderJob || Object.keys(mode.buildings).length)) offerSurvivalHint(game, 'zoom');
     // once something stands (or on the last day): upgrades are where it stands
     if (hintStore(game).build && !mode.builderJob && (Object.keys(mode.buildings).length || mode.day >= 3)) offerSurvivalHint(game, 'level');
   }
@@ -746,6 +751,7 @@ function drawNightHud(game, ctx, w, h) {
   if (h < 560) drawKeepBar(game, ctx, 64 + Math.min(210, w * 0.26) / 2, 14, Math.min(210, w * 0.26));
   else drawKeepBar(game, ctx, w / 2, 82, Math.min(220, w - 220));
   drawBanner(game, ctx, w, h);
+  drawZoomButtons(game, ctx, w, h);
   drawRecenterChip(game, ctx, w, h);
   drawHint(game, ctx, w, h < 560 ? h - 52 : 126);
 }
@@ -767,12 +773,14 @@ function dayAction(mode, here) {
     const cost = mode.keepUpgradeCost();
     const repair = mode.keepRepairCost();
     const hp = mode.keepHpMax(level), hpNext = mode.keepHpMax(Math.min(3, level + 1));
-    const rooms = mode.territoryRooms().length;
+    // the banner row: how many build plots this keep level opens (BUILD 12:
+    // plots, not yards — layout B mixes levels within a district)
+    const plots = mode.territoryPlots().length;
     return {
       icon: 'keep', name: 'KEEP', level, maxLevel: 3,
       rows: [
         { icon: 'heart', now: `${hp}`, next: max ? null : `${hpNext}` },
-        { icon: 'banner', now: `${rooms}`, next: max ? null : `${mode.territoryRooms(level + 1).length}` },
+        { icon: 'banner', now: `${plots}`, next: max ? null : `${mode.territoryPlots(level + 1).length}` },
       ],
       main: max
         ? { label: 'MAX', icon: 'star', id: 'UPGRADE MAX', disabled: true, color: 'gold' }
@@ -1251,6 +1259,7 @@ function drawDayScreen(game, ctx, w, h) {
   drawButton(game, ctx, nightBtn, `NIGHT ${mode.day}`,
     () => mode.startNight(), { id: 'START NIGHT', icon: 'moon', color: 'purple', disabled: !!job, fontSize: short ? 14 : 15 });
 
+  drawZoomButtons(game, ctx, w, h);
   drawRecenterChip(game, ctx, w, h);
   // FTUE chip: a sideways phone puts it at the foot of the screen between the
   // stick and the dock (the top band shows the keep); a tall screen under
@@ -1259,6 +1268,63 @@ function drawDayScreen(game, ctx, w, h) {
     const left = 140, right = Math.min(dockLeft, w - pad) - 10;
     drawHint(game, ctx, w, h - pad - 36, (left + right) / 2, Math.min(right - left, 440), 12);
   } else drawHint(game, ctx, w, 136, w / 2, Math.min(w - 24, 420));
+}
+
+/**
+ * BUILD 12, the dynamic camera (SURVIVAL_CAMERA): + and - on the right edge,
+ * between the counters and the thumb's corner, by day and by night — beside
+ * the pinch, as Rise of Kingdoms players asked for on-screen zoom buttons.
+ * A button at its end of the range dims. Where they sit: zoomButtonLayout.
+ */
+export function zoomButtonLayout(w, h) {
+  const short = h < 560;
+  const r = short ? 18 : 21;
+  const x = w - (short ? 12 : 16) - r;
+  const mid = Math.round(h * (short ? 0.5 : 0.48));
+  const gap = short ? 22 : 26;
+  return { r, x, zoomIn: { x, y: mid - gap }, zoomOut: { x, y: mid + gap } };
+}
+
+function drawZoomButtons(game, ctx, w, h) {
+  const mode = game.survival;
+  if (!mode || mode.cine || typeof mode.zoomStep !== 'function') return;
+  const L = zoomButtonLayout(w, h);
+  const [lo, hi] = SURVIVAL_CAMERA.zoom;
+  const goal = mode.zoomGoal();
+  for (const row of [
+    { id: 'ZOOM IN', at: L.zoomIn, dir: 1, end: goal >= hi - 1e-3 },
+    { id: 'ZOOM OUT', at: L.zoomOut, dir: -1, end: goal <= lo + 1e-3 },
+  ]) {
+    const { x, y } = row.at;
+    const r = L.r;
+    addHit(game, { x: x - r - 4, y: y - r - 4, w: r * 2 + 8, h: r * 2 + 8 }, row.id, () => mode.zoomStep(row.dir));
+    ctx.save();
+    ctx.globalAlpha = row.end ? 0.45 : 0.94;
+    ctx.beginPath();
+    ctx.arc(x, y + 3, r, 0, TAU);
+    ctx.fillStyle = 'rgba(20,16,40,0.45)';
+    ctx.fill();
+    const g = ctx.createLinearGradient(0, y - r, 0, y + r);
+    g.addColorStop(0, '#ffffff');
+    g.addColorStop(1, '#dde4ff');
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, TAU);
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = INK;
+    ctx.stroke();
+    // the glyph: a fat plus / minus in ink
+    ctx.lineCap = 'round';
+    ctx.lineWidth = Math.max(3, r * 0.22);
+    ctx.strokeStyle = '#2a2350';
+    const k = r * 0.46;
+    ctx.beginPath();
+    ctx.moveTo(x - k, y); ctx.lineTo(x + k, y);
+    if (row.dir > 0) { ctx.moveTo(x, y - k); ctx.lineTo(x, y + k); }
+    ctx.stroke();
+    ctx.restore();
+  }
 }
 
 /**

@@ -11,7 +11,8 @@ import { Valen3D } from './valen3d.js';
 import { Enemy3D, ENEMY_HEIGHT } from './enemy3d.js';
 import { Troop3D } from './troop3d.js';
 import { Crowd3D } from './crowd3d.js';
-import { Buildings3D, BUILDING_MODEL, BUILDING_COLOR, SAW_NODE } from './buildings3d.js';
+import { Buildings3D, BUILDING_MODEL, BUILDING_COLOR, SAW_NODE, KIT_DECOR } from './buildings3d.js';
+import { PLAZA_R } from './fortress.js';
 import { ROOM_MARKS } from './narrative.js';
 import { ROOM } from './mansion.js';
 import { weaponById } from './weapons.js';
@@ -87,6 +88,56 @@ const PARTICLE_FRAGMENT_SHADER = `
     #include <colorspace_fragment>
   }
 `;
+
+/**
+ * Kit models (one shared atlas material) placed once and never moved become
+ * one mesh per material, like mergeStaticByMaterial but keeping their UVs.
+ * A material whose pieces do not all carry UVs is left as it was.
+ */
+function mergeKitStatic(group) {
+  group.updateMatrixWorld(true);
+  const inverse = new THREE.Matrix4().copy(group.matrixWorld).invert();
+  const buckets = new Map();
+  group.traverse((obj) => {
+    if (!obj.isMesh || obj.isInstancedMesh || obj.isSkinnedMesh) return;
+    if (!buckets.has(obj.material)) buckets.set(obj.material, []);
+    buckets.get(obj.material).push(obj);
+  });
+  let merged = 0;
+  for (const [material, list] of buckets) {
+    if (Array.isArray(material) || list.length < 2 || !list.every((obj) => obj.geometry.attributes.uv && obj.geometry.attributes.normal)) continue;
+    const geos = list.map((obj) => {
+      const geo = obj.geometry.index ? obj.geometry.toNonIndexed() : obj.geometry.clone();
+      geo.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inverse, obj.matrixWorld));
+      return geo;
+    });
+    let count = 0;
+    for (const geo of geos) count += geo.attributes.position.count;
+    const position = new Float32Array(count * 3);
+    const normal = new Float32Array(count * 3);
+    const uv = new Float32Array(count * 2);
+    let at = 0;
+    for (const geo of geos) {
+      position.set(geo.attributes.position.array, at * 3);
+      normal.set(geo.attributes.normal.array, at * 3);
+      uv.set(geo.attributes.uv.array, at * 2);
+      at += geo.attributes.position.count;
+      geo.dispose();
+    }
+    for (const obj of list) obj.parent.remove(obj);
+    const out = new THREE.BufferGeometry();
+    out.setAttribute('position', new THREE.BufferAttribute(position, 3));
+    out.setAttribute('normal', new THREE.BufferAttribute(normal, 3));
+    out.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+    out.computeBoundingSphere();
+    const mesh = new THREE.Mesh(out, material);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    group.add(mesh);
+    merged += list.length;
+  }
+  return merged;
+}
 
 /**
  * Static procedural pieces become one mesh per material: each mesh's
@@ -551,10 +602,28 @@ class World3DRuntime {
     const lightning = clamp(game.lightningFlash || 0, 0, 1.5);
     const survival = game.mode === 'survival';
     const ambientFactor = survival ? 1 : Math.max(0.12, (1 - blackout - duel) * flicker);
-    const lift = 720;
-    lamp.target.position.set(p.x, 0, p.y);
+    // BUILD 12: Survival's camera is dragged and zoomed out to the whole
+    // bailey, so the shadow box follows the view's centre (not the captain)
+    // and grows with what is on screen; the lamp backs off with it so the
+    // box's depth still holds the ground. Further out, every texel of the
+    // one map is smaller on screen, so it stays as sharp as it looks.
+    const cam = survival && game.renderer && game.renderer.cam;
+    const focus = cam ? { x: cam.x, y: cam.y } : p;
+    let reach = 1;
+    if (cam && lamp.shadow && lamp.shadow.camera) {
+      const half = clamp((cam.viewW || 0) * 0.5, 1050, 2600);
+      reach = half / 1050;
+      const sc = lamp.shadow.camera;
+      if (Math.abs(sc.right - half) > 30) {
+        sc.left = -half; sc.right = half; sc.top = half; sc.bottom = -half;
+        sc.far = 3200 * reach;
+        sc.updateProjectionMatrix();
+      }
+    }
+    const lift = 720 * reach;
+    lamp.target.position.set(focus.x, 0, focus.y);
     lamp.target.updateMatrixWorld(true);
-    lamp.position.set(p.x + dx * 520, lift, p.y + dy * 520);
+    lamp.position.set(focus.x + dx * 520 * reach, lift, focus.y + dy * 520 * reach);
     if (survival) {
       // Survival is a readable top-down build/defend game: the fixed iso
       // camera needs the whole room legible. Night = cool moonlight plus the
@@ -1610,28 +1679,81 @@ class World3DRuntime {
     for (const m of ud.mats) { m.opacity = ud.fade; m.depthWrite = ud.fade > 0.95; }
   }
 
-  /** The banner's rooms: a faint garrison-blue wash on their floors. */
+  /**
+   * The keep's banner (BUILD 12): a faint garrison-blue wash on the ground
+   * within its reach of the keep (survival.js BANNER), clipped to the
+   * bailey's wall, with a brighter edge where the reach ends inside the wall
+   * — the border of the keep's land, as an alliance's territory reads on a
+   * Rise of Kingdoms map. Rebuilt when the keep goes up a level.
+   */
   _syncSurvivalTerritory(game, mode) {
     const night = mode.phase === 'night';
-    const want = new Set(mode.territoryRooms().map((room) => room.id));
     if (!this._territoryMat) {
-      this._territoryMat = new THREE.MeshBasicMaterial({ color: 0x3e6bff, transparent: true, opacity: 0.08, depthWrite: false, toneMapped: false });
+      this._territoryMat = new THREE.MeshBasicMaterial({ color: 0x3e6bff, transparent: true, opacity: 0.08, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });
+      this._territoryEdgeMat = new THREE.MeshBasicMaterial({ color: 0x6a8dff, transparent: true, opacity: 0.5, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });
     }
     this._territoryMat.opacity = night ? 0.15 : 0.1;
-    for (const room of game.mansion.roomList) {
-      let plane = this.survivalTerritory.get(room.id);
-      if (!want.has(room.id)) { if (plane) plane.visible = false; continue; }
-      if (!plane) {
-        plane = new THREE.Mesh(new THREE.PlaneGeometry(room.w, room.h), this._territoryMat);
-        plane.name = 'survival-banner-territory-3d';
-        plane.rotation.x = -Math.PI / 2;
-        plane.position.set(room.x + room.w / 2, 1.6, room.y + room.h / 2);
-        plane.renderOrder = 1;
-        this.root.add(plane);
-        this.survivalTerritory.set(room.id, plane);
+    this._territoryEdgeMat.opacity = night ? 0.7 : 0.55;
+    const reach = typeof mode.bannerReach === 'function' ? mode.bannerReach() : 0;
+    const keep = mode.keep();
+    const B = game.mansion.bailey || null;
+    const key = `${reach}|${Math.round(keep.x)},${Math.round(keep.y)}|${B ? `${B.x},${B.y},${B.w},${B.h}` : '-'}`;
+    let wash = this.survivalTerritory.get('banner');
+    if (!wash || wash.userData.key !== key) {
+      if (wash) {
+        this.root.remove(wash);
+        wash.traverse((item) => { if (item.isMesh) item.geometry.dispose(); });
       }
-      plane.visible = true;
+      wash = this._makeBannerWash(keep, reach, B);
+      wash.userData.key = key;
+      this.root.add(wash);
+      this.survivalTerritory.set('banner', wash);
     }
+    wash.visible = reach > 0;
+  }
+
+  _makeBannerWash(keep, reach, B) {
+    const group = new THREE.Group();
+    group.name = 'survival-banner-territory-3d';
+    const N = 144;
+    const ring = [];
+    for (let i = 0; i < N; i++) {
+      const a = (i / N) * Math.PI * 2;
+      const x = keep.x + Math.cos(a) * reach, y = keep.y + Math.sin(a) * reach;
+      const cx = B ? clamp(x, B.x, B.x + B.w) : x, cy = B ? clamp(y, B.y, B.y + B.h) : y;
+      ring.push({ x: cx, y: cy, inside: cx === x && cy === y, a });
+    }
+    // the fill: a fan from the keep (a circle clipped to a box stays convex)
+    const fill = [];
+    for (let i = 0; i < N; i++) {
+      const p = ring[i], q = ring[(i + 1) % N];
+      fill.push(keep.x, 0, keep.y, p.x, 0, p.y, q.x, 0, q.y);
+    }
+    const fillGeo = new THREE.BufferGeometry();
+    fillGeo.setAttribute('position', new THREE.Float32BufferAttribute(fill, 3));
+    const fillMesh = new THREE.Mesh(fillGeo, this._territoryMat);
+    fillMesh.position.y = 1.6;
+    fillMesh.renderOrder = 1;
+    group.add(fillMesh);
+    // the edge: where the circle runs inside the wall
+    const edge = [];
+    const at = (a, r) => [keep.x + Math.cos(a) * r, keep.y + Math.sin(a) * r];
+    for (let i = 0; i < N; i++) {
+      if (!ring[i].inside || !ring[(i + 1) % N].inside) continue;
+      const a1 = (i / N) * Math.PI * 2, a2 = ((i + 1) / N) * Math.PI * 2;
+      const [ax, ay] = at(a1, reach - 7), [bx, by] = at(a1, reach + 2), [cx, cy] = at(a2, reach + 2), [dx, dy] = at(a2, reach - 7);
+      edge.push(ax, 0, ay, bx, 0, by, cx, 0, cy, ax, 0, ay, cx, 0, cy, dx, 0, dy);
+    }
+    if (edge.length) {
+      const edgeGeo = new THREE.BufferGeometry();
+      edgeGeo.setAttribute('position', new THREE.Float32BufferAttribute(edge, 3));
+      const edgeMesh = new THREE.Mesh(edgeGeo, this._territoryEdgeMat);
+      edgeMesh.position.y = 1.9;
+      edgeMesh.renderOrder = 1;
+      group.add(edgeMesh);
+    }
+    group.userData = { reach, edgeSegments: edge.length / 18 };
+    return group;
   }
 
   /** The armory rack beside the keep (the Hunter's own upgrades). */
@@ -1861,6 +1983,25 @@ class World3DRuntime {
       plane.renderOrder = -1;
       group.add(plane);
     }
+    // BUILD 12: the keep's plaza, a round of pale paving where the four roads
+    // meet (fortress.js PLAZA_R) with a darker kerb — the focal point the
+    // districts stand round, like a city hall's square
+    const plazaMat = new THREE.MeshStandardMaterial({ color: 0xa39c90, roughness: 0.96, metalness: 0, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    const kerbMat = new THREE.MeshStandardMaterial({ color: 0x6d675f, roughness: 0.96, metalness: 0, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
+    const plazaRingMat = new THREE.MeshStandardMaterial({ color: 0x8d867b, roughness: 0.96, metalness: 0, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
+    const keepAt = m.keepSpot || { x: 0, y: 0 };
+    const flatAt = (geo, material, y) => {
+      const mesh = new THREE.Mesh(geo, material);
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.position.set(keepAt.x, y, keepAt.y);
+      mesh.receiveShadow = true;
+      mesh.renderOrder = -1;
+      group.add(mesh);
+      return mesh;
+    };
+    flatAt(new THREE.CircleGeometry(PLAZA_R, 64), plazaMat, 0.6);
+    flatAt(new THREE.RingGeometry(PLAZA_R - 14, PLAZA_R, 64), kerbMat, 0.9);
+    flatAt(new THREE.RingGeometry(PLAZA_R * 0.64 - 4, PLAZA_R * 0.64 + 4, 56), plazaRingMat, 0.9);
 
     // parapet cap and merlons along every run of the curtain wall
     const spots = [];
@@ -1976,7 +2117,7 @@ class World3DRuntime {
 
     // ~250 static pieces become one mesh per material (a handful of draw
     // calls on a phone); the merlons are already one instanced mesh
-    mergeStaticByMaterial(group, (material) => material === yardMat);
+    mergeStaticByMaterial(group, (material) => material === yardMat || material === plazaMat || material === kerbMat || material === plazaRingMat);
     for (const spot of flagSpots) {
       const flag = new THREE.Group();
       flag.position.set(spot.x, spot.y, spot.z);
@@ -2006,31 +2147,47 @@ class World3DRuntime {
     const m = game.mansion;
     if (!m || !m.isFortress) return;
     if (!this.fortressDressing) this.fortressDressing = this._makeFortressDressing(m);
-    // the yard's well: the pack's model on the well's footprint (a plain
-    // stone ring if the kit never arrives)
-    if (!this.fortressWells && (Buildings3D.ready || Buildings3D.failed)) {
+    // the bailey's dressing (fortress.js furnish): the well and every
+    // `kit:<key>` footprint get their KayKit model, fitted to the footprint
+    // (`fit`: drawn wider than what blocks) and turned by its `rot`; once
+    // placed they never move, so they become one mesh (the pack's atlas).
+    // Without the kit the well is a plain stone ring and the rest is left out.
+    if (!this.fortressDecor && (Buildings3D.ready || Buildings3D.failed)) {
+      const group = new THREE.Group();
+      group.name = 'survival-bailey-decor-3d';
       this.fortressWells = [];
+      let placed = 0, missing = 0;
       for (const f of m.furniture || []) {
-        if (f.type !== 'well') continue;
-        let well = Buildings3D.ready ? Buildings3D.clone('well') : null;
+        const key = f.type === 'well' ? 'well' : (typeof f.type === 'string' && f.type.startsWith('kit:') ? f.type.slice(4) : null);
+        if (!key || !KIT_DECOR.includes(key)) continue;
+        let model = Buildings3D.ready ? Buildings3D.clone(key) : null;
         const holder = new THREE.Group();
-        holder.name = 'survival-well-3d';
-        if (well) {
-          const box = Buildings3D.box('well');
+        holder.name = key === 'well' ? 'survival-well-3d' : `survival-decor-${key}`;
+        if (model) {
+          const box = Buildings3D.box(key);
           const size = box.getSize(new THREE.Vector3());
-          well.position.set(-(box.min.x + box.max.x) / 2, -box.min.y, -(box.min.z + box.max.z) / 2);
-          holder.add(well);
-          holder.scale.setScalar((Math.max(f.w, f.h) + 12) / Math.max(size.x, size.z));
-        } else {
-          well = new THREE.Mesh(new THREE.CylinderGeometry(f.w * 0.46, f.w * 0.5, 34, 12), new THREE.MeshStandardMaterial({ color: 0x8c867e, roughness: 0.95, flatShading: true }));
-          well.position.y = 17;
-          holder.add(well);
-        }
+          model.position.set(-(box.min.x + box.max.x) / 2, -box.min.y, -(box.min.z + box.max.z) / 2);
+          holder.add(model);
+          const across = f.fit || (Math.max(f.w, f.h) + (key === 'well' ? 12 : 0));
+          holder.scale.setScalar(across / Math.max(size.x, size.z));
+        } else if (key === 'well') {
+          model = new THREE.Mesh(new THREE.CylinderGeometry(f.w * 0.46, f.w * 0.5, 34, 12), new THREE.MeshStandardMaterial({ color: 0x8c867e, roughness: 0.95, flatShading: true }));
+          model.position.y = 17;
+          holder.add(model);
+        } else { missing++; continue; }
         holder.position.set(f.x + f.w / 2, 0, f.y + f.h / 2);
+        holder.rotation.y = f.rot || 0;
         holder.traverse((item) => { if (item.isMesh) { item.castShadow = true; item.receiveShadow = true; } });
-        this.root.add(holder);
-        this.fortressWells.push(holder);
+        group.add(holder);
+        if (key === 'well') this.fortressWells.push(holder);
+        placed++;
       }
+      const merged = mergeKitStatic(group);
+      let meshes = 0;
+      group.traverse((item) => { if (item.isMesh) meshes++; });
+      group.userData = { placed, missing, merged, meshes };
+      this.root.add(group);
+      this.fortressDecor = group;
     }
     const ud = this.fortressDressing.userData;
     const t = game.now || 0;
@@ -3834,6 +3991,10 @@ class World3DRuntime {
       fortressMeshes: this.fortressDressing ? this.fortressDressing.userData.meshes : 0,
       survivalKeepLevel: this.survivalKeep ? this.survivalKeep.userData.level : 0,
       survivalTerritoryRooms: [...this.survivalTerritory.values()].filter((object) => object.visible).length,
+      survivalBanner: (() => {
+        const wash = this.survivalTerritory.get('banner');
+        return wash ? { visible: wash.visible, reach: wash.userData.reach, edgeSegments: wash.userData.edgeSegments } : null;
+      })(),
       visibleSurvivalBuildSlots: [...this.survivalCircles.values()].filter((rec) => rec.ring.visible).length,
       visibleSurvivalGhosts: [...this.survivalCircles.values()].filter((rec) => rec.ghost && rec.ghost.visible).length,
       visibleSurvivalBuildings: [...this.survivalBuildingMeshes.values()].filter((object) => object.visible).length,
@@ -3848,6 +4009,7 @@ class World3DRuntime {
         stage: this.survivalStage ? Object.entries(this.survivalStage).filter(([, holder]) => holder.visible).map(([key]) => key)[0] || null : null,
         armoryKit: !!(this.survivalArmory && this.survivalArmory.userData.kit),
         wells: (this.fortressWells || []).length,
+        decor: this.fortressDecor ? { ...this.fortressDecor.userData } : null,
       },
       survivalGateVisible: !!(this.survivalGateMesh && this.survivalGateMesh.visible),
       visibleReliefTroops: (this.relief ? (this.relief.bodies.visible ? this.relief.bodies.count : 0) + (this.relief.bearer.visible ? 1 : 0) : 0)

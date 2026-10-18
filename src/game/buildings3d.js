@@ -58,7 +58,23 @@ export const BUILDING_KIT = Object.freeze({
   barrel: `${DIR}barrel.gltf`,
   sack: `${DIR}sack.gltf`,
   well: `${DIR}building_well_blue.gltf`,
+  // BUILD 12: the bailey's districts and open ground (fortress.js furnish)
+  treeA: `${DIR}tree_single_A.gltf`,
+  treeB: `${DIR}tree_single_B.gltf`,
+  treesA: `${DIR}trees_A_small.gltf`,
+  treesB: `${DIR}trees_B_small.gltf`,
+  rockA: `${DIR}rock_single_A.gltf`,
+  rockC: `${DIR}rock_single_C.gltf`,
+  rockE: `${DIR}rock_single_E.gltf`,
 });
+/**
+ * Bailey dressing a fortress lays out as furniture `kit:<key>` (fortress.js
+ * furnish): World3D stands the kit model on the footprint, fitted to it.
+ */
+export const KIT_DECOR = Object.freeze([
+  'well', 'target', 'weaponrack', 'bucketArrows', 'lumber', 'stone', 'wheelbarrow', 'crate', 'barrel', 'sack',
+  'treeA', 'treeB', 'treesA', 'treesB', 'rockA', 'rockC', 'rockE',
+]);
 
 /** What a building cannot be drawn without; the rest is dressing. */
 export const BUILDING_CORE = Object.freeze(['barracks', 'sawmill', 'mine', 'towerBase', 'ballista', 'pad']);

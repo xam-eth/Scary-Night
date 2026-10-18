@@ -57,7 +57,8 @@ globalThis.addEventListener = () => { };
 globalThis.requestAnimationFrame = () => 0;
 
 const { Game } = await import('../src/game/game.js');
-const { SURVIVAL_SLOTS, CIRCLE, PLOT } = await import('../src/game/survival.js');
+const { SURVIVAL_SLOTS, CIRCLE, PLOT, BANNER } = await import('../src/game/survival.js');
+const { FORT_SCALE, PLAZA_R, ROAD_HALF } = await import('../src/game/fortress.js');
 
 function makeCanvas() {
   const canvas = createCanvas(844, 390);
@@ -77,7 +78,7 @@ const plotR = (PLOT && PLOT.radius) || CIRCLE.radius;
 
 const plots = SURVIVAL_SLOTS.map((slot) => {
   const spot = mode.buildingSpot(slot.id);
-  return { id: slot.id, type: slot.type, room: slot.room, x: spot.x, y: spot.y, doorId: spot.doorId || null, face: spot.face == null ? null : spot.face };
+  return { id: slot.id, type: slot.type, room: slot.room, level: slot.level, x: spot.x, y: spot.y, doorId: spot.doorId || null, face: spot.face == null ? null : spot.face };
 });
 const armory = mode.armorySpot();
 const gateSpot = mode.gateSpot();
@@ -150,18 +151,83 @@ const axisName = { p: 'through the keep', x: 'across the north-south axis', y: '
 for (const [a, b, axis] of pairs) check(`plots ${a} / ${b} mirrored ${axisName[axis] || axis}`, mirror(a, b, axis));
 check('the plan has its twins (PLOT.mirrors)', pairs.length >= 7, `${pairs.length}`);
 // every plot stands on one of the plan's columns
-const columns = [130, 165, 340, 480];
+const columns = [130, 330, 465, 600, 870];
 for (const p of plots) check(`plot ${p.id} on a plan column (|x| in ${columns.join('/')})`, columns.includes(Math.abs(p.x - keep.x)));
-// the armory mirrors the ward's barracks; the captain's home stands between them
+// the armory is the ward barracks' twin through the keep (the south-east
+// district mirrors the north-west one); the captain starts on a road axis at
+// the plaza's edge
 const ward = byId.get('ward');
-check('armory mirrors the ward barracks across the gate road', ward && Math.abs((armory.x - keep.x) + (ward.x - keep.x)) <= 2 && Math.abs(armory.y - ward.y) <= 2);
-check('the captain starts on a road axis just off the keep', (Math.abs(home.x - keep.x) <= 2 || Math.abs(home.y - keep.y) <= 2)
-  && Math.hypot(home.x - keep.x, home.y - keep.y) > keep.r + 40 && Math.hypot(home.x - keep.x, home.y - keep.y) < keep.r + 140);
+check('armory is the ward barracks\' twin through the keep', ward && Math.abs((armory.x - keep.x) + (ward.x - keep.x)) <= 2 && Math.abs((armory.y - keep.y) + (ward.y - keep.y)) <= 2);
+const homeD = Math.hypot(home.x - keep.x, home.y - keep.y);
+check('the captain starts on a road axis at the plaza\'s edge', (Math.abs(home.x - keep.x) <= 2 || Math.abs(home.y - keep.y) <= 2)
+  && homeD > keep.r + 40 && homeD < PLAZA_R + 40, `${Math.round(homeD)} px from the keep`);
+
+/* BUILD 12 (layout B, docs/VISUAL-LAYOUT-RESEARCH.md §6): a bigger, zoned bailey */
+const B0 = m.bailey;
+check('the bailey is layout B\'s 2080 x 1520 (1.6x BUILD 11)', B0.w === 2080 && B0.h === 1520 && FORT_SCALE === 0.8, `${B0.w} x ${B0.h}, FORT_SCALE ${FORT_SCALE}`);
+const quarter = (p) => `${p.y - keep.y < 0 ? 'N' : 'S'}${p.x - keep.x < 0 ? 'W' : 'E'}`;
+const economy = plots.filter((p) => p.type !== 'tower');
+const districts = new Map();
+for (const p of economy) {
+  const q = quarter(p);
+  if (!districts.has(q)) districts.set(q, new Set());
+  districts.get(q).add(p.type);
+}
+check('each district (grass quarter) holds one trade', [...districts.values()].every((types) => types.size === 1),
+  [...districts].map(([q, types]) => `${q}:${[...types].join('+')}`).join(' '));
+check('the trades are NW barracks, NE mines, SW sawmills; SE the armory', districts.get('NW')?.has('barracks') && districts.get('NE')?.has('mine')
+  && districts.get('SW')?.has('sawmill') && !districts.has('SE') && quarter(armory) === 'SE');
+let econGap = Infinity;
+for (let i = 0; i < economy.length; i++) for (let j = i + 1; j < economy.length; j++) {
+  econGap = Math.min(econGap, Math.hypot(economy[i].x - economy[j].x, economy[i].y - economy[j].y) - plotR * 2);
+}
+check(`economy plots keep 120+ px of grass between pads (min ${Math.round(econGap)})`, econGap >= 120);
+for (const p of [...economy, { id: 'armory', x: armory.x, y: armory.y }]) {
+  const wall = Math.min(p.x - plotR - B0.x, B0.x + B0.w - p.x - plotR, p.y - plotR - B0.y, B0.y + B0.h - p.y - plotR);
+  const offRoad = Math.abs(p.x - keep.x) - plotR >= ROAD_HALF && Math.abs(p.y - keep.y) - plotR >= ROAD_HALF;
+  const offPlaza = Math.hypot(p.x - keep.x, p.y - keep.y) - plotR >= PLAZA_R;
+  check(`${p.id}: off the roads and the plaza, ${Math.round(wall)} >= 180 px from the wall`, offRoad && offPlaza && wall >= 180);
+}
+// the banner reaches every plot its keep level opens; Lv3 the whole bailey
+for (const level of [1, 2, 3]) {
+  const reach = BANNER[level];
+  const out = plots.filter((p) => p.level <= level && Math.hypot(p.x - keep.x, p.y - keep.y) > reach);
+  check(`the Lv${level} banner (${reach} px) reaches every Lv${level} plot`, out.length === 0, out.map((p) => p.id).join(','));
+}
+const far = Math.max(...[[B0.x, B0.y], [B0.x + B0.w, B0.y], [B0.x, B0.y + B0.h], [B0.x + B0.w, B0.y + B0.h]].map(([x, y]) => Math.hypot(x - keep.x, y - keep.y)));
+check('the Lv3 banner covers the whole bailey', BANNER[3] >= far, `${Math.round(far)} px to the far corner`);
+check('plots open 9 / 13 / 15 by keep level', [1, 2, 3].map((l) => plots.filter((p) => p.level <= l).length).join('/') === '9/13/15');
+// the dressing (fortress.js furnish): off the plots, the roads, the plaza
+// and every ballista's line of fire, clear of the wall
+const decor = props.filter((f) => f.type === 'well' || String(f.type).startsWith('kit:'));
+check(`the districts are dressed (${decor.length} kit props)`, decor.length >= 16);
+const segRect = (ax, ay, bx, by, r, pad) => {
+  for (let k = 0; k <= 40; k++) {
+    const x = ax + (bx - ax) * (k / 40), y = ay + (by - ay) * (k / 40);
+    if (x > r.x - pad && x < r.x + r.w + pad && y > r.y - pad && y < r.y + r.h + pad) return true;
+  }
+  return false;
+};
+const towerPlots = plots.filter((p) => p.type === 'tower' && p.doorId);
+for (const f of decor) {
+  const cx = f.x + f.w / 2, cy = f.y + f.h / 2;
+  const onRoad = Math.abs(cx - keep.x) - f.w / 2 < ROAD_HALF || Math.abs(cy - keep.y) - f.h / 2 < ROAD_HALF;
+  const onPlaza = rectCircle(f, keep.x, keep.y, PLAZA_R);
+  const wall = Math.min(f.x - B0.x, B0.x + B0.w - f.x - f.w, f.y - B0.y, B0.y + B0.h - f.y - f.h);
+  const towerHit = solids.filter((s) => s.type === 'tower' || s.type === 'wall').some((s) => f.x < s.x + s.w + 30 && f.x + f.w > s.x - 30 && f.y < s.y + s.h + 30 && f.y + f.h > s.y - 30);
+  const fire = towerPlots.filter((p) => {
+    const door = mode.entranceById(p.doorId);
+    return door && segRect(p.x, p.y, door.outside.x, door.outside.y, f, 12);
+  });
+  check(`${f.type} @(${Math.round(cx)},${Math.round(cy)}): off road / plaza, clear of masonry, out of every line of fire`,
+    !onRoad && !onPlaza && wall >= 30 && !towerHit && fire.length === 0,
+    [onRoad && 'road', onPlaza && 'plaza', wall < 30 && `wall ${Math.round(wall)}`, towerHit && 'masonry', fire.length && `fire:${fire.map((p) => p.id).join(',')}`].filter(Boolean).join(' '));
+}
 
 /* ---------------- drawing ---------------- */
 const B = m.bailey;
 const margin = 220;
-const S = Number(args.scale || 0.62);
+const S = Number(args.scale || 0.42);
 const W = Math.round((B.w + margin * 2) * S), H = Math.round((B.h + margin * 2) * S) + 40;
 const cv = createCanvas(W, H);
 const ctx = cv.getContext('2d');
@@ -179,7 +245,8 @@ for (const s of solids) {
   ctx.fillRect(X(s.x), Y(s.y), s.w * S, s.h * S);
 }
 for (const f of props) {
-  ctx.fillStyle = '#8a5a34';
+  const t = String(f.type);
+  ctx.fillStyle = /^kit:tree/.test(t) ? '#2f6b2a' : /^kit:rock/.test(t) ? '#7d7d7d' : '#8a5a34';
   ctx.fillRect(X(f.x), Y(f.y), f.w * S, f.h * S);
 }
 for (const e of m.entrances.filter((d) => d.exterior && d.kind === 'door')) {
@@ -188,10 +255,24 @@ for (const e of m.entrances.filter((d) => d.exterior && d.kind === 'door')) {
   if (e.inside) { ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(X(e.inside.x), Y(e.inside.y), 3, 0, Math.PI * 2); ctx.fill(); }
   if (e.outside) { ctx.fillStyle = '#000000'; ctx.beginPath(); ctx.arc(X(e.outside.x), Y(e.outside.y), 3, 0, Math.PI * 2); ctx.fill(); }
 }
+// the plaza and the banner's reach per keep level (clipped to the bailey)
+ctx.fillStyle = '#c9bfae';
+ctx.beginPath(); ctx.arc(X(keep.x), Y(keep.y), PLAZA_R * S, 0, Math.PI * 2); ctx.fill();
+ctx.save();
+ctx.beginPath(); ctx.rect(X(B.x), Y(B.y), B.w * S, B.h * S); ctx.clip();
+for (const level of [1, 2, 3]) {
+  ctx.strokeStyle = 'rgba(62,107,255,0.75)'; ctx.lineWidth = 2; ctx.setLineDash(level === 1 ? [] : [6, 5]);
+  ctx.beginPath(); ctx.arc(X(keep.x), Y(keep.y), BANNER[level] * S, 0, Math.PI * 2); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#2a4bd0'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText(`banner Lv${level}`, X(keep.x) + 4, Y(keep.y) - BANNER[level] * S + 12);
+}
+ctx.restore();
+ctx.textAlign = 'center';
 ctx.fillStyle = '#3a3f55';
 ctx.beginPath(); ctx.arc(X(keep.x), Y(keep.y), keep.r * S, 0, Math.PI * 2); ctx.fill();
 ctx.fillStyle = '#fff'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('KEEP', X(keep.x), Y(keep.y) + 4);
-const colors = { tower: '#e74c3c', mine: '#f1c40f', sawmill: '#e67e22', barracks: '#3498db' };
+const colors = { tower: '#ff5640', mine: '#ffc22e', sawmill: '#4cc35e', barracks: '#3e7bff' };
 for (const p of plots) {
   if (p.type === 'tower' && p.doorId) {
     const door = mode.entranceById(p.doorId);
@@ -211,7 +292,7 @@ for (const p of plots) {
     ctx.beginPath(); ctx.moveTo(X(p.x), Y(p.y)); ctx.lineTo(X(p.x + Math.cos(p.face) * plotR), Y(p.y + Math.sin(p.face) * plotR)); ctx.stroke();
   }
   ctx.fillStyle = '#111'; ctx.font = '10px sans-serif';
-  ctx.fillText(`${p.id}`, X(p.x), Y(p.y) - plotR * S - 3);
+  ctx.fillText(`${p.id} · Lv${p.level}`, X(p.x), Y(p.y) - plotR * S - 3);
   ctx.fillText(`(${p.x}, ${p.y})`, X(p.x), Y(p.y) + 3);
 }
 for (const [name, q, c] of [['ARMORY', armory, '#9b59b6'], ['GATE', gateSpot, '#16a085'], ['HOME', home, '#ffffff']]) {
