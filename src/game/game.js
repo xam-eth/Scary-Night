@@ -715,7 +715,7 @@ export class Game {
       this.input.layout(this.renderer.w, this.renderer.h);
     }
     this.input.update(rawDt);
-    this.handleUIInput();
+    this.handleUIInput(dt);
 
     if (this.input.keys.debug && !this._debugHeld) { TUNING.showDebug = !TUNING.showDebug; }
     this._debugHeld = this.input.keys.debug;
@@ -806,7 +806,7 @@ export class Game {
     // attack control can still force a shot and the Interact control is Flare.
     this.input.dashPressed = false;
     this.input.runDown = false;
-    this.handleUIInput();
+    this.handleUIInput(dt);
 
     if (worldHeld) this.player.anim(dt);
     else if (this.screen === 'playing' || this.screen === 'paused') this.survival.update(this.dt);
@@ -2857,7 +2857,7 @@ export class Game {
     return false;
   }
 
-  handleSurvivalUIInput() {
+  handleSurvivalUIInput(dt = 0) {
     const input = this.input;
     if (input.keys.pause && !this._pauseHeld) {
       this._pauseHeld = true;
@@ -2885,7 +2885,35 @@ export class Game {
       if (chip) { input.uiTap = null; chip.onClick(); return; }
     }
     const uiActive = this.screen === 'paused' || (this.screen === 'playing' && !!this.uiPanel);
-    if (!uiActive) { this.uiIndex = 0; input.uiTap = null; return; }
+    if (!uiActive) { this.uiIndex = 0; input.uiTap = null; input.uiDown = null; this._uiHoldLabel = null; return; }
+
+    // BUILD 18 (R18b): a chip that asks for a HOLD (the NIGHT chip) fills its
+    // ring while the press sits on it and fires once the ring closes. A press
+    // that leaves early starts nothing — the day is never spent by a stray
+    // thumb in the chip's corner.
+    const down = input.uiDown;
+    const holdItem = down ? ([...this.ui].reverse().find((item) => item.hold && !item.disabled
+      && down.x > item.x && down.x < item.x + item.w && down.y > item.y && down.y < item.y + item.h) || null) : null;
+    if (this._uiHoldMiss && (this._uiHoldMiss.t -= dt) <= 0) this._uiHoldMiss = null;
+    if (this._uiHoldLabel && (!holdItem || holdItem.label !== this._uiHoldLabel)) {
+      // released (or slid off) before the ring closed: the miss is shown
+      this._uiHoldMiss = { label: this._uiHoldLabel, t: 1.2 };
+      this._uiHoldLabel = null;
+      this._uiHoldT = 0;
+    }
+    if (holdItem) {
+      this._uiHoldLabel = holdItem.label;
+      this._uiHoldT = (this._uiHoldT || 0) + dt;
+      holdItem.holdT = clamp(this._uiHoldT / holdItem.hold, 0, 1);
+      if (this._uiHoldT >= holdItem.hold) {
+        input.uiDown = null;
+        this._uiHoldLabel = null;
+        this._uiHoldT = 0;
+        holdItem.holdT = 0;
+        this.audio.play('uiConfirm', { vol: 0.42 });
+        holdItem.onClick();
+      }
+    }
     if (input.keys.up && !this._navUp) { this.uiIndex = Math.max(0, this.uiIndex - 1); this.usingKeyboard = true; }
     if (input.keys.down && !this._navDown) { this.uiIndex = Math.min(Math.max(0, this.ui.length - 1), this.uiIndex + 1); this.usingKeyboard = true; }
     this._navUp = input.keys.up; this._navDown = input.keys.down;
@@ -2893,21 +2921,37 @@ export class Game {
     if (input.uiTap) {
       const tap = input.uiTap;
       input.uiTap = null;
-      const hit = [...this.ui].reverse().find((item) => !item.disabled
+      const hit = [...this.ui].reverse().find((item) => !item.hold && !item.disabled
         && tap.x > item.x && tap.x < item.x + item.w && tap.y > item.y && tap.y < item.y + item.h);
       if (hit && hit.onClick) { this.audio.play('uiConfirm', { vol: 0.42 }); hit.onClick(); }
     }
-    if (input.keys.confirm && !this._confirmHeld) {
-      this._confirmHeld = true;
+    if (input.keys.confirm) {
       const item = this.ui[this.uiIndex];
-      if (item && item.onClick && !item.disabled) item.onClick();
+      if (item && item.hold && !item.disabled) {
+        // the keyboard holds too: the ring fills while confirm stays down
+        this._kbdHoldT = (this._kbdHoldT || 0) + dt;
+        item.holdT = clamp(this._kbdHoldT / item.hold, 0, 1);
+        this._uiHoldLabel = item.label;
+        if (this._kbdHoldT >= item.hold) {
+          this._kbdHoldT = 0;
+          this._uiHoldLabel = null;
+          item.holdT = 0;
+          this.audio.play('uiConfirm', { vol: 0.42 });
+          item.onClick();
+        }
+      } else if (!this._confirmHeld) {
+        this._confirmHeld = true;
+        if (item && item.onClick && !item.disabled) item.onClick();
+      }
+    } else {
+      this._confirmHeld = false;
+      if (this._kbdHoldT) { this._kbdHoldT = 0; this._uiHoldLabel = null; }
     }
-    if (!input.keys.confirm) this._confirmHeld = false;
   }
 
-  handleUIInput() {
+  handleUIInput(dt = 0) {
     if (this.mode === 'survival') {
-      this.handleSurvivalUIInput();
+      this.handleSurvivalUIInput(dt);
       return;
     }
     const input = this.input;

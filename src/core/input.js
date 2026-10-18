@@ -75,6 +75,10 @@ export class Input {
     this.anyInput = false;
     this.debug = false;
     this.uiTap = null;
+    // BUILD 18 (R18b): where and when the current UI press began, so a chip
+    // can ask for a HOLD instead of firing on the tap (night start). Null
+    // again the frame the finger / button leaves.
+    this.uiDown = null;
     this._bind();
   }
 
@@ -248,6 +252,7 @@ export class Input {
         this.mouse.rightClick = true;
         return;
       }
+      this.uiDown = { x: p.x, y: p.y, t: this._now() };
       const btn = this._hitButton(p);
       if (btn && this.gameplay) {
         this.buttons[btn].down = true;
@@ -285,6 +290,7 @@ export class Input {
     });
     addEventListener('mouseup', (e) => {
       if (e.button === 0) {
+        this.uiDown = null;
         this.mouse.down = false;
         this._releasePointerStick(this._local(e), true);
         if (this.pan.active && this.pan.pointer) this._endPan(this._local(e));
@@ -300,6 +306,7 @@ export class Input {
       for (const t of e.changedTouches) {
         const p = area(t);
         this.uiTap = { x: p.x, y: p.y };
+        this.uiDown = { x: p.x, y: p.y, t: this._now() };
         if (!this.gameplay) continue;
         const b = this._hitButton(p);
         if (b) { this.buttons[b].down = true; this.buttons[b].pulse = 1; this.buttons[b].id = t.identifier; continue; }
@@ -393,6 +400,7 @@ export class Input {
           }
         }
       }
+      if (!e.touches.length) this.uiDown = null;
       e.preventDefault();
     };
     c.addEventListener('touchstart', onStart, { passive: false });

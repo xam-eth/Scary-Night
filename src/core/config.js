@@ -421,6 +421,9 @@ export const SURVIVAL_TUNING = Object.freeze({
   }),
   gateCost: Object.freeze({ gold: 4, wood: 16, seconds: 9 }),
   gateHpBonus: 220,
+  // BUILD 18 (R18b): the NIGHT chip is a hold, not a tap — this long a press
+  // starts the night; anything shorter is read as a stray thumb and refused
+  nightHold: 0.55,
   territoryDamageTakenMul: 1.5,   // the banner's rooms: the garrison hits harder
   dayWalkMul: 1.35,               // the day is a walk between build circles
   // the captain's reach shrank with the bailey (620 on the 0.7 bailey, ~0.87x):

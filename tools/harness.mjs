@@ -2549,6 +2549,80 @@ async function runSurvivalMilestone() {
   }
   const b17Pass = b17Checks.length === 3 && b17Checks.every(Boolean);
 
+  // BUILD 18 (R18b/c): the NIGHT chip is a HOLD, not a tap — a stray thumb in
+  // its corner must never spend the day. The harness does not draw, so the
+  // hold logic gets the same hit item drawButton would have registered.
+  let b18Pass = false;
+  {
+    const b18Checks = [];
+    const b18Check = (name, ok, detail) => {
+      b18Checks.push(!!ok);
+      console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} — ${detail}`);
+    };
+    window.localStorage.removeItem('lastnight.save.v1');
+    const hg = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 72, seed: 20261007 });
+    const hm = hg.survival;
+    const htick = (n = 1) => { for (let k = 0; k < n; k++) hg.update(step); };
+    const b18Setup = () => {
+      hm.restart();
+      hm.phase = 'day'; hm.day = 2; hm.nightsCompleted = 1; hm.rewardAck = 1;
+      hg.screen = 'playing'; hg.uiPanel = 'survival-day';
+      hg.ui.length = 0;
+      const box = { x: 12, y: 62, w: 112, h: 38 };
+      const item = { ...box, idx: 0, label: 'survival:START NIGHT', hold: hm.tuning.nightHold, disabled: false, onClick: () => { item.fired = (item.fired || 0) + 1; hm.startNight(); } };
+      hg.ui.push(item);
+      hg._uiHoldMiss = null; hg._uiHoldLabel = null; hg._uiHoldT = 0; hg._kbdHoldT = 0;
+      hg.input.uiTap = null; hg.input.uiDown = null; hg.input.keys.confirm = false;
+      return { item, box };
+    };
+    const centre = (b) => ({ x: b.x + b.w / 2, y: b.y + b.h / 2 });
+    // 1) a tap that leaves early starts nothing and is answered
+    {
+      const { item, box } = b18Setup();
+      const c = centre(box);
+      hg.input.uiTap = { ...c };
+      hg.input.uiDown = { ...c, t: 0 };
+      htick(4);                                   // 0.07 s of press
+      hg.input.uiDown = null; hg.input.uiTap = null;
+      htick(2);
+      b18Check('R18b: a tap on the NIGHT chip starts nothing — the press has to stay for the ring (0.55 s); leaving early is refused and answered',
+        hm.phase === 'day' && !item.fired && !!hg._uiHoldMiss && hg._uiHoldMiss.label === 'survival:START NIGHT',
+        `phase ${hm.phase}, fired ${item.fired || 0}, miss "${hg._uiHoldMiss && hg._uiHoldMiss.label}", hint holdnight ${!!(hg.save.survival && hg.save.survival.hints && hg.save.survival.hints.holdnight)}`);
+    }
+    // 2) the ring fills in proportion, then the night starts exactly once
+    {
+      const { item, box } = b18Setup();
+      const c = centre(box);
+      hg.input.uiDown = { ...c, t: 0 };
+      htick(18);                                  // 0.30 s of the 0.55
+      const mid = item.holdT;
+      htick(15);                                  // 0.25 s more: the ring closes
+      b18Check('R18b: the ring fills with the press and the night starts exactly once when it closes (the press is consumed)',
+        mid > 0.4 && mid < 0.7 && hm.phase === 'night' && item.fired === 1 && hg.input.uiDown === null && (item.holdT || 0) === 0,
+        `holdT at 0.30 s = ${mid}, phase ${hm.phase}, fired ${item.fired || 0}, uiDown consumed ${hg.input.uiDown === null}`);
+    }
+    // 3) the keyboard holds too: confirm released early refuses, held closes
+    {
+      const { item } = b18Setup();
+      hg.usingKeyboard = true; hg.uiIndex = 0;
+      hg.input.keys.confirm = true;
+      htick(10);                                  // 0.17 s
+      const kmid = item.holdT;
+      hg.input.keys.confirm = false;
+      htick(2);
+      const refused = hm.phase === 'day' && !item.fired;
+      const refusedPhase = hm.phase; const refusedFired = item.fired || 0;
+      hg.input.keys.confirm = true;
+      htick(40);                                  // 0.67 s: the ring closes
+      hg.input.keys.confirm = false;
+      b18Check('R18b: the keyboard holds as well — confirm released early refuses, confirm held to the ring starts the night',
+        refused && kmid > 0 && kmid < 0.6 && hm.phase === 'night' && item.fired === 1,
+        `early release: phase ${refusedPhase}, fired ${refusedFired}, holdT ${kmid}; held: phase ${hm.phase}, fired ${item.fired || 0}`);
+    }
+    window.localStorage.removeItem('lastnight.save.v1');
+    b18Pass = b18Checks.length === 3 && b18Checks.every(Boolean);
+  }
+
   console.log(`  idle Night 3: ${idle.nightThree.peakEnemies} peak enemies / ${idle.nightThree.peakBreakers} Breakers, ${idle.nightThree.kills} kills, ${idle.nightThree.wallDamage} wall damage, gate ${idle.nightThree.gateHp} HP, Hunter ${idle.nightThree.playerHp} HP; ${idle.phase}`);
   console.log(`  builder Night 3: ${builder.nightThree.peakEnemies} peak enemies / ${builder.nightThree.peakBreakers} Breakers, ${builder.nightThree.kills} kills, ${builder.nightThree.wallDamage} wall damage, gate ${builder.nightThree.gateHp} HP, Hunter ${builder.nightThree.playerHp} HP; keep Lv${builder.keepLevel} ${builder.keepHp} HP, soldiers ${builder.survivors}, buildings ${builder.buildings.join(',') || 'none'}, gateBuilt=${builder.gateBuilt}; ${builder.phase}`);
   // Balance target (M1 rebuild, K1): doing nothing must not win; an engaged
@@ -2561,7 +2635,7 @@ async function runSurvivalMilestone() {
     && hunterAutoShot && hunterRealLos && hunterSkill
     && idleLoses && builder.complete && builder.keepLevel === 3
     && builder.queueLockVerified && builder.sawmillBuilt && builder.gateBuilt && builder.barracksBuilt
-    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass && gateRulePass && b13Pass && b14Pass && b15Pass && b16Pass && b17Pass
+    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass && gateRulePass && b13Pass && b14Pass && b15Pass && b16Pass && b17Pass && b18Pass
     && builder.upgrades[0].level === 1 && builder.upgrades[0].plots === 9
     && builder.upgrades[builder.upgrades.length - 1].level === 3 && builder.upgrades[builder.upgrades.length - 1].plots === 15
     && builder.upgrades.every((item, i, all) => i === 0 || item.level >= all[i - 1].level);

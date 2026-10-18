@@ -1,6 +1,6 @@
 {
   "title": "Survival FTUE — first 30 playable seconds",
-  "capturedAt": "2026-10-18T17:44:54.366Z",
+  "capturedAt": "2026-10-18T20:25:10.569Z",
   "viewport": {
     "width": 390,
     "height": 844,
@@ -150,9 +150,9 @@
         ],
         "coach": false,
         "narration": false,
-        "swarm": 34,
+        "swarm": 33,
         "riggedCrowd": 0,
-        "proxyCrowd": 34,
+        "proxyCrowd": 33,
         "keepHp": 600,
         "keepMesh": true,
         "banner": {

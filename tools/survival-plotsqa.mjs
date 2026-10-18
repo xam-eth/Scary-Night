@@ -970,6 +970,50 @@ check(`B17: the round turns with the run — three seeds on the same day 2 scree
       && r.badges.every((b) => b.order === 0 || r.plan.slice(0, 3).includes(b.id))),
   { orders, plans: [b17day, ...b17turn].map((r) => r.plan.join(' → ')), runSeeds: [b17day, ...b17turn].map((r) => r.seed || r.runSeed) });
 
+/* ---- 10. BUILD 18 (R18b/c): NIGHT is a hold, not a tap ------------------- */
+const b18day = await page.evaluate(() => {
+  const g = window.__LN; const m = g.survival;
+  m.restart();
+  m.completeNight(); window.__pStep(2);
+  if (m.rewardPending && m.rewardPending()) m.ackRewards();
+  m.gold = 60; m.wood = 40;
+  window.__pStep(3);
+  const u = g.ui.find((it) => it.label === 'survival:START NIGHT');
+  return { box: u ? { x: u.x, y: u.y, w: u.w, h: u.h, hold: u.hold } : null, phase: m.phase, day: m.day, gold: Math.floor(m.gold) };
+});
+const press = (type, x, y) => page.evaluate(([tp, px, py]) => {
+  const c = window.__LN.input.canvas;
+  const rect = c.getBoundingClientRect();
+  c.dispatchEvent(new MouseEvent(tp, { clientX: rect.left + px, clientY: rect.top + py, button: 0, bubbles: true, cancelable: true }));
+}, [type, x, y]);
+const b18cx = b18day.box.x + b18day.box.w / 2, b18cy = b18day.box.y + b18day.box.h / 2;
+// a tap: press, a sixth of the ring, leave
+await press('mousedown', b18cx, b18cy);
+await page.evaluate(() => window.__pStep(10));
+const b18mid = await page.evaluate(() => {
+  const g = window.__LN;
+  const u = g.ui.find((it) => it.label === 'survival:START NIGHT');
+  return { holdT: u ? +(u.holdT || 0).toFixed(3) : null, note: ((g._survivalLabels || {}).nightHold || {}).note || null, phase: g.survival.phase };
+});
+await shot('b18-1-hold-ring');
+await press('mouseup', b18cx, b18cy);
+await page.evaluate(() => window.__pStep(3));
+const b18tap = await page.evaluate(() => {
+  const g = window.__LN;
+  return { phase: g.survival.phase, miss: ((g._survivalLabels || {}).nightHold || {}).miss === true, hint: g._survivalHint && g._survivalHint.id };
+});
+await shot('b18-2-tap-refused');
+// a hold: press until the ring closes
+await press('mousedown', b18cx, b18cy);
+await page.evaluate(() => window.__pStep(40));
+const b18held = await page.evaluate(() => ({ phase: window.__LN.survival.phase, consumed: window.__LN.input.uiDown === null }));
+await press('mouseup', b18cx, b18cy);
+check('B18: NIGHT is a hold, not a tap — a press that leaves at a sixth of the ring starts nothing and the chip answers (HOLD TO START, then a once-only hint); while the ring fills it names what the day would still have bought (R18c); a press held to the ring starts the night once and consumes itself',
+  !!b18day.box && b18day.box.hold > 0 && b18mid.holdT > 0.1 && b18mid.holdT < 0.4 && b18mid.phase === 'day' && !!b18mid.note
+    && b18tap.phase === 'day' && b18tap.miss && b18tap.hint === 'holdnight'
+    && b18held.phase === 'night' && b18held.consumed,
+  { box: b18day.box, gold: b18day.gold, mid: b18mid, tap: b18tap, held: b18held });
+
 fs.writeFileSync(path.join(OUT, 'plotsqa.json'), JSON.stringify({ results, errors }, null, 2));
 console.log(`errors ${errors.length}`);
 console.log(`SUMMARY ${results.length - failures}/${results.length} PASS`);

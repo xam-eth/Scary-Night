@@ -144,6 +144,28 @@ function drawButton(game, ctx, box, label, onClick, opts = {}) {
   ctx.fillStyle = 'rgba(255,255,255,0.22)';
   ctx.fill();
   ctx.restore();
+  // BUILD 18 (R18b): a hold chip fills with light while the press sits on it
+  if (opts.hold) {
+    item.hold = opts.hold;
+    // the hit list is rebuilt every frame, so the press progress comes from
+    // the game, not from the stale item the input handler touched
+    if (opts.holdT != null) item.holdT = opts.holdT;
+    const t = item.holdT || 0;
+    if (t > 0) {
+      ctx.save();
+      roundRectPath(ctx, box.x, box.y, box.w, box.h, r);
+      ctx.clip();
+      ctx.fillStyle = 'rgba(255,243,196,0.32)';
+      ctx.fillRect(box.x, box.y, box.w * t, box.h);
+      ctx.restore();
+      ctx.save();
+      roundRectPath(ctx, box.x - 2.5, box.y - 2.5, box.w + 5, box.h + 5, r + 2.5);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#fff3c4';
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
   const size = opts.fontSize || Math.round(clamp(box.h * 0.38, 11, 20));
   const icon = opts.icon;
   const iconSize = opts.iconSize || Math.round(box.h * 0.62);
@@ -207,6 +229,8 @@ const HINTS = Object.freeze({
   out: { icon: 'door', text: 'OUT HERE THEY COME FOR YOU', life: 5 },
   level: { icon: 'up', text: 'STAND BY A BUILDING TO LEVEL IT UP', life: 6 },
   rescue: { icon: 'medic', text: 'STAND BY A FALLEN GUARD TO HELP', life: 6 },
+  // BUILD 18 (R18b): the one time the night chip shrugs off a tap
+  holdnight: { icon: 'moon', text: 'HOLD THE NIGHT CHIP TO START', life: 3.5 },
   pan: { icon: 'pan', text: 'DRAG THE RIGHT SIDE TO LOOK AROUND', life: 6 },
   // BUILD 12: the dynamic camera (a new id, so players who saw 'pan' see it)
   zoom: { icon: 'zoom', text: 'PINCH OR TAP + / - TO ZOOM', life: 6 },
@@ -1582,6 +1606,25 @@ function drawRewardModal(game, ctx, w, h) {
 }
 
 /** The action dock's size on this screen: one row, bottom right. */
+/**
+ * BUILD 18 (R18c): what the purse would still have bought by day. Shown under
+ * the NIGHT chip while its hold ring fills, so the hold itself is the
+ * confirmation ("52 GOLD UNSPENT") — no modal, no second tap.
+ */
+function unspentNote(mode) {
+  let cheapest = null;
+  for (const pt of mode.dayPoints()) {
+    let cost = null;
+    if (pt.kind === 'keep') cost = mode.keepUpgradeCost();
+    else if (pt.kind === 'armory') cost = mode.hunterUpgradeCost();
+    else if (pt.kind === 'gate') cost = mode.gateBuilt ? null : mode.tuning.gateCost;
+    else if (pt.kind === 'slot' && !pt.locked) cost = pt.built ? mode.upgradeCost(pt.id) : mode.buildingCost(pt.type);
+    if (cost && mode.canAfford(cost) && (!cheapest || (cost.gold || 0) < (cheapest.gold || 0))) cheapest = cost;
+  }
+  if (!cheapest) return null;
+  return `${Math.floor(mode.gold)} GOLD UNSPENT`;
+}
+
 function dockLayout(w, h) {
   const short = h < 560;
   const pad = 12;
@@ -1644,8 +1687,21 @@ function drawDayScreen(game, ctx, w, h) {
   // cannot take back away from the everyday one): top-left, under PAUSE,
   // across the screen from the thumb's build corner — a chip, not a slab
   const nightBtn = { x: pad, y: pad + (short ? 50 : 58), w: short ? 112 : 124, h: short ? 38 : 42 };
-  drawButton(game, ctx, nightBtn, `NIGHT ${mode.day}`,
-    () => mode.startNight(), { id: 'START NIGHT', icon: 'moon', color: 'purple', disabled: !!job, fontSize: short ? 14 : 15 });
+  const nightHoldT = game._uiHoldLabel === 'survival:START NIGHT'
+    ? clamp(Math.max(game._uiHoldT || 0, game._kbdHoldT || 0) / mode.tuning.nightHold, 0, 1) : 0;
+  const nightItem = drawButton(game, ctx, nightBtn, `NIGHT ${mode.day}`,
+    () => mode.startNight(), { id: 'START NIGHT', icon: 'moon', color: 'purple', disabled: !!job, fontSize: short ? 14 : 15, hold: mode.tuning.nightHold, holdT: nightHoldT });
+  // while the ring fills: what the day would still have bought (R18c); after
+  // a tap that left early: the chip says what it wants instead of starting
+  const holdT = nightItem.holdT || 0;
+  const holdNote = holdT > 0 ? unspentNote(mode) : null;
+  const miss = game._uiHoldMiss && game._uiHoldMiss.label === nightItem.label ? game._uiHoldMiss : null;
+  if (miss) offerSurvivalHint(game, 'holdnight');
+  if (!reward && (holdNote || miss)) {
+    drawLabel(ctx, holdNote || 'HOLD TO START', nightBtn.x + nightBtn.w / 2, nightBtn.y + nightBtn.h + 11,
+      10, holdNote ? '#ffd76a' : '#fff3c4', { align: 'center', outline: 2.5 });
+  }
+  if (game._survivalLabels) game._survivalLabels.nightHold = { holdT, note: holdNote, miss: !!miss };
 
   // BUILD 17 (R8): what tonight is, read in one line before the day's builds
   // are committed — the gates in order and what the night sends

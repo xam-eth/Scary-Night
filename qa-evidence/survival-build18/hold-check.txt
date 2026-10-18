@@ -1,0 +1,5 @@
+B18: NIGHT is a hold, not a tap — a press that leaves at a sixth of the ring starts nothing and the chip answers (HOLD TO START, then a once-only hint); while the ring fills it names what the day would still have bought (R18c); a press held to the ring starts the night once and consumes itself
+{"box":{"x":12,"y":62,"w":112,"h":38,"hold":0.55},"gold":60,"mid":{"holdT":0.303,"note":"60 GOLD UNSPENT","phase":"day"},"tap":{"phase":"day","miss":true,"hint":"holdnight"},"held":{"phase":"night","consumed":true}}
+  PASS  R18b: a tap on the NIGHT chip starts nothing — the press has to stay for the ring (0.55 s); leaving early is refused and answered — phase day, fired 0, miss "survival:START NIGHT", hint holdnight false
+  PASS  R18b: the ring fills with the press and the night starts exactly once when it closes (the press is consumed) — holdT at 0.30 s = 0.5454545454545454, phase night, fired 1, uiDown consumed true
+  PASS  R18b: the keyboard holds as well — confirm released early refuses, confirm held to the ring starts the night — early release: phase day, fired 0, holdT 0.303030303030303; held: phase night, fired 1
