@@ -46,11 +46,13 @@ Dengan begitu senjata bisa dibuat jadi model terpisah dan ditempel ke tangan kar
 
 | Pemilik | Lv1 | Lv2 | Lv3 | Lainnya |
 |---|---|---|---|---|
-| Kapten (Armory: Hunter Lv1–3) | `captain-crossbow-lv1` ✅ | `captain-crossbow-lv2` ⏳ (Lv2: baut tembus) | `captain-crossbow-lv3` ⏳ (Lv3: kipas 3 baut) | `captain-sword` ✅ (jarak dekat, klip `sword`) |
-| Prajurit (usulan: ikut level Barracks) | `guard-crossbow-lv1` ✅ | `guard-crossbow-lv2` ⏳ | `guard-crossbow-lv3` ⏳ | `guard-shield` ✅ (tangan kiri) |
-| Musuh | `ghoul-cleaver` ✅ (Ghoul) | `undead-soldier-axe` ⏳ (Prajurit Mayat) | `breaker-maul` ⏳ (Pendobrak) | `night-lord-greatsword` ⏳ (Raja Malam) |
+| Kapten (Armory: Hunter Lv1–3) | `captain-crossbow-lv1` ✅ | `captain-crossbow-lv2` ✅ (Lv2: baut tembus) | `captain-crossbow-lv3` ✅ (Lv3: kipas 3 baut) | `captain-sword` ✅ (jarak dekat, klip `sword`) |
+| Prajurit (usulan: ikut level Barracks) | `guard-crossbow-lv1` ✅ | `guard-crossbow-lv2` ✅ | `guard-crossbow-lv3` ✅ | `guard-shield` ✅ (tangan kiri) |
+| Musuh | `ghoul-cleaver` ✅ (Ghoul) | `undead-soldier-axe` ✅ (Prajurit Mayat) | `breaker-maul` ✅ (Pendobrak) | `night-lord-greatsword` ✅ (Raja Malam) |
 
-✅ sudah dibuat. ⏳ **menyusul**: batas 10 gambar per turn sudah tercapai. Prompt-nya sudah tertulis di `prompts.json` dengan status `planned`. Lv2 dan Lv3 dibuat dari gambar Lv1 sebagai referensi, supaya bentuk dasarnya sama dan hanya bertambah detail.
+✅ sudah dibuat. Semua **12 senjata** kini ada: 5 dibuat 2026-10-17, 7 sisanya 2026-10-18 (prompt di `prompts.json`, tidak diubah dari rencana). Lv2 dan Lv3 dibuat dari gambar Lv1 sebagai referensi, supaya bentuk dasarnya sama dan hanya bertambah detail.
+
+Catatan hasil: crossbow Kapten Lv3 terbaca sebagai versi mewah (biru-emas, permata biru), tetapi **tiga alur baut tidak terlihat jelas** di gambar. Saat dimodelkan, tambahkan dua alur di kiri-kanan rel. Crossbow prajurit Lv3 punya sedikit bayangan abu di bawah busur; versi `cutout/` tetap bersih di tepinya.
 
 Desain level mengikuti aturan game yang sudah ada. Armory Lv2 membuat baut **menembus** satu musuh, jadi Lv2 dibuat lebih kokoh. Lv3 menembakkan **3 baut sekaligus**, jadi Lv3 dibuat sebagai crossbow tiga alur.
 
@@ -111,6 +113,6 @@ Begitu GLB-nya ada, karakter bisa diganti per peran tanpa mengubah aturan game.
 
 ## Provenance
 
-- Semua gambar di `characters/` dan `weapons/` **dibuat dengan AI**, yaitu alat generate gambar agent Arena, pada 2026-10-17 atas permintaan eksplisit user. Prompt lengkapnya ada di `prompts.json`.
+- Semua gambar di `characters/` dan `weapons/` **dibuat dengan AI**, yaitu alat generate gambar agent Arena, pada 2026-10-17 (6 karakter + 5 senjata) dan 2026-10-18 (7 senjata) atas permintaan eksplisit user. Prompt lengkapnya ada di `prompts.json`.
 - Gambar-gambar ini bukan aset pihak ketiga berlisensi. Aturan proyek "tanpa gambar AI" berlaku untuk aset game berlisensi di `assets/`. Folder ini adalah bahan konsep dan input pemodelan, sama seperti `docs/concepts/`, dan tidak dimuat oleh build game.
 - `cutout/` dan `preview/` adalah turunan yang dibuat skrip. Gambar aslinya tidak diubah; checksum-nya ada di `SHA256SUMS.txt`.

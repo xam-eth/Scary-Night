@@ -80,48 +80,59 @@
     {
       "file": "weapons/undead-soldier-axe.png",
       "kind": "weapon",
-      "status": "planned",
-      "prompt": "Stylized 3D game-asset render of a single weapon prop for a bright, colorful medieval fantasy strategy game: smooth simple forms, hand-painted colors, soft bright even studio lighting, crisp readable silhouette. The weapon: an undead soldier's notched war axe — a one-handed bearded axe with a rusty, chipped iron head, a dark cracked wooden haft and a torn crimson cloth strip tied below the head. Not bloody. Shown upright with the axe head at the top, slightly angled. Only the weapon: no person, no hands, no stand, no other objects. The whole axe visible and centered with empty margin, on a plain pure white background, no cast shadow, no text, no watermark."
+      "status": "generated",
+      "prompt": "Stylized 3D game-asset render of a single weapon prop for a bright, colorful medieval fantasy strategy game: smooth simple forms, hand-painted colors, soft bright even studio lighting, crisp readable silhouette. The weapon: an undead soldier's notched war axe — a one-handed bearded axe with a rusty, chipped iron head, a dark cracked wooden haft and a torn crimson cloth strip tied below the head. Not bloody. Shown upright with the axe head at the top, slightly angled. Only the weapon: no person, no hands, no stand, no other objects. The whole axe visible and centered with empty margin, on a plain pure white background, no cast shadow, no text, no watermark.",
+      "generated": "2026-10-18"
     },
     {
       "file": "weapons/breaker-maul.png",
       "kind": "weapon",
-      "status": "planned",
-      "prompt": "Stylized 3D game-asset render of a single weapon prop for a bright, colorful medieval fantasy strategy game: smooth simple forms, hand-painted colors, soft bright even studio lighting, crisp readable silhouette. The weapon: the Breaker's huge two-handed siege maul — a massive rusty iron hammer head studded with blunt spikes and iron bands, on a thick dark wooden haft wrapped with chains and leather, built to smash fortress gates. Shown diagonally with the hammer head at the upper right. Only the weapon: no person, no hands, no stand, no other objects. The whole maul visible and centered with empty margin, on a plain pure white background, no cast shadow, no text, no watermark."
+      "status": "generated",
+      "prompt": "Stylized 3D game-asset render of a single weapon prop for a bright, colorful medieval fantasy strategy game: smooth simple forms, hand-painted colors, soft bright even studio lighting, crisp readable silhouette. The weapon: the Breaker's huge two-handed siege maul — a massive rusty iron hammer head studded with blunt spikes and iron bands, on a thick dark wooden haft wrapped with chains and leather, built to smash fortress gates. Shown diagonally with the hammer head at the upper right. Only the weapon: no person, no hands, no stand, no other objects. The whole maul visible and centered with empty margin, on a plain pure white background, no cast shadow, no text, no watermark.",
+      "generated": "2026-10-18"
     },
     {
       "file": "weapons/night-lord-greatsword.png",
       "kind": "weapon",
-      "status": "planned",
-      "prompt": "Stylized 3D game-asset render of a single weapon prop for a bright, colorful medieval fantasy strategy game: smooth simple forms, hand-painted colors, soft bright even studio lighting, crisp readable silhouette. The weapon: the Night Lord's cursed greatsword — a giant two-handed sword with a broad dark-iron blade etched with glowing emerald-green runes, a spiked dark-iron crossguard with royal-purple accents, a long crimson-wrapped grip and a skull pommel with glowing green eyes. Shown standing upright with the blade pointing up, slightly angled. Only the weapon: no person, no hands, no stand, no other objects. The whole sword visible and centered with empty margin, on a plain pure white background, no cast shadow, no text, no watermark."
+      "status": "generated",
+      "prompt": "Stylized 3D game-asset render of a single weapon prop for a bright, colorful medieval fantasy strategy game: smooth simple forms, hand-painted colors, soft bright even studio lighting, crisp readable silhouette. The weapon: the Night Lord's cursed greatsword — a giant two-handed sword with a broad dark-iron blade etched with glowing emerald-green runes, a spiked dark-iron crossguard with royal-purple accents, a long crimson-wrapped grip and a skull pommel with glowing green eyes. Shown standing upright with the blade pointing up, slightly angled. Only the weapon: no person, no hands, no stand, no other objects. The whole sword visible and centered with empty margin, on a plain pure white background, no cast shadow, no text, no watermark.",
+      "generated": "2026-10-18"
     },
     {
       "file": "weapons/captain-crossbow-lv2.png",
       "kind": "weapon",
-      "status": "planned",
+      "status": "generated",
       "reference": "ASSET_CHARACTER/weapons/captain-crossbow-lv1.png",
-      "prompt": "Upgrade this exact hand crossbow to level 2, keeping the same overall silhouette, size, viewing angle, framing, style, lighting and plain white background: reinforce the stock with royal-blue lacquer and polished gold fittings, make the bow arms stronger recurved steel, add a small brass sight and steel plating along the rail. Still unloaded, no bolt, no person, no hands, no text."
+      "prompt": "Upgrade this exact hand crossbow to level 2, keeping the same overall silhouette, size, viewing angle, framing, style, lighting and plain white background: reinforce the stock with royal-blue lacquer and polished gold fittings, make the bow arms stronger recurved steel, add a small brass sight and steel plating along the rail. Still unloaded, no bolt, no person, no hands, no text.",
+      "generated": "2026-10-18",
+      "note": "Generated from the Lv1 image as the reference (same silhouette, more detail), 2026-10-18."
     },
     {
       "file": "weapons/captain-crossbow-lv3.png",
       "kind": "weapon",
-      "status": "planned",
+      "status": "generated",
       "reference": "ASSET_CHARACTER/weapons/captain-crossbow-lv1.png",
-      "prompt": "Upgrade this exact hand crossbow to its ultimate level 3, keeping the same viewing angle, framing, style, lighting and plain white background: it becomes a triple crossbow with three bolt grooves fanning out (it fires three bolts at once), an ornate royal-blue and gold stock, silver bow arms with gold tips and a glowing blue gem set in the stock. Unloaded, no bolts, no person, no hands, no text."
+      "prompt": "Upgrade this exact hand crossbow to its ultimate level 3, keeping the same viewing angle, framing, style, lighting and plain white background: it becomes a triple crossbow with three bolt grooves fanning out (it fires three bolts at once), an ornate royal-blue and gold stock, silver bow arms with gold tips and a glowing blue gem set in the stock. Unloaded, no bolts, no person, no hands, no text.",
+      "generated": "2026-10-18",
+      "note": "Generated from the Lv1 image as the reference (same silhouette, more detail), 2026-10-18."
     },
     {
       "file": "weapons/guard-crossbow-lv2.png",
       "kind": "weapon",
-      "status": "planned",
+      "status": "generated",
       "reference": "ASSET_CHARACTER/weapons/guard-crossbow-lv1.png",
-      "prompt": "Upgrade this exact crossbow to level 2, keeping the same silhouette, size, viewing angle, framing, style, lighting and plain white background: a steel-reinforced stock painted royal blue, a stronger steel bow and steel bands along the stock. Unloaded, no bolt, no person, no hands, no text."
+      "prompt": "Upgrade this exact crossbow to level 2, keeping the same silhouette, size, viewing angle, framing, style, lighting and plain white background: a steel-reinforced stock painted royal blue, a stronger steel bow and steel bands along the stock. Unloaded, no bolt, no person, no hands, no text.",
+      "generated": "2026-10-18",
+      "note": "Generated from the Lv1 image as the reference (same silhouette, more detail), 2026-10-18."
     },
     {
       "file": "weapons/guard-crossbow-lv3.png",
       "kind": "weapon",
-      "status": "planned",
+      "status": "generated",
       "reference": "ASSET_CHARACTER/weapons/guard-crossbow-lv1.png",
-      "prompt": "Upgrade this exact crossbow to level 3, keeping the same viewing angle, framing, style, lighting and plain white background: a heavy arbalest with a royal-blue, gold-trimmed stock, a large thick steel bow, a winding crank (cranequin) at the back and gold fittings. Unloaded, no bolt, no person, no hands, no text."
+      "prompt": "Upgrade this exact crossbow to level 3, keeping the same viewing angle, framing, style, lighting and plain white background: a heavy arbalest with a royal-blue, gold-trimmed stock, a large thick steel bow, a winding crank (cranequin) at the back and gold fittings. Unloaded, no bolt, no person, no hands, no text.",
+      "generated": "2026-10-18",
+      "note": "Generated from the Lv1 image as the reference (same silhouette, more detail), 2026-10-18."
     }
   ]
 }
