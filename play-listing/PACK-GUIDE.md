@@ -102,6 +102,13 @@ ls -la app-release-bundle.aab app-release-signed.apk
 | ingin scaffold ulang dari nol | hapus `android/app` (+ file gradle hasil init) tapi **jangan** `twa-manifest.json`, lalu jalankan script lagi |
 | password salah / keystore korup | restore dari backup `duskhold-keys`; jangan pernah generate kunci baru setelah ada upload di Play |
 
+## Shell vs isi game: siapa yang update apa
+
+Pack ini hanya mengurus **shell** Android. Isi game ter-update lewat deploy web
+tanpa pack/reinstall sama sekali — alur lengkap, aturan VERSION service worker,
+dan batas apa yang tidak boleh lewat jalur web ada di
+`play-listing/UPDATE-FLOW.md`; perintah deploy-nya `tools/deploy-web.sh`.
+
 ## Yang TIDAK berubah oleh pack ini
 
 Game-nya sendiri tidak disentuh: TWA hanya membungkus origin
