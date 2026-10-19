@@ -1014,6 +1014,26 @@ check('B18: NIGHT is a hold, not a tap — a press that leaves at a sixth of the
     && b18held.phase === 'night' && b18held.consumed,
   { box: b18day.box, gold: b18day.gold, mid: b18mid, tap: b18tap, held: b18held });
 
+/* ---- 12. BUILD 20 (R21): the watch ladder lives in PAUSE ---------------- */
+const b20pause = await page.evaluate(() => {
+  const g = window.__LN; const m = g.survival;
+  m.records.totalStars = 4;
+  g.togglePause(true);
+  window.__pStep(3);
+  return { screen: g.screen, lab: (g._survivalLabels || {}).pauseLadder || null };
+});
+await shot('b20-1-pause-ladder');
+const b20resume = await page.evaluate(() => {
+  const g = window.__LN;
+  g.togglePause(false);
+  window.__pStep(2);
+  return g.screen;
+});
+check('B20: PAUSE is the mini unlocks screen — before any run ends it shows the watch ladder: the colour worn, the next colour and the stars still owed to it (R21)',
+  b20pause.screen === 'paused' && !!b20pause.lab && b20pause.lab.tier === 'iron'
+    && b20pause.lab.next === 'CRIMSON WATCH' && b20pause.lab.total === 4 && b20resume === 'playing',
+  b20pause);
+
 fs.writeFileSync(path.join(OUT, 'plotsqa.json'), JSON.stringify({ results, errors }, null, 2));
 console.log(`errors ${errors.length}`);
 console.log(`SUMMARY ${results.length - failures}/${results.length} PASS`);

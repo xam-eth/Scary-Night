@@ -311,7 +311,8 @@ const end = await shot('fx-end', () => {
 check('end: a loss counts every kill of the run by source, shows the night\'s track with the seconds to dawn and one tip (R1, R4)',
   end.phase === 'failed' && end.run.kills > 0 && end.sum === end.run.kills && end.result.kills === end.run.kills && end.result.night === 2
     && end.result.toDawn > 0 && end.result.tip && end.result.tip.text.split(/\s+/).length <= 8 && end.result.newBest === false
-    && end.unlock && /3★ TO IRON WATCH/.test(end.unlock.text) && end.unlock.total === 0
+    && end.unlock && /2★ TO IRON WATCH/.test(end.unlock.text) && end.unlock.total === 1
+    && /\+1 NIGHTS HELD — /.test(end.unlock.text)
     && end.ui.includes('survival:PLAY AGAIN'), { natural: end.natural, kills: end.run.kills, by: end.run.by, result: end.result, unlock: end.unlock && end.unlock.text });
 
 // 8. a real three-night win: the builder bot plays it in the page, fast
@@ -362,6 +363,7 @@ check('win: the builder\'s real three nights end on stars from the keep\'s lowes
     && win.result.newBest === true && win.records.runs === 2 && win.records.wins === 1 && win.records.bestStars === win.result.stars
     && (!win.result.mvp || win.result.mvp.name !== 'CAPTAIN') && win.ui.includes('survival:PLAY AGAIN')
     && win.unlock && win.unlock.unlocked === 'IRON WATCH' && /★ TO CRIMSON WATCH/.test(win.unlock.text)
+    && win.unlock.text.startsWith(`+${win.result.stars}★ — `)
     && win.bannerHex === '#9aa7b4',
   { frames: win.frames, nightKills: win.nightKills, result: win.result, records: win.records, by: win.run.by, towers: win.run.towers, unlock: win.unlock && win.unlock.text, bannerHex: win.bannerHex });
 

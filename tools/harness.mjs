@@ -2675,6 +2675,53 @@ async function runSurvivalMilestone() {
     b19Pass = b19Checks.length === 3 && b19Checks.every(Boolean);
   }
 
+  // BUILD 20 (R20/R21/R24): a loss banks the nights it held, so the ladder
+  // moves on every closed run; the banked amount is named on the panel line.
+  let b20Pass = false;
+  {
+    const b20Checks = [];
+    const b20Check = (name, ok, detail) => {
+      b20Checks.push(!!ok);
+      console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} — ${detail}`);
+    };
+    window.localStorage.removeItem('lastnight.save.v1');
+    const bg = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 72, seed: 20261007 });
+    const bm = bg.survival;
+    // 1) a loss on night 2 banks 1 night, a loss on night 3 banks 2 — never 0
+    bm.records = { ...bm.records, totalStars: 0 };
+    bm.nightsCompleted = 1;
+    bm._finishRun(false);
+    const loss1 = { total: bm.records.totalStars, banked: bm._lastBank && { ...bm._lastBank }, line: bm.unlockSummary().text };
+    bm.records = { ...bm.records, totalStars: 0 };
+    bm.nightsCompleted = 2;
+    bm._finishRun(false);
+    const loss2 = { total: bm.records.totalStars, banked: bm._lastBank && { ...bm._lastBank }, stars: bm.runResult.stars };
+    b20Check('R20: a lost run still banks — the nights it held (1 on night 2, 2 on night 3), named on the ladder line, while the run\'s quality stars stay 0',
+      loss1.total === 1 && loss1.banked && loss1.banked.amount === 1 && /NIGHTS HELD/.test(loss1.banked.suffix)
+        && /\+1 NIGHTS HELD — /.test(loss1.line)
+        && loss2.total === 2 && loss2.banked.amount === 2 && loss2.stars === 0,
+      `night-2 loss: total ${loss1.total}, line "${loss1.line}"; night-3 loss: total ${loss2.total}, stars ${loss2.stars}`);
+    // 2) a win banks its stars with the star suffix, and the prefix is in the line
+    bm.records = { ...bm.records, totalStars: 0 };
+    bm._newBanner = null;
+    bm._finishRun(true);
+    const win = { total: bm.records.totalStars, banked: bm._lastBank && { ...bm._lastBank }, line: bm.unlockSummary().text, stars: bm.runResult.stars };
+    b20Check('R20+H5: a won run banks its quality stars with the ★ suffix and the panel line carries the banked prefix for the pop',
+      win.banked && win.banked.suffix === '★' && win.banked.amount === win.stars && win.total === win.stars
+        && win.line.startsWith(`+${win.stars}★ — `),
+      `stars ${win.stars}, total ${win.total}, line "${win.line}"`);
+    // 3) the pause ladder reads the same data the panel does (R21)
+    const us = bm.unlockSummary();
+    const tiersOk = us.tier === 'iron' || us.tier === 'azure' || us.tier === 'crimson' || us.tier === 'gold';
+    bm.records.totalStars = 4;
+    const us4 = bm.unlockSummary();
+    b20Check('R21: the ladder state PAUSE paints (tier, next colour, distance) is one read of the same summary the end panel uses',
+      tiersOk && us4.tier === 'iron' && us4.next === 'CRIMSON WATCH' && typeof us4.total === 'number',
+      `at ★4: tier ${us4.tier}, next ${us4.next}, total ${us4.total}`);
+    window.localStorage.removeItem('lastnight.save.v1');
+    b20Pass = b20Checks.length === 3 && b20Checks.every(Boolean);
+  }
+
   console.log(`  idle Night 3: ${idle.nightThree.peakEnemies} peak enemies / ${idle.nightThree.peakBreakers} Breakers, ${idle.nightThree.kills} kills, ${idle.nightThree.wallDamage} wall damage, gate ${idle.nightThree.gateHp} HP, Hunter ${idle.nightThree.playerHp} HP; ${idle.phase}`);
   console.log(`  builder Night 3: ${builder.nightThree.peakEnemies} peak enemies / ${builder.nightThree.peakBreakers} Breakers, ${builder.nightThree.kills} kills, ${builder.nightThree.wallDamage} wall damage, gate ${builder.nightThree.gateHp} HP, Hunter ${builder.nightThree.playerHp} HP; keep Lv${builder.keepLevel} ${builder.keepHp} HP, soldiers ${builder.survivors}, buildings ${builder.buildings.join(',') || 'none'}, gateBuilt=${builder.gateBuilt}; ${builder.phase}`);
   // Balance target (M1 rebuild, K1): doing nothing must not win; an engaged
@@ -2687,7 +2734,7 @@ async function runSurvivalMilestone() {
     && hunterAutoShot && hunterRealLos && hunterSkill
     && idleLoses && builder.complete && builder.keepLevel === 3
     && builder.queueLockVerified && builder.sawmillBuilt && builder.gateBuilt && builder.barracksBuilt
-    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass && gateRulePass && b13Pass && b14Pass && b15Pass && b16Pass && b17Pass && b18Pass && b19Pass
+    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass && gateRulePass && b13Pass && b14Pass && b15Pass && b16Pass && b17Pass && b18Pass && b19Pass && b20Pass
     && builder.upgrades[0].level === 1 && builder.upgrades[0].plots === 9
     && builder.upgrades[builder.upgrades.length - 1].level === 3 && builder.upgrades[builder.upgrades.length - 1].plots === 15
     && builder.upgrades.every((item, i, all) => i === 0 || item.level >= all[i - 1].level);

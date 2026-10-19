@@ -1378,6 +1378,7 @@ export class SurvivalMode {
     this.reinforcements = null;    // the relief column (victory)
     this.records = freshRecords();  // best results across runs (R3)
     this._newBanner = null;         // R9: the tier this run just crossed
+    this._lastBank = null;          // R20: what the last closed run banked
     this.runResult = null;          // how the last run ended (stars, MVP, tip)
     this._restore(game.save.survival || freshProgress(this.nightDuration));
     this.applyHunterStats(false);
@@ -4097,6 +4098,10 @@ export class SurvivalMode {
     const rs = this.runStats;
     const nights = won ? 3 : clamp(this.nightsCompleted, 0, 3);
     const stars = survivalStars(won, rs);
+    // BUILD 20 (R20): a loss still banks — the nights it held, never a win's
+    // stars. The ladder moves on every closed run, so no session is wasted.
+    const bank = won ? stars : Math.min(2, nights);
+    this._lastBank = bank > 0 ? { amount: bank, suffix: won ? '★' : ' NIGHTS HELD' } : null;
     const prev = { ...freshRecords(), ...(this.records || {}) };
     const kills = rs.kills || 0;
     this.records = {
@@ -4106,13 +4111,13 @@ export class SurvivalMode {
       bestNights: Math.max(prev.bestNights, nights),
       bestKills: Math.max(prev.bestKills, kills),
       totalKills: prev.totalKills + kills,
-      totalStars: (prev.totalStars || 0) + stars,
+      totalStars: (prev.totalStars || 0) + bank,
     };
     // R9: a crossed tier is announced on exactly the run that crossed it
     this._newBanner = unlockTierFor(this.records.totalStars).stars > unlockTierFor(prev.totalStars).stars
       ? unlockTierFor(this.records.totalStars) : null;
     this.runResult = {
-      won, stars, nights, kills,
+      won, stars, nights, kills, bank,
       newBest: prev.runs > 0 && (stars > prev.bestStars || nights > prev.bestNights),
       night: this.day,
       toDawn: won ? 0 : Math.max(0, Math.ceil(this.nightDuration - this.elapsed)),
@@ -4810,11 +4815,14 @@ export class SurvivalMode {
     const tier = this.unlockTier();
     const next = UNLOCK_TIERS.find((t) => t.stars > total) || null;
     const unlocked = this._newBanner || null;
-    let text;
-    if (unlocked) text = next ? `NEW: ${unlocked.name} — ${next.stars - total}★ TO ${next.name}` : `NEW: ${unlocked.name} — ALL EARNED`;
-    else if (next) text = `CAPTAIN'S WATCH ★${total} — ${next.stars - total}★ TO ${next.name}`;
-    else text = `ALL WATCH COLOURS EARNED — ★${total}`;
-    return { total, tier: tier.id, unlocked: unlocked ? unlocked.name : null, next: next ? next.name : null, text };
+    const banked = this._lastBank || null;
+    const prefix = banked ? `+${banked.amount}${banked.suffix} — ` : '';
+    let base;
+    if (unlocked) base = next ? `NEW: ${unlocked.name} — ${next.stars - total}★ TO ${next.name}` : `NEW: ${unlocked.name} — ALL EARNED`;
+    else if (next) base = `CAPTAIN'S WATCH ★${total} — ${next.stars - total}★ TO ${next.name}`;
+    else base = `ALL WATCH COLOURS EARNED — ★${total}`;
+    return { total, tier: tier.id, unlocked: unlocked ? unlocked.name : null, next: next ? next.name : null,
+      banked, prefix, text: prefix + base };
   }
 
   _persist(force) {

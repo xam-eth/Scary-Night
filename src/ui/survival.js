@@ -33,7 +33,7 @@
 
 import { clamp, writeSave } from '../core/util.js';
 import { SURVIVAL_ACTOR_SCALE } from '../core/config.js';
-import { SURVIVAL_BUILDINGS, BUILDING_MAX_LEVEL, HUNTER_MAX_LEVEL, ARMS_MAX_LEVEL, GUARD, CINE, SURVIVAL_CAMERA, gateShort } from '../game/survival.js';
+import { SURVIVAL_BUILDINGS, BUILDING_MAX_LEVEL, HUNTER_MAX_LEVEL, ARMS_MAX_LEVEL, GUARD, CINE, SURVIVAL_CAMERA, gateShort, UNLOCK_TIERS } from '../game/survival.js';
 import { pauseButtonBox } from '../game/hud.js';
 import {
   drawSurvivalIcon, drawLabel, measureLabel, drawPanel, drawCounter, drawBar,
@@ -1824,7 +1824,7 @@ function drawPausePanel(game, ctx, w, h) {
   ctx.fillStyle = 'rgba(12,10,30,0.62)';
   ctx.fillRect(0, 0, w, h);
   ctx.restore();
-  const bw = Math.min(300, w - 32), bh = 230;
+  const bw = Math.min(300, w - 32), bh = 292;
   const x = (w - bw) / 2, y = (h - bh) / 2;
   drawPanel(ctx, x, y, bw, bh, { radius: 22, top: '#3a4190', bottom: '#20244f', lineWidth: 3 });
   drawSurvivalIcon(ctx, 'pause', w / 2, y + 36, 34);
@@ -1833,6 +1833,34 @@ function drawPausePanel(game, ctx, w, h) {
     () => game.resumeSurvival(), { id: 'RESUME', icon: 'play', color: 'green' });
   drawButton(game, ctx, { x: x + 28, y: y + 162, w: bw - 56, h: 44 }, 'RESTART',
     () => game.survival.restart(), { id: 'RESTART 3-DAY RUN', icon: 'restart', color: 'red' });
+  // BUILD 20 (R21): the ladder is visible before a run ends — Vampire
+  // Survivors keeps its Unlocks in the menu for a reason
+  const mode = game.survival;
+  const us = mode.unlockSummary ? mode.unlockSummary() : null;
+  if (us) {
+    const ly = y + 232;
+    drawLabel(ctx, `CAPTAIN'S WATCH ★${us.total}`, w / 2, ly, 11, '#cdd3ff', { outline: 0 });
+    const seg = (bw - 56) / UNLOCK_TIERS.length;
+    const cur = UNLOCK_TIERS.find((u) => u.id === us.tier) || UNLOCK_TIERS[0];
+    const nextTier = UNLOCK_TIERS.find((u) => u.name === us.next) || null;
+    UNLOCK_TIERS.forEach((t, i) => {
+      const cx = x + 28 + seg * i + seg / 2;
+      const earned = t.stars <= cur.stars;
+      const here = t.id === cur.id;
+      const isNext = nextTier && t.id === nextTier.id;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, ly + 22, here ? 8 : 6.5, 0, Math.PI * 2);
+      ctx.fillStyle = earned ? `#${t.royal.toString(16).padStart(6, '0')}` : 'rgba(255,255,255,0.14)';
+      ctx.fill();
+      if (here) { ctx.lineWidth = 2.5; ctx.strokeStyle = '#ffffff'; ctx.stroke(); }
+      else if (isNext) { ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.setLineDash([3, 3]); ctx.stroke(); }
+      ctx.restore();
+      drawLabel(ctx, here ? t.name.split(' ')[0] : (isNext ? `${nextTier.stars - us.total}★` : ''), cx, ly + 38, 9,
+        here ? '#ffffff' : 'rgba(255,255,255,0.6)', { outline: 0 });
+    });
+    if (game._survivalLabels) game._survivalLabels.pauseLadder = { tier: us.tier, next: us.next, total: us.total };
+  }
   drawBuildStamp(ctx, w / 2, y + bh - 10, 'center', 10);
 }
 
@@ -2043,8 +2071,27 @@ function drawEndPanel(game, ctx, w, h, failed) {
   // stars earned, the next colour and the stars still owed to it
   const us = mode.unlockSummary ? mode.unlockSummary() : null;
   if (us) {
-    drawLabel(ctx, us.text, w / 2, y + L.unlock, Math.round(12 * L.k), us.unlocked ? '#b8860b' : (failed ? '#ffd8a8' : '#7a5a2a'),
-      { outline: failed ? 2.5 : 0, alpha: clamp((age - landed) / 0.25, 0, 1) });
+    const ua = clamp((age - landed) / 0.25, 0, 1);
+    const ucol = us.unlocked ? '#b8860b' : (failed ? '#ffd8a8' : '#7a5a2a');
+    const usize = Math.round(12 * L.k);
+    if (us.banked) {
+      // BUILD 20 (H5): what the run banked slams in first, then the ladder line
+      const wp = measureLabel(ctx, us.prefix, usize);
+      const wr = measureLabel(ctx, us.text.slice(us.prefix.length), usize);
+      const x0 = w / 2 - (wp + wr) / 2;
+      const pop = clamp((age - landed - 0.1) / 0.3, 0, 1);
+      ctx.save();
+      const sc = 1 + 0.6 * (1 - pop);
+      ctx.translate(x0 + wp / 2, y + L.unlock); ctx.scale(sc, sc); ctx.translate(-(x0 + wp / 2), -(y + L.unlock));
+      drawLabel(ctx, us.prefix, x0, y + L.unlock, usize, failed ? '#ffd24a' : '#b8860b',
+        { align: 'left', outline: failed ? 2.5 : 0, alpha: ua });
+      ctx.restore();
+      drawLabel(ctx, us.text.slice(us.prefix.length), x0 + wp, y + L.unlock, usize, ucol,
+        { align: 'left', outline: failed ? 2.5 : 0, alpha: ua });
+    } else {
+      drawLabel(ctx, us.text, w / 2, y + L.unlock, usize, ucol,
+        { outline: failed ? 2.5 : 0, alpha: ua });
+    }
     if (game._survivalLabels) game._survivalLabels.endUnlock = us;
   }
 
