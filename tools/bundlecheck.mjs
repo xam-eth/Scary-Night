@@ -224,7 +224,17 @@ const gi = read('.gitignore') || '';
 ok(/\*\.jks|\*\.keystore|\*\.p12/.test(gi), '.gitignore excludes keystores');
 ok(/signing\.local\.json/.test(gi), '.gitignore excludes the signing password file');
 for (const f of ['android/duskhold-upload.jks', 'android/signing.local.json']) {
-  if (fs.existsSync(P(f))) ok(false, `${f} must never be committed`, 'it exists — make sure git is ignoring it');
+  // Existing locally is fine — that is where the key lives while a build runs.
+  // Being TRACKED, or existing while git does not ignore it, is the lock-out.
+  if (fs.existsSync(P(f))) {
+    const tracked = spawnSync('git', ['ls-files', '--error-unmatch', f], { cwd: ROOT, encoding: 'utf8' }).status === 0;
+    const ignored = spawnSync('git', ['check-ignore', '-q', f], { cwd: ROOT }).status === 0;
+    ok(!tracked && ignored, `${f} must never be committed`,
+      tracked ? 'it is TRACKED by git — remove it from the index now'
+        : (ignored ? 'present locally, ignored by git — back it up outside git' : 'it exists and git is NOT ignoring it'));
+  } else {
+    ok(true, `${f} is not in the workspace (lives with the owner's backups)`);
+  }
 }
 
 /* ------------------------------------------------------ assets referenced */

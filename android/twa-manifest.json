@@ -41,7 +41,9 @@
   "fullScopeUrl": "https://duskhold.zyvrolabs.com/",
   "minSdkVersion": 23,
   "orientationLock": false,
-  "fingerprints": [],
+  "fingerprints": [
+    "94aeafbb42f4ed414e59e19cbf177e408af65dbc5d1fdf5c27b31383176f57e3"
+  ],
   "additionalTrustedOrigins": [],
   "retainedBundles": []
 }

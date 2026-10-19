@@ -24,13 +24,16 @@ const args = Object.fromEntries(process.argv.slice(2).map((a) => {
   const [k, v] = a.replace(/^--/, '').split('=');
   return [k, v === undefined ? true : v];
 }));
-const OUT = path.resolve(ROOT, args.out || '/tmp/look');
+// --store: the Play listing frames — a 16:9 phone-TV viewport (1920 x 1080),
+// the size Play Console accepts for phone screenshots, into play-listing/
+const STORE = !!args.store;
+const OUT = path.resolve(ROOT, args.out || (STORE ? 'play-listing/screenshots' : '/tmp/look'));
 const PORT = Number(args.port || 8123);
 // BUILD 17 (R8): a run's gate rotation comes from a seed. Fixed here so a
 // check measures the same run every time and an evidence shot replays.
 const SEED = Number(args.seed || 20261007);   // the base whose rotation is BUILD 16's
 const DPR = Number(args.dpr || 2);
-const ONLY = args.only ? String(args.only).split(',') : null;
+const ONLY = args.only ? String(args.only).split(',') : (STORE ? ['gate', 'day', 'build', 'fight', 'overview', 'closeup'] : null);
 fs.mkdirSync(OUT, { recursive: true });
 
 const server = spawn('python3', ['-m', 'http.server', String(PORT), '--bind', '127.0.0.1'], { cwd: ROOT, stdio: 'ignore' });
@@ -54,7 +57,9 @@ const page = await browser.newPage();
 const errors = [];
 page.on('pageerror', (e) => { errors.push(String(e.message).slice(0, 300)); console.log('PAGEERROR', String(e.message).slice(0, 300)); });
 page.on('console', (m) => { if (m.type() === 'error') { errors.push(m.text().slice(0, 300)); console.log('CONSOLE', m.text().slice(0, 300)); } });
-await page.setViewport({ width: 844, height: 390, deviceScaleFactor: DPR, isMobile: true, hasTouch: true });
+await page.setViewport(STORE
+  ? { width: 1920, height: 1080, deviceScaleFactor: 1, isMobile: true, hasTouch: true }
+  : { width: 844, height: 390, deviceScaleFactor: DPR, isMobile: true, hasTouch: true });
 await page.evaluateOnNewDocument(() => { try { localStorage.clear(); } catch (_) { /* ignore */ } });
 const t0 = Date.now();
 await page.goto(`http://127.0.0.1:${PORT}/?cine=0&seed=${SEED}`, { waitUntil: 'domcontentloaded', timeout: 180000 });

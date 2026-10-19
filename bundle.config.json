@@ -15,7 +15,7 @@
   "versionCode": 1,
   "minSdkVersion": 23,
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "landscape",
   "themeColor": "#05060b",
   "backgroundColor": "#05060b",
   "navigationColor": "#05060b",

@@ -1,0 +1,75 @@
+# DUSKHOLD — build the Play AAB + signed APK on a GitHub runner.
+#
+# UNTESTED FROM THE DEV SANDBOX (it has no JDK/Android SDK and cannot reach
+# dl.google.com). This workflow is the networked machine: ubuntu-latest can
+# reach Google's repos, and Bubblewrap installs JDK 17 + the SDK itself.
+# The repo stays the source of truth: android/twa-manifest.json is copied
+# back over whatever `bubblewrap init` derives from the live manifest.
+#
+# Secrets the owner must add once (Settings -> Secrets -> Actions):
+#   DUSKHOLD_KEYSTORE_B64       base64 of android/duskhold-upload.jks
+#   DUSKHOLD_STORE_PASSWORD     storePassword from android/signing.local.json
+#   DUSKHOLD_KEY_PASSWORD       keyPassword from the same file
+# Both files live OUTSIDE git by design; losing them locks the app out of
+# updates, so the runner never keeps them after the job.
+name: play-bundle
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'   # the Android command-line tools refuse 18+
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Bubblewrap CLI
+        run: npm install -g @bubblewrap/cli
+
+      - name: Restore the upload key (job-local only)
+        env:
+          KEYSTORE_B64: ${{ secrets.DUSKHOLD_KEYSTORE_B64 }}
+        run: |
+          test -n "$KEYSTORE_B64" || { echo "add DUSKHOLD_KEYSTORE_B64 first"; exit 1; }
+          base64 -d <<<"$KEYSTORE_B64" > android/duskhold-upload.jks
+
+      - name: Validate before spending runner minutes
+        run: node tools/bundlecheck.mjs
+
+      - name: Scaffold the Gradle project, then apply the committed manifest
+        working-directory: android
+        run: |
+          mv twa-manifest.json /tmp/twa-manifest.committed.json
+          # init downloads JDK/SDK as needed and scaffolds app/ from the LIVE
+          # manifest at the origin (same bundle.config.json that wrote it)
+          bubblewrap init --manifest https://duskhold.zyvrolabs.com/manifest.webmanifest
+          cp /tmp/twa-manifest.committed.json twa-manifest.json
+          bubblewrap update
+
+      - name: Build AAB + signed APK
+        working-directory: android
+        env:
+          STORE_PW: ${{ secrets.DUSKHOLD_STORE_PASSWORD }}
+          KEY_PW: ${{ secrets.DUSKHOLD_KEY_PASSWORD }}
+        run: |
+          # bubblewrap asks for the store then the key password on stdin
+          printf '%s\n%s\n' "$STORE_PW" "$KEY_PW" | bubblewrap build
+          ls -la app-release-bundle.aab app-release-signed.apk
+
+      - name: Upload the artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: duskhold-play-bundle
+          path: |
+            android/app-release-bundle.aab
+            android/app-release-signed.apk
+          retention-days: 7

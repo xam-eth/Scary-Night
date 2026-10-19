@@ -89,6 +89,9 @@ function writeAssetLinks(c, fingerprints) {
 
 function writeTwaManifest(c, base) {
   fs.mkdirSync(ANDROID, { recursive: true });
+  // the upload key's SHA-256 survives a re-prepare: it is measured from the
+  // keystore once (bubblewrap fingerprint / keytool), never re-derived here
+  const kept = readFingerprints() || [];
   const twa = {
     packageId: c.packageId,
     host: new URL(c.host).host,
@@ -135,7 +138,7 @@ function writeTwaManifest(c, base) {
     fullScopeUrl: c.host.replace(/\/$/, '') + base,
     minSdkVersion: c.minSdkVersion,
     orientationLock: false,
-    fingerprints: [],
+    fingerprints: kept,
     additionalTrustedOrigins: [],
     retainedBundles: [],
   };
