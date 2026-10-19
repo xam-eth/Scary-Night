@@ -22,3 +22,5 @@ android/signing.local.json
 android/*
 !android/twa-manifest.json
 !android/README.md
+!android/upload-fingerprint.txt
+dist-play/

@@ -21,7 +21,7 @@
   "navigationColor": "#05060b",
   "splashScreenFadeOutDuration": 300,
   "signingKey": {
-    "path": "./android/duskhold-upload.jks",
+    "path": "./duskhold-upload.jks",
     "alias": "duskhold"
   }
 }

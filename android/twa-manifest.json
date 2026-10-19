@@ -18,7 +18,7 @@
   "maskableIconUrl": "https://duskhold.zyvrolabs.com/assets/brand/icon-maskable-512.png",
   "splashScreenFadeOutDuration": 300,
   "signingKey": {
-    "path": "./android/duskhold-upload.jks",
+    "path": "./duskhold-upload.jks",
     "alias": "duskhold"
   },
   "appVersionCode": 1,

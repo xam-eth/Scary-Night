@@ -19,6 +19,10 @@
 
 **5. Rail build** `.github/workflows/play-bundle.yml`: runner ubuntu (punya jaringan ke repo Google) memasang JDK 17 + Bubblewrap, me-restore kunci dari secrets pemilik, scaffold proyek Gradle, menimpa twa-manifest dengan yang terkomit, lalu `bubblewrap build` → artifact `app-release-bundle.aab` + `app-release-signed.apk`. **Workflow ini belum pernah dijalankan dari sini** — secret-nya harus ditambah pemilik dulu.
 
+### Script pack + guide (lanjutan pass yang sama)
+
+Atas permintaan user ("buat guide dan script run pack nya untuk langsung menghasilkan 2 file bundle"): `tools/playpack.sh` — satu perintah yang mem-probe mesin (internet ke repo Google, JDK 17, Bubblewrap), me-restore kunci upload dari `android/`/`$DUSKHOLD_KEYS_DIR`/`~/duskhold-keys`, scaffold proyek Gradle lewat `bubblewrap init` di temp dir (lalu menimpa twa-manifest dengan yang terkomit + `bubblewrap update`), `bubblewrap build` dengan password di-stdin, dan menyalin hasilnya ke `dist-play/DUSKHOLD-<versi>.aab` + `.apk` berikut sha256-nya; di mesin yang salah ia berhenti di probe pertama dengan alasannya (di sandbox dev: 0,3 detik). Guide-nya `play-listing/PACK-GUIDE.md` (tabel syarat, jalan Actions, jalan manual, naik versi, troubleshooting, aturan backup kunci). Satu perbaikan ikut masuk: `signingKey.path` di `bundle.config.json` kini relatif terhadap `android/` (tempat twa-manifest berada dan bubblewrap build berjalan), bukan terhadap root repo.
+
 ### Yang TIDAK bisa selesai di sandbox ini (jujur)
 
 Binary AAB/APK butuh JDK 17 + Android SDK + Gradle + artifact Maven dari `dl.google.com`/`maven.google.com`; sandbox hanya boleh bicara ke github/npm/pypi, dan tidak ada JDK terpasang. `node tools/bundle.mjs build` berhenti tepat di langkah keytool dengan pesan itu. Dua jalan keluar, keduanya terdokumentasi: jalankan `node tools/bundle.mjs build` di mesin ber-JDK 17 (kunci + repo ini saja yang dibutuhkan), atau trigger workflow `play-bundle.yml` setelah secrets diisi. Sampai salah satunya dijalankan, **belum ada AAB/APK yang terupload ke Play Console mana pun** — sesuai catatan config bahwa pemilik memang belum pernah upload.

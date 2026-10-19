@@ -76,8 +76,10 @@ lives on the fortress walls of duskhold.zyvrolabs.com.
 
 ## Urutan rollout (jangan dibalik)
 
-1. **Build** AAB+APK: lihat "Pass packaging Play" di `docs/REBUILD-ROADMAP.md`
-   (mesin ber-JDK 17 + Android SDK, atau workflow `play-bundle.yml`).
+1. **Build** AAB+APK: satu perintah `bash tools/playpack.sh` di mesin ber-internet
+   biasa (JDK 17 atau biarkan Bubblewrap memasang) — panduan lengkap
+   `play-listing/PACK-GUIDE.md`; alternatif tanpa mesin pribadi: workflow
+   `play-bundle.yml` setelah secrets diisi.
 2. Upload AAB ke **internal testing** dulu; Play Console → Setup → App signing:
    salin SHA-256 **app signing** (bukan upload cert) ke `.well-known/assetlinks.json`
    di origin, lalu `node tools/bundle.mjs prepare` ulang supaya file itu naik bersama
