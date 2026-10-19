@@ -449,11 +449,13 @@ ok('the reach is measured as the room is drawn, not on the floor',
   /swingDist\(/.test(gameCode) && /swingDist\(/.test(coachCode) && /tilt/.test(weaponsCode));
 ok('a swing dead to the right keeps its aim', /swingAngle \?\? player\.angle/.test(gameCode));
 
-/* Survival's garrison (src/game/troop3d.js): the KayKit Knight and the
- * one-handed crossbow, vendored byte-for-byte from a CC0 pack. The hashes in
- * CREDITS.txt are the provenance record; the clips and nodes are the runtime
- * contract troop3d.js dresses and animates the guards with. */
-console.log('\ngarrison troops (KayKit, CC0):');
+/* Survival's garrison (src/game/troop3d.js): BUILD 21 — the troops are the
+ * captain's own character (one GLB family, graded in the garrison palette),
+ * armed with the KayKit crossbows vendored byte-for-byte from a CC0 pack.
+ * The hashes in CREDITS.txt are the provenance record (Knight.glb stays
+ * vendored but retired — it is no longer loaded); the clips and bones are
+ * the runtime contract troop3d.js dresses and animates the guards with. */
+console.log('\ngarrison troops (captain family + KayKit bows, CC0):');
 {
   const TROOP_DIR = path.join(ROOT, 'assets', 'troops', 'kaykit');
   const credits = fs.readFileSync(path.join(TROOP_DIR, 'CREDITS.txt'), 'utf8');
@@ -468,34 +470,38 @@ console.log('\ngarrison troops (KayKit, CC0):');
   ok('the pack ships its CC0 licence and the credits name the source commit',
     /Creative Commons Zero, CC0/.test(fs.readFileSync(path.join(TROOP_DIR, 'LICENSE.txt'), 'utf8'))
       && /commit 672074b73ba276876a19e8816ecdc5241817ab47/.test(credits));
-  const knight = readGlb(path.join(ROOT, TROOP_ASSETS.knight));
-  const clipNames = new Set((knight?.json.animations || []).map((clip) => clip.name));
-  const nodeNames = new Set((knight?.json.nodes || []).map((node) => node.name));
-  const missingClips = Object.values(TROOP_CLIPS).filter((name) => !clipNames.has(name));
-  ok('Knight.glb is a valid GLB with every clip the garrison plays',
-    !!knight && knight.json.skins?.length > 0 && missingClips.length === 0,
-    `${clipNames.size} clips${missingClips.length ? `; missing ${missingClips.join(', ')}` : ''}`);
-  const wanted = [...new Set(Object.values(TROOP_LOADOUTS).flatMap((loadout) => loadout.show)), 'handslot.r'];
-  const missingNodes = wanted.filter((name) => !nodeNames.has(name));
-  ok('Knight.glb has every loadout piece and the right hand slot the crossbow mounts on',
-    missingNodes.length === 0, missingNodes.length ? `missing ${missingNodes.join(', ')}` : wanted.join(', '));
+  // BUILD 21: one character file for the captain and his men
+  ok('the garrison template IS the captain\'s character file (one family, no second art style)',
+    TROOP_ASSETS.soldier.replace(/^\.\//, '') === SOURCE_NAME,
+    `${TROOP_ASSETS.soldier}`);
+  const soldier = readGlb(path.join(ROOT, TROOP_ASSETS.soldier));
+  const clipNames = new Set((soldier?.json.animations || []).map((clip) => clip.name));
+  const nodeNames = new Set((soldier?.json.nodes || []).map((node) => node.name));
+  const wantedClips = [...new Set([...Object.values(TROOP_CLIPS), ...Object.values(TROOP_CLIPS_2H)].filter(Boolean))];
+  const missingClips = wantedClips.filter((name) => !clipNames.has(name));
+  ok('the soldier GLB is a rigged character with every clip the garrison plays (idle/aim/hit/down/up/cheer are procedural on this rig)',
+    !!soldier && soldier.json.skins?.length > 0 && missingClips.length === 0,
+    `${clipNames.size} clips (${[...clipNames].join(', ')})${missingClips.length ? `; missing ${missingClips.join(', ')}` : ''}`);
+  const missingNodes = ['R_Hand'].filter((name) => !nodeNames.has(name));
+  const everyLoadoutBows = Object.values(TROOP_LOADOUTS).every((loadout) => loadout.bow);
+  ok('the rig has the right-hand bone the crossbow mounts on, and every loadout carries the garrison bow',
+    missingNodes.length === 0 && everyLoadoutBows, missingNodes.length ? `missing ${missingNodes.join(', ')}` : 'R_Hand; guard/soldier/bearer');
   const bow = JSON.parse(fs.readFileSync(path.join(ROOT, TROOP_ASSETS.crossbow), 'utf8'));
   const bowFiles = [...(bow.buffers || []), ...(bow.images || [])].map((item) => item.uri).filter(Boolean);
   ok('the crossbow glTF has a mesh and its buffer and atlas sit next to it',
     (bow.meshes || []).length > 0 && bowFiles.length >= 2
       && bowFiles.every((uri) => !/^(data:|https?:)/.test(uri) && fs.existsSync(path.join(path.dirname(path.join(ROOT, TROOP_ASSETS.crossbow)), decodeURIComponent(uri)))),
     bowFiles.join(', '));
-  // BUILD 14: the garrison's Lv3 bow is the pack's two-handed crossbow, aimed
-  // and shot with the Knight's two-handed ranged clips; Lv2/Lv3 repaint the
-  // same atlas at runtime (troop3d.js paintBowAtlas), the PNG is untouched
+  // BUILD 14 kept: the garrison's Lv3 bow is the pack's two-handed crossbow;
+  // Lv2/Lv3 repaint the same atlas at runtime (troop3d.js paintBowAtlas),
+  // the PNG is untouched
   const big = JSON.parse(fs.readFileSync(path.join(ROOT, TROOP_ASSETS.arbalest), 'utf8'));
   const bigFiles = [...(big.buffers || []), ...(big.images || [])].map((item) => item.uri).filter(Boolean);
-  const missing2H = Object.values(TROOP_CLIPS_2H).filter((name) => !clipNames.has(name));
-  ok('the Lv3 arbalest (crossbow_2handed) has a mesh, its buffer and the shared atlas sit next to it, and the Knight carries the two-handed ranged clips',
+  ok('the Lv3 arbalest (crossbow_2handed) has a mesh, its buffer and the shared atlas sit next to it',
     (big.meshes || []).length > 0 && bigFiles.length >= 2 && (big.images || []).some((img) => img.uri === (bow.images || [])[0]?.uri)
       && bigFiles.every((uri) => !/^(data:|https?:)/.test(uri) && fs.existsSync(path.join(path.dirname(path.join(ROOT, TROOP_ASSETS.arbalest)), decodeURIComponent(uri))))
-      && missing2H.length === 0 && TROOP_BOWS[3].model === 'arbalest' && TROOP_BOWS[3].twoHanded,
-    `${bigFiles.join(', ')}; clips ${Object.values(TROOP_CLIPS_2H).join(', ')}${missing2H.length ? ` (missing ${missing2H.join(', ')})` : ''}`);
+      && TROOP_BOWS[3].model === 'arbalest' && TROOP_BOWS[3].twoHanded,
+    bigFiles.join(', '));
 }
 
 /* Survival's buildings (src/game/buildings3d.js): the KayKit Medieval Hexagon

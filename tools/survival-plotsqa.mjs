@@ -1034,6 +1034,63 @@ check('B20: PAUSE is the mini unlocks screen — before any run ends it shows th
     && b20pause.lab.next === 'CRIMSON WATCH' && b20pause.lab.total === 4 && b20resume === 'playing',
   b20pause);
 
+/* ---- 13. BUILD 21: one character family, one horde faction, bolts from the bow ---- */
+const b21 = await page.evaluate(async () => {
+  const g = window.__LN; const m = g.survival;
+  const TM = await import('./src/game/troop3d.js');
+  const VA = await import('./src/game/valen3d.js');
+  const C = (await import('./src/game/crowd3d.js')).Crowd3D;
+  const out = { troopReady: TM.Troop3D.ready, soldierUrl: TM.TROOP_ASSETS.soldier, valenUrl: VA.VALEN_MODEL_URL };
+  // the garrison's cut of the captain's grade on the live guards
+  let graded = 0, hands = 0, bows = 0;
+  (window.__pW.survivalGuardMeshes || []).forEach((mesh) => {
+    const troop = mesh.userData.troop;
+    if (!troop) return;
+    troop.model.traverse((o) => {
+      if (o.material && o.material.customProgramCacheKey && o.material.customProgramCacheKey() === 'duskhold-troop-look-v1') graded = 1;
+      if (o.name === 'R_Hand') hands++;
+      if (o.name === 'troop-crossbow') bows++;
+    });
+  });
+  out.graded = graded; out.hands = hands; out.bows = bows;
+  // the horde's faction bake: one body colour per kind, one glowing part
+  out.kinds = {};
+  for (const [key, kind] of C.kinds) {
+    const col = kind.bake.geometry.getAttribute('color');
+    const glow = kind.bake.geometry.getAttribute('vatGlow');
+    let glowMax = 0;
+    for (let i = 0; i < glow.count; i++) glowMax = Math.max(glowMax, glow.getX(i));
+    out.kinds[key] = { r: +col.getX(0).toFixed(3), g: +col.getY(0).toFixed(3), b: +col.getZ(0).toFixed(3), glowMax: +glowMax.toFixed(2) };
+  }
+  // a ground bolt flies at the shooter's chest, not at the ankles: fire one
+  // guard bolt on purpose (the natural volleys land and expire between frames)
+  if (m.phase !== 'night') m.startNight();
+  window.__pStep(3);
+  const shooter = (m.guards && m.guards[0]) || { x: 400, y: 900, angle: -Math.PI / 2 };
+  const bolt = g.spawnBolt(shooter, shooter.angle == null ? -Math.PI / 2 : shooter.angle,
+    { offset: 16, boltSpeed: 560, damage: 5, friendly: true });
+  if (bolt) { bolt.guard = true; bolt.arms = 2; }
+  window.__pStep(2);
+  const ys = [];
+  for (const [id, mesh] of window.__pW.bolts) {
+    if (!mesh.visible) continue;
+    const look = mesh.userData.boltLook;
+    if (look === 'guard' || look === 'guard2' || look === 'guard3' || look === 'tracer') ys.push(+mesh.position.y.toFixed(1));
+  }
+  out.boltYs = ys.slice(0, 6);
+  const door = g.mansion.entrances.find((e) => e.id === 'northGate');
+  if (door) { g.renderer.snapCamera(door.x, door.y); m._userZoom = 1.2; m._zoomGoal = null; }
+  window.__pStep(3);
+  return out;
+});
+await shot('b21-1-garrison-horde');
+check('B21: the garrison is the captain\'s character family (graded, crossbow in the right hand), the horde bakes one faction grade with a single glowing part per kind, and a ground bolt leaves the bow at chest height',
+  b21.troopReady && b21.soldierUrl === b21.valenUrl && b21.graded === 1 && b21.hands >= 1 && b21.bows >= 1
+    && b21.kinds.zombie && Math.abs(b21.kinds.zombie.r - b21.kinds.zombie.g) < 0.03 && b21.kinds.zombie.b > b21.kinds.zombie.r && b21.kinds.zombie.glowMax >= 2
+    && b21.kinds.crawler.glowMax >= 2 && b21.kinds.ghoul.glowMax > 0.1 && b21.kinds.ghoul.glowMax < 1
+    && b21.boltYs.length > 0 && b21.boltYs.every((y) => y > 50 && y < 120),
+  b21);
+
 fs.writeFileSync(path.join(OUT, 'plotsqa.json'), JSON.stringify({ results, errors }, null, 2));
 console.log(`errors ${errors.length}`);
 console.log(`SUMMARY ${results.length - failures}/${results.length} PASS`);

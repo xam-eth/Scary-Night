@@ -6,7 +6,7 @@
  * one landscape run that shows each fix where it happens and checks the
  * parts a script can see:
  *
- *   fx-gate / fx-gate-b  GLB knights (royal-blue livery) at the north gate,
+ *   fx-gate / fx-gate-b  GLB guards (the captain's character, garrison grade) at the north gate,
  *                        glowing bolts with streaks, hit flashes, numbers
  *   fx-horde             (2026-10-17) the main gate's horde: every swarm body
  *                        an animated GLB monster (instanced, crowd3d.js), a
@@ -125,7 +125,7 @@ async function shot(name, prepare) {
   return state;
 }
 
-// 1. the north gate at night: knights, bolts, hits, numbers. BUILD 10: a
+// 1. the north gate at night: guards, bolts, hits, numbers. BUILD 10: a
 // shut gate stops every shot, so the captain holds it from its mouth (20 px
 // inside the wall line: the leaf swings open for him) and the guards shoot
 // from its towers
@@ -138,7 +138,7 @@ const gate = await shot('fx-gate', () => {
   for (let i = 0; i < 10; i++) { window.__fxMouth(); window.__fxRealtime(1); }
   return { t: +m.elapsed.toFixed(1), guards: m.guards.length, open: !!door.sortie, ...window.__fxDiag() };
 });
-check('troops: the guards are GLB knights in the keep\'s blue livery',
+check('troops: the guards are GLB troops of the captain\'s character family (garrison grade)',
   gate.troop3d && gate.troop3d.ready && !gate.troop3d.failed && gate.troop3d.livery >= 1 && gate.glbGuards === gate.guards && gate.guards > 0, gate);
 const gateB = await shot('fx-gate-b', () => {
   for (let i = 0; i < 14; i++) { window.__fxMouth(); window.__fxRealtime(1); }
@@ -199,9 +199,15 @@ const horde = await shot('fx-horde', () => {
   d && window.__fxWorld.survivalGuardMeshes && window.__fxWorld.survivalGuardMeshes.forEach((mesh) => {
     const troop = mesh.userData.troop;
     if (!troop) return;
-    let crest = false, helmet = false;
-    troop.model.traverse((o) => { if (o.name === 'knight-crest') crest = true; if (o.material && o.material.name === 'knight-helmet-royal-blue') helmet = true; });
-    knights.push({ crest, helmet });
+    // BUILD 21: the garrison is the captain's own character, graded into the
+    // garrison palette, the crossbow seated in its right hand
+    let graded = false, hand = false, bow = false;
+    troop.model.traverse((o) => {
+      if (o.material && o.material.customProgramCacheKey && o.material.customProgramCacheKey() === 'duskhold-troop-look-v1') graded = true;
+      if (o.name === 'R_Hand') hand = true;
+      if (o.name === 'troop-crossbow') bow = true;
+    });
+    knights.push({ crest: graded, helmet: hand && bow });
   });
   return {
     t: +m.elapsed.toFixed(1), horde: d.horde, primitiveCrowd: d.primitiveCrowd, rigs: d.visibleRiggedEnemies,
@@ -215,7 +221,7 @@ check('horde: every swarm body is an animated GLB monster (instanced, 3 kinds), 
   { drawn: horde.horde && horde.horde.drawn, byKind: horde.horde && horde.horde.byKind, primitive: horde.primitiveCrowd, rigs: horde.rigs });
 check('ballista: a built ballista kills and says so over its deck ("+1" skull, the night tally)',
   horde.towerKills >= 1 && horde.skullPops >= horde.towerKills, { towerKills: horde.towerKills, skullPops: horde.skullPops });
-check('troops: every GLB guard wears the keep\'s blue helmet with a gold crest; the page names its build',
+check('troops: every GLB guard is the graded captain-family character with the crossbow in its right hand; the page names its build',
   horde.knights.length >= 2 && horde.knights.every((k) => k.crest && k.helmet) && horde.build === PAGE_BUILD, { knights: horde.knights, build: horde.build, page: PAGE_BUILD });
 
 // 3. dawn: the panel credits the sawmill and the guards

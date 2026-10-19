@@ -1,0 +1,27 @@
+  SHOT night-00s      luma=89.8 dark=6.1% {"t":0.2,"alive":0,"gold":38,"keep":600,"hp":100,"phase":"night","ui":3}
+  SHOT night-20s      luma=91.2 dark=3.9% {"t":20,"alive":19,"gold":38,"keep":600,"hp":100,"phase":"night","ui":3}
+  SHOT night-40s      luma=86.5 dark=7.9% {"t":40,"alive":29,"gold":38,"keep":318,"hp":100,"phase":"night","ui":3}
+  SHOT day-reward     luma=139.8 dark=3% {"phase":"day","day":2,"rewards":{"gold":16,"wood":17,"kills":14,"walls":383.3,"survivors":0,"keepDamage":504,"keepPatched":99,"mined":0,"lost":0,"rescued":0,"reinforcements":2,"sawn":0,"killsBy":{"captain":11,"guard":3,"tower":0,"keep":0,"flare":0},"towerKills":0,"endAt":40,"cleared":null},"ui":["survival:COLLECT"]}
+  SHOT day-keep       luma=149.1 dark=1.9% {"collected":true,"context":"keep","ui":["PAUSE","survival:UPGRADE KEEP LV2","survival:REPAIR KEEP","survival:START NIGHT","survival:ZOOM IN","survival:ZOOM OUT"]}
+  SHOT day-circle     luma=140.8 dark=1.6% {"at":"south:tower","ring":true,"ui":["PAUSE","survival:BUILD tower","survival:START NIGHT","survival:ZOOM IN","survival:ZOOM OUT"]}
+  SHOT day-build      luma=139.5 dark=1.8% {"clicked":"survival:BUILD tower","job":{"kind":"building","slot":"south:tower","left":5.5}}
+  SHOT day-built      luma=137.1 dark=2.5% {"at":"west","buildings":{"south:tower":"tower"},"chips":3,"ui":["PAUSE","survival:BUILD sawmill","survival:START NIGHT","survival:ZOOM IN","survival:ZOOM OUT"]}
+  SHOT night2-flare   luma=86.6 dark=8.6% {"t":34.2,"day":2,"alive":40,"keep":330,"attackers":12,"state":"attacked","floaters":10}
+  SHOT failed         luma=56.9 dark=10.2% {"phase":"failed","ui":["survival:PLAY AGAIN"]}
+  SHOT night-door     luma=74.2 dark=7.1% {"t":13,"door":"northGate","doorHp":136,"open":true,"exposed":true,"target":true,"guardsUp":2,"hp":78,"kills":4,"zoom":0.655}
+  SHOT night-out      luma=77.8 dark=6.8% {"t":14.5,"exposed":true,"onHim":0,"target":true,"kills":4}
+  SHOT prog-keep      luma=143.8 dark=2.3% {"keepLevel":3,"hp":"540/1200","territory":15,"banner":1400,"context":"keep","ui":["PAUSE","survival:UPGRADE MAX","survival:REPAIR KEEP","survival:START NIGHT","survival:ZOOM IN","survival:ZOOM OUT"]}
+  SHOT prog-hunter    luma=149.1 dark=1.2% {"at":"armory","hunter":1,"ui":["PAUSE","survival:UPGRADE HUNTER LV2","survival:START NIGHT","survival:ZOOM IN","survival:ZOOM OUT"]}
+  SHOT prog-night     luma=86.2 dark=5.4% {"t":24,"keep":3,"roofShots":0,"hunter":3,"hp":"140/140","mined":2,"kills":2}
+  SHOT complete       luma=148.1 dark=5.7% {"phase":"complete","stars":3,"newBest":true,"kills":2,"ui":["survival:PLAY AGAIN"]}
+  SHOT tower-day      luma=140.9 dark=1.5% {"at":"south:tower","built":"tower","spot":{"x":120,"y":600,"doorId":"southGate"},"ring":true,"ui":["survival:UPGRADE tower LV2"]}
+  SHOT tower-night    luma=72.7 dark=5.4% {"t":18,"day":2,"level":2,"upgraded":true,"shots":3,"kills":2,"flying":true,"aim":1.82}
+  SHOT guard-down     luma=76.2 dark=7.1% {"t":8.4,"broken":true,"helped":0.92,"aloneLeft":10.8,"hurt":16,"hud":"1/3","banner":"breach","alive":21}
+  SHOT guard-lost     luma=73.6 dark=7.2% {"t":9.3,"survivors":2,"guards":2,"lost":1,"rescued":1,"banner":"guardLost","queue":[]}
+  SHOT guard-reward   luma=141.9 dark=2.3% {"phase":"day","survivors":2,"lost":1,"rescued":1,"guards":[40,40]}
+  SHOT intro-keep     luma=86.9 dark=8.4% {"kind":"intro","t":1.2,"caption":"PROTECT THE KEEP","ui":["survival:SKIP"],"zoom":0.937,"relief":null}
+  SHOT intro-horde    luma=74.5 dark=6.7% {"kind":"intro","t":4.22,"caption":"THE HORDE COMES AT NIGHT","ui":["survival:SKIP"],"zoom":0.637,"relief":null}
+  SHOT intro-captain  luma=94.3 dark=6.4% {"kind":"intro","t":6.02,"caption":"YOU ARE THE CAPTAIN","ui":["survival:SKIP"],"zoom":0.887,"relief":null}
+  SHOT arrival-gate   luma=136.3 dark=3.3% {"kind":"arrival","t":1.3,"caption":"REINFORCEMENTS ARRIVED!","ui":["survival:SKIP"],"zoom":0.898,"relief":{"troops":9,"marching":9,"inLine":0}}
+  SHOT arrival-lines  luma=137.4 dark=2.2% {"kind":"arrival","t":6.22,"caption":"REINFORCEMENTS ARRIVED!","ui":["survival:SKIP"],"zoom":0.708,"relief":{"troops":9,"marching":0,"inLine":9}}
+pageErrors=0

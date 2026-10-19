@@ -2055,7 +2055,15 @@ export class SurvivalMode {
       g.input.attackDown = true;
     }
     if (g.input.interactPressed) this.useSkill();
-    g.player.update(dt, g);
+    // BUILD 21: the night is combat — the captain moves (and animates) at a
+    // run, not the house's walk (user bug report 2026-10-19). The multiplier
+    // lives only for the update, exactly like the day's dayWalkMul.
+    {
+      const mul = g.player.speedMul;
+      g.player.speedMul = (mul || 1) * this.tuning.combatRunMul;
+      g.player.update(dt, g);
+      g.player.speedMul = mul;
+    }
     g.player.anim(dt);
     this.updateRest(dt);
 

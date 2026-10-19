@@ -1,0 +1,89 @@
+diag: {"ready":true,"loading":false,"failed":false,"error":null,"pieces":["gate","doorway","broken","wallCorner","floorStone","wallCracked","crate","wall","floorWood","window","table","stairs","chair","chest","barrel","shelf","candle","pillar","torch","stacked","column"],"doors":7,"room":{"floor":251,"walls":99,"corners":32,"windows":9},"props":{"table":12,"chair":23,"chest":6,"barrel":5,"stacked":16,"column":8,"candle":23,"torch":2,"stairs":1},"details":{"clockCase":1,"clockFace":1,"clockDial":1,"clockHourHand":1,"clockMinuteHand":1,"clockRod":1,"clockBob":1,"boxes":63,"spheres":28,"cylinders":8,"cones":12,"rings":1,"water":4,"vessels":3,"urns":4,"leaves":18,"cobwebs":486,"bones":15,"vines":45},"unmappedDetailTypes":[],"windows":9,"fortress":0,"fortressPieces":{},"sizes":{"floorWood":{"count":116,"h":6,"w":132,"hxValen":0.09},"floorStone":{"count":135,"h":6,"w":132,"hxValen":0.09},"wall":{"count":92,"h":135,"w":[87,191],"hxValen":1.87},"wallCracked":{"count":7,"h":135,"w":[104,160],"hxValen":1.87},"window":{"count":9,"h":135,"w":[112,166],"hxValen":1.87},"broken":{"count":9,"h":135,"w":[112,166],"hxValen":1.87},"table":{"count":12,"h":[38,53],"w":[45,250],"hxValen":0.73},"chair":{"count":23,"h":[41,49],"w":[28,150],"hxValen":0.68},"chest":{"count":6,"h":[52,60],"w":[75,86],"hxValen":0.83},"barrel":{"count":5,"h":47,"w":30,"hxValen":0.65},"stacked":{"count":16,"h":[52,106],"w":[40,125],"hxValen":1.48},"column":{"count":8,"h":47,"w":40,"hxValen":0.65},"candle":{"count":23,"h":[52,65],"w":[18,21],"hxValen":0.9},"torch":{"count":2,"h":78,"w":44,"hxValen":1.08},"stairs":{"count":1,"h":140,"w":150,"hxValen":1.95},"door":{"count":7,"h":122,"w":[112,116,118,124,126,136],"hxValen":1.69}},"bake":{"cells":4785,"cell":48,"sources":65,"ms":8.1,"mean":0.106,"peak":0.935,"darkCells":3996,"litCells":155},"bakes":1,"lit":{"room":{"min":0.225,"max":0.758,"mean":0.345,"count":400},"props":{"min":0.243,"max":0.754,"mean":0.439,"count":96},"fortress":null},"quality":3,"budget":{"instances":1181,"meshes":32,"fits":true,"over":[]}}
+
+---- THE BODIES (active full-3D scene) ----
+  hunter        rigged, 1 meshes / 1 skinned meshes, shared scene=true
+  werewolf   skinned GLB, projected 90.0px
+  zombie     skinned GLB, projected 74.0px
+  ghoul      skinned GLB, projected 68.0px
+  hunter     skinned GLB, projected 78.0px
+  stalker    skinned GLB, projected 90.0px
+  crawler    skinned GLB, projected 46.0px
+  PASS  the Hunter is a visible skinned GLB in the shared WebGL scene
+  PASS  hiding the Hunter changes 1496 pixels near her position in the WebGL buffer
+  PASS  all six enemy types render behavior-ready skinned GLBs with no generic proxy (6/6)
+  PASS  skinned enemy slots remain within cap 14 (6 active)
+  crowd-capacity: combatants=14, crowd=0, unassigned crowd=14, visible proxies=0
+  PASS  all 14 combatants use the 14-rig cap; siege crowd remains simulation-only with no placeholders
+  mapped hit-react actions: zombie=1.00@0.50, ghoul=1.00@0.50, hunter=1.00@0.50, stalker=1.00@0.50, crawler=1.00@0.50
+  PASS  damage feedback selects and poses the source hit-react clip on all five pack rigs
+  enemy models behavior-ready: 6/6; diagnostics: 6 rigged, 0 proxies
+  model URLs: ./assets/monsters/ultimate/demon.glb, ./assets/monsters/ultimate/green-spiky-blob.glb, ./assets/monsters/ultimate/blue-demon.glb, ./assets/monsters/ultimate/ghost-skull.glb, ./werewolf-3d-model.glb, ./assets/monsters/ultimate/yeti.glb
+
+---- ROOM-MARK TORUS ORIENTATION ----
+  ward=1.571rad, side=2, visible=true; dish=1.571rad, side=2, visible=true
+  PASS  the ward room-mark torus is flipped and double-sided so it still reads from above
+  PASS  the dish rim torus is flipped and double-sided so it remains visible
+
+---- MELEE SWING VFX (WebGL buffer) ----
+  ribbon visible, 168 vertices, opacity=0.225; edge visible, 168 vertices; framebuffer delta=2470px
+  PASS  a melee strike creates the filled crescent and bright 3D edge
+  PASS  hiding the slash changes 2470 WebGL pixels
+
+---- THE ROOM IS BUILT (WebGL framebuffer) ----
+  PASS  no room wears a photograph (0 of 11 still do)
+        dining       floor  30   wall  20   furniture 17
+        library      floor  30   wall  25   furniture 11
+        hall         floor  35   wall  23   furniture 9
+        basement     floor  20   wall  20   furniture 10
+        conservatory floor  25   wall  21   furniture 12
+        chapel       floor  24   wall  25   furniture 9
+        kitchen      floor  12   wall  13   furniture 8
+        study        floor  10   wall  16   furniture 4
+        gallery      floor   8   wall  14   furniture 5
+        gatehouse    floor  21   wall  18   furniture 6
+        oratory      floor   8   wall  14   furniture 5
+  PASS  every room is built out of kit pieces on its own floor plan (11/11)
+  ok    11/11 rooms carry furniture from the kit
+        WebGL kit hide diff (RMS / changed sample %): dining 43.1/58.2%  library 22.5/45.0%  hall 35.3/69.0%  basement 28.0/59.3%  conservatory 29.0/41.3%  chapel 39.5/55.2%  kitchen 25.4/43.4%  study 28.7/51.7%  gallery 28.0/51.4%  gatehouse 24.5/39.7%  oratory 24.6/44.0%
+  PASS  hiding the EnvKit group changes every room's WebGL framebuffer (11/11, weakest library at 22.5 RMS)
+
+---- PERSISTENT WORLD GEOMETRY (no movement-triggered hiding) ----
+        walked 6 camera/player anchors; active instances 628, wall instances 140
+  PASS  all active architectural instances and meshes remain visible (140 walls, 0 hidden meshes)
+  PASS  walking between rooms does not rewrite static wall/prop/detail transforms (0 changed instances)
+  PASS  every adaptive quality tier keeps rooms, props, and fortress dressing enabled
+
+---- WINDOWS IN THE ACTIVE WEBGL SCENE ----
+  PASS  diningWindow contributes 5398 changed local WebGL pixels from outside vantage
+  PASS  hallWindow contributes 7691 changed local WebGL pixels from outside vantage
+  PASS  kitchenWindow contributes 8614 changed local WebGL pixels from outside vantage
+  PASS  studyWindow contributes 10276 changed local WebGL pixels from outside vantage
+  PASS  galleryWindow contributes 10052 changed local WebGL pixels from outside vantage
+  PASS  oratoryWindow contributes 10466 changed local WebGL pixels from outside vantage
+  PASS  glassNorth contributes 18519 changed local WebGL pixels from outside vantage
+  PASS  glassEast contributes 13911 changed local WebGL pixels from outside vantage
+  PASS  chapelWindow contributes 10985 changed local WebGL pixels from outside vantage
+  PASS  all nine intact window panels are visible from at least one valid side (9/9)
+
+---- HINGED WOODEN DOORS (asset, inward swing, open and close) ----
+        door leaf asset mounted in 7 wall openings; max facing error 0.0000rad
+  PASS  all doors use the animated wooden leaf from doorway.glb, without the barred gate overlay
+  PASS  door fronts face outward and hinge swings inward for every wall orientation
+  PASS  all seven door openings align with collision and line-of-sight (closed blocks; open/broken passes)
+  PASS  every animated wooden leaf mesh casts a shadow
+  PASS  door shadow maps refresh at swing start/end, not every frame (open 1/1/2; close 3/3/4)
+  PASS  opening eases from closed to a precise 90-degree inward swing (0.00 → 0.79 → 1.57rad)
+  PASS  closing eases back to the exact closed hinge angle (0.79 → 0.00rad)
+
+---- DEFAULT SURVIVAL ROUTE · FIRST 30 SECONDS ----
+  CAPTURE 0.2s (sim 0.2s, 12 fixed steps) — /home/user/Scary-Night/qa-evidence/survival-ftue-00s.png; swarm=0, rendered crowd=0, keep=600 HP (3D true), banner 900 px, 92 edge segments
+  CAPTURE 15s (sim 15s, 888 fixed steps) — /home/user/Scary-Night/qa-evidence/survival-ftue-15s.png; swarm=21, rendered crowd=21, keep=600 HP (3D true), banner 900 px, 92 edge segments
+  CAPTURE 30s (sim 30s, 900 fixed steps) — /home/user/Scary-Night/qa-evidence/survival-ftue-30s.png; swarm=36, rendered crowd=36, keep=600 HP (3D true), banner 900 px, 92 edge segments
+  PASS  the default route reaches playable Night 1 directly (no menu, intro or narration)
+  PASS  Night-1 icon HUD registers only PAUSE and the camera's + / - as tap targets (gold/guard/enemy counters, night clock and the keep's bar are read-only; legacy coach/narration hidden; UI=PAUSE,survival:ZOOM IN,survival:ZOOM OUT)
+  PASS  Night-1 playfield is bright and readable (mean luma 89.1/255, 7.1% near-black; pre-rebuild baseline 1.4 / 99.6%)
+  PASS  the first 30 playable seconds stay in the configurable 72s night
+  PASS  the full 3D bailey (curtain wall, towers, gates), the 3D keep, its banner's wash (900 px, 92 edge segments), the districts' dressing (22 kit props in 1 meshes) and the crowd are visible (12 towers, 108/132 merlon slots on 6314px of curtain wall in 16 meshes; 0 skinned rigs + 36 horde bodies, 38 drawn as GLB monsters (zombie/crawler/ghoul), 0 primitive figures)
+  PASS  a keep upgrade through its UI button raises the 3D keep Lv1 → Lv2 (900/900), opens plots 9 → 13 and widens the banner's wash 900 → 1100 px
+  PASS  no uncaught browser page errors (0)
+ENVQA PASS: all assertions passed

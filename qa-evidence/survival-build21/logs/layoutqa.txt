@@ -1,0 +1,83 @@
+valen GLB ready          3654 ms
+env kit ready            8361 ms (21 pieces)
+night on screen          1743 ms
+room built               1743 ms
+furniture placed         1743 ms
+light baked              1743 ms
+all 6 enemy rigs ready    1743 ms
+
+---- FULL 3D WORLD GATE: PASS ----
+  renderer=webgl-3d, orthographic=true, rooms=11, portals=26
+  room meshes={"floor":251,"walls":99,"corners":32,"windows":9}, kit props={"table":12,"chair":23,"chest":6,"barrel":5,"stacked":16,"column":8,"candle":23,"torch":2,"stairs":1}, custom 3D details={"clockCase":1,"clockFace":1,"clockDial":1,"clockHourHand":1,"clockMinuteHand":1,"clockRod":1,"clockBob":1,"boxes":63,"spheres":28,"cylinders":8,"cones":12,"rings":1,"water":4,"vessels":3,"urns":4,"leaves":18,"cobwebs":486,"bones":15,"vines":45}, unmapped=[]
+  Hunter rigged=true, 3D room marks=9, decals mapped=true, quality=2, active 3D lights=3
+  Canvas overlay alpha=true, projection=0.0000px, floor raycast=0.0000 world px, legacy Canvas world draw calls=0 [], retired Mansion paint methods=[]
+---- 3D DECOR STATE: PASS ----
+  basin water hidden=true, stakes raised/lowered=30/3, fireplace/lamp flame lit/blackout=false/true
+
+---- GAMEPLAY CONTROL: PASS ----
+  keyboard movement by direction={"right":30,"left":28,"down":0,"up":6.3} (max 30.0 world px)
+---- DOOR INTERACTION: PASS ----
+  door=frontDoor, sim open=true, 3D mesh angle=1.5707963267948966, interaction cue=true
+---- PICKUP / BOLT / WORLD VFX: PASS ----
+  plank/blood pickups=true/true, bolt/trail=true/true, particles=41, decals=true (2048x1255)
+---- PICKUP COLLECTION: PASS ----
+  simulation taken=true, 3D mesh hidden=true
+---- ENEMY + HAUNT SCENE: PASS ----
+  rigged GLB enemies=11/11, types=crawler,zombie,hunter,werewolf,ghoul,stalker, proxies=0, swing=true, variants/food cues=1/1, drink trail=1, shadow=true, cat/watchers=true/1, door cues/drafts=1/1
+---- DESKTOP BOOT: PASS ----
+  viewport=1280x720, game stage=1280x720, mode=webgl-3d, world=bailey, zones=9/9, errors=0
+
+---- FURNITURE AGAINST THE BOX YOU WALK INTO ----
+96 pieces standing in the kit, 71 of them furniture you can walk into
+  none overhang their box — what you see is what you bump into
+  none leave a gap you can bump into
+
+  ---- how tall each thing stands, in metres ----
+    stairs    1x  140px  =  2.70m tall
+    chair    23x  41-49px  =  0.79-0.94m tall
+    table    12x  38-53px  =  0.73-1.02m tall
+    chest     6x  52-60px  =  1.00-1.16m tall
+    stacked  16x  52-106px  =  1.00-2.04m tall
+    barrel    5x  47px  =  0.91m tall
+    column    8x  47px  =  0.91m tall
+    candle   23x  52-65px  =  1.00-1.25m tall
+    torch     2x  78px  =  1.50m tall
+    (1m = 51.9px on this camera; she is 1.70m)
+
+---- CAN A BODY GET THROUGH? (solids inflated by her shoulders) ----
+  dining          780x 600   88% standable,  88% of the room reachable in one piece
+  library         780x 600   84% standable,  84% of the room reachable in one piece
+  hall            880x 620   87% standable,  87% of the room reachable in one piece
+  basement        500x 680   88% standable,  88% of the room reachable in one piece
+  conserv         554x 580   79% standable,  79% of the room reachable in one piece
+  chapel          507x 694   77% standable,  77% of the room reachable in one piece
+  kitchen         354x 500   87% standable,  87% of the room reachable in one piece
+  study           720x 320   90% standable,  90% of the room reachable in one piece
+  gallery         540x 280   83% standable,  83% of the room reachable in one piece
+  gatehouse       354x 850   95% standable,  95% of the room reachable in one piece
+  oratory         480x 280   93% standable,  93% of the room reachable in one piece
+
+---- IS IT ARRANGED, OR JUST STANDING ABOUT? ----
+  70 pieces of kit furniture in the house
+  0 stand against a wall, 70 stand out in the room:
+      staircase at 71,41
+      sofa at 574,83
+      sofa at 701,83
+      sideTable at 699,431
+      sideTable at 134,474
+      cabinet at 403,519
+      armchair at 692,539
+      longTable at -518,291
+      chair at -490,249
+      chair at -434,249
+  1 overlap another piece:
+      staircase into stairRail (150x20px)
+
+---- ARE THE CORNERS CLEAN? ----
+  32 corners, 99 wall panels
+  0 corners standing on top of a panel that already covers the same ground — no z-fighting seams
+
+---- IS ANYTHING STANDING INSIDE A WALL? ----
+  nothing — every piece stands on floor
+
+---- BROWSER ERRORS: PASS ----

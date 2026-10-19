@@ -116,6 +116,68 @@ export const ENEMY_EXPOSURE = Object.freeze({
 });
 
 /**
+ * BUILD 21 (user bug report 2026-10-19: "enemies juga perlu di-redesign
+ * dengan visual yang lebih konsisten dengan tema game"): the horde is one
+ * faction now — ash-and-slate bodies under the moon with crimson eyes that
+ * burn, bone and dark iron where bone and iron belong — instead of three
+ * unrelated cartoon palettes (a crimson demon, a bright green blob, a tan
+ * ghost). Silhouettes, clips and the vendored GLB bytes stay untouched: the
+ * table repaints each source material BY NAME at runtime, on per-actor
+ * material clones only (the parsed templates the legacy mansion shares are
+ * never mutated). crowd3d's VAT bake reads the same table, so the swarm and
+ * the rigged Breakers/Individuals stay one army.
+ */
+export const HORDE_GRADE = Object.freeze({
+  zombie: Object.freeze({
+    Demon_Main: 0x565d68,   // ash hide, light enough to read under the moon
+    Black: 0x1b1f25,        // dark iron: horns and the trident
+    Eye_White: 0x8f8878,    // NOT eyes on this rig: bone claws and teeth
+    // the 42-vert pupils are the ember in the face
+    Eye_Black: Object.freeze({ color: 0x2a0806, emissive: 0xff3b28, emissiveIntensity: 2.6 }),
+  }),
+  crawler: Object.freeze({
+    // on this rig Eye_White IS the spiky hide (2047 of its 2270 verts); the
+    // eyes are the 21-vert pupils, and Green_Main the belly
+    Eye_White: 0x525c55,    // greyed moss-slate hide and spikes
+    Green_Main: 0x2c342f,   // darker moss belly
+    Eye_Black: Object.freeze({ color: 0x2a0806, emissive: 0xff3b28, emissiveIntensity: 2.6 }),
+  }),
+  ghoul: Object.freeze({
+    Ghost_Main: 0x232935,   // wraith-dark shroud
+    // the skull is bone with a cold ghostfire in it — the one cold eye in
+    // the horde, so the flyer reads as a spirit, not a third cartoon
+    Ghost_Secondary: Object.freeze({ color: 0x6e6552, emissive: 0x8fc7ff, emissiveIntensity: 0.22 }),
+  }),
+});
+
+/** The eye/ghostfire colour each kind's VAT material emits (crowd3d). */
+export const HORDE_EYE = Object.freeze({ zombie: 0xff3b28, crawler: 0xff3b28, ghoul: 0x8fc7ff });
+
+/**
+ * Repaint one material of one horde role by its source name. Returns true
+ * when it changed. Call on clones only (cloneRig guarantees own materials).
+ */
+export function hordeGradeMaterial(key, material) {
+  const table = HORDE_GRADE[key];
+  if (!table || !material) return false;
+  const spec = table[material.name];
+  if (spec == null) return false;
+  if (typeof spec === 'number') { material.color.setHex(spec); return true; }
+  material.color.setHex(spec.color);
+  if (material.emissive && spec.emissive != null) {
+    material.emissive.setHex(spec.emissive);
+    material.emissiveIntensity = spec.emissiveIntensity || 1;
+  }
+  return true;
+}
+
+/** The glow (emissive intensity, 0 = none) the VAT bake gives a material's vertices. */
+export function hordeGlowFor(key, materialName) {
+  const spec = HORDE_GRADE[key] && HORDE_GRADE[key][materialName];
+  return spec && typeof spec === 'object' && spec.emissive != null ? (spec.emissiveIntensity || 1) : 0;
+}
+
+/**
  * Grade a rendered body with the light of the floor it is standing on, and
  * return it. The rule this function exists to keep: a body is a SILHOUETTE.
  * The frame it is cut from is transparent everywhere the body is not, and
@@ -780,6 +842,20 @@ class EnemyStage {
           });
         }
       });
+    }
+    if (options.hordeGrade && !slot._hordeGraded) {
+      // BUILD 21: repaint this actor's own material clones with the horde's
+      // faction palette, and make the graded values the cached "base" so the
+      // variant tint and the hurt flash still lerp from what the body now is.
+      slot._hordeGraded = true;
+      for (const [material, base] of slot._baseMaterials) {
+        if (!hordeGradeMaterial(slot.type, material)) continue;
+        base.color.copy(material.color);
+        if (base.emissive && material.emissive) {
+          base.emissive.copy(material.emissive);
+          base.emissiveIntensity = material.emissiveIntensity || 0;
+        }
+      }
     }
     if (slot._visualVariant !== variant) {
       slot._variantTint = enemy.tint ? new THREE.Color(enemy.tint) : null;

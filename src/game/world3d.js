@@ -885,6 +885,10 @@ class World3DRuntime {
       full3D: true,
       includeCrowd: game.mode === 'survival' && !horde,
       actorScale: game.mode === 'survival' ? SURVIVAL_ACTOR_SCALE : 1,
+      // BUILD 21: Survival's rigged Breakers/Individuals wear the same horde
+      // faction grade the VAT swarm bakes (enemy3d HORDE_GRADE); the legacy
+      // mansion keeps its authored monsters.
+      hordeGrade: game.mode === 'survival',
       verticalProjection: VERTICAL_PROJECTION,
       host: { stage: this.root, scene: this.scene, renderer: EnvKit.renderer, camera: EnvKit.camera, canvas: EnvKit.canvas },
     });
@@ -2579,7 +2583,7 @@ class World3DRuntime {
   }
 
   /**
-   * The GLB garrison (src/game/troop3d.js): once the Knight has loaded, a
+   * The GLB garrison (src/game/troop3d.js): once the soldier character has loaded, a
    * guard's primitive figure is swapped for a crossbowman. Called every
    * frame; it costs one flag check after the swap.
    */
@@ -3526,6 +3530,13 @@ class World3DRuntime {
       active.add(id);
       let mesh = this.bolts.get(id);
       let trail = this.boltTrails.get(id);
+      // BUILD 21 (user bug report: "keluarnya dari bawah, bukan laras
+      // panah"): a ground shooter's bolt leaves the bow at chest height —
+      // the same 80 px the wall posts use — not at the ankles; an elevated
+      // shot leaves its deck/post top. Both the flash and the flight read
+      // this one muzzle, every frame.
+      const muzzle = bolt.tower ? this._towerMuzzle(bolt) : bolt.dropFrom ? this._postTop(bolt.dropPost || bolt.dropFrom, game.mansion) + GUARD_CHEST : 0;
+      const groundH = game.mode === 'survival' ? GUARD_CHEST : 18;
       if (!mesh) {
         const look = this._boltLook(bolt);
         const pool = this.boltPool.get(look);
@@ -3545,22 +3556,20 @@ class World3DRuntime {
         const boltAge = flown / Math.max(1, Math.hypot(bolt.vx || 0, bolt.vy || 0));
         if (game.mode === 'survival' && boltAge < 0.12) {
           const look = mesh.userData.boltLook;
-          const muzzle0 = bolt.tower ? this._towerMuzzle(bolt) : 0;
           const gb = GUARD_BOLT[look] || null;
           const color = gb ? gb.muzzle : look === 'tower' ? 0xff8a3a : 0xffd36a;
-          this._playFx({ kind: 'muzzle', x: bolt.ox, y: bolt.oy, h: 18 + muzzle0, color, size: look === 'tower' ? 86 : gb ? gb.size + 2 : 56, life: look === 'tower' ? 0.14 : 0.09 });
+          this._playFx({ kind: 'muzzle', x: bolt.ox, y: bolt.oy, h: muzzle > 0 ? 18 + muzzle : groundH, color, size: look === 'tower' ? 86 : gb ? gb.size + 2 : 56, life: look === 'tower' ? 0.14 : 0.09 });
         }
       }
       // a tower's bolt leaves the ballista on the deck (a guard's, its post
       // up on the wall) and drops to body height where it was aimed, in an
       // arc that clears the wall when it flies over (BUILD 10: elevated
-      // shots go over, nothing goes through a shut gate); everything else
-      // flies at 18
-      const muzzle = bolt.tower ? this._towerMuzzle(bolt) : bolt.dropFrom ? this._postTop(bolt.dropPost || bolt.dropFrom, game.mansion) + GUARD_CHEST : 0;
+      // shots go over, nothing goes through a shut gate); a ground shot
+      // flies flat at the shooter's chest (BUILD 21), the legacy house at 18
       const aim = Math.max(1, bolt.aimDist || 1);
       const arc = muzzle > 0 && bolt.over ? this._boltArc(bolt, muzzle, aim, game.mansion) : 0;
       const heightAt = (x, y) => {
-        if (!(muzzle > 0)) return 18;
+        if (!(muzzle > 0)) return groundH;
         const u = Math.hypot(x - bolt.ox, y - bolt.oy) / aim;
         return 18 + muzzle * Math.max(0, 1 - u) + (u < 1 ? arc * 4 * u * (1 - u) : 0);
       };

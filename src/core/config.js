@@ -426,6 +426,11 @@ export const SURVIVAL_TUNING = Object.freeze({
   nightHold: 0.55,
   territoryDamageTakenMul: 1.5,   // the banner's rooms: the garrison hits harder
   dayWalkMul: 1.35,               // the day is a walk between build circles
+  // BUILD 21 (user bug report 2026-10-19: "saat bertempur animasinya walk,
+  // harusnya run"): the night is combat, so the captain moves at a run —
+  // 122 × 1.6 ≈ 195 px/s crosses player.js's RUN threshold (160) and the
+  // Valen rig blends fully into its authored run clip.
+  combatRunMul: 1.6,
   // the captain's reach shrank with the bailey (620 on the 0.7 bailey, ~0.87x):
   // from the keep he no longer covers every gate, so holding a gate means
   // walking to it, and the garrison and the ballistas get their share

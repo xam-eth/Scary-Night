@@ -1,23 +1,27 @@
 /**
  * THE GARRISON IN 3D — Survival's door guards and the relief column.
  *
- * Until 2026-10-16 the guards were primitive figures (a cylinder, a sphere,
- * two boxes and a stick for a bow) and the relief was instanced spearmen of
- * the same kind: placeholders next to a GLB captain and GLB monsters
- * (playtest: "pasukan nya masih place holder juga bukan glb visual yg
- * benar"). They are now KayKit's Knight (Adventurers Character Pack 1.0,
- * CC0, assets/troops/kaykit/CREDITS.txt), the same author as the fortress'
- * environment kit:
- *   - a door guard keeps the round shield and gets the pack's one-handed
- *     crossbow on the right hand slot (1H_Ranged_Aiming / _Shoot); the
- *     garrison's arms level (BUILD 14, survival.js SURVIVAL_ARMS) changes
- *     the bow: Lv2 the same crossbow lacquered royal blue with bright steel,
- *     Lv3 the pack's two-handed crossbow as a blue-and-gold arbalest held in
- *     both hands (2H_Ranged_Aiming / _Shoot; the shield is put away);
- *   - a relief soldier keeps the one-handed sword and the badge shield;
- *   - the banner-bearer keeps the shield and carries the keep's swallowtail.
- * Source bytes are kept unchanged; weapons the loadout does not use are
- * hidden on the clone and only this runtime map picks the actions.
+ * BUILD 21 (user bug report 2026-10-19: "pasukan perlu di-redesign karena
+ * tidak sinkron dengan character — buat pasukan baru"): the garrison is cut
+ * from the SAME character as its captain. Until BUILD 20 the guards were
+ * KayKit's Knight — a chunky toy soldier standing next to a realistically
+ * proportioned, palette-graded hunter; the two never read as one game. Every
+ * troop is now a cloneRig() of the captain's own GLB
+ * (hunter_run_walk_claw_sword_shot.glb, shared with valen3d.js), wearing the
+ * same uniform-grade shader (valen3d.buildUniformGrade) in a darker
+ * garrison palette: a deeper royal-blue tabard, brushed-steel trim where the
+ * captain wears gold (gold stays his alone), a fainter rim — so the captain
+ * remains the brightest figure on the field (V8) and his men read as his.
+ *
+ * The rig carries five authored clips (walk, run, shot, claw, sword) and no
+ * idle/hit/down/up/cheer, so TroopRig keeps those states procedural: idle
+ * and aim stand on the bind pose (exactly like the captain), a hit staggers,
+ * down/lie/up topple and raise the whole body, a cheer hops. The crossbows
+ * stay the KayKit pack's (CC0, assets/troops/kaykit/CREDITS.txt) — the BUILD
+ * 14 arms levels with their painted atlases — now parented to the soldier's
+ * R_Hand bone instead of the Knight's hand slot. Knight.glb itself is
+ * retired: it stays vendored for provenance but is no longer loaded, so the
+ * garrison shares one character file with the captain.
  *
  * One fetch and one parse per file; every troop is a cloneRig() of the
  * template (shared geometry, own skeleton, own materials so a hurt flash
@@ -28,29 +32,51 @@
 import * as THREE from '../vendor/three/three.module.min.js';
 import { GLTFLoader } from '../vendor/three/GLTFLoader.js';
 import { cloneRig } from './enemy3d.js';
+import { VALEN_MODEL_URL, buildUniformGrade } from './valen3d.js';
 
 export const TROOP_ASSETS = Object.freeze({
-  knight: 'assets/troops/kaykit/Knight.glb',
+  soldier: VALEN_MODEL_URL,
   crossbow: 'assets/troops/kaykit/crossbow_1handed.gltf',
   arbalest: 'assets/troops/kaykit/crossbow_2handed.gltf',
 });
 
-/** Runtime clip map (the GLB carries 76 clips; these are the ones used). */
-export const TROOP_CLIPS = Object.freeze({
-  idle: 'Idle',
-  walk: 'Walking_A',
-  run: 'Running_A',
-  aim: '1H_Ranged_Aiming',
-  shoot: '1H_Ranged_Shoot',
-  hit: 'Hit_A',
-  down: 'Lie_Down',
-  lie: 'Lie_Idle',
-  up: 'Lie_StandUp',
-  cheer: 'Cheer',
+/**
+ * The garrison's cut of the captain's palette (valen3d UNIFORM_GRADE_PALETTE
+ * is the captain's). Same ramp, same leather, colder and deeper cloth, and
+ * the warm trim grades to brushed steel instead of gold.
+ */
+export const TROOP_PALETTE = Object.freeze({
+  navy: 0x0a1c3c, royal: 0x1a4a85, sky: 0x87a0c6, gold: 0x9aa7b4,
+  leather: 0x4e3221, leatherDark: 0x22130a, skin: 0xd9a87f, rimColor: 0x9fc4f0,
 });
 
-/** The two-handed clips a Lv3 guard aims and shoots the arbalest with. */
-export const TROOP_CLIPS_2H = Object.freeze({ aim: '2H_Ranged_Aiming', shoot: '2H_Ranged_Shoot' });
+/** The grade is always on for troops; the rim and lift stay under the captain's. */
+export const TROOP_LOOK = Object.freeze({ look: 1, rim: 0.16, lift: 0.04 });
+
+/**
+ * Runtime clip map. `null` = the rig has no such clip and TroopRig answers
+ * procedurally (bind pose for idle/aim, stagger for hit, topple for
+ * down/lie/up, hop for cheer); 'shot' is the authored firing clip the
+ * crossbow rides.
+ */
+export const TROOP_CLIPS = Object.freeze({
+  idle: null,
+  walk: 'walk',
+  run: 'run',
+  aim: null,
+  shoot: 'shot',
+  hit: null,
+  down: null,
+  lie: null,
+  up: null,
+  cheer: null,
+});
+
+/** The Lv3 arbalest: the same authored shot clip (the rig has no 2H set). */
+export const TROOP_CLIPS_2H = Object.freeze({ aim: null, shoot: 'shot' });
+
+/** Durations of the procedural one-shots, in seconds. */
+const PROC_DUR = Object.freeze({ hit: 0.22, down: 0.42, lie: 0.01, up: 0.34, cheer: 0.55 });
 
 /**
  * BUILD 14: the garrison's crossbow per arms level. `paint` repaints the
@@ -61,8 +87,8 @@ export const TROOP_CLIPS_2H = Object.freeze({ aim: '2H_Ranged_Aiming', shoot: '2
  */
 export const TROOP_BOWS = Object.freeze({
   1: Object.freeze({ model: 'crossbow', paint: null, scale: 1, glow: 0, twoHanded: false }),
-  2: Object.freeze({ model: 'crossbow', paint: 'blue', scale: 1.3, glow: 0.22, twoHanded: false }),
-  3: Object.freeze({ model: 'arbalest', paint: 'gold', scale: 1.24, glow: 0.38, twoHanded: true }),
+  2: Object.freeze({ model: 'crossbow', paint: 'blue', scale: 1.16, glow: 0.22, twoHanded: false }),
+  3: Object.freeze({ model: 'arbalest', paint: 'gold', scale: 1.1, glow: 0.38, twoHanded: true }),
 });
 
 /**
@@ -129,80 +155,31 @@ export function paintBowAtlas(texture, paint) {
   return out;
 }
 
-/**
- * The right hand slot the crossbow mounts on. GLTFLoader sanitises node
- * names for animation bindings (PropertyBinding drops the '.'), so the GLB's
- * "handslot.r" is "handslotr" on the loaded scene: looked up under that name
- * the bow was never found and the guards shot from an empty hand until
- * BUILD 14.
- */
-const HAND_SLOT_R = THREE.PropertyBinding.sanitizeNodeName('handslot.r');
-
-/** Every weapon mesh in Knight.glb; a loadout shows a subset. */
-const WEAPON_NODES = Object.freeze(['1H_Sword_Offhand', 'Badge_Shield', 'Rectangle_Shield', 'Round_Shield', 'Spike_Shield', '1H_Sword', '2H_Sword']);
+/** Every loadout carries the garrison crossbow; the roles stay named for world3d. */
 export const TROOP_LOADOUTS = Object.freeze({
-  guard: Object.freeze({ show: Object.freeze(['Round_Shield']), right: 'crossbow' }),
-  soldier: Object.freeze({ show: Object.freeze(['1H_Sword', 'Badge_Shield']), right: null }),
-  bearer: Object.freeze({ show: Object.freeze(['Badge_Shield']), right: null }),
+  guard: Object.freeze({ bow: true }),
+  soldier: Object.freeze({ bow: true }),
+  bearer: Object.freeze({ bow: true }),
 });
 
-/**
- * The Knight's cape and tabard are red in the pack's atlas, which on a dark
- * field reads as the horde's colour. The garrison wears the keep's royal blue
- * (the HUD's guard icon, the guard rings, the banner): a runtime copy of the
- * atlas turns only the saturated reds (hue >= 340 or <= 6, saturation >= 0.5;
- * skin and leather sit at 10-30) to hue 222. The GLB's own bytes and texture
- * are untouched.
- */
-export function blueLivery(texture) {
-  const image = texture && texture.image;
-  if (!image || typeof document === 'undefined' || !(image.width > 0)) return null;
-  const w = image.width, h = image.height;
-  const canvas = document.createElement('canvas');
-  canvas.width = w; canvas.height = h;
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  if (!ctx) return null;
-  ctx.drawImage(image, 0, 0);
-  const data = ctx.getImageData(0, 0, w, h);
-  const d = data.data;
-  const hue2rgb = (p, q, t) => {
-    if (t < 0) t += 1;
-    if (t > 1) t -= 1;
-    if (t < 1 / 6) return p + (q - p) * 6 * t;
-    if (t < 1 / 2) return q;
-    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-    return p;
-  };
-  let changed = 0;
-  for (let i = 0; i < d.length; i += 4) {
-    const r = d[i] / 255, g = d[i + 1] / 255, b = d[i + 2] / 255;
-    const max = Math.max(r, g, b), min = Math.min(r, g, b);
-    const span = max - min;
-    if (span < 0.2 || max !== r) continue;
-    const l = (max + min) / 2;
-    const s = l > 0.5 ? span / (2 - max - min) : span / (max + min);
-    const hue = ((g - b) / span + (g < b ? 6 : 0)) * 60;
-    if (s < 0.5 || !(hue >= 340 || hue <= 6)) continue;
-    const L = Math.min(0.9, l * 1.04), S = Math.min(1, s * 0.95), H = 222 / 360;
-    const q = L < 0.5 ? L * (1 + S) : L + S - L * S;
-    const p = 2 * L - q;
-    d[i] = Math.round(hue2rgb(p, q, H + 1 / 3) * 255);
-    d[i + 1] = Math.round(hue2rgb(p, q, H) * 255);
-    d[i + 2] = Math.round(hue2rgb(p, q, H - 1 / 3) * 255);
-    changed++;
-  }
-  if (!changed) return null;
-  ctx.putImageData(data, 0, 0);
-  const out = new THREE.CanvasTexture(canvas);
-  for (const key of ['flipY', 'wrapS', 'wrapT', 'magFilter', 'minFilter', 'generateMipmaps', 'anisotropy', 'colorSpace', 'channel']) {
-    if (texture[key] !== undefined) out[key] = texture[key];
-  }
-  out.name = `${texture.name || 'knight_texture'}-royal-blue`;
-  out.needsUpdate = true;
-  return out;
-}
+/** The bone the crossbow mounts on (the rig's full-finger right hand). */
+const HAND_BONE_R = 'R_Hand';
 
-/** One troop's skinned body, its mixer and a tiny clip state machine. */
+/**
+ * The crossbow's seat in the hand, in the template's own units (the GLB
+ * stands ~1 unit tall) and radians, plus how long the bow reads against the
+ * body. Tuned on the fx-gate/fx-barracks shots: the stock sits in the palm,
+ * the barrel level along the aim direction.
+ */
+const BOW_MOUNT = Object.freeze({
+  length: 0.52,          // share of the troop's height the bow spans
+  pos: Object.freeze([0.035, 0.055, 0.1]),
+  // tuned on the frozen shot-clip probe (2026-10-19): the stock's +Z rides
+  // the hand's finger axis, so the authored shot pose aims the bow level
+  rot: Object.freeze([-Math.PI / 2, 0, 0]),
+});
+
+/** One troop's skinned body, its mixer, procedural states and a tiny clip machine. */
 export class TroopRig {
   constructor(model, clips, kind) {
     this.model = model;
@@ -210,10 +187,12 @@ export class TroopRig {
     this.clips = clips;
     this.mixer = new THREE.AnimationMixer(model);
     this.actions = new Map();
-    this.base = null;        // the looping clip name
+    this.base = null;        // the looping clip name (null clip = bind pose)
     this.once = null;        // a one-shot playing over it: { name, action, then }
-    this.state = 'none';     // what QA and the sync read: the clip in front
+    this.proc = null;        // a procedural one-shot: { name, t, dur, then }
+    this.state = 'none';     // what QA and the sync read: the state in front
     this.materials = [];
+    this._hopPx = 12;
     model.traverse((object) => {
       if (!object.isMesh) return;
       const list = Array.isArray(object.material) ? object.material : [object.material];
@@ -225,17 +204,27 @@ export class TroopRig {
   action(name) {
     let action = this.actions.get(name);
     if (action) return action;
-    const clip = this.clips.get((this.clipMap && this.clipMap[name]) || TROOP_CLIPS[name] || name);
+    const clipName = (this.clipMap && name in this.clipMap) ? this.clipMap[name] : (TROOP_CLIPS[name] !== undefined ? TROOP_CLIPS[name] : name);
+    if (!clipName) return null;
+    const clip = this.clips.get(clipName);
     if (!clip) return null;
     action = this.mixer.clipAction(clip);
     this.actions.set(name, action);
     return action;
   }
 
-  /** Switch the looping clip (cross-faded). */
+  /** Switch the looping state (cross-faded). A null clip stands on the bind pose. */
   loop(name, fade = 0.2, timeScale = 1) {
     const next = this.action(name);
-    if (!next) return;
+    if (!next) {
+      if (this.base === name && !this.once) return;
+      const prev = this.base ? this.action(this.base) : null;
+      this.base = name;
+      this.once = null;
+      if (prev) prev.fadeOut(fade);
+      this.state = name;
+      return;
+    }
     next.timeScale = timeScale;
     if (this.base === name) return;
     const prev = this.base ? this.action(this.base) : null;
@@ -246,10 +235,20 @@ export class TroopRig {
     this.state = name;
   }
 
-  /** Play a clip once over the loop, then hand back (or go on to `then`). */
+  /**
+   * Play a state once over the loop, then hand back (or go on to `then`).
+   * A state the rig has no clip for is answered by the body: a stagger
+   * (hit), a topple (down→lie), a rise (up) or a hop (cheer).
+   */
   play(name, { fade = 0.08, then = null, timeScale = 1 } = {}) {
     const action = this.action(name);
-    if (!action) return;
+    if (!action) {
+      this.proc = { name, t: 0, dur: (PROC_DUR[name] || 0.3) / Math.max(0.1, timeScale), then };
+      this.once = null;
+      this.state = name;
+      if (name === 'down' || name === 'up') this._silenceBase(fade);
+      return;
+    }
     const front = this.once ? this.once.action : (this.base ? this.action(this.base) : null);
     action.reset();
     action.setLoop(THREE.LoopOnce, 1);
@@ -261,12 +260,17 @@ export class TroopRig {
     this.state = name;
   }
 
+  /** Feet stop while the body topples or rises. */
+  _silenceBase(fade = 0.1) {
+    const base = this.base ? this.action(this.base) : null;
+    if (base) base.fadeOut(fade);
+  }
+
   playing(name) { return this.state === name; }
 
   /**
-   * Swap the clips behind some names (BUILD 14: a Lv3 guard aims and shoots
-   * two-handed). A name whose clip changes is stopped and rebuilt; if it is
-   * the loop in front, the new clip takes over at once.
+   * Swap the clips behind some names (BUILD 14 kept: a Lv3 guard aims and
+   * shoots the arbalest; on this rig both map to the same authored shot).
    */
   setClipMap(map) {
     const before = this.clipMap || {};
@@ -287,6 +291,37 @@ export class TroopRig {
   }
 
   update(dt) {
+    const proc = this.proc;
+    if (proc) {
+      proc.t += dt;
+      const k = Math.max(0, Math.min(1, proc.t / proc.dur));
+      if (proc.name === 'down' || proc.name === 'lie') {
+        this.model.rotation.x = -k * Math.PI / 2;
+      } else if (proc.name === 'up') {
+        this.model.rotation.x = -(1 - k) * Math.PI / 2;
+      } else if (proc.name === 'hit') {
+        this.model.rotation.z = Math.sin(k * Math.PI) * 0.2;
+      } else if (proc.name === 'cheer') {
+        this.model.position.y = (this._baseY || 0) + Math.sin(k * Math.PI) * this._hopPx;
+      }
+      if (k >= 1) {
+        this.proc = null;
+        if (proc.name === 'hit') this.model.rotation.z = 0;
+        if (proc.name === 'cheer') this.model.position.y = this._baseY || 0;
+        if (proc.name === 'down') {
+          // toppled: stay down (the world holds 'lie' until the guard rises)
+          this.model.rotation.x = -Math.PI / 2;
+          const then = proc.then || 'lie';
+          this.base = null;
+          this.loop(then, 0.12);
+        } else if (proc.name === 'up') {
+          this.model.rotation.x = 0;
+          const back = this.base || 'idle';
+          this.base = null;
+          this.loop(back, 0.15);
+        }
+      }
+    }
     const once = this.once;
     if (once) {
       const duration = once.action.getClip().duration;
@@ -298,7 +333,9 @@ export class TroopRig {
           this.loop(then, 0.12);
         } else if (this.base) {
           const base = this.action(this.base);
-          base.reset().setLoop(THREE.LoopRepeat, Infinity).setEffectiveWeight(1).fadeIn(0.15).play();
+          if (base) {
+            base.reset().setLoop(THREE.LoopRepeat, Infinity).setEffectiveWeight(1).fadeIn(0.15).play();
+          }
           once.action.fadeOut(0.15);
           this.state = this.base;
         }
@@ -339,26 +376,27 @@ class TroopStage {
     this.crossbow = null;
     this.arbalest = null;
     this.bows = new Map();   // arms level -> { model, material } (BUILD 14)
-    this.twoHanded = false;  // the Knight carries the 2H ranged clips
+    this.twoHanded = false;  // the rig has no 2H clips; the arbalest is a look
     this.clips = new Map();
     this.height = 1;       // the template's standing height, model units
+    this.minY = 0;         // the bind pose's foot offset (feet land on y = 0)
     this.made = 0;
     this.livery = 0;
   }
 
-  /** Start both fetches (idempotent). Safe without a DOM (node QA): no-op. */
+  /** Start all fetches (idempotent). Safe without a DOM (node QA): no-op. */
   init() {
     if (this.started || typeof document === 'undefined') return;
     this.started = true;
     const loader = new GLTFLoader();
-    let knight = null, bow = null, bowSettled = false, big = null, bigSettled = false;
+    let soldier = null, bow = null, bowSettled = false, big = null, bigSettled = false;
     const settle = () => {
-      if (!knight || !bowSettled || !bigSettled) return;
-      try { this._accept(knight, bow, big); } catch (error) { this._fail(error); }
+      if (!soldier || !bowSettled || !bigSettled) return;
+      try { this._accept(soldier, bow, big); } catch (error) { this._fail(error); }
     };
-    loader.load(TROOP_ASSETS.knight, (gltf) => { knight = gltf; settle(); }, undefined, (error) => this._fail(error));
-    // the crossbows are a dressing: without them a guard still stands, shield
-    // up (and without the arbalest a Lv3 guard keeps the painted 1H bow)
+    loader.load(TROOP_ASSETS.soldier, (gltf) => { soldier = gltf; settle(); }, undefined, (error) => this._fail(error));
+    // the crossbows are a dressing: without them a guard still stands
+    // (and without the arbalest a Lv3 guard keeps the painted 1H bow)
     loader.load(TROOP_ASSETS.crossbow, (gltf) => { bow = gltf; bowSettled = true; settle(); }, undefined, () => { bowSettled = true; settle(); });
     loader.load(TROOP_ASSETS.arbalest, (gltf) => { big = gltf; bigSettled = true; settle(); }, undefined, () => { bigSettled = true; settle(); });
   }
@@ -369,26 +407,15 @@ class TroopStage {
     this.error = String(error && error.message || error);
   }
 
-  _accept(knight, bow, big = null) {
-    for (const clip of knight.animations || []) this.clips.set(clip.name, clip);
-    const missing = Object.values(TROOP_CLIPS).filter((name) => !this.clips.has(name));
+  _accept(soldier, bow, big = null) {
+    for (const clip of soldier.animations || []) this.clips.set(clip.name, clip);
+    const missing = ['walk', 'run', 'shot'].filter((name) => !this.clips.has(name));
     if (missing.length) throw new Error(`troop clips missing: ${missing.join(', ')}`);
-    this.twoHanded = Object.values(TROOP_CLIPS_2H).every((name) => this.clips.has(name));
-    this.template = knight.scene;
-    const livery = new Map();
+    this.template = soldier.scene;
     this.template.traverse((object) => {
-      if (!object.isMesh) return;
-      object.castShadow = true;
-      object.receiveShadow = false;
-      const list = Array.isArray(object.material) ? object.material : [object.material];
-      for (const material of list) {
-        if (!material || !material.map) continue;
-        if (!livery.has(material.map)) livery.set(material.map, blueLivery(material.map));
-        const blue = livery.get(material.map);
-        if (blue) { material.map = blue; material.needsUpdate = true; }
-      }
+      if (object.isSkinnedMesh) object.frustumCulled = false;
+      if (object.isMesh) { object.castShadow = true; object.receiveShadow = false; }
     });
-    this.livery = [...livery.values()].filter(Boolean).length;
     if (bow && bow.scene) {
       this.crossbow = bow.scene;
       this.crossbow.traverse((object) => { if (object.isMesh) object.castShadow = true; });
@@ -397,85 +424,60 @@ class TroopStage {
       this.arbalest = big.scene;
       this.arbalest.traverse((object) => { if (object.isMesh) object.castShadow = true; });
     }
-    // standing height in the Idle pose, so a troop is scaled to world px
+    // standing height in the bind pose, so a troop is scaled to world px
     const probe = cloneRig(this.template);
     probe.visible = true;
-    const mixer = new THREE.AnimationMixer(probe);
-    mixer.clipAction(this.clips.get(TROOP_CLIPS.idle)).play();
-    mixer.update(0);
     probe.updateMatrixWorld(true);
-    const box = new THREE.Box3().setFromObject(probe, true);
+    const box = new THREE.Box3().setFromObject(probe);
     const size = new THREE.Vector3();
     box.getSize(size);
-    this.height = size.y > 0.01 ? size.y : 2.4;
+    this.height = size.y > 0.01 ? size.y : 1;
+    this.minY = box.min.y;
+    this.livery = 1;   // the garrison palette grade ships with every clone
     this.ready = true;
   }
 
   /**
-   * The Knight's bucket helmet is the biggest thing on him from this camera
-   * (it looks down at 35°): plain steel, the garrison read as grey eggs from
-   * across the bailey (2026-10-17). Each troop's helmet is tinted the keep's
-   * royal blue and gets a gold crest, so a guard reads as OUR soldier at a
-   * glance and never as a placeholder. A runtime material on the clone; the
-   * GLB's bytes are untouched.
-   */
-  _dressHelmet(model) {
-    const helmet = model.getObjectByName('Knight_Helmet');
-    if (!helmet || !helmet.isMesh) return;
-    const base = Array.isArray(helmet.material) ? helmet.material[0] : helmet.material;
-    if (base && base.clone) {
-      const steel = base.clone();
-      steel.color = new THREE.Color(0.42, 0.6, 1.0);
-      steel.name = 'knight-helmet-royal-blue';
-      helmet.material = steel;
-    }
-    const geo = helmet.geometry;
-    if (!geo) return;
-    if (!geo.boundingBox) geo.computeBoundingBox();
-    const box = geo.boundingBox;
-    const size = new THREE.Vector3();
-    const mid = new THREE.Vector3();
-    box.getSize(size);
-    box.getCenter(mid);
-    if (!this._crestMat) {
-      this._crestMat = new THREE.MeshStandardMaterial({ color: 0xffd24a, emissive: 0x8a5a00, emissiveIntensity: 0.45, roughness: 0.55, metalness: 0.2, flatShading: true });
-    }
-    // a half-disc fin from brow to nape (the helmet's +y is up, +z its
-    // front); its own material, so a hurt flash reddens this troop's crest
-    // and not every crest
-    const R = size.z * 0.34, T = size.x * 0.12;
-    const fin = new THREE.CylinderGeometry(R, R, T, 14, 1, false, 0, Math.PI);
-    fin.rotateZ(Math.PI / 2);
-    const crest = new THREE.Mesh(fin, this._crestMat.clone());
-    crest.name = 'knight-crest';
-    crest.position.set(mid.x, box.max.y - R * 0.3, mid.z - size.z * 0.05);
-    crest.castShadow = true;
-    helmet.add(crest);
-  }
-
-  /**
    * A new troop: `kind` is a TROOP_LOADOUTS key. Returns a TroopRig whose
-   * `model` stands on y = 0 and is `heightPx` world px tall.
+   * `model` stands on y = 0 and is `heightPx` world px tall, graded into the
+   * garrison's cut of the captain's palette.
    */
   make(kind, heightPx, { arms = 1 } = {}) {
     if (!this.ready) return null;
-    const loadout = TROOP_LOADOUTS[kind] || TROOP_LOADOUTS.soldier;
     const model = cloneRig(this.template);
     model.visible = true;
     model.name = `troop-3d-${kind}`;
-    model.traverse((object) => {
-      if (WEAPON_NODES.includes(object.name)) object.visible = loadout.show.includes(object.name);
-    });
-    this._dressHelmet(model);
+    model.rotation.order = 'YXZ';
+    model.traverse((object) => { if (object.isSkinnedMesh) object.frustumCulled = false; });
+    // the same shader family the captain wears, in the garrison's palette
+    const grade = buildUniformGrade(model, TROOP_PALETTE, 'duskhold-troop-look-v1');
+    grade.uCapLook.value = TROOP_LOOK.look;
+    grade.uCapRim.value = TROOP_LOOK.rim;
+    grade.uCapLift.value = TROOP_LOOK.lift;
     const scale = heightPx / Math.max(0.01, this.height);
     model.scale.setScalar(scale);
+    model.position.y = -this.minY * scale;
     this.made++;
     const rig = new TroopRig(model, this.clips, kind);
-    rig.loadout = loadout;
-    if (loadout.right === 'crossbow') this.arm(rig, arms);
+    rig.loadout = TROOP_LOADOUTS[kind] || TROOP_LOADOUTS.soldier;
+    rig._baseY = model.position.y;
+    rig._hopPx = heightPx * 0.09;
+    if (rig.loadout.bow) this.arm(rig, arms);
     rig.loop('idle', 0);
     rig.update(0);
     return rig;
+  }
+
+  /** The span of a bow's source scene, in its own units (for the hand mount). */
+  _bowSpan(source) {
+    if (source.userData.bowSpan) return source.userData.bowSpan;
+    source.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(source);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    const span = Math.max(size.x, size.y, size.z) || 1;
+    source.userData.bowSpan = span;
+    return span;
   }
 
   /**
@@ -509,23 +511,23 @@ class TroopStage {
       }
       object.material = material;
     });
-    const rec = { level: lv, model, material, spec, twoHanded: spec.twoHanded && source === this.arbalest && this.twoHanded };
+    const rec = { level: lv, model, material, spec, twoHanded: spec.twoHanded && source === this.arbalest };
     this.bows.set(lv, rec);
     return rec;
   }
 
   /**
-   * Put the arms level's crossbow in a guard's right hand (BUILD 14). Its
-   * own material copy, so a hurt flash reddens this guard's bow only. A Lv3
-   * arbalest is held two-handed (the round shield is put away). Returns
-   * true when the bow changed.
+   * Put the arms level's crossbow in a guard's right hand (BUILD 14, BUILD
+   * 21: on the character rig's R_Hand bone). Its own material copy, so a
+   * hurt flash reddens this guard's bow only. Returns true when the bow
+   * changed.
    */
   arm(rig, level = 1) {
     if (!rig || !this.ready) return false;
     const lv = Math.max(1, Math.min(3, Math.round(level) || 1));
     if (rig.armsLevel === lv) return false;
     const rec = this.bow(lv);
-    const slot = rig.model.getObjectByName(HAND_SLOT_R) || rig.model.getObjectByName('handslot.r');
+    const slot = rig.model.getObjectByName(HAND_BONE_R);
     if (!rec || !slot) return false;
     const old = slot.getObjectByName('troop-crossbow');
     if (old) {
@@ -538,14 +540,16 @@ class TroopStage {
     }
     const bow = rec.model.clone(true);
     bow.name = 'troop-crossbow';
-    bow.scale.multiplyScalar(rec.spec.scale || 1);
+    // seat it in the hand: normalised to read BOW_MOUNT.length of the body
+    const span = this._bowSpan(rec.model);
+    const local = (BOW_MOUNT.length * this.height) / span;
+    bow.scale.setScalar(local * (rec.spec.scale || 1));
+    bow.position.set(BOW_MOUNT.pos[0] * this.height, BOW_MOUNT.pos[1] * this.height, BOW_MOUNT.pos[2] * this.height);
+    bow.rotation.set(BOW_MOUNT.rot[0], BOW_MOUNT.rot[1], BOW_MOUNT.rot[2]);
     const own = rec.material.clone();
     bow.traverse((object) => { if (object.isMesh) { object.material = own; object.castShadow = true; } });
     rig.materials.push(own);
     slot.add(bow);
-    const shield = rig.model.getObjectByName('Round_Shield');
-    const shows = rig.loadout ? rig.loadout.show.includes('Round_Shield') : true;
-    if (shield) shield.visible = shows && !rec.twoHanded;
     rig.setClipMap(rec.twoHanded ? TROOP_CLIPS_2H : null);
     rig.armsLevel = lv;
     rig.twoHanded = !!rec.twoHanded;

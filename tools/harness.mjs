@@ -2722,6 +2722,40 @@ async function runSurvivalMilestone() {
     b20Pass = b20Checks.length === 3 && b20Checks.every(Boolean);
   }
 
+  // BUILD 21 (four user bug reports, 2026-10-19): combat is a run, the
+  // garrison is the captain's own character in the garrison grade, the horde
+  // wears one faction grade, and a ground bolt leaves the bow, not the floor.
+  let b21Pass = false;
+  {
+    const b21Checks = [];
+    const b21Check = (name, ok, detail) => {
+      b21Checks.push(!!ok);
+      console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} — ${detail}`);
+    };
+    const { PLAYER } = await import('../src/core/config.js');
+    const nightSpeed = PLAYER.walkSpeed * SURVIVAL_TUNING.combatRunMul;
+    b21Check('B21: the night is combat — the captain\'s night speed crosses player.js\'s RUN threshold so the rig blends fully into the authored run clip (walk was the complaint)',
+      SURVIVAL_TUNING.combatRunMul > 1 && nightSpeed > 160 && nightSpeed <= PLAYER.runSpeed * 1.05,
+      `${PLAYER.walkSpeed} × ${SURVIVAL_TUNING.combatRunMul} = ${nightSpeed} px/s (RUN needs > 160)`);
+    const { TROOP_ASSETS, TROOP_CLIPS, TROOP_PALETTE } = await import('../src/game/troop3d.js');
+    const { VALEN_MODEL_URL, UNIFORM_GRADE_PALETTE } = await import('../src/game/valen3d.js');
+    const procedural = ['idle', 'aim', 'hit', 'down', 'lie', 'up', 'cheer'].every((k) => TROOP_CLIPS[k] === null);
+    b21Check('B21: the garrison is cut from the captain\'s own character file and graded in its own darker palette (steel trim, not his gold); the clips the rig lacks are procedural',
+      TROOP_ASSETS.soldier === VALEN_MODEL_URL && procedural
+        && TROOP_CLIPS.walk === 'walk' && TROOP_CLIPS.run === 'run' && TROOP_CLIPS.shoot === 'shot'
+        && TROOP_PALETTE.royal !== UNIFORM_GRADE_PALETTE.royal && TROOP_PALETTE.gold !== UNIFORM_GRADE_PALETTE.gold,
+      `${TROOP_ASSETS.soldier}; troop royal #${TROOP_PALETTE.royal.toString(16)} vs captain #${UNIFORM_GRADE_PALETTE.royal.toString(16)}; trim #${TROOP_PALETTE.gold.toString(16)} vs #${UNIFORM_GRADE_PALETTE.gold.toString(16)}`);
+    const { HORDE_GRADE, HORDE_EYE } = await import('../src/game/enemy3d.js');
+    const hideNotEye = typeof HORDE_GRADE.crawler.Eye_White === 'number' && typeof HORDE_GRADE.zombie.Eye_White === 'number';
+    const oneGlowEach = typeof HORDE_GRADE.zombie.Eye_Black === 'object' && typeof HORDE_GRADE.crawler.Eye_Black === 'object'
+      && typeof HORDE_GRADE.ghoul.Ghost_Secondary === 'object';
+    b21Check('B21: the horde\'s faction grade maps every source material by name — the crawler\'s spiky hide is not an eye, and each kind keeps exactly one glowing part',
+      hideNotEye && oneGlowEach && typeof HORDE_GRADE.zombie.Demon_Main === 'number' && typeof HORDE_GRADE.ghoul.Ghost_Main === 'number'
+        && HORDE_EYE.zombie === HORDE_EYE.crawler && HORDE_EYE.ghoul !== HORDE_EYE.zombie,
+      `crawler hide #${HORDE_GRADE.crawler.Eye_White.toString(16)}; ember eyes on demon+crawler, cold ghostfire on the skull`);
+    b21Pass = b21Checks.length === 3 && b21Checks.every(Boolean);
+  }
+
   console.log(`  idle Night 3: ${idle.nightThree.peakEnemies} peak enemies / ${idle.nightThree.peakBreakers} Breakers, ${idle.nightThree.kills} kills, ${idle.nightThree.wallDamage} wall damage, gate ${idle.nightThree.gateHp} HP, Hunter ${idle.nightThree.playerHp} HP; ${idle.phase}`);
   console.log(`  builder Night 3: ${builder.nightThree.peakEnemies} peak enemies / ${builder.nightThree.peakBreakers} Breakers, ${builder.nightThree.kills} kills, ${builder.nightThree.wallDamage} wall damage, gate ${builder.nightThree.gateHp} HP, Hunter ${builder.nightThree.playerHp} HP; keep Lv${builder.keepLevel} ${builder.keepHp} HP, soldiers ${builder.survivors}, buildings ${builder.buildings.join(',') || 'none'}, gateBuilt=${builder.gateBuilt}; ${builder.phase}`);
   // Balance target (M1 rebuild, K1): doing nothing must not win; an engaged
@@ -2734,7 +2768,7 @@ async function runSurvivalMilestone() {
     && hunterAutoShot && hunterRealLos && hunterSkill
     && idleLoses && builder.complete && builder.keepLevel === 3
     && builder.queueLockVerified && builder.sawmillBuilt && builder.gateBuilt && builder.barracksBuilt
-    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass && gateRulePass && b13Pass && b14Pass && b15Pass && b16Pass && b17Pass && b18Pass && b19Pass && b20Pass
+    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass && gateRulePass && b13Pass && b14Pass && b15Pass && b16Pass && b17Pass && b18Pass && b19Pass && b20Pass && b21Pass
     && builder.upgrades[0].level === 1 && builder.upgrades[0].plots === 9
     && builder.upgrades[builder.upgrades.length - 1].level === 3 && builder.upgrades[builder.upgrades.length - 1].plots === 15
     && builder.upgrades.every((item, i, all) => i === 0 || item.level >= all[i - 1].level);

@@ -26,7 +26,7 @@
  * dies plays the source Death clip, then sinks into the ground.
  */
 import * as THREE from '../vendor/three/three.module.min.js';
-import { Enemy3D, ENEMY_MODELS, cloneRig } from './enemy3d.js';
+import { Enemy3D, ENEMY_MODELS, cloneRig, HORDE_EYE, hordeGradeMaterial, hordeGlowFor } from './enemy3d.js';
 
 /** Which rigs the horde is made of, and how much of it each one is (%). */
 export const CROWD_KINDS = Object.freeze([
@@ -77,13 +77,16 @@ uniform highp sampler2D vatNrm;
 uniform int vatVerts;
 attribute float vatIndex;
 attribute vec4 vatAnim;
+attribute float vatGlow;
 varying float vFlash;
+varying float vGlowM;
 ivec2 vatAt(float frame) {
   int i = int(frame + 0.5) * vatVerts + int(vatIndex + 0.5);
   return ivec2(i % ${TEX_W}, i / ${TEX_W});
 }`)
       .replace('#include <begin_vertex>', `vec3 transformed = mix(texelFetch(vatPos, vatAt(vatAnim.x), 0).xyz, texelFetch(vatPos, vatAt(vatAnim.y), 0).xyz, vatAnim.z);
-vFlash = vatAnim.w;`);
+vFlash = vatAnim.w;
+vGlowM = vatGlow;`);
     if (normals) {
       shader.vertexShader = shader.vertexShader.replace('#include <beginnormal_vertex>',
         `vec3 objectNormal = normalize(mix(texelFetch(vatNrm, vatAt(vatAnim.x), 0).xyz, texelFetch(vatNrm, vatAt(vatAnim.y), 0).xyz, vatAnim.z));
@@ -97,19 +100,23 @@ vec3 objectTangent = vec3( tangent.xyz );
       shader.fragmentShader = shader.fragmentShader
         .replace('#include <common>', `#include <common>
 varying float vFlash;
+varying float vGlowM;
 uniform vec3 vatRimColor;
 uniform float vatRim;
-uniform float vatGlow;`)
+uniform float vatGlow;
+uniform vec3 uHordeEye;
+uniform float uHordeEyeMul;`)
         .replace('#include <color_fragment>', `#include <color_fragment>
 diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.0, 0.96, 0.9), clamp(vFlash, 0.0, 1.0) * 0.55);`)
         .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
 float vatFacing = clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0);
 totalEmissiveRadiance += vatRimColor * pow(1.0 - vatFacing, 2.4) * vatRim;
 totalEmissiveRadiance += diffuseColor.rgb * vatGlow;
-totalEmissiveRadiance += vec3(1.0, 0.86, 0.72) * clamp(vFlash, 0.0, 1.0) * 1.35;`);
+totalEmissiveRadiance += vec3(1.0, 0.86, 0.72) * clamp(vFlash, 0.0, 1.0) * 1.35;
+totalEmissiveRadiance += uHordeEye * clamp(vGlowM, 0.0, 4.0) * uHordeEyeMul;`);
     }
   };
-  material.customProgramCacheKey = () => `duskhold-vat-${normals ? 'lit' : 'depth'}`;
+  material.customProgramCacheKey = () => `duskhold-vat2-${normals ? 'lit' : 'depth'}`;
 }
 
 /**
@@ -137,12 +144,20 @@ export function bakeKind(key, template, animations) {
   const index = [];
   const colors = new Float32Array(verts * 3);
   const vatIndex = new Float32Array(verts);
+  // BUILD 21: how hard each vertex's material glows (the horde's crimson
+  // eyes, the ghost's bone fire) — baked once, emitted by the VAT shader.
+  const glows = new Float32Array(verts);
   let base = 0;
   let rough = 0.7, metal = 0;
   meshes.forEach((mesh, mi) => {
     const g = mesh.geometry;
     const n = g.attributes.position.count;
     const mat = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
+    // the rig is a private clone (cloneRig copies materials), so the horde's
+    // faction grade repaints this bake only — the shared template keeps its
+    // authored colours for the legacy mansion
+    if (mat) hordeGradeMaterial(key, mat);
+    const glow = mat ? hordeGlowFor(key, mat.name) : 0;
     const color = (mat && mat.color) ? mat.color : _c.setRGB(0.5, 0.5, 0.5);
     if (mi === 0 && mat) { rough = mat.roughness != null ? mat.roughness : rough; metal = mat.metalness || 0; }
     for (let i = 0; i < n; i++) {
@@ -150,6 +165,7 @@ export function bakeKind(key, template, animations) {
       colors[(base + i) * 3 + 1] = color.g;
       colors[(base + i) * 3 + 2] = color.b;
       vatIndex[base + i] = base + i;
+      glows[base + i] = glow;
     }
     if (g.index) for (let i = 0; i < g.index.count; i++) index.push(base + g.index.getX(i));
     else for (let i = 0; i < n; i++) index.push(base + i);
@@ -269,6 +285,7 @@ export function bakeKind(key, template, animations) {
   geometry.setAttribute('position', new THREE.BufferAttribute(p0, 3));
   geometry.setAttribute('normal', new THREE.BufferAttribute(n0, 3));
   geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geometry.setAttribute('vatGlow', new THREE.BufferAttribute(glows, 1));
   geometry.setAttribute('vatIndex', new THREE.BufferAttribute(vatIndex, 1));
   geometry.setIndex(index);
   geometry.computeBoundingSphere();
@@ -288,13 +305,17 @@ class CrowdStage {
     this.drawn = 0;
     this.byKind = {};
     // shared by every kind's material (uniform objects, so one write lands)
-    this.look = { rimColor: { value: new THREE.Color(1.0, 0.36, 0.22) }, rim: { value: 0.9 }, glow: { value: 0.28 } };
+    // BUILD 21: the rim is the horde's faction edge — deep crimson, not the
+    // old orange that turned the new ash bodies into sienna mud
+    this.look = { rimColor: { value: new THREE.Color(0.78, 0.2, 0.16) }, rim: { value: 0.75 }, glow: { value: 0.28 } };
+    this._eyeMuls = [];   // every kind's uHordeEyeMul (setLook dims them by day)
   }
 
   /** Night: a strong rim and a lift; day: a light touch (world3d, per frame). */
   setLook(night) {
-    this.look.rim.value = night ? 1.05 : 0.45;
-    this.look.glow.value = night ? 0.34 : 0.12;
+    this.look.rim.value = night ? 0.6 : 0.28;
+    this.look.glow.value = night ? 0.3 : 0.12;
+    for (const mul of this._eyeMuls) mul.value = night ? 1.15 : 0.6;
   }
 
   /** True once at least the demon has its texture: the horde can be drawn. */
@@ -339,7 +360,12 @@ class CrowdStage {
       vatRimColor: this.look.rimColor,
       vatRim: this.look.rim,
       vatGlow: this.look.glow,
+      // BUILD 21: the kind's eye/ghostfire colour; the strength lives in the
+      // baked vatGlow attribute, this only dims it by day
+      uHordeEye: { value: new THREE.Color(HORDE_EYE[kind.spec.key] != null ? HORDE_EYE[kind.spec.key] : 0xff3b28) },
+      uHordeEyeMul: { value: 1 },
     };
+    this._eyeMuls.push(uniforms.uHordeEyeMul);
     const material = new THREE.MeshStandardMaterial({
       vertexColors: true, roughness: Math.max(0.45, b.rough), metalness: Math.min(0.2, b.metal),
     });
