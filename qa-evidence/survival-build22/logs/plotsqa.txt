@@ -1,0 +1,73 @@
+boot 3.6 s
+  PASS  camera: the night frame is further out than build 8 (zoom < 0.70, was 0.775) — {"zoom":0.655,"play":0.655,"user":1}
+SHOT cam-1-night-frame
+  PASS  camera: a drag on the right half slides the view (the ground follows the finger) and the captain stays put — {"camMoved":825,"playerMoved":0,"offset":840}
+  PASS  camera: dragged away, a CAPTAIN chip appears to bring the view back — {"x":370,"y":76,"w":104,"h":38}
+SHOT cam-2-dragged
+  PASS  camera: the CAPTAIN chip eases the view back onto him — {"offset":0}
+  PASS  camera: the wheel zooms in and out within 0.42–1.6 of the frame, and the choice is saved — {"z0":1,"zIn":1.433,"zOut":0.42,"camZoom":0.275,"saved":0.42}
+SHOT cam-3-zoomed-out
+  PASS  camera: two fingers spread on the right half zoom in — {"z0":0.42,"z1":1.365}
+  PASS  camera: the wheel zooms about the cursor (the ground under it stays within 12 px) — {"z":0.527,"drift":2.7}
+  PASS  camera: two fingers anywhere pinch (one each side: zoom out; both on the stick side: zoom in) and the captain stays put — {"split":{"z0":1,"z1":0.42,"moved":0,"stick":false},"left":{"z0":1,"z1":1.6,"moved":0,"stick":false}}
+  PASS  camera: + / - on the right edge (between the counters and the thumb corner) zoom a step each, eased; the + key too — {"zin":{"x":792,"y":151,"w":44,"h":44},"zout":{"x":792,"y":195,"w":44,"h":44},"w":844,"h":390,"z0":1,"steps":{"zIn":1.35,"zOut":0.741,"zKey":1,"offset":0}}
+  PASS  camera: a flick glides on after the finger lifts, then comes to rest — {"atLift":374,"glided":607,"settled":653,"still":653}
+  PASS  camera: all the way out the whole bailey (2080 x 1520) fits a sideways phone — {"phase":"day","zoom":0.255,"corners":[[379,3],[754,220],[104,162],[480,378]],"inView":true}
+SHOT cam-4-overview-day
+SHOT cam-5-closeup-day
+  PASS  assets: the KayKit kit is loaded and every placed building is a kit model (0 procedural) — {"kit":{"ready":true,"failed":false,"error":null,"models":29,"kitBuildings":7,"proceduralBuildings":0,"kitGhosts":0,"pads":17,"stage":null,"armoryKit":true,"armsKit":true,"armsDisplay":1,"wells":1,"decor":{"placed":22,"missing":0,"merged":22,"meshes":1}},"meshes":[{"slot":"ward","kit":true,"level":2,"dressed":true},{"slot":"south","kit":true,"level":1,"dressed":false},{"slot":"north","kit":true,"level":2,"dressed":tr
+  PASS  assets: every plot stands on its pad, so do the armory and the arms rack (the pack's racks), the yard has its well — {"pads":17,"plots":15,"armory":true,"arms":true,"wells":1}
+  PASS  assets: a levelled building shows it (Lv2/Lv3 flags and stock from the pack) — [{"slot":"ward","kit":true,"level":2,"dressed":true},{"slot":"south","kit":true,"level":1,"dressed":false},{"slot":"north","kit":true,"level":2,"dressed":true},{"slot":"south:tower","kit":true,"level":3,"dressed":true},{"slot":"east:tower","kit":true,"level":1,"dressed":false},{"slot":"east","kit":true,"level":1,"dressed":false},{"slot":"west","kit":true,"level":1,"dressed":false}]
+SHOT plots-1-day-town
+SHOT plots-2-gate-street
+  PASS  build: a new building rises through the pack's three construction stages, then pops up — {"ok":true,"stages":["stageA","stageB","stageC"],"built":"tower"}
+  PASS  cards: the build/upgrade dock is one row (<= 56 px tall, was 166) under half the old area — {"action":{"x":684,"y":328,"w":148,"h":50,"label":"survival:UPGRADE MAX"},"night":{"x":12,"y":62,"w":112,"h":38,"label":"survival:START NIGHT"},"view":{"w":844,"h":390},"dockArea":16500}
+  PASS  cards: NIGHT is a chip (<= 130 x 44, was 148 x 50), still top-left (R18a) — {"x":12,"y":62,"w":112,"h":38,"label":"survival:START NIGHT"}
+SHOT cards-1-dock-ballista
+  PASS  cards: the keep's two actions (UPGRADE + REPAIR) share the same one-row dock — {"here":"keep","items":[{"label":"survival:UPGRADE MAX","x":684,"y":328,"w":148,"h":50},{"label":"survival:REPAIR KEEP","x":366,"y":328,"w":124,"h":50}]}
+SHOT cards-2-dock-keep
+SHOT b13-1-captain-day
+  PASS  V8: the captain is bright — his own pixels average >= 70/255 by night and by day and >= 3x the bare Tripo texture (royal-blue tabard, leather hat and boots, rim light; the GLB untouched) — {"night":{"on":{"px":4632,"mean":87.6},"bare":{"px":4670,"mean":19.6},"look":{"look":1,"rim":0.7,"lift":0.14}},"day":{"on":{"px":4036,"mean":89.3},"bare":{"px":4047,"mean":27.1},"look":{"look":1,"rim":0.32,"lift":0.04}}}
+SHOT b13-2-names-near
+SHOT b13-3-overview-tonight
+  PASS  V4: a circle spells its name and cost only near the captain — never more than 2 at once (3 empty circles within reach: 2 names), and the overview shows icons only (0 names, 0 pills) — {"near":{"names":2,"icons":1,"pills":0,"overview":false,"reach":[157,157,160],"here":null},"far":{"names":0,"icons":9,"pills":0,"user":0.42}}
+  PASS  V10: by day every gate the coming night will hit is marked (a red badge in view, a red edge pointer with the count out of view), the same gates as the night's plan — {"plan":["westGate 24/0/0","posternNW 27/0/0","southGate 27/1/1","northGate 0/1/0"],"drawn":[{"id":"westGate","total":24,"inView":false,"order":1,"swarm":24,"individuals":0,"breakers":0},{"id":"posternNW","total":27,"inView":false,"order":2,"swarm":27,"individuals":0,"breakers":0},{"id":"southGate","total":29,"inView":true,"order":3,"swarm":27,"individuals":1,"breakers":1},{"id":"northGate","total":1,"inView":true,"o
+SHOT b14-1-arms-card
+  PASS  B14: the arms rack beside the armory — both stations show their level near the captain with the gold arrow when affordable; at the rack one UPGRADE ARMS LV2 button in the dock, the rack shows the Lv1 bow, every guard holds it — {"stations":[{"id":"armory","near":true,"arrow":true},{"id":"arms","near":true,"arrow":true}],"here":"arms","button":{"x":684,"y":328,"w":148,"h":50,"label":"survival:UPGRADE ARMS LV2","disabled":false},"display":1,"bows":[1,1]}
+SHOT b14-2-guards-lv3
+  PASS  B14: bought, the rack works on it (UPGRADING ARMS), then every guard holds the Lv2 royal-blue bow (a "Lv2" pop over each, a flash on each) and the rack shows it; Lv3 is the blue-and-gold arbalest held two-handed — {"job":"arms","working":true,"pops":2,"guards":2,"lv2":{"bows":[2,2],"display":2},"lv3":{"level":3,"bows":[3,3],"twoHanded":2,"display":3},"armFx":4}
+SHOT b14-3-night-gold-bolts
+  PASS  B14: at night a Lv3 guard up on its tower shoots the gold bolt (18 damage, runs on through a body), drawn as the Lv3 bolt — {"up":2,"bolts":[{"arms":3,"pierce":0,"damage":18},{"arms":3,"pierce":0,"damage":18},{"arms":3,"pierce":0,"damage":18},{"arms":3,"pierce":0,"damage":18},{"arms":3,"pierce":0,"damage":18},{"arms":3,"pierce":0,"damage":18},{"arms":3,"pierce":1,"damage":18},{"arms":3,"pierce":1,"damage":18}],"meshLevels":[3,3,3,3,3,3,3,3]}
+SHOT b15-1-captain-through-tower
+  PASS  B15: the captain is seen through cover — behind the north gate's east tower his figure shows through it as a blue silhouette (a twin of his skinned mesh, GreaterDepth, survival only); in plain sight he paints over it — {"state0":{"on":true,"twins":1},"xray":{"on":true,"twins":1},"seen":{"n":3212,"r":113,"b":216},"bare":{"n":0,"r":0,"b":0},"sil":3212,"silBlue":216,"silRed":113,"diag":{"felled":19,"lowTowers":["corner","southGate:-1","southGate:1","eastGate:-1","eastGate:1"],"bridges":["westGate","northGate"],"xray":{"on":true,"twins":1}}}
+SHOT b15-2-south-gate-bastions
+  PASS  B15: the south / east gates have squat bastions (no bridge over them; the north / west keep their towers and bridges), the south-east corner is cut down, the felled kill zones show stumps; a guard on the south bastion stands ~68 px lower than one on the north tower — {"lifts":[1,1],"ys":[131.7,199.7],"stumps":19,"cuts":19,"d":{"felled":19,"lowTowers":["corner","southGate:-1","southGate:1","eastGate:-1","eastGate:1"],"bridges":["westGate","northGate"],"xray":{"on":true,"twins":1}}}
+SHOT b15-3-fight-frame
+  PASS  B15: holding the main gate from inside, the night frame leans onto the knot outside — knot and captain both in the playfield (below the HUD band, above the stick / FLARE band) — {"lean":{"x":0,"y":204.8,"w":0.999,"focus":{"x":0,"y":950,"n":10}},"knot":{"x":381,"y":219},"captain":{"x":517,"y":140},"h":390,"w":844}
+SHOT b16-1-night-cleared
+SHOT b16-2-dawn-warming
+SHOT b16-3-dawn-card
+  PASS  B16: a cleared night ends early — NIGHT CLEARED! with the gold it saves, the night pill turns to DAWN, the light warms over the 2 s to the early dawn, and the dawn card says NIGHT 2 CLEARED with its clock-gold row — {"cleared":{"at":50.28333333333332,"dawnAt":52.28333333333332,"saved":19,"bonus":19,"fled":0},"banner":{"kind":"cleared","text":"NIGHT CLEARED!","sub":"DAWN COMES EARLY · +19 GOLD"},"pill":[[58,63,138],[248,177,77]],"ground":[94,109,132,162],"blend":0.5,"card":{"phase":"day","panel":"survival-day","pending":true,"cleared":{"at":50.28333333333332,"saved":19,"bonus":19,"fled":0},"endAt":52.3,"ground":{"r":173,"g":164,"
+SHOT b16-4-wave-call
+  PASS  B16: Night 2 sends its first wave at once and calls it with its gate and count (WAVE 1/3 · WEST GATE ×24), the horde's horn blown — {"at":2.82,"wave":1,"banner":{"kind":"wave","text":"WAVE 1/3","sub":"WEST GATE ×24"},"horns":2}
+SHOT b16-5-last-one
+  PASS  B16: the night's last few — the two out of the fight run for the trees and are gone, the one clawing the west gate is called LAST 1! and pointed at by a red pointer on the playfield's frame (a sideways phone's night pointers run round its edge now, not over the captain) — {"fleeing":[true,true,false],"alive":1,"stragglers":{"at":60.02,"count":3,"fled":2,"called":true},"gone":true,"banner":{"kind":"stragglers","text":"LAST 1!"},"red":150,"marks":[{"icon":"door","x":264,"y":94},{"icon":"skull","x":268,"y":94}],"captain":{"x":380,"y":219},"w":844,"h":390,"onScreen":false}
+SHOT b17-1-tonight-chip
+SHOT b17-2-tonight-chip-s20276850
+SHOT b17-2-tonight-chip-s20261013
+  PASS  B17: the day announces tonight in the top band — a TONIGHT chip naming the gates in the order the night comes at them and what it sends, inside the 48 px band, clear of PAUSE, the DAY pill and the counters, painted and legible; each gate's badge carries the wave that reaches it first; at night the chip is gone (the night HUD is BUILD 16's) — {"flags":{"drawn":true,"inBand":true,"day2":true,"order":true,"counts":true,"callMatches":true,"painted":true,"legible":true,"badges":true,"goneAtNight":true},"chip":{"box":{"x":60,"y":8,"w":232.66015625,"h":46},"order":"WEST → NW POSTERN → SOUTH","tier":"short","counts":["swarm×78","zombie×2","breaker×1"],"breakers":1,"breakerGate":"SOUTH GATE","first":"WEST GATE"},"band":{"pauseRight":52,"pillLeft":316,"countersLef
+  PASS  B17: the round turns with the run — three seeds on the same day 2 screen give 3 different TONIGHT orders (WEST → NW POSTERN → SOUTH | SE POSTERN → EAST → SOUTH | NORTH → WEST → SOUTH), each the plan its night plays, and each badge's wave pip follows it — {"orders":["WEST → NW POSTERN → SOUTH","SE POSTERN → EAST → SOUTH","NORTH → WEST → SOUTH"],"plans":["westGate → posternNW → southGate → northGate","posternSE → eastGate → southGate → westGate","northGate → westGate → southGate → eastGate"],"runSeeds":[3901008293,20276850,20261013]}
+SHOT b18-1-hold-ring
+SHOT b18-2-tap-refused
+  PASS  B18: NIGHT is a hold, not a tap — a press that leaves at a sixth of the ring starts nothing and the chip answers (HOLD TO START, then a once-only hint); while the ring fills it names what the day would still have bought (R18c); a press held to the ring starts the night once and consumes itself — {"box":{"x":12,"y":62,"w":112,"h":38,"hold":0.55},"gold":60,"mid":{"holdT":0.303,"note":"60 GOLD UNSPENT","phase":"day"},"tap":{"phase":"day","miss":true,"hint":"holdnight"},"held":{"phase":"night","consumed":true}}
+SHOT b20-1-pause-ladder
+  PASS  B20: PAUSE is the mini unlocks screen — before any run ends it shows the watch ladder: the colour worn, the next colour and the stars still owed to it (R21) — {"screen":"paused","lab":{"tier":"iron","next":"CRIMSON WATCH","total":4}}
+SHOT b21-1-garrison-horde
+  PASS  B21: the garrison is the captain's character family (graded, crossbow in the right hand), the horde bakes one faction grade with a single glowing part per kind, and a ground bolt leaves the bow at chest height — {"troopReady":true,"soldierUrl":"./hunter_run_walk_claw_sword_shot.glb","valenUrl":"./hunter_run_walk_claw_sword_shot.glb","graded":1,"hands":2,"bows":2,"kinds":{"zombie":{"r":0.093,"g":0.109,"b":0.138,"glowMax":2.6},"crawler":{"r":0.084,"g":0.107,"b":0.091,"glowMax":2.6},"ghoul":{"r":0.017,"g":0.022,"b":0.036,"glowMax":0.22}},"boltYs":[80,80]}
+SHOT b22-1-chain-day2
+SHOT b22-2-chain-night2
+  PASS  B22: day 2 raises the first run's objective chain on the left edge (three open steps, the HUD label agrees), the steps check themselves off the world as the mine and a tower rise, the chain teaches into night 2, and clearing it banks save.chainDone, celebrates at dawn and leaves for good — {"a":{"n1":{"visible":false,"all":false,"allAt":null,"steps":[{"id":"mine","label":"BUILD A MINE","done":false},{"id":"tower","label":"BUILD A TOWER","done":false},{"id":"night2","label":"HOLD NIGHT 2","done":false}],"byid":{"mine":false,"tower":false,"night2":false}},"d2":{"visible":true,"all":false,"allAt":null,"steps":[{"id":"mine","label":"BUILD A MINE","done":false},{"id":"tower","label":"BUILD A TOWER","done":f
+SHOT b23-1-guard-concept
+  PASS  B23: a live gate guard carries the concept sheet's kit (kettle helm + plume, collar, pauldrons, gambeson skirt + stripe + emblem, belt kit, back shield) while still holding the garrison crossbow in the right hand — {"guard":true,"missing":[],"hands":1,"bows":1}
+errors 0
+SUMMARY 37/37 PASS

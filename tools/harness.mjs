@@ -2756,6 +2756,99 @@ async function runSurvivalMilestone() {
     b21Pass = b21Checks.length === 3 && b21Checks.every(Boolean);
   }
 
+  // BUILD 22 (H3/R22): the first run's objective chain — three checked steps
+  // on day 2 (mine, tower, hold night 2) that level themselves up from world
+  // state, teach once per save, and celebrate at dawn before leaving.
+  let b22Pass = false;
+  {
+    const b22Checks = [];
+    const b22Check = (name, ok, detail) => {
+      b22Checks.push(!!ok);
+      console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} — ${detail}`);
+    };
+    window.localStorage.removeItem('lastnight.save.v1');
+    const c = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60, cinematics: false });
+    c.renderer.resize(844, 390, 1);
+    const cm = c.survival;
+    const run = (game, seconds) => { for (let i = 0; i < Math.round(seconds * 60); i++) game.update(1 / 60); };
+    c.beginNight();                      // night 1: the intro captions own the goals
+    run(c, 0.2);
+    const d1 = cm.objectiveChain();
+    cm.completeNight();                  // the first dawn opens day 2: the chain rises
+    run(c, 0.2);
+    const d2 = cm.objectiveChain();
+    cm.gold = 999; cm.wood = 999;
+    const mineSlot = cm.dayPoints().find((pp) => pp.kind === 'slot' && pp.type === 'mine' && !pp.locked);
+    cm.startBuild('mine', mineSlot.id);
+    while (cm.builderJob) run(c, 0.2);
+    const afterMine = cm.objectiveChain();
+    const towerSlot = cm.dayPoints().find((pp) => pp.kind === 'slot' && pp.type === 'tower' && !pp.locked && !pp.built);
+    cm.startBuild('tower', towerSlot.id);
+    while (cm.builderJob) run(c, 0.2);
+    const afterTower = cm.objectiveChain();
+    cm.startNight();                     // night 2: the chain keeps teaching
+    run(c, 0.2);
+    const night = cm.objectiveChain();
+    cm.cleared = cm.cleared || { at: cm.elapsed, dawnAt: cm.elapsed + 1, saved: 0, bonus: 0, fled: 0 };
+    run(c, 0.2);
+    const held = cm.objectiveChain();
+    const savedFlag = !!(c.save.survival && c.save.survival.chainDone);
+    cm.completeNight();                  // dawn 3: the all-checked celebration
+    run(c, 0.2);
+    const celebrating = cm.objectiveChain();
+    run(c, 3);
+    const gone = cm.objectiveChain();
+    // a second run on the same save: the teacher stays retired
+    const c2 = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60, cinematics: false });
+    c2.renderer.resize(844, 390, 1);
+    const cm2 = c2.survival;
+    c2.beginNight(); cm2.completeNight();
+    run(c2, 0.2);
+    const rerun = cm2.objectiveChain();
+    window.localStorage.removeItem('lastnight.save.v1');   // do not leak into the next battery
+    b22Check('B22: night 1 has no chain (the intro captions own it) and the first dawn raises it on day 2 with three open steps',
+      d1 && d1.visible === false && d2 && d2.visible === true && d2.steps.length === 3 && d2.steps.every((st) => !st.done),
+      `night1 ${d1 && d1.visible}, day2 ${d2 && d2.visible} [${(d2 && d2.steps || []).map((st) => st.id).join(',')}]`);
+    b22Check('B22: the steps check themselves off the world (mine, then tower) and the chain keeps teaching into night 2 with the third step open',
+      afterMine && afterMine.steps[0].done && !afterMine.steps[1].done
+        && afterTower && afterTower.steps[0].done && afterTower.steps[1].done && !afterTower.steps[2].done && afterTower.visible
+        && night && night.visible && !night.steps[2].done,
+      `mine ${afterMine && afterMine.steps.map((st) => st.done).join('/')}, tower ${afterTower && afterTower.steps.map((st) => st.done).join('/')}, night2 open ${night && !night.steps[2].done}`);
+    b22Check('B22: clearing night 2 checks the last step, banks save.survival.chainDone, celebrates all-checked at dawn, then leaves — and a save that closed it never sees it again',
+      held && held.all && held.visible && savedFlag && celebrating && celebrating.visible && celebrating.all
+        && gone && gone.visible === false && rerun && rerun.visible === false,
+      `held ${held && held.all}, save ${savedFlag}, dawn ${celebrating && celebrating.visible}, gone ${gone && !gone.visible}, rerun ${rerun && !rerun.visible}`);
+    b22Pass = b22Checks.length === 3 && b22Checks.every(Boolean);
+  }
+
+
+  // BUILD 23 (user correction: "kapten dan pasukan sama, harusnya beda — pakai
+  // visual reference di asset"): the garrison keeps the captain's rig and
+  // animation set but wears its own kit from the concept sheet
+  // ASSET_CHARACTER/characters/02-guard.png — kettle helm with a blue plume,
+  // chain collar, pauldrons, a long gambeson skirt with a gold stripe, belt
+  // kit and a back shield. The captain carries none of those nodes.
+  let b23Pass = false;
+  {
+    const b23Checks = [];
+    const b23Check = (name, ok, detail) => {
+      b23Checks.push(!!ok);
+      console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} — ${detail}`);
+    };
+    const { TROOP_GEAR, TROOP_PALETTE, dressGarrison } = await import('../src/game/troop3d.js');
+    const { UNIFORM_GRADE_PALETTE } = await import('../src/game/valen3d.js');
+    const wanted = ['guard-helm', 'guard-plume', 'guard-collar', 'guard-pauldron-l', 'guard-pauldron-r', 'guard-skirt', 'guard-stripe', 'guard-shield'];
+    const missing = wanted.filter((n) => !TROOP_GEAR.includes(n));
+    b23Check('B23: the garrison\'s kit is a named node list the concept sheet dictates (helm, plume, collar, pauldrons, gambeson skirt + stripe, back shield), dressed by one exported function',
+      missing.length === 0 && TROOP_GEAR.length >= 12 && typeof dressGarrison === 'function',
+      `${TROOP_GEAR.length} gear nodes${missing.length ? `; missing ${missing.join(', ')}` : ''}`);
+    b23Check('B23: the garrison\'s cloth is its own cut of the faction colours — the concept\'s steel-blue gambeson with a real gold stripe, neither the captain\'s royal nor the old steel trim',
+      TROOP_PALETTE.royal !== UNIFORM_GRADE_PALETTE.royal && TROOP_PALETTE.gold !== UNIFORM_GRADE_PALETTE.gold
+        && TROOP_PALETTE.gold === 0xc9a23f && TROOP_PALETTE.royal === 0x2c4f96,
+      `troop royal #${TROOP_PALETTE.royal.toString(16)} / stripe #${TROOP_PALETTE.gold.toString(16)} vs captain #${UNIFORM_GRADE_PALETTE.royal.toString(16)} / #${UNIFORM_GRADE_PALETTE.gold.toString(16)}`);
+    b23Pass = b23Checks.length === 2 && b23Checks.every(Boolean);
+  }
+
   console.log(`  idle Night 3: ${idle.nightThree.peakEnemies} peak enemies / ${idle.nightThree.peakBreakers} Breakers, ${idle.nightThree.kills} kills, ${idle.nightThree.wallDamage} wall damage, gate ${idle.nightThree.gateHp} HP, Hunter ${idle.nightThree.playerHp} HP; ${idle.phase}`);
   console.log(`  builder Night 3: ${builder.nightThree.peakEnemies} peak enemies / ${builder.nightThree.peakBreakers} Breakers, ${builder.nightThree.kills} kills, ${builder.nightThree.wallDamage} wall damage, gate ${builder.nightThree.gateHp} HP, Hunter ${builder.nightThree.playerHp} HP; keep Lv${builder.keepLevel} ${builder.keepHp} HP, soldiers ${builder.survivors}, buildings ${builder.buildings.join(',') || 'none'}, gateBuilt=${builder.gateBuilt}; ${builder.phase}`);
   // Balance target (M1 rebuild, K1): doing nothing must not win; an engaged
@@ -2768,7 +2861,7 @@ async function runSurvivalMilestone() {
     && hunterAutoShot && hunterRealLos && hunterSkill
     && idleLoses && builder.complete && builder.keepLevel === 3
     && builder.queueLockVerified && builder.sawmillBuilt && builder.gateBuilt && builder.barracksBuilt
-    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass && gateRulePass && b13Pass && b14Pass && b15Pass && b16Pass && b17Pass && b18Pass && b19Pass && b20Pass && b21Pass
+    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass && gateRulePass && b13Pass && b14Pass && b15Pass && b16Pass && b17Pass && b18Pass && b19Pass && b20Pass && b21Pass && b22Pass && b23Pass
     && builder.upgrades[0].level === 1 && builder.upgrades[0].plots === 9
     && builder.upgrades[builder.upgrades.length - 1].level === 3 && builder.upgrades[builder.upgrades.length - 1].plots === 15
     && builder.upgrades.every((item, i, all) => i === 0 || item.level >= all[i - 1].level);

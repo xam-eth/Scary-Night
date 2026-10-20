@@ -390,6 +390,58 @@ function drawGoalTrack(game, ctx, x, y, width) {
   drawSurvivalIcon(ctx, 'banner', x + width - 6, y - 2, 20);
 }
 
+/**
+ * BUILD 22 (H3/R22): the first run's objective chain — three checked steps
+ * on the left edge (build a mine, build a tower, hold night 2). The active
+ * step's ring pulses, a done step is a green check, and when the third one
+ * closes the whole chain holds for a short all-checked celebration at dawn
+ * before it leaves for good. "One clear visual goal" that survives the intro
+ * captions, Kingdom Rush style: one mechanic per step. Returns what it drew
+ * so QA can read it off `game._survivalLabels.objectiveChain`.
+ */
+function drawObjectiveChain(game, ctx, w, h, night) {
+  const mode = game.survival;
+  const chain = mode.objectiveChain();
+  if (!chain || !chain.visible) return null;
+  const short = h < 560;
+  const pad = 12;
+  const rowH = 22;
+  const x = pad;
+  const y = night ? (short ? 60 : 96) : (short ? pad + 96 : pad + 104);
+  const width = 158;
+  const height = rowH * chain.steps.length + 10;
+  const t = clock(game);
+  const flash = chain.all ? clamp(1 - (mode.uiClock - chain.allAt) / 2.6, 0, 1) : 0;
+  ctx.save();
+  ctx.globalAlpha = chain.all ? 0.5 + 0.5 * flash : 0.92;
+  drawPanel(ctx, x, y, width, height, {
+    radius: 12,
+    top: chain.all ? '#6a5416' : '#2c2440',
+    bottom: chain.all ? '#3a2f0a' : '#1c1730',
+    lineWidth: 2,
+  });
+  ctx.restore();
+  chain.steps.forEach((step, i) => {
+    const cy = y + 5 + rowH * i + rowH / 2;
+    const active = !step.done && chain.steps.slice(0, i).every((other) => other.done);
+    const r = active ? 6 + Math.sin(t * 5) * 0.8 : 5.5;
+    ctx.save();
+    ctx.beginPath(); ctx.arc(x + 14, cy, r, 0, TAU);
+    ctx.fillStyle = step.done ? '#45d06a' : active ? 'rgba(255,255,255,0.92)' : 'rgba(255,255,255,0.28)';
+    ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = INK; ctx.stroke();
+    if (step.done) {
+      ctx.strokeStyle = '#0c2a14'; ctx.lineWidth = 2.4; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x + 11, cy); ctx.lineTo(x + 13.5, cy + 2.6); ctx.lineTo(x + 17.5, cy - 2.6); ctx.stroke();
+    }
+    ctx.restore();
+    drawLabel(ctx, step.label, x + 27, cy + 1, 10,
+      step.done ? 'rgba(255,255,255,0.55)' : active ? '#fff6dc' : 'rgba(255,255,255,0.62)',
+      { align: 'left', outline: 2.5 });
+  });
+  return { visible: true, all: chain.all, steps: chain.steps.map((step) => ({ id: step.id, done: step.done })) };
+}
+
 function drawCounters(game, ctx, w, rows, gap = 36) {
   const cw = 88, ch = 30;
   const x = w - cw - 8;
@@ -961,6 +1013,9 @@ function drawNightHud(game, ctx, w, h) {
   drawBanner(game, ctx, w, h);
   drawZoomButtons(game, ctx, w, h);
   drawRecenterChip(game, ctx, w, h);
+  // BUILD 22: the chain keeps teaching through the night it asks you to hold
+  const nightChain = drawObjectiveChain(game, ctx, w, h, true);
+  if (game._survivalLabels) game._survivalLabels.objectiveChain = nightChain;
   drawHint(game, ctx, w, h < 560 ? h - 52 : 126);
 }
 
@@ -1709,6 +1764,10 @@ function drawDayScreen(game, ctx, w, h) {
   // are committed — the gates in order and what the night sends
   const tonightChip = !reward ? drawTonightChip(game, ctx, w, h) : null;
   if (game._survivalLabels) game._survivalLabels.tonightChip = tonightChip;
+
+  // BUILD 22 (H3/R22): day 2's objective chain under the NIGHT chip
+  const dayChain = !reward ? drawObjectiveChain(game, ctx, w, h, false) : null;
+  if (game._survivalLabels) game._survivalLabels.objectiveChain = dayChain;
 
   drawZoomButtons(game, ctx, w, h);
   drawRecenterChip(game, ctx, w, h);

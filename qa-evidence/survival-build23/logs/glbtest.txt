@@ -1,0 +1,146 @@
+
+=== DIRECT ANIMATED VALEN GLB ===
+  PASS  latest uploaded GLB exists — hunter_run_walk_claw_sword_shot.glb
+  PASS  uploaded file is a complete glTF 2.0 binary
+  PASS  vendored GLB bytes remain the renamed hunter file — a86d3c27533db4363aacc214df7e3aff0136ff2f6b1f418d101fdbca0b82974f
+  PASS  mesh and animation samples are the original Tripo bytes — 7f87da42950fead15d4920af63026ffe81fc8a392eca288f15333502fc5508c5
+  PASS  authored textures remain embedded — 2 images
+  PASS  the hunter skin is present — 78 joints
+  PASS  five authored clips are present — claw, run, shot, sword, walk
+  PASS  clips are exactly run, walk, claw, shot, sword — claw, run, shot, sword, walk
+  PASS  every authored clip has bone channels and samplers — run:234, claw:234, shot:234, walk:234, sword:234
+  PASS  skin weights are distributed across the rig — 50 influenced joints
+  PASS  most vertices use blended bone influences — 22929/26017
+  PASS  all vertex weights are normalised — 26017/26017
+  PASS  runtime loads the vendored hunter filename — ./hunter_run_walk_claw_sword_shot.glb
+  PASS  clip mapping uses claw for the unarmed attack
+  PASS  obsolete sources and rebuild pipeline are absent
+  PASS  no rebuilt Valen sprite derivatives remain
+  PASS  runtime has no reference to the rejected baked setup
+  PASS  root motion stays centred and source-named rig effects stay attached
+  PASS  vendored GLB runtime and license are present
+
+animated Valen GLB: all PASS
+
+=== ENEMY GLB REGISTRY ===
+  PASS  vendored zombie GLB exists — zombie+3d+model.glb
+  PASS  zombie file is a complete glTF 2.0 binary
+  PASS  zombie bytes are the uploaded file — 3d2fcff9c2107f442000a3b0867966bca2f72983d86874268b3186d8ac0152ad
+  PASS  zombie stays under the mobile budget — 3030564 bytes
+  PASS  zombie is a rigged Tripo mesh — 65 joints
+  PASS  zombie skin has its joints
+  PASS  zombie texture stays embedded
+  PASS  zombie clips are exactly the uploaded set — cast_a_spell, defeat_03, depressed, flee_02
+  PASS  legacy zombie remains auditable but is no longer assigned to a live role — cast_a_spell, defeat_03, depressed, flee_02
+  PASS  zombie uses a valid rigged GLB copied from Demon-LnfIziKv4o.glb — 485516 bytes, 43 joints
+  PASS  zombie source GLB is unchanged — 7da854e1d43428b89b1afca0feca3f323b869b1d8ed7df74d17354260b607262
+  PASS  zombie has mapped idle/hurt/locomotion/attack/death clips
+  PASS  crawler uses a valid rigged GLB copied from Green Spiky Blob.glb — 185820 bytes, 4 joints
+  PASS  crawler source GLB is unchanged — ad5e8b1cdf8c0d328b4b44537d3da8fa98119a9a99fb6163e2f325dbb8bbecc1
+  PASS  crawler has mapped idle/hurt/locomotion/attack/death clips
+  PASS  hunter uses a valid rigged GLB copied from Blue Demon.glb — 439488 bytes, 43 joints
+  PASS  hunter source GLB is unchanged — 6a8e743deba6f43f0f9b1e702016b04ddba1d3bf73b7101d2c86d64ae526f87c
+  PASS  hunter has mapped idle/hurt/locomotion/attack/death clips
+  PASS  ghoul uses a valid rigged GLB copied from Ghost Skull.glb — 232384 bytes, 38 joints
+  PASS  ghoul source GLB is unchanged — d1e2268fe9621583ff879d6e6e3ace80b0a6a2373ec0139a8139c88fe6e4d942
+  PASS  ghoul has mapped idle/hurt/locomotion/attack/death clips
+  PASS  stalker uses a valid rigged GLB copied from Yeti-ceRHrn8HHE.glb — 423024 bytes, 43 joints
+  PASS  stalker source GLB is unchanged — 789fcdd3d32a1bf6ceaa0e30f9ac5d8d2c52d15fa0181d4d1d980a1b2a2ac869
+  PASS  stalker has mapped idle/hurt/locomotion/attack/death clips
+  PASS  five distinct CC0 monster rigs are wired to the five non-werewolf roles — 5 separate rigs, 1766232 total bytes
+  PASS  monster assets include their CC0 provenance note
+  PASS  the late-game Stalker uses its Yeti rig, not the old zombie or wolf rig
+  PASS  the local werewolf retains its own run/strike/death rig
+  PASS  every behaviour avoids forbidden stand-ins
+  PASS  converted werewolf GLB is vendored — werewolf-3d-model.glb
+  PASS  werewolf file is a complete glTF 2.0 binary
+  PASS  werewolf bytes are the converted file — c2533322a4f11cc958a08049894083b16db9c671770aafd48afb4bfef4e184e3
+  PASS  werewolf stays inside the mobile budget — 4476368 bytes
+  PASS  werewolf is a rigged mesh — 65 joints
+  PASS  werewolf skin has its joints
+  PASS  werewolf texture stays embedded
+  PASS  werewolf clips are exactly the converted set — angry_02.001, box_02.001, fall.001, front_kick_02.001
+  PASS  werewolf is behavior-ready on the owner clip map
+  PASS  the werewolf upload is kept as provenance for the conversion
+  PASS  the converted werewolf is wired on the owner clip map
+  PASS  clip contract matches the roster, including pack hit reactions
+  PASS  damage and stagger choose the mapped hit reaction, while death retains priority
+  PASS  nearest cap keeps 14 skinned slots — 1,2,3,4,5,6,7,8,9,10,11,12,13,14
+  PASS  an unready model stays unassigned instead of receiving a placeholder
+  PASS  all 14 combatants receive GLBs; siege crowd does not consume combat slots
+  PASS  reduced-AI siege bodies stay out of legacy combat slots
+  PASS  survival explicitly assigns the nearest Swarm bodies to the authored zombie GLB cap — 14 Swarm rigs, nearest id 1000
+  PASS  a recent death can keep a spare skinned slot for its animation
+  PASS  an expired death clip releases its skinned slot
+  PASS  living actors keep priority over death clips at the mobile rig cap
+  PASS  pool builds one instance per live slot
+  PASS  death returns the instance; the next spawn does not allocate
+  PASS  a full swarm cannot grow the pool past the cap
+  PASS  a clip is only ever named in the registry map, never in the state machine
+
+environment kit:
+  PASS  barrel.glb is a valid GLB with geometry — meshes=1
+  PASS  candle.glb is a valid GLB with geometry — meshes=1
+  PASS  chair.glb is a valid GLB with geometry — meshes=1
+  PASS  chest.glb is a valid GLB with geometry — meshes=2
+  PASS  column.glb is a valid GLB with geometry — meshes=1
+  PASS  crate.glb is a valid GLB with geometry — meshes=1
+  PASS  crates_stacked.glb is a valid GLB with geometry — meshes=1
+  PASS  door_gate.glb is a valid GLB with geometry — meshes=1
+  PASS  doorway.glb is a valid GLB with geometry — meshes=2
+  PASS  floor_stone.glb is a valid GLB with geometry — meshes=1
+  PASS  floor_wood.glb is a valid GLB with geometry — meshes=1
+  PASS  pillar.glb is a valid GLB with geometry — meshes=1
+  PASS  shelf.glb is a valid GLB with geometry — meshes=1
+  PASS  stairs.glb is a valid GLB with geometry — meshes=1
+  PASS  table.glb is a valid GLB with geometry — meshes=1
+  PASS  torch.glb is a valid GLB with geometry — meshes=1
+  PASS  wall.glb is a valid GLB with geometry — meshes=1
+  PASS  wall_broken.glb is a valid GLB with geometry — meshes=1
+  PASS  wall_corner.glb is a valid GLB with geometry — meshes=1
+  PASS  wall_cracked.glb is a valid GLB with geometry — meshes=1
+  PASS  wall_window.glb is a valid GLB with geometry — meshes=1
+  PASS  the whole vendored kit is present and unchanged
+  PASS  the kit ships its licence note
+  PASS  the env reads the vendored kit and nothing else
+  PASS  a missing WebGL piece reports a 3D error instead of painting a Canvas fallback
+  PASS  a door with a mesh does not also paint its twin
+
+modular room:
+  PASS  architecture and repeated props are instanced; only the unique animated clock uses separate meshes
+  PASS  the kit's table has somewhere to stand
+  PASS  the kit's chair has somewhere to stand
+  PASS  the kit's shelf has somewhere to stand
+  PASS  the kit's chest has somewhere to stand
+  PASS  the kit's barrel has somewhere to stand
+  PASS  the kit's stacked has somewhere to stand
+  PASS  the kit's column has somewhere to stand
+  PASS  the kit's candle has somewhere to stand
+  PASS  the kit's torch has somewhere to stand
+  PASS  a fire on the floor gets something burning
+  PASS  every window in the house stands in the wall, not a hole in it
+  PASS  a smashed window swaps its glass panel for the broken wall
+  PASS  the grand staircase is kit stairs, not paint
+  PASS  furniture stands on the middle of the rect it is drawn from, not its corner
+  PASS  the retired Canvas Mansion render and lightmap methods are absent
+  PASS  WebGL marks mapped furniture and props for the active environment
+  PASS  the reach is measured as the room is drawn, not on the floor
+  PASS  a swing dead to the right keeps its aim
+
+garrison troops (captain family + KayKit bows, CC0):
+  PASS  every vendored troop file matches the SHA-256 in CREDITS.txt, and nothing ships unlisted — 7 listed
+  PASS  the pack ships its CC0 licence and the credits name the source commit
+  PASS  the garrison template IS the captain's character file (one family, no second art style) — ./hunter_run_walk_claw_sword_shot.glb
+  PASS  the soldier GLB is a rigged character with every clip the garrison plays (idle/aim/hit/down/up/cheer are procedural on this rig) — 5 clips (run, claw, shot, walk, sword)
+  PASS  the rig has the right-hand bone the crossbow mounts on, and every loadout carries the garrison bow — R_Hand; guard/soldier/bearer
+  PASS  the crossbow glTF has a mesh and its buffer and atlas sit next to it — crossbow_1handed.bin, rogue_texture.png
+  PASS  the Lv3 arbalest (crossbow_2handed) has a mesh, its buffer and the shared atlas sit next to it — crossbow_2handed.bin, rogue_texture.png
+
+bailey buildings (KayKit Medieval Hexagon Pack, CC0):
+  PASS  every vendored building file matches the SHA-256 in CREDITS.txt, and nothing ships unlisted — 58 listed
+  PASS  the pack ships its CC0 licence and the credits name the source commit
+  PASS  every kit model the game loads is a glTF with a mesh whose buffer and atlas sit next to it — 29 models, 31 meshes
+  PASS  every buildable type (barracks, sawmill, mine, ballista) maps to a core kit model — barracks=barracks, sawmill=sawmill, mine=mine, tower=towerBase
+  PASS  the lumbermill keeps its separate saw node (it spins while the sawmill works)
+
+GLB registry + environment kit + garrison troops + bailey buildings: all PASS

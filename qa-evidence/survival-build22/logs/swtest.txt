@@ -1,0 +1,27 @@
+DUSKHOLD — service worker
+
+  PASS  install opens one cache (duskhold-v23)
+  PASS  the cache is the brand's current version (duskhold-v23 = sw.js VERSION duskhold-v23)
+  PASS  the shell is precached (12 entries)
+  PASS  offline.html is in it
+  PASS  activate drops a cache from an older version
+  PASS  a POST is not answered at all (no payment call is ever cached)
+  PASS  GET /api/privacy/delete is not answered either
+  PASS  a cross-origin request is left to the browser
+  PASS  a same-origin asset is answered
+  PASS  and the first answer is the network one
+  PASS  then it is written to the cache
+  PASS  a second visit is answered
+  PASS  and the cached copy comes back first
+  PASS  while the network copy refreshes in the background
+  PASS  a game module is answered from the network
+  PASS  and kept for offline
+  PASS  a changed module is the new one on the next load, not the cached one
+  PASS  offline, the last module that loaded is served
+  PASS  a navigation offline is still answered
+  PASS  and what comes back is the game itself — the house plays with no network
+  PASS  a first launch offline is answered too
+  PASS  with the offline page, because there is no game on the phone yet
+
+service worker: all PASS
+

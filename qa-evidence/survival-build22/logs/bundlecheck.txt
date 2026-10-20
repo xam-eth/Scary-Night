@@ -1,0 +1,84 @@
+DUSKHOLD — Play bundle check
+
+-- config --
+  PASS  bundle.config.json reads as JSON
+  PASS  host is an https origin — https://duskhold.zyvrolabs.com
+  PASS  packageId looks like a reverse domain (com.zyvrolabs.duskhold)
+  PASS  versionCode is a positive integer (1)
+  PASS  versionName is semver-ish (1.0.0)
+  ....  packageId is permanent on Play: com.zyvrolabs.duskhold
+
+-- web manifest --
+  PASS  manifest.webmanifest reads as JSON
+  PASS  name and short_name are set (DUSKHOLD)
+  PASS  short_name fits the launcher (8/12 chars)
+  PASS  start_url and scope are set (/index.html)
+  PASS  display is a mode Bubblewrap accepts (standalone)
+  PASS  orientation is landscape (the game is designed for landscape play)
+  PASS  theme_color is a hex colour (#05060b)
+  PASS  background_color is a hex colour (#05060b)
+  PASS  a 192px icon is declared (Chrome installability)
+  PASS  a 512px icon is declared (Bubblewrap minimum is 512)
+  PASS  a maskable icon is declared (Android adaptive icon)
+  PASS  every declared icon exists on disk
+  PASS  and is exactly the size it declares
+
+-- service worker --
+  PASS  sw.js exists
+  PASS  sw.js parses
+  PASS  it has an install handler
+  PASS  it has an activate handler (old caches get dropped)
+  PASS  it has a fetch handler (Chrome installability)
+  PASS  it serves an offline page when the network is gone
+  PASS  it refuses to cache anything but GET — payment calls must never be cached
+  PASS  it names the /api/ paths to leave alone
+  PASS  index.html registers the service worker
+  PASS  and only over https — localhost dev stays untouched
+  PASS  offline.html exists
+  PASS  offline.html pulls in nothing from the network
+
+-- digital asset links --
+  PASS  .well-known/assetlinks.json exists (the TWA only hides its URL bar with this)
+  PASS  it targets this app (com.zyvrolabs.duskhold)
+  PASS  at least one fingerprint is listed
+  PASS  every fingerprint is a real 64-char SHA-256, not a placeholder (1/1 valid) — generate the upload key, then use Bubblewrap fingerprint or the Play App Signing SHA-256
+
+-- the billing rail --
+  PASS  src/shop/digitalgoods.js exists (Play Billing through the Digital Goods API)
+  PASS  it connects to https://play.google.com/billing
+  PASS  it buys through the Payment Request API, the way Play requires
+  PASS  it acknowledges non-consumables and consumes consumables
+  PASS  restore reads listPurchases()
+  PASS  iap.js knows about the rail
+  PASS  and prefers it after a native bridge, before Midtrans
+  PASS  and Midtrans is switched off inside a TWA (Play Payments policy)
+  WARN  the Digital Goods origin trial token is in index.html — uncomment the meta tag and paste your token — without it the Play shop takes no money
+  PASS  android/twa-manifest.json exists
+  PASS  features.playBilling is on — that is what installs the Digital Goods handler in the app
+  PASS  packageId matches the config (com.zyvrolabs.duskhold)
+  PASS  webManifestUrl points at the host (https://duskhold.zyvrolabs.com/manifest.webmanifest)
+  PASS  appVersion is spelled the way the schema reads it (1.0.0)
+  ....  Bubblewrap is not installed here — skipping the schema check (npm i -g @bubblewrap/cli)
+
+-- secrets --
+  PASS  no server key, private key or keystore password in anything that gets deployed
+  PASS  .gitignore excludes keystores
+  PASS  .gitignore excludes the signing password file
+  PASS  android/duskhold-upload.jks is not in the workspace (lives with the owner's backups)
+  PASS  android/signing.local.json is not in the workspace (lives with the owner's backups)
+
+-- what the page loads --
+  PASS  every local file index.html references exists (17 checked)
+
+-- 2026 Play rules this build has to answer --
+  ....  target API 36 (Android 16): the Bubblewrap template sets compileSdk/targetSdk 36 — check after init
+  ....  minSdk 23 — Bubblewrap default is 23
+  ....  AAB, not APK: bubblewrap build produces app-release-bundle.aab
+  ....  Play Billing Library 8+ applies to native billing; a TWA bills through the Digital Goods API and the androidbrowserhelper:billing delegate
+  ....  developer verification + package registration: enforced from 30 Sep 2026 in Indonesia, where this account is
+  ....  closed testing: 12 testers x 14 continuous days for personal accounts created after 13 Nov 2023
+
+bundle check: all PASS
+1 thing only you can fill in:
+  - the Digital Goods origin trial token is in index.html
+

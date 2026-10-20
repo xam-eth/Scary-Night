@@ -1,0 +1,26 @@
+  PASS  boot: the night clock waits for the 3D house — {"nightArmedAt":0,"elapsedWhenWorldShown":0.08}
+  PASS  touch: the stick floats in the left half below the HUD band; a right-half drag moves the camera, not the captain — {"leftHalf":159,"rightHalf":4,"cameraPan":230,"hudBand":0}
+  PASS  camera: walking eases the dragged view back onto the captain — {"offsetAfterWalk":16,"dragged":230}
+  PASS  controls: Survival shows one action button (attack hidden) — {"flare":{"x":336,"y":768,"r":40,"hitR":44,"hidden":false},"attackHidden":true,"vw":390,"vh":844}
+  PASS  flare: a tap on the drawn edge fires — {"tapAtPx":38,"cooldown":13.93}
+  PASS  pause: 2 s paused leaves the Flare cooldown untouched — {"cd":10,"screen":"paused"}
+  PASS  hidden: a hidden tab pauses the night — {"screen":"paused"}
+  PASS  context: a lost WebGL context freezes the night, restore resumes it — {"ext":true,"elapsedDuringLoss":0,"resumedAdvance":1,"lost":false,"lastError":null}
+  PASS  guards: one 3D guard pawn per survivor at night — {"survivors":2,"guards":2,"visibleGuardMeshes":2,"boltObjects":3,"shots":33}
+  PASS  pooling: bolt meshes do not grow with every shot — {"shots":33,"boltObjectsInScene":3}
+  PASS  guards: a fallen guard lies down on a red ring; helped up it stands on its blue ring — {"down":{"visible":true,"figureRotX":-1.571,"figureY":9,"ring":"ff4a3d","xray":"ff4a3d","hud":"1/2","troop":{"state":"down","visible":true}},"up":{"down":false,"hp":20,"figureRotX":0,"ring":"5ab8ff","troop":{"state":"walk"}},"glb":true}
+  PASS  tower: model on its circle by the main gate, red reach ring while the Hunter stands at it by day — {"queued":true,"built":"tower","model":true,"at":[120,600],"spot":[120,600],"ring":true,"ringR":520}
+  PASS  tower: by night the ballista swivels to its aim and its bolts are pooled — {"shots":14,"kills":9,"ringHidden":true,"towerBolts":1,"swivelDiff":0}
+  PASS  pause: the end panel has no pause hit area — {"screen":"playing","phase":"failed"}
+  PASS  framing: landscape night zoom matches portrait (short-side framing) — {"portrait":0.655,"landscape":0.655,"flare":[794,330,36]}
+  PASS  keep: the 3D keep stands in the middle of the inner ward (solid), banner up, three townsfolk on top — {"visible":true,"at":[0,0],"hallCentre":[0,0],"keep":[0,0],"villagers":3,"banner":true,"solid":true,"diag":true}
+  PASS  day (P1): the stick walks the Hunter by day; in a circle ONE contextual BUILD button shows (no side panel, no "+"); a real tap on it starts the builder — {"stickMoved":124,"context":"south:tower","gameplay":true,"build":{"x":684,"y":328,"w":148,"h":50,"disabled":false},"oldLabels":[],"circles":10,"ghosts":1,"tallPanels":0,"job":{"kind":"building","slot":"south:tower"}}
+  PASS  reload: a mid-night reload resumes the clock and the enemies — {"before":{"t":15.08,"alive":21,"records":{"runs":1,"wins":0,"bestStars":0,"bestNights":1,"bestKills":9,"totalKills":9,"totalStars":1}},"after":{"t":15.16,"alive":21,"phase":"night","records":{"runs":1,"wins":0,"bestStars":0,"bestNights":1,"bestKills":9,"totalKills":9,"totalStars":1}}}
+  PASS  records: the run records (save.survival.records) survive a reload — {"before":{"runs":1,"wins":0,"bestStars":0,"bestNights":1,"bestKills":9,"totalKills":9,"totalStars":1},"after":{"runs":1,"wins":0,"bestStars":0,"bestNights":1,"bestKills":9,"totalKills":9,"totalStars":1}}
+  PASS  cine: a fresh save opens on the K1 intro — keep close-up, captioned, the clock and the horde wait, no HUD but SKIP — {"cine":{"kind":"intro","t":0.38},"t":1.28,"elapsed":[2.88,2.88],"horde":21,"still":true,"closeUp":1.41,"caption":"PROTECT THE KEEP","labels":["survival:SKIP"],"panel":"survival-cine","gameplay":false,"stick":false,"introSeen":true}
+  PASS  cine: a real tap skips to the hand-over — HOLD THE KEEP, the night clock runs, the HUD and the stick are back — {"cine":false,"panel":null,"banner":"HOLD THE KEEP","gameplay":true,"labels":["PAUSE"],"ran":1,"zoom":1}
+  PASS  cine: a reload mid-night plays straight on (the intro opens every run, not every page load) — {"cine":false,"phase":"night","panel":null,"elapsed":4.35}
+  PASS  cine: RESTART opens on the intro again (playtest 2026-10-17: the trailer must stay) — {"kind":"intro","seen":true}
+  PASS  cine: the third dawn plays the arrival — gate open, nine 3D troops march in under REINFORCEMENTS ARRIVED!, then the end panel with the column in line — {"cine":"arrival","gateOpen":true,"relief":{"troops":9,"marching":9,"inLine":0},"troops3d":9,"caption":"REINFORCEMENTS ARRIVED!","labels":["survival:SKIP"],"panel":"survival-cine","after":{"cine":false,"panel":"survival-complete","relief":{"troops":9,"marching":0,"inLine":9},"troops3d":9,"labels":["survival:PLAY AGAIN"],"phase":"complete"}}
+  PASS  health: 0 page errors, 0 console errors, 0 failed requests — {"pageErrors":[],"consoleErrors":[],"failed":[]}
+SUMMARY 25/25 PASS

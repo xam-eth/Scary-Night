@@ -1,0 +1,11 @@
+  PASS  a fresh save opens on the intro — {"cine":"intro","t":0.17}
+SHOT intro-1-keep {"t":0.7,"caption":"PROTECT THE KEEP","zoom":1.002,"play":0.655}
+SHOT intro-2-keep-wide {"t":2.32,"caption":"PROTECT THE KEEP","zoom":0.844,"play":0.655}
+SHOT intro-3-horde {"t":4.02,"caption":"THE HORDE COMES AT NIGHT","zoom":0.624,"play":0.655}
+SHOT intro-4-captain {"t":6.02,"caption":"YOU ARE THE CAPTAIN","zoom":0.887,"play":0.655}
+SHOT intro-5-handover {"t":7.17,"caption":"YOU ARE THE CAPTAIN","zoom":0.656,"play":0.655}
+  PASS  the opening frames the keep wider than play but not cut by the bars (zoom 1.2–1.7 x play at the first caption) — {"name":"intro-1-keep","t":0.7,"caption":"PROTECT THE KEEP","zoom":1.002,"play":0.655}
+  PASS  RESTART and PLAY AGAIN open on the intro again (a save that has seen it included) — {"seen":true,"restart":"intro","ended":"survival-failed","playAgain":true,"again":"intro"}
+  PASS  a reload mid-night plays straight on (no replay) — {"cine":false,"phase":"night","elapsed":4}
+errors 0
+SUMMARY PASS (0 failed)

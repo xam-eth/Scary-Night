@@ -149,10 +149,11 @@ save, SW freshness, dan packaging sudah beres.
   akhir) memuat tangga watch lengkap: tier sekarang, warna berikutnya, sisa
   bintang, dan siluet tier terkunci — layar "Unlocks" mini ala VS tanpa konten
   baru. Murah: data sudah ada (`unlockSummary` + `UNLOCK_TIERS`).
-- **H3 — rantai sasaran run pertama.** Tiga langkah bercentang di hari 2
-  (bangun mine → bangun tower → tahan malam 2) sebagai hint chain yang naik
-  tingkat otomatis; memberi "satu tujuan visual" lanjutan setelah caption
-  intro habis.
+- **H3 — rantai sasaran run pertama. (TERBANGUN BUILD 22, 2026-10-20;**
+  harness 94/94 + plotsqa §14; playtest manusia masih terbuka**)** Tiga langkah
+  bercentang di hari 2 (bangun mine → bangun tower → tahan malam 2) sebagai
+  hint chain yang naik tingkat otomatis; memberi "satu tujuan visual"
+  lanjutan setelah caption intro habis.
 - **H4 — aturan ulang cine (butuh persetujuan user).** Trailer pembuka tetap
   ada dan utuh pada run pertama per save (permintaan user dihormati); run
   berikutnya memainkan versi pendek ±2,5 dtk (horn + satu caption) yang tetap

@@ -1456,6 +1456,9 @@ export class SurvivalMode {
     this.builderJob = job;
     this.selectedRoom = s.selectedRoom || null;
     this.nightsCompleted = clamp(Math.floor(Number(s.nightsCompleted) || 0), 0, 3);
+    // BUILD 22 (H3/R22): the objective chain is a first-run teacher — a save
+    // that has already closed it never sees it again
+    this._chainEligible = !s.chainDone;
     this.waveIndex = Math.max(0, Math.floor(Number(s.waveIndex) || 0));
     this.breakerIndex = Math.max(0, Math.floor(Number(s.breakerIndex) || 0));
     this.individualIndex = Math.max(0, Math.floor(Number(s.individualIndex) || 0));
@@ -2026,6 +2029,7 @@ export class SurvivalMode {
       g.mansion.update(dt, g);
       g.player.anim(dt);
     }
+    this._updateChain();
     this._saveT += dt;
     if (this._saveT >= SAVE_EVERY) { this._saveT = 0; this._persist(false); }
   }
@@ -3650,6 +3654,49 @@ export class SurvivalMode {
     return best;
   }
 
+  /* ---------------- BUILD 22 (H3/R22): the first run's objective chain ---- */
+
+  /**
+   * The run-first goal chain: three checked steps on day 2 (build a mine,
+   * build a tower, hold night 2) as a hint chain that levels itself up
+   * automatically, so "one clear visual goal" survives the intro captions
+   * (research production & hook H3 / UX R22). It reads state, not events: a
+   * mine the player already built on day 1 checks itself the moment the
+   * chain appears. Shown once per save (`save.survival.chainDone`); a failed
+   * run that never closed the chain teaches its own day 2 again. The third
+   * step checks when night 2 is cleared (or once two nights are banked), and
+   * the whole chain stays up for a short all-checked celebration at dawn
+   * before it goes away for good.
+   */
+  _updateChain() {
+    if (this.phase !== 'day' && this.phase !== 'night') return;
+    const built = (type) => this.dayPoints().some((p) => p.kind === 'slot' && p.type === type && p.built);
+    const held = this.nightsCompleted >= 2 || (this.day === 2 && this.phase === 'night' && !!this.cleared);
+    const steps = [
+      { id: 'mine', label: 'BUILD A MINE', done: built('mine') },
+      { id: 'tower', label: 'BUILD A TOWER', done: built('tower') },
+      { id: 'night2', label: 'HOLD NIGHT 2', done: held },
+    ];
+    const prev = this._chain;
+    for (const step of steps) if (step.done && !(prev && prev.byid[step.id])) step.doneAt = this.uiClock;
+    const all = steps.every((step) => step.done);
+    let allAt = prev && prev.allAt != null ? prev.allAt : null;
+    if (all && allAt == null) {
+      allAt = this.uiClock;
+      const s = this.game.save && this.game.save.survival;
+      if (s && !s.chainDone) { s.chainDone = true; this._persist(true); }
+    }
+    if (!all) allAt = null;
+    const celebrating = allAt != null && this.uiClock - allAt < 2.6;
+    const visible = !!this._chainEligible && (celebrating || (this.day === 2 && !all));
+    const byid = {};
+    for (const step of steps) byid[step.id] = step.done;
+    this._chain = { visible, all, allAt, steps, byid };
+  }
+
+  /** What the HUD draws and QA reads: the chain's steps and its visibility. */
+  objectiveChain() { return this._chain || null; }
+
   /* ---------------- building ---------------- */
 
   startBuild(type, slotId = null) {
@@ -4073,6 +4120,9 @@ export class SurvivalMode {
     });
     // BUILD 17 (R8): a new run comes at the gates from a new side
     this.runSeed = this.newRunSeed();
+    // BUILD 22: a new run re-reads whether this save still needs the teacher
+    this._chain = null;
+    this._chainEligible = !!(g.save && g.save.survival) ? !g.save.survival.chainDone : true;
     this._resetNightFx();
     this._fields.clear();
     for (const e of g.mansion.entrances) {

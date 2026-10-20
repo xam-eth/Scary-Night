@@ -1091,6 +1091,91 @@ check('B21: the garrison is the captain\'s character family (graded, crossbow in
     && b21.boltYs.length > 0 && b21.boltYs.every((y) => y > 50 && y < 120),
   b21);
 
+/* ---- 14. BUILD 22 (H3/R22): the first run's objective chain ---- */
+const b22a = await page.evaluate(() => {
+  const g = window.__LN; const m = g.survival;
+  delete g.save.survival.chainDone;          // a save that never met the teacher
+  m.restart();                               // night 1: the captions own the goals
+  window.__pStep(60);
+  const n1 = m.objectiveChain();
+  m.completeNight();                         // the first dawn raises the chain
+  m.ackRewards();
+  window.__pStep(6);
+  const d2 = m.objectiveChain();
+  m.gold = 999; m.wood = 999;
+  const mine = m.dayPoints().find((p) => p.kind === 'slot' && p.type === 'mine' && !p.locked);
+  m.startBuild('mine', mine.id);
+  // step the sim without rendering while the builder works (swiftshader frames
+  // are ~80 ms each; a screenshot starves behind a long render loop)
+  for (let i = 0; i < 900 && m.builderJob; i++) window.__pOrig.call(g, 1 / 60);
+  window.__pStep(3);
+  const afterMine = m.objectiveChain();
+  const lab = g._survivalLabels && g._survivalLabels.objectiveChain;
+  return { n1, d2, afterMine, lab };
+});
+await shot('b22-1-chain-day2');
+const b22b = await page.evaluate(() => {
+  const g = window.__LN; const m = g.survival;
+  const tower = m.dayPoints().find((p) => p.kind === 'slot' && p.type === 'tower' && !p.locked && !p.built);
+  m.startBuild('tower', tower.id);
+  for (let i = 0; i < 900 && m.builderJob; i++) window.__pOrig.call(g, 1 / 60);
+  window.__pStep(3);
+  const afterTower = m.objectiveChain();
+  m.startNight();
+  window.__pStep(30);
+  const night = m.objectiveChain();
+  const lab = g._survivalLabels && g._survivalLabels.objectiveChain;
+  return { afterTower, night, lab };
+});
+await shot('b22-2-chain-night2');
+const b22c = await page.evaluate(() => {
+  const g = window.__LN; const m = g.survival;
+  m.cleared = m.cleared || { at: m.elapsed, dawnAt: m.elapsed + 1, saved: 0, bonus: 0, fled: 0 };
+  window.__pStep(6);
+  const held = m.objectiveChain();
+  const savedFlag = !!(g.save.survival && g.save.survival.chainDone);
+  m.completeNight();
+  m.ackRewards();
+  window.__pStep(6);
+  const celebrating = m.objectiveChain();
+  for (let i = 0; i < 180; i++) window.__pOrig.call(g, 1 / 60);
+  window.__pStep(2);
+  const gone = m.objectiveChain();
+  return { held, savedFlag, celebrating, gone };
+});
+check('B22: day 2 raises the first run\'s objective chain on the left edge (three open steps, the HUD label agrees), the steps check themselves off the world as the mine and a tower rise, the chain teaches into night 2, and clearing it banks save.chainDone, celebrates at dawn and leaves for good',
+  b22a.n1 && b22a.n1.visible === false && b22a.d2 && b22a.d2.visible === true && b22a.d2.steps.length === 3
+    && b22a.d2.steps.every((st) => !st.done) && b22a.lab && b22a.lab.visible === true && b22a.lab.steps.length === 3
+    && b22a.afterMine.steps[0].done && !b22a.afterMine.steps[1].done
+    && b22b.afterTower.steps[1].done && !b22b.afterTower.steps[2].done
+    && b22b.night.visible && !b22b.night.steps[2].done && b22b.lab && b22b.lab.visible === true
+    && b22c.held.all && b22c.savedFlag && b22c.celebrating.visible && b22c.gone.visible === false,
+  { a: b22a, b: b22b, c: b22c });
+
+/* ---- 15. BUILD 23: the garrison wears its own kit, not the captain's face ---- */
+const b23 = await page.evaluate(async () => {
+  const g = window.__LN; const m = g.survival;
+  const w = window.__pW;
+  const mesh = (w.survivalGuardMeshes || [])[0];
+  if (!mesh || !mesh.userData.troop) return { guard: false };
+  const names = new Set();
+  mesh.userData.troop.model.traverse((o) => { if (o.name) names.add(o.name); });
+  const wanted = ['guard-helm', 'guard-helm-brim', 'guard-plume', 'guard-collar', 'guard-pauldron-l', 'guard-pauldron-r', 'guard-skirt', 'guard-stripe', 'guard-emblem', 'guard-belt', 'guard-pouch', 'guard-quiver', 'guard-shield', 'guard-shield-boss'];
+  const missing = wanted.filter((n) => !names.has(n));
+  let hands = 0, bows = 0;
+  mesh.userData.troop.model.traverse((o) => { if (o.name === 'R_Hand') hands++; if (o.name === 'troop-crossbow') bows++; });
+  // frame the guard with the captain beside him: one frame, two silhouettes
+  const gp = mesh.getWorldPosition(new mesh.position.constructor());
+  g.player.x = gp.x + 46; g.player.y = gp.y + 30;
+  g.renderer.snapCamera(gp.x + 10, gp.y + 6);
+  m._userZoom = 1.6; m._zoomGoal = null;
+  window.__pStep(3);
+  return { guard: true, missing, hands, bows };
+});
+await shot('b23-1-guard-concept');
+check('B23: a live gate guard carries the concept sheet\'s kit (kettle helm + plume, collar, pauldrons, gambeson skirt + stripe + emblem, belt kit, back shield) while still holding the garrison crossbow in the right hand',
+  b23.guard && b23.missing.length === 0 && b23.hands >= 1 && b23.bows >= 1, b23);
+
 fs.writeFileSync(path.join(OUT, 'plotsqa.json'), JSON.stringify({ results, errors }, null, 2));
 console.log(`errors ${errors.length}`);
 console.log(`SUMMARY ${results.length - failures}/${results.length} PASS`);

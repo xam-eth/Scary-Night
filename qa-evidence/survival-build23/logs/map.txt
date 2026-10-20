@@ -1,0 +1,3 @@
+plots: south:tower@(120,600) ward@(-330,-260) south@(-330,260) north@(330,-260) north:tower@(-120,-600) west@(-600,260) west:tower@(-870,115) east@(600,-260) east:tower@(870,-115) northwest@(-600,-260) northwest:tower@(-870,-427) southeast@(465,-500) southeast:tower@(870,427) northeast@(-465,500) southwest@(-465,-500)
+armory (330,260) arms (600,260) gate (0,693) home (240,0)
+SUMMARY 230/230 layout checks pass
