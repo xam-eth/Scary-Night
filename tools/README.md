@@ -19,6 +19,7 @@ Satu pintu QA: `bash tools/chain.sh` (Fase 2 direname `tools/chain.sh`)
 | survival-look.mjs | 12 shot look-pass (siang/malam, zoom) |
 | shots.mjs | page-error sweep lintas screen |
 | glbtest.mjs | integritas GLB/aset (byte, lisensi, klip, tulang, pack user) |
+| probe-horde-view.mjs | render terkontrol rig horde pack (tampak depan + profil, pose walk) untuk verifikasi pose/arah sesudah perubahan rig; argumen 1 = direktori output |
 | map.mjs | peta bailey 230 check |
 | bundlecheck.mjs | budget bundle & daftar aset rilis |
 | structaudit.mjs | audit struktur: graph import, orphan, pelanggaran lapis, matriks tools, referensi aset (pass perapian 2026-10-21) |
