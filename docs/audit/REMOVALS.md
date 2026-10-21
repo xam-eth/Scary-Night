@@ -26,6 +26,13 @@ duplikat murni; SHA dicatat di sini supaya provenance tidak hilang.
 | 15 tools satu-pakai (asset-sheet, audit-play×3, brandassets, clicktest, export-house, frameqa, frameview, makeicons, qa-char, qa-final, qa-pitch, shot-char, shotbrowser) | `tools/archive/` | refs = 0 di semua korpus; outputnya sudah jadi evidence committed. Disimpan (bukan dihapus) agar evidence tetap reproducibel |
 | `tools/.probe-pack24.mjs` | `tools/archive/probe-pack24.mjs` | probe satu-pakai BUILD 24; sheet-nya sudah di `qa-evidence/survival-build24/` |
 
+## File yang dihapus setelah dipakai sekali
+
+| File | Alasan | Reproducibilitas |
+| --- | --- | --- |
+| `tools/.refactor-move.mjs` | skrip satu-pakai pemindahan Fase 2 (26 move/45 sentuh); tak sengaja ikut ter-commit di `ef707ba`. Semua pemindahannya sudah selesai, terverifikasi hijau (harness/glbtest/structaudit) dan tercermin di tree | byte aslinya tetap ada di riwayat git (`ef707ba:tools/.refactor-move.mjs`) |
+| `tools/.rerun-red.sh` | runner satu-pakai rerun gate merah (map/shots/plotsqa) 2026-10-21; tidak pernah di-track git | perintah rerun tercatat di `qa-evidence/survival-build24/README.md` |
+
 ## Yang TIDAK disentuh (masih terpakai, terbukti)
 
 - Seluruh `assets/*` (8 dir, 126 file: 100 % tereferensi kode/sw/index).

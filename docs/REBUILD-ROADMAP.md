@@ -18,6 +18,23 @@
 
 **QA:** harness 96+ check hijau termasuk check B24 baru (peran berbeda-beda dari satu pack, palet identitas); plotsqa §15 diganti assertion `person-rig-Warrior` + crossbow di tangan; glbtest memeriksa pack (5 mesh/5 tekstur, role lengkap) dan pack zombie (10 skin, 1 klip) sebagai sumber musuh BUILD 25; fxshots cacheKey `duskhold-troop-look-v2`. Stamp `index.html` '24', `sw.js` `duskhold-v24`.
 
+**Hasil rantai final (2026-10-21, state `ef707ba` + `b481537`):** `tools/chain.sh`
+dijalankan penuh — **13/13 gate EXIT=0**: harness 96 PASS/0 FAIL, plotsqa 37/37,
+devqa 25/25, envqa all assertions + 0 page error, intro 0 failed, fxshots 16/16,
+swtest all PASS, layoutqa semua seksi PASS, look errors 0, shots pageErrors=0,
+glbtest all PASS/0 FAIL, map 230/230, bundlecheck all PASS. Run penuh pertama
+sebelumnya mengekspos tiga masalah tools yang lalu diperbaiki di `b481537`
+(tools-only, tanpa mengubah game): `chain.sh` memanggil nama file gate yang tidak
+ada untuk shots/map (MODULE_NOT_FOUND), check V8 masih mengontrak kapten
+pra-BUILD 24 (`look===1`, >=3x tekstur Tripo) padahal kontrak BUILD 24 adalah
+tekstur pack + rim/lift (`uCapLook=0`), dan check §15 menuntut nama
+`person-rig-Warrior` yang di-rename `troop3d.make()` menjadi `troop-3d-<kind>` —
+assertion diganti ke identitas pack yang benar-benar bertahan (mesh
+`person-Warrior` + skeleton Head/Hip/R_Hand/L_Upperarm + root `troop-3d-*`).
+Klaim "semua EXIT=0" pada commit evidence `3443228` dibuat saat rantai masih
+berjalan dan **tidak akurat**; koreksi lengkapnya ada di
+`qa-evidence/survival-build24/README.md` bagian "Koreksi riwayat".
+
 **Terbuka:** musuh dari pack zombie (BUILD 25), acceptance visual manusia, playtest perangkat.
 
 ## Pass perapian struktur — audit data + modularisasi bertahap (2026-10-21)
