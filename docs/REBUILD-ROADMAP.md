@@ -20,6 +20,38 @@
 
 **Terbuka:** musuh dari pack zombie (BUILD 25), acceptance visual manusia, playtest perangkat.
 
+## Pass perapian struktur — audit data + modularisasi bertahap (2026-10-21)
+
+**Mandat user:** bersihkan framework & file test untuk dev yang terstruktur,
+audit dulu dengan debug supaya tidak menghapus file terpakai, buat sistem
+modular per bagian agar mudah maintenance dan dipindahtangankan/dijual, dan
+semua harus dibuktikan dengan data + riset struktur game yang benar.
+
+**Riset:** struktur repo game (kode inti/sistem/aset/tools/docs), satu akar
+source + organisasi per domain + satu konvensi nama, "satu folder satu axis",
+"flat sampai sakit", Core/ untuk sistem bersama, dan pola decoupling Game
+Programming Patterns (Component/Observer/Event Queue/Service Locator) —
+sitasi lengkap di `docs/RESTRUCTURE-AUDIT.md` §2.
+
+**Audit (tools/structaudit.mjs, output docs/audit/struct-audit.json):** 48 file
+src / 45.592 LOC; 7 file > 1.800 LOC; fan-in tertinggi core/util (23) &
+core/config (16); 0 modul yatim; 6 pelanggaran lapis; 15 dari 40 tools tanpa
+pemakai (refs 0); aset 100 % terpakai; 5 zip ±101,7 MB sampah root.
+
+**Fase 1 (selesai, commit ini):** 15 tools scratch + 1 probe di-`git mv` ke
+`tools/archive/` (outputnya sudah jadi evidence); `HUNTER_GLB.txt` →
+`docs/provenance/`; 5 zip root dihapus dengan SHA tercatat di
+`docs/audit/REMOVALS.md` (ekstraknya sudah vendored byte-for-byte); katalog
+`tools/README.md`; peta modul + aturan lapis + seam pecah file raksasa +
+checklist handoff di `docs/ARCHITECTURE.md`.
+
+**Fase 2 (berikutnya):** pemindahan folder modul (render3d/sim/meta),
+`hud.js`→`ui/`, `migrateSave`→`core/save.js`, renama chain, index docs.
+**Fase 3:** pecah 7 file raksasa per seam, inversi shop→sim via event (perilaku
+shop tidak diubah), package.json root. **Fase 4:** CREDITS gabungan + onboarding
++ tag rilis. Gerbang tiap fase: rantai QA penuh + structaudit delta nol
+pelanggaran baru.
+
 ## Pass BUILD 21 — empat bug visual dari user (2026-10-19)
 
 **Pesan user:** "disini ada beberapa bug yg harus di fix sebelum lanjut dev yg lain. 1. pasukan perlu di redesign karna tidak singkron dengan character buat pasukan baru, 2. animasi shoter tidak tepat kelarnya dari bawah kali bukan laras panah, 3. animasi character jalan nya terlalu lambat, sedang di tahap build itu lari tapi saat bertempur animasinya walk, harusnya run, 4. nimes juga perlu di redesign dengan visual yg lebih konsisten dengan tema game". Keempatnya dikerjakan dulu sebelum item riset berikutnya.

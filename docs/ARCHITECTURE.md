@@ -1,0 +1,81 @@
+# ARSITEKTUR DUSKHOLD / SCARY NIGHT — peta modul & aturan main
+
+**Status:** dokumen hidup pass perapian 2026-10-21 (lihat
+`docs/RESTRUCTURE-AUDIT.md` untuk data & fase). Angka import/LOC dari
+`tools/structaudit.mjs` → `docs/audit/struct-audit.json`.
+
+## 1. Lapis & aturan dependensi
+
+| Lapis | Isi | Boleh impor | Dilarang impor |
+| --- | --- | --- | --- |
+| `src/core/` | engine-agnostic: config, util, input, audio, render helpers, save (F3a) | sesama core | game, ui, shop, vendor-three |
+| `src/game/render3d/` (Fase 2) | semua modul three.js: world3d, buildings3d, enemy3d, troop3d, valen3d, pack3d, crowd3d, envkit, lightbake | core, vendor | sim, ui, shop |
+| `src/game/sim/` (Fase 2) | simulasi & aturan: survival, economy, enemies, fortress, objectives, weapons, hunt, house, mansion, exterior, haunts | core | render3d (lewat kontrak data), ui, shop |
+| `src/game/meta/` (Fase 2) | sutradara sesi: director, coach, narrative, climax, informant | core, sim (read-only) | render3d, ui |
+| `src/game/game.js` | **composition root** — merakit semua lapis | semua lapis (hak root) | — |
+| `src/ui/` | DOM/HUD/screens: components, icons, screens, storycards, survival, survivalIcons, hud (F3b) | core, game (kontrak baca) | shop langsung (lewat game) |
+| `src/shop/` | monetisasi: iap, ads — **perilaku tidak boleh diubah** (constraint user) | core | sim/render langsung (Fase 3: event) |
+| `src/vendor/` | three.js + loader, byte-for-byte | — | — |
+
+Pelanggaran terukur sebelum perapian: 6 (structaudit). Sesudah Fase 2 sisa 0
++ 2 yang didokumentasikan sebagai hak composition root (`game.js→ui/*`).
+
+## 2. Kontrak antar-modul yang sudah terbukti dipakai (fan-in)
+
+- `core/util.js` (23 importir) & `core/config.js` (16) — satu-satunya tempat
+  tuning numbers & helper murni; modul baru WAJIB lewat sini, tidak boleh
+  menebar konstanta.
+- `game/economy.js` (8) — pemilik save `save.survival` + migrasi (migrasi
+  pindah ke `core/save.js` di Fase 2, economy tetap pemilik aturan).
+- `game/valen3d.js` (8) — pemilik kapten + shader grade (`buildUniformGrade`);
+  pack3d memasok rig kapten (BUILD 24).
+- `game/enemy3d.js` (6) — pemilik rig horde + `cloneRig`; `game/weapons.js`
+  (6) — pemilik bolt/ballista.
+- Kontrak lintas-modul yang dijaga QA: nama tulang `R_Hand`/`Head`/`Hip`
+  (mount crossbow), cacheKey shader `duskhold-*-look-v2`, clip names
+  walk/run/shot/claw/sword, `TROOP_ASSETS.soldier === VALEN_MODEL_URL`.
+
+## 3. Konvensi nama (F8)
+
+- Suffix `3d` = modul render three.js (world3d, troop3d, pack3d…).
+- Tanpa suffix = logika/simulasi (survival, economy, enemies…).
+- `src/ui/survival.js` vs `src/game/survival.js`: UI-panel vs simulasi —
+  prefix lapis sudah membedakannya; jangan digabung.
+- File tools: `survival-<gate>.mjs` untuk gate QA survival, `<nama>.mjs`
+  untuk gate umum; chain satu pintu `tools/chain.sh` (renama dari
+  `.chain-b24.sh` di Fase 2).
+
+## 4. Seam pecah file raksasa (F2, dieksekusi Fase 3, satu pecahan = satu chain)
+
+| File | LOC | Seam kandidat |
+| --- | --- | --- |
+| game/survival.js | 4.926 | (a) gelombang & jadwal malam; (b) plot/bangunan & antrian builder; (c) rantai sasaran + reward (B22); (d) fase siang/malam & zoom kamera |
+| game/world3d.js | 4.319 | (a) perakitan scene & light; (b) guard survival & mount troop; (c) kamera/drag/pinch; (d) bake/quality |
+| game/game.js | 3.034 | composition root tetap tipis: loop, mode, wiring; aturan mansion pindah ke sim/ |
+| ui/screens.js | 2.998 | per-screen module (menu, pause, end, options) + shell |
+| ui/survival.js | 2.389 | HUD survival vs panel bangun vs chain-objective widget |
+| game/envkit.js | 2.104 | kit props per bioma |
+| game/enemies.js | 1.814 | AI pathing vs stat/wave definitions |
+
+## 5. Menambah modul baru (checklist owner)
+
+1. Tentukan lapis (§1) — satu folder = satu axis (riset: jangan campur axis).
+2. Export API sempit; state bersama lewat `core/config.js`/event, bukan
+   referensi silang (Game Programming Patterns: decoupling = bisa dipahami
+   terpisah).
+3. Tambahkan check ke `tools/harness.mjs` (kontrak nama/URL) atau gate terkait.
+4. Jalankan `tools/chain.sh` + `tools/structaudit.mjs` (delta pelanggaran = 0).
+5. Doc satu paragraf di §2 dokumen ini + baris di `tools/README.md`.
+
+## 6. Checklist handoff / jual (Fase 4)
+
+- [ ] `CREDITS.md` gabungan: pack aset + lisensi (KayKit CC0, egyptian pack,
+      zombie pack, three.js) — sumber per-pack sudah di `assets/*/LICENSE*`
+      dan diverifikasi `glbtest`.
+- [ ] `docs/provenance/` lengkap (HUNTER_GLB.txt sudah; SHA zip bekas sumber
+      aset tercatat di `docs/audit/REMOVALS.md`).
+- [ ] README onboarding: satu perintah setup (`npm ci` di tools/), satu
+      perintah QA (`tools/chain.sh`), satu perintah serve.
+- [ ] Tag rilis ber-stamp BUILD + `sw.js` VERSION sinkun (konvensi berjalan).
+- [ ] Rantai QA hijau sebagai acceptance otomatis yang bisa dijalankan owner
+      baru tanpa pengetahuan tribal.

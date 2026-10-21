@@ -1,0 +1,584 @@
+{
+  "generated": "2026-10-21T01:20:59.289Z",
+  "src": {
+    "files": 48,
+    "locTotal": 45592,
+    "biggest": [
+      [
+        "src/game/survival.js",
+        4926
+      ],
+      [
+        "src/vendor/three/GLTFLoader.js",
+        4891
+      ],
+      [
+        "src/game/world3d.js",
+        4319
+      ],
+      [
+        "src/game/game.js",
+        3034
+      ],
+      [
+        "src/ui/screens.js",
+        2998
+      ],
+      [
+        "src/ui/survival.js",
+        2389
+      ],
+      [
+        "src/game/envkit.js",
+        2104
+      ],
+      [
+        "src/game/enemies.js",
+        1814
+      ],
+      [
+        "src/vendor/three/BufferGeometryUtils.js",
+        1436
+      ],
+      [
+        "src/game/player.js",
+        1143
+      ],
+      [
+        "src/game/director.js",
+        1129
+      ],
+      [
+        "src/game/enemy3d.js",
+        1127
+      ]
+    ],
+    "orphans": [],
+    "layerViolations": [
+      "src/core/util.js -> src/game/economy.js",
+      "src/game/game.js -> src/ui/screens.js",
+      "src/game/game.js -> src/ui/survival.js",
+      "src/game/hud.js -> src/ui/icons.js",
+      "src/game/hud.js -> src/ui/components.js",
+      "src/shop/iap.js -> src/game/economy.js"
+    ],
+    "fanIn": [
+      [
+        "src/core/util.js",
+        23
+      ],
+      [
+        "src/core/config.js",
+        16
+      ],
+      [
+        "src/vendor/three/three.module.min.js",
+        10
+      ],
+      [
+        "src/game/economy.js",
+        8
+      ],
+      [
+        "src/game/valen3d.js",
+        8
+      ],
+      [
+        "src/game/hunt.js",
+        7
+      ],
+      [
+        "src/game/enemy3d.js",
+        6
+      ],
+      [
+        "src/game/weapons.js",
+        6
+      ],
+      [
+        "src/game/mansion.js",
+        5
+      ],
+      [
+        "src/vendor/three/GLTFLoader.js",
+        5
+      ],
+      [
+        "src/game/enemies.js",
+        4
+      ],
+      [
+        "src/game/envkit.js",
+        4
+      ]
+    ]
+  },
+  "tools": [
+    {
+      "file": "tools/asset-sheet.mjs",
+      "refs": 0,
+      "inPkg": false,
+      "inDocs": false,
+      "inChain": false,
+      "inCi": false,
+      "used": false
+    },
+    {
+      "file": "tools/audit-play.mjs",
+      "refs": 0,
+      "inPkg": false,
+      "inDocs": false,
+      "inChain": false,
+      "inCi": false,
+      "used": false
+    },
+    {
+      "file": "tools/audit-play2.mjs",
+      "refs": 0,
+      "inPkg": false,
+      "inDocs": false,
+      "inChain": false,
+      "inCi": false,
+      "used": false
+    },
+    {
+      "file": "tools/audit-play3.mjs",
+      "refs": 0,
+      "inPkg": false,
+      "inDocs": false,
+      "inChain": false,
+      "inCi": false,
+      "used": false
+    },
+    {
+      "file": "tools/brandassets.mjs",
+      "refs": 0,
+      "inPkg": false,
+      "inDocs": false,
+      "inChain": false,
+      "inCi": false,
+      "used": false
+    },
+    {
+      "file": "tools/bundle.mjs",
+      "refs": 57,
+      "inPkg": false,
+      "inDocs": true,
+      "inChain": true,
+      "inCi": true,
+      "used": true
+    },
+    {
+      "file": "tools/bundlecheck.mjs",
+      "refs": 24,
+      "inPkg": false,
+      "inDocs": true,
+      "inChain": true,
+      "inCi": true,
+      "used": true
+    },
+    {
+      "file": "tools/clicktest.mjs",
+      "refs": 0,
+      "inPkg": false,
+      "inDocs": false,
+      "inChain": false,
+      "inCi": false,
+      "used": false
+    },
+    {
+      "file": "tools/deploy-web.sh",
+      "refs": 4,
+      "inPkg": false,
+      "inDocs": false,
+      "inChain": true,
+      "inCi": false,
+      "used": true
+    },
+    {
+      "file": "tools/envqa.mjs",
+      "refs": 31,
+      "inPkg": false,
+      "inDocs": true,
+      "inChain": false,
+      "inCi": false,
+      "used": true
+    },
+    {
+      "file": "tools/evidence-images.mjs",
+      "refs": 1,
+      "inPkg": false,
+      "inDocs": true,
+      "inChain": false,
+      "inCi": false,
+      "used": true
+    },
+    {
+      "file": "tools/export-house.mjs",
+      "refs": 0,
+      "inPkg": false,
+      "inDocs": false,
+      "inChain": false,
+      "inCi": false,
+      "used": false
+    },
+    {
+      "file": "tools/frameqa.mjs",
+      "refs": 0,
+      "inPkg": false,
+      "inDocs": false,
+      "inChain": false,
+      "inCi": false,
+      "used": false
+    },
+    {
+      "file": "tools/frameview.mjs",
+      "refs": 0,
+      "inPkg": false,
+      "inDocs": false,
+      "inChain": false,
+      "inCi": false,
+      "used": false
+    },
+    {
+      "file": "tools/geo.mjs",
+      "refs": 9,
+      "inPkg": false,
+      "inDocs": true,
+      "inChain": false,
+      "inCi": false,
+      "used": true
+    },
+    {
+      "file": "tools/glbtest.mjs",
+      "refs": 28,
+      "inPkg": false,
+      "inDocs": true,
+      "inChain": false,
+      "inCi": false,
+      "used": true
+    },
+    {
+      "file": "tools/harness.mjs",
+      "refs": 73,
+      "inPkg": false,
+      "inDocs": true,
+      "inChain": false,
+      "inCi": false,
+      "used": true
+    },
+    {
+      "file": "tools/layoutqa.mjs",
+      "refs": 26,
+      "inPkg": false,
+      "inDocs": true,
+      "inChain": false,
+      "inCi": false,
+      "used": true
+    },
+    {
+      "file": "tools/makeicons.mjs",
+      "refs": 0,
+      "inPkg": false,
+      "inDocs": false,
+      "inChain": false,
+      "inCi": false,
+      "used": false
+    },
+    {
+      "file": "tools/nav.mjs",
+      "refs": 8,
+      "inPkg": false,
+      "inDocs": true,
+      "inChain": false,
+      "inCi": false,
+      "used": true
+    },
+    {
+      "file": "tools/playpack.sh",
+      "refs": 2,
+      "inPkg": false,
+      "inDocs": true,
+      "inChain": true,
+      "inCi": false,
+      "used": true
+    },
+    {
+      "file": "tools/qa-char.mjs",
+      "refs": 0,
+      "inPkg": false,
+      "inDocs": false,
+      "inChain": false,
+      "inCi": false,
+      "used": false
+    },
+    {
+      "file": "tools/qa-final.mjs",
+      "refs": 0,
+      "inPkg": false,
+      "inDocs": false,
+      "inChain": false,
+      "inCi": false,
+      "used": false
+    },
+    {
+      "file": "tools/qa-pitch.mjs",
+      "refs": 0,
+      "inPkg": false,
+      "inDocs": false,
+      "inChain": false,
+      "inCi": false,
+      "used": false
+    },
+    {
+      "file": "tools/shot-char.mjs",
+      "refs": 0,
+      "inPkg": false,
+      "inDocs": false,
+      "inChain": false,
+      "inCi": false,
+      "used": false
+    },
+    {
+      "file": "tools/shotbrowser.mjs",
+      "refs": 0,
+      "inPkg": false,
+      "inDocs": false,
+      "inChain": false,
+      "inCi": false,
+      "used": false
+    },
+    {
+      "file": "tools/structaudit.mjs",
+      "refs": 0,
+      "inPkg": false,
+      "inDocs": false,
+      "inChain": false,
+      "inCi": false,
+      "used": false
+    },
+    {
+      "file": "tools/survival-balance.mjs",
+      "refs": 16,
+      "inPkg": false,
+      "inDocs": true,
+      "inChain": false,
+      "inCi": false,
+      "used": true
+    },
+    {
+      "file": "tools/survival-bots.mjs",
+      "refs": 3,
+      "inPkg": false,
+      "inDocs": true,
+      "inChain": false,
+      "inCi": false,
+      "used": true
+    },
+    {
+      "file": "tools/survival-devqa.mjs",
+      "refs": 24,
+      "inPkg": false,
+      "inDocs": true,
+      "inChain": false,
+      "inCi": false,
+      "used": true
+    },
+    {
+      "file": "tools/survival-fxshots.mjs",
+      "refs": 24,
+      "inPkg": false,
+      "inDocs": true,
+      "inChain": false,
+      "inCi": false,
+      "used": true
+    },
+    {
+      "file": "tools/survival-intro.mjs",
+      "refs": 17,
+      "inPkg": false,
+      "inDocs": true,
+      "inChain": false,
+      "inCi": false,
+      "used": true
+    },
+    {
+      "file": "tools/survival-look.mjs",
+      "refs": 22,
+      "inPkg": false,
+      "inDocs": true,
+      "inChain": false,
+      "inCi": false,
+      "used": true
+    },
+    {
+      "file": "tools/survival-map.mjs",
+      "refs": 23,
+      "inPkg": false,
+      "inDocs": true,
+      "inChain": false,
+      "inCi": false,
+      "used": true
+    },
+    {
+      "file": "tools/survival-plotsqa.mjs",
+      "refs": 29,
+      "inPkg": false,
+      "inDocs": true,
+      "inChain": false,
+      "inCi": false,
+      "used": true
+    },
+    {
+      "file": "tools/survival-uxprobe.mjs",
+      "refs": 11,
+      "inPkg": false,
+      "inDocs": true,
+      "inChain": false,
+      "inCi": false,
+      "used": true
+    },
+    {
+      "file": "tools/survivalshots.mjs",
+      "refs": 29,
+      "inPkg": false,
+      "inDocs": true,
+      "inChain": false,
+      "inCi": false,
+      "used": true
+    },
+    {
+      "file": "tools/swtest.mjs",
+      "refs": 22,
+      "inPkg": false,
+      "inDocs": true,
+      "inChain": false,
+      "inCi": false,
+      "used": true
+    }
+  ],
+  "assets": [
+    {
+      "dir": "brand",
+      "files": 22,
+      "referenced": 22
+    },
+    {
+      "dir": "buildings",
+      "files": 59,
+      "referenced": 59
+    },
+    {
+      "dir": "cards",
+      "files": 2,
+      "referenced": 2
+    },
+    {
+      "dir": "env-kit",
+      "files": 22,
+      "referenced": 22
+    },
+    {
+      "dir": "fonts",
+      "files": 5,
+      "referenced": 5
+    },
+    {
+      "dir": "monsters",
+      "files": 6,
+      "referenced": 6
+    },
+    {
+      "dir": "troops",
+      "files": 8,
+      "referenced": 8
+    },
+    {
+      "dir": "ui",
+      "files": 2,
+      "referenced": 2
+    }
+  ],
+  "root": [
+    {
+      "file": ".gitignore",
+      "referenced": true
+    },
+    {
+      "file": "Godot_v4.6.2-stable_linux.x86_64.zip",
+      "referenced": false
+    },
+    {
+      "file": "HUNTER_GLB.txt",
+      "referenced": false
+    },
+    {
+      "file": "Ultimate Monsters Bundle-glb.zip",
+      "referenced": false
+    },
+    {
+      "file": "bundle.config.json",
+      "referenced": true
+    },
+    {
+      "file": "delete.html",
+      "referenced": true
+    },
+    {
+      "file": "egyptian_people.glb",
+      "referenced": true
+    },
+    {
+      "file": "hunter_run_walk_claw_sword_shot.glb",
+      "referenced": true
+    },
+    {
+      "file": "index.html",
+      "referenced": true
+    },
+    {
+      "file": "manifest.webmanifest",
+      "referenced": true
+    },
+    {
+      "file": "offline.html",
+      "referenced": true
+    },
+    {
+      "file": "polyart_zombies_with_animations_free_pack.glb",
+      "referenced": true
+    },
+    {
+      "file": "privacy.html",
+      "referenced": true
+    },
+    {
+      "file": "styles.css",
+      "referenced": true
+    },
+    {
+      "file": "sw.js",
+      "referenced": true
+    },
+    {
+      "file": "web_nothreads_debug.zip",
+      "referenced": false
+    },
+    {
+      "file": "web_nothreads_release.zip",
+      "referenced": false
+    },
+    {
+      "file": "werewolf+3d+model.zip",
+      "referenced": true
+    },
+    {
+      "file": "werewolf-3d-model.glb",
+      "referenced": true
+    },
+    {
+      "file": "zombie+3d+model.glb",
+      "referenced": true
+    }
+  ]
+}
