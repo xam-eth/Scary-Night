@@ -1,0 +1,479 @@
+{
+  "capturedAt": "2026-10-21T19:41:21.547Z",
+  "results": [
+    {
+      "name": "night-00s",
+      "file": "qa-evidence/phase3-screens/shots/night-00s.png",
+      "meanLuma": 90.4,
+      "darkPct": 6.2,
+      "quality": 3,
+      "state": {
+        "t": 0.2,
+        "alive": 0,
+        "gold": 38,
+        "keep": 600,
+        "hp": 100,
+        "phase": "night",
+        "ui": 3
+      }
+    },
+    {
+      "name": "night-20s",
+      "file": "qa-evidence/phase3-screens/shots/night-20s.png",
+      "meanLuma": 91.4,
+      "darkPct": 3.9,
+      "quality": 3,
+      "state": {
+        "t": 20,
+        "alive": 19,
+        "gold": 38,
+        "keep": 600,
+        "hp": 100,
+        "phase": "night",
+        "ui": 3
+      }
+    },
+    {
+      "name": "night-40s",
+      "file": "qa-evidence/phase3-screens/shots/night-40s.png",
+      "meanLuma": 87,
+      "darkPct": 8.1,
+      "quality": 3,
+      "state": {
+        "t": 40,
+        "alive": 29,
+        "gold": 38,
+        "keep": 330,
+        "hp": 100,
+        "phase": "night",
+        "ui": 3
+      }
+    },
+    {
+      "name": "day-reward",
+      "file": "qa-evidence/phase3-screens/shots/day-reward.png",
+      "meanLuma": 139.8,
+      "darkPct": 3,
+      "quality": 3,
+      "state": {
+        "phase": "day",
+        "day": 2,
+        "rewards": {
+          "gold": 16,
+          "wood": 17,
+          "kills": 14,
+          "walls": 383.3,
+          "survivors": 0,
+          "keepDamage": 492,
+          "keepPatched": 95,
+          "mined": 0,
+          "lost": 0,
+          "rescued": 0,
+          "reinforcements": 2,
+          "sawn": 0,
+          "killsBy": {
+            "captain": 10,
+            "guard": 4,
+            "tower": 0,
+            "keep": 0,
+            "flare": 0
+          },
+          "towerKills": 0,
+          "endAt": 40,
+          "cleared": null
+        },
+        "ui": [
+          "survival:COLLECT"
+        ]
+      }
+    },
+    {
+      "name": "day-keep",
+      "file": "qa-evidence/phase3-screens/shots/day-keep.png",
+      "meanLuma": 142.8,
+      "darkPct": 2.8,
+      "quality": 3,
+      "state": {
+        "collected": true,
+        "context": "keep",
+        "ui": [
+          "PAUSE",
+          "survival:UPGRADE KEEP LV2",
+          "survival:REPAIR KEEP",
+          "survival:START NIGHT",
+          "survival:ZOOM IN",
+          "survival:ZOOM OUT"
+        ]
+      }
+    },
+    {
+      "name": "day-circle",
+      "file": "qa-evidence/phase3-screens/shots/day-circle.png",
+      "meanLuma": 134.2,
+      "darkPct": 2.4,
+      "quality": 3,
+      "state": {
+        "at": "south:tower",
+        "ring": true,
+        "ui": [
+          "PAUSE",
+          "survival:BUILD tower",
+          "survival:START NIGHT",
+          "survival:ZOOM IN",
+          "survival:ZOOM OUT"
+        ]
+      }
+    },
+    {
+      "name": "day-build",
+      "file": "qa-evidence/phase3-screens/shots/day-build.png",
+      "meanLuma": 132.8,
+      "darkPct": 2.7,
+      "quality": 3,
+      "state": {
+        "clicked": "survival:BUILD tower",
+        "job": {
+          "kind": "building",
+          "slot": "south:tower",
+          "left": 5.5
+        }
+      }
+    },
+    {
+      "name": "day-built",
+      "file": "qa-evidence/phase3-screens/shots/day-built.png",
+      "meanLuma": 133.3,
+      "darkPct": 3.2,
+      "quality": 3,
+      "state": {
+        "at": "west",
+        "buildings": {
+          "south:tower": "tower"
+        },
+        "chips": 3,
+        "ui": [
+          "PAUSE",
+          "survival:BUILD sawmill",
+          "survival:START NIGHT",
+          "survival:ZOOM IN",
+          "survival:ZOOM OUT"
+        ]
+      }
+    },
+    {
+      "name": "night2-flare",
+      "file": "qa-evidence/phase3-screens/shots/night2-flare.png",
+      "meanLuma": 84.2,
+      "darkPct": 9.7,
+      "quality": 3,
+      "state": {
+        "t": 34.2,
+        "day": 2,
+        "alive": 41,
+        "keep": 306,
+        "attackers": 13,
+        "state": "attacked",
+        "floaters": 9
+      }
+    },
+    {
+      "name": "failed",
+      "file": "qa-evidence/phase3-screens/shots/failed.png",
+      "meanLuma": 56.9,
+      "darkPct": 10.2,
+      "quality": 3,
+      "state": {
+        "phase": "failed",
+        "ui": [
+          "survival:PLAY AGAIN"
+        ]
+      }
+    },
+    {
+      "name": "night-door",
+      "file": "qa-evidence/phase3-screens/shots/night-door.png",
+      "meanLuma": 75.7,
+      "darkPct": 6.4,
+      "quality": 3,
+      "state": {
+        "t": 13,
+        "door": "northGate",
+        "doorHp": 126,
+        "open": true,
+        "exposed": true,
+        "target": true,
+        "guardsUp": 2,
+        "hp": 67,
+        "kills": 4,
+        "zoom": 0.655
+      }
+    },
+    {
+      "name": "night-out",
+      "file": "qa-evidence/phase3-screens/shots/night-out.png",
+      "meanLuma": 79,
+      "darkPct": 7.2,
+      "quality": 3,
+      "state": {
+        "t": 14.5,
+        "exposed": true,
+        "onHim": 0,
+        "target": true,
+        "kills": 5
+      }
+    },
+    {
+      "name": "prog-keep",
+      "file": "qa-evidence/phase3-screens/shots/prog-keep.png",
+      "meanLuma": 137.7,
+      "darkPct": 2.9,
+      "quality": 3,
+      "state": {
+        "keepLevel": 3,
+        "hp": "540/1200",
+        "territory": 15,
+        "banner": 1400,
+        "context": "keep",
+        "ui": [
+          "PAUSE",
+          "survival:UPGRADE MAX",
+          "survival:REPAIR KEEP",
+          "survival:START NIGHT",
+          "survival:ZOOM IN",
+          "survival:ZOOM OUT"
+        ]
+      }
+    },
+    {
+      "name": "prog-hunter",
+      "file": "qa-evidence/phase3-screens/shots/prog-hunter.png",
+      "meanLuma": 141.8,
+      "darkPct": 2,
+      "quality": 3,
+      "state": {
+        "at": "armory",
+        "hunter": 1,
+        "ui": [
+          "PAUSE",
+          "survival:UPGRADE HUNTER LV2",
+          "survival:START NIGHT",
+          "survival:ZOOM IN",
+          "survival:ZOOM OUT"
+        ]
+      }
+    },
+    {
+      "name": "prog-night",
+      "file": "qa-evidence/phase3-screens/shots/prog-night.png",
+      "meanLuma": 93.5,
+      "darkPct": 3.7,
+      "quality": 3,
+      "state": {
+        "t": 24,
+        "keep": 3,
+        "roofShots": 0,
+        "hunter": 3,
+        "hp": "140/140",
+        "mined": 2,
+        "kills": 2
+      }
+    },
+    {
+      "name": "complete",
+      "file": "qa-evidence/phase3-screens/shots/complete.png",
+      "meanLuma": 149.2,
+      "darkPct": 3.4,
+      "quality": 3,
+      "state": {
+        "phase": "complete",
+        "stars": 3,
+        "newBest": true,
+        "kills": 2,
+        "ui": [
+          "survival:PLAY AGAIN"
+        ]
+      }
+    },
+    {
+      "name": "tower-day",
+      "file": "qa-evidence/phase3-screens/shots/tower-day.png",
+      "meanLuma": 134.3,
+      "darkPct": 2.4,
+      "quality": 3,
+      "state": {
+        "at": "south:tower",
+        "built": "tower",
+        "spot": {
+          "x": 120,
+          "y": 600,
+          "doorId": "southGate"
+        },
+        "ring": true,
+        "ui": [
+          "survival:UPGRADE tower LV2"
+        ]
+      }
+    },
+    {
+      "name": "tower-night",
+      "file": "qa-evidence/phase3-screens/shots/tower-night.png",
+      "meanLuma": 70.3,
+      "darkPct": 7.1,
+      "quality": 3,
+      "state": {
+        "t": 17.8,
+        "day": 2,
+        "level": 2,
+        "upgraded": true,
+        "shots": 3,
+        "kills": 2,
+        "flying": true,
+        "aim": 1.82
+      }
+    },
+    {
+      "name": "guard-down",
+      "file": "qa-evidence/phase3-screens/shots/guard-down.png",
+      "meanLuma": 77.4,
+      "darkPct": 6.9,
+      "quality": 3,
+      "state": {
+        "t": 8.3,
+        "broken": true,
+        "helped": 0.92,
+        "aloneLeft": 10.8,
+        "hurt": 16,
+        "hud": "1/3",
+        "banner": "breach",
+        "alive": 21
+      }
+    },
+    {
+      "name": "guard-lost",
+      "file": "qa-evidence/phase3-screens/shots/guard-lost.png",
+      "meanLuma": 75.4,
+      "darkPct": 7.3,
+      "quality": 3,
+      "state": {
+        "t": 9.2,
+        "survivors": 2,
+        "guards": 2,
+        "lost": 1,
+        "rescued": 1,
+        "banner": "guardLost",
+        "queue": []
+      }
+    },
+    {
+      "name": "guard-reward",
+      "file": "qa-evidence/phase3-screens/shots/guard-reward.png",
+      "meanLuma": 141.9,
+      "darkPct": 2.4,
+      "quality": 3,
+      "state": {
+        "phase": "day",
+        "survivors": 2,
+        "lost": 1,
+        "rescued": 1,
+        "guards": [
+          40,
+          40
+        ]
+      }
+    },
+    {
+      "name": "intro-keep",
+      "file": "qa-evidence/phase3-screens/shots/intro-keep.png",
+      "meanLuma": 86.9,
+      "darkPct": 8.4,
+      "quality": 3,
+      "state": {
+        "kind": "intro",
+        "t": 1.2,
+        "caption": "PROTECT THE KEEP",
+        "ui": [
+          "survival:SKIP"
+        ],
+        "zoom": 0.937,
+        "relief": null
+      }
+    },
+    {
+      "name": "intro-horde",
+      "file": "qa-evidence/phase3-screens/shots/intro-horde.png",
+      "meanLuma": 75.2,
+      "darkPct": 7.3,
+      "quality": 3,
+      "state": {
+        "kind": "intro",
+        "t": 4.22,
+        "caption": "THE HORDE COMES AT NIGHT",
+        "ui": [
+          "survival:SKIP"
+        ],
+        "zoom": 0.637,
+        "relief": null
+      }
+    },
+    {
+      "name": "intro-captain",
+      "file": "qa-evidence/phase3-screens/shots/intro-captain.png",
+      "meanLuma": 94.7,
+      "darkPct": 6,
+      "quality": 3,
+      "state": {
+        "kind": "intro",
+        "t": 6.02,
+        "caption": "YOU ARE THE CAPTAIN",
+        "ui": [
+          "survival:SKIP"
+        ],
+        "zoom": 0.887,
+        "relief": null
+      }
+    },
+    {
+      "name": "arrival-gate",
+      "file": "qa-evidence/phase3-screens/shots/arrival-gate.png",
+      "meanLuma": 142.1,
+      "darkPct": 1,
+      "quality": 3,
+      "state": {
+        "kind": "arrival",
+        "t": 1.3,
+        "caption": "REINFORCEMENTS ARRIVED!",
+        "ui": [
+          "survival:SKIP"
+        ],
+        "zoom": 0.898,
+        "relief": {
+          "troops": 9,
+          "marching": 9,
+          "inLine": 0
+        }
+      }
+    },
+    {
+      "name": "arrival-lines",
+      "file": "qa-evidence/phase3-screens/shots/arrival-lines.png",
+      "meanLuma": 140.4,
+      "darkPct": 1.3,
+      "quality": 3,
+      "state": {
+        "kind": "arrival",
+        "t": 6.22,
+        "caption": "REINFORCEMENTS ARRIVED!",
+        "ui": [
+          "survival:SKIP"
+        ],
+        "zoom": 0.708,
+        "relief": {
+          "troops": 9,
+          "marching": 0,
+          "inLine": 9
+        }
+      }
+    }
+  ],
+  "pageErrors": []
+}
