@@ -1,8 +1,8 @@
 {
-  "generated": "2026-10-21T08:45:53.936Z",
+  "generated": "2026-10-21T17:00:25.762Z",
   "src": {
-    "files": 51,
-    "locTotal": 45945,
+    "files": 61,
+    "locTotal": 46116,
     "biggest": [
       [
         "src/vendor/three/GLTFLoader.js",
@@ -19,10 +19,6 @@
       [
         "src/game/game.js",
         3036
-      ],
-      [
-        "src/ui/screens.js",
-        2998
       ],
       [
         "src/ui/survival.js",
@@ -51,6 +47,10 @@
       [
         "src/game/meta/director.js",
         1129
+      ],
+      [
+        "src/game/sim/mansion.js",
+        1097
       ]
     ],
     "orphans": [],
@@ -63,26 +63,34 @@
     "fanIn": [
       [
         "src/core/util.js",
-        24
+        33
       ],
       [
         "src/core/config.js",
-        16
+        18
+      ],
+      [
+        "src/game/sim/economy.js",
+        12
       ],
       [
         "src/vendor/three/three.module.min.js",
         11
       ],
       [
+        "src/ui/screens/shared.js",
+        10
+      ],
+      [
         "src/game/render3d/valen3d.js",
         8
       ],
       [
-        "src/game/sim/economy.js",
+        "src/game/sim/hunt.js",
         8
       ],
       [
-        "src/game/sim/hunt.js",
+        "src/shop/iap.js",
         7
       ],
       [
@@ -94,20 +102,12 @@
         6
       ],
       [
-        "src/vendor/three/GLTFLoader.js",
+        "src/shop/ads.js",
         6
       ],
       [
-        "src/game/sim/mansion.js",
-        5
-      ],
-      [
-        "src/core/save.js",
-        4
-      ],
-      [
-        "src/game/render3d/envkit.js",
-        4
+        "src/vendor/three/GLTFLoader.js",
+        6
       ]
     ]
   },
@@ -276,7 +276,7 @@
     },
     {
       "file": "tools/chain.sh",
-      "refs": 30,
+      "refs": 31,
       "inPkg": false,
       "inDocs": true,
       "inChain": false,
@@ -312,7 +312,7 @@
     },
     {
       "file": "tools/geo.mjs",
-      "refs": 9,
+      "refs": 10,
       "inPkg": false,
       "inDocs": true,
       "inChain": false,
@@ -321,7 +321,7 @@
     },
     {
       "file": "tools/glbtest.mjs",
-      "refs": 40,
+      "refs": 41,
       "inPkg": false,
       "inDocs": true,
       "inChain": true,
@@ -330,7 +330,7 @@
     },
     {
       "file": "tools/harness.mjs",
-      "refs": 82,
+      "refs": 86,
       "inPkg": false,
       "inDocs": true,
       "inChain": true,
@@ -365,8 +365,26 @@
       "used": true
     },
     {
+      "file": "tools/probe-horde-view.mjs",
+      "refs": 0,
+      "inPkg": false,
+      "inDocs": false,
+      "inChain": false,
+      "inCi": false,
+      "used": false
+    },
+    {
+      "file": "tools/split-screens.mjs",
+      "refs": 0,
+      "inPkg": false,
+      "inDocs": false,
+      "inChain": false,
+      "inCi": false,
+      "used": false
+    },
+    {
       "file": "tools/structaudit.mjs",
-      "refs": 19,
+      "refs": 21,
       "inPkg": false,
       "inDocs": true,
       "inChain": false,
@@ -375,7 +393,7 @@
     },
     {
       "file": "tools/survival-balance.mjs",
-      "refs": 16,
+      "refs": 17,
       "inPkg": false,
       "inDocs": true,
       "inChain": false,

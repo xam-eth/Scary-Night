@@ -2900,6 +2900,27 @@ async function runSurvivalMilestone() {
     b25Pass = b25Checks.length === 2 && b25Checks.every(Boolean);
   }
 
+  // Phase 3 fragment 2 (F2 seam: ui/screens.js -> per-screen modules): the
+  // shell keeps exactly the 21-name surface game.js has always used; the
+  // bodies live in src/ui/screens/<screen>.js + shared.js for the UI kit.
+  let f2sPass = false;
+  {
+    const f2sChecks = [];
+    const f2sCheck = (name, ok, detail) => {
+      f2sChecks.push(!!ok);
+      console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} — ${detail}`);
+    };
+    const UI = await import('../src/ui/screens.js');
+    const NAMES = ['drawFocusCaption', 'drawMenuScene', 'drawTitle', 'drawMenu', 'drawPrivacy', 'drawIntro', 'drawPause', 'drawSettings', 'drawUpgrades', 'drawCollection', 'drawDawnCard', 'drawEnding', 'drawNarration', 'drawHelp', 'drawDeath', 'drawVictory', 'drawTutorial', 'drawShop', 'drawPeakOverlay', 'drawRefuge', 'drawFieldCard'];
+    const shellSrc = fs.readFileSync(new URL('../src/ui/screens.js', import.meta.url), 'utf8');
+    const mods = ['shared', 'menu', 'pause', 'options', 'meta', 'story', 'end', 'shop', 'play', 'refuge'];
+    const missing = mods.filter((m) => !fs.existsSync(new URL(`../src/ui/screens/${m}.js`, import.meta.url)));
+    f2sCheck('F2 seam screens: ui/screens.js is a thin re-export shell (<= 30 lines) over ten per-screen modules + shared kit, and the 21-name UI surface game.js uses is intact',
+      NAMES.every((n) => typeof UI[n] === 'function') && shellSrc.split('\n').length <= 30 && missing.length === 0,
+      `${NAMES.length} draws on the shell, ${shellSrc.split('\n').length} shell lines, modules ${mods.length - missing.length}/${mods.length}`);
+    f2sPass = f2sChecks.length === 1 && f2sChecks.every(Boolean);
+  }
+
   console.log(`  idle Night 3: ${idle.nightThree.peakEnemies} peak enemies / ${idle.nightThree.peakBreakers} Breakers, ${idle.nightThree.kills} kills, ${idle.nightThree.wallDamage} wall damage, gate ${idle.nightThree.gateHp} HP, Hunter ${idle.nightThree.playerHp} HP; ${idle.phase}`);
   console.log(`  builder Night 3: ${builder.nightThree.peakEnemies} peak enemies / ${builder.nightThree.peakBreakers} Breakers, ${builder.nightThree.kills} kills, ${builder.nightThree.wallDamage} wall damage, gate ${builder.nightThree.gateHp} HP, Hunter ${builder.nightThree.playerHp} HP; keep Lv${builder.keepLevel} ${builder.keepHp} HP, soldiers ${builder.survivors}, buildings ${builder.buildings.join(',') || 'none'}, gateBuilt=${builder.gateBuilt}; ${builder.phase}`);
   // Balance target (M1 rebuild, K1): doing nothing must not win; an engaged
@@ -2912,7 +2933,7 @@ async function runSurvivalMilestone() {
     && hunterAutoShot && hunterRealLos && hunterSkill
     && idleLoses && builder.complete && builder.keepLevel === 3
     && builder.queueLockVerified && builder.sawmillBuilt && builder.gateBuilt && builder.barracksBuilt
-    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass && gateRulePass && b13Pass && b14Pass && b15Pass && b16Pass && b17Pass && b18Pass && b19Pass && b20Pass && b21Pass && b22Pass && b23Pass && b25Pass
+    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass && gateRulePass && b13Pass && b14Pass && b15Pass && b16Pass && b17Pass && b18Pass && b19Pass && b20Pass && b21Pass && b22Pass && b23Pass && b25Pass && f2sPass
     && builder.upgrades[0].level === 1 && builder.upgrades[0].plots === 9
     && builder.upgrades[builder.upgrades.length - 1].level === 3 && builder.upgrades[builder.upgrades.length - 1].plots === 15
     && builder.upgrades.every((item, i, all) => i === 0 || item.level >= all[i - 1].level);

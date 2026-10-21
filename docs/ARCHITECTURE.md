@@ -31,6 +31,12 @@ Pelanggaran terukur sebelum perapian: 6 (structaudit). Sesudah Fase 2 sisa 0
   pack3d memasok rig kapten (BUILD 24).
 - `game/enemy3d.js` (6) — pemilik rig horde + `cloneRig`; `game/weapons.js`
   (6) — pemilik bolt/ballista.
+- `ui/screens.js` + `ui/screens/*.js` (Fase 3, pecahan F2 kedua) — shell
+  re-export tipis (18 baris) di atas sepuluh modul per-screen (`shared` =
+  kit immediate-mode: type-fit, tombol, brand plate, plate shade, data tab
+  field-card; `menu`, `pause`, `options`, `meta`, `story`, `end`, `shop`,
+  `play`, `refuge`). `game.js` tetap `import * as UI` dari shell — permukaan
+  21 nama tidak berubah; edit satu layar tidak menyentuh file layar lain.
 - `game/sim/waves.js` (Fase 3, pecahan F2 pertama) — pemilik jadwal malam
   Survival: tabel waktu gelombang/Breaker/runner, ukuran swarm, `SWARM_CAP`,
   rotasi gerbang authored (`NIGHT_ROTATIONS`), `mixSeed`, dan helper murni
@@ -58,7 +64,7 @@ Pelanggaran terukur sebelum perapian: 6 (structaudit). Sesudah Fase 2 sisa 0
 | game/survival.js | 4.828 | (a) **selesai → `sim/waves.js`** (Fase 3, pecahan 1); (b) plot/bangunan & antrian builder; (c) rantai sasaran + reward (B22); (d) fase siang/malam & zoom kamera |
 | game/world3d.js | 4.319 | (a) perakitan scene & light; (b) guard survival & mount troop; (c) kamera/drag/pinch; (d) bake/quality |
 | game/game.js | 3.034 | composition root tetap tipis: loop, mode, wiring; aturan mansion pindah ke sim/ |
-| ui/screens.js | 2.998 | per-screen module (menu, pause, end, options) + shell |
+| ui/screens.js | 18 (shell) | **selesai → `ui/screens/*.js`** (Fase 3, pecahan 2): 10 modul per-screen + shared kit; shell = re-export saja |
 | ui/survival.js | 2.389 | HUD survival vs panel bangun vs chain-objective widget |
 | game/envkit.js | 2.104 | kit props per bioma |
 | game/enemies.js | 1.814 | AI pathing vs stat/wave definitions |

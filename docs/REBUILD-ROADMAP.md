@@ -191,6 +191,19 @@ sumber murni + invariant rotasi authored) → 100 PASS/0 FAIL; structaudit delta
 nama direktori evidence. Rantai penuh pecahan ini dicatat di
 `qa-evidence/phase3-f2a-waves/README.md`.
 
+**Fase 3 (berjalan) — pecahan 2, `ui/screens.js` → modul per-screen
+(2026-10-21):** 2.997 LOC layar dipecah jadi `src/ui/screens/` — `shared.js`
+(kit immediate-mode: type-fit, tombol, brand plate, shade plate story, data
+tab field-card) + sembilan modul layar (`menu` termasuk attract/consent/
+privacy, `pause`, `options`, `meta` = upgrades/collection/help, `story` =
+intro/narration, `end` = dawn/ending/death/victory + debrief hunt, `shop`
+(UI saja; logika beli tetap di `src/shop/iap.js`), `play` = overlay puncak/
+tutorial/field-card, `refuge` = papan informan). `ui/screens.js` jadi shell
+re-export 18 baris dengan permukaan 21 nama yang sama persis — `game.js`
+tidak berubah satu baris pun. Check harness baru "F2 seam screens" (shell
+tipis + 10 modul ada + 21 draw function) → 101 PASS/0 FAIL; structaudit
+delta 0. Rantai penuh: `qa-evidence/phase3-screens/README.md`.
+
 ## Pass BUILD 21 — empat bug visual dari user (2026-10-19)
 
 **Pesan user:** "disini ada beberapa bug yg harus di fix sebelum lanjut dev yg lain. 1. pasukan perlu di redesign karna tidak singkron dengan character buat pasukan baru, 2. animasi shoter tidak tepat kelarnya dari bawah kali bukan laras panah, 3. animasi character jalan nya terlalu lambat, sedang di tahap build itu lari tapi saat bertempur animasinya walk, harusnya run, 4. nimes juga perlu di redesign dengan visual yg lebih konsisten dengan tema game". Keempatnya dikerjakan dulu sebelum item riset berikutnya.
