@@ -644,8 +644,11 @@ async function bodySection() {
   check(result.hero.ready && result.hero.visible && result.hero.sharedScene && result.hero.skinnedMeshes > 0,
     `the Hunter is a visible skinned GLB in the shared WebGL scene`);
   check(pixelDiff > 0, `hiding the Hunter changes ${pixelDiff} pixels near her position in the WebGL buffer`);
-  check(result.actors.length === 6 && result.readyTypes === 6 && result.actors.every((actor) => actor.rigged && !actor.proxy3D),
-    `all six enemy types render behavior-ready skinned GLBs with no generic proxy (${result.actors.filter((actor) => actor.rigged).length}/6)`);
+  // BUILD 25: the roster grew past the mansion's six — the survival horde's
+  // three zombie-pack kinds stage alongside them, so count "at least the six"
+  // (every mansion actor still has to render its own rigged GLB).
+  check(result.actors.length === 6 && result.readyTypes >= 6 && result.actors.every((actor) => actor.rigged && !actor.proxy3D),
+    `all six enemy types render behavior-ready skinned GLBs with no generic proxy (${result.actors.filter((actor) => actor.rigged).length}/6 rigged, ${result.readyTypes} roster types ready)`);
   check(result.actors.filter((actor) => actor.rigged).length <= result.cap,
     `skinned enemy slots remain within cap ${result.cap} (${result.actors.filter((actor) => actor.rigged).length} active)`);
   console.log(`  crowd-capacity: combatants=${result.capacity.realRigs}, crowd=${result.capacity.crowdRigs}, unassigned crowd=${result.capacity.unassignedCrowd}, visible proxies=${result.capacity.visibleProxyCount}`);
@@ -657,7 +660,7 @@ async function bodySection() {
   check(result.hitReact.length === 5 && result.hitReact.every((item) => item.action
     && Math.abs(item.weight - 1) < 0.001 && Math.abs(item.progress - 0.5) < 0.06),
   'damage feedback selects and poses the source hit-react clip on all five pack rigs');
-  console.log(`  enemy models behavior-ready: ${result.readyTypes}/6; diagnostics: ${result.diag.visibleRiggedEnemies} rigged, ${result.diag.proxyActors} proxies`);
+  console.log(`  enemy models behavior-ready: ${result.readyTypes} (>= the mansion's 6); diagnostics: ${result.diag.visibleRiggedEnemies} rigged, ${result.diag.proxyActors} proxies`);
   console.log(`  model URLs: ${Object.values(result.modelUrls).join(', ')}`);
 }
 
