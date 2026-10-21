@@ -163,6 +163,17 @@ export const ZombiPack3D = {
       vi++;
       const joints = skeleton.bones.map((bone) => ({ name: bone.name, node: bone }));
       const variant = { index: vi, meshes, joints, clips: {} };
+      // BUILD 26 fix (user report 2026-10-21: "rig jalan nya posisi salah …
+      // terlihat jalan baring"): every variant's rig hangs under a
+      // `rig_CharRoot*` node that carries the pack's FBX->glTF axis
+      // conversion (a -90 deg X quaternion) plus the lineup offset. The
+      // reparent below moves meshes and joint roots out from under it, so
+      // without keeping that orientation the horde rendered lying on its
+      // back (and the bbox-height normaliser then blew the scale up). Keep
+      // the rotation, drop the offset: the game places each body itself.
+      const lostQ = new THREE.Quaternion();
+      if (meshes[0] && meshes[0].parent) meshes[0].parent.getWorldQuaternion(lostQ);
+      variant.lostOrientation = lostQ.clone();
       // the shared take animates every variant's own bones by name
       if (walk) variant.clips.walk = walk;
       variant.clips['pack-attack'] = bakeVariantClip('pack-attack', 0.5, variant, attackPose);
@@ -172,6 +183,7 @@ export const ZombiPack3D = {
       // so cloneRig/bakeKind see a self-contained rig (both clone it)
       const root = new THREE.Group();
       root.name = `zombi-variant-${vi}`;
+      root.quaternion.copy(lostQ);   // stand the rig up the way the pack authored it
       const jointSet = new Set(skeleton.bones);
       for (const mesh of meshes) {
         if (mesh.parent) mesh.parent.remove(mesh);

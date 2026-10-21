@@ -513,6 +513,43 @@ console.log('\ngarrison troops (captain family + KayKit bows, CC0):');
       && CROWD_KINDS.reduce((sum, k) => sum + k.share, 0) === 100
       && CROWD_KINDS.every((k) => k.hover === 0 && ENEMY_MODELS[k.key] && ENEMY_MODELS[k.key].pack === k.key),
     CROWD_KINDS.map((k) => `${k.key}:${k.share}%`).join(' '));
+
+  // BUILD 26 (user report 2026-10-21: "rig jalan nya posisi salah … terlihat
+  // jalan baring"): each variant's rig hangs under a `rig_CharRoot*` node that
+  // carries the pack's FBX->glTF axis conversion (-90 deg X). The split in
+  // zombipack3d._split reparents meshes + joint roots out from under it, so
+  // the conversion MUST be re-applied on the variant root or the bodies lie
+  // on their backs (and the bbox-height normaliser in enemy3d then blows
+  // their scale up). Pin all three: conversion kept, bone box tallest on Y,
+  // hunch (head over pelvis) leaning to +Z — the axis enemy3d yaws against
+  // (slot.model.rotation.y = PI/2 - angle expects the model to face +Z).
+  {
+    globalThis.self = globalThis;
+    globalThis.createImageBitmap = globalThis.createImageBitmap || (async () => ({ width: 4, height: 4, close() {} }));
+    const { GLTFLoader } = await import('../src/vendor/three/GLTFLoader.js');
+    const THREE = await import('../src/vendor/three/three.module.min.js');
+    const { ZombiPack3D: ZP } = await import('../src/game/render3d/zombipack3d.js');
+    const raw = fs.readFileSync(path.join(ROOT, 'polyart_zombies_with_animations_free_pack.glb'));
+    const ab = raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength);
+    await new Promise((resolve) => new GLTFLoader().parse(ab, '', (gltf) => { ZP._split(gltf); resolve(); }, () => resolve()));
+    const conv = new THREE.Quaternion(-0.70710678, 0, 0, 0.70710678);
+    const rows = ZOMBI_KINDS.map((k) => {
+      const v = ZP.forKind(k.key);
+      if (!v) return null;
+      v.template.updateMatrixWorld(true);
+      const pts = v.joints.map((j) => { const p = new THREE.Vector3(); j.node.getWorldPosition(p); return p; });
+      const size = new THREE.Box3().setFromPoints(pts).getSize(new THREE.Vector3());
+      const pel = v.joints.find((j) => /Pelvis/.test(j.name));
+      const head = v.joints.find((j) => /Head(?!Nub)/.test(j.name));
+      const pv = new THREE.Vector3(); pel.node.getWorldPosition(pv);
+      const hv = new THREE.Vector3(); head.node.getWorldPosition(hv);
+      const up = hv.sub(pv);
+      return { key: k.key, upright: size.y > size.x && size.y > size.z, conv: v.lostOrientation.angleTo(conv) < 1e-3, face: up.z > 0 && up.y > Math.abs(up.z) };
+    });
+    ok('BUILD 26: the split keeps the pack axis conversion on every variant root, so the horde stands upright (bone box tallest on Y) and faces +Z the way enemy3d yaws it',
+      rows.every((r) => r && r.upright && r.conv && r.face),
+      rows.map((r) => (r ? `${r.key} ${r.conv ? 'conv' : 'NOCONV'}/${r.upright ? 'up' : 'LYING'}/${r.face ? '+Z' : '-Z'}` : 'missing')).join(' '));
+  }
   const missingBones = ['R_Hand', 'Head', 'Hip'].filter((name) => !PACK_BONES.some((b) => b[0] === name));
   const everyLoadoutBows = Object.values(TROOP_LOADOUTS).every((loadout) => loadout.bow);
   ok('the generated skeleton carries the right-hand bone the crossbow mounts on, and every loadout carries the garrison bow',
