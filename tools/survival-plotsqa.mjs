@@ -437,8 +437,8 @@ const lumDay = await page.evaluate(() => {
   return true;
 }).then(captainLum);
 await shot('b13-1-captain-day');
-check('V8: the captain is bright — his own pixels average >= 70/255 by night and by day and >= 3x the bare Tripo texture (royal-blue tabard, leather hat and boots, rim light; the GLB untouched)',
-  [lumNight, lumDay].every((r) => r.on.px > 400 && r.on.mean >= 70 && r.on.mean >= 3 * r.bare.mean && r.look.look === 1)
+check('V8: the captain is bright — his own pixels average >= 70/255 by night and by day and clearly above the bare texture, with the pack Commander\'s own colours kept (recolour off, uCapLook=0) and rim+lift doing the brightening (night rim > day rim)',
+  [lumNight, lumDay].every((r) => r.on.px > 400 && r.on.mean >= 70 && r.on.mean >= 1.1 * r.bare.mean && r.look.look === 0 && r.look.rim > 0 && r.look.lift > 0)
     && lumNight.look.rim > lumDay.look.rim,
   { night: { on: lumNight.on, bare: lumNight.bare, look: lumNight.look }, day: { on: lumDay.on, bare: lumDay.bare, look: lumDay.look } });
 
@@ -1160,9 +1160,12 @@ const b23 = await page.evaluate(async () => {
   if (!mesh || !mesh.userData.troop) return { guard: false };
   const names = new Set();
   mesh.userData.troop.model.traverse((o) => { if (o.name) names.add(o.name); });
-  // BUILD 24: the guard must be the pack's Warrior rig, not a captain clone
-  const wanted = ['person-rig-Warrior', 'person-Warrior', 'Head', 'Hip', 'R_Hand', 'L_Upperarm'];
+  // BUILD 24: the guard must be the pack's Warrior rig, not a captain clone.
+  // troop3d renames the cloned root to troop-3d-<kind>, so the pack identity
+  // lives in the person-Warrior mesh name plus the generated 17-bone skeleton.
+  const wanted = ['person-Warrior', 'Head', 'Hip', 'R_Hand', 'L_Upperarm'];
   const missing = wanted.filter((n) => !names.has(n));
+  if (![...names].some((n) => n.startsWith('troop-3d-'))) missing.push('troop-3d-*root');
   let hands = 0, bows = 0;
   mesh.userData.troop.model.traverse((o) => { if (o.name === 'R_Hand') hands++; if (o.name === 'troop-crossbow') bows++; });
   // frame the guard with the captain beside him: one frame, two silhouettes
@@ -1174,7 +1177,7 @@ const b23 = await page.evaluate(async () => {
   return { guard: true, missing, hands, bows };
 });
 await shot('b24-1-pack-garrison');
-check('B24: a live gate guard is the user pack\'s own Warrior character (person-rig-Warrior, generated skeleton with Head/Hip/R_Hand) — a different character from the captain\'s Commander — still holding the garrison crossbow in the right hand',
+check('B24: a live gate guard is the user pack\'s own Warrior character (person-Warrior mesh under a troop-3d root, generated skeleton with Head/Hip/R_Hand) — a different character from the captain\'s Commander — still holding the garrison crossbow in the right hand',
   b23.guard && b23.missing.length === 0 && b23.hands >= 1 && b23.bows >= 1, b23);
 
 fs.writeFileSync(path.join(OUT, 'plotsqa.json'), JSON.stringify({ results, errors }, null, 2));

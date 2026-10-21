@@ -13,8 +13,8 @@ run fxshots survival-fxshots.mjs "--out=qa-evidence/survival-build24/fx"
 run swtest swtest.mjs
 run layoutqa layoutqa.mjs
 run look survival-look.mjs "--out=qa-evidence/survival-build24/look"
-run shots shots.mjs
+run shots survivalshots.mjs "--landscape --out=qa-evidence/survival-build24/shots"
 run glbtest glbtest.mjs
-run map map.mjs
+run map survival-map.mjs "--out=qa-evidence/survival-build24/map/plan.png"
 run bundlecheck bundlecheck.mjs
 echo CHAIN-DONE
