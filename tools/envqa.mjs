@@ -88,12 +88,12 @@ for (let i = 0; i < 120; i++) {
 await page.evaluate(async () => {
   const g = window.__LN;
   g.save.privacyAck = true;
-  window.__env = (await import('./src/game/envkit.js')).EnvKit;
-  window.__valen = (await import('./src/game/valen3d.js')).Valen3D;
-  window.__enemy = (await import('./src/game/enemy3d.js')).Enemy3D;
-  window.__world3d = (await import('./src/game/world3d.js')).World3D;
-  window.__eh = (await import('./src/game/enemy3d.js')).ENEMY_HEIGHT;
-  window.__foes = await import('./src/game/enemies.js');
+  window.__env = (await import('./src/game/render3d/envkit.js')).EnvKit;
+  window.__valen = (await import('./src/game/render3d/valen3d.js')).Valen3D;
+  window.__enemy = (await import('./src/game/render3d/enemy3d.js')).Enemy3D;
+  window.__world3d = (await import('./src/game/render3d/world3d.js')).World3D;
+  window.__eh = (await import('./src/game/render3d/enemy3d.js')).ENEMY_HEIGHT;
+  window.__foes = await import('./src/game/sim/enemies.js');
   window.__three = await import('./src/vendor/three/three.module.min.js');
 });
 await page.waitForFunction(() => {
@@ -146,8 +146,8 @@ async function survivalFtueSection() {
       && g.survival && g.survival.phase === 'night');
   }, { timeout: 90000, polling: 100 });
   await page.evaluate(async () => {
-    window.__survWorld = (await import('./src/game/world3d.js')).World3D;
-    window.__survEnemy = (await import('./src/game/enemy3d.js')).Enemy3D;
+    window.__survWorld = (await import('./src/game/render3d/world3d.js')).World3D;
+    window.__survEnemy = (await import('./src/game/render3d/enemy3d.js')).Enemy3D;
   });
   await page.waitForFunction(() => window.__survWorld?.diagnostics?.().ready, { timeout: 60000, polling: 100 });
   // Start a clean Night 1 after GLB/scene setup, then advance the game clock
@@ -1301,7 +1301,7 @@ async function staticWorldSection() {
   console.log('\n---- PERSISTENT WORLD GEOMETRY (no movement-triggered hiding) ----');
   const read = await page.evaluate(async () => {
     const g = window.__LN, E = window.__env, THREE = window.__three;
-    const { QUALITY_TIERS } = await import('./src/game/envkit.js');
+    const { QUALITY_TIERS } = await import('./src/game/render3d/envkit.js');
     const groups = [
       ['room', E.roomMeshes], ['props', E.propMeshes],
       ['fortress', E.fortressMeshes], ['details', E.detailMeshes],

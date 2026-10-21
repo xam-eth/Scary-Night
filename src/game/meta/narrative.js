@@ -13,8 +13,8 @@
  * until the interstitial consumes them.
  */
 
-import { playLean } from './economy.js';
-import { INTEL } from './hunt.js';
+import { playLean } from '../sim/economy.js';
+import { INTEL } from '../sim/hunt.js';
 
 export const BEATS = [
   /* ---- opening narration: night one, her voice, then the house ----

@@ -16,7 +16,7 @@
  * the guided win. The floor is not an easy mode.
  */
 
-import { PLAYER, RES, nightHeat, threatMix } from '../core/config.js';
+import { PLAYER, RES, nightHeat, threatMix } from '../../core/config.js';
 import { fortressLevel } from './hunt.js';
 
 export const LARDER_BLOOD = 6;

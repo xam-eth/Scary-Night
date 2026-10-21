@@ -21,10 +21,10 @@
  *   - procedural only. Grade, particles, synth. No new art, no video.
  */
 
-import { clamp, lerp, rand, dist } from '../core/util.js';
-import { CLIMAX, DAWN_AT } from '../core/config.js';
-import { Werewolf, applyVariant } from './enemies.js';
-import { masterReady, masterDown } from './hunt.js';
+import { clamp, lerp, rand, dist } from '../../core/util.js';
+import { CLIMAX, DAWN_AT } from '../../core/config.js';
+import { Werewolf, applyVariant } from '../sim/enemies.js';
+import { masterReady, masterDown } from '../sim/hunt.js';
 
 export const PEAK = Object.freeze({
   CRESCENDO: 'crescendo',

@@ -10,13 +10,13 @@
 
 import { clamp, lerp, TAU, fmtClock, hash2 } from '../core/util.js';
 import { DIFFICULTY, CODEX } from '../core/config.js';
-import { unlocked, nextRevealLine, LANES, nextRank, rankCost, rankCount, LANE_CAP, houseTitle } from '../game/economy.js';
-import { fragmentsKnown, endingFrame } from '../game/narrative.js';
-import { intelLine, huntPct, huntProgress, fortressState, huntTells, masterReady, masterDown, FORTRESS_STATES } from '../game/hunt.js';
-import { INFORMANT, informantLine, boardEntries } from '../game/informant.js';
+import { unlocked, nextRevealLine, LANES, nextRank, rankCost, rankCount, LANE_CAP, houseTitle } from '../game/sim/economy.js';
+import { fragmentsKnown, endingFrame } from '../game/meta/narrative.js';
+import { intelLine, huntPct, huntProgress, fortressState, huntTells, masterReady, masterDown, FORTRESS_STATES } from '../game/sim/hunt.js';
+import { INFORMANT, informantLine, boardEntries } from '../game/meta/informant.js';
 import { drawPlateCover } from './storycards.js';
-import { Valen3D } from '../game/valen3d.js';
-import { Enemy3D } from '../game/enemy3d.js';
+import { Valen3D } from '../game/render3d/valen3d.js';
+import { Enemy3D } from '../game/render3d/enemy3d.js';
 import { IAP, CATALOG } from '../shop/iap.js';
 import { Ads } from '../shop/ads.js';
 import { buttonIconForLabel, drawGameIcon } from './icons.js';

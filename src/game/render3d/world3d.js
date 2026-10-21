@@ -4,18 +4,18 @@
  * adapter maps them to Three.js (x, height, z=y), renders the room kit and
  * actors through EnvKit's single world camera, and leaves Canvas for HUD/UI.
  */
-import * as THREE from '../vendor/three/three.module.min.js';
-import { ISO_CAMERA, clamp, visualAngle } from '../core/util.js';
+import * as THREE from '../../vendor/three/three.module.min.js';
+import { ISO_CAMERA, clamp, visualAngle } from '../../core/util.js';
 import { EnvKit, PIECE_METRES, PX_PER_METRE, SURVIVAL_ACTOR_SCALE, VALEN_METRES } from './envkit.js';
 import { Valen3D } from './valen3d.js';
 import { Enemy3D, ENEMY_HEIGHT } from './enemy3d.js';
 import { Troop3D } from './troop3d.js';
 import { Crowd3D } from './crowd3d.js';
 import { Buildings3D, BUILDING_MODEL, BUILDING_COLOR, SAW_NODE, KIT_DECOR } from './buildings3d.js';
-import { PLAZA_R, TOWER_RISE, NEAR_SIDES } from './fortress.js';
-import { ROOM_MARKS } from './narrative.js';
-import { ROOM } from './mansion.js';
-import { weaponById } from './weapons.js';
+import { PLAZA_R, TOWER_RISE, NEAR_SIDES } from '../sim/fortress.js';
+import { ROOM_MARKS } from '../meta/narrative.js';
+import { ROOM } from '../sim/mansion.js';
+import { weaponById } from '../sim/weapons.js';
 
 const VERTICAL_PROJECTION = Math.sqrt(1 - ISO_CAMERA.tilt * ISO_CAMERA.tilt);
 /** A GLB guard's standing height, world px before SURVIVAL_ACTOR_SCALE (the captain is 1.7 m = ~88). */

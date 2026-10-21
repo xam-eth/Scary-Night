@@ -141,8 +141,8 @@ Math.random = function () {
 
 const Audio = await import('../src/core/audio.js');
 const { Game } = await import('../src/game/game.js');
-const { ROOM } = await import('../src/game/mansion.js');
-const { FORT } = await import('../src/game/fortress.js');
+const { ROOM } = await import('../src/game/sim/mansion.js');
+const { FORT } = await import('../src/game/sim/fortress.js');
 const { TUNING, NIGHT_DURATION, SURVIVAL_TUNING } = await import('../src/core/config.js');
 
 function makeHarnessCanvas() {
@@ -262,7 +262,7 @@ async function runSurvivalMilestone() {
   const lightDoor = lightMode.mainGate();
   lightDoor.hp = 0; lightDoor.broken = true; lightDoor.open = true;
   survivalGame.mansion.refreshNavAround(lightDoor);
-  const { SurvivalCrowdZombie } = await import('../src/game/survival.js');
+  const { SurvivalCrowdZombie } = await import('../src/game/sim/survival.js');
   const walkSpeed = (spot) => {
     const body = new SurvivalCrowdZombie(spot.x, spot.y, lightDoor, 0, 1);
     body._inHouse = true;
@@ -518,7 +518,7 @@ async function runSurvivalMilestone() {
   console.log(`  ${hunterSkill ? 'PASS' : 'FAIL'}  Hunter's Flare skill damages/staggers in radius and respects cooldown (${skillHp} → ${skillTarget.hp} HP)`);
 
   /* ---------- gap/bug regressions (crowd ranks, door slits, guards, pause) ---------- */
-  const { GUARD } = await import('../src/game/survival.js');
+  const { GUARD } = await import('../src/game/sim/survival.js');
   const quietNight = (mode) => {
     // freeze the scheduled spawners so a probe controls every body
     mode.waveIndex = 99; mode.breakerIndex = 99; mode.individualIndex = 99;
@@ -588,7 +588,7 @@ async function runSurvivalMilestone() {
     survivalGame.player.vx = 0; survivalGame.player.vy = 0;
   };
   parkInside();
-  const { survivalSpot, SORTIE } = await import('../src/game/survival.js');
+  const { survivalSpot, SORTIE } = await import('../src/game/sim/survival.js');
   const slitSpot = survivalSpot(slitDoor, 0, 72);
   const slitBody = new SurvivalCrowdZombie(slitSpot.x, slitSpot.y, slitDoor, 0, 1);
   slitBody.hp = slitBody.hpMax = 400;
@@ -1002,7 +1002,7 @@ async function runSurvivalMilestone() {
     console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} (${detail})`);
   };
   {
-    const { TOWER, SURVIVAL_SLOTS } = await import('../src/game/survival.js');
+    const { TOWER, SURVIVAL_SLOTS } = await import('../src/game/sim/survival.js');
     const mode = survivalGame.survival;
     const m = survivalGame.mansion;
     mode.restart();
@@ -1432,7 +1432,7 @@ async function runSurvivalMilestone() {
     console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} (${detail})`);
   };
   {
-    const { CINE } = await import('../src/game/survival.js');
+    const { CINE } = await import('../src/game/sim/survival.js');
     const step = 1 / 60;
     const run = (game, seconds) => { for (let i = 0; i < Math.round(seconds * 60); i++) game.update(step); };
     window.localStorage.removeItem('lastnight.save.v1');
@@ -1501,7 +1501,7 @@ async function runSurvivalMilestone() {
     console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} (${detail})`);
   };
   {
-    const { survivalStars, survivalMvp, RUN_STARS } = await import('../src/game/survival.js');
+    const { survivalStars, survivalMvp, RUN_STARS } = await import('../src/game/sim/survival.js');
     // R1 + R2 on the builder's real three nights (runScenario above)
     const br = builder.runResult || {};
     const nightSum = builder.nightKills.reduce((a, b) => a + b, 0);
@@ -1619,9 +1619,9 @@ async function runSurvivalMilestone() {
     console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} (${detail})`);
   };
   {
-    const { FORT_SCALE, FORT_WALL_METRES, BAILEY } = await import('../src/game/fortress.js');
+    const { FORT_SCALE, FORT_WALL_METRES, BAILEY } = await import('../src/game/sim/fortress.js');
     const { SURVIVAL_ACTOR_SCALE } = await import('../src/core/config.js');
-    const { KEEP, SURVIVAL_BUILDING_LEVELS } = await import('../src/game/survival.js');
+    const { KEEP, SURVIVAL_BUILDING_LEVELS } = await import('../src/game/sim/survival.js');
     window.localStorage.removeItem('lastnight.save.v1');
     const vg = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
     const vm = vg.survival;
@@ -1695,7 +1695,7 @@ async function runSurvivalMilestone() {
     console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} (${detail})`);
   };
   {
-    const { SORTIE, GUARD: G, survivalSpot: spotOf, SurvivalBreaker } = await import('../src/game/survival.js');
+    const { SORTIE, GUARD: G, survivalSpot: spotOf, SurvivalBreaker } = await import('../src/game/sim/survival.js');
     const { steerStick } = await import('./survival-bots.mjs');
     const { ISO_CAMERA: ISO } = await import('../src/core/util.js');
     window.localStorage.removeItem('lastnight.save.v1');
@@ -1893,7 +1893,7 @@ async function runSurvivalMilestone() {
     console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} (${detail})`);
   };
   {
-    const { DMG_NUMBER, SurvivalCrowdZombie: Crowd } = await import('../src/game/survival.js');
+    const { DMG_NUMBER, SurvivalCrowdZombie: Crowd } = await import('../src/game/sim/survival.js');
     const { SURVIVAL_ACTOR_SCALE: ACTOR_SCALE } = await import('../src/core/config.js');
     window.localStorage.removeItem('lastnight.save.v1');
     const bg = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
@@ -1976,7 +1976,7 @@ async function runSurvivalMilestone() {
     console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} (${detail})`);
   };
   {
-    const { SURVIVAL_ARMS, ARMS_MAX_LEVEL, PLOT, SURVIVAL_SLOTS: SLOTS, SurvivalCrowdZombie: Crowd, GUARD: GUARD_BASE } = await import('../src/game/survival.js');
+    const { SURVIVAL_ARMS, ARMS_MAX_LEVEL, PLOT, SURVIVAL_SLOTS: SLOTS, SurvivalCrowdZombie: Crowd, GUARD: GUARD_BASE } = await import('../src/game/sim/survival.js');
     window.localStorage.removeItem('lastnight.save.v1');
     const ag = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 60 });
     const am = ag.survival;
@@ -2091,10 +2091,10 @@ async function runSurvivalMilestone() {
     console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} (${detail})`);
   };
   {
-    const { KILL_ZONE, GLACIS } = await import('../src/game/exterior.js');
-    const { TOWER_RISE, NEAR_SIDES } = await import('../src/game/fortress.js');
-    const { Mansion } = await import('../src/game/mansion.js');
-    const { THREAT_FRAME, SurvivalCrowdZombie: Crowd } = await import('../src/game/survival.js');
+    const { KILL_ZONE, GLACIS } = await import('../src/game/sim/exterior.js');
+    const { TOWER_RISE, NEAR_SIDES } = await import('../src/game/sim/fortress.js');
+    const { Mansion } = await import('../src/game/sim/mansion.js');
+    const { THREAT_FRAME, SurvivalCrowdZombie: Crowd } = await import('../src/game/sim/survival.js');
     window.localStorage.removeItem('lastnight.save.v1');
     // a phone held sideways: the frame is judged on the screen it is for
     const phone = createCanvas(844, 390);
@@ -2238,8 +2238,8 @@ async function runSurvivalMilestone() {
     console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} (${detail})`);
   };
   {
-    const { NIGHT_CLEAR, SurvivalCrowdZombie: Crowd, SurvivalIndividualZombie: Ind, gateLabel } = await import('../src/game/survival.js');
-    const { World3D, SURVIVAL_RIG, dawnHex } = await import('../src/game/world3d.js');
+    const { NIGHT_CLEAR, SurvivalCrowdZombie: Crowd, SurvivalIndividualZombie: Ind, gateLabel } = await import('../src/game/sim/survival.js');
+    const { World3D, SURVIVAL_RIG, dawnHex } = await import('../src/game/render3d/world3d.js');
     window.localStorage.removeItem('lastnight.save.v1');
     const hg = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 72 });
     const hm = hg.survival;
@@ -2404,7 +2404,7 @@ async function runSurvivalMilestone() {
     console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} (${detail})`);
   };
   {
-    const { NIGHT_ROTATIONS, gateLabel, mixSeed } = await import('../src/game/survival.js');
+    const { NIGHT_ROTATIONS, gateLabel, mixSeed } = await import('../src/game/sim/survival.js');
     // the seeds the balance and UX probes play (tools/survival-uxprobe.mjs)
     const SEEDS = [20261012, 20268931, 20276850, 20261013, 20261014];
     window.localStorage.removeItem('lastnight.save.v1');
@@ -2633,7 +2633,7 @@ async function runSurvivalMilestone() {
       b19Checks.push(!!ok);
       console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} — ${detail}`);
     };
-    const { UNLOCK_TIERS, unlockTierFor } = await import('../src/game/survival.js');
+    const { UNLOCK_TIERS, unlockTierFor } = await import('../src/game/sim/survival.js');
     const lum = (hex) => { const r = (hex >> 16) & 255, g = (hex >> 8) & 255, b = hex & 255; return (r + g + b) / 3; };
     window.localStorage.removeItem('lastnight.save.v1');
     const ug = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 72, seed: 20261007 });
@@ -2737,8 +2737,8 @@ async function runSurvivalMilestone() {
     b21Check('B21: the night is combat — the captain\'s night speed crosses player.js\'s RUN threshold so the rig blends fully into the authored run clip (walk was the complaint)',
       SURVIVAL_TUNING.combatRunMul > 1 && nightSpeed > 160 && nightSpeed <= PLAYER.runSpeed * 1.05,
       `${PLAYER.walkSpeed} × ${SURVIVAL_TUNING.combatRunMul} = ${nightSpeed} px/s (RUN needs > 160)`);
-    const { TROOP_ASSETS, TROOP_CLIPS, TROOP_PALETTE } = await import('../src/game/troop3d.js');
-    const { VALEN_MODEL_URL, UNIFORM_GRADE_PALETTE } = await import('../src/game/valen3d.js');
+    const { TROOP_ASSETS, TROOP_CLIPS, TROOP_PALETTE } = await import('../src/game/render3d/troop3d.js');
+    const { VALEN_MODEL_URL, UNIFORM_GRADE_PALETTE } = await import('../src/game/render3d/valen3d.js');
     const procedural = TROOP_CLIPS.aim === null;
     b21Check('B21: the garrison comes from the user\'s character pack (BUILD 24) and keeps its own palette identity; the pack rigs carry the full clip set (only aim stays procedural)',
       TROOP_ASSETS.soldier === VALEN_MODEL_URL && procedural
@@ -2746,7 +2746,7 @@ async function runSurvivalMilestone() {
         && TROOP_CLIPS.idle === 'idle' && TROOP_CLIPS.hit === 'hit' && TROOP_CLIPS.down === 'down'
         && TROOP_PALETTE.royal !== UNIFORM_GRADE_PALETTE.royal && TROOP_PALETTE.gold !== UNIFORM_GRADE_PALETTE.gold,
       `${TROOP_ASSETS.soldier}; troop royal #${TROOP_PALETTE.royal.toString(16)} vs captain #${UNIFORM_GRADE_PALETTE.royal.toString(16)}; trim #${TROOP_PALETTE.gold.toString(16)} vs #${UNIFORM_GRADE_PALETTE.gold.toString(16)}`);
-    const { HORDE_GRADE, HORDE_EYE } = await import('../src/game/enemy3d.js');
+    const { HORDE_GRADE, HORDE_EYE } = await import('../src/game/render3d/enemy3d.js');
     const hideNotEye = typeof HORDE_GRADE.crawler.Eye_White === 'number' && typeof HORDE_GRADE.zombie.Eye_White === 'number';
     const oneGlowEach = typeof HORDE_GRADE.zombie.Eye_Black === 'object' && typeof HORDE_GRADE.crawler.Eye_Black === 'object'
       && typeof HORDE_GRADE.ghoul.Ghost_Secondary === 'object';
@@ -2836,9 +2836,9 @@ async function runSurvivalMilestone() {
       b23Checks.push(!!ok);
       console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} — ${detail}`);
     };
-    const { TROOP_PALETTE, TROOP_ASSETS } = await import('../src/game/troop3d.js');
-    const { UNIFORM_GRADE_PALETTE, VALEN_MODEL_URL } = await import('../src/game/valen3d.js');
-    const { People3D, PEOPLE_ROLES, PEOPLE_MODEL_URL } = await import('../src/game/pack3d.js');
+    const { TROOP_PALETTE, TROOP_ASSETS } = await import('../src/game/render3d/troop3d.js');
+    const { UNIFORM_GRADE_PALETTE, VALEN_MODEL_URL } = await import('../src/game/render3d/valen3d.js');
+    const { People3D, PEOPLE_ROLES, PEOPLE_MODEL_URL } = await import('../src/game/render3d/pack3d.js');
     b23Check('B24: the garrison and the captain are DIFFERENT characters from the user\'s pack (egyptian_people.glb) — captain=Commander, bowman=King, melee guard=Warrior, bearer=Resident — no clone of one GLB',
       PEOPLE_MODEL_URL === './egyptian_people.glb' && VALEN_MODEL_URL === PEOPLE_MODEL_URL
         && TROOP_ASSETS.soldier === PEOPLE_MODEL_URL
@@ -3144,7 +3144,7 @@ if (MODE === 'density') {
 
 if (MODE === 'combat') {
   // deterministic check: put a crawler in front of the vampire and claw it
-  const { Crawler, Hunter, Werewolf } = await import('../src/game/enemies.js');
+  const { Crawler, Hunter, Werewolf } = await import('../src/game/sim/enemies.js');
   const results = [];
   for (const [name, Cls, dist0] of [['crawler', Crawler, 50], ['hunter', Hunter, 50], ['werewolf', Werewolf, 58]]) {
     const p = game.player;
@@ -3347,8 +3347,8 @@ if (args.systems) {
   }
   else line(false, 'no basin in the mansion');
 
-  const { hideDeathSecond, unlocked, rankCount, tellFor, purseFloor, drainPerSecond, projectDawn, curveSweep, grantLaneTitle, houseTitle } = await import('../src/game/economy.js');
-  const { dealNightGoals, forbiddenPair, CORE_GOALS } = await import('../src/game/objectives.js');
+  const { hideDeathSecond, unlocked, rankCount, tellFor, purseFloor, drainPerSecond, projectDawn, curveSweep, grantLaneTitle, houseTitle } = await import('../src/game/sim/economy.js');
+  const { dealNightGoals, forbiddenPair, CORE_GOALS } = await import('../src/game/sim/objectives.js');
   const { TUNING, nightHeat, threatMix, CLIMAX } = await import('../src/core/config.js');
   const hideAt = hideDeathSecond({ nightsSurvived: 1 });
   line(hideAt > 180 && hideAt < 210, `hoard-and-hide dies at ${hideAt.toFixed(0)}s (want 03:00–03:30)`);
@@ -3374,7 +3374,7 @@ if (args.systems) {
     line(tellFor(outcome).class === cls, `${outcome} tell is ${cls}`);
   }
   line(tellFor('nothing').sound === 'tellEmpty', 'an empty door still has a knock tell');
-  const { guidanceLine } = await import('../src/game/hud.js');
+  const { guidanceLine } = await import('../src/ui/hud.js');
   const coachWas = game.coach;
   const bloodWas = game.player.blood;
   const failingWas = game.hungerFailing;
@@ -3461,7 +3461,7 @@ if (args.systems) {
   // never been told — that is the whole point of the surface.
   line(game.screen !== 'intro', 'a retry fades in and skips the intro card');
 
-  const { BEATS, nextBeat, ackBeat, endingFrame, fragmentsKnown, narrationLines } = await import('../src/game/narrative.js');
+  const { BEATS, nextBeat, ackBeat, endingFrame, fragmentsKnown, narrationLines } = await import('../src/game/meta/narrative.js');
   line(BEATS.length > 0 && BEATS.every((b) => b.id && b.trigger && b.surface && b.text && !/placeholder|\[draft\]/i.test(b.text)), 'beats are data, not placeholders');
   line(BEATS.every((b) => b.surface === 'strip' || b.surface === 'dawnCard' || b.surface === 'room' || b.surface === 'narration' || b.surface === 'actCard'), 'every beat names a surface the game can draw: strip, dawn-card, room, narration, act card');
   const storySave = { beats: {}, pendingDawn: [] };
@@ -3609,8 +3609,8 @@ if (args.systems) {
   game.screen = 'playing';
 
   // ---- THE HUNT (#57): every night banks progress, won or lost ----
-  const { bankNight, huntProgress, huntPct, fortressLevel, fortressState, nearingEnd, INTEL, HUNT_OBJECTIVES, pickHuntObjective, dealHuntObjective, huntNightSeed, objectiveBonus } = await import('../src/game/hunt.js');
-  const { migrateSave } = await import('../src/game/economy.js');
+  const { bankNight, huntProgress, huntPct, fortressLevel, fortressState, nearingEnd, INTEL, HUNT_OBJECTIVES, pickHuntObjective, dealHuntObjective, huntNightSeed, objectiveBonus } = await import('../src/game/sim/hunt.js');
+  const { migrateSave } = await import('../src/game/sim/economy.js');
   const huntSave = { nightsSurvived: 0 };
   const night1 = bankNight(huntSave, { won: false, survived: 120, kills: 6,
     intel: ['foe:crawler', 'room:kitchen', 'peak:crescendo'] });
@@ -3660,10 +3660,10 @@ if (args.systems) {
   game.lastGain = null;
 
   // ---- THE FINALE (#56 P4): the Master is huntable, and the hunt ends ----
-  const { masterReady, masterDown, fellMaster, HUNT_END_AT } = await import('../src/game/hunt.js');
+  const { masterReady, masterDown, fellMaster, HUNT_END_AT } = await import('../src/game/sim/hunt.js');
   const { VARIANTS } = await import('../src/core/config.js');
-  const { endingReady } = await import('../src/game/narrative.js');
-  const { huntGoal: huntGoalFor } = await import('../src/game/objectives.js');
+  const { endingReady } = await import('../src/game/meta/narrative.js');
+  const { huntGoal: huntGoalFor } = await import('../src/game/sim/objectives.js');
 
   // a hunt that is still walking does not get to end
   const midHunt = { hunt: { track: 60, intel: [], materials: 0, nights: 6, lastObjective: null } };
@@ -3725,8 +3725,8 @@ if (args.systems) {
   line(!masterDown({}) && !masterReady({}), 'a save that never hunted has no Master, dead or otherwise');
 
   // ---- PHASE C2 (#53): the bake and the budget -----------------------------
-  const { bakeLight, bakedTint, bakeReport, staticSources, BAKE_CELL } = await import('../src/game/lightbake.js');
-  const { MOBILE_BUDGET, QUALITY_TIERS, budgetReport, tintPlacements } = await import('../src/game/envkit.js');
+  const { bakeLight, bakedTint, bakeReport, staticSources, BAKE_CELL } = await import('../src/game/render3d/lightbake.js');
+  const { MOBILE_BUDGET, QUALITY_TIERS, budgetReport, tintPlacements } = await import('../src/game/render3d/envkit.js');
 
   const house = game.mansion;
   const sources = staticSources(house);
@@ -3796,7 +3796,7 @@ if (args.systems) {
   // and a dining table 1.2m high. So every piece is told how tall it is,
   // through the camera's own foreshortening, against the one thing in the
   // house whose height is known: her.
-  const { pxPerMetre, VALEN_HEIGHT, VALEN_METRES, PIECE_METRES, PROP_METRES } = await import('../src/game/envkit.js');
+  const { pxPerMetre, VALEN_HEIGHT, VALEN_METRES, PIECE_METRES, PROP_METRES } = await import('../src/game/render3d/envkit.js');
   const mPortrait = pxPerMetre(0.56);
   const mWide = pxPerMetre(0.42);
   line(mPortrait > mWide && Math.abs(mPortrait / mWide - Math.sqrt(1 - 0.42 * 0.42) / Math.sqrt(1 - 0.56 * 0.56)) < 1e-9,
@@ -3819,7 +3819,7 @@ if (args.systems) {
   // got into that frame and filled it: first the shadow-catcher floor, then
   // the room itself, and the player and every enemy arrived on the world
   // inside a rectangle. These are the two guards on that door.
-  const { gradeFrame } = await import('../src/game/enemy3d.js');
+  const { gradeFrame } = await import('../src/game/render3d/enemy3d.js');
   const { createCanvas } = await import('@napi-rs/canvas');
   const body = createCanvas(60, 60);
   const bc = body.getContext('2d');
@@ -3838,8 +3838,8 @@ if (args.systems) {
   line(bodyLit > bodyRaw, `and the lamp does what it is for — it lightens the body, not the frame (${bodyRaw.toFixed(0)} -> ${bodyLit.toFixed(0)})`);
 
   // ---- THE ARMOURY (#56 P5): the mid-term ladder ---------------------------
-  const { ARMOURY, ARMOURY_BY, armouryNext, armouryHeld, forgeArmoury, huntKit } = await import('../src/game/hunt.js');
-  const { kitDamage } = await import('../src/game/weapons.js');
+  const { ARMOURY, ARMOURY_BY, armouryNext, armouryHeld, forgeArmoury, huntKit } = await import('../src/game/sim/hunt.js');
+  const { kitDamage } = await import('../src/game/sim/weapons.js');
 
   line(ARMOURY.length === 3 && ARMOURY.every((t) => t.intel > 0 && t.cost > 0 && t.line && t.effect),
     `the ladder has three rungs, and each one costs both knowing and gathering (${ARMOURY.map((t) => t.name).join(' · ')})`);
@@ -3863,7 +3863,7 @@ if (args.systems) {
   line(armouryNext(learned).name === 'BLESSED', `and the ladder points at the next rung (${armouryNext(learned).name})`);
 
   // the whole ladder, climbed
-  const everyFact = Object.keys((await import('../src/game/hunt.js')).INTEL);
+  const everyFact = Object.keys((await import('../src/game/sim/hunt.js')).INTEL);
   const rich = { hunt: { track: 90, intel: everyFact, materials: 400, nights: 12, forged: [] } };
   const madeAll = ['silver', 'blessed', 'ward'].map(() => forgeArmoury(rich));
   line(madeAll.every(Boolean) && rich.hunt.forged.length === 3 && !armouryNext(rich),
@@ -3916,7 +3916,7 @@ if (args.systems) {
   line(carried.hunt.forged.length === 3 && huntKit(carried).ward, 'the kit rides the save through a migration');
 
   // she says what she made, and the board remembers what is next
-  const { informantLine: herLine, boardEntries: herBoard } = await import('../src/game/informant.js');
+  const { informantLine: herLine, boardEntries: herBoard } = await import('../src/game/meta/informant.js');
   const forgeLine = herLine(rich, 'hub', { forged: 'ward' });
   line(forgeLine.kind === 'forge' && forgeLine.text === ARMOURY_BY.ward.line,
     `the night she makes it, that is all she talks about ("${forgeLine.text.slice(0, 34)}…")`);
@@ -3926,7 +3926,7 @@ if (args.systems) {
     'and still points at the next rung while one is missing');
 
   // ---- THE FORTRESS (#59): the house she is building, out of the same kit ----
-  const { planFortress } = await import('../src/game/envkit.js');
+  const { planFortress } = await import('../src/game/render3d/envkit.js');
   // the kit's own measurements, so the plan can be checked without a GPU
   const BOX = (x, y, z, mx = -x / 2, mz = -z / 2, my = 0) => ({ size: { x, y, z }, min: { x: mx, y: my, z: mz } });
   const BOXES = {
@@ -4054,7 +4054,7 @@ if (args.systems) {
   //   · crowd remains reduced-AI and simulation-only in 3D, never a proxy army
   {
     const { SIEGE } = await import('../src/core/config.js');
-    const { CrowdBody, CROWD, crowdSpot, outwardOf } = await import('../src/game/enemies.js');
+    const { CrowdBody, CROWD, crowdSpot, outwardOf } = await import('../src/game/sim/enemies.js');
     const noSpawn0 = TUNING.noSpawns;
     const dir = game.director;
     const crowd0 = dir.crowd.length, foes0 = game.enemies.length, phase0 = game.screen;
@@ -4166,7 +4166,7 @@ if (args.systems) {
   line(fortressLevel(fortSave) >= 0 && migrateSave({ ...fortSave, upgrades: {}, builds: {} }).fortressLevel === fortressLevel(fortSave),
     `the fortress level is derived, and a reload reads the same house (level ${fortressLevel(fortSave)})`);
   // ---- the informant + the refuge (#56 P3): one person, who remembers ----
-  const { INFORMANT, informantLine, informantStage, informantIntelLine, boardEntries, WEAPON_NAMES, informantLines, informantCounts } = await import('../src/game/informant.js');
+  const { INFORMANT, informantLine, informantStage, informantIntelLine, boardEntries, WEAPON_NAMES, informantLines, informantCounts } = await import('../src/game/meta/informant.js');
   const firstNight = { nightsSurvived: 0 };
   const lastNight = { hunt: { track: 92, intel: [], materials: 0, nights: 11 }, killsBy: {}, weapon: 'claw' };
   line(informantStage(firstNight) === 0 && informantStage(lastNight) === 4,
@@ -4239,7 +4239,7 @@ if (args.systems) {
 
   // the par is real state, never a timer: stand in the room, bleed the hound,
   // live through the stalker, pick up the drops.
-  const { huntGoal, Objectives, GOALS } = await import('../src/game/objectives.js');
+  const { huntGoal, Objectives, GOALS } = await import('../src/game/sim/objectives.js');
   const fakeGame = (save, stats = {}) => ({
     save,
     stats: { roomsSeen: {}, killsBy: {}, pickupsTaken: 0, kills: 0, ...stats },
@@ -4327,8 +4327,8 @@ if (args.systems) {
   line(climbed >= 3, `twelve nights of hunting climb the house to level ${climbed} (${fortressState(climbSave).name})`);
 
   // ---- the four peaks (#52 A): every peak fires at its trigger, once ----
-  const { Climax, PEAK } = await import('../src/game/climax.js');
-  const Swarm = (await import('../src/game/enemies.js')).Crawler;
+  const { Climax, PEAK } = await import('../src/game/meta/climax.js');
+  const Swarm = (await import('../src/game/sim/enemies.js')).Crawler;
   TUNING.noSpawns = false;
   game.save.nightsSurvived = 2;
   game.save.pendingDawn = [];
@@ -4386,7 +4386,7 @@ if (args.systems) {
   // Probe distance and bearing in the renderer's actual isometric projection;
   // scaling only world-Y by `tilt` is not the inverse of the 45-degree camera.
   // screenToWorld keeps the requested test radius identical on all four sides.
-  const { swingBearingToWorld } = await import('../src/game/weapons.js');
+  const { swingBearingToWorld } = await import('../src/game/sim/weapons.js');
   game.player.weapon = 'claw';
   const reachProbe = (r, deg) => {
     const th = (deg * Math.PI) / 180;
@@ -4458,8 +4458,8 @@ if (args.systems) {
   const wide = { w: game.renderer.w, h: game.renderer.h, zoom: game.renderer.cam.zoom };
   game.renderer.resize(390, 844, 1);
   const pv = game.renderer.view;
-  const { selectGlbSlots, ENEMY_GLB_CAP, ENEMY_MODELS, requiredClips, SlotBook, Enemy3D } = await import('../src/game/enemy3d.js');
-  const { Crawler } = await import('../src/game/enemies.js');
+  const { selectGlbSlots, ENEMY_GLB_CAP, ENEMY_MODELS, requiredClips, SlotBook, Enemy3D } = await import('../src/game/render3d/enemy3d.js');
+  const { Crawler } = await import('../src/game/sim/enemies.js');
   const wallCandidates = game.mansion.solids.filter((solid) => solid.type === 'wall')
     .sort((a, b) => Math.max(b.w, b.h) - Math.max(a.w, a.h));
   let sweptWallBlocked = false;

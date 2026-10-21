@@ -16,8 +16,8 @@
  * openings. Shared boundaries are merged so walls and collision agree.
  */
 
-import { clamp, rand, randInt, chance, TAU } from '../core/util.js';
-import { DOOR } from '../core/config.js';
+import { clamp, rand, randInt, chance, TAU } from '../../core/util.js';
+import { DOOR } from '../../core/config.js';
 import { makeExterior } from './exterior.js';
 
 export const ROOM = {

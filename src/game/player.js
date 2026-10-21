@@ -12,11 +12,11 @@
 
 import { clamp, lerp, damp, TAU, angDiff, approachAngle, chance, visualAngle, screenDirToWorld } from '../core/util.js';
 import { PLAYER, TUNING } from '../core/config.js';
-import { Valen3D } from './valen3d.js';
-import { PX_PER_METRE, SURVIVAL_ACTOR_SCALE, VALEN_METRES } from './envkit.js';
+import { Valen3D } from './render3d/valen3d.js';
+import { PX_PER_METRE, SURVIVAL_ACTOR_SCALE, VALEN_METRES } from './render3d/envkit.js';
 import { IAP } from '../shop/iap.js';
-import { drainPerSecond, laneStats } from './economy.js';
-import { weaponById, swingDist, swingBearing, swingBearingToWorld } from './weapons.js';
+import { drainPerSecond, laneStats } from './sim/economy.js';
+import { weaponById, swingDist, swingBearing, swingBearingToWorld } from './sim/weapons.js';
 
 function coatFilter(id) {
   if (id === 'coat_bloodmoon' || id === 'coat_glutton') return 'hue-rotate(-22deg) saturate(1.7) brightness(0.96)';

@@ -1,6 +1,6 @@
 import { createCanvas } from '@napi-rs/canvas';
 globalThis.document = { createElement: () => ({ getContext: () => createCanvas(64, 64).getContext('2d'), width: 64, height: 64, style: {} }) };
-const { Mansion } = await import('/home/user/Scary-Night/src/game/mansion.js');
+const { Mansion } = await import('/home/user/Scary-Night/src/game/sim/mansion.js');
 const m = new Mansion();
 console.log(`grid ${m.navW}x${m.navH} cell=${m.navCell}`);
 for (let gy = 0; gy < m.navH; gy++) {

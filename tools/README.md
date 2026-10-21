@@ -1,6 +1,6 @@
 # Katalog tools
 
-Satu pintu QA: `bash tools/.chain-b24.sh` (Fase 2 direname `tools/chain.sh`)
+Satu pintu QA: `bash tools/chain.sh` (Fase 2 direname `tools/chain.sh`)
 — menjalankan gate berurutan, log per gate ke
 `qa-evidence/survival-buildNN/logs/`.
 

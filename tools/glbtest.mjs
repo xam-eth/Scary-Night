@@ -7,14 +7,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { VALEN_CLIPS, VALEN_MODEL_URL, valenClipForState } from '../src/game/valen3d.js';
+import { VALEN_CLIPS, VALEN_MODEL_URL, valenClipForState } from '../src/game/render3d/valen3d.js';
 import {
   ENEMY_GLB_CAP, ENEMY_MODELS, ENEMY_CLIP_CONTRACT, FORBIDDEN_STANDINS,
   SlotBook, behaviorReady, enemyClipForState, requiredClips, selectGlbSlots, standinViolation,
-} from '../src/game/enemy3d.js';
-import { TROOP_ASSETS, TROOP_LOADOUTS, TROOP_BOWS } from '../src/game/troop3d.js';
-import { PEOPLE_ROLES, BONES as PACK_BONES } from '../src/game/pack3d.js';
-import { BUILDING_KIT, BUILDING_CORE, BUILDING_MODEL, SAW_NODE } from '../src/game/buildings3d.js';
+} from '../src/game/render3d/enemy3d.js';
+import { TROOP_ASSETS, TROOP_LOADOUTS, TROOP_BOWS } from '../src/game/render3d/troop3d.js';
+import { PEOPLE_ROLES, BONES as PACK_BONES } from '../src/game/render3d/pack3d.js';
+import { BUILDING_KIT, BUILDING_CORE, BUILDING_MODEL, SAW_NODE } from '../src/game/render3d/buildings3d.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE_NAME = 'hunter_run_walk_claw_sword_shot.glb';
@@ -143,10 +143,10 @@ ok('obsolete sources and rebuild pipeline are absent', retired.every((name) => !
 const bakedValen = fs.readdirSync(path.join(ROOT, 'assets')).filter((name) => /^vamp_valen_.*\.webp$/.test(name));
 ok('no rebuilt Valen sprite derivatives remain', bakedValen.length === 0, bakedValen.join(', '));
 
-const valenRuntimeCode = fs.readFileSync(path.join(ROOT, 'src/game/valen3d.js'), 'utf8');
+const valenRuntimeCode = fs.readFileSync(path.join(ROOT, 'src/game/render3d/valen3d.js'), 'utf8');
 const runtimeCode = [
   'src/game/player.js',
-  'src/game/valen3d.js',
+  'src/game/render3d/valen3d.js',
   'src/main.js',
   'src/ui/screens.js',
 ].map((filename) => fs.readFileSync(path.join(ROOT, filename), 'utf8')).join('\n');
@@ -282,9 +282,11 @@ if (wolf) {
   ok('werewolf is behavior-ready on the owner clip map',
     verdict.ready === true && verdict.missing.length === 0, verdict.missing.join(', '));
 }
-ok('the werewolf upload is kept as provenance for the conversion',
-  fs.existsSync(path.join(ROOT, 'werewolf+3d+model.zip'))
-    && fs.readFileSync(path.join(ROOT, 'werewolf+3d+model.zip')).subarray(0, 2).toString('ascii') === 'PK');
+// perapian 2026-10-21: the source zip left the repo; its SHA-256 prefix and
+// replacement are recorded in docs/audit/REMOVALS.md, the extract is vendored
+ok('the werewolf source provenance survives the cleanup (SHA recorded in REMOVALS, extract vendored byte-for-byte)',
+  /801ad29c720a/.test(fs.readFileSync(path.join(ROOT, 'docs/audit/REMOVALS.md'), 'utf8'))
+    && fs.existsSync(path.join(ROOT, 'werewolf-3d-model.glb')));
 ok('the converted werewolf is wired on the owner clip map',
   ENEMY_MODELS.werewolf.url === `./${WOLF_NAME}` && ENEMY_MODELS.werewolf.map.die === 'fall.001'
     && ENEMY_MODELS.werewolf.map.run === 'angry_02.001'
@@ -340,7 +342,7 @@ ok('death returns the instance; the next spawn does not allocate', reused.made =
 const crush = book.sync(Array.from({ length: ENEMY_GLB_CAP + 12 }, (_, i) => ({ id: 200 + i, key: 'zombie', dead: false, x: i * 10, y: 9 })));
 ok('a full swarm cannot grow the pool past the cap', crush.live === ENEMY_GLB_CAP && crush.made === ENEMY_GLB_CAP && crush.starved === 12);
 
-const enemyCode = fs.readFileSync(path.join(ROOT, 'src/game/enemy3d.js'), 'utf8');
+const enemyCode = fs.readFileSync(path.join(ROOT, 'src/game/render3d/enemy3d.js'), 'utf8');
 ok('a clip is only ever named in the registry map, never in the state machine',
   !/clipForState[\s\S]{0,200}flee_02/.test(enemyCode) && !/_pose[\s\S]{0,200}cast_a_spell/.test(enemyCode)
     && enemyCode.includes('FORBIDDEN_STANDINS'));
@@ -395,17 +397,17 @@ ok('the whole vendored kit is present and unchanged', KIT_FILES.length === 21 &&
 const credits = path.join(ROOT, 'assets', 'env-kit', 'CREDITS.txt');
 ok('the kit ships its licence note', fs.existsSync(credits) && /CC0/i.test(fs.readFileSync(credits, 'utf8')));
 
-const envCode = fs.readFileSync(path.join(ROOT, 'src/game/envkit.js'), 'utf8');
+const envCode = fs.readFileSync(path.join(ROOT, 'src/game/render3d/envkit.js'), 'utf8');
 ok('the env reads the vendored kit and nothing else',
   envCode.includes("./assets/env-kit/") && envCode.includes('KIT_SCALE')
     && envCode.includes('Valen3D.scene') && !/\.fbx|\.zip/i.test(envCode));
-const worldCode = fs.readFileSync(path.join(ROOT, 'src/game/world3d.js'), 'utf8');
+const worldCode = fs.readFileSync(path.join(ROOT, 'src/game/render3d/world3d.js'), 'utf8');
 const gameplayCode = fs.readFileSync(path.join(ROOT, 'src/game/game.js'), 'utf8');
 ok('a missing WebGL piece reports a 3D error instead of painting a Canvas fallback',
   /this\.failed = true/.test(envCode) && /EnvKit\.failed/.test(worldCode)
     && /3D MANSION COULD NOT BE BUILT/.test(gameplayCode) && !/renderWorld\(/.test(gameplayCode));
 
-const mansionCode = fs.readFileSync(path.join(ROOT, 'src/game/mansion.js'), 'utf8');
+const mansionCode = fs.readFileSync(path.join(ROOT, 'src/game/sim/mansion.js'), 'utf8');
 ok('a door with a mesh does not also paint its twin',
   envCode.includes('e.env3d = true') && !mansionCode.includes('drawEntrances('));
 
@@ -414,8 +416,8 @@ ok('a door with a mesh does not also paint its twin',
 console.log('\nmodular room:');
 
 const gameCode = fs.readFileSync(path.join(ROOT, 'src', 'game', 'game.js'), 'utf8');
-const weaponsCode = fs.readFileSync(path.join(ROOT, 'src', 'game', 'weapons.js'), 'utf8');
-const coachCode = fs.readFileSync(path.join(ROOT, 'src', 'game', 'coach.js'), 'utf8');
+const weaponsCode = fs.readFileSync(path.join(ROOT, 'src', 'game', 'sim', 'weapons.js'), 'utf8');
+const coachCode = fs.readFileSync(path.join(ROOT, 'src', 'game', 'meta', 'coach.js'), 'utf8');
 
 const uniqueDecorMeshes = (envCode.match(/new THREE\.Mesh\(/g) || []).length;
 ok('architecture and repeated props are instanced; only the unique animated clock uses separate meshes',
@@ -452,7 +454,7 @@ ok('the reach is measured as the room is drawn, not on the floor',
   /swingDist\(/.test(gameCode) && /swingDist\(/.test(coachCode) && /tilt/.test(weaponsCode));
 ok('a swing dead to the right keeps its aim', /swingAngle \?\? player\.angle/.test(gameCode));
 
-/* Survival's garrison (src/game/troop3d.js): BUILD 21 — the troops are the
+/* Survival's garrison (src/game/render3d/troop3d.js): BUILD 21 — the troops are the
  * captain's own character (one GLB family, graded in the garrison palette),
  * armed with the KayKit crossbows vendored byte-for-byte from a CC0 pack.
  * The hashes in CREDITS.txt are the provenance record (Knight.glb stays

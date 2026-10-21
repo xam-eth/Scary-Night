@@ -29,8 +29,8 @@
  * or if they fail — world3d keeps the primitive figure, so the guards never
  * vanish.
  */
-import * as THREE from '../vendor/three/three.module.min.js';
-import { GLTFLoader } from '../vendor/three/GLTFLoader.js';
+import * as THREE from '../../vendor/three/three.module.min.js';
+import { GLTFLoader } from '../../vendor/three/GLTFLoader.js';
 import { VALEN_MODEL_URL, buildUniformGrade } from './valen3d.js';
 import { People3D, PEOPLE_ROLES } from './pack3d.js';
 

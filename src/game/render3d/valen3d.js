@@ -6,7 +6,7 @@
  * composites as the upright player layer.
  */
 
-import * as THREE from '../vendor/three/three.module.min.js';
+import * as THREE from '../../vendor/three/three.module.min.js';
 
 // BUILD 24: the captain now wears the user's own pack (the egyptian
 // Commander, auto-rigged + procedurally animated by src/game/pack3d.js).

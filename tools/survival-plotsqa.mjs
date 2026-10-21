@@ -76,8 +76,8 @@ await page.waitForFunction(() => {
 }, { timeout: 180000, polling: 100 });
 console.log(`boot ${((Date.now() - t0) / 1000).toFixed(1)} s`);
 await page.evaluate(async () => {
-  window.__pW = (await import('./src/game/world3d.js')).World3D;
-  window.__pK = (await import('./src/game/buildings3d.js')).Buildings3D;
+  window.__pW = (await import('./src/game/render3d/world3d.js')).World3D;
+  window.__pK = (await import('./src/game/render3d/buildings3d.js')).Buildings3D;
   const g = window.__LN;
   g.setQuality(99);
   window.__pOrig = g.update;
@@ -385,8 +385,8 @@ await shot('cards-2-dock-keep');
  * the captain (V4), the coming night's gates shown by day (V10). V9 (the
  * merged damage numbers) is a rule, checked in tools/harness.mjs ---- */
 await page.evaluate(async () => {
-  window.__pV = (await import('./src/game/valen3d.js')).Valen3D;
-  window.__pE = (await import('./src/game/envkit.js')).EnvKit;
+  window.__pV = (await import('./src/game/render3d/valen3d.js')).Valen3D;
+  window.__pE = (await import('./src/game/render3d/envkit.js')).EnvKit;
 });
 // the captain's own pixels: the frame with him minus the frame without him
 const captainLum = () => page.evaluate(() => {
@@ -549,7 +549,7 @@ check('B14: bought, the rack works on it (UPGRADING ARMS), then every guard hold
     && b14b.armFx >= b14b.guards * 2, b14b);
 const b14c = await page.evaluate(async () => {
   const g = window.__LN; const m = g.survival;
-  const { SurvivalCrowdZombie: Crowd } = await import('./src/game/survival.js');
+  const { SurvivalCrowdZombie: Crowd } = await import('./src/game/sim/survival.js');
   m.startNight();
   m.armsLevel = 3;
   m.keepHp = 99999;
@@ -674,7 +674,7 @@ check('B15: the south / east gates have squat bastions (no bridge over them; the
   b15b);
 const b15c = await page.evaluate(async () => {
   const g = window.__LN; const m = g.survival;
-  const { SurvivalCrowdZombie: Crowd } = await import('./src/game/survival.js');
+  const { SurvivalCrowdZombie: Crowd } = await import('./src/game/sim/survival.js');
   const south = m.entranceById('southGate');
   g.enemies.length = 0; g.bolts.length = 0;
   m.guards.length = 0; m.survivors = 0;
@@ -704,9 +704,9 @@ await page.evaluate(() => { const g = window.__LN; g.enemies.length = 0; g.survi
  * still fight, every wave called with its gate. The rules are in
  * tools/harness.mjs, the tempo in tools/survival-uxprobe.mjs ---- */
 await page.evaluate(async () => {
-  window.__pV = window.__pV || (await import('./src/game/valen3d.js')).Valen3D;
-  window.__pE = window.__pE || (await import('./src/game/envkit.js')).EnvKit;
-  window.__pS = await import('./src/game/survival.js');
+  window.__pV = window.__pV || (await import('./src/game/render3d/valen3d.js')).Valen3D;
+  window.__pE = window.__pE || (await import('./src/game/render3d/envkit.js')).EnvKit;
+  window.__pS = await import('./src/game/sim/survival.js');
   const g = window.__LN;
   // a night as the day's START NIGHT opens it
   window.__pNight = (day) => {
@@ -1037,9 +1037,9 @@ check('B20: PAUSE is the mini unlocks screen — before any run ends it shows th
 /* ---- 13. BUILD 21: one character family, one horde faction, bolts from the bow ---- */
 const b21 = await page.evaluate(async () => {
   const g = window.__LN; const m = g.survival;
-  const TM = await import('./src/game/troop3d.js');
-  const VA = await import('./src/game/valen3d.js');
-  const C = (await import('./src/game/crowd3d.js')).Crowd3D;
+  const TM = await import('./src/game/render3d/troop3d.js');
+  const VA = await import('./src/game/render3d/valen3d.js');
+  const C = (await import('./src/game/render3d/crowd3d.js')).Crowd3D;
   const out = { troopReady: TM.Troop3D.ready, soldierUrl: TM.TROOP_ASSETS.soldier, valenUrl: VA.VALEN_MODEL_URL };
   // the garrison's cut of the captain's grade on the live guards
   let graded = 0, hands = 0, bows = 0;

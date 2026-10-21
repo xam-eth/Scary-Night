@@ -151,7 +151,7 @@ ok(!!shell.get(glb), 'while the network copy refreshes in the background');
 // A module that changed under the same name must never be served stale
 // (playtest 2026-10-17: a cache-first module graph kept an old build on
 // screen after every update).
-const mod = 'https://duskhold.example/src/game/survival.js';
+const mod = 'https://duskhold.example/src/game/sim/survival.js';
 net.handler = async () => new Response('code-v1', { status: 200 });
 res = await fire('fetch', req(mod));
 ok(res && (await res.text()) === 'code-v1', 'a game module is answered from the network');

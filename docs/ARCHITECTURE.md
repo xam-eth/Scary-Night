@@ -1,6 +1,6 @@
 # ARSITEKTUR DUSKHOLD / SCARY NIGHT — peta modul & aturan main
 
-**Status:** dokumen hidup pass perapian 2026-10-21 (lihat
+**Status:** Fase 1–2 SELESAI (2026-10-21): modul sudah pindah folder, `hud.js` di `src/ui/`, save storage di `core/save.js` dengan migrasi disuntik composition root, chain satu pintu `tools/chain.sh`. Lihat
 `docs/RESTRUCTURE-AUDIT.md` untuk data & fase). Angka import/LOC dari
 `tools/structaudit.mjs` → `docs/audit/struct-audit.json`.
 
@@ -8,12 +8,12 @@
 
 | Lapis | Isi | Boleh impor | Dilarang impor |
 | --- | --- | --- | --- |
-| `src/core/` | engine-agnostic: config, util, input, audio, render helpers, save (F3a) | sesama core | game, ui, shop, vendor-three |
-| `src/game/render3d/` (Fase 2) | semua modul three.js: world3d, buildings3d, enemy3d, troop3d, valen3d, pack3d, crowd3d, envkit, lightbake | core, vendor | sim, ui, shop |
-| `src/game/sim/` (Fase 2) | simulasi & aturan: survival, economy, enemies, fortress, objectives, weapons, hunt, house, mansion, exterior, haunts | core | render3d (lewat kontrak data), ui, shop |
-| `src/game/meta/` (Fase 2) | sutradara sesi: director, coach, narrative, climax, informant | core, sim (read-only) | render3d, ui |
+| `src/core/` | engine-agnostic: config, util, input, audio, render helpers, save | sesama core | game, ui, shop, vendor-three |
+| `src/game/render3d/` | semua modul three.js: world3d, buildings3d, enemy3d, troop3d, valen3d, pack3d, crowd3d, envkit, lightbake | core, vendor | sim, ui, shop |
+| `src/game/sim/` | simulasi & aturan: survival, economy, enemies, fortress, objectives, weapons, hunt, house, mansion, exterior, haunts | core | render3d (lewat kontrak data), ui, shop |
+| `src/game/meta/` | sutradara sesi: director, coach, narrative, climax, informant | core, sim (read-only) | render3d, ui |
 | `src/game/game.js` | **composition root** — merakit semua lapis | semua lapis (hak root) | — |
-| `src/ui/` | DOM/HUD/screens: components, icons, screens, storycards, survival, survivalIcons, hud (F3b) | core, game (kontrak baca) | shop langsung (lewat game) |
+| `src/ui/` | DOM/HUD/screens: components, icons, screens, storycards, survival, survivalIcons, hud | core, game (kontrak baca) | shop langsung (lewat game) |
 | `src/shop/` | monetisasi: iap, ads — **perilaku tidak boleh diubah** (constraint user) | core | sim/render langsung (Fase 3: event) |
 | `src/vendor/` | three.js + loader, byte-for-byte | — | — |
 
@@ -43,7 +43,7 @@ Pelanggaran terukur sebelum perapian: 6 (structaudit). Sesudah Fase 2 sisa 0
   prefix lapis sudah membedakannya; jangan digabung.
 - File tools: `survival-<gate>.mjs` untuk gate QA survival, `<nama>.mjs`
   untuk gate umum; chain satu pintu `tools/chain.sh` (renama dari
-  `.chain-b24.sh` di Fase 2).
+  `chain.sh`, selesai Fase 2).
 
 ## 4. Seam pecah file raksasa (F2, dieksekusi Fase 3, satu pecahan = satu chain)
 

@@ -19,8 +19,8 @@
  * (`R_Hand` for the crossbow mount, `Head`, `Hip`, `Spine02`), so every
  * weapon layer, muzzle and QA contract keeps working unchanged.
  */
-import * as THREE from '../vendor/three/three.module.min.js';
-import { GLTFLoader } from '../vendor/three/GLTFLoader.js';
+import * as THREE from '../../vendor/three/three.module.min.js';
+import { GLTFLoader } from '../../vendor/three/GLTFLoader.js';
 
 export const PEOPLE_MODEL_URL = './egyptian_people.glb';
 

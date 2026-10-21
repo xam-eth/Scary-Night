@@ -7,16 +7,16 @@
 import * as Audio from './core/audio.js';
 import { Game } from './game/game.js';
 import { phaseAt } from './core/config.js';
-import { drawTouchControls } from './game/hud.js';
+import { drawTouchControls } from './ui/hud.js';
 import { drawSurvivalControls } from './ui/survival.js';
-import { drawCoach } from './game/coach.js';
-import { Valen3D } from './game/valen3d.js';
-import { Enemy3D } from './game/enemy3d.js';
-import { Troop3D } from './game/troop3d.js';
-import { Crowd3D } from './game/crowd3d.js';
-import { Buildings3D } from './game/buildings3d.js';
-import { EnvKit } from './game/envkit.js';
-import { World3D } from './game/world3d.js';
+import { drawCoach } from './game/meta/coach.js';
+import { Valen3D } from './game/render3d/valen3d.js';
+import { Enemy3D } from './game/render3d/enemy3d.js';
+import { Troop3D } from './game/render3d/troop3d.js';
+import { Crowd3D } from './game/render3d/crowd3d.js';
+import { Buildings3D } from './game/render3d/buildings3d.js';
+import { EnvKit } from './game/render3d/envkit.js';
+import { World3D } from './game/render3d/world3d.js';
 import { Ads } from './shop/ads.js';
 import { IAP } from './shop/iap.js';
 

@@ -13,7 +13,7 @@
  * nothing is horror; a fake low-blood warning is a broken game.
  */
 
-import { clamp, rand, chance, dist, TAU } from '../core/util.js';
+import { clamp, rand, chance, dist, TAU } from '../../core/util.js';
 
 const WHISPERS = [
   'SOMETHING AGREES WITH YOUR CHOICE OF DOOR.',

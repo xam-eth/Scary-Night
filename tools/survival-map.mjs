@@ -63,8 +63,8 @@ globalThis.addEventListener = () => { };
 globalThis.requestAnimationFrame = () => 0;
 
 const { Game } = await import('../src/game/game.js');
-const { SURVIVAL_SLOTS, CIRCLE, PLOT, BANNER } = await import('../src/game/survival.js');
-const { FORT_SCALE, PLAZA_R, ROAD_HALF } = await import('../src/game/fortress.js');
+const { SURVIVAL_SLOTS, CIRCLE, PLOT, BANNER } = await import('../src/game/sim/survival.js');
+const { FORT_SCALE, PLAZA_R, ROAD_HALF } = await import('../src/game/sim/fortress.js');
 
 function makeCanvas() {
   const canvas = createCanvas(844, 390);
@@ -251,9 +251,9 @@ for (const f of decor) {
  * height (x1.6). The captain's see-through silhouette is 3D
  * (survival-plotsqa §7); this is the masonry itself.
  */
-const { TOWER_RISE, NEAR_SIDES } = await import('../src/game/fortress.js');
-const { PX_PER_METRE, PIECE_METRES, VALEN_METRES, SURVIVAL_ACTOR_SCALE } = await import('../src/game/envkit.js');
-const { KILL_ZONE, GLACIS } = await import('../src/game/exterior.js');
+const { TOWER_RISE, NEAR_SIDES } = await import('../src/game/sim/fortress.js');
+const { PX_PER_METRE, PIECE_METRES, VALEN_METRES, SURVIVAL_ACTOR_SCALE } = await import('../src/game/render3d/envkit.js');
+const { KILL_ZONE, GLACIS } = await import('../src/game/sim/exterior.js');
 const wallTop = m.wallMetres * PX_PER_METRE;
 const gateTop = Math.max(wallTop, PIECE_METRES.doorway * PX_PER_METRE + 6);
 const sightSolids = [];

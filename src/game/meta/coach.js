@@ -4,9 +4,10 @@
  * action actually happens, not when the player is merely nearby.
  */
 
-import { TAU, writeSave, clamp } from '../core/util.js';
-import { PLAYER } from '../core/config.js';
-import { swingDist } from './weapons.js';
+import { TAU, clamp } from '../../core/util.js';
+import { writeSave } from '../../core/save.js';
+import { PLAYER } from '../../core/config.js';
+import { swingDist } from '../sim/weapons.js';
 
 // The servant door is already knocking. Learn the stick, then go to it.
 // Planks for the fort come after that choice, not before the door falls.

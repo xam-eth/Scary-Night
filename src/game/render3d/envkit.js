@@ -14,11 +14,11 @@
  * silently drawing a Canvas version of the world.
  */
 
-import * as THREE from '../vendor/three/three.module.min.js';
-import { GLTFLoader } from '../vendor/three/GLTFLoader.js';
+import * as THREE from '../../vendor/three/three.module.min.js';
+import { GLTFLoader } from '../../vendor/three/GLTFLoader.js';
 import { Valen3D } from './valen3d.js';
 import { bakeLight, bakedTint, bakeReport } from './lightbake.js';
-import { ISO_CAMERA } from '../core/util.js';
+import { ISO_CAMERA } from '../../core/util.js';
 
 export const KIT_DIR = './assets/env-kit/';
 
@@ -70,7 +70,7 @@ export const PX_PER_METRE = pxPerMetre(ISO_CAMERA.tilt);
  * captain, his guards and the horde stand ×1.6 in the half-size bailey).
  * A visual multiplier only — collision radii, reach and ranges are unchanged.
  */
-export { SURVIVAL_ACTOR_SCALE } from '../core/config.js';
+export { SURVIVAL_ACTOR_SCALE } from '../../core/config.js';
 
 /**
  * WHAT EVERYTHING IS, IN METRES.

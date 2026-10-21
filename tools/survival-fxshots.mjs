@@ -84,9 +84,9 @@ await page.waitForFunction(() => {
   return !!(g && g.mode === 'survival' && g.screen === 'playing' && g.survival && g.survival.phase === 'night');
 }, { timeout: 120000, polling: 100 });
 await page.evaluate(async () => {
-  window.__fxWorld = (await import('./src/game/world3d.js')).World3D;
-  window.__fxEnemy = (await import('./src/game/enemy3d.js')).Enemy3D;
-  window.__fxTroop = (await import('./src/game/troop3d.js')).Troop3D;
+  window.__fxWorld = (await import('./src/game/render3d/world3d.js')).World3D;
+  window.__fxEnemy = (await import('./src/game/render3d/enemy3d.js')).Enemy3D;
+  window.__fxTroop = (await import('./src/game/render3d/troop3d.js')).Troop3D;
 });
 await page.waitForFunction(() => window.__fxWorld?.diagnostics?.().ready, { timeout: 90000, polling: 100 });
 await page.waitForFunction(() => {
@@ -323,15 +323,15 @@ check('end: a loss counts every kill of the run by source, shows the night\'s tr
 
 // 8. a real three-night win: the builder bot plays it in the page, fast
 await page.evaluate(async () => {
-  window.__fxValen = (await import('./src/game/valen3d.js')).Valen3D;
+  window.__fxValen = (await import('./src/game/render3d/valen3d.js')).Valen3D;
   window.__fxBots = await import('./tools/survival-bots.mjs');
-  window.__fxRoom = (await import('./src/game/mansion.js')).ROOM;
+  window.__fxRoom = (await import('./src/game/sim/mansion.js')).ROOM;
   window.__fxIso = (await import('./src/core/util.js')).ISO_CAMERA;
 });
 const win = await shot('fx-win', async () => {
   const g = window.__LN; const m = g.survival;
-  const W = (await import('./src/game/world3d.js')).World3D;
-  const V = (await import('./src/game/valen3d.js')).Valen3D;
+  const W = (await import('./src/game/render3d/world3d.js')).World3D;
+  const V = (await import('./src/game/render3d/valen3d.js')).Valen3D;
   const { botNight, botDay, releaseControls } = window.__fxBots;
   m.restart();
   m.records.totalStars = 2;   // BUILD 19: banked earlier, so this win crosses IRON

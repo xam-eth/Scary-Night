@@ -5,7 +5,7 @@
  * mansion's collision grid so the player and combatants cannot walk through
  * the scenery. The siege crowd is deliberately not part of this module.
  */
-import { hash2 } from '../core/util.js';
+import { hash2 } from '../../core/util.js';
 
 const hashRange = (x, y, seed, min, max) => min + hash2(x, y, seed) * (max - min);
 

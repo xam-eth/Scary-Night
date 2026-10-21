@@ -122,8 +122,8 @@ try {
   // freeze the loop; step manually from here on
   await page.evaluate(async () => {
     const g = window.__LN;
-    window.__W = (await import('./src/game/world3d.js')).World3D;
-    window.__E = (await import('./src/game/envkit.js')).EnvKit;
+    window.__W = (await import('./src/game/render3d/world3d.js')).World3D;
+    window.__E = (await import('./src/game/render3d/envkit.js')).EnvKit;
     window.__orig = g.update;
     g.update = () => {};
     window.__step = (n = 1) => { for (let i = 0; i < n; i++) window.__orig.call(g, 1 / 60); g.render(); };
@@ -459,7 +459,7 @@ try {
     }, { timeout: 120000, polling: 50 });
     await cine.evaluate(async () => {
       const g = window.__LN;
-      window.__W = (await import('./src/game/world3d.js')).World3D;
+      window.__W = (await import('./src/game/render3d/world3d.js')).World3D;
       window.__orig = g.update;
       g.update = () => {};
       window.__step = (n = 1) => { for (let i = 0; i < n; i++) window.__orig.call(g, 1 / 60); g.render(); };

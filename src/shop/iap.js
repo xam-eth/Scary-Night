@@ -43,7 +43,7 @@
  */
 
 import { SHOP_CONFIG, IDR } from './config.js';
-import { LANES, ownsRank, unlocked } from '../game/economy.js';
+import { LANES, ownsRank, unlocked } from '../game/sim/economy.js';
 import { Ads } from './ads.js';
 import { DigitalGoodsProvider, inTwa } from './digitalgoods.js';
 

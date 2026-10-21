@@ -74,8 +74,8 @@ await page.waitForFunction(() => {
   return !!(g && g.mode === 'survival' && g.screen === 'playing' && g.survival && g.survival.phase === 'night');
 }, { timeout: 120000, polling: 100 });
 await page.evaluate(async () => {
-  window.__survWorld = (await import('./src/game/world3d.js')).World3D;
-  window.__survEnemy = (await import('./src/game/enemy3d.js')).Enemy3D;
+  window.__survWorld = (await import('./src/game/render3d/world3d.js')).World3D;
+  window.__survEnemy = (await import('./src/game/render3d/enemy3d.js')).Enemy3D;
 });
 await page.waitForFunction(() => window.__survWorld?.diagnostics?.().ready, { timeout: 90000, polling: 100 });
 await page.waitForFunction(() => {

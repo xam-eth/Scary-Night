@@ -30,8 +30,8 @@
  * or if a core file fails — world3d keeps its procedural buildings, so a
  * plot never stands empty.
  */
-import * as THREE from '../vendor/three/three.module.min.js';
-import { GLTFLoader } from '../vendor/three/GLTFLoader.js';
+import * as THREE from '../../vendor/three/three.module.min.js';
+import { GLTFLoader } from '../../vendor/three/GLTFLoader.js';
 
 const DIR = 'assets/buildings/kaykit-hex/';
 

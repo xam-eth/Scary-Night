@@ -31,10 +31,11 @@
  *     (live after CINE.armAfter so the tap that started the run can't skip).
  */
 
-import { clamp, writeSave } from '../core/util.js';
+import { clamp } from '../core/util.js';
+import { writeSave } from '../core/save.js';
 import { SURVIVAL_ACTOR_SCALE } from '../core/config.js';
-import { SURVIVAL_BUILDINGS, BUILDING_MAX_LEVEL, HUNTER_MAX_LEVEL, ARMS_MAX_LEVEL, GUARD, CINE, SURVIVAL_CAMERA, gateShort, UNLOCK_TIERS } from '../game/survival.js';
-import { pauseButtonBox } from '../game/hud.js';
+import { SURVIVAL_BUILDINGS, BUILDING_MAX_LEVEL, HUNTER_MAX_LEVEL, ARMS_MAX_LEVEL, GUARD, CINE, SURVIVAL_CAMERA, gateShort, UNLOCK_TIERS } from '../game/sim/survival.js';
+import { pauseButtonBox } from './hud.js';
 import {
   drawSurvivalIcon, drawLabel, measureLabel, drawPanel, drawCounter, drawBar,
   roundRectPath, COLORS, INK,
@@ -668,7 +669,7 @@ function drawEdgeMarker(ctx, w, h, p, icon, color, top = 128, bottom = 150, coun
  * pop (a mine's coin, a sawmill's planks, a barracks' soldier) sits on a dark
  * pill with its icon so it reads over any floor. A damage number (BUILD 13,
  * V9) starts over the head, rides with its body, and pops again each time a
- * further hit adds into it (game/survival.js pushDamageNumber), so its rise
+ * further hit adds into it (game/sim/survival.js pushDamageNumber), so its rise
  * and fade run on its own clock, not on its (growing) life.
  */
 const DMG_LANES = 3;   // steps a damage number may climb to keep clear
@@ -1544,7 +1545,7 @@ function drawDayWorldLayer(game, ctx, w, h, view) {
   }
   // BUILD 13 (V10, research §7: "info gelombang sebelum malam"; Thronefall's
   // edge icons): tonight's attack by day — every gate it will hit, what comes
-  // and how many (the plan the night plays: game/survival.js tonightPlan). In
+  // and how many (the plan the night plays: game/sim/survival.js tonightPlan). In
   // view a red badge over the gate; out of view a red pointer on the edge
   // with the count. Not under the dawn reward (this layer isn't drawn then).
   const tonight = [];

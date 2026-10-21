@@ -6,8 +6,9 @@
  * resources, builder queue, night waves, and rewards.
  */
 
-import { ISO_CAMERA, approachAngle, clamp, damp, dist, lerp, rand, screenDirToWorld, writeSave } from '../core/util.js';
-import { SURVIVAL_TUNING, SURVIVAL_ACTOR_SCALE } from '../core/config.js';
+import { ISO_CAMERA, approachAngle, clamp, damp, dist, lerp, rand, screenDirToWorld } from '../../core/util.js';
+import { writeSave } from '../../core/save.js';
+import { SURVIVAL_TUNING, SURVIVAL_ACTOR_SCALE } from '../../core/config.js';
 import { CrowdBody, Zombie, outwardOf, CROWD, ESTATE } from './enemies.js';
 import { ROOM } from './mansion.js';
 import { FORT } from './fortress.js';

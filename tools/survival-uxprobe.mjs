@@ -91,7 +91,7 @@ Math.random = function () {
 };
 
 const { Game } = await import('../src/game/game.js');
-const { ROOM } = await import('../src/game/mansion.js');
+const { ROOM } = await import('../src/game/sim/mansion.js');
 const { ISO_CAMERA } = await import('../src/core/util.js');
 const { PLAYER } = await import('../src/core/config.js');
 
@@ -105,7 +105,7 @@ function makeCanvas() {
 }
 
 const { botNight, botDay, releaseControls } = await import('./survival-bots.mjs');
-const { gateShort } = await import('../src/game/survival.js');
+const { gateShort } = await import('../src/game/sim/survival.js');
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
 /* ---------------- measurement ---------------- */

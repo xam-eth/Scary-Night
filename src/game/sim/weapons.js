@@ -3,8 +3,8 @@
  * Nothing here is sold, and nothing here raises a stat.
  */
 
-import { PLAYER } from '../core/config.js';
-import { screenDirToWorld } from '../core/util.js';
+import { PLAYER } from '../../core/config.js';
+import { screenDirToWorld } from '../../core/util.js';
 
 export const WEAPONS = Object.freeze({
   claw: Object.freeze({

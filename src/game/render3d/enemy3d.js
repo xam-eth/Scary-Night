@@ -19,9 +19,9 @@
  * Source GLB bytes are kept unchanged; only this runtime map selects actions.
  */
 
-import * as THREE from '../vendor/three/three.module.min.js';
-import { GLTFLoader } from '../vendor/three/GLTFLoader.js';
-import { dist } from '../core/util.js';
+import * as THREE from '../../vendor/three/three.module.min.js';
+import { GLTFLoader } from '../../vendor/three/GLTFLoader.js';
+import { dist } from '../../core/util.js';
 import { Valen3D } from './valen3d.js';
 
 export const ENEMY_GLB_CAP = 14;

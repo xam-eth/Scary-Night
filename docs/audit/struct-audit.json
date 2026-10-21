@@ -1,24 +1,24 @@
 {
-  "generated": "2026-10-21T01:20:59.289Z",
+  "generated": "2026-10-21T01:43:30.678Z",
   "src": {
-    "files": 48,
-    "locTotal": 45592,
+    "files": 49,
+    "locTotal": 45600,
     "biggest": [
       [
-        "src/game/survival.js",
-        4926
+        "src/game/sim/survival.js",
+        4927
       ],
       [
         "src/vendor/three/GLTFLoader.js",
         4891
       ],
       [
-        "src/game/world3d.js",
+        "src/game/render3d/world3d.js",
         4319
       ],
       [
         "src/game/game.js",
-        3034
+        3036
       ],
       [
         "src/ui/screens.js",
@@ -26,14 +26,14 @@
       ],
       [
         "src/ui/survival.js",
-        2389
+        2390
       ],
       [
-        "src/game/envkit.js",
+        "src/game/render3d/envkit.js",
         2104
       ],
       [
-        "src/game/enemies.js",
+        "src/game/sim/enemies.js",
         1814
       ],
       [
@@ -45,22 +45,20 @@
         1143
       ],
       [
-        "src/game/director.js",
+        "src/game/meta/director.js",
         1129
       ],
       [
-        "src/game/enemy3d.js",
+        "src/game/render3d/enemy3d.js",
         1127
       ]
     ],
     "orphans": [],
     "layerViolations": [
-      "src/core/util.js -> src/game/economy.js",
+      "src/game/game.js -> src/ui/hud.js",
       "src/game/game.js -> src/ui/screens.js",
       "src/game/game.js -> src/ui/survival.js",
-      "src/game/hud.js -> src/ui/icons.js",
-      "src/game/hud.js -> src/ui/components.js",
-      "src/shop/iap.js -> src/game/economy.js"
+      "src/shop/iap.js -> src/game/sim/economy.js"
     ],
     "fanIn": [
       [
@@ -76,27 +74,27 @@
         10
       ],
       [
-        "src/game/economy.js",
+        "src/game/render3d/valen3d.js",
         8
       ],
       [
-        "src/game/valen3d.js",
+        "src/game/sim/economy.js",
         8
       ],
       [
-        "src/game/hunt.js",
+        "src/game/sim/hunt.js",
         7
       ],
       [
-        "src/game/enemy3d.js",
+        "src/game/render3d/enemy3d.js",
         6
       ],
       [
-        "src/game/weapons.js",
+        "src/game/sim/weapons.js",
         6
       ],
       [
-        "src/game/mansion.js",
+        "src/game/sim/mansion.js",
         5
       ],
       [
@@ -104,18 +102,36 @@
         5
       ],
       [
-        "src/game/enemies.js",
+        "src/core/save.js",
         4
       ],
       [
-        "src/game/envkit.js",
+        "src/game/render3d/envkit.js",
         4
       ]
     ]
   },
   "tools": [
     {
-      "file": "tools/asset-sheet.mjs",
+      "file": "tools/archive/asset-sheet.mjs",
+      "refs": 1,
+      "inPkg": false,
+      "inDocs": true,
+      "inChain": false,
+      "inCi": false,
+      "used": true
+    },
+    {
+      "file": "tools/archive/audit-play.mjs",
+      "refs": 1,
+      "inPkg": false,
+      "inDocs": true,
+      "inChain": false,
+      "inCi": false,
+      "used": true
+    },
+    {
+      "file": "tools/archive/audit-play2.mjs",
       "refs": 0,
       "inPkg": false,
       "inDocs": false,
@@ -124,7 +140,7 @@
       "used": false
     },
     {
-      "file": "tools/audit-play.mjs",
+      "file": "tools/archive/audit-play3.mjs",
       "refs": 0,
       "inPkg": false,
       "inDocs": false,
@@ -133,35 +149,116 @@
       "used": false
     },
     {
-      "file": "tools/audit-play2.mjs",
-      "refs": 0,
+      "file": "tools/archive/brandassets.mjs",
+      "refs": 1,
       "inPkg": false,
-      "inDocs": false,
+      "inDocs": true,
       "inChain": false,
       "inCi": false,
-      "used": false
+      "used": true
     },
     {
-      "file": "tools/audit-play3.mjs",
-      "refs": 0,
+      "file": "tools/archive/clicktest.mjs",
+      "refs": 1,
       "inPkg": false,
-      "inDocs": false,
+      "inDocs": true,
       "inChain": false,
       "inCi": false,
-      "used": false
+      "used": true
     },
     {
-      "file": "tools/brandassets.mjs",
-      "refs": 0,
+      "file": "tools/archive/export-house.mjs",
+      "refs": 1,
       "inPkg": false,
-      "inDocs": false,
+      "inDocs": true,
       "inChain": false,
       "inCi": false,
-      "used": false
+      "used": true
+    },
+    {
+      "file": "tools/archive/frameqa.mjs",
+      "refs": 1,
+      "inPkg": false,
+      "inDocs": true,
+      "inChain": false,
+      "inCi": false,
+      "used": true
+    },
+    {
+      "file": "tools/archive/frameview.mjs",
+      "refs": 1,
+      "inPkg": false,
+      "inDocs": true,
+      "inChain": false,
+      "inCi": false,
+      "used": true
+    },
+    {
+      "file": "tools/archive/makeicons.mjs",
+      "refs": 1,
+      "inPkg": false,
+      "inDocs": true,
+      "inChain": false,
+      "inCi": false,
+      "used": true
+    },
+    {
+      "file": "tools/archive/probe-pack24.mjs",
+      "refs": 2,
+      "inPkg": false,
+      "inDocs": true,
+      "inChain": false,
+      "inCi": false,
+      "used": true
+    },
+    {
+      "file": "tools/archive/qa-char.mjs",
+      "refs": 1,
+      "inPkg": false,
+      "inDocs": true,
+      "inChain": false,
+      "inCi": false,
+      "used": true
+    },
+    {
+      "file": "tools/archive/qa-final.mjs",
+      "refs": 1,
+      "inPkg": false,
+      "inDocs": true,
+      "inChain": false,
+      "inCi": false,
+      "used": true
+    },
+    {
+      "file": "tools/archive/qa-pitch.mjs",
+      "refs": 1,
+      "inPkg": false,
+      "inDocs": true,
+      "inChain": false,
+      "inCi": false,
+      "used": true
+    },
+    {
+      "file": "tools/archive/shot-char.mjs",
+      "refs": 1,
+      "inPkg": false,
+      "inDocs": true,
+      "inChain": false,
+      "inCi": false,
+      "used": true
+    },
+    {
+      "file": "tools/archive/shotbrowser.mjs",
+      "refs": 1,
+      "inPkg": false,
+      "inDocs": true,
+      "inChain": false,
+      "inCi": false,
+      "used": true
     },
     {
       "file": "tools/bundle.mjs",
-      "refs": 57,
+      "refs": 58,
       "inPkg": false,
       "inDocs": true,
       "inChain": true,
@@ -170,21 +267,12 @@
     },
     {
       "file": "tools/bundlecheck.mjs",
-      "refs": 24,
+      "refs": 25,
       "inPkg": false,
       "inDocs": true,
       "inChain": true,
       "inCi": true,
       "used": true
-    },
-    {
-      "file": "tools/clicktest.mjs",
-      "refs": 0,
-      "inPkg": false,
-      "inDocs": false,
-      "inChain": false,
-      "inCi": false,
-      "used": false
     },
     {
       "file": "tools/deploy-web.sh",
@@ -197,7 +285,7 @@
     },
     {
       "file": "tools/envqa.mjs",
-      "refs": 31,
+      "refs": 32,
       "inPkg": false,
       "inDocs": true,
       "inChain": false,
@@ -214,33 +302,6 @@
       "used": true
     },
     {
-      "file": "tools/export-house.mjs",
-      "refs": 0,
-      "inPkg": false,
-      "inDocs": false,
-      "inChain": false,
-      "inCi": false,
-      "used": false
-    },
-    {
-      "file": "tools/frameqa.mjs",
-      "refs": 0,
-      "inPkg": false,
-      "inDocs": false,
-      "inChain": false,
-      "inCi": false,
-      "used": false
-    },
-    {
-      "file": "tools/frameview.mjs",
-      "refs": 0,
-      "inPkg": false,
-      "inDocs": false,
-      "inChain": false,
-      "inCi": false,
-      "used": false
-    },
-    {
       "file": "tools/geo.mjs",
       "refs": 9,
       "inPkg": false,
@@ -251,7 +312,7 @@
     },
     {
       "file": "tools/glbtest.mjs",
-      "refs": 28,
+      "refs": 34,
       "inPkg": false,
       "inDocs": true,
       "inChain": false,
@@ -260,7 +321,7 @@
     },
     {
       "file": "tools/harness.mjs",
-      "refs": 73,
+      "refs": 76,
       "inPkg": false,
       "inDocs": true,
       "inChain": false,
@@ -269,21 +330,12 @@
     },
     {
       "file": "tools/layoutqa.mjs",
-      "refs": 26,
+      "refs": 27,
       "inPkg": false,
       "inDocs": true,
       "inChain": false,
       "inCi": false,
       "used": true
-    },
-    {
-      "file": "tools/makeicons.mjs",
-      "refs": 0,
-      "inPkg": false,
-      "inDocs": false,
-      "inChain": false,
-      "inCi": false,
-      "used": false
     },
     {
       "file": "tools/nav.mjs",
@@ -296,7 +348,7 @@
     },
     {
       "file": "tools/playpack.sh",
-      "refs": 2,
+      "refs": 3,
       "inPkg": false,
       "inDocs": true,
       "inChain": true,
@@ -304,58 +356,13 @@
       "used": true
     },
     {
-      "file": "tools/qa-char.mjs",
-      "refs": 0,
-      "inPkg": false,
-      "inDocs": false,
-      "inChain": false,
-      "inCi": false,
-      "used": false
-    },
-    {
-      "file": "tools/qa-final.mjs",
-      "refs": 0,
-      "inPkg": false,
-      "inDocs": false,
-      "inChain": false,
-      "inCi": false,
-      "used": false
-    },
-    {
-      "file": "tools/qa-pitch.mjs",
-      "refs": 0,
-      "inPkg": false,
-      "inDocs": false,
-      "inChain": false,
-      "inCi": false,
-      "used": false
-    },
-    {
-      "file": "tools/shot-char.mjs",
-      "refs": 0,
-      "inPkg": false,
-      "inDocs": false,
-      "inChain": false,
-      "inCi": false,
-      "used": false
-    },
-    {
-      "file": "tools/shotbrowser.mjs",
-      "refs": 0,
-      "inPkg": false,
-      "inDocs": false,
-      "inChain": false,
-      "inCi": false,
-      "used": false
-    },
-    {
       "file": "tools/structaudit.mjs",
-      "refs": 0,
+      "refs": 18,
       "inPkg": false,
-      "inDocs": false,
+      "inDocs": true,
       "inChain": false,
       "inCi": false,
-      "used": false
+      "used": true
     },
     {
       "file": "tools/survival-balance.mjs",
@@ -377,7 +384,7 @@
     },
     {
       "file": "tools/survival-devqa.mjs",
-      "refs": 24,
+      "refs": 25,
       "inPkg": false,
       "inDocs": true,
       "inChain": false,
@@ -386,7 +393,7 @@
     },
     {
       "file": "tools/survival-fxshots.mjs",
-      "refs": 24,
+      "refs": 25,
       "inPkg": false,
       "inDocs": true,
       "inChain": false,
@@ -395,7 +402,7 @@
     },
     {
       "file": "tools/survival-intro.mjs",
-      "refs": 17,
+      "refs": 18,
       "inPkg": false,
       "inDocs": true,
       "inChain": false,
@@ -404,7 +411,7 @@
     },
     {
       "file": "tools/survival-look.mjs",
-      "refs": 22,
+      "refs": 23,
       "inPkg": false,
       "inDocs": true,
       "inChain": false,
@@ -422,7 +429,7 @@
     },
     {
       "file": "tools/survival-plotsqa.mjs",
-      "refs": 29,
+      "refs": 30,
       "inPkg": false,
       "inDocs": true,
       "inChain": false,
@@ -449,7 +456,7 @@
     },
     {
       "file": "tools/swtest.mjs",
-      "refs": 22,
+      "refs": 23,
       "inPkg": false,
       "inDocs": true,
       "inChain": false,
@@ -505,18 +512,6 @@
       "referenced": true
     },
     {
-      "file": "Godot_v4.6.2-stable_linux.x86_64.zip",
-      "referenced": false
-    },
-    {
-      "file": "HUNTER_GLB.txt",
-      "referenced": false
-    },
-    {
-      "file": "Ultimate Monsters Bundle-glb.zip",
-      "referenced": false
-    },
-    {
       "file": "bundle.config.json",
       "referenced": true
     },
@@ -558,18 +553,6 @@
     },
     {
       "file": "sw.js",
-      "referenced": true
-    },
-    {
-      "file": "web_nothreads_debug.zip",
-      "referenced": false
-    },
-    {
-      "file": "web_nothreads_release.zip",
-      "referenced": false
-    },
-    {
-      "file": "werewolf+3d+model.zip",
       "referenced": true
     },
     {

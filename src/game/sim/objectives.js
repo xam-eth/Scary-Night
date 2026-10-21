@@ -12,7 +12,7 @@
  * explicit notify() events, so no gameplay system had to be rewired.
  */
 
-import { clamp } from '../core/util.js';
+import { clamp } from '../../core/util.js';
 import { dealHuntObjective, HUNT_OBJECTIVES, huntNightSeed } from './hunt.js';
 
 function applyMissionReward(game, reward) {

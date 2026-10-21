@@ -13,7 +13,7 @@
  * synthesised SFX. If it is removed, nothing else breaks.
  */
 
-import { clamp, lerp, damp, dist, rand, chance, TAU } from '../core/util.js';
+import { clamp, lerp, damp, dist, rand, chance, TAU } from '../../core/util.js';
 
 export class House {
   constructor() {

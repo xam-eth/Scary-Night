@@ -107,7 +107,7 @@ Math.random = function () {
 
 const { Game } = await import('../src/game/game.js');
 const { drawSurvivalScreen } = await import('../src/ui/survival.js');
-const { ROOM } = await import('../src/game/mansion.js');
+const { ROOM } = await import('../src/game/sim/mansion.js');
 const { ISO_CAMERA } = await import('../src/core/util.js');
 
 function makeCanvas() {
@@ -120,7 +120,7 @@ function makeCanvas() {
 }
 
 const { botNight, botDay, releaseControls } = await import('./survival-bots.mjs');
-const { NIGHT_ROTATIONS } = await import('../src/game/survival.js');
+const { NIGHT_ROTATIONS } = await import('../src/game/sim/survival.js');
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const release = releaseControls;
 
@@ -268,7 +268,7 @@ if (args.walkprobe) {
   const game = new Game(makeCanvas(), { mode: 'survival', nightDuration: DURATION });
   const mode = game.survival;
   const m = game.mansion;
-  const { SurvivalCrowdZombie } = await import('../src/game/survival.js');
+  const { SurvivalCrowdZombie } = await import('../src/game/sim/survival.js');
   const door = m.entranceById('southGate');
   door.broken = true; door.open = true; m.refreshNavAround(door);
   mode._fields.clear();

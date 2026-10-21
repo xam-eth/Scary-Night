@@ -13,7 +13,7 @@
  * The legacy fortress and weapons read progression from this state.
  */
 
-import { NIGHT_DURATION } from '../core/config.js';
+import { NIGHT_DURATION } from '../../core/config.js';
 
 /**
  * Intel: discrete facts about the Master, learned by playing. Each is banked

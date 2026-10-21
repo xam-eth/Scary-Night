@@ -9,11 +9,11 @@
 
 import { clamp, fmtClock, TAU } from '../core/util.js';
 import { PLAYER } from '../core/config.js';
-import { unlocked } from './economy.js';
-import { drawGuideArrow, guideScale, guideSize } from './coach.js';
-import { weaponById } from './weapons.js';
-import { drawGameIcon } from '../ui/icons.js';
-import { drawIconButton, iconButtonState, iconHitArea, UI_TOKENS } from '../ui/components.js';
+import { unlocked } from '../game/sim/economy.js';
+import { drawGuideArrow, guideScale, guideSize } from '../game/meta/coach.js';
+import { weaponById } from '../game/sim/weapons.js';
+import { drawGameIcon } from './icons.js';
+import { drawIconButton, iconButtonState, iconHitArea, UI_TOKENS } from './components.js';
 
 const SERIF = '"IM Fell English SC", Georgia, serif';
 const SANS = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';

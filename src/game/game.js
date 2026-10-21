@@ -13,39 +13,41 @@ import { Input } from '../core/input.js';
 import { Renderer, Particles, Decals, PAL } from '../core/render.js';
 import {
   clamp, lerp, damp, rand, chance, dist, TAU,
-  loadSave, writeSave, defaultSave, angDiff, visualAngle,
+  angDiff, visualAngle,
 } from '../core/util.js';
+import { loadSave, writeSave, defaultSave } from '../core/save.js';
+import { migrateSave } from './sim/economy.js';
 import {
   NIGHT_DURATION, DAWN_AT, PANIC_AT, PLAYER, DOOR, RES,
   phaseAt, DIFFICULTY, TUNING, SHARDS, nightHeat, threatMix,
 } from '../core/config.js';
-import { Mansion, ROOM } from './mansion.js';
-import { Fortress } from './fortress.js';
+import { Mansion, ROOM } from './sim/mansion.js';
+import { Fortress } from './sim/fortress.js';
 import { Player, PSTATE } from './player.js';
-import { Bolt } from './enemies.js';
-import { Director } from './director.js';
-import { Objectives } from './objectives.js';
+import { Bolt } from './sim/enemies.js';
+import { Director } from './meta/director.js';
+import { Objectives } from './sim/objectives.js';
 import {
   packGain, killShards, purseFloor, projectDawn, revealForNight,
   nextRank, rankCost, rankCount, LANE_CAP, LARDER_BLOOD, unlocked, markUnlocks, grantLaneTitle, houseTitle,
-} from './economy.js';
-import { House } from './house.js';
-import { bankNight, fellMaster, masterReady, masterDown, forgeArmoury, huntKit } from './hunt.js';
-import { informantLine } from './informant.js';
-import { Haunts } from './haunts.js';
+} from './sim/economy.js';
+import { House } from './sim/house.js';
+import { bankNight, fellMaster, masterReady, masterDown, forgeArmoury, huntKit } from './sim/hunt.js';
+import { informantLine } from './meta/informant.js';
+import { Haunts } from './sim/haunts.js';
 import { Ads } from '../shop/ads.js';
-import { Valen3D } from './valen3d.js';
-import { EnvKit, MOBILE_BUDGET, QUALITY_TIERS } from './envkit.js';
-import { World3D } from './world3d.js';
-import { Enemy3D } from './enemy3d.js';
+import { Valen3D } from './render3d/valen3d.js';
+import { EnvKit, MOBILE_BUDGET, QUALITY_TIERS } from './render3d/envkit.js';
+import { World3D } from './render3d/world3d.js';
+import { Enemy3D } from './render3d/enemy3d.js';
 import { IAP } from '../shop/iap.js';
-import { drawHUD, urgentGuidance, pauseButtonBox } from './hud.js';
-import { WEAPONS, weaponById, nextWeapon, swingBearing, swingDist, kitDamage } from './weapons.js';
-import { nextBeat, ackBeat, beatById, endingReady, narrationLines, beatSeen } from './narrative.js';
-import { updateCoach } from './coach.js';
-import { Climax, PEAK } from './climax.js';
+import { drawHUD, urgentGuidance, pauseButtonBox } from '../ui/hud.js';
+import { WEAPONS, weaponById, nextWeapon, swingBearing, swingDist, kitDamage } from './sim/weapons.js';
+import { nextBeat, ackBeat, beatById, endingReady, narrationLines, beatSeen } from './meta/narrative.js';
+import { updateCoach } from './meta/coach.js';
+import { Climax, PEAK } from './meta/climax.js';
 import * as UI from '../ui/screens.js';
-import { SurvivalMode } from './survival.js';
+import { SurvivalMode } from './sim/survival.js';
 import { drawSurvivalScreen, updateSurvivalHints } from '../ui/survival.js';
 
 /** HUD chips that take a tap in play, day or night (survival.js camera). */
@@ -141,7 +143,7 @@ export class Game {
     this.renderer = new Renderer(canvas);
     this.input = canvas.__input || (canvas.__input = new Input(canvas));
     this.audio = Audio;
-    this.save = loadSave();
+    this.save = loadSave(migrateSave);
     Ads.suppressed = !!(this.save.iap && this.save.iap.owned && this.save.iap.owned.remove_ads);
     this.screen = 'menu';
     this.settingsReturn = 'menu';

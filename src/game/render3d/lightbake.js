@@ -24,7 +24,7 @@
  * a phone can be trusted.
  */
 
-import { clamp } from '../core/util.js';
+import { clamp } from '../../core/util.js';
 
 /** World units per bake cell. ~4 cells across a door, ~2.5 across a body. */
 export const BAKE_CELL = 48;

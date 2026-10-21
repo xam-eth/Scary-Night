@@ -12,9 +12,9 @@
  * real strategy here — the player is not supposed to kill everything.
  */
 
-import { clamp, lerp, damp, TAU, rand, chance, dist, dist2, approachAngle, angDiff, visualAngle } from '../core/util.js';
-import { paintContactShadow, Enemy3D, ENEMY_HEIGHT } from './enemy3d.js';
-import { ENEMY_TYPES, VARIANTS, SIEGE } from '../core/config.js';
+import { clamp, lerp, damp, TAU, rand, chance, dist, dist2, approachAngle, angDiff, visualAngle } from '../../core/util.js';
+import { paintContactShadow, Enemy3D, ENEMY_HEIGHT } from '../render3d/enemy3d.js';
+import { ENEMY_TYPES, VARIANTS, SIEGE } from '../../core/config.js';
 import { kitDamage } from './weapons.js';
 import { ROOM } from './mansion.js';
 

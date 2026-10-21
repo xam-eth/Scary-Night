@@ -69,8 +69,8 @@ await page.waitForFunction(() => {
 }, { timeout: 180000, polling: 100 });
 console.log(`boot ${((Date.now() - t0) / 1000).toFixed(1)} s`);
 await page.evaluate(async () => {
-  window.__lkWorld = (await import('./src/game/world3d.js')).World3D;
-  window.__lkTroop = (await import('./src/game/troop3d.js')).Troop3D;
+  window.__lkWorld = (await import('./src/game/render3d/world3d.js')).World3D;
+  window.__lkTroop = (await import('./src/game/render3d/troop3d.js')).Troop3D;
 });
 await page.waitForFunction(() => window.__lkWorld?.diagnostics?.().ready, { timeout: 90000, polling: 100 });
 await page.evaluate(() => {

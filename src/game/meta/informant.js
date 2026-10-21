@@ -16,7 +16,7 @@
  * because Marthe has watched both, and she says what she knows now.
  */
 
-import { INTEL, huntProgress, masterReady, FORTRESS_STATES, ARMOURY, ARMOURY_BY, armouryHeld, armouryNext } from './hunt.js';
+import { INTEL, huntProgress, masterReady, FORTRESS_STATES, ARMOURY, ARMOURY_BY, armouryHeld, armouryNext } from '../sim/hunt.js';
 
 export const INFORMANT = Object.freeze({
   name: 'MARTHE',

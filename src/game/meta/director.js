@@ -13,13 +13,13 @@
 
 import {
   clamp, lerp, damp, rand, chance, pick, dist,
-} from '../core/util.js';
+} from '../../core/util.js';
 import {
   BEATS, DIRECTOR, KNOCKS, NIGHT_DURATION, nightHeat, threatMix,
   SPAWN_WARMUP, PANIC_AT, SILENCE_AT, COUNTDOWN_AT, ENEMY_TYPES, TUNING, SIEGE,
-} from '../core/config.js';
-import { tellFor, revealForNight } from './economy.js';
-import { Crawler, Hunter, Werewolf, Stalker, Ghoul, Zombie, applyVariant, CrowdBody, CROWD } from './enemies.js';
+} from '../../core/config.js';
+import { tellFor, revealForNight } from '../sim/economy.js';
+import { Crawler, Hunter, Werewolf, Stalker, Ghoul, Zombie, applyVariant, CrowdBody, CROWD } from '../sim/enemies.js';
 
 export const MOOD = {
   CALM: 'calm', CURIOUS: 'curious', UNEASY: 'uneasy', ALERT: 'alert',

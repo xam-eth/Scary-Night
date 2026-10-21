@@ -25,7 +25,7 @@
  * its ranks, picked per body by id so a body keeps its kind. A body that
  * dies plays the source Death clip, then sinks into the ground.
  */
-import * as THREE from '../vendor/three/three.module.min.js';
+import * as THREE from '../../vendor/three/three.module.min.js';
 import { Enemy3D, ENEMY_MODELS, cloneRig, HORDE_EYE, hordeGradeMaterial, hordeGlowFor } from './enemy3d.js';
 
 /** Which rigs the horde is made of, and how much of it each one is (%). */

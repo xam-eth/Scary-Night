@@ -69,14 +69,14 @@ console.log(`valen GLB ready          ${Date.now() - t0} ms`);
 await page.evaluate(async () => {
   const g = window.__LN;
   g.save.privacyAck = true;
-  window.__env = (await import('./src/game/envkit.js')).EnvKit;
-  window.__enemy = (await import('./src/game/enemy3d.js')).Enemy3D;
-  window.__foes = await import('./src/game/enemies.js');
+  window.__env = (await import('./src/game/render3d/envkit.js')).EnvKit;
+  window.__enemy = (await import('./src/game/render3d/enemy3d.js')).Enemy3D;
+  window.__foes = await import('./src/game/sim/enemies.js');
   window.__playerModule = await import('./src/game/player.js');
-  window.__houseModule = await import('./src/game/house.js');
-  window.__hauntsModule = await import('./src/game/haunts.js');
-  window.__coachModule = await import('./src/game/coach.js');
-  window.__valen = await import('./src/game/valen3d.js');
+  window.__houseModule = await import('./src/game/sim/house.js');
+  window.__hauntsModule = await import('./src/game/sim/haunts.js');
+  window.__coachModule = await import('./src/game/meta/coach.js');
+  window.__valen = await import('./src/game/render3d/valen3d.js');
   // Catch regressions where any dormant Canvas world path starts painting
   // rooms, furniture, actors, combat or house effects over the WebGL scene.
   window.__legacyWorldDrawCalls = 0;
@@ -300,7 +300,7 @@ const testDoorId = await page.evaluate(() => {
 if (testDoorId) {
   await page.evaluate(async () => {
     const g = window.__LN;
-    const World3D = (await import('./src/game/world3d.js')).World3D;
+    const World3D = (await import('./src/game/render3d/world3d.js')).World3D;
     g.input.interactPressed = true;
     g.updateInteraction(1 / 60);
     g.input.interactPressed = false;
@@ -334,7 +334,7 @@ const objectSetup = await page.evaluate(async () => {
   const bloodPickup = g.pickups[g.pickups.length - 1];
   bloodPickup.id = 'qa-blood-pickup';
   window.__watchLegacyWorldDraw(bloodPickup, 'draw');
-  const { Bolt } = await import('./src/game/enemies.js');
+  const { Bolt } = await import('./src/game/sim/enemies.js');
   const bolt = new Bolt(boltAt.x, boltAt.y, 0.2, 0, 1, g.player);
   window.__watchLegacyWorldDraw(bolt, 'draw');
   bolt.id = 'qa-bolt';
@@ -349,7 +349,7 @@ const objectSetup = await page.evaluate(async () => {
   g.particles.burst('mist', boltAt.x, boltAt.y, 4, { color: 'rgba(120,150,205,0.35)', sizeMin: 5, sizeMax: 11, lifeMin: 0.8, lifeMax: 1.2 });
   g.particles.burst('shard', boltAt.x + 12, boltAt.y, 3, { color: '#d7cfbd', sizeMin: 3, sizeMax: 6, lifeMin: 0.8, lifeMax: 1.2 });
   g.decals.splat(pickupAt.x, pickupAt.y, 22, 'rgba(100,18,26,0.55)', 8);
-  const World3D = (await import('./src/game/world3d.js')).World3D;
+  const World3D = (await import('./src/game/render3d/world3d.js')).World3D;
   World3D.render(g);
   return { pickup: pickupAt, bolt: boltAt };
 });
@@ -365,7 +365,7 @@ const objectVisibility = await page.evaluate(() => {
   };
 });
 const meshVisibility = await page.evaluate(async () => {
-  const W = (await import('./src/game/world3d.js')).World3D;
+  const W = (await import('./src/game/render3d/world3d.js')).World3D;
   return {
     pickup: !!(W.pickups.get('qa-pickup') && W.pickups.get('qa-pickup').visible),
     bloodPickup: !!(W.pickups.get('qa-blood-pickup') && W.pickups.get('qa-blood-pickup').visible),
@@ -384,7 +384,7 @@ if (!entitiesPass) process.exitCode = 1;
 
 const pickupCollected = await page.evaluate(async () => {
   const g = window.__LN;
-  const W = (await import('./src/game/world3d.js')).World3D;
+  const W = (await import('./src/game/render3d/world3d.js')).World3D;
   const pickup = g.pickups.find((item) => item.id === 'qa-pickup');
   g.player.x = pickup.x; g.player.y = pickup.y; g.player.vx = g.player.vy = 0;
   pickup.update(1 / 60, g);
@@ -424,7 +424,7 @@ const enemyScene = await page.evaluate(async () => {
   const door = g.mansion.entrances.find((item) => item.id === 'frontDoor');
   if (door) { door.attackers = 1; g.house.drafts = [{ e: door, t: 0.8 }]; }
   window.__LN_TIME_SCALE = 0;
-  const World3D = (await import('./src/game/world3d.js')).World3D;
+  const World3D = (await import('./src/game/render3d/world3d.js')).World3D;
   World3D.render(g);
   return true;
 });
