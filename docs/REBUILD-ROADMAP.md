@@ -50,16 +50,28 @@ yang menumpang skeleton body-nya (skin 1/2/6/9).
 - Roster legacy mansion (demon/blob/skull ultimate + werewolf/hunter/
   stalker) TIDAK berubah — alias hanya aktif di mode Survival.
 
-**QA:** harness 99 PASS / 0 FAIL (2 check B25 baru: wiring pack + alias
+**QA:** harness 98 PASS / 0 FAIL (2 check B25 baru: wiring pack + alias
 slot book; check lama roster ultimate tetap hijau); glbtest 134 PASS /
 0 FAIL (pack 10 skin/1 klip tetap dikontrak + tiga check wiring B25;
 kontrak klip diperbarui: kind pack walk/attack/die tanpa hurt); devqa
 25/25 PASS dengan 0 page error (pack termuat & ter-render live di malam
 Survival); plotsqa §13 ditulis ulang sebagai B21/B25 (atlas terbawa di
-bake: mapped+uvMax>0, warna vertex putih, glowMax 0, rim crimson) —
-hasil rantai penuh diisi setelah chain selesai (`tools/chain.sh`,
-evidence `qa-evidence/survival-build25/`). Stamp `index.html` '25',
-`sw.js` `duskhold-v25`.
+bake: mapped+uvMax>0, warna vertex putih, glowMax 0, rim crimson).
+
+**Hasil rantai final (2026-10-21, state `376117d`):** `tools/chain.sh`
+dijalankan penuh — **13/13 gate EXIT=0**: harness 98/0, plotsqa 37/37
+errors 0, devqa 25/25, envqa all assertions + 0 page error, intro 0
+failed, fxshots 16/16, swtest all PASS, layoutqa semua seksi PASS, look
+errors 0, shots pageErrors=0, glbtest 134/0, map 230/230, bundlecheck
+all PASS. Data bake horde: shambler 4104 / lurcher 3570 / wretch 4420
+verteks (beanie wretch ikut ter-bake — pengelompokan per skeleton benar),
+semuanya mapped (atlas terbawa), glowMax 0, rim 0.78/0.2/0.16. Riwayat
+jujur: run 1 mengekspos assertion basi envqa (`readyTypes === 6` → roster
+kini 9; diperbaiki tools-only di `376117d`) dan flake seed check "win"
+fxshots (rerun hijau); sandbox rollback menghapus log run 1 sehingga
+seluruh rantai diulang pada tree pemulihan — evidence
+`qa-evidence/survival-build25/` adalah run 2 yang hijau penuh. Stamp
+`index.html` '25', `sw.js` `duskhold-v25`.
 
 **Batas yang jujur & terbuka:** klip attack/die adalah pose sintetis
 (bukan animasi authored pack — pack-nya memang hanya walk); 7 variant

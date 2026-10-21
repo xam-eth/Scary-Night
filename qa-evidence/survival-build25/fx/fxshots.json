@@ -1,0 +1,688 @@
+{
+  "capturedAt": "2026-10-21T07:26:22.796Z",
+  "view": {
+    "width": 844,
+    "height": 390,
+    "dpr": 1
+  },
+  "checks": [
+    {
+      "name": "troops: the guards are GLB troops of the captain's character family (garrison grade)",
+      "ok": true,
+      "detail": {
+        "t": 11.2,
+        "guards": 2,
+        "open": true,
+        "troop3d": {
+          "ready": true,
+          "failed": false,
+          "error": null,
+          "made": 2,
+          "livery": 1
+        },
+        "glbGuards": 2,
+        "fx": {
+          "live": 2,
+          "played": {
+            "impact": 5,
+            "kill": 2,
+            "muzzle": 0,
+            "coin": 0,
+            "log": 0,
+            "rally": 0,
+            "arm": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "fx: hits flash, kills burst and shots flash at the muzzle",
+      "ok": true,
+      "detail": {
+        "live": 1,
+        "played": {
+          "impact": 5,
+          "kill": 2,
+          "muzzle": 1,
+          "coin": 0,
+          "log": 0,
+          "rally": 0,
+          "arm": 0
+        }
+      }
+    },
+    {
+      "name": "kills: every kill is credited to a source (captain / guard / ballista / keep / flare)",
+      "ok": true,
+      "detail": {
+        "kills": 9,
+        "by": {
+          "captain": 9,
+          "guard": 0,
+          "tower": 0,
+          "keep": 0,
+          "flare": 0
+        }
+      }
+    },
+    {
+      "name": "mine: a dug coin pops out of the mine with \"+1\", and beside the purse in the HUD wherever the captain stands",
+      "ok": true,
+      "detail": {
+        "coins": 1,
+        "income": [
+          "+1:gold"
+        ],
+        "hud": 1
+      }
+    },
+    {
+      "name": "horde: every swarm body is an animated GLB monster (instanced, 3 kinds), no primitive figure",
+      "ok": true,
+      "detail": {
+        "drawn": 49,
+        "byKind": {
+          "shambler": 26,
+          "lurcher": 13,
+          "wretch": 10
+        },
+        "primitive": 0,
+        "rigs": 0
+      }
+    },
+    {
+      "name": "ballista: a built ballista kills and says so over its deck (\"+1\" skull, the night tally)",
+      "ok": true,
+      "detail": {
+        "towerKills": 3,
+        "skullPops": 3
+      }
+    },
+    {
+      "name": "troops: every GLB guard is the graded captain-family character with the crossbow in its right hand; the page names its build",
+      "ok": true,
+      "detail": {
+        "knights": [
+          {
+            "crest": true,
+            "helmet": true
+          },
+          {
+            "crest": true,
+            "helmet": true
+          }
+        ],
+        "build": "25",
+        "page": "25"
+      }
+    },
+    {
+      "name": "dawn: the reward counts the sawmill's planks and the kills by source",
+      "ok": true,
+      "detail": {
+        "sawn": 7,
+        "killsBy": {
+          "captain": 9,
+          "guard": 6,
+          "tower": 3,
+          "keep": 0,
+          "flare": 0
+        },
+        "runKills": 18
+      }
+    },
+    {
+      "name": "sawmill: COLLECT throws its planks off the sawmill with \"+N\"",
+      "ok": true,
+      "detail": {
+        "logs": 1,
+        "income": [
+          "+7:wood"
+        ]
+      }
+    },
+    {
+      "name": "ui: NIGHT sits top-left, far from the build corner (R18a)",
+      "ok": true,
+      "detail": {
+        "night": {
+          "x": 12,
+          "y": 62,
+          "w": 112,
+          "h": 38,
+          "label": "survival:START NIGHT"
+        },
+        "action": {
+          "x": 684,
+          "y": 328,
+          "w": 148,
+          "h": 50,
+          "label": "survival:UPGRADE KEEP LV2"
+        },
+        "view": {
+          "w": 844,
+          "h": 390
+        },
+        "dist": 742
+      }
+    },
+    {
+      "name": "barracks: the housed soldier steps out of its door, a blue rally ring pops, and it walks to its post",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "survivors": 3,
+        "start": {
+          "x": -330,
+          "y": -220
+        },
+        "fromSpot": 40,
+        "rally": 1,
+        "walked": {
+          "at": [
+            -48,
+            146
+          ],
+          "post": [
+            -48,
+            146
+          ]
+        }
+      }
+    },
+    {
+      "name": "end: a loss counts every kill of the run by source, shows the night's track with the seconds to dawn and one tip (R1, R4)",
+      "ok": true,
+      "detail": {
+        "natural": true,
+        "kills": 35,
+        "by": {
+          "captain": 22,
+          "guard": 9,
+          "tower": 4,
+          "keep": 0,
+          "flare": 0
+        },
+        "result": {
+          "night": 2,
+          "toDawn": 34,
+          "nights": 1,
+          "kills": 35,
+          "tip": {
+            "icon": "tower",
+            "text": "BUILD A BALLISTA AT THE WEST GATE"
+          },
+          "mvp": {
+            "id": "guard",
+            "icon": "guard",
+            "name": "GUARDS",
+            "kills": 9
+          },
+          "newBest": false
+        },
+        "unlock": "+1 NIGHTS HELD — CAPTAIN'S WATCH ★1 — 2★ TO IRON WATCH"
+      }
+    },
+    {
+      "name": "win: the builder's real three nights end on stars from the keep's lowest point, the run's numbers, the MVP building, the records and NEW BEST! over the loss (R1-R3, R19)",
+      "ok": true,
+      "detail": {
+        "frames": 15706,
+        "nightKills": [
+          67,
+          78,
+          92
+        ],
+        "result": {
+          "stars": 3,
+          "kills": 237,
+          "keepLeft": 95,
+          "built": 3,
+          "time": 262,
+          "mvp": {
+            "id": "keep",
+            "icon": "keep",
+            "name": "KEEP BALLISTA",
+            "kills": 12
+          },
+          "newBest": true
+        },
+        "records": {
+          "runs": 2,
+          "wins": 1,
+          "bestStars": 3,
+          "bestNights": 3,
+          "bestKills": 237,
+          "totalKills": 272,
+          "totalStars": 5
+        },
+        "by": {
+          "captain": 155,
+          "guard": 9,
+          "tower": 0,
+          "keep": 12,
+          "flare": 61
+        },
+        "towers": {},
+        "unlock": "+3★ — NEW: IRON WATCH — 1★ TO CRIMSON WATCH",
+        "bannerHex": "#9aa7b4"
+      }
+    },
+    {
+      "name": "watch: the morning after a crossed tier says once what the stars now earn (a narrator hint, saved so it never repeats)",
+      "ok": true,
+      "detail": {
+        "hint": "watch",
+        "saved": true,
+        "phase": "day"
+      }
+    },
+    {
+      "name": "watch: the banked tier repaints the captain in the world — the daylight frame shows the earned watch colour, not the stock blue",
+      "ok": true,
+      "detail": {
+        "tier": "iron",
+        "total": 5,
+        "hex": 10135476
+      }
+    },
+    {
+      "name": "health: 0 page errors, 0 console errors",
+      "ok": true,
+      "detail": {
+        "pageErrors": [],
+        "consoleErrors": []
+      }
+    }
+  ],
+  "results": [
+    {
+      "name": "fx-gate",
+      "file": "qa-evidence/survival-build25/fx/fx-gate.png",
+      "state": {
+        "t": 11.2,
+        "guards": 2,
+        "open": true,
+        "troop3d": {
+          "ready": true,
+          "failed": false,
+          "error": null,
+          "made": 2,
+          "livery": 1
+        },
+        "glbGuards": 2,
+        "fx": {
+          "live": 2,
+          "played": {
+            "impact": 5,
+            "kill": 2,
+            "muzzle": 0,
+            "coin": 0,
+            "log": 0,
+            "rally": 0,
+            "arm": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "fx-gate-b",
+      "file": "qa-evidence/survival-build25/fx/fx-gate-b.png",
+      "state": {
+        "kills": 9,
+        "by": {
+          "captain": 9,
+          "guard": 0,
+          "tower": 0,
+          "keep": 0,
+          "flare": 0
+        },
+        "troop3d": {
+          "ready": true,
+          "failed": false,
+          "error": null,
+          "made": 2,
+          "livery": 1
+        },
+        "glbGuards": 2,
+        "fx": {
+          "live": 1,
+          "played": {
+            "impact": 5,
+            "kill": 2,
+            "muzzle": 1,
+            "coin": 0,
+            "log": 0,
+            "rally": 0,
+            "arm": 0
+          }
+        }
+      }
+    },
+    {
+      "name": "fx-mine",
+      "file": "qa-evidence/survival-build25/fx/fx-mine.png",
+      "state": {
+        "coins": 1,
+        "income": [
+          "+1:gold"
+        ],
+        "hud": 1
+      }
+    },
+    {
+      "name": "fx-horde",
+      "file": "qa-evidence/survival-build25/fx/fx-horde.png",
+      "state": {
+        "t": 45.2,
+        "horde": {
+          "ready": true,
+          "kinds": {
+            "shambler": {
+              "verts": 4104,
+              "frames": 169,
+              "rows": 339,
+              "clips": [
+                "walk",
+                "attack",
+                "die"
+              ],
+              "drawn": 26
+            },
+            "lurcher": {
+              "verts": 3570,
+              "frames": 169,
+              "rows": 295,
+              "clips": [
+                "walk",
+                "attack",
+                "die"
+              ],
+              "drawn": 13
+            },
+            "wretch": {
+              "verts": 4420,
+              "frames": 169,
+              "rows": 365,
+              "clips": [
+                "walk",
+                "attack",
+                "die"
+              ],
+              "drawn": 10
+            }
+          },
+          "failed": [],
+          "error": null,
+          "bakeMs": 1148,
+          "drawn": 49,
+          "byKind": {
+            "shambler": 26,
+            "lurcher": 13,
+            "wretch": 10
+          }
+        },
+        "primitiveCrowd": 0,
+        "rigs": 0,
+        "towerKills": 3,
+        "skullPops": 3,
+        "knights": [
+          {
+            "crest": true,
+            "helmet": true
+          },
+          {
+            "crest": true,
+            "helmet": true
+          }
+        ],
+        "build": "25"
+      }
+    },
+    {
+      "name": "fx-dawn",
+      "file": "qa-evidence/survival-build25/fx/fx-dawn.png",
+      "state": {
+        "phase": "day",
+        "rewards": {
+          "gold": 17,
+          "wood": 25,
+          "kills": 18,
+          "walls": 421.3,
+          "survivors": 0,
+          "keepDamage": 288,
+          "keepPatched": 0,
+          "mined": 3,
+          "lost": 0,
+          "rescued": 0,
+          "reinforcements": 2,
+          "sawn": 7,
+          "killsBy": {
+            "captain": 9,
+            "guard": 6,
+            "tower": 3,
+            "keep": 0,
+            "flare": 0
+          },
+          "towerKills": 3,
+          "endAt": 45.22,
+          "cleared": null
+        },
+        "run": {
+          "kills": 18,
+          "by": {
+            "captain": 9,
+            "guard": 6,
+            "tower": 3,
+            "keep": 0,
+            "flare": 0
+          },
+          "mined": 2.8180555555556768,
+          "sawn": 7,
+          "recruited": 0,
+          "nights": 1,
+          "keepMin": 1,
+          "lost": 0,
+          "towers": {
+            "south:tower": 3
+          },
+          "time": 45.31666666666538,
+          "cleared": 0,
+          "saved": 0
+        },
+        "ui": [
+          "survival:COLLECT"
+        ]
+      }
+    },
+    {
+      "name": "fx-sawmill",
+      "file": "qa-evidence/survival-build25/fx/fx-sawmill.png",
+      "state": {
+        "logs": 1,
+        "income": [
+          "+7:wood"
+        ]
+      }
+    },
+    {
+      "name": "fx-day",
+      "file": "qa-evidence/survival-build25/fx/fx-day.png",
+      "state": {
+        "night": {
+          "x": 12,
+          "y": 62,
+          "w": 112,
+          "h": 38,
+          "label": "survival:START NIGHT"
+        },
+        "action": {
+          "x": 684,
+          "y": 328,
+          "w": 148,
+          "h": 50,
+          "label": "survival:UPGRADE KEEP LV2"
+        },
+        "view": {
+          "w": 844,
+          "h": 390
+        }
+      }
+    },
+    {
+      "name": "fx-barracks",
+      "file": "qa-evidence/survival-build25/fx/fx-barracks.png",
+      "state": {
+        "ok": true,
+        "survivors": 3,
+        "start": {
+          "x": -330,
+          "y": -220
+        },
+        "fromSpot": 40,
+        "rally": 1
+      }
+    },
+    {
+      "name": "fx-end",
+      "file": "qa-evidence/survival-build25/fx/fx-end.png",
+      "state": {
+        "started": true,
+        "natural": true,
+        "phase": "failed",
+        "run": {
+          "kills": 35,
+          "by": {
+            "captain": 22,
+            "guard": 9,
+            "tower": 4,
+            "keep": 0,
+            "flare": 0
+          },
+          "mined": 6.011111111111731,
+          "sawn": 7,
+          "recruited": 1,
+          "nights": 1,
+          "keepMin": 0,
+          "lost": 0,
+          "towers": {
+            "south:tower": 4
+          },
+          "time": 96.08333333332916,
+          "cleared": 0,
+          "saved": 0
+        },
+        "sum": 35,
+        "result": {
+          "night": 2,
+          "toDawn": 34,
+          "nights": 1,
+          "kills": 35,
+          "tip": {
+            "icon": "tower",
+            "text": "BUILD A BALLISTA AT THE WEST GATE"
+          },
+          "mvp": {
+            "id": "guard",
+            "icon": "guard",
+            "name": "GUARDS",
+            "kills": 9
+          },
+          "newBest": false
+        },
+        "unlock": {
+          "total": 1,
+          "tier": "azure",
+          "unlocked": null,
+          "next": "IRON WATCH",
+          "banked": {
+            "amount": 1,
+            "suffix": " NIGHTS HELD"
+          },
+          "prefix": "+1 NIGHTS HELD — ",
+          "text": "+1 NIGHTS HELD — CAPTAIN'S WATCH ★1 — 2★ TO IRON WATCH"
+        },
+        "ui": [
+          "survival:PLAY AGAIN"
+        ]
+      }
+    },
+    {
+      "name": "fx-win",
+      "file": "qa-evidence/survival-build25/fx/fx-win.png",
+      "state": {
+        "frames": 15706,
+        "phase": "complete",
+        "nightKills": [
+          67,
+          78,
+          92
+        ],
+        "run": {
+          "kills": 237,
+          "by": {
+            "captain": 155,
+            "guard": 9,
+            "tower": 0,
+            "keep": 12,
+            "flare": 61
+          },
+          "towers": {},
+          "keepMin": 0.93,
+          "lost": 0
+        },
+        "result": {
+          "stars": 3,
+          "kills": 237,
+          "keepLeft": 95,
+          "built": 3,
+          "time": 262,
+          "mvp": {
+            "id": "keep",
+            "icon": "keep",
+            "name": "KEEP BALLISTA",
+            "kills": 12
+          },
+          "newBest": true
+        },
+        "records": {
+          "runs": 2,
+          "wins": 1,
+          "bestStars": 3,
+          "bestNights": 3,
+          "bestKills": 237,
+          "totalKills": 272,
+          "totalStars": 5
+        },
+        "unlock": {
+          "total": 5,
+          "tier": "iron",
+          "unlocked": "IRON WATCH",
+          "next": "CRIMSON WATCH",
+          "banked": {
+            "amount": 3,
+            "suffix": "★"
+          },
+          "prefix": "+3★ — ",
+          "text": "+3★ — NEW: IRON WATCH — 1★ TO CRIMSON WATCH"
+        },
+        "bannerSet": 10135476,
+        "bannerHex": "#9aa7b4",
+        "ui": [
+          "survival:PLAY AGAIN"
+        ]
+      }
+    },
+    {
+      "name": "fx-watch-iron",
+      "file": "qa-evidence/survival-build25/fx/fx-watch-iron.png",
+      "state": {
+        "tier": "iron",
+        "total": 5,
+        "hex": 10135476
+      }
+    }
+  ],
+  "pageErrors": [],
+  "consoleErrors": []
+}
