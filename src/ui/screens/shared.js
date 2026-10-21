@@ -158,8 +158,8 @@ export function drawFocusCaption(game, ctx, w, h) {
 
 const BRAND_PLATE = './assets/brand/menu-9x16-clean.jpg';
 const BRAND_WORDMARK = './assets/brand/wordmark-duskhold-lockup.png';
-let brandWordmark = null;
-let brandPlate = null;
+export let brandWordmark = null;
+export let brandPlate = null;
 
 
 export function ensureBrandPlate() {

@@ -7,7 +7,7 @@ import { Valen3D } from '../../game/render3d/valen3d.js';
 import { Enemy3D } from '../../game/render3d/enemy3d.js';
 import { IAP } from '../../shop/iap.js';
 import { drawGameIcon } from '../icons.js';
-import { SERIF, SANS, MONO, isPhone, fitType, wrapLines, uiButton, buttonVisual, ensureBrandPlate, drawBrandPlate } from './shared.js';
+import { SERIF, SANS, MONO, isPhone, fitType, wrapLines, uiButton, buttonVisual, ensureBrandPlate, drawBrandPlate, brandWordmark } from './shared.js';
 
 /**
  * The attract loop: the house is awake and she is in it.
