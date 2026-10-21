@@ -9,9 +9,11 @@ import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { VALEN_CLIPS, VALEN_MODEL_URL, valenClipForState } from '../src/game/render3d/valen3d.js';
 import {
-  ENEMY_GLB_CAP, ENEMY_MODELS, ENEMY_CLIP_CONTRACT, FORBIDDEN_STANDINS,
+  ENEMY_GLB_CAP, ENEMY_MODELS, ENEMY_CLIP_CONTRACT, FORBIDDEN_STANDINS, SURVIVAL_HORDE_ALIAS,
   SlotBook, behaviorReady, enemyClipForState, requiredClips, selectGlbSlots, standinViolation,
 } from '../src/game/render3d/enemy3d.js';
+import { ZOMBI_KINDS, ZOMBI_PACK_URL } from '../src/game/render3d/zombipack3d.js';
+import { CROWD_KINDS } from '../src/game/render3d/crowd3d.js';
 import { TROOP_ASSETS, TROOP_LOADOUTS, TROOP_BOWS } from '../src/game/render3d/troop3d.js';
 import { PEOPLE_ROLES, BONES as PACK_BONES } from '../src/game/render3d/pack3d.js';
 import { BUILDING_KIT, BUILDING_CORE, BUILDING_MODEL, SAW_NODE } from '../src/game/render3d/buildings3d.js';
@@ -293,10 +295,11 @@ ok('the converted werewolf is wired on the owner clip map',
     && ENEMY_MODELS.werewolf.map.attack === 'front_kick_02.001'
     && ENEMY_MODELS.werewolf.map.idle === 'box_02.001');
 const wolfZip = path.join(ROOT, 'werewolf+3d+model.zip');
-ok('clip contract matches the roster, including pack hit reactions',
+ok('clip contract matches the roster: hit reactions everywhere except the werewolf and the zombie-pack kinds (their hit read is the white flash + the crowd bake treats hurt as nullable)',
   requiredClips('zombie').join(',') === 'walk,attack,die,hurt'
     && requiredClips('werewolf').join(',') === 'run,attack,die'
-    && Object.keys(ENEMY_MODELS).filter((key) => key !== 'werewolf').every((key) => requiredClips(key).includes('hurt'))
+    && Object.keys(ENEMY_MODELS).filter((key) => key !== 'werewolf' && !ENEMY_MODELS[key].pack).every((key) => requiredClips(key).includes('hurt'))
+    && Object.keys(ENEMY_MODELS).filter((key) => ENEMY_MODELS[key].pack).every((key) => requiredClips(key).join(',') === 'walk,attack,die')
     && ENEMY_CLIP_CONTRACT.crawler.includes('walk')
     && ENEMY_CLIP_CONTRACT.stalker.includes('attack'));
 ok('damage and stagger choose the mapped hit reaction, while death retains priority',
@@ -490,6 +493,26 @@ console.log('\ngarrison troops (captain family + KayKit bows, CC0):');
   ok('the zombie pack is rigged and animated (10 skinned variants, one shared take) — the BUILD 25 enemy source',
     !!zombie && (zombie.json.skins || []).length === 10 && (zombie.json.animations || []).length === 1,
     `${zombie?.json.skins?.length || 0} skins, anim "${(zombie?.json.animations || [])[0]?.name || 'none'}"`);
+  // BUILD 25: the pack is WIRED — the survival night's horde faction
+  const packTake = (zombie?.json.animations || [])[0]?.name || '';
+  const PACK_KEYS = ['shambler', 'lurcher', 'wretch'];
+  ok('BUILD 25: the survival horde fields three pack variants (ENEMY_MODELS pack kinds, the shared take as walk/idle/run, the synthesised pack-attack/pack-die mapped)',
+    PACK_KEYS.every((key) => ENEMY_MODELS[key] && ENEMY_MODELS[key].pack === key && ENEMY_MODELS[key].url === ZOMBI_PACK_URL)
+      && PACK_KEYS.every((key) => ENEMY_MODELS[key].map.walk === packTake && ENEMY_MODELS[key].map.attack === 'pack-attack' && ENEMY_MODELS[key].map.die === 'pack-die')
+      && ZOMBI_KINDS.length === 3 && new Set(ZOMBI_KINDS.map((k) => k.variant)).size === 3
+      && ZOMBI_KINDS.every((k) => PACK_KEYS.includes(k.key)),
+    `take "${packTake}", kinds ${ZOMBI_KINDS.map((k) => `${k.key}=${k.variant}`).join(' ')}`);
+  ok('BUILD 25: survival aliases its sim keys onto the pack at the render layer only (the legacy roster keeps its ultimate monsters)',
+    SURVIVAL_HORDE_ALIAS.zombie === 'shambler' && SURVIVAL_HORDE_ALIAS.crawler === 'lurcher' && SURVIVAL_HORDE_ALIAS.ghoul === 'wretch'
+      && ENEMY_MODELS.zombie.url === './assets/monsters/ultimate/demon.glb'
+      && ENEMY_MODELS.crawler.url === './assets/monsters/ultimate/green-spiky-blob.glb'
+      && ENEMY_MODELS.ghoul.url === './assets/monsters/ultimate/ghost-skull.glb',
+    Object.entries(SURVIVAL_HORDE_ALIAS).map(([a, b]) => `${a}->${b}`).join(' '));
+  ok('BUILD 25: the VAT crowd bakes exactly the three pack kinds, shares sum to 100, none hovers',
+    CROWD_KINDS.map((k) => k.key).join(',') === PACK_KEYS.join(',')
+      && CROWD_KINDS.reduce((sum, k) => sum + k.share, 0) === 100
+      && CROWD_KINDS.every((k) => k.hover === 0 && ENEMY_MODELS[k.key] && ENEMY_MODELS[k.key].pack === k.key),
+    CROWD_KINDS.map((k) => `${k.key}:${k.share}%`).join(' '));
   const missingBones = ['R_Hand', 'Head', 'Hip'].filter((name) => !PACK_BONES.some((b) => b[0] === name));
   const everyLoadoutBows = Object.values(TROOP_LOADOUTS).every((loadout) => loadout.bow);
   ok('the generated skeleton carries the right-hand bone the crossbow mounts on, and every loadout carries the garrison bow',

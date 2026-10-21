@@ -20,19 +20,22 @@
  * touched; the textures are made in memory from the same files the rigs
  * use (assets/monsters/ultimate, CC0, CREDITS.txt).
  *
- * Kinds: the demon (Enemy3D's 'zombie' role) carries most of the horde,
- * with the green spiky blob ('crawler') and the ghost skull ('ghoul') in
- * its ranks, picked per body by id so a body keeps its kind. A body that
- * dies plays the source Death clip, then sinks into the ground.
+ * Kinds (BUILD 25): the horde wears the user's own zombie pack — three of
+ * its ten variants (shambler, lurcher, wretch) fielded by share, picked per
+ * body by id so a body keeps its kind. The pack's painted atlas survives the
+ * bake (UVs ride along and the VAT material samples it); the faction reads
+ * through the shared crimson rim, not a repaint. A body that dies plays the
+ * synthesised pack-die clip, then sinks into the ground. The legacy mansion
+ * roster (demon, blob, skull) stays in Enemy3D for its own scene.
  */
 import * as THREE from '../../vendor/three/three.module.min.js';
 import { Enemy3D, ENEMY_MODELS, cloneRig, HORDE_EYE, hordeGradeMaterial, hordeGlowFor } from './enemy3d.js';
 
 /** Which rigs the horde is made of, and how much of it each one is (%). */
 export const CROWD_KINDS = Object.freeze([
-  Object.freeze({ key: 'zombie', share: 58, height: 76, hover: 0 }),
-  Object.freeze({ key: 'crawler', share: 26, height: 58, hover: 0 }),
-  Object.freeze({ key: 'ghoul', share: 16, height: 72, hover: 10 }),
+  Object.freeze({ key: 'shambler', share: 58, height: 76, hover: 0 }),
+  Object.freeze({ key: 'lurcher', share: 26, height: 62, hover: 0 }),
+  Object.freeze({ key: 'wretch', share: 16, height: 72, hover: 0 }),
 ]);
 /** Clips baked per kind (names resolve through ENEMY_MODELS[key].map). */
 const BAKE = Object.freeze([
@@ -67,7 +70,7 @@ function hash(n) {
 }
 
 /** Inject the VAT read into a standard (or depth) material. */
-function vatShader(material, uniforms, { normals }) {
+function vatShader(material, uniforms, { normals, textured = false }) {
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms);
     shader.vertexShader = shader.vertexShader
@@ -116,7 +119,7 @@ totalEmissiveRadiance += vec3(1.0, 0.86, 0.72) * clamp(vFlash, 0.0, 1.0) * 1.35;
 totalEmissiveRadiance += uHordeEye * clamp(vGlowM, 0.0, 4.0) * uHordeEyeMul;`);
     }
   };
-  material.customProgramCacheKey = () => `duskhold-vat2-${normals ? 'lit' : 'depth'}`;
+  material.customProgramCacheKey = () => `duskhold-vat2-${normals ? 'lit' : 'depth'}${textured ? '-tex' : ''}`;
 }
 
 /**
@@ -143,6 +146,10 @@ export function bakeKind(key, template, animations) {
   for (const mesh of meshes) verts += mesh.geometry.attributes.position.count;
   const index = [];
   const colors = new Float32Array(verts * 3);
+  // BUILD 25: the pack paints its bodies through one shared atlas — carry the
+  // UVs (and the texture itself) through the bake or the horde comes out blank
+  const uvs = new Float32Array(verts * 2);
+  let mapTex = null;
   const vatIndex = new Float32Array(verts);
   // BUILD 21: how hard each vertex's material glows (the horde's crimson
   // eyes, the ghost's bone fire) — baked once, emitted by the VAT shader.
@@ -157,13 +164,16 @@ export function bakeKind(key, template, animations) {
     // faction grade repaints this bake only — the shared template keeps its
     // authored colours for the legacy mansion
     if (mat) hordeGradeMaterial(key, mat);
+    if (mat && mat.map && !mapTex) mapTex = mat.map;
     const glow = mat ? hordeGlowFor(key, mat.name) : 0;
     const color = (mat && mat.color) ? mat.color : _c.setRGB(0.5, 0.5, 0.5);
     if (mi === 0 && mat) { rough = mat.roughness != null ? mat.roughness : rough; metal = mat.metalness || 0; }
+    const uv = g.attributes.uv;
     for (let i = 0; i < n; i++) {
       colors[(base + i) * 3] = color.r;
       colors[(base + i) * 3 + 1] = color.g;
       colors[(base + i) * 3 + 2] = color.b;
+      if (uv) { uvs[(base + i) * 2] = uv.getX(i); uvs[(base + i) * 2 + 1] = uv.getY(i); }
       vatIndex[base + i] = base + i;
       glows[base + i] = glow;
     }
@@ -285,6 +295,7 @@ export function bakeKind(key, template, animations) {
   geometry.setAttribute('position', new THREE.BufferAttribute(p0, 3));
   geometry.setAttribute('normal', new THREE.BufferAttribute(n0, 3));
   geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
   geometry.setAttribute('vatGlow', new THREE.BufferAttribute(glows, 1));
   geometry.setAttribute('vatIndex', new THREE.BufferAttribute(vatIndex, 1));
   geometry.setIndex(index);
@@ -292,7 +303,7 @@ export function bakeKind(key, template, animations) {
   if (!(maxY > minY)) { minY = 0; maxY = 1; }
   return {
     geometry, posTex: tex(pos), nrmTex: tex(nrm), clips, verts, frames, rows,
-    height: maxY - minY, minY, rough, metal, bytes: TEX_W * rows * 8 * 2,
+    height: maxY - minY, minY, rough, metal, map: mapTex, bytes: TEX_W * rows * 8 * 2,
   };
 }
 
@@ -318,8 +329,8 @@ class CrowdStage {
     for (const mul of this._eyeMuls) mul.value = night ? 1.15 : 0.6;
   }
 
-  /** True once at least the demon has its texture: the horde can be drawn. */
-  get ready() { return this.kinds.has('zombie'); }
+  /** True once the leading kind has its texture: the horde can be drawn. */
+  get ready() { return this.kinds.has(CROWD_KINDS[0].key); }
 
   /** Keys the boot waits for (all of them load with the enemy roster). */
   keys() { return CROWD_KINDS.map((k) => k.key); }
@@ -369,7 +380,10 @@ class CrowdStage {
     const material = new THREE.MeshStandardMaterial({
       vertexColors: true, roughness: Math.max(0.45, b.rough), metalness: Math.min(0.2, b.metal),
     });
-    vatShader(material, uniforms, { normals: true });
+    // BUILD 25: the pack's painted atlas rides the bake (b.map); ultimates
+    // bake without one and stay flat-coloured as before
+    if (b.map) material.map = b.map;
+    vatShader(material, uniforms, { normals: true, textured: !!b.map });
     const depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
     vatShader(depth, uniforms, { normals: false });
     const geometry = b.geometry.clone();
@@ -397,11 +411,12 @@ class CrowdStage {
   kindFor(enemy) {
     const roll = hash(enemy.id);
     let acc = 0;
+    const lead = this.kinds.get(CROWD_KINDS[0].key) || null;
     for (const spec of CROWD_KINDS) {
       acc += spec.share;
-      if (roll < acc) return this.kinds.get(spec.key) || this.kinds.get('zombie') || null;
+      if (roll < acc) return this.kinds.get(spec.key) || lead;
     }
-    return this.kinds.get('zombie') || null;
+    return lead;
   }
 
   static clipFrame(clip, time) {

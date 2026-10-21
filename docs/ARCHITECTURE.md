@@ -9,7 +9,7 @@
 | Lapis | Isi | Boleh impor | Dilarang impor |
 | --- | --- | --- | --- |
 | `src/core/` | engine-agnostic: config, util, input, audio, render helpers, save | sesama core | game, ui, shop, vendor-three |
-| `src/game/render3d/` | semua modul three.js: world3d, buildings3d, enemy3d, troop3d, valen3d, pack3d, crowd3d, envkit, lightbake | core, vendor | sim, ui, shop |
+| `src/game/render3d/` | semua modul three.js: world3d, buildings3d, enemy3d, troop3d, valen3d, pack3d, zombipack3d, crowd3d, envkit, lightbake | core, vendor | sim, ui, shop |
 | `src/game/sim/` | simulasi & aturan: survival, economy, enemies, fortress, objectives, weapons, hunt, house, mansion, exterior, haunts | core | render3d (lewat kontrak data), ui, shop |
 | `src/game/meta/` | sutradara sesi: director, coach, narrative, climax, informant | core, sim (read-only) | render3d, ui |
 | `src/game/game.js` | **composition root** — merakit semua lapis | semua lapis (hak root) | — |

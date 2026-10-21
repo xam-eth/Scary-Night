@@ -2852,6 +2852,43 @@ async function runSurvivalMilestone() {
     b23Pass = b23Checks.length === 2 && b23Checks.every(Boolean);
   }
 
+  // BUILD 25 (the pack commit's "juga enimies nya"): the survival night's
+  // army wears the user's zombie pack — the render layer aliases the sim
+  // keys onto three pack variants, the VAT crowd fields exactly those, and
+  // synthesised pack-attack/pack-die clips meet the baker's walk+die
+  // contract. Sim keys, stats and waves never change; the legacy mansion
+  // roster keeps its ultimate monsters.
+  let b25Pass = false;
+  {
+    const b25Checks = [];
+    const b25Check = (name, ok, detail) => {
+      b25Checks.push(!!ok);
+      console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} — ${detail}`);
+    };
+    const { ENEMY_MODELS: EM, SURVIVAL_HORDE_ALIAS: ALIAS, SlotBook: SB, requiredClips: rc } = await import('../src/game/render3d/enemy3d.js');
+    const { ZOMBI_KINDS: ZK, ZOMBI_PACK_URL: ZURL, ZombiPack3D: ZP } = await import('../src/game/render3d/zombipack3d.js');
+    const { CROWD_KINDS: CK } = await import('../src/game/render3d/crowd3d.js');
+    b25Check('B25: the survival horde is the user\'s zombie pack — three variant kinds wired (shambler/lurcher/wretch), the sim keys alias at the render layer only, and the legacy ultimate roster stays intact',
+      ['shambler', 'lurcher', 'wretch'].every((key) => EM[key] && EM[key].pack === key && EM[key].url === ZURL
+        && EM[key].map.walk === 'Take 001' && EM[key].map.attack === 'pack-attack' && EM[key].map.die === 'pack-die')
+        && ALIAS.zombie === 'shambler' && ALIAS.crawler === 'lurcher' && ALIAS.ghoul === 'wretch'
+        && EM.zombie.url === './assets/monsters/ultimate/demon.glb'
+        && rc('shambler').join(',') === 'walk,attack,die'
+        && ZK.length === 3 && new Set(ZK.map((k) => k.variant)).size === 3
+        && typeof ZP.stage === 'function' && typeof ZP.forKind === 'function',
+      `kinds ${ZK.map((k) => `${k.key}=variant ${k.variant}`).join(', ')} from ${ZURL}`);
+    const aliasBook = new SB(4);
+    aliasBook.sync([{ id: 1, key: 'zombie' }, { id: 2, key: 'crawler' }, { id: 3, key: 'ghoul' }, { id: 4, key: 'werewolf' }],
+      (key) => ALIAS[key] || key);
+    b25Check('B25: the VAT crowd fields exactly the three pack kinds (shares sum to 100, no hover on the grounded bodies) and the slot book aliases the horde keys while every other role stays itself',
+      CK.map((k) => k.key).join(',') === 'shambler,lurcher,wretch'
+        && CK.reduce((sum, k) => sum + k.share, 0) === 100
+        && CK.every((k) => k.hover === 0 && EM[k.key] && EM[k.key].pack === k.key)
+        && aliasBook.live.map((slot) => slot.type).sort().join(',') === 'lurcher,shambler,werewolf,wretch',
+      `crowd ${CK.map((k) => `${k.key} ${k.share}%`).join(' / ')}, slots ${aliasBook.live.map((slot) => slot.type).sort().join(',')}`);
+    b25Pass = b25Checks.length === 2 && b25Checks.every(Boolean);
+  }
+
   console.log(`  idle Night 3: ${idle.nightThree.peakEnemies} peak enemies / ${idle.nightThree.peakBreakers} Breakers, ${idle.nightThree.kills} kills, ${idle.nightThree.wallDamage} wall damage, gate ${idle.nightThree.gateHp} HP, Hunter ${idle.nightThree.playerHp} HP; ${idle.phase}`);
   console.log(`  builder Night 3: ${builder.nightThree.peakEnemies} peak enemies / ${builder.nightThree.peakBreakers} Breakers, ${builder.nightThree.kills} kills, ${builder.nightThree.wallDamage} wall damage, gate ${builder.nightThree.gateHp} HP, Hunter ${builder.nightThree.playerHp} HP; keep Lv${builder.keepLevel} ${builder.keepHp} HP, soldiers ${builder.survivors}, buildings ${builder.buildings.join(',') || 'none'}, gateBuilt=${builder.gateBuilt}; ${builder.phase}`);
   // Balance target (M1 rebuild, K1): doing nothing must not win; an engaged
@@ -2864,7 +2901,7 @@ async function runSurvivalMilestone() {
     && hunterAutoShot && hunterRealLos && hunterSkill
     && idleLoses && builder.complete && builder.keepLevel === 3
     && builder.queueLockVerified && builder.sawmillBuilt && builder.gateBuilt && builder.barracksBuilt
-    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass && gateRulePass && b13Pass && b14Pass && b15Pass && b16Pass && b17Pass && b18Pass && b19Pass && b20Pass && b21Pass && b22Pass && b23Pass
+    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass && gateRulePass && b13Pass && b14Pass && b15Pass && b16Pass && b17Pass && b18Pass && b19Pass && b20Pass && b21Pass && b22Pass && b23Pass && b25Pass
     && builder.upgrades[0].level === 1 && builder.upgrades[0].plots === 9
     && builder.upgrades[builder.upgrades.length - 1].level === 3 && builder.upgrades[builder.upgrades.length - 1].plots === 15
     && builder.upgrades.every((item, i, all) => i === 0 || item.level >= all[i - 1].level);
@@ -4458,7 +4495,9 @@ if (args.systems) {
   const wide = { w: game.renderer.w, h: game.renderer.h, zoom: game.renderer.cam.zoom };
   game.renderer.resize(390, 844, 1);
   const pv = game.renderer.view;
-  const { selectGlbSlots, ENEMY_GLB_CAP, ENEMY_MODELS, requiredClips, SlotBook, Enemy3D } = await import('../src/game/render3d/enemy3d.js');
+  const { selectGlbSlots, ENEMY_GLB_CAP, ENEMY_MODELS, requiredClips, SlotBook, Enemy3D, SURVIVAL_HORDE_ALIAS } = await import('../src/game/render3d/enemy3d.js');
+  const { ZOMBI_KINDS, ZOMBI_PACK_URL } = await import('../src/game/render3d/zombipack3d.js');
+  const { CROWD_KINDS } = await import('../src/game/render3d/crowd3d.js');
   const { Crawler } = await import('../src/game/sim/enemies.js');
   const wallCandidates = game.mansion.solids.filter((solid) => solid.type === 'wall')
     .sort((a, b) => Math.max(b.w, b.h) - Math.max(a.w, a.h));
@@ -4509,6 +4548,23 @@ if (args.systems) {
     'the werewolf charges on angry and strikes on front_kick');
   line(['zombie', 'crawler', 'ghoul', 'hunter', 'stalker', 'werewolf'].every((key) => ENEMY_MODELS[key] && ENEMY_MODELS[key].url),
     'every besieger in the roster has a body wired to it');
+  // BUILD 25: the survival night's horde wears the user's zombie pack —
+  // render-layer alias only; the sim keys, stats and waves never change and
+  // the legacy mansion roster keeps its ultimate monsters.
+  line(['shambler', 'lurcher', 'wretch'].every((key) => ENEMY_MODELS[key]
+      && ENEMY_MODELS[key].pack === key && ENEMY_MODELS[key].url === ZOMBI_PACK_URL
+      && ENEMY_MODELS[key].map.attack === 'pack-attack' && ENEMY_MODELS[key].map.die === 'pack-die')
+    && SURVIVAL_HORDE_ALIAS.zombie === 'shambler' && SURVIVAL_HORDE_ALIAS.crawler === 'lurcher' && SURVIVAL_HORDE_ALIAS.ghoul === 'wretch'
+    && requiredClips('shambler').join(',') === 'walk,attack,die'
+    && ZOMBI_KINDS.length === 3
+    && CROWD_KINDS.map((k) => k.key).join(',') === 'shambler,lurcher,wretch'
+    && CROWD_KINDS.reduce((sum, k) => sum + k.share, 0) === 100,
+    'BUILD 25: the horde faction is the zombie pack (three variants, alias zombie/crawler/ghoul -> shambler/lurcher/wretch, synthesised attack/die mapped)');
+  const aliasBook = new SlotBook(ENEMY_GLB_CAP);
+  aliasBook.sync([{ id: 1, key: 'zombie' }, { id: 2, key: 'crawler' }, { id: 3, key: 'ghoul' }, { id: 4, key: 'werewolf' }],
+    (key) => SURVIVAL_HORDE_ALIAS[key] || key);
+  line(aliasBook.live.map((slot) => slot.type).sort().join(',') === 'lurcher,shambler,wretch,werewolf',
+    'SlotBook.sync aliases the survival horde onto the pack kinds and leaves every other role alone');
   const book = new SlotBook(ENEMY_GLB_CAP);
   book.sync(capped);
   book.sync([]);

@@ -23,6 +23,7 @@ import * as THREE from '../../vendor/three/three.module.min.js';
 import { GLTFLoader } from '../../vendor/three/GLTFLoader.js';
 import { dist } from '../../core/util.js';
 import { Valen3D } from './valen3d.js';
+import { ZombiPack3D, ZOMBI_PACK_URL } from './zombipack3d.js';
 
 export const ENEMY_GLB_CAP = 14;
 const HURT_FLASH_COLOR = new THREE.Color(0xffe0d8);
@@ -83,6 +84,21 @@ const WOLF_MAP = Object.freeze({
   idle: 'box_02.001',
 });
 
+/* BUILD 25 (user 2026-10-21, the pack commit's "juga enimies nya"): the
+ * survival night's army wears the user's own zombie pack. Its single 7.37 s
+ * take is the walk; ZombiPack3D synthesises the missing attack/die as real
+ * AnimationClips per variant, so the crowd baker's walk+die contract holds.
+ * The legacy mansion roster (zombie/crawler/ghoul/…) keeps its ultimate
+ * monsters; survival aliases onto the pack at the RENDER layer only
+ * (SURVIVAL_HORDE_ALIAS) — no sim key, stat or wave ever changes. */
+const PACK_MAP = Object.freeze({
+  walk: 'Take 001',
+  run: 'Take 001',
+  attack: 'pack-attack',
+  die: 'pack-die',
+  idle: 'Take 001',
+});
+
 export const ENEMY_MODELS = Object.freeze({
   zombie: Object.freeze({ url: `${MONSTERS}demon.glb`, map: BIPED_MAP }),
   crawler: Object.freeze({ url: `${MONSTERS}green-spiky-blob.glb`, map: CRAWLER_MAP }),
@@ -90,6 +106,16 @@ export const ENEMY_MODELS = Object.freeze({
   ghoul: Object.freeze({ url: `${MONSTERS}ghost-skull.glb`, map: FLYER_MAP }),
   werewolf: Object.freeze({ url: WOLF_BODY, map: WOLF_MAP }),
   stalker: Object.freeze({ url: `${MONSTERS}yeti.glb`, map: YETI_MAP }),
+  shambler: Object.freeze({ url: ZOMBI_PACK_URL, pack: 'shambler', map: PACK_MAP }),
+  lurcher: Object.freeze({ url: ZOMBI_PACK_URL, pack: 'lurcher', map: PACK_MAP }),
+  wretch: Object.freeze({ url: ZOMBI_PACK_URL, pack: 'wretch', map: PACK_MAP }),
+});
+
+/** Which pack character a survival horde sim-key wears (render layer only). */
+export const SURVIVAL_HORDE_ALIAS = Object.freeze({
+  zombie: 'shambler',
+  crawler: 'lurcher',
+  ghoul: 'wretch',
 });
 
 /** No action aliases are used as stand-ins: every role has its own source clip. */
@@ -100,6 +126,9 @@ export const FORBIDDEN_STANDINS = Object.freeze({
   ghoul: Object.freeze([]),
   werewolf: Object.freeze([]),
   stalker: Object.freeze([]),
+  shambler: Object.freeze([]),
+  lurcher: Object.freeze([]),
+  wretch: Object.freeze([]),
 });
 
 /**
@@ -113,6 +142,9 @@ export const ENEMY_EXPOSURE = Object.freeze({
   hunter: 0.55,
   stalker: 1.3,
   werewolf: 1.3,
+  shambler: 0.7,
+  lurcher: 0.7,
+  wretch: 0.7,
 });
 
 /**
@@ -151,7 +183,12 @@ export const HORDE_GRADE = Object.freeze({
 });
 
 /** The eye/ghostfire colour each kind's VAT material emits (crowd3d). */
-export const HORDE_EYE = Object.freeze({ zombie: 0xff3b28, crawler: 0xff3b28, ghoul: 0x8fc7ff });
+export const HORDE_EYE = Object.freeze({
+  zombie: 0xff3b28, crawler: 0xff3b28, ghoul: 0x8fc7ff,
+  // BUILD 25: the pack bodies keep their own painted textures (no repaint,
+  // no glowing part) — the faction reads through the shared crimson rim.
+  shambler: 0xff3b28, lurcher: 0xff3b28, wretch: 0xff3b28,
+});
 
 /**
  * Repaint one material of one horde role by its source name. Returns true
@@ -225,6 +262,9 @@ export const ENEMY_HEIGHT = Object.freeze({
   ghoul: 68,
   werewolf: 90,
   stalker: 90,
+  shambler: 76,
+  lurcher: 70,
+  wretch: 72,
 });
 
 export function requiredClips(key) {
@@ -286,7 +326,7 @@ export class SlotBook {
     this.made = 0;
   }
 
-  sync(picked) {
+  sync(picked, keyOf = null) {
     const want = new Set(picked.map((e) => e.id));
     for (const slot of this.live) {
       if (!want.has(slot.id)) {
@@ -297,18 +337,21 @@ export class SlotBook {
     this.live = this.live.filter((slot) => slot.id);
     let starved = 0;
     for (const enemy of picked) {
+      // BUILD 25: `keyOf` aliases the sim key onto the render roster (the
+      // survival horde wears the zombie pack); without it nothing changes.
+      const type = keyOf ? keyOf(enemy.key) : enemy.key;
       if (this.live.some((slot) => slot.id === enemy.id)) continue;
-      let slot = this.free.find((free) => free.type === enemy.key);
+      let slot = this.free.find((free) => free.type === type);
       if (slot) this.free.splice(this.free.indexOf(slot), 1);
       if (!slot) {
         if (this.live.length + this.free.length >= this.cap) {
           starved++;
           continue;
         }
-        slot = { id: 0, type: enemy.key, n: ++this.made };
+        slot = { id: 0, type, n: ++this.made };
       }
       slot.id = enemy.id;
-      slot.type = enemy.key;
+      slot.type = type;
       this.live.push(slot);
     }
     return { live: this.live.length, made: this.made, starved, free: this.free.length };
@@ -425,6 +468,33 @@ class EnemyStage {
       preview: null,
     };
     this.types[key] = rec;
+    if (spec.pack) {
+      // BUILD 25: pack-backed kinds share one staged file; ZombiPack3D splits
+      // it into per-variant rigs with the synthesised attack/die clips.
+      ZombiPack3D.stage().then(() => {
+        const variant = ZombiPack3D.forKind(spec.pack);
+        if (!variant || !variant.template) {
+          this._fail(key, ZombiPack3D.error || `pack variant ${spec.pack} missing`);
+          return;
+        }
+        rec.clips = variant.animations.map((clip) => clip.name);
+        const verdict = behaviorReady(key, rec.clips);
+        rec.missing = verdict.missing;
+        rec.behaviorReady = verdict.ready;
+        // the variant template is shared like a parsed file: every consumer
+        // (bakeKind, _takeModel) clones it, so its materials stay authored
+        rec.template = variant.template;
+        rec.template.traverse((object) => {
+          if (object.isMesh) { object.castShadow = true; object.receiveShadow = false; }
+        });
+        rec.template.visible = false;
+        rec.animations = variant.animations;
+        rec.loaded = true;
+        rec.loading = false;
+        rec.failed = false;
+      });
+      return;
+    }
     let file = this._files[spec.url];
     if (!file) {
       file = this._files[spec.url] = { url: spec.url, gltf: null, failed: false, error: null, waiting: [key] };
@@ -727,9 +797,16 @@ class EnemyStage {
       const rec = this.types[key];
       if (rec && rec.loaded && !rec.failed && !rec.preview) this._bakePreview(key);
     }
-    const ready = (key) => !!(this.types[key] && this.types[key].behaviorReady && !this.types[key].failed);
+    // BUILD 25: in survival (hordeGrade) the skinned Individuals/Breakers
+    // wear the same zombie-pack faction the VAT horde bakes — one army. The
+    // legacy mansion keeps the ultimate-monster roster untouched.
+    const keyOf = options.hordeGrade ? (key) => SURVIVAL_HORDE_ALIAS[key] || key : null;
+    const ready = (key) => {
+      const k = keyOf ? keyOf(key) : key;
+      return !!(this.types[k] && this.types[k].behaviorReady && !this.types[k].failed);
+    };
     const picked = selectGlbSlots(enemies, player, this.cap, ready, !!options.includeCrowd);
-    this.book.sync(picked);
+    this.book.sync(picked, keyOf);
     if (!options.host && !this._host()) {
       for (const enemy of enemies) enemy._glb = null;
       return picked;

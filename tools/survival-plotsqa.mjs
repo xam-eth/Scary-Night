@@ -1053,15 +1053,25 @@ const b21 = await page.evaluate(async () => {
     });
   });
   out.graded = graded; out.hands = hands; out.bows = bows;
-  // the horde's faction bake: one body colour per kind, one glowing part
+  // BUILD 25: the horde's faction bake — the user's zombie pack, its painted
+  // atlas carried through the bake (UVs ride along, the material samples the
+  // map), no repaint and no glow parts; the faction reads through the rim
   out.kinds = {};
   for (const [key, kind] of C.kinds) {
     const col = kind.bake.geometry.getAttribute('color');
     const glow = kind.bake.geometry.getAttribute('vatGlow');
+    const uv = kind.bake.geometry.getAttribute('uv');
     let glowMax = 0;
     for (let i = 0; i < glow.count; i++) glowMax = Math.max(glowMax, glow.getX(i));
-    out.kinds[key] = { r: +col.getX(0).toFixed(3), g: +col.getY(0).toFixed(3), b: +col.getZ(0).toFixed(3), glowMax: +glowMax.toFixed(2) };
+    let uvMax = 0;
+    for (let i = 0; i < uv.count; i++) uvMax = Math.max(uvMax, uv.getX(i), uv.getY(i));
+    out.kinds[key] = {
+      r: +col.getX(0).toFixed(3), g: +col.getY(0).toFixed(3), b: +col.getZ(0).toFixed(3),
+      glowMax: +glowMax.toFixed(2), uvMax: +uvMax.toFixed(2),
+      mapped: !!kind.bake.map, verts: kind.bake.verts,
+    };
   }
+  out.rim = [C.look.rimColor.value.r, C.look.rimColor.value.g, C.look.rimColor.value.b].map((v) => +v.toFixed(2)).join(',');
   // a ground bolt flies at the shooter's chest, not at the ankles: fire one
   // guard bolt on purpose (the natural volleys land and expire between frames)
   if (m.phase !== 'night') m.startNight();
@@ -1084,10 +1094,11 @@ const b21 = await page.evaluate(async () => {
   return out;
 });
 await shot('b21-1-garrison-horde');
-check('B21: the garrison is the captain\'s character family (graded, crossbow in the right hand), the horde bakes one faction grade with a single glowing part per kind, and a ground bolt leaves the bow at chest height',
+check('B21/B25: the garrison is the captain\'s character family (graded, crossbow in the right hand), the horde bakes the user\'s zombie pack as one faction (three variants, painted atlas carried through the bake, crimson rim, no repaint), and a ground bolt leaves the bow at chest height',
   b21.troopReady && b21.soldierUrl === b21.valenUrl && b21.graded === 1 && b21.hands >= 1 && b21.bows >= 1
-    && b21.kinds.zombie && Math.abs(b21.kinds.zombie.r - b21.kinds.zombie.g) < 0.03 && b21.kinds.zombie.b > b21.kinds.zombie.r && b21.kinds.zombie.glowMax >= 2
-    && b21.kinds.crawler.glowMax >= 2 && b21.kinds.ghoul.glowMax > 0.1 && b21.kinds.ghoul.glowMax < 1
+    && b21.kinds.shambler && b21.kinds.lurcher && b21.kinds.wretch
+    && [b21.kinds.shambler, b21.kinds.lurcher, b21.kinds.wretch].every((k) => k.mapped && k.uvMax > 0.01 && k.glowMax === 0 && k.r === 1 && k.g === 1 && k.b === 1 && k.verts > 500)
+    && b21.rim === '0.78,0.2,0.16'
     && b21.boltYs.length > 0 && b21.boltYs.every((y) => y > 50 && y < 120),
   b21);
 

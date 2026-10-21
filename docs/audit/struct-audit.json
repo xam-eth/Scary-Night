@@ -1,8 +1,8 @@
 {
-  "generated": "2026-10-21T01:43:30.678Z",
+  "generated": "2026-10-21T04:40:08.307Z",
   "src": {
-    "files": 49,
-    "locTotal": 45600,
+    "files": 50,
+    "locTotal": 45897,
     "biggest": [
       [
         "src/game/sim/survival.js",
@@ -41,16 +41,16 @@
         1436
       ],
       [
+        "src/game/render3d/enemy3d.js",
+        1204
+      ],
+      [
         "src/game/player.js",
         1143
       ],
       [
         "src/game/meta/director.js",
         1129
-      ],
-      [
-        "src/game/render3d/enemy3d.js",
-        1127
       ]
     ],
     "orphans": [],
@@ -71,7 +71,7 @@
       ],
       [
         "src/vendor/three/three.module.min.js",
-        10
+        11
       ],
       [
         "src/game/render3d/valen3d.js",
@@ -94,11 +94,11 @@
         6
       ],
       [
-        "src/game/sim/mansion.js",
-        5
+        "src/vendor/three/GLTFLoader.js",
+        6
       ],
       [
-        "src/vendor/three/GLTFLoader.js",
+        "src/game/sim/mansion.js",
         5
       ],
       [
@@ -258,7 +258,7 @@
     },
     {
       "file": "tools/bundle.mjs",
-      "refs": 58,
+      "refs": 61,
       "inPkg": false,
       "inDocs": true,
       "inChain": true,
@@ -267,11 +267,20 @@
     },
     {
       "file": "tools/bundlecheck.mjs",
-      "refs": 25,
+      "refs": 28,
       "inPkg": false,
       "inDocs": true,
       "inChain": true,
       "inCi": true,
+      "used": true
+    },
+    {
+      "file": "tools/chain.sh",
+      "refs": 31,
+      "inPkg": false,
+      "inDocs": true,
+      "inChain": false,
+      "inCi": false,
       "used": true
     },
     {
@@ -285,10 +294,10 @@
     },
     {
       "file": "tools/envqa.mjs",
-      "refs": 32,
+      "refs": 35,
       "inPkg": false,
       "inDocs": true,
-      "inChain": false,
+      "inChain": true,
       "inCi": false,
       "used": true
     },
@@ -312,28 +321,28 @@
     },
     {
       "file": "tools/glbtest.mjs",
-      "refs": 34,
+      "refs": 39,
       "inPkg": false,
       "inDocs": true,
-      "inChain": false,
+      "inChain": true,
       "inCi": false,
       "used": true
     },
     {
       "file": "tools/harness.mjs",
-      "refs": 76,
+      "refs": 81,
       "inPkg": false,
       "inDocs": true,
-      "inChain": false,
+      "inChain": true,
       "inCi": false,
       "used": true
     },
     {
       "file": "tools/layoutqa.mjs",
-      "refs": 27,
+      "refs": 30,
       "inPkg": false,
       "inDocs": true,
-      "inChain": false,
+      "inChain": true,
       "inCi": false,
       "used": true
     },
@@ -357,7 +366,7 @@
     },
     {
       "file": "tools/structaudit.mjs",
-      "refs": 18,
+      "refs": 19,
       "inPkg": false,
       "inDocs": true,
       "inChain": false,
@@ -384,55 +393,55 @@
     },
     {
       "file": "tools/survival-devqa.mjs",
-      "refs": 25,
+      "refs": 26,
       "inPkg": false,
       "inDocs": true,
-      "inChain": false,
+      "inChain": true,
       "inCi": false,
       "used": true
     },
     {
       "file": "tools/survival-fxshots.mjs",
-      "refs": 25,
+      "refs": 26,
       "inPkg": false,
       "inDocs": true,
-      "inChain": false,
+      "inChain": true,
       "inCi": false,
       "used": true
     },
     {
       "file": "tools/survival-intro.mjs",
-      "refs": 18,
+      "refs": 19,
       "inPkg": false,
       "inDocs": true,
-      "inChain": false,
+      "inChain": true,
       "inCi": false,
       "used": true
     },
     {
       "file": "tools/survival-look.mjs",
-      "refs": 23,
+      "refs": 24,
       "inPkg": false,
       "inDocs": true,
-      "inChain": false,
+      "inChain": true,
       "inCi": false,
       "used": true
     },
     {
       "file": "tools/survival-map.mjs",
-      "refs": 23,
+      "refs": 24,
       "inPkg": false,
       "inDocs": true,
-      "inChain": false,
+      "inChain": true,
       "inCi": false,
       "used": true
     },
     {
       "file": "tools/survival-plotsqa.mjs",
-      "refs": 30,
+      "refs": 31,
       "inPkg": false,
       "inDocs": true,
-      "inChain": false,
+      "inChain": true,
       "inCi": false,
       "used": true
     },
@@ -447,19 +456,19 @@
     },
     {
       "file": "tools/survivalshots.mjs",
-      "refs": 29,
+      "refs": 30,
       "inPkg": false,
       "inDocs": true,
-      "inChain": false,
+      "inChain": true,
       "inCi": false,
       "used": true
     },
     {
       "file": "tools/swtest.mjs",
-      "refs": 23,
+      "refs": 26,
       "inPkg": false,
       "inDocs": true,
-      "inChain": false,
+      "inChain": true,
       "inCi": false,
       "used": true
     }
