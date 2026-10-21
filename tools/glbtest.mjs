@@ -12,7 +12,8 @@ import {
   ENEMY_GLB_CAP, ENEMY_MODELS, ENEMY_CLIP_CONTRACT, FORBIDDEN_STANDINS,
   SlotBook, behaviorReady, enemyClipForState, requiredClips, selectGlbSlots, standinViolation,
 } from '../src/game/enemy3d.js';
-import { TROOP_ASSETS, TROOP_CLIPS, TROOP_CLIPS_2H, TROOP_LOADOUTS, TROOP_BOWS } from '../src/game/troop3d.js';
+import { TROOP_ASSETS, TROOP_LOADOUTS, TROOP_BOWS } from '../src/game/troop3d.js';
+import { PEOPLE_ROLES, BONES as PACK_BONES } from '../src/game/pack3d.js';
 import { BUILDING_KIT, BUILDING_CORE, BUILDING_MODEL, SAW_NODE } from '../src/game/buildings3d.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -113,7 +114,9 @@ if (glb) {
     `${skin.normalised}/${skin.vertices}`);
 }
 
-ok('runtime loads the vendored hunter filename', VALEN_MODEL_URL === `./${SOURCE_NAME}`, VALEN_MODEL_URL);
+// BUILD 24: the captain now wears the user's own pack (pack3d rigs it);
+// the vendored hunter GLB stays in the repo and its checks above stay valid
+ok('runtime loads the user\'s people pack', VALEN_MODEL_URL === './egyptian_people.glb', VALEN_MODEL_URL);
 ok('clip mapping uses claw for the unarmed attack',
   VALEN_CLIPS.idle === null
     && valenClipForState('idle') === null
@@ -470,22 +473,25 @@ console.log('\ngarrison troops (captain family + KayKit bows, CC0):');
   ok('the pack ships its CC0 licence and the credits name the source commit',
     /Creative Commons Zero, CC0/.test(fs.readFileSync(path.join(TROOP_DIR, 'LICENSE.txt'), 'utf8'))
       && /commit 672074b73ba276876a19e8816ecdc5241817ab47/.test(credits));
-  // BUILD 21: one character file for the captain and his men
-  ok('the garrison template IS the captain\'s character file (one family, no second art style)',
-    TROOP_ASSETS.soldier.replace(/^\.\//, '') === SOURCE_NAME,
+  // BUILD 24: the garrison and the captain are the user's pack characters —
+  // auto-rigged at runtime by pack3d.js, the GLB itself is static sculpture
+  ok('the garrison template IS the people pack the captain wears (one art family)',
+    TROOP_ASSETS.soldier.replace(/^\.\//, '') === 'egyptian_people.glb',
     `${TROOP_ASSETS.soldier}`);
   const soldier = readGlb(path.join(ROOT, TROOP_ASSETS.soldier));
-  const clipNames = new Set((soldier?.json.animations || []).map((clip) => clip.name));
   const nodeNames = new Set((soldier?.json.nodes || []).map((node) => node.name));
-  const wantedClips = [...new Set([...Object.values(TROOP_CLIPS), ...Object.values(TROOP_CLIPS_2H)].filter(Boolean))];
-  const missingClips = wantedClips.filter((name) => !clipNames.has(name));
-  ok('the soldier GLB is a rigged character with every clip the garrison plays (idle/aim/hit/down/up/cheer are procedural on this rig)',
-    !!soldier && soldier.json.skins?.length > 0 && missingClips.length === 0,
-    `${clipNames.size} clips (${[...clipNames].join(', ')})${missingClips.length ? `; missing ${missingClips.join(', ')}` : ''}`);
-  const missingNodes = ['R_Hand'].filter((name) => !nodeNames.has(name));
+  const missingRoles = Object.values(PEOPLE_ROLES).filter((role) => !nodeNames.has(role));
+  ok('the people pack carries every role the garrison and captain wear (Commander/Slave/Warrior/Resident/King, each its own mesh + texture)',
+    !!soldier && missingRoles.length === 0 && (soldier.json.meshes || []).length === 5 && (soldier.json.images || []).length === 5,
+    `${(soldier?.json.meshes || []).length} meshes${missingRoles.length ? `; missing ${missingRoles.join(', ')}` : ''}`);
+  const zombie = readGlb(path.join(ROOT, 'polyart_zombies_with_animations_free_pack.glb'));
+  ok('the zombie pack is rigged and animated (10 skinned variants, one shared take) — the BUILD 25 enemy source',
+    !!zombie && (zombie.json.skins || []).length === 10 && (zombie.json.animations || []).length === 1,
+    `${zombie?.json.skins?.length || 0} skins, anim "${(zombie?.json.animations || [])[0]?.name || 'none'}"`);
+  const missingBones = ['R_Hand', 'Head', 'Hip'].filter((name) => !PACK_BONES.some((b) => b[0] === name));
   const everyLoadoutBows = Object.values(TROOP_LOADOUTS).every((loadout) => loadout.bow);
-  ok('the rig has the right-hand bone the crossbow mounts on, and every loadout carries the garrison bow',
-    missingNodes.length === 0 && everyLoadoutBows, missingNodes.length ? `missing ${missingNodes.join(', ')}` : 'R_Hand; guard/soldier/bearer');
+  ok('the generated skeleton carries the right-hand bone the crossbow mounts on, and every loadout carries the garrison bow',
+    missingBones.length === 0 && everyLoadoutBows, missingBones.length ? `missing ${missingBones.join(', ')}` : 'R_Hand/Head/Hip; guard/soldier/bearer');
   const bow = JSON.parse(fs.readFileSync(path.join(ROOT, TROOP_ASSETS.crossbow), 'utf8'));
   const bowFiles = [...(bow.buffers || []), ...(bow.images || [])].map((item) => item.uri).filter(Boolean);
   ok('the crossbow glTF has a mesh and its buffer and atlas sit next to it',

@@ -7,9 +7,12 @@
  */
 
 import * as THREE from '../vendor/three/three.module.min.js';
-import { GLTFLoader } from '../vendor/three/GLTFLoader.js';
 
-export const VALEN_MODEL_URL = './hunter_run_walk_claw_sword_shot.glb';
+// BUILD 24: the captain now wears the user's own pack (the egyptian
+// Commander, auto-rigged + procedurally animated by src/game/pack3d.js).
+// The export name stays for every contract that checks it.
+import { People3D, PEOPLE_MODEL_URL, PEOPLE_ROLES } from './pack3d.js';
+export const VALEN_MODEL_URL = PEOPLE_MODEL_URL;
 export const VALEN_CLIPS = Object.freeze({
   idle: null,       // bind/rest pose — this rig has no idle clip
   walk: 'walk',
@@ -280,40 +283,39 @@ class ValenRuntime {
         camera.lookAt(0, 0.5, 0);
         this.camera = camera;
 
-        const loader = new GLTFLoader();
-        // The character IS this asset. A weak link gets three attempts with
-        // backoff before the failure state, and a public retry() after that.
-        // A night never blocks on the model — the canvas silhouette stands in.
+        // BUILD 24: the pack rig replaces the vendored hunter GLB. Same
+        // three-attempt retry contract; People3D builds every role once, so
+        // later rigs (the garrison) reuse this fetch for free.
         const ATTEMPTS = 3;
-        const attempt = (n) => loader.load(
-          VALEN_MODEL_URL,
-          (gltf) => {
+        const attempt = (n) => People3D.stage().then(() => {
+          const person = People3D.make(PEOPLE_ROLES.captain);
+          if (person) {
             try {
-              this._acceptModel(gltf);
+              this._acceptModel({
+                scene: person.model,
+                animations: Object.values(person.clips),
+              });
+              this.packRig = true;
               this.progress = 1;
               if (onProgress) onProgress(1);
               resolve(this);
+              return;
             } catch (error) {
               this._fail(error);
               resolve(this);
-            }
-          },
-          (event) => {
-            const total = event.total || 0;
-            this.progress = total > 0 ? clamp01(event.loaded / total) : this.progress;
-            if (onProgress) onProgress(this.progress);
-          },
-          (error) => {
-            if (n < ATTEMPTS) {
-              this.progress = 0;
-              if (onProgress) onProgress(0.02);
-              setTimeout(() => attempt(n + 1), 600 * n);
               return;
             }
-            this._fail(error);
-            resolve(this);
-          },
-        );
+          }
+          if (n < ATTEMPTS) {
+            this.progress = 0;
+            if (onProgress) onProgress(0.02);
+            People3D._promise = null;
+            setTimeout(() => attempt(n + 1), 600 * n);
+            return;
+          }
+          this._fail(new Error(People3D.error || 'people pack failed to load'));
+          resolve(this);
+        });
         attempt(1);
       } catch (error) {
         this._fail(error);
@@ -416,7 +418,9 @@ class ValenRuntime {
       this._look = this._lookUniforms;
     }
     const u = this._look;
-    u.uCapLook.value = look;
+    // BUILD 24: pack characters keep their painted textures — the grade recolour
+    // is disabled and only the rim/lift survive (V8 night legibility).
+    u.uCapLook.value = this.packRig ? 0 : look;
     u.uCapRim.value = rim;
     u.uCapLift.value = lift;
     return true;

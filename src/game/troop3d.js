@@ -6,8 +6,8 @@
  * from the SAME character as its captain. Until BUILD 20 the guards were
  * KayKit's Knight — a chunky toy soldier standing next to a realistically
  * proportioned, palette-graded hunter; the two never read as one game. Every
- * troop is now a cloneRig() of the captain's own GLB
- * (hunter_run_walk_claw_sword_shot.glb, shared with valen3d.js), wearing the
+ * troop is now a fresh rig of the user's pack character (pack3d.js)
+ * (BUILD 24: the user's egyptian_people.glb pack, shared with valen3d.js),
  * same uniform-grade shader (valen3d.buildUniformGrade) in a darker
  * garrison palette: a deeper royal-blue tabard, brushed-steel trim where the
  * captain wears gold (gold stays his alone), a fainter rim — so the captain
@@ -23,7 +23,7 @@
  * retired: it stays vendored for provenance but is no longer loaded, so the
  * garrison shares one character file with the captain.
  *
- * One fetch and one parse per file; every troop is a cloneRig() of the
+ * One fetch and one parse per file; every troop is a fresh People3D rig of
  * template (shared geometry, own skeleton, own materials so a hurt flash
  * stays on one body) with its own AnimationMixer. Until the files arrive —
  * or if they fail — world3d keeps the primitive figure, so the guards never
@@ -31,8 +31,8 @@
  */
 import * as THREE from '../vendor/three/three.module.min.js';
 import { GLTFLoader } from '../vendor/three/GLTFLoader.js';
-import { cloneRig } from './enemy3d.js';
 import { VALEN_MODEL_URL, buildUniformGrade } from './valen3d.js';
+import { People3D, PEOPLE_ROLES } from './pack3d.js';
 
 export const TROOP_ASSETS = Object.freeze({
   soldier: VALEN_MODEL_URL,
@@ -43,183 +43,16 @@ export const TROOP_ASSETS = Object.freeze({
 /**
  * The garrison's cut of the captain's palette (valen3d UNIFORM_GRADE_PALETTE
  * is the captain's). BUILD 23, after the user's correction ("kapten dan pasukan
- * sama, harusnya beda — pakai visual reference di asset"): the cloth follows
- * the concept sheet ASSET_CHARACTER/characters/02-guard.png — a mid steel-blue
- * gambeson with a gold stripe — while the captain keeps his brighter royal
- * tabard, gold trim, hat and cape. The silhouette difference is carried by
- * TROOP_GEAR below, not by paint alone.
+ * sama, harusnya beda"): BUILD 24 answer — the garrison and the captain are
+ * different characters from the user's pack (egyptian_people.glb): the guard
+ * wears the pack's Warrior, the bearer the Resident, the captain the
+ * Commander, all painted by the pack's own textures. This palette survives
+ * for the rim/lift uniforms and for QA identity checks.
  */
 export const TROOP_PALETTE = Object.freeze({
   navy: 0x14264c, royal: 0x2c4f96, sky: 0x9fb4d8, gold: 0xc9a23f,
   leather: 0x6b4a2f, leatherDark: 0x3a2718, skin: 0xd9a87f, rimColor: 0x9fc4f0,
 });
-
-/**
- * BUILD 23: the garrison's own silhouette, modelled after the guard concept
- * (02-guard.png): an open-face kettle helm with a blue plume (the captain
- * wears his feathered hat), a chain collar, rounded shoulder plates, a long
- * padded gambeson skirt with a gold stripe and tower emblem (the captain's
- * coat stops at the hip and he wears a cape), a bolt pouch and quiver on the
- * belt, and the garrison's round shield on the back where the captain's cape
- * hangs. Every node is procedural, parented to a bone, and named so QA can
- * find it; the captain's model carries none of these names.
- */
-export const TROOP_GEAR = Object.freeze([
-  'guard-helm', 'guard-helm-brim', 'guard-plume', 'guard-collar',
-  'guard-pauldron-l', 'guard-pauldron-r', 'guard-skirt', 'guard-stripe',
-  'guard-emblem', 'guard-belt', 'guard-pouch', 'guard-quiver',
-  'guard-shield', 'guard-shield-boss',
-]);
-
-let troopBodyGeometry = null;
-
-const GEAR_MAT = {
-  steel: () => new THREE.MeshStandardMaterial({ color: 0xb9bec6, metalness: 0.78, roughness: 0.34 }),
-  chain: () => new THREE.MeshStandardMaterial({ color: 0x8d939c, metalness: 0.52, roughness: 0.62 }),
-  cloth: () => new THREE.MeshStandardMaterial({ color: 0x2c4f96, metalness: 0.04, roughness: 0.85 }),
-  gold: () => new THREE.MeshStandardMaterial({ color: 0xc9a23f, metalness: 0.62, roughness: 0.4 }),
-  leather: () => new THREE.MeshStandardMaterial({ color: 0x6b4a2f, metalness: 0.05, roughness: 0.8 }),
-  plume: () => new THREE.MeshStandardMaterial({ color: 0x2f5fd0, metalness: 0.05, roughness: 0.7 }),
-};
-
-const _gearV = new THREE.Vector3();
-const _gearQ = new THREE.Quaternion();
-
-/**
- * Parent `node` to `bone` so it sits at the model-space point (x, y, z) in
- * the bind pose and keeps the bone's own orientation from there on (a helm
- * turns with the head, a skirt swings with the hip).
- */
-function seat(node, bone, model, x, y, z) {
-  bone.updateWorldMatrix(true, false);
-  node.quaternion.copy(bone.getWorldQuaternion(_gearQ).invert());
-  node.position.copy(bone.worldToLocal(model.localToWorld(_gearV.set(x, y, z))));
-  bone.add(node);
-  node.traverse((o) => { if (o.isMesh) o.castShadow = true; });
-  return node;
-}
-
-/**
- * BUILD 23: dress a cloned captain rig as the concept's guard (02-guard.png).
- * The body underneath stays the captain's rig — one character file, one
- * animation set — but everything the eye reads first is the garrison's own:
- * helm, collar, pauldrons, long gambeson skirt, belt kit and back shield.
- */
-export function dressGarrison(model) {
-  // the captain's short cape hangs exactly where the concept puts the
-  // garrison's shield: fold its vertices into the back so the guard reads
-  // cape-less, like the sheet. cloneRig shares vertex buffers, so the fold
-  // lives in a troop-only geometry copy (built once, shared by every guard;
-  // the captain keeps the untouched original)
-  model.traverse((o) => {
-    if (!o.isSkinnedMesh || !o.geometry || !o.geometry.attributes.position) return;
-    if (!troopBodyGeometry) {
-      troopBodyGeometry = o.geometry.clone();
-      const pos = troopBodyGeometry.attributes.position;
-      for (let i = 0; i < pos.count; i++) {
-        const y = pos.getY(i), z = pos.getZ(i), x = pos.getX(i);
-        if (y > 0.5 && y < 0.84 && z < -0.095 && Math.abs(x) < 0.1) pos.setZ(i, -0.06);
-      }
-      pos.needsUpdate = true;
-      troopBodyGeometry.computeBoundingSphere();
-      troopBodyGeometry.computeBoundingBox();
-    }
-    o.geometry = troopBodyGeometry;
-  });
-  const bones = {};
-  model.traverse((o) => { if (o.isBone) bones[o.name] = o; });
-  const head = bones.Head, hip = bones.Hip, spine = bones.Spine02;
-  const shoulderL = bones.L_Upperarm, shoulderR = bones.R_Upperarm;
-  if (!head || !hip || !spine || !shoulderL || !shoulderR) return false;
-
-  // kettle helm: a bell over the skull with the face left open, a flared
-  // brim, and the concept's small blue plume on the left
-  const helm = new THREE.Group(); helm.name = 'guard-helm';
-  const dome = new THREE.Mesh(
-    new THREE.SphereGeometry(0.062, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.62), GEAR_MAT.steel());
-  dome.position.y = 0.012;
-  const bell = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.062, 0.086, 0.055, 20, 1, true, Math.PI * 0.14, Math.PI * 1.72), GEAR_MAT.steel());
-  bell.material.side = THREE.DoubleSide;
-  bell.position.y = -0.018;
-  helm.add(dome, bell);
-  seat(helm, head, model, 0, 0.955, -0.004);
-  const brim = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.088, 0.102, 0.016, 22, 1, true, Math.PI * 0.14, Math.PI * 1.72), GEAR_MAT.steel());
-  brim.material.side = THREE.DoubleSide;
-  brim.name = 'guard-helm-brim';
-  seat(brim, head, model, 0, 0.928, -0.004);
-  const plumeHolder = new THREE.Group(); plumeHolder.name = 'guard-plume';
-  const plume = new THREE.Mesh(new THREE.SphereGeometry(0.016, 10, 8), GEAR_MAT.plume());
-  plume.scale.set(0.55, 2.6, 1.1);
-  plume.rotation.set(0.3, 0, -0.5);
-  plumeHolder.add(plume);
-  seat(plumeHolder, head, model, 0.052, 0.985, -0.02);
-
-  // chain collar: the concept's mail gorget under the helm
-  const collar = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.052, 0.072, 0.05, 16, 1, true), GEAR_MAT.chain());
-  collar.material.side = THREE.DoubleSide;
-  collar.name = 'guard-collar';
-  seat(collar, bones.NeckTwist01 || head, model, 0, 0.868, 0);
-
-  // rounded shoulder plates over the gambeson's sleeves
-  for (const [bone, name, sx] of [[shoulderL, 'guard-pauldron-l', 1], [shoulderR, 'guard-pauldron-r', -1]]) {
-    const cap = new THREE.Mesh(
-      new THREE.SphereGeometry(0.048, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.56), GEAR_MAT.steel());
-    cap.scale.set(1, 0.82, 1.12);
-    cap.name = name;
-    seat(cap, bone, model, sx * 0.108, 0.812, 0);
-  }
-
-  // the long padded gambeson skirt with its gold stripe and tower emblem
-  const skirt = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.088, 0.132, 0.24, 20, 1, true), GEAR_MAT.cloth());
-  skirt.material.side = THREE.DoubleSide;
-  skirt.name = 'guard-skirt';
-  seat(skirt, hip, model, 0, 0.415, 0);
-  const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.235, 0.006), GEAR_MAT.gold());
-  stripe.name = 'guard-stripe';
-  seat(stripe, hip, model, 0, 0.415, 0.119);
-  const emblem = new THREE.Group(); emblem.name = 'guard-emblem';
-  const tower = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.026, 0.005), GEAR_MAT.gold());
-  const crown = new THREE.Mesh(new THREE.BoxGeometry(0.024, 0.008, 0.005), GEAR_MAT.gold());
-  crown.position.y = 0.017;
-  emblem.add(tower, crown);
-  seat(emblem, spine, model, 0.032, 0.72, 0.078);
-
-  // belt kit: a leather belt, a bolt pouch on the right hip, a quiver behind
-  const beltHolder = new THREE.Group(); beltHolder.name = 'guard-belt';
-  const belt = new THREE.Mesh(new THREE.TorusGeometry(0.092, 0.011, 8, 22), GEAR_MAT.leather());
-  belt.rotation.x = Math.PI / 2;
-  beltHolder.add(belt);
-  seat(beltHolder, hip, model, 0, 0.535, 0);
-  const pouch = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.062, 0.032), GEAR_MAT.leather());
-  pouch.name = 'guard-pouch';
-  seat(pouch, hip, model, 0.098, 0.492, 0.028);
-  const quiverHolder = new THREE.Group(); quiverHolder.name = 'guard-quiver';
-  const quiver = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.016, 0.1, 10), GEAR_MAT.leather());
-  quiver.rotation.z = 0.32;
-  quiverHolder.add(quiver);
-  seat(quiverHolder, hip, model, -0.096, 0.55, -0.045);
-
-  // the garrison's round shield on the back, where the captain's cape hangs
-  const shieldHolder = new THREE.Group(); shieldHolder.name = 'guard-shield';
-  // steel board, blue field, gold boss: the concept's colours, but with
-  // enough contrast to read at phone zoom
-  const shield = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.105, 0.014, 22), GEAR_MAT.steel());
-  shield.rotation.x = Math.PI / 2;
-  const field = new THREE.Mesh(new THREE.CylinderGeometry(0.082, 0.082, 0.016, 20), GEAR_MAT.cloth());
-  field.rotation.x = Math.PI / 2;
-  field.position.z = -0.004;
-  shieldHolder.add(shield, field);
-  seat(shieldHolder, spine, model, 0, 0.66, -0.116);
-  const boss = new THREE.Mesh(new THREE.SphereGeometry(0.026, 12, 10), GEAR_MAT.gold());
-  boss.scale.z = 0.6;
-  boss.name = 'guard-shield-boss';
-  seat(boss, spine, model, 0, 0.66, -0.132);
-  return true;
-}
 
 /** The grade is always on for troops; the rim and lift stay under the captain's. */
 export const TROOP_LOOK = Object.freeze({ look: 1, rim: 0.16, lift: 0.04 });
@@ -231,16 +64,16 @@ export const TROOP_LOOK = Object.freeze({ look: 1, rim: 0.16, lift: 0.04 });
  * crossbow rides.
  */
 export const TROOP_CLIPS = Object.freeze({
-  idle: null,
+  idle: 'idle',
   walk: 'walk',
   run: 'run',
   aim: null,
   shoot: 'shot',
-  hit: null,
-  down: null,
-  lie: null,
-  up: null,
-  cheer: null,
+  hit: 'hit',
+  down: 'down',
+  lie: 'lie',
+  up: 'up',
+  cheer: 'cheer',
 });
 
 /** The Lv3 arbalest: the same authored shot clip (the rig has no 2H set). */
@@ -344,10 +177,11 @@ const HAND_BONE_R = 'R_Hand';
  */
 const BOW_MOUNT = Object.freeze({
   length: 0.52,          // share of the troop's height the bow spans
-  pos: Object.freeze([0.035, 0.055, 0.1]),
-  // tuned on the frozen shot-clip probe (2026-10-19): the stock's +Z rides
-  // the hand's finger axis, so the authored shot pose aims the bow level
-  rot: Object.freeze([-Math.PI / 2, 0, 0]),
+  pos: Object.freeze([0.01, 0.03, 0.08]),
+  // BUILD 24: the kaykit bow's barrel is its local +Z and the prod spans X;
+  // the shoot pose now levels the arm absolutely (pack3d rest compensation),
+  // so an identity mount rides the aim line with the hand.
+  rot: Object.freeze([0, 0, 0]),
 });
 
 /** One troop's skinned body, its mixer, procedural states and a tiny clip machine. */
@@ -565,7 +399,15 @@ class TroopStage {
       if (!soldier || !bowSettled || !bigSettled) return;
       try { this._accept(soldier, bow, big); } catch (error) { this._fail(error); }
     };
-    loader.load(TROOP_ASSETS.soldier, (gltf) => { soldier = gltf; settle(); }, undefined, (error) => this._fail(error));
+    // BUILD 24: the garrison is the user's pack — People3D auto-rigs the
+    // Warrior and bakes the whole clip set (pack3d.js).
+    People3D.stage().then(() => {
+      const person = People3D.people.get(PEOPLE_ROLES.soldier);
+      if (person) {
+        soldier = { scene: person.root, animations: Object.values(person.clips) };
+        settle();
+      } else this._fail(new Error(People3D.error || 'people pack failed to load'));
+    });
     // the crossbows are a dressing: without them a guard still stands
     // (and without the arbalest a Lv3 guard keeps the painted 1H bow)
     loader.load(TROOP_ASSETS.crossbow, (gltf) => { bow = gltf; bowSettled = true; settle(); }, undefined, () => { bowSettled = true; settle(); });
@@ -596,7 +438,7 @@ class TroopStage {
       this.arbalest.traverse((object) => { if (object.isMesh) object.castShadow = true; });
     }
     // standing height in the bind pose, so a troop is scaled to world px
-    const probe = cloneRig(this.template);
+    const probe = People3D.make(PEOPLE_ROLES.soldier).model;
     probe.visible = true;
     probe.updateMatrixWorld(true);
     const box = new THREE.Box3().setFromObject(probe);
@@ -615,17 +457,21 @@ class TroopStage {
    */
   make(kind, heightPx, { arms = 1 } = {}) {
     if (!this.ready) return null;
-    const model = cloneRig(this.template);
+    // BUILD 24: every troop is a fresh rig of the pack's own character —
+    // the Warrior for fighting loadouts, the Resident for bearers.
+    const role = kind === 'bearer' ? PEOPLE_ROLES.bearer
+      : kind === 'guard' ? PEOPLE_ROLES.melee : PEOPLE_ROLES.soldier;
+    const person = People3D.make(role);
+    if (!person) return null;
+    const model = person.model;
     model.visible = true;
     model.name = `troop-3d-${kind}`;
     model.rotation.order = 'YXZ';
     model.traverse((object) => { if (object.isSkinnedMesh) object.frustumCulled = false; });
-    // the same shader family the captain wears, in the garrison's palette
-    const grade = buildUniformGrade(model, TROOP_PALETTE, 'duskhold-troop-look-v1');
-    // BUILD 23: then the garrison's own kit, so a guard is not a recoloured
-    // captain (user: "kapten dan pasukan sama, harusnya beda")
-    dressGarrison(model);
-    grade.uCapLook.value = TROOP_LOOK.look;
+    // rim + lift for night legibility; the pack's painted textures stay
+    // (uCapLook forced to 0 — recolouring would flatten the characters)
+    const grade = buildUniformGrade(model, TROOP_PALETTE, 'duskhold-troop-look-v2');
+    grade.uCapLook.value = 0;
     grade.uCapRim.value = TROOP_LOOK.rim;
     grade.uCapLift.value = TROOP_LOOK.lift;
     const scale = heightPx / Math.max(0.01, this.height);
@@ -634,6 +480,9 @@ class TroopStage {
     this.made++;
     const rig = new TroopRig(model, this.clips, kind);
     rig.loadout = TROOP_LOADOUTS[kind] || TROOP_LOADOUTS.soldier;
+    // the Warrior sculpt's right hand holds his khopesh: his garrison bow
+    // rides the left hand instead
+    rig.bowBone = role === PEOPLE_ROLES.melee ? 'L_Hand' : HAND_BONE_R;
     rig._baseY = model.position.y;
     rig._hopPx = heightPx * 0.09;
     if (rig.loadout.bow) this.arm(rig, arms);
@@ -701,7 +550,7 @@ class TroopStage {
     const lv = Math.max(1, Math.min(3, Math.round(level) || 1));
     if (rig.armsLevel === lv) return false;
     const rec = this.bow(lv);
-    const slot = rig.model.getObjectByName(HAND_BONE_R);
+    const slot = rig.model.getObjectByName(rig.bowBone || HAND_BONE_R);
     if (!rec || !slot) return false;
     const old = slot.getObjectByName('troop-crossbow');
     if (old) {

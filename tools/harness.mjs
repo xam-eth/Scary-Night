@@ -2739,10 +2739,11 @@ async function runSurvivalMilestone() {
       `${PLAYER.walkSpeed} × ${SURVIVAL_TUNING.combatRunMul} = ${nightSpeed} px/s (RUN needs > 160)`);
     const { TROOP_ASSETS, TROOP_CLIPS, TROOP_PALETTE } = await import('../src/game/troop3d.js');
     const { VALEN_MODEL_URL, UNIFORM_GRADE_PALETTE } = await import('../src/game/valen3d.js');
-    const procedural = ['idle', 'aim', 'hit', 'down', 'lie', 'up', 'cheer'].every((k) => TROOP_CLIPS[k] === null);
-    b21Check('B21: the garrison is cut from the captain\'s own character file and graded in its own darker palette (steel trim, not his gold); the clips the rig lacks are procedural',
+    const procedural = TROOP_CLIPS.aim === null;
+    b21Check('B21: the garrison comes from the user\'s character pack (BUILD 24) and keeps its own palette identity; the pack rigs carry the full clip set (only aim stays procedural)',
       TROOP_ASSETS.soldier === VALEN_MODEL_URL && procedural
         && TROOP_CLIPS.walk === 'walk' && TROOP_CLIPS.run === 'run' && TROOP_CLIPS.shoot === 'shot'
+        && TROOP_CLIPS.idle === 'idle' && TROOP_CLIPS.hit === 'hit' && TROOP_CLIPS.down === 'down'
         && TROOP_PALETTE.royal !== UNIFORM_GRADE_PALETTE.royal && TROOP_PALETTE.gold !== UNIFORM_GRADE_PALETTE.gold,
       `${TROOP_ASSETS.soldier}; troop royal #${TROOP_PALETTE.royal.toString(16)} vs captain #${UNIFORM_GRADE_PALETTE.royal.toString(16)}; trim #${TROOP_PALETTE.gold.toString(16)} vs #${UNIFORM_GRADE_PALETTE.gold.toString(16)}`);
     const { HORDE_GRADE, HORDE_EYE } = await import('../src/game/enemy3d.js');
@@ -2835,17 +2836,19 @@ async function runSurvivalMilestone() {
       b23Checks.push(!!ok);
       console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} — ${detail}`);
     };
-    const { TROOP_GEAR, TROOP_PALETTE, dressGarrison } = await import('../src/game/troop3d.js');
-    const { UNIFORM_GRADE_PALETTE } = await import('../src/game/valen3d.js');
-    const wanted = ['guard-helm', 'guard-plume', 'guard-collar', 'guard-pauldron-l', 'guard-pauldron-r', 'guard-skirt', 'guard-stripe', 'guard-shield'];
-    const missing = wanted.filter((n) => !TROOP_GEAR.includes(n));
-    b23Check('B23: the garrison\'s kit is a named node list the concept sheet dictates (helm, plume, collar, pauldrons, gambeson skirt + stripe, back shield), dressed by one exported function',
-      missing.length === 0 && TROOP_GEAR.length >= 12 && typeof dressGarrison === 'function',
-      `${TROOP_GEAR.length} gear nodes${missing.length ? `; missing ${missing.join(', ')}` : ''}`);
-    b23Check('B23: the garrison\'s cloth is its own cut of the faction colours — the concept\'s steel-blue gambeson with a real gold stripe, neither the captain\'s royal nor the old steel trim',
-      TROOP_PALETTE.royal !== UNIFORM_GRADE_PALETTE.royal && TROOP_PALETTE.gold !== UNIFORM_GRADE_PALETTE.gold
-        && TROOP_PALETTE.gold === 0xc9a23f && TROOP_PALETTE.royal === 0x2c4f96,
-      `troop royal #${TROOP_PALETTE.royal.toString(16)} / stripe #${TROOP_PALETTE.gold.toString(16)} vs captain #${UNIFORM_GRADE_PALETTE.royal.toString(16)} / #${UNIFORM_GRADE_PALETTE.gold.toString(16)}`);
+    const { TROOP_PALETTE, TROOP_ASSETS } = await import('../src/game/troop3d.js');
+    const { UNIFORM_GRADE_PALETTE, VALEN_MODEL_URL } = await import('../src/game/valen3d.js');
+    const { People3D, PEOPLE_ROLES, PEOPLE_MODEL_URL } = await import('../src/game/pack3d.js');
+    b23Check('B24: the garrison and the captain are DIFFERENT characters from the user\'s pack (egyptian_people.glb) — captain=Commander, bowman=King, melee guard=Warrior, bearer=Resident — no clone of one GLB',
+      PEOPLE_MODEL_URL === './egyptian_people.glb' && VALEN_MODEL_URL === PEOPLE_MODEL_URL
+        && TROOP_ASSETS.soldier === PEOPLE_MODEL_URL
+        && PEOPLE_ROLES.captain === 'Commander' && PEOPLE_ROLES.soldier === 'King'
+        && PEOPLE_ROLES.melee === 'Warrior' && PEOPLE_ROLES.bearer === 'Resident'
+        && typeof People3D.make === 'function' && typeof People3D.stage === 'function',
+      `captain ${PEOPLE_ROLES.captain} vs bowman ${PEOPLE_ROLES.soldier} vs melee ${PEOPLE_ROLES.melee} vs bearer ${PEOPLE_ROLES.bearer}, all from ${PEOPLE_MODEL_URL}`);
+    b23Check('B24: the pack keeps its painted textures (grade recolour off) and the garrison palette survives for rim/lift + QA identity, distinct from the captain\'s royal',
+      TROOP_PALETTE.royal !== UNIFORM_GRADE_PALETTE.royal && TROOP_PALETTE.gold !== UNIFORM_GRADE_PALETTE.gold,
+      `troop royal #${TROOP_PALETTE.royal.toString(16)} vs captain #${UNIFORM_GRADE_PALETTE.royal.toString(16)}`);
     b23Pass = b23Checks.length === 2 && b23Checks.every(Boolean);
   }
 

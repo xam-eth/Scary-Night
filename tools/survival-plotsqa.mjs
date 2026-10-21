@@ -1047,7 +1047,7 @@ const b21 = await page.evaluate(async () => {
     const troop = mesh.userData.troop;
     if (!troop) return;
     troop.model.traverse((o) => {
-      if (o.material && o.material.customProgramCacheKey && o.material.customProgramCacheKey() === 'duskhold-troop-look-v1') graded = 1;
+      if (o.material && o.material.customProgramCacheKey && o.material.customProgramCacheKey() === 'duskhold-troop-look-v2') graded = 1;
       if (o.name === 'R_Hand') hands++;
       if (o.name === 'troop-crossbow') bows++;
     });
@@ -1160,7 +1160,8 @@ const b23 = await page.evaluate(async () => {
   if (!mesh || !mesh.userData.troop) return { guard: false };
   const names = new Set();
   mesh.userData.troop.model.traverse((o) => { if (o.name) names.add(o.name); });
-  const wanted = ['guard-helm', 'guard-helm-brim', 'guard-plume', 'guard-collar', 'guard-pauldron-l', 'guard-pauldron-r', 'guard-skirt', 'guard-stripe', 'guard-emblem', 'guard-belt', 'guard-pouch', 'guard-quiver', 'guard-shield', 'guard-shield-boss'];
+  // BUILD 24: the guard must be the pack's Warrior rig, not a captain clone
+  const wanted = ['person-rig-Warrior', 'person-Warrior', 'Head', 'Hip', 'R_Hand', 'L_Upperarm'];
   const missing = wanted.filter((n) => !names.has(n));
   let hands = 0, bows = 0;
   mesh.userData.troop.model.traverse((o) => { if (o.name === 'R_Hand') hands++; if (o.name === 'troop-crossbow') bows++; });
@@ -1172,8 +1173,8 @@ const b23 = await page.evaluate(async () => {
   window.__pStep(3);
   return { guard: true, missing, hands, bows };
 });
-await shot('b23-1-guard-concept');
-check('B23: a live gate guard carries the concept sheet\'s kit (kettle helm + plume, collar, pauldrons, gambeson skirt + stripe + emblem, belt kit, back shield) while still holding the garrison crossbow in the right hand',
+await shot('b24-1-pack-garrison');
+check('B24: a live gate guard is the user pack\'s own Warrior character (person-rig-Warrior, generated skeleton with Head/Hip/R_Hand) — a different character from the captain\'s Commander — still holding the garrison crossbow in the right hand',
   b23.guard && b23.missing.length === 0 && b23.hands >= 1 && b23.bows >= 1, b23);
 
 fs.writeFileSync(path.join(OUT, 'plotsqa.json'), JSON.stringify({ results, errors }, null, 2));

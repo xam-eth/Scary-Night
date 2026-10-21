@@ -203,7 +203,7 @@ const horde = await shot('fx-horde', () => {
     // garrison palette, the crossbow seated in its right hand
     let graded = false, hand = false, bow = false;
     troop.model.traverse((o) => {
-      if (o.material && o.material.customProgramCacheKey && o.material.customProgramCacheKey() === 'duskhold-troop-look-v1') graded = true;
+      if (o.material && o.material.customProgramCacheKey && o.material.customProgramCacheKey() === 'duskhold-troop-look-v2') graded = true;
       if (o.name === 'R_Hand') hand = true;
       if (o.name === 'troop-crossbow') bow = true;
     });
