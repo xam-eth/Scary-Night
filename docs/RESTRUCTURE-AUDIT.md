@@ -60,7 +60,7 @@ publik di §2. Tidak ada file yang dihapus tanpa baris bukti di
 | # | Temuan (bukti) | Keputusan | Fase |
 | --- | --- | --- | --- |
 | F1 | `src/game/` flat mencampur render-3D, simulasi, dan meta (26 file) | Pecah jadi `src/game/render3d/` (world3d, buildings3d, enemy3d, troop3d, valen3d, pack3d, crowd3d, envkit, lightbake), `src/game/sim/` (survival, economy, enemies, fortress, objectives, weapons, hunt, house, mansion, exterior, haunts), `src/game/meta/` (director, coach, narrative, climax, informant); `game.js` tetap composition root di `src/game/` | 2 (selesai) |
-| F2 | 7 file > 1.800 LOC | Rencana seam pecah per file ditulis di `docs/ARCHITECTURE.md` §4; dieksekusi bertahap, tiap pecahan lewat rantai QA | 3+ |
+| F2 | 7 file > 1.800 LOC | Rencana seam pecah per file ditulis di `docs/ARCHITECTURE.md` §4; dieksekusi bertahap, tiap pecahan lewat rantai QA. Pecahan 1 selesai: seam (a) survival.js → `sim/waves.js` (jadwal malam murni, 145 LOC; harness check "F2 seam (a)"; structaudit delta 0) | 3+ (berjalan) |
 | F3 | 6 pelanggaran lapis | (a) `migrateSave` pindah ke `core/save.js` (core tak boleh impor game); (b) `hud.js` pindah ke `src/ui/hud.js` (hud = UI); (c) `shop/iap→game/economy` dibalik jadi event/interfacce tanpa mengubah perilaku shop (constraint user: shop/IAP tidak disentuh fungsinya); (d) `game.js→ui` didokumentasikan sebagai hak composition root | 2 (a/b/d selesai; c Fase 3) |
 | F4 | 40 tools, 15 refs 0 | 15 tools + 1 probe di-`git mv` ke `tools/archive/` (outputnya sudah jadi evidence committed → reproducibility aman); katalog resmi di `tools/README.md`; rantai QA satu pintu direname ke `tools/chain.sh` | 1–2 (selesai) |
 | F5 | 5 zip ±101,7 MB + txt provenance di root | Dihapus/dipindah dengan SHA tercatat di `docs/audit/REMOVALS.md` | 1 (selesai) |
@@ -79,6 +79,8 @@ publik di §2. Tidak ada file yang dihapus tanpa baris bukti di
 - **Fase 3:** pemecahan file raksasa per seam (F2), inversi shop→sim via event
   (F3c), package.json root (F6). Gerbang: rantai QA penuh per pecahan +
   harness/check baru per modul yang lahir.
+  Progres: pecahan 1 (seam (a) survival.js → `sim/waves.js`) selesai
+  2026-10-21; rantai penuh tercatat di `qa-evidence/phase3-f2a-waves/`.
 - **Fase 4:** checklist handoff/jual: inventory lisensi per pack aset
   (sudah ada per-pack LICENSE/credits + glbtest), CREDITS.md gabungan,
   onboarding README, tag rilis ber-stamp.

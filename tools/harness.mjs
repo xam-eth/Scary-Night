@@ -2404,7 +2404,9 @@ async function runSurvivalMilestone() {
     console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} (${detail})`);
   };
   {
-    const { NIGHT_ROTATIONS, gateLabel, mixSeed } = await import('../src/game/sim/survival.js');
+    const { gateLabel } = await import('../src/game/sim/survival.js');
+    const { NIGHT_ROTATIONS, mixSeed } = await import('../src/game/sim/waves.js');
+    const WAVES = await import('../src/game/sim/waves.js');
     // the seeds the balance and UX probes play (tools/survival-uxprobe.mjs)
     const SEEDS = [20261012, 20268931, 20276850, 20261013, 20261014];
     window.localStorage.removeItem('lastnight.save.v1');
@@ -2413,6 +2415,15 @@ async function runSurvivalMilestone() {
     const rtick = (n = 1) => { for (let i = 0; i < n; i++) rg.update(step); };
     const setSeed = (seed) => { rm.seedBase = seed; rm.runSeed = rm.newRunSeed(); };
     const mainId = rm.mainGate().id;
+    b17Check('F2 seam (a): the night schedule lives in sim/waves.js — pure tables + arithmetic, the Survival class delegates read the same source, and every authored rotation keeps its invariants (no gate twice a night, wave 3 at the main gate, Night 3 posterns never take wave 2)',
+      rm.waveCounts().join() === WAVES.waveCountsFor(rm.day).join()
+        && rm.waveTimes().join() === WAVES.waveTimesFor(rm.day).join()
+        && rm.nightDoors(2).join() === WAVES.nightDoorsFor(rm.runSeed, 2).join()
+        && rm.nightDoors(3).join() === WAVES.nightDoorsFor(rm.runSeed, 3).join()
+        && WAVES.nightDoorsFor(424242, 2).join() === WAVES.nightDoorsFor(424242, 2).join()
+        && WAVES.NIGHT_ROTATIONS.every((night) => night.every((plan) => new Set(plan).size === plan.length && plan[2] === 'southGate'))
+        && WAVES.NIGHT_ROTATIONS[2].every((plan) => !/^postern/i.test(plan[1])),
+      `day ${rm.day}: counts ${rm.waveCounts().join('/')} = waves.waveCountsFor(${rm.day}); doors N2 ${rm.nightDoors(2).join('→')} = waves.nightDoorsFor(seed)`);
     const postern = (id) => /^postern/.test(id);
     const plans = {};
     for (const seed of SEEDS) {
@@ -2547,7 +2558,7 @@ async function runSurvivalMilestone() {
       `reload seed ${reloadedSeed} (wanted ${beforeReload.seed}), plans kept ${keptPlan}; free runs differ ${turnsFree} (${a} vs ${b}); fixed base replays ${replaysFixed} (${c} = ${d})`);
     window.localStorage.removeItem('lastnight.save.v1');
   }
-  const b17Pass = b17Checks.length === 3 && b17Checks.every(Boolean);
+  const b17Pass = b17Checks.length === 4 && b17Checks.every(Boolean);
 
   // BUILD 18 (R18b/c): the NIGHT chip is a HOLD, not a tap — a stray thumb in
   // its corner must never spend the day. The harness does not draw, so the

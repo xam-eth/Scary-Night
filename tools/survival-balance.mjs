@@ -120,7 +120,7 @@ function makeCanvas() {
 }
 
 const { botNight, botDay, releaseControls } = await import('./survival-bots.mjs');
-const { NIGHT_ROTATIONS } = await import('../src/game/sim/survival.js');
+const { NIGHT_ROTATIONS } = await import('../src/game/sim/waves.js');
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const release = releaseControls;
 

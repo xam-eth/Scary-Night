@@ -8,7 +8,7 @@ Satu pintu QA: `bash tools/chain.sh` (Fase 2 direname `tools/chain.sh`)
 
 | Tool | Mengukur |
 | --- | --- |
-| harness.mjs | simulasi headless 3 malam + ~100 check kontrak (balance, save, gelombang, B13–B24) |
+| harness.mjs | simulasi headless 3 malam + 100 check kontrak (balance, save, gelombang, B13–B25, F2-seam `sim/waves.js`) |
 | survival-plotsqa.mjs | 37 check in-browser (kamera, HUD, chain B22, garrison B24) + shot evidence |
 | survival-devqa.mjs | gate dev-server & boot |
 | envqa.mjs | lingkungan/preview (host, cache, orientation) |

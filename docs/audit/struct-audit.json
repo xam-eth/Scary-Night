@@ -1,16 +1,16 @@
 {
-  "generated": "2026-10-21T04:40:08.307Z",
+  "generated": "2026-10-21T08:45:53.936Z",
   "src": {
-    "files": 50,
-    "locTotal": 45897,
+    "files": 51,
+    "locTotal": 45945,
     "biggest": [
-      [
-        "src/game/sim/survival.js",
-        4927
-      ],
       [
         "src/vendor/three/GLTFLoader.js",
         4891
+      ],
+      [
+        "src/game/sim/survival.js",
+        4829
       ],
       [
         "src/game/render3d/world3d.js",
@@ -63,7 +63,7 @@
     "fanIn": [
       [
         "src/core/util.js",
-        23
+        24
       ],
       [
         "src/core/config.js",
@@ -258,7 +258,7 @@
     },
     {
       "file": "tools/bundle.mjs",
-      "refs": 61,
+      "refs": 62,
       "inPkg": false,
       "inDocs": true,
       "inChain": true,
@@ -267,7 +267,7 @@
     },
     {
       "file": "tools/bundlecheck.mjs",
-      "refs": 28,
+      "refs": 29,
       "inPkg": false,
       "inDocs": true,
       "inChain": true,
@@ -276,7 +276,7 @@
     },
     {
       "file": "tools/chain.sh",
-      "refs": 31,
+      "refs": 30,
       "inPkg": false,
       "inDocs": true,
       "inChain": false,
@@ -294,7 +294,7 @@
     },
     {
       "file": "tools/envqa.mjs",
-      "refs": 35,
+      "refs": 37,
       "inPkg": false,
       "inDocs": true,
       "inChain": true,
@@ -321,7 +321,7 @@
     },
     {
       "file": "tools/glbtest.mjs",
-      "refs": 39,
+      "refs": 40,
       "inPkg": false,
       "inDocs": true,
       "inChain": true,
@@ -330,7 +330,7 @@
     },
     {
       "file": "tools/harness.mjs",
-      "refs": 81,
+      "refs": 82,
       "inPkg": false,
       "inDocs": true,
       "inChain": true,
@@ -339,7 +339,7 @@
     },
     {
       "file": "tools/layoutqa.mjs",
-      "refs": 30,
+      "refs": 31,
       "inPkg": false,
       "inDocs": true,
       "inChain": true,
@@ -465,7 +465,7 @@
     },
     {
       "file": "tools/swtest.mjs",
-      "refs": 26,
+      "refs": 27,
       "inPkg": false,
       "inDocs": true,
       "inChain": true,

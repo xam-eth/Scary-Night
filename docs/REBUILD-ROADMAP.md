@@ -137,12 +137,26 @@ pemakai (refs 0); aset 100 % terpakai; 5 zip ±101,7 MB sampah root.
 `tools/README.md`; peta modul + aturan lapis + seam pecah file raksasa +
 checklist handoff di `docs/ARCHITECTURE.md`.
 
-**Fase 2 (berikutnya):** pemindahan folder modul (render3d/sim/meta),
+**Fase 2 (selesai, rantai final hijau bersama BUILD 25):** pemindahan folder modul (render3d/sim/meta),
 `hud.js`→`ui/`, `migrateSave`→`core/save.js`, renama chain, index docs.
 **Fase 3:** pecah 7 file raksasa per seam, inversi shop→sim via event (perilaku
 shop tidak diubah), package.json root. **Fase 4:** CREDITS gabungan + onboarding
 + tag rilis. Gerbang tiap fase: rantai QA penuh + structaudit delta nol
 pelanggaran baru.
+
+**Fase 3 (berjalan) — pecahan 1, seam (a) `sim/survival.js` → `sim/waves.js`
+(2026-10-21):** jadwal malam Survival pindah utuh ke modul murni baru
+`game/sim/waves.js` (145 LOC): tabel `WAVE_TIMES`/`WAVE_TIMES_LATER`/
+`BREAKER_TIMES`/`INDIVIDUAL_TIMES`/`WAVE_COUNTS`/`SWARM_CAP`, rotasi authored
+`NIGHT_ROTATIONS` (R8), `mixSeed`, plus helper murni `waveCountsFor`/
+`waveTimesFor`/`breakersFor`/`nightDoorsFor`. Kelas `Survival` jadi delegasi
+tipis (4.926→4.828 LOC); perilaku tidak berubah — seed run yang sama tetap
+memberi putaran gerbang yang sama. `harness.mjs` & `survival-balance.mjs`
+impor jadwal dari modul baru; check harness baru "F2 seam (a)" (delegasi =
+sumber murni + invariant rotasi authored) → 100 PASS/0 FAIL; structaudit delta
+0 (4 pelanggaran lama tetap, menunggu F3c). `chain.sh` kini menerima argumen
+nama direktori evidence. Rantai penuh pecahan ini dicatat di
+`qa-evidence/phase3-f2a-waves/README.md`.
 
 ## Pass BUILD 21 — empat bug visual dari user (2026-10-19)
 

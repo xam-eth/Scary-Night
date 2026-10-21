@@ -22,7 +22,7 @@ Pelanggaran terukur sebelum perapian: 6 (structaudit). Sesudah Fase 2 sisa 0
 
 ## 2. Kontrak antar-modul yang sudah terbukti dipakai (fan-in)
 
-- `core/util.js` (23 importir) & `core/config.js` (16) — satu-satunya tempat
+- `core/util.js` (24 importir) & `core/config.js` (16) — satu-satunya tempat
   tuning numbers & helper murni; modul baru WAJIB lewat sini, tidak boleh
   menebar konstanta.
 - `game/economy.js` (8) — pemilik save `save.survival` + migrasi (migrasi
@@ -31,6 +31,12 @@ Pelanggaran terukur sebelum perapian: 6 (structaudit). Sesudah Fase 2 sisa 0
   pack3d memasok rig kapten (BUILD 24).
 - `game/enemy3d.js` (6) — pemilik rig horde + `cloneRig`; `game/weapons.js`
   (6) — pemilik bolt/ballista.
+- `game/sim/waves.js` (Fase 3, pecahan F2 pertama) — pemilik jadwal malam
+  Survival: tabel waktu gelombang/Breaker/runner, ukuran swarm, `SWARM_CAP`,
+  rotasi gerbang authored (`NIGHT_ROTATIONS`), `mixSeed`, dan helper murni
+  `waveCountsFor`/`waveTimesFor`/`breakersFor`/`nightDoorsFor`. Kelas
+  `Survival` (`sim/survival.js`) membaca jadwal hanya lewat sini; spawn,
+  event, horn, dan state tetap di kelas. Dipin check harness "F2 seam (a)".
 - Kontrak lintas-modul yang dijaga QA: nama tulang `R_Hand`/`Head`/`Hip`
   (mount crossbow), cacheKey shader `duskhold-*-look-v2`, clip names
   walk/run/shot/claw/sword, `TROOP_ASSETS.soldier === VALEN_MODEL_URL`.
@@ -49,7 +55,7 @@ Pelanggaran terukur sebelum perapian: 6 (structaudit). Sesudah Fase 2 sisa 0
 
 | File | LOC | Seam kandidat |
 | --- | --- | --- |
-| game/survival.js | 4.926 | (a) gelombang & jadwal malam; (b) plot/bangunan & antrian builder; (c) rantai sasaran + reward (B22); (d) fase siang/malam & zoom kamera |
+| game/survival.js | 4.828 | (a) **selesai → `sim/waves.js`** (Fase 3, pecahan 1); (b) plot/bangunan & antrian builder; (c) rantai sasaran + reward (B22); (d) fase siang/malam & zoom kamera |
 | game/world3d.js | 4.319 | (a) perakitan scene & light; (b) guard survival & mount troop; (c) kamera/drag/pinch; (d) bake/quality |
 | game/game.js | 3.034 | composition root tetap tipis: loop, mode, wiring; aturan mansion pindah ke sim/ |
 | ui/screens.js | 2.998 | per-screen module (menu, pause, end, options) + shell |
