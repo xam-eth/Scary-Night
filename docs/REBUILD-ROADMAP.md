@@ -223,6 +223,28 @@ leak lintas-modul 0) → 102 PASS/0 FAIL; structaudit delta 0 (4 pelanggaran
 lama tetap; ui/survival.js keluar dari daftar file terbesar). Rantai penuh:
 `qa-evidence/phase3-survival-ui/README.md`.
 
+**Fase 3 (berjalan) — pecahan 4, seam (b) `sim/survival.js` →
+`sim/buildings.js` (2026-10-22):** seluruh tabel beku ekonomi bailey pindah
+ke modul murni mengikuti preseden `sim/waves.js`: KEEP + BANNER,
+SURVIVAL_SLOTS (15 lingkaran bertipe) + denah PLOT layout B (+mirror),
+SLOT_BY_ID/survivalSlot/TYPE_MIGRATE/CIRCLE, SURVIVAL_BUILDINGS +
+BUILDING_MAX_LEVEL + SURVIVAL_BUILDING_LEVELS + DOOR_BONUS_CAP, TOWER,
+HUNTER_MAX_LEVEL + SURVIVAL_HUNTER, ARMS_MAX_LEVEL + SURVIVAL_ARMS — plus 16
+fungsi matematika murni baru (bannerReachFor, territoryPlotsFor,
+lockedSlotsFor, slotUnlockLevelFor, buildingLevelOf, buildingStatsFor,
+upgradeCostFor, goldPerNightFor, doorHpBonusFor, hunterStatsFor,
+hunterUpgradeCostFor, armsStatsFor, armsUpgradeCostFor, keepUpgradeCostFor,
+keepRepairCostFor, affordReasonFor). 17 metode `SurvivalMode` jadi delegasi
+satu baris; `sim/survival.js` (4.828 → 4.540 LOC) re-export 14 nama publik
+yang sama — game.js, ui/survival/*, tools/survival-map.mjs, harness tidak
+pindah impor. Setengah antrian builder yang stateful (builderJob, purse,
+audio, _persist) tetap di kelas. Check harness baru "F2 seam (b)" (permukaan
+14/14 + delegasi = sumber murni + invariant tabel: 9/13/15 plot per level
+keep, banner 900/1100/1400, cap doorBonus 0.6, biaya null di level max) →
+103 PASS/0 FAIL; structaudit delta 0; survival-balance headless EXIT=0
+(builder 3/3 WIN stars 3); survival-map 230/230. Rantai penuh:
+`qa-evidence/phase3-sim-buildings/README.md`.
+
 ## Pass BUILD 21 — empat bug visual dari user (2026-10-19)
 
 **Pesan user:** "disini ada beberapa bug yg harus di fix sebelum lanjut dev yg lain. 1. pasukan perlu di redesign karna tidak singkron dengan character buat pasukan baru, 2. animasi shoter tidak tepat kelarnya dari bawah kali bukan laras panah, 3. animasi character jalan nya terlalu lambat, sedang di tahap build itu lari tapi saat bertempur animasinya walk, harusnya run, 4. nimes juga perlu di redesign dengan visual yg lebih konsisten dengan tema game". Keempatnya dikerjakan dulu sebelum item riset berikutnya.

@@ -46,6 +46,15 @@ Pelanggaran terukur sebelum perapian: 6 (structaudit). Sesudah Fase 2 sisa 0
   recenter/stick-flare; `end` = panel pause + akhir run; `cine` = cine antar
   malam). Permukaan publik 8 nama tetap; `drawSurvivalScreen` (komposer)
   tinggal di shell.
+- `game/sim/buildings.js` (Fase 3, pecahan F2 seam (b)) — tabel beku +
+  matematika murni ekonomi bailey: keep/banner, lingkaran bangun bertipe
+  (SURVIVAL_SLOTS + denah PLOT layout B), tabel bangunan/level, ballista
+  (TOWER), track Hunter, arms rack, plus fungsi biaya/hasil (upgradeCostFor,
+  goldPerNightFor, doorHpBonusFor, affordReasonFor, …). `SurvivalMode`
+  mendelegasi; `sim/survival.js` re-export 14 nama publik lama — importir
+  (ui/survival/day.js, tools/survival-map.mjs, harness) tidak pindah.
+  Setengah antrian yang stateful (builderJob, purse, audio, save) tetap di
+  kelas.
 - `game/sim/waves.js` (Fase 3, pecahan F2 pertama) — pemilik jadwal malam
   Survival: tabel waktu gelombang/Breaker/runner, ukuran swarm, `SWARM_CAP`,
   rotasi gerbang authored (`NIGHT_ROTATIONS`), `mixSeed`, dan helper murni
@@ -70,7 +79,7 @@ Pelanggaran terukur sebelum perapian: 6 (structaudit). Sesudah Fase 2 sisa 0
 
 | File | LOC | Seam kandidat |
 | --- | --- | --- |
-| game/survival.js | 4.828 | (a) **selesai → `sim/waves.js`** (Fase 3, pecahan 1); (b) plot/bangunan & antrian builder; (c) rantai sasaran + reward (B22); (d) fase siang/malam & zoom kamera |
+| game/survival.js | 4.540 | (a) **selesai → `sim/waves.js`** (Fase 3, pecahan 1); (b) **selesai → `sim/buildings.js`** (Fase 3, pecahan 4: tabel + matematika murni; 17 metode delegasi); (c) rantai sasaran + reward (B22); (d) fase siang/malam & zoom kamera |
 | game/world3d.js | 4.319 | (a) perakitan scene & light; (b) guard survival & mount troop; (c) kamera/drag/pinch; (d) bake/quality |
 | game/game.js | 3.034 | composition root tetap tipis: loop, mode, wiring; aturan mansion pindah ke sim/ |
 | ui/screens.js | 18 (shell) | **selesai → `ui/screens/*.js`** (Fase 3, pecahan 2): 10 modul per-screen + shared kit; shell = re-export saja |

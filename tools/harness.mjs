@@ -2972,6 +2972,72 @@ async function runSurvivalMilestone() {
     f3uPass = f3uChecks.length === 1 && f3uChecks.every(Boolean);
   }
 
+  // Phase 3 fragment 4 (F2 seam (b): plots/buildings + the builder queue's
+  // math -> sim/buildings.js): the frozen tables (keep/banner, typed circles,
+  // layout-B plot plan, building/level tables, ballista, Hunter track, arms
+  // rack) and the cost/yield arithmetic live in a pure module like sim/waves;
+  // the SurvivalMode methods delegate, and sim/survival.js re-exports the same
+  // public names so no importer moved. The queue's stateful half (builderJob,
+  // purse, audio, saves) stays on the class.
+  let f2bPass = false;
+  {
+    const f2bChecks = [];
+    const f2bCheck = (name, ok, detail) => {
+      f2bChecks.push(!!ok);
+      console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} (${detail})`);
+    };
+    const B = await import('../src/game/sim/buildings.js');
+    const S = await import('../src/game/sim/survival.js');
+    const { SURVIVAL_TUNING } = await import('../src/core/config.js');
+    const bg = new Game(makeHarnessCanvas(), { mode: 'survival', nightDuration: 72 });
+    const bm = bg.survival;
+    // pin the state the delegations read, so a restored save cannot sway them
+    bm.phase = 'day'; bm.builderJob = null;
+    bm.keepLevel = 2; bm.keepHp = 500; bm.hunterLevel = 1; bm.armsLevel = 1;
+    bm.gold = 10; bm.wood = 5;
+    bm.buildings = { ward: 'barracks', north: 'mine', south: 'sawmill', west: 'sawmill', east: 'mine' };
+    bm.buildingLevels = { ward: 2, north: 1, south: 3, west: 2, east: 3 };
+    const same = (a, b2) => JSON.stringify(a) === JSON.stringify(b2);
+    const surface = ['KEEP', 'BANNER', 'SURVIVAL_SLOTS', 'PLOT', 'survivalSlot', 'CIRCLE', 'SURVIVAL_BUILDINGS', 'BUILDING_MAX_LEVEL', 'SURVIVAL_BUILDING_LEVELS', 'TOWER', 'HUNTER_MAX_LEVEL', 'SURVIVAL_HUNTER', 'ARMS_MAX_LEVEL', 'SURVIVAL_ARMS'];
+    const surfaceOk = surface.every((n) => S[n] != null) && typeof S.survivalSlot === 'function';
+    const delegOk = [1, 2, 3].every((lv) => bm.bannerReach(lv) === B.bannerReachFor(lv))
+      && same(bm.territoryPlots(2).map((x) => x.id), B.territoryPlotsFor(2).map((x) => x.id))
+      && same(bm.lockedSlots().map((x) => x.id), B.lockedSlotsFor(bm.keepLevel).map((x) => x.id))
+      && bm.slotUnlockLevel('northeast') === B.slotUnlockLevelFor('northeast')
+      && bm.buildingLevel('ward') === B.buildingLevelOf(bm.buildings, bm.buildingLevels, 'ward')
+      && bm.buildingLevel('empty') === 0
+      && same(bm.buildingStats('mine', 2), B.buildingStatsFor('mine', 2))
+      && same(bm.upgradeCost('ward'), B.upgradeCostFor('barracks', 2))
+      && bm.upgradeCost('south') === null && B.upgradeCostFor('sawmill', 3) === null
+      && bm.goldPerNight() === B.goldPerNightFor(bm.buildings, bm.buildingLevels)
+      && bm.doorHpBonus() === B.doorHpBonusFor(bm.buildings, bm.buildingLevels)
+      && same(bm.hunterStats(), B.hunterStatsFor(bm.hunterLevel))
+      && same(bm.hunterUpgradeCost(), B.hunterUpgradeCostFor(bm.hunterLevel))
+      && bm.hunterUpgradeCost() !== null && B.hunterUpgradeCostFor(3) === null
+      && same(bm.armsStats(), B.armsStatsFor(bm.armsLevel))
+      && same(bm.armsUpgradeCost(), B.armsUpgradeCostFor(bm.armsLevel))
+      && same(bm.keepUpgradeCost(), B.keepUpgradeCostFor(bm.keepLevel, SURVIVAL_TUNING))
+      && same(bm.keepRepairCost(), B.keepRepairCostFor(bm.keepHp, bm.keepHpMax(), SURVIVAL_TUNING))
+      && bm.affordReason({ gold: 100, wood: 0 }) === B.affordReasonFor(bm.gold, bm.wood, { gold: 100, wood: 0 })
+      && bm.canAfford({ gold: 1, wood: 1 }) === (B.affordReasonFor(bm.gold, bm.wood, { gold: 1, wood: 1 }) === null);
+    const mathOk = B.bannerReachFor(1) === 900 && B.bannerReachFor(2) === 1100 && B.bannerReachFor(3) === 1400
+      && B.territoryPlotsFor(1).length === 9 && B.territoryPlotsFor(2).length === 13 && B.territoryPlotsFor(3).length === 15
+      && B.lockedSlotsFor(1).length === 6
+      && B.SURVIVAL_SLOTS.every((slot) => B.SURVIVAL_BUILDINGS[slot.type] && B.PLOT.at[slot.id])
+      && B.doorHpBonusFor({ a: 'sawmill', b: 'sawmill', c: 'sawmill', d: 'sawmill' }, { a: 3, b: 3, c: 3, d: 3 }) === 0.6
+      && B.goldPerNightFor({ a: 'mine' }, { a: 3 }) === 14
+      && B.upgradeCostFor('mine', 1).wood === 12
+      && B.keepUpgradeCostFor(3, SURVIVAL_TUNING) === null
+      && B.keepRepairCostFor(600, 600, SURVIVAL_TUNING) === null
+      && B.affordReasonFor(0, 9, { gold: 1, wood: 0 }) === 'gold'
+      && B.affordReasonFor(9, 0, { gold: 0, wood: 1 }) === 'wood'
+      && B.affordReasonFor(null, null, null) === 'none';
+    f2bCheck('F2 seam (b): plots/buildings + queue math live in sim/buildings.js — pure tables + arithmetic, the SurvivalMode delegations read the same source, and sim/survival.js re-exports the same 14 public names',
+      surfaceOk && delegOk && mathOk,
+      `surface ${surface.filter((n) => S[n] != null).length}/14, delegations ${delegOk}, pure math ${mathOk}, buildings.js exports ${Object.keys(B).length}`);
+    f2bPass = f2bChecks.length === 1 && f2bChecks.every(Boolean);
+  }
+
   console.log(`  idle Night 3: ${idle.nightThree.peakEnemies} peak enemies / ${idle.nightThree.peakBreakers} Breakers, ${idle.nightThree.kills} kills, ${idle.nightThree.wallDamage} wall damage, gate ${idle.nightThree.gateHp} HP, Hunter ${idle.nightThree.playerHp} HP; ${idle.phase}`);
   console.log(`  builder Night 3: ${builder.nightThree.peakEnemies} peak enemies / ${builder.nightThree.peakBreakers} Breakers, ${builder.nightThree.kills} kills, ${builder.nightThree.wallDamage} wall damage, gate ${builder.nightThree.gateHp} HP, Hunter ${builder.nightThree.playerHp} HP; keep Lv${builder.keepLevel} ${builder.keepHp} HP, soldiers ${builder.survivors}, buildings ${builder.buildings.join(',') || 'none'}, gateBuilt=${builder.gateBuilt}; ${builder.phase}`);
   // Balance target (M1 rebuild, K1): doing nothing must not win; an engaged
@@ -2984,7 +3050,7 @@ async function runSurvivalMilestone() {
     && hunterAutoShot && hunterRealLos && hunterSkill
     && idleLoses && builder.complete && builder.keepLevel === 3
     && builder.queueLockVerified && builder.sawmillBuilt && builder.gateBuilt && builder.barracksBuilt
-    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass && gateRulePass && b13Pass && b14Pass && b15Pass && b16Pass && b17Pass && b18Pass && b19Pass && b20Pass && b21Pass && b22Pass && b23Pass && b25Pass && f2sPass && f3uPass
+    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass && gateRulePass && b13Pass && b14Pass && b15Pass && b16Pass && b17Pass && b18Pass && b19Pass && b20Pass && b21Pass && b22Pass && b23Pass && b25Pass && f2sPass && f3uPass && f2bPass
     && builder.upgrades[0].level === 1 && builder.upgrades[0].plots === 9
     && builder.upgrades[builder.upgrades.length - 1].level === 3 && builder.upgrades[builder.upgrades.length - 1].plots === 15
     && builder.upgrades.every((item, i, all) => i === 0 || item.level >= all[i - 1].level);

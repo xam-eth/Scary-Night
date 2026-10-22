@@ -1,8 +1,8 @@
 {
-  "generated": "2026-10-22T06:06:15.417Z",
+  "generated": "2026-10-22T12:23:20.551Z",
   "src": {
-    "files": 69,
-    "locTotal": 46283,
+    "files": 70,
+    "locTotal": 46357,
     "biggest": [
       [
         "src/vendor/three/GLTFLoader.js",
@@ -10,7 +10,7 @@
       ],
       [
         "src/game/sim/survival.js",
-        4829
+        4541
       ],
       [
         "src/game/render3d/world3d.js",
@@ -63,7 +63,7 @@
     "fanIn": [
       [
         "src/core/util.js",
-        40
+        41
       ],
       [
         "src/core/config.js",
@@ -112,15 +112,6 @@
     ]
   },
   "tools": [
-    {
-      "file": "tools/analysis-survival-ui.mjs",
-      "refs": 0,
-      "inPkg": false,
-      "inDocs": false,
-      "inChain": false,
-      "inCi": false,
-      "used": false
-    },
     {
       "file": "tools/archive/asset-sheet.mjs",
       "refs": 1,
@@ -285,7 +276,7 @@
     },
     {
       "file": "tools/chain.sh",
-      "refs": 31,
+      "refs": 35,
       "inPkg": false,
       "inDocs": true,
       "inChain": false,
@@ -339,7 +330,7 @@
     },
     {
       "file": "tools/harness.mjs",
-      "refs": 88,
+      "refs": 90,
       "inPkg": false,
       "inDocs": true,
       "inChain": true,
@@ -383,7 +374,7 @@
       "used": false
     },
     {
-      "file": "tools/split-survival-ui.mjs",
+      "file": "tools/split-sim-buildings.mjs",
       "refs": 0,
       "inPkg": false,
       "inDocs": false,
@@ -393,7 +384,7 @@
     },
     {
       "file": "tools/structaudit.mjs",
-      "refs": 22,
+      "refs": 23,
       "inPkg": false,
       "inDocs": true,
       "inChain": false,
@@ -402,7 +393,7 @@
     },
     {
       "file": "tools/survival-balance.mjs",
-      "refs": 17,
+      "refs": 19,
       "inPkg": false,
       "inDocs": true,
       "inChain": false,
