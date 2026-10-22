@@ -1,0 +1,152 @@
+DUSKHOLD survival-uxprobe — Siege 1 (FIRST WATCH, the first run of a new save) on BUILD 17 (bed4ab2): the opening hook
+node tools/survival-uxprobe.mjs --kinds=builder,rally,prepared,active --siege=1 (5 seeds 20261012,20268931,20276850,20261013,20261014; 72 s nights; cinematics off)
+active = moves and fights but never builds; keepMin / hpMin = the keep's / the captain's lowest HP; cleared = nights that ended early on NIGHT CLEARED (bonus = its gold)
+first / target% / quiet as in tempo-r6-5seed.txt: Siege 1 sends half the horde, so the captain has a target for less of the night than on Siege 3
+
+# Summary per player kind (min–max over 5 seeds)
+builder: 5/5 win | keepMin 94–100% | hpMin 100% | cleared 13/15 | target% 8–20 | quiet 12.6–32s | N1: first 10–13.2s target% 8–15 quiet 13–32s kills 35 bonus 8–26 fail 0 | N2: first 14.4–14.8s target% 16–20 quiet 15.6–19.5s kills 41 bonus 17–21 fail 0 | N3: first 12.4–12.7s target% 11–20 quiet 12.6–15.7s kills 46–47 bonus 3–21 fail 0 | D2 build-job sum 19.5s over 6 buys
+rally: 5/5 win | keepMin 100% | hpMin 100% | cleared 15/15 | target% 9–18 | quiet 13.7–37.6s | N1: first 2.9s target% 9–12 quiet 24.6–37.6s kills 35 bonus 11–24 fail 0 | N2: first 11.4s target% 13–18 quiet 15.8–16.5s kills 41 bonus 3–25 fail 0 | N3: first 9.5s target% 9–17 quiet 13.7–16.2s kills 46–48 bonus 2–12 fail 0 | D2 build-job sum 19.5s over 6 buys
+prepared: 5/5 win | keepMin 100% | hpMin 100% | cleared 15/15 | target% 9–23 | quiet 15.8–37.6s | N1: first 2.9s target% 9–12 quiet 24.6–37.6s kills 35 bonus 11–24 fail 0 | N2: first 1.1s target% 20–23 quiet 15.8–16.2s kills 41 bonus 21–24 fail 0 | N3: first 1.1s target% 10–13 quiet 21.1–22.3s kills 47–48 bonus 0–3 fail 0 | D2 build-job sum 19.5s over 6 buys
+active: 5/5 win | keepMin 84–100% | hpMin 64–100% | cleared 15/15 | target% 8–34 | quiet 13–32s | N1: first 10–13.2s target% 8–15 quiet 13–32s kills 35 bonus 8–26 fail 0 | N2: first 14.6–15.9s target% 22–27 quiet 14.6–16.2s kills 41 bonus 5–20 fail 0 | N3: first 12.5–12.8s target% 31–34 quiet 15.7–19.9s kills 46 bonus 15–19 fail 0 | D2 build-job sum 0s over 0 buys
+
+# The probe's own lines
+
+builder s20261012 -> complete
+  N1 OK end@62.1s cleared@60s(+9g) kills=35 target%=15 contact@5.1s first@10.6s longestQuiet=15s lastKill@60s deadTail=2.1s keepMin=100% hpMin=100% flares=3 bins=0,6,5,0,8,2,0,13,0,0,1,0
+  N2 OK end@55s cleared@52.9s(+17g) kills=41 target%=16 contact@3.2s first@14.6s longestQuiet=19.5s lastKill@52.9s deadTail=2.1s keepMin=100% hpMin=100% flares=3 bins=0,0,11,3,6,6,0,4,11,0,0,0
+  N3 OK end@72s kills=47 target%=11 contact@2.9s first@12.5s longestQuiet=15.4s lastKill@67.1s deadTail=4.9s keepMin=100% hpMin=100% flares=3 bins=0,0,15,0,2,3,7,7,1,11,0,1
+  D2 purse=96g/67w options=12 [keep armory gate tower barracks sawmill mine] buys=keep(walk2.1s,job2.5s) mine(walk3.4s,job3.5s) gate(walk6.6s,job4.5s) sawmill(walk4s,job3.5s) keep(walk3.6s,job3s) hunter(walk2.7s,job2.5s) human≈39s
+  D3 purse=110g/46w options=16 [armory tower barracks up:sawmill up:mine sawmill mine] buys=up:mine(walk1.6s,job3s) barracks(walk3.4s,job4.5s) mine(walk4.9s,job3.5s) human≈21s
+
+builder s20268931 -> complete
+  N1 OK end@45.4s cleared@43.4s(+26g) kills=35 target%=9 contact@5.4s first@11.4s longestQuiet=13s lastKill@43.4s deadTail=2s keepMin=100% hpMin=100% flares=3 bins=0,7,4,0,7,2,2,13,0,0,0,0
+  N2 OK end@50.9s cleared@48.8s(+21g) kills=41 target%=20 contact@3.2s first@14.5s longestQuiet=16.2s lastKill@48.8s deadTail=2.1s keepMin=100% hpMin=100% flares=2 bins=0,0,12,6,8,0,0,14,1,0,0,0
+  N3 OK end@72s kills=47 target%=15 contact@3.2s first@12.7s longestQuiet=12.8s lastKill@70.2s deadTail=1.8s keepMin=100% hpMin=100% flares=3 bins=0,0,13,1,2,0,10,5,2,8,3,3
+  D2 purse=113g/67w options=12 [keep armory gate tower barracks sawmill mine] buys=keep(walk2.1s,job2.5s) mine(walk3.4s,job3.5s) gate(walk6.6s,job4.5s) sawmill(walk4s,job3.5s) keep(walk3.6s,job3s) hunter(walk2.7s,job2.5s) human≈39s
+  D3 purse=131g/46w options=16 [armory tower barracks up:sawmill up:mine sawmill mine] buys=up:mine(walk1.6s,job3s) barracks(walk3.4s,job4.5s) mine(walk4.9s,job3.5s) human≈21s
+
+builder s20276850 -> complete
+  N1 OK end@63.4s cleared@61.4s(+8g) kills=35 target%=13 contact@5.2s first@10.8s longestQuiet=32s lastKill@61.4s deadTail=2s keepMin=94% hpMin=100% flares=3 bins=0,6,5,0,5,2,2,2,0,4,9,0
+  N2 OK end@51.5s cleared@49.5s(+20g) kills=41 target%=20 contact@3.2s first@14.6s longestQuiet=16.2s lastKill@49.5s deadTail=2s keepMin=100% hpMin=100% flares=2 bins=0,0,12,8,6,0,0,12,3,0,0,0
+  N3 OK end@68.5s cleared@66.5s(+3g) kills=47 target%=15 contact@2.9s first@12.4s longestQuiet=14.3s lastKill@61.9s deadTail=6.6s keepMin=100% hpMin=100% flares=3 bins=0,4,10,0,2,0,8,7,4,7,5,0
+  D2 purse=95g/67w options=12 [keep armory gate tower barracks sawmill mine] buys=keep(walk2.1s,job2.5s) mine(walk3.4s,job3.5s) gate(walk6.6s,job4.5s) sawmill(walk4s,job3.5s) keep(walk3.6s,job3s) hunter(walk2.7s,job2.5s) human≈39s
+  D3 purse=112g/46w options=16 [armory tower barracks up:sawmill up:mine sawmill mine] buys=up:mine(walk1.6s,job3s) barracks(walk3.4s,job4.5s) mine(walk4.9s,job3.5s) human≈21s
+
+builder s20261013 -> complete
+  N1 OK end@58s cleared@55.9s(+14g) kills=35 target%=11 contact@4.8s first@10s longestQuiet=25.6s lastKill@55.9s deadTail=2.1s keepMin=100% hpMin=100% flares=3 bins=0,7,4,0,7,2,3,11,0,1,0,0
+  N2 OK end@51.6s cleared@49.6s(+20g) kills=41 target%=20 contact@3.5s first@14.8s longestQuiet=16.2s lastKill@49.6s deadTail=2s keepMin=100% hpMin=100% flares=2 bins=0,0,12,8,6,0,0,10,5,0,0,0
+  N3 OK end@64.5s cleared@62.5s(+7g) kills=47 target%=15 contact@3s first@12.5s longestQuiet=12.6s lastKill@62.5s deadTail=2s keepMin=100% hpMin=100% flares=3 bins=0,0,14,0,2,2,11,3,1,8,6,0
+  D2 purse=101g/67w options=12 [keep armory gate tower barracks sawmill mine] buys=keep(walk2.1s,job2.5s) mine(walk3.4s,job3.5s) gate(walk6.6s,job4.5s) sawmill(walk4s,job3.5s) keep(walk3.6s,job3s) hunter(walk2.7s,job2.5s) human≈39s
+  D3 purse=118g/46w options=16 [armory tower barracks up:sawmill up:mine sawmill mine] buys=up:mine(walk1.6s,job3s) barracks(walk3.4s,job4.5s) mine(walk4.9s,job3.5s) human≈21s
+
+builder s20261014 -> complete
+  N1 OK end@60.1s cleared@58.1s(+11g) kills=35 target%=8 contact@5.4s first@13.2s longestQuiet=13.6s lastKill@58.1s deadTail=2s keepMin=100% hpMin=100% flares=3 bins=0,6,5,0,2,8,0,13,0,1,0,0
+  N2 OK end@54.2s cleared@52.1s(+17g) kills=41 target%=17 contact@3s first@14.4s longestQuiet=15.6s lastKill@52.1s deadTail=2.1s keepMin=100% hpMin=100% flares=3 bins=0,0,11,7,4,4,0,4,11,0,0,0
+  N3 OK end@50.7s cleared@48.6s(+21g) kills=46 target%=20 contact@3.2s first@12.7s longestQuiet=15.7s lastKill@48.6s deadTail=2.1s keepMin=100% hpMin=100% flares=2 bins=0,0,15,0,0,15,0,12,4,0,0,0
+  D2 purse=98g/67w options=12 [keep armory gate tower barracks sawmill mine] buys=keep(walk2.1s,job2.5s) mine(walk3.4s,job3.5s) gate(walk6.6s,job4.5s) sawmill(walk4s,job3.5s) keep(walk3.6s,job3s) hunter(walk2.7s,job2.5s) human≈39s
+  D3 purse=112g/46w options=16 [armory tower barracks up:sawmill up:mine sawmill mine] buys=up:mine(walk1.6s,job3s) barracks(walk3.4s,job4.5s) mine(walk4.9s,job3.5s) human≈21s
+
+rally s20261012 -> complete
+  N1 OK end@60.1s cleared@58.1s(+11g) kills=35 target%=9 contact@17.6s first@2.9s longestQuiet=37.1s lastKill@58.1s deadTail=2s keepMin=100% hpMin=100% flares=3 bins=11,0,0,0,3,6,1,13,0,1,0,0
+  N2 OK end@68.9s cleared@66.9s(+3g) kills=41 target%=17 contact@3.2s first@11.4s longestQuiet=15.8s lastKill@66.9s deadTail=2s keepMin=100% hpMin=100% flares=3 bins=0,5,7,0,11,2,0,12,3,0,0,1
+  N3 OK end@63.6s cleared@61.6s(+8g) kills=47 target%=14 contact@3.3s first@9.5s longestQuiet=14.5s lastKill@60.5s deadTail=3.1s keepMin=100% hpMin=100% flares=3 bins=0,10,5,0,2,1,7,7,1,13,1,0
+  D2 purse=98g/67w options=12 [keep armory gate tower barracks sawmill mine] buys=keep(walk2.1s,job2.5s) mine(walk3.4s,job3.5s) gate(walk6.6s,job4.5s) sawmill(walk4s,job3.5s) keep(walk3.6s,job3s) hunter(walk2.7s,job2.5s) human≈39s
+  D3 purse=98g/46w options=16 [armory tower barracks up:sawmill up:mine sawmill mine] buys=up:mine(walk1.6s,job3s) barracks(walk3.4s,job4.5s) mine(walk4.9s,job3.5s) human≈21s
+
+rally s20268931 -> complete
+  N1 OK end@60s cleared@58s(+12g) kills=35 target%=10 contact@17.7s first@2.9s longestQuiet=24.6s lastKill@58s deadTail=2s keepMin=100% hpMin=100% flares=3 bins=9,2,0,0,2,8,0,13,0,1,0,0
+  N2 OK end@51s cleared@49s(+20g) kills=41 target%=14 contact@3.2s first@11.4s longestQuiet=16.2s lastKill@49s deadTail=2s keepMin=100% hpMin=100% flares=3 bins=0,6,6,0,13,1,0,10,5,0,0,0
+  N3 OK end@59.8s cleared@57.7s(+12g) kills=46 target%=16 contact@2.9s first@9.5s longestQuiet=16.2s lastKill@57.7s deadTail=2.1s keepMin=100% hpMin=100% flares=2 bins=0,12,3,0,0,11,3,13,2,2,0,0
+  D2 purse=99g/67w options=12 [keep armory gate tower barracks sawmill mine] buys=keep(walk2.1s,job2.5s) mine(walk3.4s,job3.5s) gate(walk6.6s,job4.5s) sawmill(walk4s,job3.5s) keep(walk3.6s,job3s) hunter(walk2.7s,job2.5s) human≈39s
+  D3 purse=116g/46w options=16 [armory tower barracks up:sawmill up:mine sawmill mine] buys=up:mine(walk1.6s,job3s) barracks(walk3.4s,job4.5s) mine(walk4.9s,job3.5s) human≈21s
+
+rally s20276850 -> complete
+  N1 OK end@47.6s cleared@45.6s(+24g) kills=35 target%=12 contact@18s first@2.9s longestQuiet=24.8s lastKill@45.6s deadTail=2s keepMin=100% hpMin=100% flares=3 bins=9,2,0,0,2,7,2,13,0,0,0,0
+  N2 OK end@51.5s cleared@49.4s(+20g) kills=41 target%=18 contact@3s first@11.4s longestQuiet=15.9s lastKill@49.4s deadTail=2.1s keepMin=100% hpMin=100% flares=3 bins=0,7,5,0,14,0,0,12,3,0,0,0
+  N3 OK end@59.4s cleared@57.4s(+12g) kills=46 target%=17 contact@2.6s first@9.5s longestQuiet=16.2s lastKill@57.4s deadTail=2s keepMin=100% hpMin=100% flares=2 bins=0,10,4,1,0,10,6,10,4,1,0,0
+  D2 purse=111g/67w options=12 [keep armory gate tower barracks sawmill mine] buys=keep(walk2.1s,job2.5s) mine(walk3.4s,job3.5s) gate(walk6.6s,job4.5s) sawmill(walk4s,job3.5s) keep(walk3.6s,job3s) hunter(walk2.7s,job2.5s) human≈39s
+  D3 purse=128g/46w options=16 [armory tower barracks up:sawmill up:mine sawmill mine] buys=up:mine(walk1.6s,job3s) barracks(walk3.4s,job4.5s) mine(walk4.9s,job3.5s) human≈21s
+
+rally s20261013 -> complete
+  N1 OK end@60.6s cleared@58.6s(+11g) kills=35 target%=10 contact@18.3s first@2.9s longestQuiet=25.7s lastKill@58.6s deadTail=2s keepMin=100% hpMin=100% flares=3 bins=10,1,0,0,2,8,0,13,0,1,0,0
+  N2 OK end@46.6s cleared@44.6s(+25g) kills=41 target%=16 contact@3.4s first@11.4s longestQuiet=16.3s lastKill@44.6s deadTail=2s keepMin=100% hpMin=100% flares=3 bins=0,7,5,1,13,0,7,8,0,0,0,0
+  N3 OK end@61.4s cleared@59.4s(+10g) kills=47 target%=15 contact@2.9s first@9.5s longestQuiet=13.7s lastKill@59.4s deadTail=2s keepMin=100% hpMin=100% flares=3 bins=0,11,4,0,2,4,4,12,4,6,0,0
+  D2 purse=98g/67w options=12 [keep armory gate tower barracks sawmill mine] buys=keep(walk2.1s,job2.5s) mine(walk3.4s,job3.5s) gate(walk6.6s,job4.5s) sawmill(walk4s,job3.5s) keep(walk3.6s,job3s) hunter(walk2.7s,job2.5s) human≈39s
+  D3 purse=120g/46w options=16 [armory tower barracks up:sawmill up:mine sawmill mine] buys=up:mine(walk1.6s,job3s) barracks(walk3.4s,job4.5s) mine(walk4.9s,job3.5s) human≈21s
+
+rally s20261014 -> complete
+  N1 OK end@60.4s cleared@58.4s(+11g) kills=35 target%=9 contact@18.1s first@2.9s longestQuiet=37.6s lastKill@58.4s deadTail=2s keepMin=100% hpMin=100% flares=3 bins=10,1,0,0,3,7,0,13,0,1,0,0
+  N2 OK end@67.5s cleared@65.5s(+4g) kills=41 target%=13 contact@3.3s first@11.4s longestQuiet=16.5s lastKill@65.5s deadTail=2s keepMin=100% hpMin=100% flares=3 bins=0,7,5,0,12,1,0,13,2,0,1,0
+  N3 OK end@69.2s cleared@67.2s(+2g) kills=48 target%=9 contact@3s first@9.5s longestQuiet=15.4s lastKill@67.2s deadTail=2s keepMin=100% hpMin=100% flares=3 bins=0,11,4,0,5,4,3,15,2,3,0,1
+  D2 purse=98g/67w options=12 [keep armory gate tower barracks sawmill mine] buys=keep(walk2.1s,job2.5s) mine(walk3.4s,job3.5s) gate(walk6.6s,job4.5s) sawmill(walk4s,job3.5s) keep(walk3.6s,job3s) hunter(walk2.7s,job2.5s) human≈39s
+  D3 purse=99g/46w options=16 [armory tower barracks up:sawmill up:mine sawmill mine] buys=up:mine(walk1.6s,job3s) barracks(walk3.4s,job4.5s) mine(walk4.9s,job3.5s) human≈21s
+
+prepared s20261012 -> complete
+  N1 OK end@60.1s cleared@58.1s(+11g) kills=35 target%=9 contact@17.6s first@2.9s longestQuiet=37.1s lastKill@58.1s deadTail=2s keepMin=100% hpMin=100% flares=3 bins=11,0,0,0,3,6,1,13,0,1,0,0
+  N2 OK end@51s cleared@49s(+21g) kills=41 target%=21 contact@17.4s first@1.1s longestQuiet=16.1s lastKill@49s deadTail=2s keepMin=100% hpMin=100% flares=3 bins=12,0,0,6,8,0,0,12,3,0,0,0
+  N3 OK end@69.3s cleared@67.3s(+2g) kills=47 target%=12 contact@14.9s first@1.1s longestQuiet=21.4s lastKill@67.3s deadTail=2s keepMin=100% hpMin=100% flares=3 bins=15,0,0,0,3,1,11,3,8,3,2,1
+  D2 purse=98g/67w options=12 [keep armory gate tower barracks sawmill mine] buys=keep(walk2.1s,job2.5s) mine(walk3.4s,job3.5s) gate(walk6.6s,job4.5s) sawmill(walk4s,job3.5s) keep(walk3.6s,job3s) hunter(walk2.7s,job2.5s) human≈39s
+  D3 purse=116g/46w options=16 [armory tower barracks up:sawmill up:mine sawmill mine] buys=up:mine(walk1.6s,job3s) barracks(walk3.4s,job4.5s) mine(walk4.9s,job3.5s) human≈21s
+
+prepared s20268931 -> complete
+  N1 OK end@60s cleared@58s(+12g) kills=35 target%=10 contact@17.7s first@2.9s longestQuiet=24.6s lastKill@58s deadTail=2s keepMin=100% hpMin=100% flares=3 bins=9,2,0,0,2,8,0,13,0,1,0,0
+  N2 OK end@51s cleared@49s(+21g) kills=41 target%=20 contact@17.5s first@1.1s longestQuiet=16.2s lastKill@49s deadTail=2s keepMin=100% hpMin=100% flares=3 bins=12,0,0,6,8,0,0,11,4,0,0,0
+  N3 OK end@68.5s cleared@66.5s(+3g) kills=47 target%=10 contact@14.9s first@1.1s longestQuiet=22.3s lastKill@66.5s deadTail=2s keepMin=100% hpMin=100% flares=3 bins=15,0,0,0,3,0,8,6,2,8,4,1
+  D2 purse=99g/67w options=12 [keep armory gate tower barracks sawmill mine] buys=keep(walk2.1s,job2.5s) mine(walk3.4s,job3.5s) gate(walk6.6s,job4.5s) sawmill(walk4s,job3.5s) keep(walk3.6s,job3s) hunter(walk2.7s,job2.5s) human≈39s
+  D3 purse=117g/46w options=16 [armory tower barracks up:sawmill up:mine sawmill mine] buys=up:mine(walk1.6s,job3s) barracks(walk3.4s,job4.5s) mine(walk4.9s,job3.5s) human≈21s
+
+prepared s20276850 -> complete
+  N1 OK end@47.6s cleared@45.6s(+24g) kills=35 target%=12 contact@18s first@2.9s longestQuiet=24.8s lastKill@45.6s deadTail=2s keepMin=100% hpMin=100% flares=3 bins=9,2,0,0,2,7,2,13,0,0,0,0
+  N2 OK end@50.5s cleared@48.5s(+21g) kills=41 target%=20 contact@17.4s first@1.1s longestQuiet=16.2s lastKill@48.5s deadTail=2s keepMin=100% hpMin=100% flares=3 bins=12,0,0,9,5,0,1,13,1,0,0,0
+  N3 OK end@69.9s cleared@67.9s(+2g) kills=48 target%=13 contact@14.9s first@1.1s longestQuiet=21.1s lastKill@67.9s deadTail=2s keepMin=100% hpMin=100% flares=3 bins=15,0,0,0,3,1,9,6,1,9,3,1
+  D2 purse=111g/67w options=12 [keep armory gate tower barracks sawmill mine] buys=keep(walk2.1s,job2.5s) mine(walk3.4s,job3.5s) gate(walk6.6s,job4.5s) sawmill(walk4s,job3.5s) keep(walk3.6s,job3s) hunter(walk2.7s,job2.5s) human≈39s
+  D3 purse=129g/46w options=16 [armory tower barracks up:sawmill up:mine sawmill mine] buys=up:mine(walk1.6s,job3s) barracks(walk3.4s,job4.5s) mine(walk4.9s,job3.5s) human≈21s
+
+prepared s20261013 -> complete
+  N1 OK end@60.6s cleared@58.6s(+11g) kills=35 target%=10 contact@18.3s first@2.9s longestQuiet=25.7s lastKill@58.6s deadTail=2s keepMin=100% hpMin=100% flares=3 bins=10,1,0,0,2,8,0,13,0,1,0,0
+  N2 OK end@47.1s cleared@45.1s(+24g) kills=41 target%=23 contact@17.6s first@1.1s longestQuiet=15.8s lastKill@45.1s deadTail=2s keepMin=100% hpMin=100% flares=3 bins=12,0,0,8,6,0,6,9,0,0,0,0
+  N3 OK end@71.1s cleared@69.1s(+0g) kills=47 target%=13 contact@14.9s first@1.1s longestQuiet=21.3s lastKill@69.1s deadTail=2s keepMin=100% hpMin=100% flares=3 bins=15,0,0,0,3,1,10,4,1,11,1,1
+  D2 purse=98g/67w options=12 [keep armory gate tower barracks sawmill mine] buys=keep(walk2.1s,job2.5s) mine(walk3.4s,job3.5s) gate(walk6.6s,job4.5s) sawmill(walk4s,job3.5s) keep(walk3.6s,job3s) hunter(walk2.7s,job2.5s) human≈39s
+  D3 purse=119g/46w options=16 [armory tower barracks up:sawmill up:mine sawmill mine] buys=up:mine(walk1.6s,job3s) barracks(walk3.4s,job4.5s) mine(walk4.9s,job3.5s) human≈21s
+
+prepared s20261014 -> complete
+  N1 OK end@60.4s cleared@58.4s(+11g) kills=35 target%=9 contact@18.1s first@2.9s longestQuiet=37.6s lastKill@58.4s deadTail=2s keepMin=100% hpMin=100% flares=3 bins=10,1,0,0,3,7,0,13,0,1,0,0
+  N2 OK end@48.3s cleared@46.3s(+23g) kills=41 target%=21 contact@17.9s first@1.1s longestQuiet=16.2s lastKill@46.3s deadTail=2s keepMin=100% hpMin=100% flares=3 bins=12,0,0,9,5,0,4,11,0,0,0,0
+  N3 OK end@70.5s cleared@68.4s(+1g) kills=47 target%=11 contact@14.9s first@1.1s longestQuiet=22.2s lastKill@68.4s deadTail=2.1s keepMin=100% hpMin=100% flares=3 bins=15,0,0,0,3,1,8,6,1,11,1,1
+  D2 purse=98g/67w options=12 [keep armory gate tower barracks sawmill mine] buys=keep(walk2.1s,job2.5s) mine(walk3.4s,job3.5s) gate(walk6.6s,job4.5s) sawmill(walk4s,job3.5s) keep(walk3.6s,job3s) hunter(walk2.7s,job2.5s) human≈39s
+  D3 purse=118g/46w options=16 [armory tower barracks up:sawmill up:mine sawmill mine] buys=up:mine(walk1.6s,job3s) barracks(walk3.4s,job4.5s) mine(walk4.9s,job3.5s) human≈21s
+
+active s20261012 -> complete
+  N1 OK end@62.1s cleared@60s(+9g) kills=35 target%=15 contact@5.1s first@10.6s longestQuiet=15s lastKill@60s deadTail=2.1s keepMin=100% hpMin=100% flares=3 bins=0,6,5,0,8,2,0,13,0,0,1,0
+  N2 OK end@58.7s cleared@56.7s(+13g) kills=41 target%=23 contact@3.1s first@15.9s longestQuiet=16s lastKill@56.7s deadTail=2s keepMin=100% hpMin=100% flares=2 bins=0,0,9,7,6,4,0,0,11,4,0,0
+  N3 OK end@55.2s cleared@53.2s(+16g) kills=46 target%=32 contact@3.1s first@12.6s longestQuiet=15.8s lastKill@53.2s deadTail=2s keepMin=88% hpMin=85% flares=3 bins=0,0,12,3,0,5,1,17,8,0,0,0
+  D2 purse=96g/67w options=12 [keep armory gate tower barracks sawmill mine] buys= human≈2s
+  D3 purse=151g/101w options=12 [keep armory gate tower barracks sawmill mine] buys= human≈2s
+
+active s20268931 -> complete
+  N1 OK end@45.4s cleared@43.4s(+26g) kills=35 target%=9 contact@5.4s first@11.4s longestQuiet=13s lastKill@43.4s deadTail=2s keepMin=100% hpMin=100% flares=3 bins=0,7,4,0,7,2,2,13,0,0,0,0
+  N2 OK end@51.4s cleared@49.4s(+20g) kills=41 target%=27 contact@3.4s first@15s longestQuiet=15.7s lastKill@49.4s deadTail=2s keepMin=100% hpMin=100% flares=3 bins=0,0,10,4,12,0,0,14,1,0,0,0
+  N3 OK end@52s cleared@50s(+19g) kills=46 target%=33 contact@3.1s first@12.6s longestQuiet=19.9s lastKill@50s deadTail=2s keepMin=97% hpMin=79% flares=3 bins=0,0,11,3,0,4,5,14,9,0,0,0
+  D2 purse=113g/67w options=12 [keep armory gate tower barracks sawmill mine] buys= human≈2s
+  D3 purse=175g/101w options=12 [keep armory gate tower barracks sawmill mine] buys= human≈2s
+
+active s20276850 -> complete
+  N1 OK end@63.4s cleared@61.4s(+8g) kills=35 target%=13 contact@5.2s first@10.8s longestQuiet=32s lastKill@61.4s deadTail=2s keepMin=94% hpMin=100% flares=3 bins=0,6,5,0,5,2,2,2,0,4,9,0
+  N2 OK end@54.4s cleared@52.3s(+17g) kills=41 target%=26 contact@3.2s first@14.6s longestQuiet=16.2s lastKill@52.3s deadTail=2.1s keepMin=96% hpMin=100% flares=2 bins=0,0,12,4,8,2,0,7,8,0,0,0
+  N3 OK end@56.1s cleared@54.1s(+15g) kills=46 target%=34 contact@3s first@12.5s longestQuiet=15.7s lastKill@54.1s deadTail=2s keepMin=84% hpMin=80% flares=3 bins=0,0,11,3,0,4,1,18,8,1,0,0
+  D2 purse=95g/67w options=12 [keep armory gate tower barracks sawmill mine] buys= human≈2s
+  D3 purse=154g/101w options=12 [keep armory gate tower barracks sawmill mine] buys= human≈2s
+
+active s20261013 -> complete
+  N1 OK end@58s cleared@55.9s(+14g) kills=35 target%=11 contact@4.8s first@10s longestQuiet=25.6s lastKill@55.9s deadTail=2.1s keepMin=100% hpMin=100% flares=3 bins=0,7,4,0,7,2,3,11,0,1,0,0
+  N2 OK end@66.7s cleared@64.7s(+5g) kills=41 target%=22 contact@3.3s first@14.7s longestQuiet=15.5s lastKill@64.7s deadTail=2s keepMin=100% hpMin=100% flares=2 bins=0,0,12,3,10,0,0,14,1,0,1,0
+  N3 OK end@53.5s cleared@51.5s(+18g) kills=46 target%=31 contact@3s first@12.5s longestQuiet=15.7s lastKill@51.5s deadTail=2s keepMin=91% hpMin=64% flares=3 bins=0,0,12,2,0,5,1,18,8,0,0,0
+  D2 purse=101g/67w options=12 [keep armory gate tower barracks sawmill mine] buys= human≈2s
+  D3 purse=148g/101w options=12 [keep armory gate tower barracks sawmill mine] buys= human≈2s
+
+active s20261014 -> complete
+  N1 OK end@60.1s cleared@58.1s(+11g) kills=35 target%=8 contact@5.4s first@13.2s longestQuiet=13.6s lastKill@58.1s deadTail=2s keepMin=100% hpMin=100% flares=3 bins=0,6,5,0,2,8,0,13,0,1,0,0
+  N2 OK end@66.8s cleared@64.7s(+5g) kills=41 target%=23 contact@3.2s first@14.6s longestQuiet=14.6s lastKill@64.7s deadTail=2.1s keepMin=100% hpMin=100% flares=2 bins=0,0,11,4,9,1,0,13,2,0,1,0
+  N3 OK end@55.4s cleared@53.4s(+16g) kills=46 target%=32 contact@3.3s first@12.8s longestQuiet=15.7s lastKill@53.4s deadTail=2s keepMin=88% hpMin=76% flares=3 bins=0,0,11,4,0,5,1,17,8,0,0,0
+  D2 purse=98g/67w options=12 [keep armory gate tower barracks sawmill mine] buys= human≈2s
+  D3 purse=145g/101w options=12 [keep armory gate tower barracks sawmill mine] buys= human≈2s

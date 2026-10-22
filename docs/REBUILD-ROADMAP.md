@@ -1,7 +1,216 @@
 # Status Rebuild 3D & Survival Milestone 1
 
-**Pembaruan:** 2026-10-18 (Asia/Makassar), BUILD 16
-**Status keseluruhan: MASIH TERBUKA — bukan klaim siap rilis.** Inti rebuild dunia 3D dan loop Survival Milestone 1 sudah terimplementasi. Pada 2026-10-12 arah UI/UX dan threat model dikoreksi mengikuti feedback user; pada 2026-10-15 dilakukan pass analisis gap & bug (lihat bagian "Gap & bug pass 2026-10-15"), lalu pass progres Hunter + level bangunan (lihat "Progres Hunter & level bangunan"), lalu pass menara crossbow (lihat "Menara crossbow"), lalu pass guard yang bisa jatuh (lihat "Guard bisa jatuh"; termasuk perbaikan bug gelombang yang muncul di dalam rumah), dan seluruh gate otomatis dijalankan ulang. Setelah itu user memutuskan **game landscape only** dan meminta brainstorming + design system plan sebelum koding lagi (lihat "Arah desain & orientasi" dan `docs/DESIGN-SYSTEM-PLAN.md`; belum ada perubahan kode game untuk arah ini). Revisi 1 desain (konsep api) ditolak user. Di revisi 2 user memilih konsep **K1 "Benteng Terakhir"**, pola build **jalan ke lingkaran + BUILD**, dan nada **dark stylized**, lalu menyetujui semua rekomendasi aturan dan meminta "pastikan dunianya 3D". K1 kini **terimplementasi sebagai vertical slice** (lihat "K1 Benteng Terakhir — implementasi"); acceptance manusia/perangkat untuk K1 belum ada. Atas feedback user berikutnya, Survival kini dimainkan di **dunia benteng (bailey)** baru, bukan di dalam ruangan mansion (lihat "Dunia benteng untuk Survival"). Setelah itu kedua bookend cerita K1 dibuat: **intro sinematik** di malam pertama dan **adegan bala bantuan tiba** di fajar ke-3 (lihat "Bookend K1"); pemahaman pemain atas keduanya belum diuji. Lalu dibuat **riset UX & replay** dari review pemain (Play Store, Steam, Reddit, dan platform review lain) plus playtest bot "sebagai gamer" (lihat "Riset UX & replay" dan `docs/UX-REPLAY-RESEARCH.md`). Riset itu lalu diperdalam atas permintaan user agar tidak ada coding: v2 menambah review bintang 5, persona, peta perjalanan, dan protokol playtest; v3 menambah pemain Indonesia, analisis loop 3 lapis, dan uji HP kelas bawah. Setelah itu, atas feedback user, dibuat pass perbaikan: benteng diperkecil dan aktor diperbesar, pasukan memakai GLB (KayKit Knight, CC0), efek tembakan/damage diperkuat, kerja bangunan dibuat terlihat, dan UI dirapikan (NIGHT dipisah dari BUILD, panel fajar/akhir menghitung kontribusi). Dari rekomendasi riset, yang terbangun baru R1 sebagian, R18a, dan R19 (lihat "Perbaikan dari feedback user"). Lalu pesan "next" berikutnya dikerjakan sebagai P0 riset **"Momen akhir run"**: bintang 1–3, rekor + NEW BEST!, panel kalah "Ns TO DAWN" + satu tip dari penyebab nyata, dan MVP bangunan (R1–R4, R19; lihat "Momen akhir run"). R5 dan R6 belum. Lalu user melapor "tidak ada perubahan" (2026-10-17): dibuat **pass visual besar** — build yang benar sampai ke layar (service worker hanya di host rilis, preview tanpa cache, stempel BUILD 8), bailey setengah ukuran dengan aktor ×1,6 dan kamera lebih dekat, seluruh horde monster GLB (vertex animation texture), knight dimuat saat boot dengan helm biru berjambul, efek tembakan/damage lebih besar, ballista yang membunuh dan menandai kill-nya, koin mine di HUD, dan penanda gerbang dengan jumlah musuh (lihat "Pass visual besar"). Lalu user meminta lima perbaikan lagi (2026-10-17, "ada beberapa masih perlu di fix"): kamera dijauhkan sedikit dan bisa digeser, plot bangunan ditata rapi, bangunan memakai aset gratis yang diunduh (bukan prototipe), kartu diperkecil, dan trailer pembuka dipertahankan. Kelimanya terimplementasi di **BUILD 9** (lihat "Pass perbaikan BUILD 9"). Lalu user meminta gambar karakter manusia yang cerah dengan senjata terpisah (folder `ASSET_CHARACTER`, gambar konsep AI atas permintaan user) dan aturan gerbang yang benar. Di **BUILD 10** gerbang tertutup menahan tembakan, gerbang hanya terbuka untuk kapten, dan untuk melawan, kapten keluar ke mulut gerbang atau ke luar benteng (lihat "Pass BUILD 10"). Lalu user melapor kapten berjalan sendiri keluar benteng dan bailey terlihat terlalu padat. Di **BUILD 11** kapten tidak lagi digerakkan apa pun selain stick, gerbang hanya terbuka untuk arah stick, setiap jenis bangunan punya warna sendiri, plot terkunci dan tiang hantu disembunyikan, dan props dikurangi (lihat "Pass BUILD 11"). Lalu user melapor ukuran world dan tata letak bangunan masih sama, dan meminta riset visual dan UI/UX game sejenis tanpa coding. Riset itu ada di `docs/VISUAL-LAYOUT-RESEARCH.md` (lihat "Riset visual & tata letak"). User lalu memilih **Opsi B**, meminta peta Rise of Kingdoms dicek dulu, dan meminta kamera yang bisa diperbesar, diperkecil, dan digeser. Ketiganya dikerjakan di **BUILD 12**: bailey ×1,6 dengan distrik per fungsi dan plaza Keep, plus kamera dinamis (lihat "Pass BUILD 12"). Lalu user menulis "lanjut": 7 senjata `ASSET_CHARACTER` yang tersisa dibuat (kini 18/18), dan empat usulan "murah tapi terlihat jelas" dari riset §7 dikerjakan di **BUILD 13**: kapten terang (V8), label hanya saat dekat (V4), angka damage kecil yang digabung (V9), dan gerbang malam ini terlihat di siang hari (V10) (lihat "Pass BUILD 13"). Lalu user menulis "next": di **BUILD 14** senjata pasukan bisa di-upgrade. Ada rak senjata baru di samping armory dengan 3 level crossbow guard, yang terlihat di tangan setiap guard dan di warna bautnya. Pass ini juga memperbaiki bug lama: crossbow guard tidak pernah terpasang di tangan (lihat "Pass BUILD 14"). Lalu user menulis "next" lagi: di **BUILD 15** pertarungan malam dibuat terlihat utuh (V6 + V7 riset). Kamera malam condong ke gerombolan, pohon di kill zone depan gerbang ditebang jadi tunggul, menara di sisi dekat kamera direndahkan, dan kapten tampil sebagai siluet biru saat tertutup (lihat "Pass BUILD 15"). Lalu user menulis "next" lagi: di **BUILD 16** tempo malam diperbaiki (R5 + R6 riset UX). Malam yang dibersihkan kini berakhir lebih cepat dengan bonus emas, sisa gerombolan yang tidak sedang bertarung lari ke hutan, dan setiap gelombang dipanggil dengan nama gerbangnya dan terompet. Pass ini juga memperbaiki panah tepi malam di HP landscape, yang kini berada di bingkai area main, bukan di dekat kepala kapten (lihat "Pass BUILD 16"). Acceptance visual/manual di perangkat, playtest manusia, dan packaging Play masih terbuka. Hasil tiap skrip hanya berlaku untuk cakupan yang benar-benar diuji.
+**Pembaruan:** 2026-10-22 (Asia/Makassar), BUILD 17
+**Status keseluruhan: MASIH TERBUKA — bukan klaim siap rilis.** Inti rebuild dunia 3D dan loop Survival Milestone 1 sudah terimplementasi. Pada 2026-10-12 arah UI/UX dan threat model dikoreksi mengikuti feedback user; pada 2026-10-15 dilakukan pass analisis gap & bug (lihat bagian "Gap & bug pass 2026-10-15"), lalu pass progres Hunter + level bangunan (lihat "Progres Hunter & level bangunan"), lalu pass menara crossbow (lihat "Menara crossbow"), lalu pass guard yang bisa jatuh (lihat "Guard bisa jatuh"; termasuk perbaikan bug gelombang yang muncul di dalam rumah), dan seluruh gate otomatis dijalankan ulang. Setelah itu user memutuskan **game landscape only** dan meminta brainstorming + design system plan sebelum koding lagi (lihat "Arah desain & orientasi" dan `docs/DESIGN-SYSTEM-PLAN.md`; belum ada perubahan kode game untuk arah ini). Revisi 1 desain (konsep api) ditolak user. Di revisi 2 user memilih konsep **K1 "Benteng Terakhir"**, pola build **jalan ke lingkaran + BUILD**, dan nada **dark stylized**, lalu menyetujui semua rekomendasi aturan dan meminta "pastikan dunianya 3D". K1 kini **terimplementasi sebagai vertical slice** (lihat "K1 Benteng Terakhir — implementasi"); acceptance manusia/perangkat untuk K1 belum ada. Atas feedback user berikutnya, Survival kini dimainkan di **dunia benteng (bailey)** baru, bukan di dalam ruangan mansion (lihat "Dunia benteng untuk Survival"). Setelah itu kedua bookend cerita K1 dibuat: **intro sinematik** di malam pertama dan **adegan bala bantuan tiba** di fajar ke-3 (lihat "Bookend K1"); pemahaman pemain atas keduanya belum diuji. Lalu dibuat **riset UX & replay** dari review pemain (Play Store, Steam, Reddit, dan platform review lain) plus playtest bot "sebagai gamer" (lihat "Riset UX & replay" dan `docs/UX-REPLAY-RESEARCH.md`). Riset itu lalu diperdalam atas permintaan user agar tidak ada coding: v2 menambah review bintang 5, persona, peta perjalanan, dan protokol playtest; v3 menambah pemain Indonesia, analisis loop 3 lapis, dan uji HP kelas bawah. Setelah itu, atas feedback user, dibuat pass perbaikan: benteng diperkecil dan aktor diperbesar, pasukan memakai GLB (KayKit Knight, CC0), efek tembakan/damage diperkuat, kerja bangunan dibuat terlihat, dan UI dirapikan (NIGHT dipisah dari BUILD, panel fajar/akhir menghitung kontribusi). Dari rekomendasi riset, yang terbangun baru R1 sebagian, R18a, dan R19 (lihat "Perbaikan dari feedback user"). Lalu pesan "next" berikutnya dikerjakan sebagai P0 riset **"Momen akhir run"**: bintang 1–3, rekor + NEW BEST!, panel kalah "Ns TO DAWN" + satu tip dari penyebab nyata, dan MVP bangunan (R1–R4, R19; lihat "Momen akhir run"). R5 dan R6 belum. Lalu user melapor "tidak ada perubahan" (2026-10-17): dibuat **pass visual besar** — build yang benar sampai ke layar (service worker hanya di host rilis, preview tanpa cache, stempel BUILD 8), bailey setengah ukuran dengan aktor ×1,6 dan kamera lebih dekat, seluruh horde monster GLB (vertex animation texture), knight dimuat saat boot dengan helm biru berjambul, efek tembakan/damage lebih besar, ballista yang membunuh dan menandai kill-nya, koin mine di HUD, dan penanda gerbang dengan jumlah musuh (lihat "Pass visual besar"). Lalu user meminta lima perbaikan lagi (2026-10-17, "ada beberapa masih perlu di fix"): kamera dijauhkan sedikit dan bisa digeser, plot bangunan ditata rapi, bangunan memakai aset gratis yang diunduh (bukan prototipe), kartu diperkecil, dan trailer pembuka dipertahankan. Kelimanya terimplementasi di **BUILD 9** (lihat "Pass perbaikan BUILD 9"). Lalu user meminta gambar karakter manusia yang cerah dengan senjata terpisah (folder `ASSET_CHARACTER`, gambar konsep AI atas permintaan user) dan aturan gerbang yang benar. Di **BUILD 10** gerbang tertutup menahan tembakan, gerbang hanya terbuka untuk kapten, dan untuk melawan, kapten keluar ke mulut gerbang atau ke luar benteng (lihat "Pass BUILD 10"). Lalu user melapor kapten berjalan sendiri keluar benteng dan bailey terlihat terlalu padat. Di **BUILD 11** kapten tidak lagi digerakkan apa pun selain stick, gerbang hanya terbuka untuk arah stick, setiap jenis bangunan punya warna sendiri, plot terkunci dan tiang hantu disembunyikan, dan props dikurangi (lihat "Pass BUILD 11"). Lalu user melapor ukuran world dan tata letak bangunan masih sama, dan meminta riset visual dan UI/UX game sejenis tanpa coding. Riset itu ada di `docs/VISUAL-LAYOUT-RESEARCH.md` (lihat "Riset visual & tata letak"). User lalu memilih **Opsi B**, meminta peta Rise of Kingdoms dicek dulu, dan meminta kamera yang bisa diperbesar, diperkecil, dan digeser. Ketiganya dikerjakan di **BUILD 12**: bailey ×1,6 dengan distrik per fungsi dan plaza Keep, plus kamera dinamis (lihat "Pass BUILD 12"). Lalu user menulis "lanjut": 7 senjata `ASSET_CHARACTER` yang tersisa dibuat (kini 18/18), dan empat usulan "murah tapi terlihat jelas" dari riset §7 dikerjakan di **BUILD 13**: kapten terang (V8), label hanya saat dekat (V4), angka damage kecil yang digabung (V9), dan gerbang malam ini terlihat di siang hari (V10) (lihat "Pass BUILD 13"). Lalu user menulis "next": di **BUILD 14** senjata pasukan bisa di-upgrade. Ada rak senjata baru di samping armory dengan 3 level crossbow guard, yang terlihat di tangan setiap guard dan di warna bautnya. Pass ini juga memperbaiki bug lama: crossbow guard tidak pernah terpasang di tangan (lihat "Pass BUILD 14"). Lalu user menulis "next" lagi: di **BUILD 15** pertarungan malam dibuat terlihat utuh (V6 + V7 riset). Kamera malam condong ke gerombolan, pohon di kill zone depan gerbang ditebang jadi tunggul, menara di sisi dekat kamera direndahkan, dan kapten tampil sebagai siluet biru saat tertutup (lihat "Pass BUILD 15"). Lalu user menulis "next" lagi: di **BUILD 16** tempo malam diperbaiki (R5 + R6 riset UX). Malam yang dibersihkan kini berakhir lebih cepat dengan bonus emas, sisa gerombolan yang tidak sedang bertarung lari ke hutan, dan setiap gelombang dipanggil dengan nama gerbangnya dan terompet. Pass ini juga memperbaiki panah tepi malam di HP landscape, yang kini berada di bingkai area main, bukan di dekat kepala kapten (lihat "Pass BUILD 16"). Lalu user meminta hook awal yang kuat: awal yang mudah dan "terus menang", kesulitan dan kelangkaan resource yang baru naik di level tinggi, musuh yang lebih lemah, tombol panel kalah yang terlihat di landscape, dan tanda "+-" yang dihapus. Di **BUILD 17** run kini salah satu dari 10 siege yang terbuka berurutan: Siege 1 mudah (horde setengah dan lemah, purse lebih besar), angka BUILD 16 menjadi Siege 3, dan pendapatan menipis di siege tinggi. Kill membayar emas langsung, bintang membuka perk tetap, setiap run memakai rencana gerbang lain, panel akhir/fajar/PAUSE diskalakan agar muat di layar landscape yang pendek, dan tombol zoom + / − dihapus (lihat "Pass BUILD 17"). Acceptance visual/manual di perangkat, playtest manusia, dan packaging Play masih terbuka. Hasil tiap skrip hanya berlaku untuk cakupan yang benar-benar diuji.
+
+## Pass BUILD 17 — hook awal & tangga siege (2026-10-18)
+
+**Pesan user:** "lanjut kerjakan yg belum dan perbaiki bug pada ui saat kalah itu tombol nya tidak terlihat pada mode lanscape … game loop nya belum di buat maksimal di awal … game belum punya hook yg kuat di awal harus punya hook dan rasa penasaran seperti game game lain harus terus menang karna ini roguelike harus di buat mudah di awal baru terasa sulit sampai level level tinggi dan resource mulai sulit di dapatkan … hook loop nya masih kurang kuat dan musuh terlihat kuat … susah survive dan bertahan seharusnya di buat lebih mudah, ada bug visual yaitu tanda +- yg harus tidak perlu ada hapus itu di visual"
+
+Cara saya membaca pesan ini:
+
+1. **Bug panel kalah:** tombolnya tidak terlihat di landscape. Diperbaiki (§1).
+2. **Tanda "+-":** saya baca sebagai **tombol zoom + / −** di tepi kanan HUD (ada sejak BUILD 12) dan teks hint "PINCH OR TAP + / - TO ZOOM". Keduanya dihapus (§2). Bila yang dimaksud tanda lain, perlu screenshot.
+3. **Hook, "terus menang", mudah di awal, sulit di level tinggi, resource makin sulit:** run kini adalah salah satu dari **10 siege** yang terbuka berurutan (R7 riset UX). Siege 1 dibuat mudah. Pendapatan dan purse awal makin tipis di siege tinggi. Kill membayar emas langsung, bintang membuka perk tetap (R9), dan setiap run memakai rencana gerbang yang berbeda (R8) (§3–§5).
+4. **Musuh terlalu kuat, sulit bertahan:** horde Siege 1 setengah jumlahnya, lebih kecil, dan jauh lebih lemah. Angka BUILD 16 kini menjadi Siege 3 (§3–§4).
+5. **"Lanjut kerjakan yg belum":** R7, R8, R9 terbangun; R13 setengah; R6 dijawab tanpa memindahkan kapten; R17 digantikan tangga siege. Belum: R10, R11, R12, R14, R18, dan V1/V3 riset visual (butuh pass aset).
+
+Kartu skill acak "pilih 1 dari 3" tetap tidak dipakai, sesuai larangan user sebelumnya. "Roguelike" saya terapkan sebagai run pendek di mana kalah berarti mulai lagi, dengan kemajuan permanen lewat tangga siege dan perk tetap, bukan kartu acak.
+
+Stempel di layar kini **BUILD 17**, service worker `duskhold-v17`. Implementasi ada di commit `bed4ab2`.
+
+### 1. Bug: tombol panel kalah tidak terlihat di landscape
+
+**Penyebab.** Panel akhir BUILD 16 berukuran tetap: tinggi 332 px, mulai di y ≥ 30, dengan PLAY AGAIN di y 296–344. Di layar landscape yang lebih pendek dari ±344 px, tombol itu jatuh di bawah tepi layar. Contohnya HP dengan bilah browser atau navigasi, seperti 740×280 dan 667×260. Diukur ulang di worktree `e988ecb` (BUILD 16):
+
+| Layar | PLAY AGAIN, BUILD 16 | BUILD 17 |
+|---|---|---|
+| 844×390 | y 303–351 (terlihat) | utuh |
+| 740×280 | **y 296–344: di luar layar 280 px** | TRY AGAIN + SIEGE n−1 di y 227–263 (tinggi 36) |
+| 667×260 | **y 296–344: di luar layar 260 px** | y 211–245 (tinggi 34) |
+
+**Perbaikan.** `fitModal()` di `src/ui/survival.js` menggambar setiap panel modal di ukuran virtualnya lalu menskalakannya agar muat di layar (panel akhir butuh 640×372). Kotak sentuh tombolnya ikut diskalakan. Ini berlaku untuk panel akhir (menang/kalah), kartu fajar, dan PAUSE. Kartu fajar dengan 13 baris di 740×280: COLLECT di y 225–258 (tinggi 33).
+
+**Diukur:**
+- harness b17: tombol panel akhir, COLLECT, dan RESUME/RESTART utuh di layar dan setinggi ≥ 28 px, dari 1280×720 sampai 640×260;
+- `survival-plotsqa` §9: tap nyata di TRY AGAIN (740×280 dan 667×260), NEXT SIEGE (667×260), dan COLLECT (740×280).
+
+Di layar 260 px panel diperkecil ke ±70 %, jadi teks terkecilnya ±10 px. Keterbacaannya di HP nyata belum dinilai manusia.
+
+### 2. Tanda "+−" dihapus
+
+- Tombol zoom + dan − di tepi kanan HUD dihapus dari HUD malam dan siang, bersama `zoomButtonLayout`.
+- Hint zoom kini "PINCH TO ZOOM IN AND OUT" (dengan mouse: "SCROLL TO ZOOM IN AND OUT"). Dulu: "PINCH OR TAP + / - TO ZOOM".
+- Zoom tetap bisa lewat pinch, roda mouse, dan keyboard. Chip RECENTER tetap ada.
+
+Harness: tidak ada target tap ZOOM. plotsqa §9: kanvas HUD kosong (alpha 0) di tempat BUILD 12–16 menggambar dua tombol putih, malam dan siang.
+
+### 3. Hook awal: Siege 1 "FIRST WATCH"
+
+Save baru selalu mulai di Siege 1. Save lama (BUILD ≤ 16) dimigrasi: kemenangan lama dihitung sebagai bintang terbaik Siege 3, jadi Siege 1–4 terbuka; run berikutnya dimulai di Siege 1.
+
+| | BUILD 16 (kini Siege 3) | BUILD 17, Siege 1 |
+|---|---|---|
+| Badan swarm per gelombang, malam 1 · 2 · 3 | 21/21/24 · 24/27/27 · 30/30/30 | **11/11/12 · 12/14/14 · 15/15/15** |
+| Isi horde (iblis / blob / tengkorak) | 58 / 26 / 16 % | 5 / 75 / 20 %, tinggi ×0,86 |
+| HP badan, malam 1 · 2 | 48 · 54 | **28 · 31** (tembakan kapten 32: satu tembakan di malam 1) |
+| Cakaran ke Keep · gigitan ke kapten & guard | ×1 · ×1 | ×0,3 · ×0,55 |
+| HP Keep Lv1 · HP gerbang | 600 · ×1 | **840** · ×1,3 |
+| Breaker malam 1/2/3 · Individual | 0/1/2 · 2/2/2 | 0/0/1 · 1/1/2 |
+| Purse awal | 38 emas / 26 kayu | **52 / 38** |
+| Pendapatan (malam, mine, sawmill, kayu fajar) | ×1 | ×1,3 |
+| Emas dari kill | dibayar di fajar: kill ÷ 6 | **langsung saat kill**: 1 koin tiap 2 kill. Koin 3D melompat dari badan, "+1", terbang ke purse dengan pop tengkorak dan bunyi koin |
+| Posisi awal kapten | di Keep | satu langkah di dalam gerbang utara, gelombang 1 di depannya |
+| Hint "WALK OUT A GATE TO FIGHT THEM", malam 1 | 12 dtk | 4 dtk |
+| Setelah menang | PLAY AGAIN | **SIEGE 2** (siege berikutnya dengan aturan barunya) + REPLAY, tangga siege dengan bintang, perk yang baru terbuka dan perk berikutnya |
+
+Penanda rasa penasaran ada di tiga tempat:
+- panel menang menamai siege berikutnya dan aturan barunya ("SIEGE 2 · DEMONS JOIN THE HORDE");
+- pill malam dan banner pembuka run memakai perisai siege;
+- PAUSE menunjukkan siege run ini, aturannya, dan perk yang aktif.
+
+**Diukur** (`survival-uxprobe --siege=1`, 5 seed, malam 72 dtk; `hook-siege1-5seed.txt`):
+
+| Pemain | Hasil Siege 1 | Keep terendah | HP kapten terendah | Malam yang selesai lebih cepat (NIGHT CLEARED) |
+|---|---|---|---|---|
+| builder | 5/5 menang | 94–100 % | 100 % | 13 dari 15 |
+| active (tidak membangun apa pun) | 5/5 menang | 84–100 % | 64–100 % | 15 dari 15 |
+| prepared (berdiri di gerbang WAVE 1 sebelum NIGHT) | 5/5 menang | 100 % | 100 % | 15 dari 15 |
+
+**Kekurangan Siege 1 yang terukur: malamnya sepi.** Horde setengah berarti kill setengah dan waktu menunggu lebih banyak:
+
+| Bot builder, 5 seed | Siege 1 | Siege 3 (= BUILD 16) |
+|---|---|---|
+| Kill malam 1 · 2 · 3 | 35 · 41 · 46–47 | 66–67 · 78–79 · 91–92 |
+| Bagian malam dengan target dalam jangkauan | 8–20 % | 40–66 % |
+| Jeda terpanjang tanpa target, malam 1 | 13–32 dtk | 13 dtk |
+
+Pemain `rally`/`prepared` yang langsung ke gerbang menunggu 25–38 dtk di malam 1 Siege 1 setelah gelombang pertama habis. NIGHT CLEARED memotong ekor malam (bonus 8–26 emas di malam 1), tapi jeda di tengah malam tetap ada. Ini bertentangan dengan permintaan "game loop maksimal di awal". Usulan untuk pass berikutnya: Siege 1 dengan badan lebih banyak tapi lebih lemah (lebih banyak kill dan koin), atau R10 (gerombolan kecil di antara gelombang).
+
+### 4. Tangga 10 siege (R7) — sulit naik, resource menipis
+
+`src/game/siege.js`. Setiap siege mempertahankan aturan sebelumnya dan menambah satu yang terlihat. Multiplier dihitung terhadap angka BUILD 16.
+
+| Siege | Nama | Aturan baru (teks di layar) | HP · jumlah horde | Pendapatan | Purse awal |
+|---|---|---|---|---|---|
+| 1 | FIRST WATCH | A SMALL HORDE OF BLOBS | ×0,58 · ×0,5 | ×1,3 | 52 / 38 |
+| 2 | THE DEAD WALK | DEMONS JOIN THE HORDE | ×0,78 · ×0,7 | ×1,15 | 44 / 31 |
+| 3 | BREAKERS | TWO BREAKERS ON NIGHT 3 | ×1 · ×1 (= BUILD 16) | ×1 | 38 / 26 |
+| 4 | RUNNERS | FLYING SKULLS SPRINT (×1,5 cepat, HP ×0,7) | ×1,05 · ×1 | ×0,95 | 36 / 25 |
+| 5 | TWO GATES | FROM NIGHT 2: TWO GATES AT ONCE | ×1,06 · ×1 | ×0,9 | 34 / 24 |
+| 6 | LEAN TIMES | GOLD AND WOOD -25% | ×1,15 · ×1,1 | ×0,75 | 30 / 21 |
+| 7 | BLOOD MOON | THE HORDE HAS +35% HP (malam merah) | ×1,35 · ×1,15 | ×0,72 | 30 / 20 |
+| 8 | IRON HORDE | THREE BREAKERS ON NIGHT 3 | ×1,45 · ×1,2 | ×0,7 | 28 / 19 |
+| 9 | BITTER DAWN | NO FREE KEEP REPAIRS AT DAWN | ×1,55 · ×1,25 | ×0,65 | 26 / 18 |
+| 10 | LAST STAND | WEAKER WALLS, THE BIGGEST HORDE | ×1,7 · ×1,3 | ×0,6 | 24 / 17 |
+
+- Loot kill: 1 koin per 2 kill (Siege 1), per 3 (Siege 2), per 6 (Siege 3–4, sama dengan pembayaran fajar BUILD 16), lalu per 7 (Siege 5) sampai per 10 (Siege 9–10).
+- Satu gelombang ke satu gerbang dibatasi 36 badan (BUILD 16: 30).
+- Malam 1 hanya menerima **35 %** dari tambahan siege di atas Siege 3, dan aturan TWO GATES baru berlaku dari malam 2. Di pengukuran pertama tanpa kedua batas ini, semua bot kalah di Siege 5 (dua gerbang sejak malam 1) dan di Siege 8 ke atas (multiplier penuh sejak malam 1).
+- Tidak ada siege yang mengirim Breaker di malam 1.
+
+### 5. Perk (R9), rencana gerbang (R8), R6, R13
+
+**Perk** (bintang terbaik setiap siege dijumlah, maks 30; tetap, sama untuk semua pemain, bukan acak):
+
+| Perk | Bintang | Efek |
+|---|---|---|
+| WAR CHEST | 2 | +15 emas di awal run |
+| VETERANS | 5 | +1 guard di awal run |
+| OAK GATES | 8 | gerbang +25 % HP |
+| SHARP BOLTS | 12 | damage kapten +15 % (32 → 37) |
+| STONE KEEP | 16 | Keep +20 % HP |
+| RICH MINES | 21 | mine +30 % emas |
+
+**R8 — rencana gerbang.** Ada 4 rencana gerbang. Run ke-n sebuah save memakai rencana n mod 4, jadi dua run berturut-turut tidak pernah terbuka dengan cara yang sama. Gelombang 1 malam 1 selalu di gerbang utara, karena pembuka membingkainya dan kapten memulai run di sampingnya. Sifat malam diumumkan di banner "NIGHT n" saat malam mulai (mis. "A BREAKER AT THE SOUTH GATE", "WAVES HIT TWO GATES AT ONCE"), bukan di senja seperti usulan riset.
+
+**R6 — target pertama kapten.** Pertanyaan keputusan dari laporan BUILD 16 (memindahkan kapten otomatis ke gerbang saat malam mulai) belum dijawab, jadi kapten tetap hanya bergerak lewat stick. Yang dikerjakan:
+- run dimulai dengan kapten di dalam gerbang utara;
+- di siang hari, gerbang gelombang 1 malam berikutnya memakai tag **WAVE 1** di atas badge-nya, jadi pemain tahu harus berdiri di mana sebelum menekan NIGHT.
+
+`survival-uxprobe --siege=3` (angka BUILD 16), target pertama kapten:
+
+| Pemain | Malam 1 | Malam 2 | Malam 3 |
+|---|---|---|---|
+| builder (menunggu di dekat Keep) | 9,7–10,7 dtk | 14,2–14,8 dtk | 12,2–12,4 dtk |
+| rally (berjalan ke gerbang yang dipanggil saat malam mulai) | 2,9 dtk | 11,4 dtk | 9,5 dtk |
+| **prepared** (berdiri di gerbang WAVE 1 sebelum NIGHT) | **2,9 dtk** | **1,1 dtk** | **1,1 dtk** |
+
+Target ≤ 5 dtk tercapai untuk pemain yang bersiap. Untuk pemain yang menunggu di Keep belum tercapai. Bersiap di gerbang juga lebih berbahaya: satu dari 5 run prepared kalah di malam 2 karena kapten jatuh saat bertarung di gerbang, dan HP terendah kapten di malam 2 adalah 2–37 % di semua run prepared (bot builder: 80–100 %).
+
+**R13 — waktu kerja builder.** Semua kerja builder kini setengah detik aslinya (minimal 2 dtk; mine 7 → 3,5 dtk). Hari 2 Siege 3 (bot builder, rally, dan prepared membeli hal yang sama): kerja builder 17 dtk untuk 5 pembelian (riset: ±34 dtk). Antrean build belum dibuat.
+
+### Balance (5 seed, malam 72 dtk; `ladder-balance.txt`)
+
+Tanpa perk:
+
+| Siege | idle | active | builder | tower-builder | keep-builder | hunter-builder | arms-builder |
+|---|---|---|---|---|---|---|---|
+| 1 | 0/5 (kalah malam 2) | **5/5 ★★★** | 5/5 ★★★ | 5/5 ★★★ | 5/5 ★★★ | 5/5 ★★★ | 5/5 ★★★ |
+| 2 | 0/5 | 5/5 (★ 3,1,1,1,1) | 5/5 ★★★ | 5/5 ★★★ | 5/5 ★★★ | 5/5 ★★★ | 5/5 ★★★ |
+| 3 (= BUILD 16) | 0/5 | 0/5 | 5/5 ★★★ | 5/5 ★★★ | 1/5 | 5/5 ★★★ | 5/5 |
+| 4 | 0/5 | 0/5 | 5/5 ★★★ | 5/5 ★★★ | 0/5 | 5/5 ★★★ | 4/5 |
+| 5 | 0/5 | 0/5 | **0/5** | 4/5 | 0/5 | 4/5 | 4/5 |
+| 6 | 0/5 | 0/5 | 1/5 | 3/5 | 0/5 | 5/5 ★★★ | 1/5 |
+| 7 | 0/5 | 0/5 | 1/5 | 0/5 | 0/5 | 5/5 | 0/5 |
+| 8 | 0/5 | 0/5 | 0/5 | 0/5 | 0/5 | 5/5 ★ | 0/5 |
+| 9 | 0/5 | 0/5 | 0/5 | 0/5 | 0/5 | 1/5 | 0/5 |
+| 10 | 0/5 | 0/5 | 0/5 | 0/5 | 0/5 | 0/5 | 0/5 |
+
+Dengan perk dari bintang yang realistis terkumpul saat naik:
+
+| Siege (bintang) | builder | tower-builder | hunter-builder | arms-builder |
+|---|---|---|---|---|
+| 4 (8★) | 5/5 | 5/5 ★★★ | 5/5 ★★★ | 5/5 ★★★ |
+| 5 (10★) | 4/5 | 5/5 | 5/5 ★★★ | 5/5 ★★★ |
+| 6 (13★) | 1/5 | 4/5 | 5/5 ★★★ | 3/5 |
+| 7 (15★) | 5/5 | 0/5 | 5/5 ★★★ | 0/5 |
+| 8 (18★) | 1/5 | 0/5 | 5/5 ★★★ | 0/5 |
+| 9 (20★) | 0/5 | 0/5 | 5/5 ★★★ | 0/5 |
+| 10 (23★) | 0/5 | 0/5 | 5/5 | 0/5 |
+
+- Ukuran berhasil R7 riset ("bot builder menang Siege I, kalah di Siege V") tercapai.
+- Siege 3 identik dengan BUILD 16 untuk bot yang menang (builder, tower-builder, hunter-builder 5/5 ★★★).
+- Siege 10 tanpa perk tidak dimenangkan bot mana pun. Dengan perk hanya hunter-builder yang menang. Ini disengaja sebagai puncak, tapi apakah manusia bisa sampai ke sana belum diuji.
+- Hasil bot tidak selalu naik-turun rapi (builder dengan perk: Siege 6 1/5, Siege 7 5/5). Urutan beli bot tetap, jadi hasilnya peka terhadap aturan siege. Ini batas bot, bukan ukuran manusia.
+
+**Bug alat uji yang ketemu (bukan bug game):** bot builder membeku di Siege 2 malam 3 di (580, 720), dekat gudang SE. Ia berdiri di sel nav yang dihitung terblokir, sehingga waypoint pertamanya berada di belakangnya dan ia bolak-balik di tempat. Perbaikan di `tools/survival-bots.mjs`: waypoint yang lebih dekat dari 60 px dilewati. Pemain manusia memakai stick, jadi tidak terpengaruh.
+
+### QA yang dijalankan (BUILD 17)
+
+QA dijalankan ulang 2026-10-22 di commit `bed4ab2`, setelah sandbox di-restore di tengah rantai pertama (run pertama `survival-plotsqa` sudah 38/38 PASS sebelum restore; hasilnya hilang bersama `/tmp`).
+
+| Perintah | Hasil |
+|---|---|
+| `node tools/harness.mjs` | **86 baris PASS, 0 FAIL, exit 0** (+9 cek BUILD 17). (1) Save baru = Siege 1: gelombang 11/11/12 · 12/14/14 · 15/15/15, badan 28 HP (satu tembakan kapten 32), mayoritas blob dan lebih kecil, Keep 840, purse 52/38; Siege 3 = BUILD 16 persis (21/21/24 …, Breaker 0/1/2, Keep 600, purse 38/26). (2) Sepuluh siege yang tidak pernah lebih mudah dan membayar lebih sedikit; aturan baru di 4, 5, 7, 9 dan tetap; malam 1 hanya 35 % tambahan. (3) Loot kill langsung: Siege 1 satu koin per 2 kill, Siege 3 per 6; kartu fajar menampilkannya sebagai baris sendiri dan tidak membayar lagi. (4) Siege 2 terkunci sampai Siege 1 menang; menang membuka Siege 2 + WAR CHEST. (5) Enam perk dan efeknya. (6) R8: run berikutnya = rencana berikutnya, malam 1 selalu gerbang utara; TWO GATES dari malam 2; RUNNERS ×1,5 dengan HP 70 %. (7) Kapten mulai di dalam gerbang utara, trait malam 2, mine 3,5 dtk. (8) Tanpa tombol zoom; tombol panel akhir, COLLECT, dan RESUME/RESTART utuh dari 1280×720 sampai 640×260. (9) Reload mempertahankan siege, tangga, rencana gerbang, dan bank loot; `?siege=N` memulai run baru di siege N. Cek intro disesuaikan: banner serah terima kini "SIEGE 3: BREAKERS" (dulu "HOLD THE KEEP") |
+| `node tools/survival-balance.mjs --seeds=5 --duration=72 --siege=1..10 [--stars=N]` | lihat "Balance" dan `ladder-balance.txt` |
+| `node tools/survival-uxprobe.mjs --siege=1` dan `--siege=3` (builder, rally, prepared, active × 5 seed) | lihat §3, §5, `hook-siege1-5seed.txt`, `tempo-r6-5seed.txt` |
+| Rantai browser (plotsqa, devqa, envqa, intro, fxshots, layoutqa, survivalshots, look) | berjalan; hasil menyusul di commit berikutnya |
+
+**Bukti** (`qa-evidence/survival-build17/`):
+
+- `compare-defeat-740x280.png`: panel kalah di 740×280, BUILD 16 (tanpa tombol) vs BUILD 17 (TRY AGAIN + SIEGE 2);
+- `defeat-667x260.png`: panel kalah di 667×260;
+- `win-unlock-844x390.png` dan `win-667x260.png`: panel menang dengan tangga siege, siege yang baru terbuka, dan perk;
+- `dawn-13rows-740x280.png`: kartu fajar 13 baris (termasuk baris loot) dengan COLLECT utuh;
+- `pause-740x280.png`: PAUSE dengan pemilih siege dan perk;
+- `compare-no-zoom-buttons.png`: BUILD 16 (`wave-call.png`, tombol + / − di tepi kanan) vs BUILD 17 di adegan yang sama;
+- `horde-siege1-vs-siege7.png`: horde Siege 1 (blob kecil) vs Siege 7 (iblis, blood moon);
+- `loot-coins.png`: koin kill di Siege 1;
+- `opening-north-gate.png`: run dimulai di dalam gerbang utara dengan banner siege;
+- `day-wave1.png`: tag WAVE 1 di siang hari;
+- `ladder-balance.txt`, `hook-siege1-5seed.txt`, `tempo-r6-5seed.txt`.
+
+**Belum / terbuka:**
+- Penilaian manusia di HP:
+  - apakah Siege 1 terasa sebagai hook (bukan terlalu mudah atau terlalu sepi);
+  - apakah kurva 10 siege terasa adil;
+  - apakah perk dan "siege berikutnya" memancing main lagi;
+  - apakah panel yang diperkecil di layar 260–280 px masih terbaca.
+- Siege 1 sepi di tengah malam (lihat §3). Kandidat R10.
+- R6 untuk pemain yang menunggu di Keep: target pertama masih 9,7–14,8 dtk. Keputusan memindahkan kapten otomatis tetap menunggu user.
+- R10, R11, R12, R14, R18 dan V1/V3 riset visual belum dikerjakan. R13 baru setengah (tanpa antrean).
+- Interpretasi "+-" sebagai tombol zoom perlu dikonfirmasi user.
 
 ## Pass BUILD 16 — tempo malam: fajar lebih cepat, gelombang dipanggil (2026-10-18)
 
