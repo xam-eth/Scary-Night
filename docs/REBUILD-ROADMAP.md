@@ -204,6 +204,25 @@ tidak berubah satu baris pun. Check harness baru "F2 seam screens" (shell
 tipis + 10 modul ada + 21 draw function) → 101 PASS/0 FAIL; structaudit
 delta 0. Rantai penuh: `qa-evidence/phase3-screens/README.md`.
 
+**Fase 3 (berjalan) — pecahan 3, `ui/survival.js` → modul per-concern
+(2026-10-22):** 2.389 LOC HUD survival dipecah jadi `src/ui/survival/`
+sepanjang seam audit (HUD malam vs panel bangun vs widget chain-objective):
+`shared.js` (kit: proyeksi, tombol/biaya, edge marker, floater, counter,
+status pill, kotak chip TONIGHT/zoom/recenter), `hints.js` (coach hints
+save-backed), `chain.js` (phase pill + goal track + timeline + kartu rantai
+sasaran B22), `night.js` (keep bar, banner, guard counter, world layer,
+komposisi HUD malam), `day.js` (dock builder: action button, dock info, plot
+label, chip TONIGHT, reward modal, layar siang penuh), `controls.js` (tombol
+zoom, chip CAPTAIN recenter, stick/flare untuk main.js), `end.js` (panel
+pause + panel akhir run + ladder unlock), `cine.js` (caption/track/marker
+kapten). `ui/survival.js` jadi shell + komposer `drawSurvivalScreen` 59
+baris; permukaan publik 8 nama (game.js, main.js, tools/survival-balance.mjs)
+tidak berubah; `survival-balance` headless tetap EXIT=0. Check harness baru
+"F3 seam survival-ui" (shell ≤ 90 baris + 8 modul + permukaan 8 nama + scan
+leak lintas-modul 0) → 102 PASS/0 FAIL; structaudit delta 0 (4 pelanggaran
+lama tetap; ui/survival.js keluar dari daftar file terbesar). Rantai penuh:
+`qa-evidence/phase3-survival-ui/README.md`.
+
 ## Pass BUILD 21 — empat bug visual dari user (2026-10-19)
 
 **Pesan user:** "disini ada beberapa bug yg harus di fix sebelum lanjut dev yg lain. 1. pasukan perlu di redesign karna tidak singkron dengan character buat pasukan baru, 2. animasi shoter tidak tepat kelarnya dari bawah kali bukan laras panah, 3. animasi character jalan nya terlalu lambat, sedang di tahap build itu lari tapi saat bertempur animasinya walk, harusnya run, 4. nimes juga perlu di redesign dengan visual yg lebih konsisten dengan tema game". Keempatnya dikerjakan dulu sebelum item riset berikutnya.

@@ -2921,6 +2921,57 @@ async function runSurvivalMilestone() {
     f2sPass = f2sChecks.length === 1 && f2sChecks.every(Boolean);
   }
 
+  // Phase 3 fragment 3 (F3 seam: ui/survival.js -> per-concern modules): the
+  // shell keeps exactly the eight-name surface game.js/main.js/tools import and
+  // composes drawSurvivalScreen; the bodies live in src/ui/survival/*.js along
+  // the audit seams (night HUD / day builder / chain widget / controls / end /
+  // cine / hints / shared kit). Every cross-module name must be imported — the
+  // screens split shipped a brandWordmark ReferenceError that only surfaced in
+  // the browser, so the leak scan is part of the birth check.
+  let f3uPass = false;
+  {
+    const f3uChecks = [];
+    const f3uCheck = (name, ok, detail) => {
+      f3uChecks.push(!!ok);
+      console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} — ${detail}`);
+    };
+    const SURV = await import('../src/ui/survival.js');
+    const SURFACE = ['offerSurvivalHint', 'updateSurvivalHints', 'drawSurvivalControls', 'drawSurvivalScreen'];
+    const surfaceOk = SURFACE.every((n) => typeof SURV[n] === 'function')
+      && typeof SURV.nightPointerBand === 'function' && typeof SURV.tonightChipBox === 'function'
+      && typeof SURV.zoomButtonLayout === 'function' && SURV.COLORS && typeof SURV.COLORS === 'object';
+    const shellSrc = fs.readFileSync(new URL('../src/ui/survival.js', import.meta.url), 'utf8');
+    const shellOk = shellSrc.split('\n').length <= 90 && /from '\.\/survival\/night\.js'/.test(shellSrc);
+    const mods = ['shared', 'hints', 'chain', 'night', 'day', 'controls', 'end', 'cine'];
+    const srcs = {};
+    const missing = [];
+    for (const m of mods) {
+      try { srcs[m] = fs.readFileSync(new URL(`../src/ui/survival/${m}.js`, import.meta.url), 'utf8'); }
+      catch (e) { missing.push(m); }
+    }
+    const defs = {};
+    for (const m of mods) {
+      defs[m] = new Set([...(srcs[m] || '').matchAll(/^(?:export )?(?:const|let|function) ([A-Za-z0-9_]+)/gm)].map((x) => x[1]));
+    }
+    const leaks = [];
+    for (const a of mods) {
+      if (!srcs[a]) continue;
+      const imported = new Set([...srcs[a].matchAll(/import \{([^}]+)\} from/g)].flatMap((x) => x[1].split(',').map((t) => t.trim())));
+      for (const b of mods) {
+        if (a === b) continue;
+        for (const n of defs[b]) {
+          if (!imported.has(n) && !defs[a].has(n) && new RegExp('\\b' + n + '\\b').test(srcs[a])) {
+            leaks.push(`${a}->${n} (${b})`);
+          }
+        }
+      }
+    }
+    f3uCheck('F3 seam survival-ui: ui/survival.js is a shell + composer (<= 90 lines) over eight per-concern modules, the 8-name public surface is intact, and no cross-module name is used without an import',
+      surfaceOk && shellOk && missing.length === 0 && leaks.length === 0,
+      `surface ${SURFACE.length + 4}/8, ${shellSrc.split('\n').length} shell lines, modules ${mods.length - missing.length}/${mods.length}, leaks ${leaks.length}`);
+    f3uPass = f3uChecks.length === 1 && f3uChecks.every(Boolean);
+  }
+
   console.log(`  idle Night 3: ${idle.nightThree.peakEnemies} peak enemies / ${idle.nightThree.peakBreakers} Breakers, ${idle.nightThree.kills} kills, ${idle.nightThree.wallDamage} wall damage, gate ${idle.nightThree.gateHp} HP, Hunter ${idle.nightThree.playerHp} HP; ${idle.phase}`);
   console.log(`  builder Night 3: ${builder.nightThree.peakEnemies} peak enemies / ${builder.nightThree.peakBreakers} Breakers, ${builder.nightThree.kills} kills, ${builder.nightThree.wallDamage} wall damage, gate ${builder.nightThree.gateHp} HP, Hunter ${builder.nightThree.playerHp} HP; keep Lv${builder.keepLevel} ${builder.keepHp} HP, soldiers ${builder.survivors}, buildings ${builder.buildings.join(',') || 'none'}, gateBuilt=${builder.gateBuilt}; ${builder.phase}`);
   // Balance target (M1 rebuild, K1): doing nothing must not win; an engaged
@@ -2933,7 +2984,7 @@ async function runSurvivalMilestone() {
     && hunterAutoShot && hunterRealLos && hunterSkill
     && idleLoses && builder.complete && builder.keepLevel === 3
     && builder.queueLockVerified && builder.sawmillBuilt && builder.gateBuilt && builder.barracksBuilt
-    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass && gateRulePass && b13Pass && b14Pass && b15Pass && b16Pass && b17Pass && b18Pass && b19Pass && b20Pass && b21Pass && b22Pass && b23Pass && b25Pass && f2sPass
+    && saveProgressPass && economyPass && progressionPass && towerPass && guardFallPass && cinePass && endPass && passPass && gateRulePass && b13Pass && b14Pass && b15Pass && b16Pass && b17Pass && b18Pass && b19Pass && b20Pass && b21Pass && b22Pass && b23Pass && b25Pass && f2sPass && f3uPass
     && builder.upgrades[0].level === 1 && builder.upgrades[0].plots === 9
     && builder.upgrades[builder.upgrades.length - 1].level === 3 && builder.upgrades[builder.upgrades.length - 1].plots === 15
     && builder.upgrades.every((item, i, all) => i === 0 || item.level >= all[i - 1].level);

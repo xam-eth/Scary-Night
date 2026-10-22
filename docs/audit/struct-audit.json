@@ -1,8 +1,8 @@
 {
-  "generated": "2026-10-21T17:00:25.762Z",
+  "generated": "2026-10-22T06:06:15.417Z",
   "src": {
-    "files": 61,
-    "locTotal": 46116,
+    "files": 69,
+    "locTotal": 46283,
     "biggest": [
       [
         "src/vendor/three/GLTFLoader.js",
@@ -19,10 +19,6 @@
       [
         "src/game/game.js",
         3036
-      ],
-      [
-        "src/ui/survival.js",
-        2390
       ],
       [
         "src/game/render3d/envkit.js",
@@ -51,6 +47,10 @@
       [
         "src/game/sim/mansion.js",
         1097
+      ],
+      [
+        "src/game/render3d/valen3d.js",
+        1010
       ]
     ],
     "orphans": [],
@@ -63,11 +63,11 @@
     "fanIn": [
       [
         "src/core/util.js",
-        33
+        40
       ],
       [
         "src/core/config.js",
-        18
+        19
       ],
       [
         "src/game/sim/economy.js",
@@ -82,11 +82,23 @@
         10
       ],
       [
+        "src/ui/survival/shared.js",
+        9
+      ],
+      [
+        "src/ui/survivalIcons.js",
+        9
+      ],
+      [
         "src/game/render3d/valen3d.js",
         8
       ],
       [
         "src/game/sim/hunt.js",
+        8
+      ],
+      [
+        "src/game/sim/survival.js",
         8
       ],
       [
@@ -96,22 +108,19 @@
       [
         "src/game/render3d/enemy3d.js",
         6
-      ],
-      [
-        "src/game/sim/weapons.js",
-        6
-      ],
-      [
-        "src/shop/ads.js",
-        6
-      ],
-      [
-        "src/vendor/three/GLTFLoader.js",
-        6
       ]
     ]
   },
   "tools": [
+    {
+      "file": "tools/analysis-survival-ui.mjs",
+      "refs": 0,
+      "inPkg": false,
+      "inDocs": false,
+      "inChain": false,
+      "inCi": false,
+      "used": false
+    },
     {
       "file": "tools/archive/asset-sheet.mjs",
       "refs": 1,
@@ -330,7 +339,7 @@
     },
     {
       "file": "tools/harness.mjs",
-      "refs": 86,
+      "refs": 88,
       "inPkg": false,
       "inDocs": true,
       "inChain": true,
@@ -374,7 +383,7 @@
       "used": false
     },
     {
-      "file": "tools/split-screens.mjs",
+      "file": "tools/split-survival-ui.mjs",
       "refs": 0,
       "inPkg": false,
       "inDocs": false,
@@ -384,7 +393,7 @@
     },
     {
       "file": "tools/structaudit.mjs",
-      "refs": 21,
+      "refs": 22,
       "inPkg": false,
       "inDocs": true,
       "inChain": false,
