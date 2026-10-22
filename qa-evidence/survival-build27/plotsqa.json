@@ -1,0 +1,1250 @@
+{
+  "results": [
+    {
+      "name": "camera: the night frame is further out than build 8 (zoom < 0.70, was 0.775)",
+      "ok": true,
+      "detail": {
+        "zoom": 0.655,
+        "play": 0.655,
+        "user": 1
+      }
+    },
+    {
+      "name": "camera: a drag on the right half slides the view (the ground follows the finger) and the captain stays put",
+      "ok": true,
+      "detail": {
+        "camMoved": 825,
+        "playerMoved": 0,
+        "offset": 840
+      }
+    },
+    {
+      "name": "camera: dragged away, a CAPTAIN chip appears to bring the view back",
+      "ok": true,
+      "detail": {
+        "x": 370,
+        "y": 76,
+        "w": 104,
+        "h": 38
+      }
+    },
+    {
+      "name": "camera: the CAPTAIN chip eases the view back onto him",
+      "ok": true,
+      "detail": {
+        "offset": 0
+      }
+    },
+    {
+      "name": "camera: the wheel zooms in and out within 0.42–1.6 of the frame, and the choice is saved",
+      "ok": true,
+      "detail": {
+        "z0": 1,
+        "zIn": 1.433,
+        "zOut": 0.42,
+        "camZoom": 0.275,
+        "saved": 0.42
+      }
+    },
+    {
+      "name": "camera: two fingers spread on the right half zoom in",
+      "ok": true,
+      "detail": {
+        "z0": 0.42,
+        "z1": 1.365
+      }
+    },
+    {
+      "name": "camera: the wheel zooms about the cursor (the ground under it stays within 12 px)",
+      "ok": true,
+      "detail": {
+        "z": 0.527,
+        "drift": 2.7
+      }
+    },
+    {
+      "name": "camera: two fingers anywhere pinch (one each side: zoom out; both on the stick side: zoom in) and the captain stays put",
+      "ok": true,
+      "detail": {
+        "split": {
+          "z0": 1,
+          "z1": 0.42,
+          "moved": 0,
+          "stick": false
+        },
+        "left": {
+          "z0": 1,
+          "z1": 1.6,
+          "moved": 0,
+          "stick": false
+        }
+      }
+    },
+    {
+      "name": "camera: + / - on the right edge (between the counters and the thumb corner) zoom a step each, eased; the + key too",
+      "ok": true,
+      "detail": {
+        "zin": {
+          "x": 792,
+          "y": 151,
+          "w": 44,
+          "h": 44
+        },
+        "zout": {
+          "x": 792,
+          "y": 195,
+          "w": 44,
+          "h": 44
+        },
+        "w": 844,
+        "h": 390,
+        "z0": 1,
+        "steps": {
+          "zIn": 1.35,
+          "zOut": 0.741,
+          "zKey": 1,
+          "offset": 0
+        }
+      }
+    },
+    {
+      "name": "camera: a flick glides on after the finger lifts, then comes to rest",
+      "ok": true,
+      "detail": {
+        "atLift": 374,
+        "glided": 607,
+        "settled": 653,
+        "still": 653
+      }
+    },
+    {
+      "name": "camera: all the way out the whole bailey (2080 x 1520) fits a sideways phone",
+      "ok": true,
+      "detail": {
+        "phase": "day",
+        "zoom": 0.255,
+        "corners": [
+          [
+            379,
+            3
+          ],
+          [
+            754,
+            220
+          ],
+          [
+            104,
+            162
+          ],
+          [
+            480,
+            378
+          ]
+        ],
+        "inView": true
+      }
+    },
+    {
+      "name": "assets: the KayKit kit is loaded and every placed building is a kit model (0 procedural)",
+      "ok": true,
+      "detail": {
+        "kit": {
+          "ready": true,
+          "failed": false,
+          "error": null,
+          "models": 29,
+          "kitBuildings": 7,
+          "proceduralBuildings": 0,
+          "kitGhosts": 0,
+          "pads": 17,
+          "stage": null,
+          "armoryKit": true,
+          "armsKit": true,
+          "armsDisplay": 1,
+          "wells": 1,
+          "decor": {
+            "placed": 22,
+            "missing": 0,
+            "merged": 22,
+            "meshes": 1
+          }
+        },
+        "meshes": [
+          {
+            "slot": "ward",
+            "kit": true,
+            "level": 2,
+            "dressed": true
+          },
+          {
+            "slot": "south",
+            "kit": true,
+            "level": 1,
+            "dressed": false
+          },
+          {
+            "slot": "north",
+            "kit": true,
+            "level": 2,
+            "dressed": true
+          },
+          {
+            "slot": "south:tower",
+            "kit": true,
+            "level": 3,
+            "dressed": true
+          },
+          {
+            "slot": "east:tower",
+            "kit": true,
+            "level": 1,
+            "dressed": false
+          },
+          {
+            "slot": "east",
+            "kit": true,
+            "level": 1,
+            "dressed": false
+          },
+          {
+            "slot": "west",
+            "kit": true,
+            "level": 1,
+            "dressed": false
+          }
+        ],
+        "plots": 15
+      }
+    },
+    {
+      "name": "assets: every plot stands on its pad, so do the armory and the arms rack (the pack's racks), the yard has its well",
+      "ok": true,
+      "detail": {
+        "pads": 17,
+        "plots": 15,
+        "armory": true,
+        "arms": true,
+        "wells": 1
+      }
+    },
+    {
+      "name": "assets: a levelled building shows it (Lv2/Lv3 flags and stock from the pack)",
+      "ok": true,
+      "detail": [
+        {
+          "slot": "ward",
+          "kit": true,
+          "level": 2,
+          "dressed": true
+        },
+        {
+          "slot": "south",
+          "kit": true,
+          "level": 1,
+          "dressed": false
+        },
+        {
+          "slot": "north",
+          "kit": true,
+          "level": 2,
+          "dressed": true
+        },
+        {
+          "slot": "south:tower",
+          "kit": true,
+          "level": 3,
+          "dressed": true
+        },
+        {
+          "slot": "east:tower",
+          "kit": true,
+          "level": 1,
+          "dressed": false
+        },
+        {
+          "slot": "east",
+          "kit": true,
+          "level": 1,
+          "dressed": false
+        },
+        {
+          "slot": "west",
+          "kit": true,
+          "level": 1,
+          "dressed": false
+        }
+      ]
+    },
+    {
+      "name": "build: a new building rises through the pack's three construction stages, then pops up",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "stages": [
+          "stageA",
+          "stageB",
+          "stageC"
+        ],
+        "built": "tower"
+      }
+    },
+    {
+      "name": "cards: the build/upgrade dock is one row (<= 56 px tall, was 166) under half the old area",
+      "ok": true,
+      "detail": {
+        "action": {
+          "x": 684,
+          "y": 328,
+          "w": 148,
+          "h": 50,
+          "label": "survival:UPGRADE MAX"
+        },
+        "night": {
+          "x": 12,
+          "y": 62,
+          "w": 112,
+          "h": 38,
+          "label": "survival:START NIGHT"
+        },
+        "view": {
+          "w": 844,
+          "h": 390
+        },
+        "dockArea": 16500
+      }
+    },
+    {
+      "name": "cards: NIGHT is a chip (<= 130 x 44, was 148 x 50), still top-left (R18a)",
+      "ok": true,
+      "detail": {
+        "x": 12,
+        "y": 62,
+        "w": 112,
+        "h": 38,
+        "label": "survival:START NIGHT"
+      }
+    },
+    {
+      "name": "cards: the keep's two actions (UPGRADE + REPAIR) share the same one-row dock",
+      "ok": true,
+      "detail": {
+        "here": "keep",
+        "items": [
+          {
+            "label": "survival:UPGRADE MAX",
+            "x": 684,
+            "y": 328,
+            "w": 148,
+            "h": 50
+          },
+          {
+            "label": "survival:REPAIR KEEP",
+            "x": 366,
+            "y": 328,
+            "w": 124,
+            "h": 50
+          }
+        ]
+      }
+    },
+    {
+      "name": "V8: the captain is bright — his own pixels average >= 70/255 by night and by day and clearly above the bare texture, with the pack Commander's own colours kept (recolour off, uCapLook=0) and rim+lift doing the brightening (night rim > day rim)",
+      "ok": true,
+      "detail": {
+        "night": {
+          "on": {
+            "px": 3856,
+            "mean": 98.1
+          },
+          "bare": {
+            "px": 3928,
+            "mean": 58.2
+          },
+          "look": {
+            "look": 0,
+            "rim": 0.7,
+            "lift": 0.14
+          }
+        },
+        "day": {
+          "on": {
+            "px": 3342,
+            "mean": 102.4
+          },
+          "bare": {
+            "px": 3377,
+            "mean": 86.8
+          },
+          "look": {
+            "look": 0,
+            "rim": 0.32,
+            "lift": 0.04
+          }
+        }
+      }
+    },
+    {
+      "name": "V4: a circle spells its name and cost only near the captain — never more than 2 at once (3 empty circles within reach: 2 names), and the overview shows icons only (0 names, 0 pills)",
+      "ok": true,
+      "detail": {
+        "near": {
+          "names": 2,
+          "icons": 1,
+          "pills": 0,
+          "overview": false,
+          "reach": [
+            157,
+            157,
+            160
+          ],
+          "here": null
+        },
+        "far": {
+          "names": 0,
+          "icons": 9,
+          "pills": 0,
+          "user": 0.42
+        }
+      }
+    },
+    {
+      "name": "V10: by day every gate the coming night will hit is marked (a red badge in view, a red edge pointer with the count out of view), the same gates as the night's plan",
+      "ok": true,
+      "detail": {
+        "plan": [
+          "westGate 24/0/0",
+          "posternNW 27/0/0",
+          "southGate 27/1/1",
+          "northGate 0/1/0"
+        ],
+        "drawn": [
+          {
+            "id": "westGate",
+            "total": 24,
+            "inView": false,
+            "order": 1,
+            "swarm": 24,
+            "individuals": 0,
+            "breakers": 0
+          },
+          {
+            "id": "posternNW",
+            "total": 27,
+            "inView": false,
+            "order": 2,
+            "swarm": 27,
+            "individuals": 0,
+            "breakers": 0
+          },
+          {
+            "id": "southGate",
+            "total": 29,
+            "inView": true,
+            "order": 3,
+            "swarm": 27,
+            "individuals": 1,
+            "breakers": 1
+          },
+          {
+            "id": "northGate",
+            "total": 1,
+            "inView": true,
+            "order": 0,
+            "swarm": 0,
+            "individuals": 1,
+            "breakers": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "B14: the arms rack beside the armory — both stations show their level near the captain with the gold arrow when affordable; at the rack one UPGRADE ARMS LV2 button in the dock, the rack shows the Lv1 bow, every guard holds it",
+      "ok": true,
+      "detail": {
+        "stations": [
+          {
+            "id": "armory",
+            "near": true,
+            "arrow": true
+          },
+          {
+            "id": "arms",
+            "near": true,
+            "arrow": true
+          }
+        ],
+        "here": "arms",
+        "button": {
+          "x": 684,
+          "y": 328,
+          "w": 148,
+          "h": 50,
+          "label": "survival:UPGRADE ARMS LV2",
+          "disabled": false
+        },
+        "display": 1,
+        "bows": [
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "name": "B14: bought, the rack works on it (UPGRADING ARMS), then every guard holds the Lv2 royal-blue bow (a \"Lv2\" pop over each, a flash on each) and the rack shows it; Lv3 is the blue-and-gold arbalest held two-handed",
+      "ok": true,
+      "detail": {
+        "job": "arms",
+        "working": true,
+        "pops": 2,
+        "guards": 2,
+        "lv2": {
+          "bows": [
+            2,
+            2
+          ],
+          "display": 2
+        },
+        "lv3": {
+          "level": 3,
+          "bows": [
+            3,
+            3
+          ],
+          "twoHanded": 2,
+          "display": 3
+        },
+        "armFx": 4
+      }
+    },
+    {
+      "name": "B14: at night a Lv3 guard up on its tower shoots the gold bolt (18 damage, runs on through a body), drawn as the Lv3 bolt",
+      "ok": true,
+      "detail": {
+        "up": 2,
+        "bolts": [
+          {
+            "arms": 3,
+            "pierce": 0,
+            "damage": 18
+          },
+          {
+            "arms": 3,
+            "pierce": 0,
+            "damage": 18
+          },
+          {
+            "arms": 3,
+            "pierce": 0,
+            "damage": 18
+          },
+          {
+            "arms": 3,
+            "pierce": 0,
+            "damage": 18
+          },
+          {
+            "arms": 3,
+            "pierce": 0,
+            "damage": 18
+          },
+          {
+            "arms": 3,
+            "pierce": 0,
+            "damage": 18
+          },
+          {
+            "arms": 3,
+            "pierce": 1,
+            "damage": 18
+          },
+          {
+            "arms": 3,
+            "pierce": 1,
+            "damage": 18
+          }
+        ],
+        "meshLevels": [
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3
+        ]
+      }
+    },
+    {
+      "name": "B15: the captain is seen through cover — behind the north gate's east tower his figure shows through it as a blue silhouette (a twin of his skinned mesh, GreaterDepth, survival only); in plain sight he paints over it",
+      "ok": true,
+      "detail": {
+        "state0": {
+          "on": true,
+          "twins": 1
+        },
+        "xray": {
+          "on": true,
+          "twins": 1
+        },
+        "seen": {
+          "n": 2742,
+          "r": 137,
+          "b": 229
+        },
+        "bare": {
+          "n": 0,
+          "r": 0,
+          "b": 0
+        },
+        "sil": 2742,
+        "silBlue": 229,
+        "silRed": 137,
+        "diag": {
+          "felled": 19,
+          "lowTowers": [
+            "corner",
+            "southGate:-1",
+            "southGate:1",
+            "eastGate:-1",
+            "eastGate:1"
+          ],
+          "bridges": [
+            "westGate",
+            "northGate"
+          ],
+          "xray": {
+            "on": true,
+            "twins": 1
+          }
+        }
+      }
+    },
+    {
+      "name": "B15: the south / east gates have squat bastions (no bridge over them; the north / west keep their towers and bridges), the south-east corner is cut down, the felled kill zones show stumps; a guard on the south bastion stands ~68 px lower than one on the north tower",
+      "ok": true,
+      "detail": {
+        "lifts": [
+          1,
+          1
+        ],
+        "ys": [
+          131.7,
+          199.7
+        ],
+        "stumps": 19,
+        "cuts": 19,
+        "d": {
+          "felled": 19,
+          "lowTowers": [
+            "corner",
+            "southGate:-1",
+            "southGate:1",
+            "eastGate:-1",
+            "eastGate:1"
+          ],
+          "bridges": [
+            "westGate",
+            "northGate"
+          ],
+          "xray": {
+            "on": true,
+            "twins": 1
+          }
+        }
+      }
+    },
+    {
+      "name": "B15: holding the main gate from inside, the night frame leans onto the knot outside — knot and captain both in the playfield (below the HUD band, above the stick / FLARE band)",
+      "ok": true,
+      "detail": {
+        "lean": {
+          "x": 0,
+          "y": 204.8,
+          "w": 0.999,
+          "focus": {
+            "x": 0,
+            "y": 950,
+            "n": 10
+          }
+        },
+        "knot": {
+          "x": 381,
+          "y": 219
+        },
+        "captain": {
+          "x": 517,
+          "y": 140
+        },
+        "h": 390,
+        "w": 844
+      }
+    },
+    {
+      "name": "B16: a cleared night ends early — NIGHT CLEARED! with the gold it saves, the night pill turns to DAWN, the light warms over the 2 s to the early dawn, and the dawn card says NIGHT 2 CLEARED with its clock-gold row",
+      "ok": true,
+      "detail": {
+        "cleared": {
+          "at": 50.28333333333332,
+          "dawnAt": 52.28333333333332,
+          "saved": 19,
+          "bonus": 19,
+          "fled": 0
+        },
+        "banner": {
+          "kind": "cleared",
+          "text": "NIGHT CLEARED!",
+          "sub": "DAWN COMES EARLY · +19 GOLD"
+        },
+        "pill": [
+          [
+            58,
+            63,
+            138
+          ],
+          [
+            248,
+            177,
+            77
+          ]
+        ],
+        "ground": [
+          96,
+          108,
+          133,
+          162
+        ],
+        "blend": 0.5,
+        "card": {
+          "phase": "day",
+          "panel": "survival-day",
+          "pending": true,
+          "cleared": {
+            "at": 50.28333333333332,
+            "saved": 19,
+            "bonus": 19,
+            "fled": 0
+          },
+          "endAt": 52.3,
+          "ground": {
+            "r": 173,
+            "g": 164,
+            "b": 126,
+            "lum": 162
+          }
+        }
+      }
+    },
+    {
+      "name": "B16: Night 2 sends its first wave at once and calls it with its gate and count (WAVE 1/3 · WEST GATE ×24), the horde's horn blown",
+      "ok": true,
+      "detail": {
+        "at": 2.82,
+        "wave": 1,
+        "banner": {
+          "kind": "wave",
+          "text": "WAVE 1/3",
+          "sub": "WEST GATE ×24"
+        },
+        "horns": 2
+      }
+    },
+    {
+      "name": "B16: the night's last few — the two out of the fight run for the trees and are gone, the one clawing the west gate is called LAST 1! and pointed at by a red pointer on the playfield's frame (a sideways phone's night pointers run round its edge now, not over the captain)",
+      "ok": true,
+      "detail": {
+        "fleeing": [
+          true,
+          true,
+          false
+        ],
+        "alive": 1,
+        "stragglers": {
+          "at": 60.02,
+          "count": 3,
+          "fled": 2,
+          "called": true
+        },
+        "gone": true,
+        "banner": {
+          "kind": "stragglers",
+          "text": "LAST 1!"
+        },
+        "red": 150,
+        "marks": [
+          {
+            "icon": "door",
+            "x": 264,
+            "y": 94
+          },
+          {
+            "icon": "skull",
+            "x": 268,
+            "y": 94
+          }
+        ],
+        "captain": {
+          "x": 380,
+          "y": 219
+        },
+        "w": 844,
+        "h": 390,
+        "onScreen": false
+      }
+    },
+    {
+      "name": "B17: the day announces tonight in the top band — a TONIGHT chip naming the gates in the order the night comes at them and what it sends, inside the 48 px band, clear of PAUSE, the DAY pill and the counters, painted and legible; each gate's badge carries the wave that reaches it first; at night the chip is gone (the night HUD is BUILD 16's)",
+      "ok": true,
+      "detail": {
+        "flags": {
+          "drawn": true,
+          "inBand": true,
+          "day2": true,
+          "order": true,
+          "counts": true,
+          "callMatches": true,
+          "painted": true,
+          "legible": true,
+          "badges": true,
+          "goneAtNight": true
+        },
+        "chip": {
+          "box": {
+            "x": 60,
+            "y": 8,
+            "w": 232.66015625,
+            "h": 46
+          },
+          "order": "WEST → NW POSTERN → SOUTH",
+          "tier": "short",
+          "counts": [
+            "swarm×78",
+            "zombie×2",
+            "breaker×1"
+          ],
+          "breakers": 1,
+          "breakerGate": "SOUTH GATE",
+          "first": "WEST GATE"
+        },
+        "band": {
+          "pauseRight": 52,
+          "pillLeft": 316,
+          "countersLeft": 748,
+          "top": 48
+        },
+        "plan": [
+          "westGate",
+          "posternNW",
+          "southGate",
+          "northGate"
+        ],
+        "call": {
+          "first": "WEST GATE",
+          "breakers": 1
+        },
+        "face": [
+          56,
+          61,
+          134
+        ],
+        "ink": 160,
+        "badges": [
+          "westGate[1]",
+          "posternNW[2]",
+          "southGate[3]",
+          "northGate[0]"
+        ],
+        "night": {
+          "phase": "night",
+          "chip": null,
+          "key": true
+        },
+        "sample": "WEST GATE",
+        "wantOrder": "westGate → posternNW → southGate"
+      }
+    },
+    {
+      "name": "B17: the round turns with the run — three seeds on the same day 2 screen give 3 different TONIGHT orders (WEST → NW POSTERN → SOUTH | SE POSTERN → EAST → SOUTH | NORTH → WEST → SOUTH), each the plan its night plays, and each badge's wave pip follows it",
+      "ok": true,
+      "detail": {
+        "orders": [
+          "WEST → NW POSTERN → SOUTH",
+          "SE POSTERN → EAST → SOUTH",
+          "NORTH → WEST → SOUTH"
+        ],
+        "plans": [
+          "westGate → posternNW → southGate → northGate",
+          "posternSE → eastGate → southGate → westGate",
+          "northGate → westGate → southGate → eastGate"
+        ],
+        "runSeeds": [
+          3901008293,
+          20276850,
+          20261013
+        ]
+      }
+    },
+    {
+      "name": "B18: NIGHT is a hold, not a tap — a press that leaves at a sixth of the ring starts nothing and the chip answers (HOLD TO START, then a once-only hint); while the ring fills it names what the day would still have bought (R18c); a press held to the ring starts the night once and consumes itself",
+      "ok": true,
+      "detail": {
+        "box": {
+          "x": 12,
+          "y": 62,
+          "w": 112,
+          "h": 38,
+          "hold": 0.55
+        },
+        "gold": 60,
+        "mid": {
+          "holdT": 0.303,
+          "note": "60 GOLD UNSPENT",
+          "phase": "day"
+        },
+        "tap": {
+          "phase": "day",
+          "miss": true,
+          "hint": "holdnight"
+        },
+        "held": {
+          "phase": "night",
+          "consumed": true
+        }
+      }
+    },
+    {
+      "name": "B20: PAUSE is the mini unlocks screen — before any run ends it shows the watch ladder: the colour worn, the next colour and the stars still owed to it (R21)",
+      "ok": true,
+      "detail": {
+        "screen": "paused",
+        "lab": {
+          "tier": "iron",
+          "next": "CRIMSON WATCH",
+          "total": 4
+        }
+      }
+    },
+    {
+      "name": "B21/B25: the garrison is the captain's character family (graded, crossbow in the right hand), the horde bakes the user's zombie pack as one faction (three variants, painted atlas carried through the bake, crimson rim, no repaint), and a ground bolt leaves the bow at chest height",
+      "ok": true,
+      "detail": {
+        "troopReady": true,
+        "soldierUrl": "./egyptian_people.glb",
+        "valenUrl": "./egyptian_people.glb",
+        "graded": 1,
+        "hands": 2,
+        "bows": 2,
+        "kinds": {
+          "shambler": {
+            "r": 1,
+            "g": 1,
+            "b": 1,
+            "glowMax": 0,
+            "uvMax": 1,
+            "mapped": true,
+            "verts": 4104
+          },
+          "lurcher": {
+            "r": 1,
+            "g": 1,
+            "b": 1,
+            "glowMax": 0,
+            "uvMax": 0.97,
+            "mapped": true,
+            "verts": 3570
+          },
+          "wretch": {
+            "r": 1,
+            "g": 1,
+            "b": 1,
+            "glowMax": 0,
+            "uvMax": 0.98,
+            "mapped": true,
+            "verts": 4420
+          }
+        },
+        "rim": "0.78,0.2,0.16",
+        "boltYs": [
+          80,
+          80
+        ]
+      }
+    },
+    {
+      "name": "B22: day 2 raises the first run's objective chain on the left edge (three open steps, the HUD label agrees), the steps check themselves off the world as the mine and a tower rise, the chain teaches into night 2, and clearing it banks save.chainDone, celebrates at dawn and leaves for good",
+      "ok": true,
+      "detail": {
+        "a": {
+          "n1": {
+            "visible": false,
+            "all": false,
+            "allAt": null,
+            "steps": [
+              {
+                "id": "mine",
+                "label": "BUILD A MINE",
+                "done": false
+              },
+              {
+                "id": "tower",
+                "label": "BUILD A TOWER",
+                "done": false
+              },
+              {
+                "id": "night2",
+                "label": "HOLD NIGHT 2",
+                "done": false
+              }
+            ],
+            "byid": {
+              "mine": false,
+              "tower": false,
+              "night2": false
+            }
+          },
+          "d2": {
+            "visible": true,
+            "all": false,
+            "allAt": null,
+            "steps": [
+              {
+                "id": "mine",
+                "label": "BUILD A MINE",
+                "done": false
+              },
+              {
+                "id": "tower",
+                "label": "BUILD A TOWER",
+                "done": false
+              },
+              {
+                "id": "night2",
+                "label": "HOLD NIGHT 2",
+                "done": false
+              }
+            ],
+            "byid": {
+              "mine": false,
+              "tower": false,
+              "night2": false
+            }
+          },
+          "afterMine": {
+            "visible": true,
+            "all": false,
+            "allAt": null,
+            "steps": [
+              {
+                "id": "mine",
+                "label": "BUILD A MINE",
+                "done": true
+              },
+              {
+                "id": "tower",
+                "label": "BUILD A TOWER",
+                "done": false
+              },
+              {
+                "id": "night2",
+                "label": "HOLD NIGHT 2",
+                "done": false
+              }
+            ],
+            "byid": {
+              "mine": true,
+              "tower": false,
+              "night2": false
+            }
+          },
+          "lab": {
+            "visible": true,
+            "all": false,
+            "steps": [
+              {
+                "id": "mine",
+                "done": true
+              },
+              {
+                "id": "tower",
+                "done": false
+              },
+              {
+                "id": "night2",
+                "done": false
+              }
+            ]
+          }
+        },
+        "b": {
+          "afterTower": {
+            "visible": true,
+            "all": false,
+            "allAt": null,
+            "steps": [
+              {
+                "id": "mine",
+                "label": "BUILD A MINE",
+                "done": true
+              },
+              {
+                "id": "tower",
+                "label": "BUILD A TOWER",
+                "done": true
+              },
+              {
+                "id": "night2",
+                "label": "HOLD NIGHT 2",
+                "done": false
+              }
+            ],
+            "byid": {
+              "mine": true,
+              "tower": true,
+              "night2": false
+            }
+          },
+          "night": {
+            "visible": true,
+            "all": false,
+            "allAt": null,
+            "steps": [
+              {
+                "id": "mine",
+                "label": "BUILD A MINE",
+                "done": true
+              },
+              {
+                "id": "tower",
+                "label": "BUILD A TOWER",
+                "done": true
+              },
+              {
+                "id": "night2",
+                "label": "HOLD NIGHT 2",
+                "done": false
+              }
+            ],
+            "byid": {
+              "mine": true,
+              "tower": true,
+              "night2": false
+            }
+          },
+          "lab": {
+            "visible": true,
+            "all": false,
+            "steps": [
+              {
+                "id": "mine",
+                "done": true
+              },
+              {
+                "id": "tower",
+                "done": true
+              },
+              {
+                "id": "night2",
+                "done": false
+              }
+            ]
+          }
+        },
+        "c": {
+          "held": {
+            "visible": true,
+            "all": true,
+            "allAt": 83.79999999999653,
+            "steps": [
+              {
+                "id": "mine",
+                "label": "BUILD A MINE",
+                "done": true
+              },
+              {
+                "id": "tower",
+                "label": "BUILD A TOWER",
+                "done": true
+              },
+              {
+                "id": "night2",
+                "label": "HOLD NIGHT 2",
+                "done": true
+              }
+            ],
+            "byid": {
+              "mine": true,
+              "tower": true,
+              "night2": true
+            }
+          },
+          "savedFlag": true,
+          "celebrating": {
+            "visible": true,
+            "all": true,
+            "allAt": 83.79999999999653,
+            "steps": [
+              {
+                "id": "mine",
+                "label": "BUILD A MINE",
+                "done": true
+              },
+              {
+                "id": "tower",
+                "label": "BUILD A TOWER",
+                "done": true
+              },
+              {
+                "id": "night2",
+                "label": "HOLD NIGHT 2",
+                "done": true
+              }
+            ],
+            "byid": {
+              "mine": true,
+              "tower": true,
+              "night2": true
+            }
+          },
+          "gone": {
+            "visible": false,
+            "all": true,
+            "allAt": 83.79999999999653,
+            "steps": [
+              {
+                "id": "mine",
+                "label": "BUILD A MINE",
+                "done": true
+              },
+              {
+                "id": "tower",
+                "label": "BUILD A TOWER",
+                "done": true
+              },
+              {
+                "id": "night2",
+                "label": "HOLD NIGHT 2",
+                "done": true
+              }
+            ],
+            "byid": {
+              "mine": true,
+              "tower": true,
+              "night2": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "B24: a live gate guard is the user pack's own Warrior character (person-Warrior mesh under a troop-3d root, generated skeleton with Head/Hip/R_Hand) — a different character from the captain's Commander — still holding the garrison crossbow in the right hand",
+      "ok": true,
+      "detail": {
+        "guard": true,
+        "missing": [],
+        "hands": 1,
+        "bows": 1
+      }
+    }
+  ],
+  "errors": []
+}
