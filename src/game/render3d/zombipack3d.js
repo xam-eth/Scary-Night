@@ -180,17 +180,28 @@ export const ZombiPack3D = {
       const die = bakeVariantClip('pack-die', 0.55, variant, diePose);
       variant.clips['pack-die'] = die;
       // template root: the variant's meshes plus the roots of its joint tree,
-      // so cloneRig/bakeKind see a self-contained rig (both clone it)
+      // so cloneRig/bakeKind see a self-contained rig (both clone it).
+      // BUILD 27 (user report 2026-10-22, seen on screenshots: the horde still
+      // "jalan baring"): BUILD 26 put the pack's axis conversion on the root
+      // itself — but three consumers zero the root before using the rig
+      // (crowd3d bakeKind, enemy3d's per-frame facing, enemy3d _bakePreview),
+      // which threw the orientation away again and baked/drew the horde lying
+      // down. The root now stays neutral and an intermediate `orient` child
+      // carries the conversion, so zeroing or yawing the root can never lose
+      // the upright pose again.
       const root = new THREE.Group();
       root.name = `zombi-variant-${vi}`;
-      root.quaternion.copy(lostQ);   // stand the rig up the way the pack authored it
+      const orient = new THREE.Group();
+      orient.name = `zombi-variant-${vi}-orient`;
+      orient.quaternion.copy(lostQ);   // stand the rig up the way the pack authored it
+      root.add(orient);
       const jointSet = new Set(skeleton.bones);
       for (const mesh of meshes) {
         if (mesh.parent) mesh.parent.remove(mesh);
-        root.add(mesh);
+        orient.add(mesh);
       }
       for (const bone of skeleton.bones) {
-        if (!bone.parent || !jointSet.has(bone.parent)) root.add(bone);
+        if (!bone.parent || !jointSet.has(bone.parent)) orient.add(bone);
       }
       root.updateMatrixWorld(true);
       variant.template = root;

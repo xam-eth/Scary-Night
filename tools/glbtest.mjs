@@ -544,10 +544,26 @@ console.log('\ngarrison troops (captain family + KayKit bows, CC0):');
       const pv = new THREE.Vector3(); pel.node.getWorldPosition(pv);
       const hv = new THREE.Vector3(); head.node.getWorldPosition(hv);
       const up = hv.sub(pv);
-      return { key: k.key, upright: size.y > size.x && size.y > size.z, conv: v.lostOrientation.angleTo(conv) < 1e-3, face: up.z > 0 && up.y > Math.abs(up.z) };
+      // BUILD 27: three consumers zero the template root before using the rig
+      // (crowd3d bakeKind, enemy3d's per-frame facing, enemy3d _bakePreview) —
+      // the conversion now lives on an intermediate child, so a zeroed root
+      // must STILL stand the horde up (this is the regression the user saw).
+      const zeroed = v.template.clone(true);
+      zeroed.rotation.set(0, 0, 0);
+      zeroed.updateMatrixWorld(true);
+      const zpts = v.joints.map((j) => {
+        const p = new THREE.Vector3();
+        const n = zeroed.getObjectByName(j.node.name);
+        if (n) n.getWorldPosition(p);
+        return p;
+      });
+      const zsize = new THREE.Box3().setFromPoints(zpts).getSize(new THREE.Vector3());
+      const q = v.template.quaternion;
+      return { key: k.key, upright: size.y > size.x && size.y > size.z, conv: v.lostOrientation.angleTo(conv) < 1e-3, face: up.z > 0 && up.y > Math.abs(up.z),
+        rootNeutral: Math.abs(q.x) + Math.abs(q.y) + Math.abs(q.z) < 1e-6, zeroedUpright: zsize.y > zsize.x && zsize.y > zsize.z };
     });
-    ok('BUILD 26: the split keeps the pack axis conversion on every variant root, so the horde stands upright (bone box tallest on Y) and faces +Z the way enemy3d yaws it',
-      rows.every((r) => r && r.upright && r.conv && r.face),
+    ok('BUILD 26+27: the split keeps the pack axis conversion on an intermediate node under a neutral root, so the horde stands upright (bone box tallest on Y), faces +Z the way enemy3d yaws it, and STAYS upright when a consumer zeroes the root (bakeKind / facing / _bakePreview)',
+      rows.every((r) => r && r.upright && r.conv && r.face && r.rootNeutral && r.zeroedUpright),
       rows.map((r) => (r ? `${r.key} ${r.conv ? 'conv' : 'NOCONV'}/${r.upright ? 'up' : 'LYING'}/${r.face ? '+Z' : '-Z'}` : 'missing')).join(' '));
   }
   const missingBones = ['R_Hand', 'Head', 'Hip'].filter((name) => !PACK_BONES.some((b) => b[0] === name));

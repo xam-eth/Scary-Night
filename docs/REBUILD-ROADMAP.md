@@ -245,6 +245,25 @@ keep, banner 900/1100/1400, cap doorBonus 0.6, biaya null di level max) →
 (builder 3/3 WIN stars 3); survival-map 230/230. Rantai penuh:
 `qa-evidence/phase3-sim-buildings/README.md`.
 
+## Pass BUILD 27 — horde benar-benar tegak (kelanjutan BUILD 26, 2026-10-22)
+
+**Pesan user:** "musuh masih belum d fix, coba kamu screenshot dan liat dengan
+vision". Screenshot gameplay (tools/survival-look) membuktikan: rig probe
+tegak, tapi horde in-game masih "jalan baring" — akar masalahnya bukan di rig
+saja: fix BUILD 26 menaruh konversi sumbu pack di **root template**, padahal
+tiga pemakai me-nol-kan root sebelum memakai rig — `crowd3d.bakeKind` (bake
+atlas VAT yang justru dipakai horde in-game), facing per-frame `enemy3d`
+(`rotation.x=0; rotation.y=…`), dan `enemy3d._bakePreview`. Akibatnya bake
+menggambar horde berbaring dan slot live kehilangan orientasinya.
+**Fix:** konversi sumbu pindah ke node anak menengah (`zombi-variant-N-orient`)
+di bawah root yang netral, sehingga me-nol-kan / yaw root tidak bisa
+membuang pose tegak lagi. Pin glbtest diperluas: root harus netral DAN klon
+dengan root dinolkan tetap tegak. Screenshot sesudah fix: zombie march/serang
+tegak membungkuk menghadap dinding; badan berbaring yang tersisa hanya mayat
+(guard tumbang di menara/dinding, zombie mati di atas dinding) — dimaksudkan.
+Stamp dinaikkan ke BUILD 27 / duskhold-v27 supaya device user menarik bundle
+baru. Rantai penuh: `qa-evidence/survival-build27/`.
+
 ## Pass BUILD 21 — empat bug visual dari user (2026-10-19)
 
 **Pesan user:** "disini ada beberapa bug yg harus di fix sebelum lanjut dev yg lain. 1. pasukan perlu di redesign karna tidak singkron dengan character buat pasukan baru, 2. animasi shoter tidak tepat kelarnya dari bawah kali bukan laras panah, 3. animasi character jalan nya terlalu lambat, sedang di tahap build itu lari tapi saat bertempur animasinya walk, harusnya run, 4. nimes juga perlu di redesign dengan visual yg lebih konsisten dengan tema game". Keempatnya dikerjakan dulu sebelum item riset berikutnya.
