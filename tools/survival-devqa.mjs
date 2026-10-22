@@ -215,6 +215,11 @@ try {
   // ---------------- guards + pooling ----------------
   const shots0 = await page.evaluate(() => {
     const g = window.__LN;
+    // BUILD 17: a fresh save plays Siege 1, whose first wave (11 bodies of 28
+    // HP, one captain shot each) is over in ~19 shots: too few to exercise
+    // the pool. This scenario plays Siege 3 (BUILD 16's horde); the tower
+    // section below goes back to Siege 1.
+    g.survival._setSiege(3);
     g.survival.restart();
     // the captain holds the gate wave 1 claws (K1 bailey: Night 1 opens at
     // the north gate, across the bailey from the camera). BUILD 10: a shut
@@ -287,6 +292,7 @@ try {
   const towerDay = await page.evaluate(() => {
     const g = window.__LN;
     const m = g.survival;
+    m._setSiege(1);   // back to the fresh save's siege (the pool played Siege 3)
     m.restart();
     m.phase = 'night'; m.completeNight(); m.ackRewards();
     m.gold = 200; m.wood = 200;
@@ -475,12 +481,16 @@ try {
     const cap = m.cineCaption();
     return {
       cine: at0, t: m.cine && +m.cine.t.toFixed(2), elapsed: [+elapsed0.toFixed(2), +m.elapsed.toFixed(2)], horde: swarm1.length, still,
+      siege: m.siege, wave1: m.waveCounts()[0],
       closeUp: +(g.renderer.cam.zoom / playZoom).toFixed(2), caption: cap && cap.title, labels: g.ui.map((u) => u.label),
       panel: g.uiPanel, gameplay: g.input.gameplay, stick: !g.input.buttons.interact.hidden, introSeen: !!g.save.survival.introSeen,
     };
   });
-  check('cine: a fresh save opens on the K1 intro — keep close-up, captioned, the clock and the horde wait, no HUD but SKIP',
-    opening.cine && opening.cine.kind === 'intro' && opening.t > 0.8 && opening.elapsed[0] === opening.elapsed[1] && opening.horde >= 21 && opening.still
+  // (BUILD 17: a fresh save is Siege 1, so the horde at the gate is its first
+  // wave of 11; BUILD 16 checked for its 21)
+  check('cine: a fresh save opens on the K1 intro — keep close-up, captioned, the clock and the horde (Siege 1\'s whole first wave) wait, no HUD but SKIP',
+    opening.cine && opening.cine.kind === 'intro' && opening.t > 0.8 && opening.elapsed[0] === opening.elapsed[1]
+      && opening.siege === 1 && opening.wave1 === 11 && opening.horde >= opening.wave1 && opening.still
       && opening.closeUp > 1.25 && opening.caption === 'PROTECT THE KEEP' && opening.labels.length === 1 && opening.labels[0] === 'survival:SKIP'
       && opening.panel === 'survival-cine' && !opening.gameplay && !opening.stick && opening.introSeen, opening);
   await cine.touchscreen.tap(422, 195);

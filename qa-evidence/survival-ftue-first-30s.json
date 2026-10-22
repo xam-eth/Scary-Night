@@ -1,6 +1,6 @@
 {
   "title": "Survival FTUE — first 30 playable seconds",
-  "capturedAt": "2026-10-18T10:44:51.190Z",
+  "capturedAt": "2026-10-22T03:25:26.512Z",
   "viewport": {
     "width": 390,
     "height": 844,
@@ -24,20 +24,18 @@
         "elapsed": 0.2,
         "duration": 72,
         "resources": {
-          "gold": 38,
-          "wood": 26
+          "gold": 52,
+          "wood": 38
         },
         "ui": [
-          "PAUSE",
-          "survival:ZOOM IN",
-          "survival:ZOOM OUT"
+          "PAUSE"
         ],
         "coach": false,
         "narration": false,
         "swarm": 0,
         "riggedCrowd": 0,
         "proxyCrowd": 0,
-        "keepHp": 600,
+        "keepHp": 840,
         "keepMesh": true,
         "banner": {
           "visible": true,
@@ -80,20 +78,18 @@
         "elapsed": 15,
         "duration": 72,
         "resources": {
-          "gold": 38,
-          "wood": 26
+          "gold": 53,
+          "wood": 38
         },
         "ui": [
-          "PAUSE",
-          "survival:ZOOM IN",
-          "survival:ZOOM OUT"
+          "PAUSE"
         ],
         "coach": false,
         "narration": false,
-        "swarm": 21,
+        "swarm": 9,
         "riggedCrowd": 0,
-        "proxyCrowd": 21,
-        "keepHp": 600,
+        "proxyCrowd": 9,
+        "keepHp": 840,
         "keepMesh": true,
         "banner": {
           "visible": true,
@@ -112,7 +108,7 @@
         "curtainRun": 6314,
         "curtainSlots": 132,
         "renderMode": "webgl-3d",
-        "hordeDrawn": 21,
+        "hordeDrawn": 9,
         "hordeKinds": [
           "zombie",
           "crawler",
@@ -121,8 +117,8 @@
         "primitiveCrowd": 0
       },
       "luma": {
-        "meanLuma": 89.1,
-        "darkPct": 7.1
+        "meanLuma": 81.2,
+        "darkPct": 5.5
       }
     },
     {
@@ -140,20 +136,18 @@
         "elapsed": 30,
         "duration": 72,
         "resources": {
-          "gold": 38,
-          "wood": 26
+          "gold": 55,
+          "wood": 38
         },
         "ui": [
-          "PAUSE",
-          "survival:ZOOM IN",
-          "survival:ZOOM OUT"
+          "PAUSE"
         ],
         "coach": false,
         "narration": false,
-        "swarm": 36,
+        "swarm": 27,
         "riggedCrowd": 0,
-        "proxyCrowd": 36,
-        "keepHp": 600,
+        "proxyCrowd": 27,
+        "keepHp": 840,
         "keepMesh": true,
         "banner": {
           "visible": true,
@@ -172,7 +166,7 @@
         "curtainRun": 6314,
         "curtainSlots": 132,
         "renderMode": "webgl-3d",
-        "hordeDrawn": 38,
+        "hordeDrawn": 27,
         "hordeKinds": [
           "zombie",
           "crawler",
@@ -186,7 +180,7 @@
     "clicked": true,
     "queued": 2,
     "level": 2,
-    "hp": "900/900",
+    "hp": "1260/1260",
     "before": 1,
     "after": 2,
     "roomsBefore": 9,
