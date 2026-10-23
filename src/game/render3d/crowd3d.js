@@ -34,9 +34,9 @@ import { EnvKit } from './envkit.js';
 
 /** Which rigs the horde is made of, and how much of it each one is (%). */
 export const CROWD_KINDS = Object.freeze([
-  Object.freeze({ key: 'shambler', share: 58, height: 76, hover: 0 }),
-  Object.freeze({ key: 'lurcher', share: 26, height: 62, hover: 0 }),
-  Object.freeze({ key: 'wretch', share: 16, height: 72, hover: 0 }),
+  Object.freeze({ key: 'shambler', share: 58, height: 53, hover: 0 }), // build 28: 76 * KAYKIT_CAST_SCALE (heights are multiplied by actorScale 1.6 at sync)
+  Object.freeze({ key: 'lurcher', share: 26, height: 43, hover: 0 }), // build 28: 62 * KAYKIT_CAST_SCALE
+  Object.freeze({ key: 'wretch', share: 16, height: 50, hover: 0 }), // build 28: 72 * KAYKIT_CAST_SCALE
 ]);
 /** Clips baked per kind (names resolve through ENEMY_MODELS[key].map). */
 const BAKE = Object.freeze([

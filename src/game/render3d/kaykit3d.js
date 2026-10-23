@@ -149,14 +149,22 @@ export const People3D = {
     if (this._promise) return this._promise;
     this._promise = Promise.all(Object.entries(KAYKIT_HERO_URLS).map(async ([name, url]) => {
       const gltf = await load(url);
-      const root = gltf.scene;
-      root.updateMatrixWorld(true);
-      const box = new THREE.Box3().setFromObject(root);
+      const raw = gltf.scene;
+      raw.updateMatrixWorld(true);
+      const box = new THREE.Box3().setFromObject(raw);
       const height = Math.max(0.001, box.max.y - box.min.y);
-      // pack3d contract: people stand 1 unit tall with feet on y = 0
-      root.scale.setScalar(1 / height);
-      root.position.y = -box.min.y / height;
+      // pack3d contract: people stand 1 unit tall with feet on y = 0.
+      // CRITICAL (build 28 size bug, user: "size sangat tidak tepat"): the
+      // consumers (troop3d/valen3d) OVERWRITE model.scale with their own
+      // heightPx factor, so the 1/h normalisation must NOT live on the node
+      // they scale — pack3d baked it into geometry for the egyptian pack;
+      // here a wrapper group carries it instead, or every hero drew 2.4x
+      // too tall (the keep-plaza giants the user saw).
+      const root = new THREE.Group();
       root.name = `kaykit-hero-${name}`;
+      raw.scale.setScalar(1 / height);
+      raw.position.y = -box.min.y / height;
+      root.add(raw);
       this.people.set(name, { root, clips: renamedClips(gltf.animations, HERO_CLIP_SRC) });
     })).then(() => {
       this.ready = true;
