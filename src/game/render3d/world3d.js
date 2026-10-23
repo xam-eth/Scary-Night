@@ -6,7 +6,7 @@
  */
 import * as THREE from '../../vendor/three/three.module.min.js';
 import { ISO_CAMERA, clamp, visualAngle } from '../../core/util.js';
-import { EnvKit, PIECE_METRES, PX_PER_METRE, SURVIVAL_ACTOR_SCALE, VALEN_METRES } from './envkit.js';
+import { EnvKit, PIECE_METRES, PX_PER_METRE, SURVIVAL_ACTOR_SCALE, VALEN_METRES, KAYKIT_CAST_SCALE } from './envkit.js';
 import { Valen3D } from './valen3d.js';
 import { Enemy3D, ENEMY_HEIGHT } from './enemy3d.js';
 import { Troop3D } from './troop3d.js';
@@ -2590,7 +2590,7 @@ class World3DRuntime {
   _dressSurvivalGuard(mesh) {
     const ud = mesh.userData;
     if (ud.troop || !Troop3D.ready) return ud.troop;
-    const troop = Troop3D.make('guard', GUARD_TROOP_HEIGHT * SURVIVAL_ACTOR_SCALE);
+    const troop = Troop3D.make('guard', GUARD_TROOP_HEIGHT * SURVIVAL_ACTOR_SCALE * KAYKIT_CAST_SCALE);
     if (!troop) return null;
     ud.troop = troop;
     mesh.add(troop.model);
@@ -2767,7 +2767,7 @@ class World3DRuntime {
   _makeReliefTroop(role) {
     const group = new THREE.Group();
     group.name = `survival-relief-troop-${role}`;
-    const troop = Troop3D.make(role === 'banner' ? 'bearer' : 'soldier', GUARD_TROOP_HEIGHT * SURVIVAL_ACTOR_SCALE);
+    const troop = Troop3D.make(role === 'banner' ? 'bearer' : 'soldier', GUARD_TROOP_HEIGHT * SURVIVAL_ACTOR_SCALE * KAYKIT_CAST_SCALE);
     if (!troop) return null;
     group.add(troop.model);
     let flag = null;

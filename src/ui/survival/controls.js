@@ -6,45 +6,10 @@ import { drawSurvivalIcon, drawLabel, drawPanel, INK } from '../survivalIcons.js
 import { TAU, clock, addHit, BUTTON_COLORS, zoomButtonLayout, recenterChipBox } from './shared.js';
 
 export function drawZoomButtons(game, ctx, w, h) {
-  const mode = game.survival;
-  if (!mode || mode.cine || typeof mode.zoomStep !== 'function') return;
-  const L = zoomButtonLayout(w, h);
-  const [lo, hi] = SURVIVAL_CAMERA.zoom;
-  const goal = mode.zoomGoal();
-  for (const row of [
-    { id: 'ZOOM IN', at: L.zoomIn, dir: 1, end: goal >= hi - 1e-3 },
-    { id: 'ZOOM OUT', at: L.zoomOut, dir: -1, end: goal <= lo + 1e-3 },
-  ]) {
-    const { x, y } = row.at;
-    const r = L.r;
-    addHit(game, { x: x - r - 4, y: y - r - 4, w: r * 2 + 8, h: r * 2 + 8 }, row.id, () => mode.zoomStep(row.dir));
-    ctx.save();
-    ctx.globalAlpha = row.end ? 0.45 : 0.94;
-    ctx.beginPath();
-    ctx.arc(x, y + 3, r, 0, TAU);
-    ctx.fillStyle = 'rgba(20,16,40,0.45)';
-    ctx.fill();
-    const g = ctx.createLinearGradient(0, y - r, 0, y + r);
-    g.addColorStop(0, '#ffffff');
-    g.addColorStop(1, '#dde4ff');
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, TAU);
-    ctx.fillStyle = g;
-    ctx.fill();
-    ctx.lineWidth = 2.5;
-    ctx.strokeStyle = INK;
-    ctx.stroke();
-    // the glyph: a fat plus / minus in ink
-    ctx.lineCap = 'round';
-    ctx.lineWidth = Math.max(3, r * 0.22);
-    ctx.strokeStyle = '#2a2350';
-    const k = r * 0.46;
-    ctx.beginPath();
-    ctx.moveTo(x - k, y); ctx.lineTo(x + k, y);
-    if (row.dir > 0) { ctx.moveTo(x, y - k); ctx.lineTo(x, y + k); }
-    ctx.stroke();
-    ctx.restore();
-  }
+  // BUILD 28 (user 2026-10-23: "hapus _+ zoom icon pada game"): the on-screen
+  // + / - discs are gone. Pinch anywhere, the mouse wheel and the + / - keys
+  // remain the zoom paths (input.js); nothing registers a hit here anymore.
+  return;
 }
 
 /**

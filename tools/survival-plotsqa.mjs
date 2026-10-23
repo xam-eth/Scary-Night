@@ -218,29 +218,27 @@ const pinchAny = await page.evaluate(() => {
 check('camera: two fingers anywhere pinch (one each side: zoom out; both on the stick side: zoom in) and the captain stays put',
   pinchAny.split.z1 < pinchAny.split.z0 * 0.8 && pinchAny.left.z1 > pinchAny.left.z0 * 1.2 && pinchAny.split.moved < 4 && pinchAny.left.moved < 4 && !pinchAny.left.stick, pinchAny);
 await reset();
-// the + / - buttons on the right edge, and the + / - keys
+// BUILD 28 (user 2026-10-23: "hapus _+ zoom icon pada game"): the discs are
+// gone from the HUD; the + / - keys (and pinch above) remain the zoom paths
 const buttons = await page.evaluate(() => {
   const g = window.__LN; const m = g.survival;
   window.__pStep(2);
-  const pick = (label) => { const u = g.ui.find((item) => item.label === label); return u ? { x: u.x, y: u.y, w: u.w, h: u.h } : null; };
-  return { zin: pick('survival:ZOOM IN'), zout: pick('survival:ZOOM OUT'), w: g.renderer.w, h: g.renderer.h, z0: m.userZoom() };
+  const pick = (label) => g.ui.find((item) => item.label === label) || null;
+  return { zin: pick('survival:ZOOM IN'), zout: pick('survival:ZOOM OUT'), z0: m.userZoom() };
 });
 let zoomSteps = null;
-if (buttons.zin && buttons.zout) {
-  await page.touchscreen.tap(buttons.zin.x + buttons.zin.w / 2, buttons.zin.y + buttons.zin.h / 2);
-  const zIn = await page.evaluate(() => { window.__pStep(40); return window.__LN.survival.userZoom(); });
-  await page.touchscreen.tap(buttons.zout.x + buttons.zout.w / 2, buttons.zout.y + buttons.zout.h / 2);
-  await page.evaluate(() => window.__pStep(40));
-  await page.touchscreen.tap(buttons.zout.x + buttons.zout.w / 2, buttons.zout.y + buttons.zout.h / 2);
-  const zOut = await page.evaluate(() => { window.__pStep(40); return window.__LN.survival.userZoom(); });
+if (!buttons.zin && !buttons.zout) {
   await page.keyboard.press('Equal');
-  const zKey = await page.evaluate(() => { window.__pStep(40); return window.__LN.survival.userZoom(); });
+  const zIn = await page.evaluate(() => { window.__pStep(40); return window.__LN.survival.userZoom(); });
+  await page.keyboard.press('Minus');
+  await page.evaluate(() => window.__pStep(40));
+  await page.keyboard.press('Minus');
+  const zOut = await page.evaluate(() => { window.__pStep(40); return window.__LN.survival.userZoom(); });
   const moved = await page.evaluate(() => Math.round(window.__LN.survival.cameraOffset()));
-  zoomSteps = { zIn: +zIn.toFixed(3), zOut: +zOut.toFixed(3), zKey: +zKey.toFixed(3), offset: moved };
+  zoomSteps = { zIn: +(zIn / buttons.z0).toFixed(3), zOut: +(zOut / zIn).toFixed(3), offset: moved };
 }
-check('camera: + / - on the right edge (between the counters and the thumb corner) zoom a step each, eased; the + key too',
-  zoomSteps && Math.abs(zoomSteps.zIn - 1.35) < 0.01 && Math.abs(zoomSteps.zOut - 1 / 1.35) < 0.01 && Math.abs(zoomSteps.zKey - 1) < 0.01
-    && buttons.zin.x > buttons.w - 70 && buttons.zin.y > 120 && buttons.zout.y + buttons.zout.h < buttons.h - 96,
+check('camera: the + / - icons are removed (user 2026-10-23) and the + / - keys still zoom a step each, eased',
+  zoomSteps && Math.abs(zoomSteps.zIn - 1.35) < 0.01 && Math.abs(zoomSteps.zOut - 1 / 1.35) < 0.01,
   { ...buttons, steps: zoomSteps });
 await reset();
 // a flick glides on after the finger lifts, then stops

@@ -84,9 +84,9 @@ const BOW_BONE = Object.freeze({
  *  peasant bone for the ghoul line, ash for the runner, cold bog for the
  *  caster. The authored 'Glow' eye material stays untouched (night read). */
 const HORDE_BONE_TINT = Object.freeze({
-  shambler: 0xd9e6c3,
-  lurcher: 0xd9d6c9,
-  wretch: 0xcfe0da,
+  shambler: 0xe9f2d6,
+  lurcher: 0xe8e4d8,
+  wretch: 0xe0ece6,
 });
 
 let _loader = null;

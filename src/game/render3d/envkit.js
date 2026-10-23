@@ -72,6 +72,13 @@ export const PX_PER_METRE = pxPerMetre(ISO_CAMERA.tilt);
  */
 export { SURVIVAL_ACTOR_SCALE } from '../../core/config.js';
 
+/** BUILD 28 (user 2026-10-23: "size sangat besar untuk character dan pasukan
+ *  nya"): the KayKit family is chibi-proportioned — same standing height as
+ *  the retired slim packs reads roughly a third bulkier in the bailey. Every
+ *  cast height (captain, garrison, horde) is multiplied by this so the visual
+ *  mass, not the metre stick, matches what BUILD 27 tuned. */
+export const KAYKIT_CAST_SCALE = 0.75;
+
 /**
  * WHAT EVERYTHING IS, IN METRES.
  *
