@@ -1,0 +1,37 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.zyvrolabs.duskhold.device'
+    compileSdk 35
+    // use the SDK the owner already installed (sdkmanager build-tools;35.0.1)
+    buildToolsVersion '35.0.1'
+
+    defaultConfig {
+        // .device suffix: sideloadable next to the Play build (com.zyvrolabs.duskhold)
+        applicationId 'com.zyvrolabs.duskhold.device'
+        minSdk 23
+        targetSdk 35
+        versionCode 27
+        versionName '27'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildTypes {
+        release {
+            minify false
+        }
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    // WebViewAssetLoader: serves the bundled game over a virtual https origin
+    // so ES modules, fetch() and WebGL all behave like on a real host.
+    implementation 'androidx.webkit:webkit:1.11.0'
+}

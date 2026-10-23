@@ -24,3 +24,8 @@ android/*
 !android/README.md
 !android/upload-fingerprint.txt
 dist-play/
+
+# device-test wrapper build artifacts (tools/android-install.sh)
+android-device/app/src/main/assets/
+android-device/app/build/
+android-device/.gradle/

@@ -1,0 +1,5 @@
+// DUSKHOLD device-test wrapper (tools/android-install.sh). AGP 8.5.x needs a
+// JDK 17 and compileSdk 35 — both probed by the script before Gradle runs.
+plugins {
+    id 'com.android.application' version '8.5.2' apply false
+}

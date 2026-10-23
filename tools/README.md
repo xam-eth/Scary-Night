@@ -8,6 +8,7 @@ Satu pintu QA: `bash tools/chain.sh` (Fase 2 direname `tools/chain.sh`)
 
 | Tool | Mengukur |
 | --- | --- |
+| android-install.sh | pack game jadi APK WebView offline (project `android-device/`) + `adb install` + launch ke device tersambung; flag `--pack-only/--skip-build/--dry/--twa`; kunci upload Play tidak disentuh |
 | harness.mjs | simulasi headless 3 malam + 103 check kontrak (balance, save, gelombang, B13–B25, F2-seam `sim/waves.js` + `ui/screens` + `sim/buildings.js`, F3-seam `ui/survival`) |
 | survival-plotsqa.mjs | 37 check in-browser (kamera, HUD, chain B22, garrison B24) + shot evidence |
 | survival-devqa.mjs | gate dev-server & boot |

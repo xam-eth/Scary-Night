@@ -1,0 +1,8 @@
+<resources>
+    <style name="Theme.Duskhold" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowBackground">#05060b</item>
+        <item name="android:navigationBarColor">#05060b</item>
+        <item name="android:statusBarColor">#05060b</item>
+    </style>
+</resources>
