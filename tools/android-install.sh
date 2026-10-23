@@ -58,6 +58,9 @@ die() { printf '\n  FAIL  %s\n' "$*" >&2; exit 1; }
 
 # ---------------------------------------------------------------- 0/5 probes
 say "0/5  this machine"
+HEADH="$(git -C "$ROOT" log -1 --format='%h %s' 2>/dev/null | cut -c1-60 || echo 'not a git tree')"
+echo "  repo HEAD: $HEADH"
+grep -q "kotlin-bom" "$ROOT/android-device/app/build.gradle" 2>/dev/null   || echo "  WARN  android-device/app/build.gradle has no kotlin-bom — this tree is OLDER than the duplicate-class fix; git pull the branch arena/d4f2fdce-scary-night first"
 ADB=""
 if [ "$PACK_ONLY" = 1 ]; then
   echo "  pack-only: skipping adb/JDK/Gradle probes"

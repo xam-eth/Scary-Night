@@ -17,6 +17,17 @@ android {
         versionName '27'
     }
 
+    // Belt for the kotlin-stdlib split (see the bom above): force every
+    // kotlin-stdlib artifact to ONE version whatever any androidx pin says,
+    // so checkDebugDuplicateClasses can never see 1.6.21 jars next to 1.8.x.
+    configurations.all {
+        resolutionStrategy {
+            force 'org.jetbrains.kotlin:kotlin-stdlib:1.8.22'
+            force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22'
+            force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22'
+        }
+    }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
