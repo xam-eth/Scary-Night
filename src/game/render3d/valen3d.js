@@ -11,7 +11,9 @@ import * as THREE from '../../vendor/three/three.module.min.js';
 // BUILD 24: the captain now wears the user's own pack (the egyptian
 // Commander, auto-rigged + procedurally animated by src/game/pack3d.js).
 // The export name stays for every contract that checks it.
-import { People3D, PEOPLE_MODEL_URL, PEOPLE_ROLES } from './pack3d.js';
+// BUILD 28: the captain is the KayKit Knight (CC0) — see kaykit3d.js for the
+// visual-sync research that retired the egyptian pack from gameplay.
+import { People3D, PEOPLE_MODEL_URL, PEOPLE_ROLES } from './kaykit3d.js';
 export const VALEN_MODEL_URL = PEOPLE_MODEL_URL;
 export const VALEN_CLIPS = Object.freeze({
   idle: null,       // bind/rest pose — this rig has no idle clip

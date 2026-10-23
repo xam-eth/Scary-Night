@@ -264,6 +264,56 @@ tegak membungkuk menghadap dinding; badan berbaring yang tersisa hanya mayat
 Stamp dinaikkan ke BUILD 27 / duskhold-v27 supaya device user menarik bundle
 baru. Rantai penuh: `qa-evidence/survival-build27/`.
 
+## Pass BUILD 28 — cast singkron dengan dunia (KayKit CC0, 2026-10-23)
+
+**Pesan user:** setelah APK terpasang di Infinix X6881, "game masih harus terus
+di debug terutama character dan enemies saya merasa dunia dan character type
+nya tidak singkron kurang tepat, coba research dan pelajari dunia nya visual
+nya secara langsung dan perhatikan object character dan enemies nya QA
+screenshot gunakan vision untuk liat hasilnya secara real".
+
+**Audit + riset (commit `ad17483`, `5c961fe`):** audit vision
+(qa-evidence/visual-sync-audit/) mengukur desync: dunia koheren (bailey
+medieval stylized terang), tapi hero = pack Mesir kuno dan horde = zombie kota
+modern; palet desaturasi membuat karakter tampak seperti bidak pucat di zoom
+gameplay. Prototipe lineup (tools/probe-cast-candidates.mjs,
+qa-evidence/cast-research/) membandingkan cast lama dengan kandidat CC0 di
+satu cahaya netral + cahaya siang dunia; user memilih adopt_kaykit setelah
+melihat lineup.
+
+**Implementasi:**
+- `src/game/render3d/kaykit3d.js` (baru): satu keluarga KayKit CC0 — hero
+  Knight/Rogue/Barbarian/Rogue_Hooded (kapten/pemanah/guard melee/pembawa
+  panji) dan horde Skeleton_Minion/Rogue/Mage (shambler/lurcher/wretch).
+  Clip authored di-rename ke nama pendek game (walk/run/shot/claw/sword/
+  attack/die/idle + spawn), socket senjata `handslot.l/r` dipakai untuk busur
+  pasukan, tint tulang per jenis horde mengikuti palet konsep (tulang
+  pucat-hijau petani undead, abu pelari, rawa dingin caster); mata Glow
+  dibiarkan untuk keterbacaan malam.
+- Konsumen pindah seam tipis: valen3d (kapten), troop3d (garnisun + bowBone
+  dari socket pack), enemy3d (dispatch `kk-*` ke KayKitHorde; map identitas).
+  pack3d/zombipack3d tetap hidup sebagai pool + probe, tidak dipakai gameplay.
+- Provenance: 6 GLB baru + LICENSE-Skeletons.txt di-vendor byte-for-byte di
+  assets/troops/kaykit/ dengan SHA-256 di CREDITS.txt (commit sumber
+  Adventures 672074b, Skeletons 15b62b9); android-install.sh tidak lagi
+  mengirim pack Mesir/polyart ke APK (hemat ±30 MB).
+- Gate di-update ke wiring baru: glbtest (registry + kontrak clip hero +
+  crowd VAT), harness (B24→B28 kapten/garnisun, B25→B28 horde/crowd/slotbook).
+
+**Bukti vision (qa-evidence/survival-build28/):** ingame-night.png — horde
+skeleton menekan gerbang malam, tegak di tangga, tulang pucat + mata glow
+terbaca di gelap; ingame-closeup.png — guard Barbarian bear-hood di siang
+hari satu keluarga saturasi dengan props/bendera; ingame-day.png +
+ingame-overview.png — dunia tetap koheren. survival-look errors 0.
+glbtest all PASS; harness 102 PASS / 0 FAIL.
+
+**Masih terbuka:** konfirmasi user di perangkat (BUILD 28 di HUD + rasa cast
+baru); frame time horde KayKit di HP kelas bawah; kapten kehilangan tint
+banner tabard (uniform grade egyptian tidak dipakai lagi untuk Knight —
+banner hex tersimpan, efek visual dorman); proporsi chibi vs PNG konsep
+realistis diputuskan sadar (dunia chunky + readability zoom gameplay),
+konsep tetap rujukan palet/narasi.
+
 ## Pass BUILD 21 — empat bug visual dari user (2026-10-19)
 
 **Pesan user:** "disini ada beberapa bug yg harus di fix sebelum lanjut dev yg lain. 1. pasukan perlu di redesign karna tidak singkron dengan character buat pasukan baru, 2. animasi shoter tidak tepat kelarnya dari bawah kali bukan laras panah, 3. animasi character jalan nya terlalu lambat, sedang di tahap build itu lari tapi saat bertempur animasinya walk, harusnya run, 4. nimes juga perlu di redesign dengan visual yg lebih konsisten dengan tema game". Keempatnya dikerjakan dulu sebelum item riset berikutnya.

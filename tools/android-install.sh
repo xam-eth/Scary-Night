@@ -158,10 +158,11 @@ mkdir -p "$ASSETS/server"
 cd "$ROOT"
 cp index.html styles.css sw.js offline.html privacy.html manifest.webmanifest "$ASSETS/"
 cp -r src assets "$ASSETS/"
-cp egyptian_people.glb werewolf-3d-model.glb polyart_zombies_with_animations_free_pack.glb \
-   hunter_run_walk_claw_sword_shot.glb zombie+3d+model.glb "$ASSETS/"
+# BUILD 28: the egyptian people + polyart zombie packs retired from gameplay
+# (kept in the repo as pool); the KayKit family ships inside assets/troops/kaykit
+cp werewolf-3d-model.glb hunter_run_walk_claw_sword_shot.glb zombie+3d+model.glb "$ASSETS/"
 cp server/catalog.json "$ASSETS/server/"
-for need in index.html src/main.js assets egyptian_people.glb polyart_zombies_with_animations_free_pack.glb server/catalog.json; do
+for need in index.html src/main.js assets assets/troops/kaykit/Knight.glb server/catalog.json; do
   [ -e "$ASSETS/$need" ] || die "asset copy incomplete: $need missing from $ASSETS"
 done
 STAMP="$(grep -o "DUSKHOLD_BUILD = '[0-9]*'" "$ASSETS/index.html" | head -1)"

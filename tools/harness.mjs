@@ -2849,12 +2849,12 @@ async function runSurvivalMilestone() {
     };
     const { TROOP_PALETTE, TROOP_ASSETS } = await import('../src/game/render3d/troop3d.js');
     const { UNIFORM_GRADE_PALETTE, VALEN_MODEL_URL } = await import('../src/game/render3d/valen3d.js');
-    const { People3D, PEOPLE_ROLES, PEOPLE_MODEL_URL } = await import('../src/game/render3d/pack3d.js');
-    b23Check('B24: the garrison and the captain are DIFFERENT characters from the user\'s pack (egyptian_people.glb) — captain=Commander, bowman=King, melee guard=Warrior, bearer=Resident — no clone of one GLB',
-      PEOPLE_MODEL_URL === './egyptian_people.glb' && VALEN_MODEL_URL === PEOPLE_MODEL_URL
+    const { People3D, PEOPLE_ROLES, PEOPLE_MODEL_URL } = await import('../src/game/render3d/kaykit3d.js');
+    b23Check('B28: the garrison and the captain are DIFFERENT characters from the KayKit CC0 family — captain=Knight, bowman=Rogue, melee guard=Barbarian, bearer=Rogue_Hooded — no clone of one GLB',
+      PEOPLE_MODEL_URL === 'assets/troops/kaykit/Knight.glb' && VALEN_MODEL_URL === PEOPLE_MODEL_URL
         && TROOP_ASSETS.soldier === PEOPLE_MODEL_URL
-        && PEOPLE_ROLES.captain === 'Commander' && PEOPLE_ROLES.soldier === 'King'
-        && PEOPLE_ROLES.melee === 'Warrior' && PEOPLE_ROLES.bearer === 'Resident'
+        && PEOPLE_ROLES.captain === 'Knight' && PEOPLE_ROLES.soldier === 'Rogue'
+        && PEOPLE_ROLES.melee === 'Barbarian' && PEOPLE_ROLES.bearer === 'Rogue_Hooded'
         && typeof People3D.make === 'function' && typeof People3D.stage === 'function',
       `captain ${PEOPLE_ROLES.captain} vs bowman ${PEOPLE_ROLES.soldier} vs melee ${PEOPLE_ROLES.melee} vs bearer ${PEOPLE_ROLES.bearer}, all from ${PEOPLE_MODEL_URL}`);
     b23Check('B24: the pack keeps its painted textures (grade recolour off) and the garrison palette survives for rim/lift + QA identity, distinct from the captain\'s royal',
@@ -2877,24 +2877,24 @@ async function runSurvivalMilestone() {
       console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name} — ${detail}`);
     };
     const { ENEMY_MODELS: EM, SURVIVAL_HORDE_ALIAS: ALIAS, SlotBook: SB, requiredClips: rc } = await import('../src/game/render3d/enemy3d.js');
-    const { ZOMBI_KINDS: ZK, ZOMBI_PACK_URL: ZURL, ZombiPack3D: ZP } = await import('../src/game/render3d/zombipack3d.js');
+    const { KAYKIT_HORDE_KINDS: KK, KayKitHorde: KH } = await import('../src/game/render3d/kaykit3d.js');
     const { CROWD_KINDS: CK } = await import('../src/game/render3d/crowd3d.js');
-    b25Check('B25: the survival horde is the user\'s zombie pack — three variant kinds wired (shambler/lurcher/wretch), the sim keys alias at the render layer only, and the legacy ultimate roster stays intact',
-      ['shambler', 'lurcher', 'wretch'].every((key) => EM[key] && EM[key].pack === key && EM[key].url === ZURL
-        && EM[key].map.walk === 'Take 001' && EM[key].map.attack === 'pack-attack' && EM[key].map.die === 'pack-die')
+    b25Check('B28: the survival horde is the KayKit skeleton family (CC0) — three kinds wired (shambler/lurcher/wretch), the sim keys alias at the render layer only, and the legacy ultimate roster stays intact',
+      ['shambler', 'lurcher', 'wretch'].every((key) => EM[key] && EM[key].pack === `kk-${key}`
+        && EM[key].map.walk === 'walk' && EM[key].map.attack === 'attack' && EM[key].map.die === 'die')
         && ALIAS.zombie === 'shambler' && ALIAS.crawler === 'lurcher' && ALIAS.ghoul === 'wretch'
         && EM.zombie.url === './assets/monsters/ultimate/demon.glb'
         && rc('shambler').join(',') === 'walk,attack,die'
-        && ZK.length === 3 && new Set(ZK.map((k) => k.variant)).size === 3
-        && typeof ZP.stage === 'function' && typeof ZP.forKind === 'function',
-      `kinds ${ZK.map((k) => `${k.key}=variant ${k.variant}`).join(', ')} from ${ZURL}`);
+        && KK.length === 3 && new Set(KK.map((k) => k.file)).size === 3
+        && typeof KH.stage === 'function' && typeof KH.forKind === 'function',
+      `kinds ${KK.map((k) => `${k.key}=${k.file}`).join(', ')} (KayKit CC0)`);
     const aliasBook = new SB(4);
     aliasBook.sync([{ id: 1, key: 'zombie' }, { id: 2, key: 'crawler' }, { id: 3, key: 'ghoul' }, { id: 4, key: 'werewolf' }],
       (key) => ALIAS[key] || key);
-    b25Check('B25: the VAT crowd fields exactly the three pack kinds (shares sum to 100, no hover on the grounded bodies) and the slot book aliases the horde keys while every other role stays itself',
+    b25Check('B28: the VAT crowd fields exactly the three KayKit horde kinds (shares sum to 100, no hover on the grounded bodies) and the slot book aliases the horde keys while every other role stays itself',
       CK.map((k) => k.key).join(',') === 'shambler,lurcher,wretch'
         && CK.reduce((sum, k) => sum + k.share, 0) === 100
-        && CK.every((k) => k.hover === 0 && EM[k.key] && EM[k.key].pack === k.key)
+        && CK.every((k) => k.hover === 0 && EM[k.key] && EM[k.key].pack === `kk-${k.key}`)
         && aliasBook.live.map((slot) => slot.type).sort().join(',') === 'lurcher,shambler,werewolf,wretch',
       `crowd ${CK.map((k) => `${k.key} ${k.share}%`).join(' / ')}, slots ${aliasBook.live.map((slot) => slot.type).sort().join(',')}`);
     b25Pass = b25Checks.length === 2 && b25Checks.every(Boolean);
@@ -4645,7 +4645,7 @@ if (args.systems) {
   game.renderer.resize(390, 844, 1);
   const pv = game.renderer.view;
   const { selectGlbSlots, ENEMY_GLB_CAP, ENEMY_MODELS, requiredClips, SlotBook, Enemy3D, SURVIVAL_HORDE_ALIAS } = await import('../src/game/render3d/enemy3d.js');
-  const { ZOMBI_KINDS, ZOMBI_PACK_URL } = await import('../src/game/render3d/zombipack3d.js');
+  const { KAYKIT_HORDE_KINDS } = await import('../src/game/render3d/kaykit3d.js');
   const { CROWD_KINDS } = await import('../src/game/render3d/crowd3d.js');
   const { Crawler } = await import('../src/game/sim/enemies.js');
   const wallCandidates = game.mansion.solids.filter((solid) => solid.type === 'wall')
@@ -4697,18 +4697,18 @@ if (args.systems) {
     'the werewolf charges on angry and strikes on front_kick');
   line(['zombie', 'crawler', 'ghoul', 'hunter', 'stalker', 'werewolf'].every((key) => ENEMY_MODELS[key] && ENEMY_MODELS[key].url),
     'every besieger in the roster has a body wired to it');
-  // BUILD 25: the survival night's horde wears the user's zombie pack —
+  // BUILD 28: the survival night's horde wears the KayKit skeleton family —
   // render-layer alias only; the sim keys, stats and waves never change and
   // the legacy mansion roster keeps its ultimate monsters.
   line(['shambler', 'lurcher', 'wretch'].every((key) => ENEMY_MODELS[key]
-      && ENEMY_MODELS[key].pack === key && ENEMY_MODELS[key].url === ZOMBI_PACK_URL
-      && ENEMY_MODELS[key].map.attack === 'pack-attack' && ENEMY_MODELS[key].map.die === 'pack-die')
+      && ENEMY_MODELS[key].pack === `kk-${key}`
+      && ENEMY_MODELS[key].map.attack === 'attack' && ENEMY_MODELS[key].map.die === 'die')
     && SURVIVAL_HORDE_ALIAS.zombie === 'shambler' && SURVIVAL_HORDE_ALIAS.crawler === 'lurcher' && SURVIVAL_HORDE_ALIAS.ghoul === 'wretch'
     && requiredClips('shambler').join(',') === 'walk,attack,die'
-    && ZOMBI_KINDS.length === 3
+    && KAYKIT_HORDE_KINDS.length === 3
     && CROWD_KINDS.map((k) => k.key).join(',') === 'shambler,lurcher,wretch'
     && CROWD_KINDS.reduce((sum, k) => sum + k.share, 0) === 100,
-    'BUILD 25: the horde faction is the zombie pack (three variants, alias zombie/crawler/ghoul -> shambler/lurcher/wretch, synthesised attack/die mapped)');
+    'BUILD 28: the horde faction is the KayKit skeleton family (three variants, alias zombie/crawler/ghoul -> shambler/lurcher/wretch, authored attack/die mapped)');
   const aliasBook = new SlotBook(ENEMY_GLB_CAP);
   aliasBook.sync([{ id: 1, key: 'zombie' }, { id: 2, key: 'crawler' }, { id: 3, key: 'ghoul' }, { id: 4, key: 'werewolf' }],
     (key) => SURVIVAL_HORDE_ALIAS[key] || key);

@@ -32,7 +32,9 @@
 import * as THREE from '../../vendor/three/three.module.min.js';
 import { GLTFLoader } from '../../vendor/three/GLTFLoader.js';
 import { VALEN_MODEL_URL, buildUniformGrade } from './valen3d.js';
-import { People3D, PEOPLE_ROLES } from './pack3d.js';
+// BUILD 28: the garrison is the KayKit family (CC0) — kaykit3d.js mirrors the
+// pack3d surface (roles, clips renamed to the game's short names, hand slots).
+import { People3D, PEOPLE_ROLES } from './kaykit3d.js';
 
 export const TROOP_ASSETS = Object.freeze({
   soldier: VALEN_MODEL_URL,
@@ -480,9 +482,9 @@ class TroopStage {
     this.made++;
     const rig = new TroopRig(model, this.clips, kind);
     rig.loadout = TROOP_LOADOUTS[kind] || TROOP_LOADOUTS.soldier;
-    // the Warrior sculpt's right hand holds his khopesh: his garrison bow
-    // rides the left hand instead
-    rig.bowBone = role === PEOPLE_ROLES.melee ? 'L_Hand' : HAND_BONE_R;
+    // BUILD 28: KayKit rigs carry their own weapon sockets (handslot.l/r);
+    // the egyptian bone names stay as the fallback for legacy rigs.
+    rig.bowBone = person.bowBone || (role === PEOPLE_ROLES.melee ? 'L_Hand' : HAND_BONE_R);
     rig._baseY = model.position.y;
     rig._hopPx = heightPx * 0.09;
     if (rig.loadout.bow) this.arm(rig, arms);

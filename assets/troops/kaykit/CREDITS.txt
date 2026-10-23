@@ -47,4 +47,30 @@ under the GLB's node name "handslot.r", which GLTFLoader renames
   LICENSE.txt               LICENSE.txt
     sha256 ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629
 
+BUILD 28 (2026-10-23, visual-sync fix): the cast joins the art family of the
+world. Six more CC0 characters vendored byte-for-byte: three Adventurers (the
+garrison roles) and three Skeletons (the survival horde shambler/lurcher/
+wretch), wired by src/game/render3d/kaykit3d.js after the prototype lineup in
+qa-evidence/cast-research/. The Skeletons pack is a separate CC0 release:
+Source: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Skeletons-1.0
+        commit 15b62b9bad122f72926c10fb14d622c73819fa54
+        path   addons/kaykit_character_pack_skeletons/
+The egyptian people pack and the polyart zombie pack retire from gameplay to
+the repo pool (probes and QA only); their files stay untouched.
+
+  Rogue.glb    Adventurers Characters/gltf/Rogue.glb (BUILD 28 garrison bowman)
+    sha256 e825437cd4d2ee9c1960b517a74a69101e33eb409ae7fa8cedc7134a998fbb7d
+  Barbarian.glb    Adventurers Characters/gltf/Barbarian.glb (BUILD 28 melee guard)
+    sha256 cefc311a0e10c7858b6141f5ada7e33268727564fb8ac1347aab97d000669cc6
+  Rogue_Hooded.glb    Adventurers Characters/gltf/Rogue_Hooded.glb (BUILD 28 banner bearer)
+    sha256 93e6e25213009952276d9cf34f5d96a243767334c66f280db0433ddfabb91545
+  Skeleton_Minion.glb    Skeletons Characters/gltf/Skeleton_Minion.glb (BUILD 28 horde shambler)
+    sha256 6ffc003f895bed0b074791e0e490846210a2e2f8fc7da300aba53cc185f95968
+  Skeleton_Rogue.glb    Skeletons Characters/gltf/Skeleton_Rogue.glb (BUILD 28 horde lurcher)
+    sha256 4003f2b77891bb56f7e0de7d555abcb497aebbcaee35b614211f16275f9ccae3
+  Skeleton_Mage.glb    Skeletons Characters/gltf/Skeleton_Mage.glb (BUILD 28 horde wretch)
+    sha256 e05b0f5cfa395271c9f75fd07c0a0613c56f401ece4ab644e080001a79971075
+  LICENSE-Skeletons.txt    Skeletons pack LICENSE.txt (same CC0, copied under its own name)
+    sha256 5d822abca4e08c5a91d329e5372b3dc605cba8d994f752cb0f7dfdb7a0a79954
+
 Attribution is appreciated but not required by CC0.

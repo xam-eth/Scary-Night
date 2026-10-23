@@ -32,8 +32,7 @@ await new Promise((r) => server.listen(8148, '0.0.0.0', r));
 const PAGE = `<!doctype html><html><head><meta charset=utf8><style>body{margin:0;background:#20303c}canvas{display:block}</style></head>
 <body><script type=module>
 import * as THREE from '/src/vendor/three/three.module.min.js';
-import { People3D, PEOPLE_ROLES } from '/src/game/render3d/pack3d.js';
-import { ZombiPack3D } from '/src/game/render3d/zombipack3d.js';
+import { People3D, PEOPLE_ROLES, KayKitHorde } from '/src/game/render3d/kaykit3d.js';
 import { cloneRig, hordeGradeMaterial } from '/src/game/render3d/enemy3d.js';
 import { buildUniformGrade } from '/src/game/render3d/valen3d.js';
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
@@ -48,7 +47,7 @@ ground.rotation.x = -Math.PI / 2; scene.add(ground);
 const cam = new THREE.PerspectiveCamera(32, 1100 / 520, 0.1, 100);
 
 await People3D.stage();
-await ZombiPack3D.stage();
+await KayKitHorde.stage();
 const stand = (rig, x) => {
   rig.visible = true;
   rig.traverse((o) => { o.visible = true; });
@@ -69,7 +68,7 @@ if (captain) stand(captain.model, -2.4);
 if (soldier) stand(soldier.model, -1.2);
 const zk = ['shambler', 'lurcher', 'wretch'];
 zk.forEach((key, i) => {
-  const v = ZombiPack3D.forKind(key);
+  const v = KayKitHorde.forKind(key);
   const rig = cloneRig(v.template);
   rig.traverse((o) => {
     if (o.isMesh && o.material) {

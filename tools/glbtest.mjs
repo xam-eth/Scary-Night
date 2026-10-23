@@ -15,7 +15,10 @@ import {
 import { ZOMBI_KINDS, ZOMBI_PACK_URL } from '../src/game/render3d/zombipack3d.js';
 import { CROWD_KINDS } from '../src/game/render3d/crowd3d.js';
 import { TROOP_ASSETS, TROOP_LOADOUTS, TROOP_BOWS } from '../src/game/render3d/troop3d.js';
-import { PEOPLE_ROLES, BONES as PACK_BONES } from '../src/game/render3d/pack3d.js';
+import { BONES as PACK_BONES } from '../src/game/render3d/pack3d.js';
+import {
+  PEOPLE_ROLES as KAYKIT_ROLES, KAYKIT_HERO_URLS, KAYKIT_HORDE_KINDS,
+} from '../src/game/render3d/kaykit3d.js';
 import { BUILDING_KIT, BUILDING_CORE, BUILDING_MODEL, SAW_NODE } from '../src/game/render3d/buildings3d.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -118,7 +121,7 @@ if (glb) {
 
 // BUILD 24: the captain now wears the user's own pack (pack3d rigs it);
 // the vendored hunter GLB stays in the repo and its checks above stay valid
-ok('runtime loads the user\'s people pack', VALEN_MODEL_URL === './egyptian_people.glb', VALEN_MODEL_URL);
+ok('runtime loads the KayKit CC0 people pack (BUILD 28 cast)', VALEN_MODEL_URL === 'assets/troops/kaykit/Knight.glb', VALEN_MODEL_URL);
 ok('clip mapping uses claw for the unarmed attack',
   VALEN_CLIPS.idle === null
     && valenClipForState('idle') === null
@@ -478,40 +481,47 @@ console.log('\ngarrison troops (captain family + KayKit bows, CC0):');
   ok('the pack ships its CC0 licence and the credits name the source commit',
     /Creative Commons Zero, CC0/.test(fs.readFileSync(path.join(TROOP_DIR, 'LICENSE.txt'), 'utf8'))
       && /commit 672074b73ba276876a19e8816ecdc5241817ab47/.test(credits));
-  // BUILD 24: the garrison and the captain are the user's pack characters —
-  // auto-rigged at runtime by pack3d.js, the GLB itself is static sculpture
-  ok('the garrison template IS the people pack the captain wears (one art family)',
-    TROOP_ASSETS.soldier.replace(/^\.\//, '') === 'egyptian_people.glb',
+  // BUILD 28: the garrison and the captain are the KayKit CC0 family —
+  // one art family with the world (visual-sync audit, qa-evidence/cast-research)
+  ok('the garrison template IS the people pack the captain wears (one art family, KayKit CC0)',
+    TROOP_ASSETS.soldier.replace(/^\.\//, '') === 'assets/troops/kaykit/Knight.glb',
     `${TROOP_ASSETS.soldier}`);
-  const soldier = readGlb(path.join(ROOT, TROOP_ASSETS.soldier));
-  const nodeNames = new Set((soldier?.json.nodes || []).map((node) => node.name));
-  const missingRoles = Object.values(PEOPLE_ROLES).filter((role) => !nodeNames.has(role));
-  ok('the people pack carries every role the garrison and captain wear (Commander/Slave/Warrior/Resident/King, each its own mesh + texture)',
-    !!soldier && missingRoles.length === 0 && (soldier.json.meshes || []).length === 5 && (soldier.json.images || []).length === 5,
-    `${(soldier?.json.meshes || []).length} meshes${missingRoles.length ? `; missing ${missingRoles.join(', ')}` : ''}`);
+  const HERO_CLIP_CONTRACT = ['Idle', 'Walking_A', 'Running_A', '1H_Ranged_Shoot', 'Death_A'];
+  const heroFiles = [...new Set(Object.values(KAYKIT_ROLES).map((role) => KAYKIT_HERO_URLS[role]))];
+  const heroMissing = heroFiles.map((url) => ({ url, glb: readGlb(path.join(ROOT, url)) }))
+    .filter(({ glb }) => !glb || !(glb.json.skins || []).length
+      || !HERO_CLIP_CONTRACT.every((clip) => (glb.json.animations || []).some((a) => a.name === clip)));
+  ok('every KayKit hero file the roles wear is rigged, animated and covers the clip contract (Idle/Walking_A/Running_A/1H_Ranged_Shoot/Death_A)',
+    heroFiles.length === 4 && heroMissing.length === 0,
+    heroMissing.length ? `missing: ${heroMissing.map((m) => m.url).join(', ')}` : `${heroFiles.length} files ok`);
+  const retiredPeople = readGlb(path.join(ROOT, 'egyptian_people.glb'));
+  ok('the retired BUILD 24 egyptian people pack is intact (5 meshes, 5 textures) — kept as pool, no longer wired',
+    !!retiredPeople && (retiredPeople.json.meshes || []).length === 5 && (retiredPeople.json.images || []).length === 5,
+    `${(retiredPeople?.json.meshes || []).length} meshes`);
   const zombie = readGlb(path.join(ROOT, 'polyart_zombies_with_animations_free_pack.glb'));
-  ok('the zombie pack is rigged and animated (10 skinned variants, one shared take) — the BUILD 25 enemy source',
+  ok('the retired BUILD 25 zombie pack is still rigged and animated (10 skinned variants, one shared take) — kept as pool, no longer wired',
     !!zombie && (zombie.json.skins || []).length === 10 && (zombie.json.animations || []).length === 1,
     `${zombie?.json.skins?.length || 0} skins, anim "${(zombie?.json.animations || [])[0]?.name || 'none'}"`);
-  // BUILD 25: the pack is WIRED — the survival night's horde faction
-  const packTake = (zombie?.json.animations || [])[0]?.name || '';
+  // BUILD 28: the horde is WIRED to the KayKit skeletons (CC0) — authored
+  // attack/die clips, identity map over the game's short clip names.
   const PACK_KEYS = ['shambler', 'lurcher', 'wretch'];
-  ok('BUILD 25: the survival horde fields three pack variants (ENEMY_MODELS pack kinds, the shared take as walk/idle/run, the synthesised pack-attack/pack-die mapped)',
-    PACK_KEYS.every((key) => ENEMY_MODELS[key] && ENEMY_MODELS[key].pack === key && ENEMY_MODELS[key].url === ZOMBI_PACK_URL)
-      && PACK_KEYS.every((key) => ENEMY_MODELS[key].map.walk === packTake && ENEMY_MODELS[key].map.attack === 'pack-attack' && ENEMY_MODELS[key].map.die === 'pack-die')
-      && ZOMBI_KINDS.length === 3 && new Set(ZOMBI_KINDS.map((k) => k.variant)).size === 3
-      && ZOMBI_KINDS.every((k) => PACK_KEYS.includes(k.key)),
-    `take "${packTake}", kinds ${ZOMBI_KINDS.map((k) => `${k.key}=${k.variant}`).join(' ')}`);
+  ok('BUILD 28: the survival horde fields three KayKit skeleton variants (ENEMY_MODELS kk- pack kinds, identity clip map, three distinct rigged files)',
+    PACK_KEYS.every((key) => ENEMY_MODELS[key] && ENEMY_MODELS[key].pack === `kk-${key}`)
+      && PACK_KEYS.every((key) => ENEMY_MODELS[key].map.walk === 'walk' && ENEMY_MODELS[key].map.attack === 'attack' && ENEMY_MODELS[key].map.die === 'die')
+      && KAYKIT_HORDE_KINDS.length === 3 && new Set(KAYKIT_HORDE_KINDS.map((k) => k.file)).size === 3
+      && KAYKIT_HORDE_KINDS.every((k) => PACK_KEYS.includes(k.key))
+      && KAYKIT_HORDE_KINDS.every((k) => fs.existsSync(path.join(ROOT, 'assets/troops/kaykit', `${k.file}.glb`))),
+    `kinds ${KAYKIT_HORDE_KINDS.map((k) => `${k.key}=${k.file}`).join(' ')}`);
   ok('BUILD 25: survival aliases its sim keys onto the pack at the render layer only (the legacy roster keeps its ultimate monsters)',
     SURVIVAL_HORDE_ALIAS.zombie === 'shambler' && SURVIVAL_HORDE_ALIAS.crawler === 'lurcher' && SURVIVAL_HORDE_ALIAS.ghoul === 'wretch'
       && ENEMY_MODELS.zombie.url === './assets/monsters/ultimate/demon.glb'
       && ENEMY_MODELS.crawler.url === './assets/monsters/ultimate/green-spiky-blob.glb'
       && ENEMY_MODELS.ghoul.url === './assets/monsters/ultimate/ghost-skull.glb',
     Object.entries(SURVIVAL_HORDE_ALIAS).map(([a, b]) => `${a}->${b}`).join(' '));
-  ok('BUILD 25: the VAT crowd bakes exactly the three pack kinds, shares sum to 100, none hovers',
+  ok('BUILD 28: the VAT crowd bakes exactly the three KayKit horde kinds, shares sum to 100, none hovers',
     CROWD_KINDS.map((k) => k.key).join(',') === PACK_KEYS.join(',')
       && CROWD_KINDS.reduce((sum, k) => sum + k.share, 0) === 100
-      && CROWD_KINDS.every((k) => k.hover === 0 && ENEMY_MODELS[k.key] && ENEMY_MODELS[k.key].pack === k.key),
+      && CROWD_KINDS.every((k) => k.hover === 0 && ENEMY_MODELS[k.key] && ENEMY_MODELS[k.key].pack === `kk-${k.key}`),
     CROWD_KINDS.map((k) => `${k.key}:${k.share}%`).join(' '));
 
   // BUILD 26 (user report 2026-10-21: "rig jalan nya posisi salah … terlihat

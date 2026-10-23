@@ -24,6 +24,7 @@ import { GLTFLoader } from '../../vendor/three/GLTFLoader.js';
 import { dist } from '../../core/util.js';
 import { Valen3D } from './valen3d.js';
 import { ZombiPack3D, ZOMBI_PACK_URL } from './zombipack3d.js';
+import { KayKitHorde, KAYKIT_HORDE_MAP } from './kaykit3d.js';
 
 export const ENEMY_GLB_CAP = 14;
 const HURT_FLASH_COLOR = new THREE.Color(0xffe0d8);
@@ -106,9 +107,9 @@ export const ENEMY_MODELS = Object.freeze({
   ghoul: Object.freeze({ url: `${MONSTERS}ghost-skull.glb`, map: FLYER_MAP }),
   werewolf: Object.freeze({ url: WOLF_BODY, map: WOLF_MAP }),
   stalker: Object.freeze({ url: `${MONSTERS}yeti.glb`, map: YETI_MAP }),
-  shambler: Object.freeze({ url: ZOMBI_PACK_URL, pack: 'shambler', map: PACK_MAP }),
-  lurcher: Object.freeze({ url: ZOMBI_PACK_URL, pack: 'lurcher', map: PACK_MAP }),
-  wretch: Object.freeze({ url: ZOMBI_PACK_URL, pack: 'wretch', map: PACK_MAP }),
+  shambler: Object.freeze({ pack: 'kk-shambler', map: KAYKIT_HORDE_MAP }),
+  lurcher: Object.freeze({ pack: 'kk-lurcher', map: KAYKIT_HORDE_MAP }),
+  wretch: Object.freeze({ pack: 'kk-wretch', map: KAYKIT_HORDE_MAP }),
 });
 
 /** Which pack character a survival horde sim-key wears (render layer only). */
@@ -469,12 +470,17 @@ class EnemyStage {
     };
     this.types[key] = rec;
     if (spec.pack) {
-      // BUILD 25: pack-backed kinds share one staged file; ZombiPack3D splits
-      // it into per-variant rigs with the synthesised attack/die clips.
-      ZombiPack3D.stage().then(() => {
-        const variant = ZombiPack3D.forKind(spec.pack);
+      // BUILD 28: pack-backed kinds — 'kk-' prefixes route to the KayKit
+      // skeletons (kaykit3d.js), the rest stay on ZombiPack3D. Both split a
+      // staged file into per-variant rigs; KayKit ships authored attack/die
+      // clips so nothing is synthesised here.
+      const kaykit = spec.pack.startsWith('kk-');
+      const Pack = kaykit ? KayKitHorde : ZombiPack3D;
+      const packKey = kaykit ? spec.pack.slice(3) : spec.pack;
+      Pack.stage().then(() => {
+        const variant = Pack.forKind(packKey);
         if (!variant || !variant.template) {
-          this._fail(key, ZombiPack3D.error || `pack variant ${spec.pack} missing`);
+          this._fail(key, Pack.error || `pack variant ${packKey} missing`);
           return;
         }
         rec.clips = variant.animations.map((clip) => clip.name);
