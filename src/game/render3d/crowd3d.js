@@ -30,12 +30,13 @@
  */
 import * as THREE from '../../vendor/three/three.module.min.js';
 import { Enemy3D, ENEMY_MODELS, cloneRig, HORDE_EYE, hordeGradeMaterial, hordeGlowFor } from './enemy3d.js';
+import { EnvKit } from './envkit.js';
 
 /** Which rigs the horde is made of, and how much of it each one is (%). */
 export const CROWD_KINDS = Object.freeze([
-  Object.freeze({ key: 'shambler', share: 58, height: 57, hover: 0 }), // BUILD 28: 76 * KAYKIT_CAST_SCALE
-  Object.freeze({ key: 'lurcher', share: 26, height: 47, hover: 0 }), // BUILD 28: 62 * KAYKIT_CAST_SCALE
-  Object.freeze({ key: 'wretch', share: 16, height: 54, hover: 0 }), // BUILD 28: 72 * KAYKIT_CAST_SCALE
+  Object.freeze({ key: 'shambler', share: 58, height: 76, hover: 0 }),
+  Object.freeze({ key: 'lurcher', share: 26, height: 62, hover: 0 }),
+  Object.freeze({ key: 'wretch', share: 16, height: 72, hover: 0 }),
 ]);
 /** Clips baked per kind (names resolve through ENEMY_MODELS[key].map). */
 const BAKE = Object.freeze([
@@ -341,6 +342,21 @@ class CrowdStage {
    * in case a rig arrived late.
    */
   prepare() {
+    // BUILD 28 device-safety: the VAT streams positions/normals through
+    // HalfFloat data textures sampled in the vertex stage. Core in WebGL2;
+    // on a WebGL1 WebView without the half-float pair the bodies collapse
+    // to nothing and only their ground shadows show (user report 2026-10-23:
+    // "enimies tidak ada hanya bayangan yg ada"). Fall back to the instanced
+    // primitive swarm instead of an invisible horde.
+    const renderer = EnvKit && EnvKit.renderer;
+    if (renderer && renderer.capabilities && !renderer.capabilities.isWebGL2) {
+      const half = renderer.extensions.get('OES_texture_half_float');
+      const halfLinear = renderer.extensions.get('OES_texture_half_float_linear');
+      if (!half || !halfLinear) {
+        this.lastError = 'WebGL1 without half-float vertex textures: primitive crowd fallback';
+        return false;
+      }
+    }
     for (const spec of CROWD_KINDS) {
       if (this.kinds.has(spec.key) || this.failed.includes(spec.key)) continue;
       const rec = Enemy3D.types && Enemy3D.types[spec.key];

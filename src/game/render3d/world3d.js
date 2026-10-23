@@ -923,8 +923,8 @@ class World3DRuntime {
   _ensureSurvivalCrowdInstances() {
     if (this.survivalCrowdInstances) return this.survivalCrowdInstances;
     const cap = 160;
-    const skin = new THREE.MeshStandardMaterial({ color: 0x8fbf6a, roughness: 0.92, flatShading: true });
-    const cloth = new THREE.MeshStandardMaterial({ color: 0x56664a, roughness: 0.95, flatShading: true });
+    const skin = new THREE.MeshStandardMaterial({ color: 0xb7d98e, roughness: 0.92, flatShading: true }); // BUILD 28: night-readable fallback swarm
+    const cloth = new THREE.MeshStandardMaterial({ color: 0x8a6a4a, roughness: 0.95, flatShading: true }); // BUILD 28: rag brown, not shadow green
     const eyes = new THREE.MeshBasicMaterial({ color: 0xffd04a, toneMapped: false });
     const make = (geometry, material, count, name) => {
       const mesh = new THREE.InstancedMesh(geometry, material, count);

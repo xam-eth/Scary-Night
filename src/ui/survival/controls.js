@@ -6,7 +6,7 @@ import { drawSurvivalIcon, drawLabel, drawPanel, INK } from '../survivalIcons.js
 import { TAU, clock, addHit, BUTTON_COLORS, zoomButtonLayout, recenterChipBox } from './shared.js';
 
 export function drawZoomButtons(game, ctx, w, h) {
-  // BUILD 28 (user 2026-10-23: "hapus _+ zoom icon pada game"): the on-screen
+  // build 28 (user 2026-10-23: "hapus _+ zoom icon pada game"): the on-screen
   // + / - discs are gone. Pinch anywhere, the mouse wheel and the + / - keys
   // remain the zoom paths (input.js); nothing registers a hit here anymore.
   return;
