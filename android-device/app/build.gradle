@@ -30,6 +30,12 @@ android {
 }
 
 dependencies {
+    // Kotlin stdlib alignment: since Kotlin 1.8 the jdk7/jdk8 classes live IN
+    // kotlin-stdlib, but old androidx pins still drag the separate
+    // kotlin-stdlib-jdk7/jdk8:1.6.21 jars onto the classpath -> AGP's
+    // checkDebugDuplicateClasses fails. The bom forces every kotlin-stdlib
+    // artifact to one version (the jdk7/jdk8 ones become empty placeholders).
+    implementation platform('org.jetbrains.kotlin:kotlin-bom:1.8.22')
     implementation 'androidx.appcompat:appcompat:1.7.0'
     // WebViewAssetLoader: serves the bundled game over a virtual https origin
     // so ES modules, fetch() and WebGL all behave like on a real host.
