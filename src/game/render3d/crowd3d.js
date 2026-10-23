@@ -325,9 +325,9 @@ class CrowdStage {
 
   /** Night: a strong rim and a lift; day: a light touch (world3d, per frame). */
   setLook(night) {
-    this.look.rim.value = night ? 0.6 : 0.28;
-    this.look.glow.value = night ? 0.3 : 0.12;
-    for (const mul of this._eyeMuls) mul.value = night ? 1.15 : 0.6;
+    this.look.rim.value = night ? 0.85 : 0.28;
+    this.look.glow.value = night ? 0.42 : 0.12;
+    for (const mul of this._eyeMuls) mul.value = night ? 1.35 : 0.6;
   }
 
   /** True once the leading kind has its texture: the horde can be drawn. */

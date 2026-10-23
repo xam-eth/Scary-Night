@@ -6,7 +6,7 @@ import { drawSurvivalIcon, drawLabel, measureLabel, drawPanel, drawBar, roundRec
 import { TAU, clock, project, addHit, affordable, onScreen, edgeAvoid, drawEdgeMarker, drawFloaters, drawHunterBar, drawStatusPill, statusPillWidth, drawCounters, drawPauseButton, drawButton, costRow, costWidth, BUTTON_COLORS, zoomButtonLayout, tonightChipBox, BUILD } from './shared.js';
 import { offerSurvivalHint, drawHint } from './hints.js';
 import { drawPhasePill, drawObjectiveChain } from './chain.js';
-import { drawZoomButtons, drawRecenterChip } from './controls.js';
+import { drawZoomButtons, drawRecenterChip, drawDiagnostics } from './controls.js';
 
 // color: each type's own colour (BUILD 11, playtest 2026-10-17: "tidak tau
 // build yg mana") — the same as its kit model's roof and its circle on the
@@ -789,6 +789,7 @@ export function drawDayScreen(game, ctx, w, h) {
   if (game._survivalLabels) game._survivalLabels.objectiveChain = dayChain;
 
   drawZoomButtons(game, ctx, w, h);
+  drawDiagnostics(game, ctx, w, h);
   drawRecenterChip(game, ctx, w, h);
   // FTUE chip: a sideways phone puts it at the foot of the screen between the
   // stick and the dock (the top band shows the keep); a tall screen under

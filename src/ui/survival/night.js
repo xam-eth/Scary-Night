@@ -7,7 +7,7 @@ import { drawSurvivalIcon, drawLabel, measureLabel, drawPanel, drawBar, INK, COL
 import { TAU, clock, project, onScreen, edgeAvoid, nightPointerBand, drawEdgeMarker, drawFloaters, drawHunterBar, drawStatusPill, drawCounters, drawPauseButton, ACTOR, BUILD } from './shared.js';
 import { drawPhasePill, drawObjectiveChain } from './chain.js';
 import { drawHint } from './hints.js';
-import { drawZoomButtons, drawRecenterChip } from './controls.js';
+import { drawZoomButtons, drawRecenterChip, drawDiagnostics } from './controls.js';
 
 /**
  * The keep's life, under the night pill: the most important bar on screen.
@@ -253,6 +253,7 @@ export function drawNightHud(game, ctx, w, h) {
   else drawKeepBar(game, ctx, w / 2, 82, Math.min(220, w - 220));
   drawBanner(game, ctx, w, h);
   drawZoomButtons(game, ctx, w, h);
+  drawDiagnostics(game, ctx, w, h);
   drawRecenterChip(game, ctx, w, h);
   // BUILD 22: the chain keeps teaching through the night it asks you to hold
   const nightChain = drawObjectiveChain(game, ctx, w, h, true);

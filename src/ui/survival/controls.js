@@ -4,6 +4,8 @@ import { clamp } from '../../core/util.js';
 import { SURVIVAL_CAMERA } from '../../game/sim/survival.js';
 import { drawSurvivalIcon, drawLabel, drawPanel, INK } from '../survivalIcons.js';
 import { TAU, clock, addHit, BUTTON_COLORS, zoomButtonLayout, recenterChipBox } from './shared.js';
+import { EnvKit } from '../../game/render3d/envkit.js';
+import { Crowd3D } from '../../game/render3d/crowd3d.js';
 
 export function drawZoomButtons(game, ctx, w, h) {
   // build 28 (user 2026-10-23: "hapus _+ zoom icon pada game"): the on-screen
@@ -132,3 +134,36 @@ export function drawSurvivalControls(game, ctx, w, h) {
 /* entry                                                               */
 /* ------------------------------------------------------------------ */
 
+
+/**
+ * build 28 device probe: open the game with ?diag=1 and a small monospace
+ * panel reports the build stamp, the GL capabilities that gate the VAT horde
+ * (WebGL2 / half-float vertex textures / max texture size), the crowd bake
+ * verdict and the per-kind drawn counts — the exact facts a device screenshot
+ * needs when the horde ever reads as shadows again.
+ */
+export function drawDiagnostics(game, ctx, w, h) {
+  const forced = typeof location !== 'undefined' && /[?&]diag=1/.test(location.search);
+  // self-report: a night whose horde could not bake tells the player (and the
+  // bug report) why, on any runtime — APK included — without a query string
+  const hordeDown = !!(game && game.survival && game.survival.phase === 'night') && !Crowd3D.ready;
+  if (!forced && !hordeDown) return;
+  const rend = EnvKit && EnvKit.renderer;
+  const caps = rend && rend.capabilities;
+  const half = rend ? !!(rend.extensions.get('OES_texture_half_float') && rend.extensions.get('OES_texture_half_float_linear')) : false;
+  const counts = Crowd3D.keys().map((k) => { const kind = Crowd3D.kinds.get(k); return `${k}:${kind ? kind.count : '-'}`; }).join(' ');
+  const rows = hordeDown && !forced
+    ? [`HORDE FALLBACK: ${Crowd3D.lastError || 'bake pending'}`, `stamp ${typeof window !== 'undefined' ? window.DUSKHOLD_BUILD : '?'} gl2 ${caps ? caps.isWebGL2 : '?'} half ${half}`]
+    : [
+    `stamp ${typeof window !== 'undefined' ? window.DUSKHOLD_BUILD : '?'} dpr ${typeof devicePixelRatio !== 'undefined' ? devicePixelRatio : '?'}`,
+    `gl2 ${caps ? caps.isWebGL2 : '?'} half ${half} maxTex ${caps ? caps.maxTextureSize : '?'}`,
+    `crowd ${Crowd3D.ready ? 'ready' : 'NOT-READY'} bake ${Math.round(Crowd3D.bakeMs)}ms err ${Crowd3D.lastError || '-'}`,
+    `drawn ${counts}`,
+    ];
+  ctx.save();
+  ctx.font = '12px monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillStyle = 'rgba(0,0,0,0.68)'; ctx.fillRect(8, 64, 380, rows.length * 16 + 10);
+  ctx.fillStyle = '#9dffb0';
+  rows.forEach((row, i) => ctx.fillText(row, 14, 70 + i * 16));
+  ctx.restore();
+}

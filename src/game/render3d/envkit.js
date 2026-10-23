@@ -77,7 +77,7 @@ export { SURVIVAL_ACTOR_SCALE } from '../../core/config.js';
  *  the retired slim packs reads roughly a third bulkier in the bailey. Every
  *  cast height (captain, garrison, horde) is multiplied by this so the visual
  *  mass, not the metre stick, matches what BUILD 27 tuned. */
-export const KAYKIT_CAST_SCALE = 0.75;
+export const KAYKIT_CAST_SCALE = 0.7;
 
 /**
  * WHAT EVERYTHING IS, IN METRES.
