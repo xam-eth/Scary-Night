@@ -1,0 +1,20 @@
+{
+  "pass": "form-refinement",
+  "fidelity": 0.64,
+  "aiVisionScore": 0.76,
+  "action": "refine-spec",
+  "layerScores": {"silhouetteProportion": 0.84, "componentStructure": 0.82, "formDetail": 0.58, "materialSurface": 0.42, "lightingCamera": 0.78},
+  "featureReviews": [
+    {"id": "overall-silhouette", "score": 0.84, "notes": "Silhouette holds (Tier-1 IoU 0.899)."},
+    {"id": "blade-read", "score": 0.78, "notes": "Hub, nut and slot unchanged and correct."},
+    {"id": "table-structure", "score": 0.72, "notes": "No visible change: the generator builds box primitives as plain subdivided BoxGeometry and ignores edgeTreatment, so the declared 14 mm chamfers produced no geometry (same triangle count as before); only the 4 mm stagger landed and it is invisible at this distance."},
+    {"id": "log-read", "score": 0.76, "notes": "Unchanged."}
+  ],
+  "summary": "The first form refine did not change the top: box primitives ignore edgeTreatment. Refine the spec again by building the five boards as extrusions of a chamfered cross-section (14 mm chamfers along the long edges) so the plank seams exist in the geometry.",
+  "matched": ["arbor nut, slot and log cut face as before"],
+  "mismatches": ["board chamfers not generated (box primitive ignores edgeTreatment); top still one slab"],
+  "specFixes": ["form-refinement: top boards as extrude primitives of a chamfered cross-section, turned 90 degrees about Y so they run along X"],
+  "codeFixes": ["none"],
+  "notes": "Viewed renders/form-refinement/cmp-loop2.jpg (this build's sheet, kept because the next build overwrites cmp.jpg).",
+  "cameraView": "fixed: az 31, el 6, fov 24 (fitted)"
+}

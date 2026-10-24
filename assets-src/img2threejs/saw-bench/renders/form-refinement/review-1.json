@@ -1,0 +1,20 @@
+{
+  "pass": "form-refinement",
+  "fidelity": 0.64,
+  "aiVisionScore": 0.76,
+  "action": "refine-spec",
+  "layerScores": {"silhouetteProportion": 0.84, "componentStructure": 0.82, "formDetail": 0.58, "materialSurface": 0.42, "lightingCamera": 0.78},
+  "featureReviews": [
+    {"id": "overall-silhouette", "score": 0.84, "notes": "Silhouette holds (Tier-1 IoU 0.899)."},
+    {"id": "blade-read", "score": 0.78, "notes": "Hub with its nut at the blade centre and the dark slot along the blade line in the top, as in the reference."},
+    {"id": "table-structure", "score": 0.72, "notes": "The top still reads as one sharp-edged slab: the reference's five boards show as softened planks with visible seams on the top surface and at the board ends; ours have square edges and 6 mm gaps that vanish at this distance."},
+    {"id": "log-read", "score": 0.76, "notes": "The pale cut face now shows at the log's end, facing the camera's right like the reference's."}
+  ],
+  "summary": "Form pass adds the arbor nut, the blade slot and the log's cut face (Tier-1 IoU 0.899, all gates pass), but the top boards read as one slab: refine the spec with chamfered board edges and a slight height stagger so the five planks and their seams read.",
+  "matched": ["arbor nut on the hub", "dark blade slot in the top", "pale cut face on the log"],
+  "mismatches": ["top boards read as one sharp-edged slab, seams invisible", "materials still blockout-grade (material-pass)"],
+  "specFixes": ["form-refinement: chamfer the five top boards (14 mm) and stagger their tops by +-4 mm so the plank seams read"],
+  "codeFixes": ["none"],
+  "notes": "Viewed renders/form-refinement/cmp.jpg and renders/form-refinement/turntable.jpg.",
+  "cameraView": "fixed: az 31, el 6, fov 24 (fitted)"
+}

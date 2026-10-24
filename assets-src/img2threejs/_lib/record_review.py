@@ -47,7 +47,7 @@ def main() -> None:
             "--spec-fixes", "; ".join(r.get("specFixes", [])) or "none",
             "--code-fixes", "; ".join(r.get("codeFixes", [])) or "none",
             "--reference-screenshot", "reference.png", "--render-screenshot", f"{rd}/fixed.png",
-            "--comparison-image", f"{rd}/cmp.jpg", "--ai-vision-score", str(r["aiVisionScore"]),
+            "--comparison-image", r.get("comparisonImage", f"{rd}/cmp.jpg"), "--ai-vision-score", str(r["aiVisionScore"]),
             "--layer-scores-json", json.dumps(r["layerScores"]), "--feature-reviews-json", str(fr),
             "--ai-vision-notes", r.get("notes", ""), "--camera-view", r.get("cameraView", "fixed"),
             "--in-place"]
@@ -58,7 +58,8 @@ def main() -> None:
     print(run(args).strip().splitlines()[-1] if True else "")
     state = ".img2threejs/state.json"
     run([sys.executable, str(SKILL / "forge/state.py"), "mark", "ai-review-recorded", "--state", state,
-         "--evidence", f"{rd}/cmp.jpg", "--evidence", "object-sculpt-spec.json#reviewHistory", "--evidence", str(review_path)])
+         "--evidence", r.get("comparisonImage", f"{rd}/cmp.jpg"), "--evidence", "object-sculpt-spec.json#reviewHistory",
+         "--evidence", str(review_path)])
     run([sys.executable, str(SKILL / "forge/stage3_build/orchestrate_passes.py"), "sync", "object-sculpt-spec.json", "--in-place"])
     run([sys.executable, str(SKILL / "forge/state.py"), "mark", "pipeline-sync", "--state", state,
          "--evidence", "object-sculpt-spec.json#sculptPipeline"])

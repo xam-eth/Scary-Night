@@ -1,0 +1,20 @@
+{
+  "pass": "form-refinement",
+  "fidelity": 0.67,
+  "aiVisionScore": 0.78,
+  "action": "continue",
+  "layerScores": {"silhouetteProportion": 0.84, "componentStructure": 0.83, "formDetail": 0.7, "materialSurface": 0.42, "lightingCamera": 0.78},
+  "featureReviews": [
+    {"id": "overall-silhouette", "score": 0.84, "notes": "Silhouette holds (Tier-1 IoU 0.898)."},
+    {"id": "blade-read", "score": 0.78, "notes": "Hub with nut at the blade centre and the dark slot along the blade line, as in the reference."},
+    {"id": "table-structure", "score": 0.79, "notes": "The five top boards are now extruded from a chamfered cross-section: the planks and their V seams read on the top, at the board ends and in the side views like the reference's softened boards."},
+    {"id": "log-read", "score": 0.76, "notes": "Round log with a pale cut face toward the camera's right."}
+  ],
+  "summary": "Form pass after two refine-specs: arbor nut, blade slot, pale log end, and chamfered extruded top boards whose seams read. Tier-1 IoU 0.898, aspect 0.011, scale 0.0003; all gates pass; 4.2k triangles.",
+  "matched": ["arbor nut and slot", "pale log cut face", "five chamfered planks with readable seams"],
+  "mismatches": ["wood grain runs across the extruded boards, the legs and the log (UV direction): the material pass needs grain materials per UV orientation", "wood too orange-red, blade too bright and bluish (material-pass)"],
+  "specFixes": ["material-pass: a post/board wood material with the grain along v for legs and extruded boards, the log's grain along its length, and colour/roughness tuned to the reference regions"],
+  "codeFixes": ["none"],
+  "notes": "Viewed renders/form-refinement/cmp.jpg and renders/form-refinement/turntable.jpg (review-1/review-2 hold the two refine verdicts).",
+  "cameraView": "fixed: az 31, el 6, fov 24 (fitted)"
+}

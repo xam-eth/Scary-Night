@@ -93,6 +93,16 @@ LOG_Z = 0.12          # the log lies just in front of the blade plane (it hides 
 LOG_X = (0.2, 0.7)
 
 
+BOARD_CHAMFER = 0.014
+
+
+def board_profile(w: float, t: float, c: float) -> list[list[float]]:
+    """Cross-section of a top board (x = across the board, y = up), corners chamfered by c."""
+    hw, ht = w / 2, t / 2
+    pts = [(-hw + c, -ht), (hw - c, -ht), (hw, -ht + c), (hw, ht - c), (hw - c, ht), (-hw + c, ht), (-hw, ht - c), (-hw, -ht + c)]
+    return [[round(x, 4), round(y, 4)] for x, y in pts]
+
+
 def blade_profile() -> list[list[float]]:
     pts = []
     step = 2 * math.pi / TEETH
@@ -108,17 +118,29 @@ def build_components() -> SpecBuilder:
     b = SpecBuilder("saw-bench", MATERIALS)
     zs = [(i - 2) * (PLANK_W + 0.006) for i in range(5)]
     # root: the middle top board (the bench's motion node); the other boards hang off it
-    b.box("root", "Top board 3", parent=None, center=(0.0, TOP_Y - TOP_T / 2, zs[2]), size=(TOP_LEN, TOP_T, PLANK_W),
-          level="macro", role="body", material="wood", anim="root", importance=0.8, confidence=0.75,
-          rationale="Top board: a thick rectangular board, box-shaped; the middle one is the bench's root.",
+    # the five top boards are extruded from a chamfered cross-section along X (the box primitive has
+    # no edge geometry): the 14 mm chamfers and a +-4 mm height stagger make the planks and their
+    # seams read like the reference's softened boards. Extrude runs along local +Z, so each board is
+    # turned +90 deg about Y (local Z -> world +X) and starts at its left end.
+    def board(cid: str, name: str, parent: str | None, i: int, **kw):
+        dy = 0.0 if i == 2 else (0.004 if i % 2 else -0.003)
+        x0 = -TOP_LEN / 2 + 0.01 * (i % 2)
+        length = TOP_LEN - 0.02 * (i % 2)
+        return b.add(cid, name, parent=parent, primitive="extrude", world=(x0, TOP_Y - TOP_T / 2 + dy, zs[i]),
+                     rot=(0.0, math.pi / 2, 0.0), scale=None, material="wood", topology="assembled-solid",
+                     descriptor={"profile2D": {"points": board_profile(PLANK_W, TOP_T, BOARD_CHAMFER), "depth": length}},
+                     **kw)
+    board("root", "Top board 3", None, 2, level="macro", role="body", anim="root", importance=0.8, confidence=0.75,
+          rationale="Top board: a thick plank with chamfered long edges, extruded from its cross-section; the middle "
+                    "one is the bench's root.",
           features=[feature("top-seam-3", "seam", "dark gaps between the five top boards")],
           channels={"translate": True, "rotate": True, "scale": True, "bend": False, "twist": False, "detach": False,
                     "visibility": True, "materialState": True})
-    for i, z in enumerate(zs):
+    for i in range(5):
         if i == 2:
             continue
-        b.box(f"top-board-{i + 1}", f"Top board {i + 1}", parent="root", center=(0.01 * (i % 2), TOP_Y - TOP_T / 2, z),
-              size=(TOP_LEN - 0.02 * (i % 2), TOP_T, PLANK_W), level="macro", role="panel", material="wood", importance=0.7,
+        board(f"top-board-{i + 1}", f"Top board {i + 1}", "root", i, level="macro", role="panel", importance=0.7,
+              rationale="Top board: a thick plank with chamfered long edges, extruded from its cross-section.",
               features=[feature(f"top-seam-{i + 1}", "seam", "6 mm dark gap to the next board")])
     # legs: three per side
     n = 1

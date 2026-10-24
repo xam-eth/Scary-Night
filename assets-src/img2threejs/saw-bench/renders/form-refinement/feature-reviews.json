@@ -1,0 +1,22 @@
+[
+  {
+    "id": "overall-silhouette",
+    "score": 0.84,
+    "notes": "Silhouette holds (Tier-1 IoU 0.898)."
+  },
+  {
+    "id": "blade-read",
+    "score": 0.78,
+    "notes": "Hub with nut at the blade centre and the dark slot along the blade line, as in the reference."
+  },
+  {
+    "id": "table-structure",
+    "score": 0.79,
+    "notes": "The five top boards are now extruded from a chamfered cross-section: the planks and their V seams read on the top, at the board ends and in the side views like the reference's softened boards."
+  },
+  {
+    "id": "log-read",
+    "score": 0.76,
+    "notes": "Round log with a pale cut face toward the camera's right."
+  }
+]
