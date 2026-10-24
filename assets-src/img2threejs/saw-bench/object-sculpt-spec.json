@@ -1880,19 +1880,56 @@
       "role": "post",
       "importance": 0.7,
       "confidence": 0.75,
-      "primitive": "box",
+      "primitive": "extrude",
       "topologyClass": "assembled-solid",
-      "topologyRationale": "Leg: a square timber post, box-shaped.",
+      "topologyRationale": "Leg: a square timber post with chamfered edges, extruded from its section.",
       "geometryDescriptor": {
         "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
         "edgeTreatment": {
           "type": "chamfer",
-          "bevelRadius": 0.012,
+          "bevelRadius": 0.016,
           "segments": 1
         },
         "deformationStack": [],
         "uvStrategy": "generated procedural coordinates",
-        "normalStrategy": "vertex normals from generated geometry"
+        "normalStrategy": "vertex normals from generated geometry",
+        "profile2D": {
+          "points": [
+            [
+              -0.049,
+              -0.065
+            ],
+            [
+              0.049,
+              -0.065
+            ],
+            [
+              0.065,
+              -0.049
+            ],
+            [
+              0.065,
+              0.049
+            ],
+            [
+              0.049,
+              0.065
+            ],
+            [
+              -0.049,
+              0.065
+            ],
+            [
+              -0.065,
+              0.049
+            ],
+            [
+              -0.065,
+              -0.049
+            ]
+          ],
+          "depth": 0.39999999999999997
+        }
       },
       "parent": "root",
       "attachment": {
@@ -1916,27 +1953,22 @@
         ]
       },
       "dimensions": {
-        "width": 0.13,
-        "height": 0.4,
-        "depth": 0.13,
+        "width": 1.0,
+        "height": 1.0,
+        "depth": 1.0,
         "units": "object",
         "confidence": 0.75
       },
       "transform": {
         "position": [
           -0.23,
-          -0.285,
+          -0.48,
           0.15
         ],
         "rotation": [
-          0.0,
           -1.5708,
-          0.0
-        ],
-        "scale": [
-          0.13,
-          0.4,
-          0.13
+          -0.0,
+          -1.5708
         ]
       },
       "actionProfile": {
@@ -2057,19 +2089,56 @@
       "role": "post",
       "importance": 0.7,
       "confidence": 0.75,
-      "primitive": "box",
+      "primitive": "extrude",
       "topologyClass": "assembled-solid",
-      "topologyRationale": "Leg: a square timber post, box-shaped.",
+      "topologyRationale": "Leg: a square timber post with chamfered edges, extruded from its section.",
       "geometryDescriptor": {
         "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
         "edgeTreatment": {
           "type": "chamfer",
-          "bevelRadius": 0.012,
+          "bevelRadius": 0.016,
           "segments": 1
         },
         "deformationStack": [],
         "uvStrategy": "generated procedural coordinates",
-        "normalStrategy": "vertex normals from generated geometry"
+        "normalStrategy": "vertex normals from generated geometry",
+        "profile2D": {
+          "points": [
+            [
+              -0.049,
+              -0.065
+            ],
+            [
+              0.049,
+              -0.065
+            ],
+            [
+              0.065,
+              -0.049
+            ],
+            [
+              0.065,
+              0.049
+            ],
+            [
+              0.049,
+              0.065
+            ],
+            [
+              -0.049,
+              0.065
+            ],
+            [
+              -0.065,
+              0.049
+            ],
+            [
+              -0.065,
+              -0.049
+            ]
+          ],
+          "depth": 0.39999999999999997
+        }
       },
       "parent": "root",
       "attachment": {
@@ -2093,27 +2162,22 @@
         ]
       },
       "dimensions": {
-        "width": 0.13,
-        "height": 0.4,
-        "depth": 0.13,
+        "width": 1.0,
+        "height": 1.0,
+        "depth": 1.0,
         "units": "object",
         "confidence": 0.75
       },
       "transform": {
         "position": [
           0.23,
-          -0.285,
+          -0.48,
           0.15
         ],
         "rotation": [
-          0.0,
           -1.5708,
-          0.0
-        ],
-        "scale": [
-          0.13,
-          0.4,
-          0.13
+          -0.0,
+          -1.5708
         ]
       },
       "actionProfile": {
@@ -2234,19 +2298,56 @@
       "role": "post",
       "importance": 0.7,
       "confidence": 0.75,
-      "primitive": "box",
+      "primitive": "extrude",
       "topologyClass": "assembled-solid",
-      "topologyRationale": "Leg: a square timber post, box-shaped.",
+      "topologyRationale": "Leg: a square timber post with chamfered edges, extruded from its section.",
       "geometryDescriptor": {
         "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
         "edgeTreatment": {
           "type": "chamfer",
-          "bevelRadius": 0.012,
+          "bevelRadius": 0.016,
           "segments": 1
         },
         "deformationStack": [],
         "uvStrategy": "generated procedural coordinates",
-        "normalStrategy": "vertex normals from generated geometry"
+        "normalStrategy": "vertex normals from generated geometry",
+        "profile2D": {
+          "points": [
+            [
+              -0.049,
+              -0.065
+            ],
+            [
+              0.049,
+              -0.065
+            ],
+            [
+              0.065,
+              -0.049
+            ],
+            [
+              0.065,
+              0.049
+            ],
+            [
+              0.049,
+              0.065
+            ],
+            [
+              -0.049,
+              0.065
+            ],
+            [
+              -0.065,
+              0.049
+            ],
+            [
+              -0.065,
+              -0.049
+            ]
+          ],
+          "depth": 0.39999999999999997
+        }
       },
       "parent": "root",
       "attachment": {
@@ -2270,27 +2371,22 @@
         ]
       },
       "dimensions": {
-        "width": 0.13,
-        "height": 0.4,
-        "depth": 0.13,
+        "width": 1.0,
+        "height": 1.0,
+        "depth": 1.0,
         "units": "object",
         "confidence": 0.75
       },
       "transform": {
         "position": [
           -0.23,
-          -0.285,
+          -0.48,
           1.0
         ],
         "rotation": [
-          0.0,
           -1.5708,
-          0.0
-        ],
-        "scale": [
-          0.13,
-          0.4,
-          0.13
+          -0.0,
+          -1.5708
         ]
       },
       "actionProfile": {
@@ -2411,19 +2507,56 @@
       "role": "post",
       "importance": 0.7,
       "confidence": 0.75,
-      "primitive": "box",
+      "primitive": "extrude",
       "topologyClass": "assembled-solid",
-      "topologyRationale": "Leg: a square timber post, box-shaped.",
+      "topologyRationale": "Leg: a square timber post with chamfered edges, extruded from its section.",
       "geometryDescriptor": {
         "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
         "edgeTreatment": {
           "type": "chamfer",
-          "bevelRadius": 0.012,
+          "bevelRadius": 0.016,
           "segments": 1
         },
         "deformationStack": [],
         "uvStrategy": "generated procedural coordinates",
-        "normalStrategy": "vertex normals from generated geometry"
+        "normalStrategy": "vertex normals from generated geometry",
+        "profile2D": {
+          "points": [
+            [
+              -0.049,
+              -0.065
+            ],
+            [
+              0.049,
+              -0.065
+            ],
+            [
+              0.065,
+              -0.049
+            ],
+            [
+              0.065,
+              0.049
+            ],
+            [
+              0.049,
+              0.065
+            ],
+            [
+              -0.049,
+              0.065
+            ],
+            [
+              -0.065,
+              0.049
+            ],
+            [
+              -0.065,
+              -0.049
+            ]
+          ],
+          "depth": 0.39999999999999997
+        }
       },
       "parent": "root",
       "attachment": {
@@ -2447,27 +2580,22 @@
         ]
       },
       "dimensions": {
-        "width": 0.13,
-        "height": 0.4,
-        "depth": 0.13,
+        "width": 1.0,
+        "height": 1.0,
+        "depth": 1.0,
         "units": "object",
         "confidence": 0.75
       },
       "transform": {
         "position": [
           0.23,
-          -0.285,
+          -0.48,
           1.0
         ],
         "rotation": [
-          0.0,
           -1.5708,
-          0.0
-        ],
-        "scale": [
-          0.13,
-          0.4,
-          0.13
+          -0.0,
+          -1.5708
         ]
       },
       "actionProfile": {
@@ -2588,19 +2716,56 @@
       "role": "post",
       "importance": 0.7,
       "confidence": 0.75,
-      "primitive": "box",
+      "primitive": "extrude",
       "topologyClass": "assembled-solid",
-      "topologyRationale": "Leg: a square timber post, box-shaped.",
+      "topologyRationale": "Leg: a square timber post with chamfered edges, extruded from its section.",
       "geometryDescriptor": {
         "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
         "edgeTreatment": {
           "type": "chamfer",
-          "bevelRadius": 0.012,
+          "bevelRadius": 0.016,
           "segments": 1
         },
         "deformationStack": [],
         "uvStrategy": "generated procedural coordinates",
-        "normalStrategy": "vertex normals from generated geometry"
+        "normalStrategy": "vertex normals from generated geometry",
+        "profile2D": {
+          "points": [
+            [
+              -0.049,
+              -0.065
+            ],
+            [
+              0.049,
+              -0.065
+            ],
+            [
+              0.065,
+              -0.049
+            ],
+            [
+              0.065,
+              0.049
+            ],
+            [
+              0.049,
+              0.065
+            ],
+            [
+              -0.049,
+              0.065
+            ],
+            [
+              -0.065,
+              0.049
+            ],
+            [
+              -0.065,
+              -0.049
+            ]
+          ],
+          "depth": 0.39999999999999997
+        }
       },
       "parent": "root",
       "attachment": {
@@ -2624,27 +2789,22 @@
         ]
       },
       "dimensions": {
-        "width": 0.13,
-        "height": 0.4,
-        "depth": 0.13,
+        "width": 1.0,
+        "height": 1.0,
+        "depth": 1.0,
         "units": "object",
         "confidence": 0.75
       },
       "transform": {
         "position": [
           -0.23,
-          -0.285,
+          -0.48,
           1.85
         ],
         "rotation": [
-          0.0,
           -1.5708,
-          0.0
-        ],
-        "scale": [
-          0.13,
-          0.4,
-          0.13
+          -0.0,
+          -1.5708
         ]
       },
       "actionProfile": {
@@ -2765,19 +2925,56 @@
       "role": "post",
       "importance": 0.7,
       "confidence": 0.75,
-      "primitive": "box",
+      "primitive": "extrude",
       "topologyClass": "assembled-solid",
-      "topologyRationale": "Leg: a square timber post, box-shaped.",
+      "topologyRationale": "Leg: a square timber post with chamfered edges, extruded from its section.",
       "geometryDescriptor": {
         "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
         "edgeTreatment": {
           "type": "chamfer",
-          "bevelRadius": 0.012,
+          "bevelRadius": 0.016,
           "segments": 1
         },
         "deformationStack": [],
         "uvStrategy": "generated procedural coordinates",
-        "normalStrategy": "vertex normals from generated geometry"
+        "normalStrategy": "vertex normals from generated geometry",
+        "profile2D": {
+          "points": [
+            [
+              -0.049,
+              -0.065
+            ],
+            [
+              0.049,
+              -0.065
+            ],
+            [
+              0.065,
+              -0.049
+            ],
+            [
+              0.065,
+              0.049
+            ],
+            [
+              0.049,
+              0.065
+            ],
+            [
+              -0.049,
+              0.065
+            ],
+            [
+              -0.065,
+              0.049
+            ],
+            [
+              -0.065,
+              -0.049
+            ]
+          ],
+          "depth": 0.39999999999999997
+        }
       },
       "parent": "root",
       "attachment": {
@@ -2801,27 +2998,22 @@
         ]
       },
       "dimensions": {
-        "width": 0.13,
-        "height": 0.4,
-        "depth": 0.13,
+        "width": 1.0,
+        "height": 1.0,
+        "depth": 1.0,
         "units": "object",
         "confidence": 0.75
       },
       "transform": {
         "position": [
           0.23,
-          -0.285,
+          -0.48,
           1.85
         ],
         "rotation": [
-          0.0,
           -1.5708,
-          0.0
-        ],
-        "scale": [
-          0.13,
-          0.4,
-          0.13
+          -0.0,
+          -1.5708
         ]
       },
       "actionProfile": {
@@ -2942,9 +3134,9 @@
       "role": "beam",
       "importance": 0.6,
       "confidence": 0.75,
-      "primitive": "box",
+      "primitive": "extrude",
       "topologyClass": "assembled-solid",
-      "topologyRationale": "Stretcher: a straight board bracing two legs, box-shaped.",
+      "topologyRationale": "Stretcher: a straight board bracing two legs, a chamfered prism along X.",
       "geometryDescriptor": {
         "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
         "edgeTreatment": {
@@ -2954,14 +3146,51 @@
         },
         "deformationStack": [],
         "uvStrategy": "generated procedural coordinates",
-        "normalStrategy": "vertex normals from generated geometry"
+        "normalStrategy": "vertex normals from generated geometry",
+        "profile2D": {
+          "points": [
+            [
+              -0.0125,
+              -0.0375
+            ],
+            [
+              0.0125,
+              -0.0375
+            ],
+            [
+              0.0225,
+              -0.0275
+            ],
+            [
+              0.0225,
+              0.0275
+            ],
+            [
+              0.0125,
+              0.0375
+            ],
+            [
+              -0.0125,
+              0.0375
+            ],
+            [
+              -0.0225,
+              0.0275
+            ],
+            [
+              -0.0225,
+              -0.0275
+            ]
+          ],
+          "depth": 0.98
+        }
       },
       "parent": "root",
       "attachment": null,
       "dimensions": {
-        "width": 0.98,
-        "height": 0.075,
-        "depth": 0.045,
+        "width": 1.0,
+        "height": 1.0,
+        "depth": 1.0,
         "units": "object",
         "confidence": 0.75
       },
@@ -2969,17 +3198,12 @@
         "position": [
           -0.315,
           -0.29,
-          0.575
+          0.085
         ],
         "rotation": [
+          -0.0,
           0.0,
-          -1.5708,
-          0.0
-        ],
-        "scale": [
-          0.98,
-          0.075,
-          0.045
+          -0.0
         ]
       },
       "actionProfile": {
@@ -3031,12 +3255,12 @@
           "seamRefs": [],
           "detachableFragments": [],
           "breakImpulse": 0.0,
-          "debrisMaterial": "wood"
+          "debrisMaterial": "wood-long"
         }
       },
-      "material": "wood",
+      "material": "wood-long",
       "materialLayers": [
-        "wood"
+        "wood-long"
       ],
       "colorMaterialRecipe": {
         "dominantAlbedo": "rgba(162, 111, 71, 1.0)",
@@ -3082,12 +3306,12 @@
       "uvContract": {
         "status": "unwrapped",
         "strategy": "generated procedural coordinates",
-        "materialId": "wood"
+        "materialId": "wood-long"
       },
       "materialRegions": [
         {
           "regionId": "stretcher-wood",
-          "materialId": "wood",
+          "materialId": "wood-long",
           "profileId": "wood.unfinished",
           "crop": {
             "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/01-stretcher-wood.png",
@@ -3112,9 +3336,9 @@
       "role": "beam",
       "importance": 0.6,
       "confidence": 0.75,
-      "primitive": "box",
+      "primitive": "extrude",
       "topologyClass": "assembled-solid",
-      "topologyRationale": "Stretcher: a straight board bracing two legs, box-shaped.",
+      "topologyRationale": "Stretcher: a straight board bracing two legs, a chamfered prism along X.",
       "geometryDescriptor": {
         "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
         "edgeTreatment": {
@@ -3124,14 +3348,51 @@
         },
         "deformationStack": [],
         "uvStrategy": "generated procedural coordinates",
-        "normalStrategy": "vertex normals from generated geometry"
+        "normalStrategy": "vertex normals from generated geometry",
+        "profile2D": {
+          "points": [
+            [
+              -0.0125,
+              -0.0375
+            ],
+            [
+              0.0125,
+              -0.0375
+            ],
+            [
+              0.0225,
+              -0.0275
+            ],
+            [
+              0.0225,
+              0.0275
+            ],
+            [
+              0.0125,
+              0.0375
+            ],
+            [
+              -0.0125,
+              0.0375
+            ],
+            [
+              -0.0225,
+              0.0275
+            ],
+            [
+              -0.0225,
+              -0.0275
+            ]
+          ],
+          "depth": 0.98
+        }
       },
       "parent": "root",
       "attachment": null,
       "dimensions": {
-        "width": 0.98,
-        "height": 0.075,
-        "depth": 0.045,
+        "width": 1.0,
+        "height": 1.0,
+        "depth": 1.0,
         "units": "object",
         "confidence": 0.75
       },
@@ -3139,17 +3400,12 @@
         "position": [
           -0.315,
           -0.29,
-          1.425
+          0.935
         ],
         "rotation": [
+          -0.0,
           0.0,
-          -1.5708,
-          0.0
-        ],
-        "scale": [
-          0.98,
-          0.075,
-          0.045
+          -0.0
         ]
       },
       "actionProfile": {
@@ -3201,12 +3457,12 @@
           "seamRefs": [],
           "detachableFragments": [],
           "breakImpulse": 0.0,
-          "debrisMaterial": "wood"
+          "debrisMaterial": "wood-long"
         }
       },
-      "material": "wood",
+      "material": "wood-long",
       "materialLayers": [
-        "wood"
+        "wood-long"
       ],
       "colorMaterialRecipe": {
         "dominantAlbedo": "rgba(162, 111, 71, 1.0)",
@@ -3257,9 +3513,9 @@
       "role": "beam",
       "importance": 0.6,
       "confidence": 0.75,
-      "primitive": "box",
+      "primitive": "extrude",
       "topologyClass": "assembled-solid",
-      "topologyRationale": "Stretcher: a straight board bracing two legs, box-shaped.",
+      "topologyRationale": "Stretcher: a straight board bracing two legs, a chamfered prism along X.",
       "geometryDescriptor": {
         "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
         "edgeTreatment": {
@@ -3269,14 +3525,51 @@
         },
         "deformationStack": [],
         "uvStrategy": "generated procedural coordinates",
-        "normalStrategy": "vertex normals from generated geometry"
+        "normalStrategy": "vertex normals from generated geometry",
+        "profile2D": {
+          "points": [
+            [
+              -0.0125,
+              -0.0375
+            ],
+            [
+              0.0125,
+              -0.0375
+            ],
+            [
+              0.0225,
+              -0.0275
+            ],
+            [
+              0.0225,
+              0.0275
+            ],
+            [
+              0.0125,
+              0.0375
+            ],
+            [
+              -0.0125,
+              0.0375
+            ],
+            [
+              -0.0225,
+              0.0275
+            ],
+            [
+              -0.0225,
+              -0.0275
+            ]
+          ],
+          "depth": 0.98
+        }
       },
       "parent": "root",
       "attachment": null,
       "dimensions": {
-        "width": 0.98,
-        "height": 0.075,
-        "depth": 0.045,
+        "width": 1.0,
+        "height": 1.0,
+        "depth": 1.0,
         "units": "object",
         "confidence": 0.75
       },
@@ -3284,17 +3577,12 @@
         "position": [
           0.315,
           -0.29,
-          0.575
+          0.085
         ],
         "rotation": [
+          -0.0,
           0.0,
-          -1.5708,
-          0.0
-        ],
-        "scale": [
-          0.98,
-          0.075,
-          0.045
+          -0.0
         ]
       },
       "actionProfile": {
@@ -3346,12 +3634,12 @@
           "seamRefs": [],
           "detachableFragments": [],
           "breakImpulse": 0.0,
-          "debrisMaterial": "wood"
+          "debrisMaterial": "wood-long"
         }
       },
-      "material": "wood",
+      "material": "wood-long",
       "materialLayers": [
-        "wood"
+        "wood-long"
       ],
       "colorMaterialRecipe": {
         "dominantAlbedo": "rgba(162, 111, 71, 1.0)",
@@ -3402,9 +3690,9 @@
       "role": "beam",
       "importance": 0.6,
       "confidence": 0.75,
-      "primitive": "box",
+      "primitive": "extrude",
       "topologyClass": "assembled-solid",
-      "topologyRationale": "Stretcher: a straight board bracing two legs, box-shaped.",
+      "topologyRationale": "Stretcher: a straight board bracing two legs, a chamfered prism along X.",
       "geometryDescriptor": {
         "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
         "edgeTreatment": {
@@ -3414,14 +3702,51 @@
         },
         "deformationStack": [],
         "uvStrategy": "generated procedural coordinates",
-        "normalStrategy": "vertex normals from generated geometry"
+        "normalStrategy": "vertex normals from generated geometry",
+        "profile2D": {
+          "points": [
+            [
+              -0.0125,
+              -0.0375
+            ],
+            [
+              0.0125,
+              -0.0375
+            ],
+            [
+              0.0225,
+              -0.0275
+            ],
+            [
+              0.0225,
+              0.0275
+            ],
+            [
+              0.0125,
+              0.0375
+            ],
+            [
+              -0.0125,
+              0.0375
+            ],
+            [
+              -0.0225,
+              0.0275
+            ],
+            [
+              -0.0225,
+              -0.0275
+            ]
+          ],
+          "depth": 0.98
+        }
       },
       "parent": "root",
       "attachment": null,
       "dimensions": {
-        "width": 0.98,
-        "height": 0.075,
-        "depth": 0.045,
+        "width": 1.0,
+        "height": 1.0,
+        "depth": 1.0,
         "units": "object",
         "confidence": 0.75
       },
@@ -3429,17 +3754,12 @@
         "position": [
           0.315,
           -0.29,
-          1.425
+          0.935
         ],
         "rotation": [
+          -0.0,
           0.0,
-          -1.5708,
-          0.0
-        ],
-        "scale": [
-          0.98,
-          0.075,
-          0.045
+          -0.0
         ]
       },
       "actionProfile": {
@@ -3491,12 +3811,12 @@
           "seamRefs": [],
           "detachableFragments": [],
           "breakImpulse": 0.0,
-          "debrisMaterial": "wood"
+          "debrisMaterial": "wood-long"
         }
       },
-      "material": "wood",
+      "material": "wood-long",
       "materialLayers": [
-        "wood"
+        "wood-long"
       ],
       "colorMaterialRecipe": {
         "dominantAlbedo": "rgba(162, 111, 71, 1.0)",
@@ -3547,9 +3867,9 @@
       "role": "beam",
       "importance": 0.55,
       "confidence": 0.75,
-      "primitive": "box",
+      "primitive": "extrude",
       "topologyClass": "assembled-solid",
-      "topologyRationale": "Cross brace: a flat diagonal board, box-shaped, one of an X between the end legs.",
+      "topologyRationale": "Cross brace: a flat diagonal board, a chamfered prism, one of an X between the end legs.",
       "geometryDescriptor": {
         "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
         "edgeTreatment": {
@@ -3559,32 +3879,64 @@
         },
         "deformationStack": [],
         "uvStrategy": "generated procedural coordinates",
-        "normalStrategy": "vertex normals from generated geometry"
+        "normalStrategy": "vertex normals from generated geometry",
+        "profile2D": {
+          "points": [
+            [
+              -0.0095,
+              -0.0325
+            ],
+            [
+              0.0095,
+              -0.0325
+            ],
+            [
+              0.0175,
+              -0.0245
+            ],
+            [
+              0.0175,
+              0.0245
+            ],
+            [
+              0.0095,
+              0.0325
+            ],
+            [
+              -0.0095,
+              0.0325
+            ],
+            [
+              -0.0175,
+              0.0245
+            ],
+            [
+              -0.0175,
+              -0.0245
+            ]
+          ],
+          "depth": 0.6047071299343466
+        }
       },
       "parent": "root",
       "attachment": null,
       "dimensions": {
-        "width": 0.035,
-        "height": 0.065,
-        "depth": 0.6047,
+        "width": 1.0,
+        "height": 1.0,
+        "depth": 1.0,
         "units": "object",
         "confidence": 0.75
       },
       "transform": {
         "position": [
-          0.0,
-          -0.26,
+          0.2507,
+          -0.091,
           0.225
         ],
         "rotation": [
           1.5708,
           -0.97779,
           1.5708
-        ],
-        "scale": [
-          0.035,
-          0.065,
-          0.6047
         ]
       },
       "actionProfile": {
@@ -3636,12 +3988,12 @@
           "seamRefs": [],
           "detachableFragments": [],
           "breakImpulse": 0.0,
-          "debrisMaterial": "wood"
+          "debrisMaterial": "wood-long"
         }
       },
-      "material": "wood",
+      "material": "wood-long",
       "materialLayers": [
-        "wood"
+        "wood-long"
       ],
       "colorMaterialRecipe": {
         "dominantAlbedo": "rgba(162, 111, 71, 1.0)",
@@ -3692,9 +4044,9 @@
       "role": "beam",
       "importance": 0.55,
       "confidence": 0.75,
-      "primitive": "box",
+      "primitive": "extrude",
       "topologyClass": "assembled-solid",
-      "topologyRationale": "Cross brace: a flat diagonal board, box-shaped, one of an X between the end legs.",
+      "topologyRationale": "Cross brace: a flat diagonal board, a chamfered prism, one of an X between the end legs.",
       "geometryDescriptor": {
         "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
         "edgeTreatment": {
@@ -3704,32 +4056,64 @@
         },
         "deformationStack": [],
         "uvStrategy": "generated procedural coordinates",
-        "normalStrategy": "vertex normals from generated geometry"
+        "normalStrategy": "vertex normals from generated geometry",
+        "profile2D": {
+          "points": [
+            [
+              -0.0095,
+              -0.0325
+            ],
+            [
+              0.0095,
+              -0.0325
+            ],
+            [
+              0.0175,
+              -0.0245
+            ],
+            [
+              0.0175,
+              0.0245
+            ],
+            [
+              0.0095,
+              0.0325
+            ],
+            [
+              -0.0095,
+              0.0325
+            ],
+            [
+              -0.0175,
+              0.0245
+            ],
+            [
+              -0.0175,
+              -0.0245
+            ]
+          ],
+          "depth": 0.6047071299343466
+        }
       },
       "parent": "root",
       "attachment": null,
       "dimensions": {
-        "width": 0.035,
-        "height": 0.065,
-        "depth": 0.6047,
+        "width": 1.0,
+        "height": 1.0,
+        "depth": 1.0,
         "units": "object",
         "confidence": 0.75
       },
       "transform": {
         "position": [
-          0.0,
-          -0.26,
+          0.2507,
+          -0.429,
           0.225
         ],
         "rotation": [
           -1.5708,
           -0.97779,
           -1.5708
-        ],
-        "scale": [
-          0.035,
-          0.065,
-          0.6047
         ]
       },
       "actionProfile": {
@@ -3781,12 +4165,12 @@
           "seamRefs": [],
           "detachableFragments": [],
           "breakImpulse": 0.0,
-          "debrisMaterial": "wood"
+          "debrisMaterial": "wood-long"
         }
       },
-      "material": "wood",
+      "material": "wood-long",
       "materialLayers": [
-        "wood"
+        "wood-long"
       ],
       "colorMaterialRecipe": {
         "dominantAlbedo": "rgba(162, 111, 71, 1.0)",
@@ -3837,9 +4221,9 @@
       "role": "beam",
       "importance": 0.55,
       "confidence": 0.75,
-      "primitive": "box",
+      "primitive": "extrude",
       "topologyClass": "assembled-solid",
-      "topologyRationale": "Cross brace: a flat diagonal board, box-shaped, one of an X between the end legs.",
+      "topologyRationale": "Cross brace: a flat diagonal board, a chamfered prism, one of an X between the end legs.",
       "geometryDescriptor": {
         "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
         "edgeTreatment": {
@@ -3849,32 +4233,64 @@
         },
         "deformationStack": [],
         "uvStrategy": "generated procedural coordinates",
-        "normalStrategy": "vertex normals from generated geometry"
+        "normalStrategy": "vertex normals from generated geometry",
+        "profile2D": {
+          "points": [
+            [
+              -0.0095,
+              -0.0325
+            ],
+            [
+              0.0095,
+              -0.0325
+            ],
+            [
+              0.0175,
+              -0.0245
+            ],
+            [
+              0.0175,
+              0.0245
+            ],
+            [
+              0.0095,
+              0.0325
+            ],
+            [
+              -0.0095,
+              0.0325
+            ],
+            [
+              -0.0175,
+              0.0245
+            ],
+            [
+              -0.0175,
+              -0.0245
+            ]
+          ],
+          "depth": 0.6047071299343466
+        }
       },
       "parent": "root",
       "attachment": null,
       "dimensions": {
-        "width": 0.035,
-        "height": 0.065,
-        "depth": 0.6047,
+        "width": 1.0,
+        "height": 1.0,
+        "depth": 1.0,
         "units": "object",
         "confidence": 0.75
       },
       "transform": {
         "position": [
-          0.0,
-          -0.26,
+          0.2507,
+          -0.091,
           1.775
         ],
         "rotation": [
           1.5708,
           -0.97779,
           1.5708
-        ],
-        "scale": [
-          0.035,
-          0.065,
-          0.6047
         ]
       },
       "actionProfile": {
@@ -3926,12 +4342,12 @@
           "seamRefs": [],
           "detachableFragments": [],
           "breakImpulse": 0.0,
-          "debrisMaterial": "wood"
+          "debrisMaterial": "wood-long"
         }
       },
-      "material": "wood",
+      "material": "wood-long",
       "materialLayers": [
-        "wood"
+        "wood-long"
       ],
       "colorMaterialRecipe": {
         "dominantAlbedo": "rgba(162, 111, 71, 1.0)",
@@ -3982,9 +4398,9 @@
       "role": "beam",
       "importance": 0.55,
       "confidence": 0.75,
-      "primitive": "box",
+      "primitive": "extrude",
       "topologyClass": "assembled-solid",
-      "topologyRationale": "Cross brace: a flat diagonal board, box-shaped, one of an X between the end legs.",
+      "topologyRationale": "Cross brace: a flat diagonal board, a chamfered prism, one of an X between the end legs.",
       "geometryDescriptor": {
         "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
         "edgeTreatment": {
@@ -3994,32 +4410,64 @@
         },
         "deformationStack": [],
         "uvStrategy": "generated procedural coordinates",
-        "normalStrategy": "vertex normals from generated geometry"
+        "normalStrategy": "vertex normals from generated geometry",
+        "profile2D": {
+          "points": [
+            [
+              -0.0095,
+              -0.0325
+            ],
+            [
+              0.0095,
+              -0.0325
+            ],
+            [
+              0.0175,
+              -0.0245
+            ],
+            [
+              0.0175,
+              0.0245
+            ],
+            [
+              0.0095,
+              0.0325
+            ],
+            [
+              -0.0095,
+              0.0325
+            ],
+            [
+              -0.0175,
+              0.0245
+            ],
+            [
+              -0.0175,
+              -0.0245
+            ]
+          ],
+          "depth": 0.6047071299343466
+        }
       },
       "parent": "root",
       "attachment": null,
       "dimensions": {
-        "width": 0.035,
-        "height": 0.065,
-        "depth": 0.6047,
+        "width": 1.0,
+        "height": 1.0,
+        "depth": 1.0,
         "units": "object",
         "confidence": 0.75
       },
       "transform": {
         "position": [
-          0.0,
-          -0.26,
+          0.2507,
+          -0.429,
           1.775
         ],
         "rotation": [
           -1.5708,
           -0.97779,
           -1.5708
-        ],
-        "scale": [
-          0.035,
-          0.065,
-          0.6047
         ]
       },
       "actionProfile": {
@@ -4071,12 +4519,12 @@
           "seamRefs": [],
           "detachableFragments": [],
           "breakImpulse": 0.0,
-          "debrisMaterial": "wood"
+          "debrisMaterial": "wood-long"
         }
       },
-      "material": "wood",
+      "material": "wood-long",
       "materialLayers": [
-        "wood"
+        "wood-long"
       ],
       "colorMaterialRecipe": {
         "dominantAlbedo": "rgba(162, 111, 71, 1.0)",
@@ -5467,8 +5915,8 @@
   ],
   "materials": [
     {
-      "id": "wood",
-      "name": "Bench wood",
+      "id": "wood-long",
+      "name": "Bench wood (long grain on v)",
       "type": "standard",
       "shaderModel": "MeshStandardMaterial / PBR approximation (stylized, low-amplitude variation)",
       "baseColor": "#a26f47",
@@ -5513,8 +5961,8 @@
           "frequency": 6.0,
           "amplitude": 0.45,
           "stretch": [
-            0.35,
-            4.0
+            4.0,
+            0.35
           ],
           "pattern": "grain",
           "role": "long grain streaks along the board"
@@ -5572,7 +6020,7 @@
         {
           "id": "bench-grain",
           "kind": "groove",
-          "region": "all bench boards, along their length",
+          "region": "every bench member, along its length",
           "evidenceRefs": [
             "full-object"
           ],
@@ -5598,7 +6046,7 @@
         "Stylized game prop: keep albedo flat-ish and readable at ~100 px; the procedural maps add only subtle breakup.",
         "Albedo, roughness, height/normal and AO are generated independently; albedo is never reused as another channel."
       ],
-      "notes": "Muted warm brown boards (stretchers, braces), grain along u (box faces).",
+      "notes": "Muted warm-brown bench wood for every member (top boards, legs, stretchers, braces): all are extruded prisms whose side-wall UVs run v along the grain.",
       "evidenceRefs": [
         "full-object"
       ],
@@ -5649,32 +6097,32 @@
         "hardLimit": "A single image cannot uniquely recover true albedo/roughness/normal/AO; maps are reference-derived estimates.",
         "maps": {
           "albedo": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood_albedo.png",
-            "url": "wood_albedo.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood-long_albedo.png",
+            "url": "wood-long_albedo.png",
             "channel": "albedo",
             "source": "reference-pixel-extraction"
           },
           "roughness": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood_roughness.png",
-            "url": "wood_roughness.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood-long_roughness.png",
+            "url": "wood-long_roughness.png",
             "channel": "roughness",
             "source": "reference-pixel-extraction"
           },
           "height": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood_height.png",
-            "url": "wood_height.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood-long_height.png",
+            "url": "wood-long_height.png",
             "channel": "height",
             "source": "reference-pixel-extraction"
           },
           "normal": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood_normal.png",
-            "url": "wood_normal.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood-long_normal.png",
+            "url": "wood-long_normal.png",
             "channel": "normal",
             "source": "reference-pixel-extraction"
           },
           "ao": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood_ao.png",
-            "url": "wood_ao.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood-long_ao.png",
+            "url": "wood-long_ao.png",
             "channel": "ao",
             "source": "reference-pixel-extraction"
           }
@@ -5780,313 +6228,6 @@
           "finish": "unfinished",
           "aliases": [],
           "confidence": 0.76,
-          "source": "vision"
-        },
-        "alternatives": []
-      }
-    },
-    {
-      "id": "wood-long",
-      "name": "Bench wood (long grain on v)",
-      "type": "standard",
-      "shaderModel": "MeshStandardMaterial / PBR approximation (stylized, low-amplitude variation)",
-      "baseColor": "#a26f47",
-      "color": "#a26f47",
-      "albedo": {
-        "dominant": "#a26f47",
-        "secondary": [
-          "#84583a",
-          "#bb8c63"
-        ],
-        "samplingNotes": "Sampled from the de-shaded mid tones of the reference region; highlights and core shadows of the illustration are lighting, not albedo."
-      },
-      "colorVariation": {
-        "palette": [
-          "#a26f47",
-          "#84583a",
-          "#bb8c63"
-        ],
-        "pattern": "mottled",
-        "amplitude": 0.16,
-        "heightCorrelation": 0.3
-      },
-      "textureResolution": 256,
-      "textureProjection": {
-        "mode": "uv",
-        "repeat": [
-          2.0,
-          2.0
-        ],
-        "anisotropy": 4,
-        "texelDensityIntent": "Stable object-scale detail sized for a ~100 px on-screen game prop."
-      },
-      "surfaceFrequencyBands": [
-        {
-          "id": "macro",
-          "frequency": 2.0,
-          "amplitude": 0.25,
-          "role": "broad tone breakup across a plank"
-        },
-        {
-          "id": "meso",
-          "frequency": 6.0,
-          "amplitude": 0.45,
-          "stretch": [
-            4.0,
-            0.35
-          ],
-          "pattern": "grain",
-          "role": "long grain streaks along the board"
-        },
-        {
-          "id": "micro",
-          "frequency": 28.0,
-          "amplitude": 0.08,
-          "role": "highlight breakup under grazing light"
-        }
-      ],
-      "roughness": {
-        "base": 0.88,
-        "variation": 0.12,
-        "map": "independent-procedural-field",
-        "localResponse": "slightly rougher in cavities, smoother on worn edges"
-      },
-      "metalness": {
-        "base": 0.0,
-        "variation": 0.0
-      },
-      "normal": {
-        "pattern": "derived-from-independent-height-field",
-        "strength": 0.35,
-        "scale": 18.0,
-        "space": "tangent"
-      },
-      "bump": {
-        "pattern": "none",
-        "amplitude": 0.0,
-        "scale": 1.0
-      },
-      "displacement": {
-        "pattern": "none",
-        "amplitude": 0.0,
-        "scale": 1.0,
-        "silhouetteAffects": false
-      },
-      "ambientOcclusion": {
-        "cavityStrength": 0.25,
-        "contactShadowBias": 0.3,
-        "notes": "Darken plank seams, bracket edges and the contact with the parts below."
-      },
-      "wear": {
-        "edgeWear": 0.2,
-        "scratches": [],
-        "chips": []
-      },
-      "dirt": {
-        "amount": 0.1,
-        "cavityBias": 0.6,
-        "color": "#3a2c1e"
-      },
-      "localOverrides": [
-        {
-          "id": "top-grain",
-          "kind": "groove",
-          "region": "top boards and legs, along their length",
-          "evidenceRefs": [
-            "full-object"
-          ],
-          "confidence": 0.7,
-          "albedoShift": "#7a4f30",
-          "pattern": "streaked along the board",
-          "amplitude": 0.12
-        }
-      ],
-      "shaderNotes": [
-        "Stylized game prop: keep albedo flat-ish and readable at ~100 px; the procedural maps add only subtle breakup.",
-        "Albedo, roughness, height/normal and AO are generated independently; albedo is never reused as another channel."
-      ],
-      "notes": "The same wood for the extruded top boards and the legs, whose UVs run v along the grain (extrude side walls, post faces).",
-      "evidenceRefs": [
-        "full-object"
-      ],
-      "referenceMaterialId": "wood.unfinished",
-      "materialFamily": "wood",
-      "materialSubtype": "generic",
-      "materialFinish": "unfinished",
-      "materialReference": {
-        "registry": "/home/user/Scary-Night/.agents/skills/img2threejs/docs/materials/material-reference.json",
-        "profileId": "wood.unfinished",
-        "method": "family-subtype-finish",
-        "confidence": 0.766,
-        "sourceRefs": [
-          "three.mesh-standard",
-          "three.texture",
-          "adobe.pbr-guide-1",
-          "mit.material-recognition"
-        ],
-        "requiredMaps": [
-          "map",
-          "roughnessMap",
-          "normalMap"
-        ],
-        "optionalMaps": [
-          "aoMap",
-          "anisotropyMap"
-        ],
-        "validationViews": [
-          "albedo-unlit",
-          "neutral-studio",
-          "grazing"
-        ]
-      },
-      "anisotropy": {
-        "base": 0.12,
-        "variation": 0.0
-      },
-      "referencePbr": {
-        "version": "1.0",
-        "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/00-bench-wood.png",
-        "extractor": "stage1_intake/extract_pbr_evidence.py",
-        "method": "single-image pixel evidence with de-lighting estimate; not photogrammetry",
-        "usable": false,
-        "verdict": "pass",
-        "confidence": 0.766,
-        "estimatedFidelity": 0.766,
-        "targetThreshold": 0.7,
-        "hardLimit": "A single image cannot uniquely recover true albedo/roughness/normal/AO; maps are reference-derived estimates.",
-        "maps": {
-          "albedo": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood-long_albedo.png",
-            "url": "wood-long_albedo.png",
-            "channel": "albedo",
-            "source": "reference-pixel-extraction"
-          },
-          "roughness": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood-long_roughness.png",
-            "url": "wood-long_roughness.png",
-            "channel": "roughness",
-            "source": "reference-pixel-extraction"
-          },
-          "height": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood-long_height.png",
-            "url": "wood-long_height.png",
-            "channel": "height",
-            "source": "reference-pixel-extraction"
-          },
-          "normal": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood-long_normal.png",
-            "url": "wood-long_normal.png",
-            "channel": "normal",
-            "source": "reference-pixel-extraction"
-          },
-          "ao": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood-long_ao.png",
-            "url": "wood-long_ao.png",
-            "channel": "ao",
-            "source": "reference-pixel-extraction"
-          }
-        },
-        "diagnostics": {
-          "sourceWidth": 280,
-          "sourceHeight": 60,
-          "mapSize": 512,
-          "cropBBoxPixels": {
-            "x": 0,
-            "y": 0,
-            "width": 280,
-            "height": 60
-          },
-          "mask": {
-            "backgroundColor": "#B58765",
-            "backgroundNoise": 81.664,
-            "transparentPixelFraction": 0.0,
-            "foregroundCoverage": 0.9973
-          },
-          "mapStats": {
-            "valueRange": 0.2288,
-            "heightP90Gradient": 0.02073,
-            "roughnessBase": 0.698,
-            "roughnessVariation": 0.05,
-            "normalStrength": 0.181,
-            "blurRadius": 10
-          },
-          "palette": [
-            "#8A5632",
-            "#A06A3C",
-            "#945F36",
-            "#BF8E5E",
-            "#5B3620"
-          ]
-        },
-        "warnings": [
-          "image is not clearly isolated from background; using most pixels as material evidence",
-          "object/background separation is weak",
-          "single-image inverse rendering cannot prove true physical PBR; confidence is capped",
-          "low value range weakens height/roughness inference"
-        ],
-        "shippingNote": "Extracted from an AI concept image: kept as palette/roughness evidence only, never loaded as textures (DUSKHOLD rule: AI images are concepts only). The factory falls back to its procedural canvas maps."
-      },
-      "textureAnalysis": {
-        "finishClass": "painted-metal",
-        "recipe": {
-          "metalness": 0.0,
-          "roughness": 0.5,
-          "clearcoat": 1.0,
-          "clearcoatRoughness": 0.05,
-          "transmission": 0.0,
-          "ior": 1.5,
-          "envMapIntensity": 1.0,
-          "anisotropy": 0.0,
-          "procedural": "flat-clearcoat"
-        },
-        "palette": [
-          "#B18056",
-          "#9D693E",
-          "#915D35",
-          "#8F5A34",
-          "#815534"
-        ],
-        "paletteHueRisk": [],
-        "gradientAxis": "vertical",
-        "stats": {
-          "meanLum": 109.6,
-          "meanSaturation": 0.615,
-          "gradientStrength": 0.171,
-          "mottle": 0.007,
-          "streakRatio": 0.85,
-          "hueSpread": 0.001,
-          "specularFraction": 0.0
-        }
-      },
-      "materialEvidence": {
-        "componentId": "top-board-5",
-        "regionId": "bench-wood",
-        "crop": {
-          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/00-bench-wood.png",
-          "bbox": {
-            "x": 200,
-            "y": 325,
-            "width": 280,
-            "height": 60
-          },
-          "sourceWidth": 1408,
-          "sourceHeight": 768,
-          "loaderWarnings": [],
-          "coverage": 0.0155
-        },
-        "observations": [
-          "chromatic base-colour response",
-          "single-image PBR inference requires controlled render validation"
-        ],
-        "hypothesis": {
-          "componentId": "top-board-5",
-          "regionId": "bench-wood",
-          "materialId": null,
-          "family": "wood",
-          "subtype": "generic",
-          "finish": "unfinished",
-          "aliases": [],
-          "confidence": 0.766,
           "source": "vision"
         },
         "alternatives": []
@@ -8896,7 +9037,7 @@
       {
         "componentId": "stretcher-1",
         "regionId": "stretcher-wood",
-        "specMaterialId": "wood",
+        "specMaterialId": "wood-long",
         "profileId": "wood.unfinished",
         "status": "proceed"
       },
@@ -10387,6 +10528,126 @@
       "maskWarnings": [],
       "renderHash": "baec38f26623e3b5",
       "passId": "interaction-pass"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "silhouetteIoU": 0.8736,
+        "aspectRatioDelta": 0.0345,
+        "scaleDelta": 0.0231,
+        "bilateralSymmetryError": 0.1689,
+        "colorDelta": {
+          "checked": 25,
+          "maxDeltaE": 17.85,
+          "perComponent": [
+            {
+              "componentId": null,
+              "deltaE": 3.39
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.39
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.39
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.39
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.39
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.39
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.39
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.39
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.39
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.39
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.39
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.39
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.39
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.39
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.39
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.39
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.39
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.39
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.39
+            },
+            {
+              "componentId": null,
+              "deltaE": 8.78
+            },
+            {
+              "componentId": null,
+              "deltaE": 17.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 17.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.81
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.22
+            },
+            {
+              "componentId": null,
+              "deltaE": 16.11
+            }
+          ],
+          "gated": true
+        }
+      },
+      "failures": [],
+      "maskWarnings": [],
+      "renderHash": "8d7248612e14fe28",
+      "passId": "optimization-pass"
     }
   ]
 }

@@ -46,22 +46,17 @@ GRAIN_V = [dict(band, stretch=[band["stretch"][1], band["stretch"][0]]) if "stre
 # legs), the blade a mid steel grey (#717177-#97979a), the hub a dark warm grey (#454044-#5f5959),
 # the cut face a pale peach (#e5c4a1)
 MATERIALS = {
-    "wood": Material("wood", "Bench wood", "#a26f47", ["#84583a", "#bb8c63"], material_class="wood",
-                     roughness=0.86, normal=0.35, amplitude=0.16, edge_wear=0.2, dirt=0.1, bands=GRAIN,
-                     overrides=[dict(id="bench-grain", kind="groove", region="all bench boards, along their length",
-                                     evidenceRefs=["full-object"], confidence=0.7, albedoShift="#7a4f30",
-                                     pattern="streaked along the board", amplitude=0.12),
-                                dict(id="bench-edge-wear", kind="chip", region="top and leg edges", evidenceRefs=["full-object"],
-                                     confidence=0.6, albedoShift="#c99a70", roughnessDelta=-0.06, edgeWear=0.25)],
-                     notes="Muted warm brown boards (stretchers, braces), grain along u (box faces)."),
     "wood-long": Material("wood-long", "Bench wood (long grain on v)", "#a26f47", ["#84583a", "#bb8c63"],
                           material_class="wood", roughness=0.86, normal=0.35, amplitude=0.16, edge_wear=0.2, dirt=0.1,
                           bands=GRAIN_V,
-                          overrides=[dict(id="top-grain", kind="groove", region="top boards and legs, along their length",
+                          overrides=[dict(id="bench-grain", kind="groove", region="every bench member, along its length",
                                           evidenceRefs=["full-object"], confidence=0.7, albedoShift="#7a4f30",
-                                          pattern="streaked along the board", amplitude=0.12)],
-                          notes="The same wood for the extruded top boards and the legs, whose UVs run v along the "
-                                "grain (extrude side walls, post faces)."),
+                                          pattern="streaked along the board", amplitude=0.12),
+                                     dict(id="bench-edge-wear", kind="chip", region="top and leg edges",
+                                          evidenceRefs=["full-object"], confidence=0.6, albedoShift="#c99a70",
+                                          roughnessDelta=-0.06, edgeWear=0.25)],
+                          notes="Muted warm-brown bench wood for every member (top boards, legs, stretchers, braces): "
+                                "all are extruded prisms whose side-wall UVs run v along the grain."),
     "bark": Material("bark", "Log wood", "#8c6548", ["#6e4c33", "#a27858"], material_class="wood",
                      roughness=0.9, normal=0.45, amplitude=0.18, bands=GRAIN_V,
                      overrides=[dict(id="log-bark-streaks", kind="scratch", region="log side", evidenceRefs=["full-object"],
@@ -90,7 +85,7 @@ MATERIALS = {
 }
 FLAT_SHADED: set[str] = set()
 METAL_OVERRIDES = {"steel": {"metalness": 0.25, "roughness": 0.32}, "iron": {"metalness": 0.25, "roughness": 0.45}}
-ROUGHNESS_OVERRIDES = {"wood": 0.88, "wood-long": 0.88, "bark": 0.92, "end-grain": 0.93, "slot": 0.96}
+ROUGHNESS_OVERRIDES = {"wood-long": 0.88, "bark": 0.92, "end-grain": 0.93, "slot": 0.96}
 
 # ---- geometry -----------------------------------------------------------------------------------
 TOP_Y = 0.57          # table top surface
@@ -167,33 +162,44 @@ def build_components() -> SpecBuilder:
     for x in LEG_X:
         for z in (LEG_Z, -LEG_Z):
             leg_top = TOP_Y - TOP_T + 0.01
-            b.box(f"leg-{n}", f"Leg {n}", parent="root", center=(x, (TOP_Y - TOP_T) / 2, z),
-                  size=(LEG, leg_top, LEG), level="macro", role="post", material="wood-long", importance=0.7,
-                  edge=("chamfer", 0.012, 1),
+            # optimization pass: frame members are chamfered prisms (an extruded 8-point section, 28
+            # triangles) instead of subdivided boxes (192): softer edges like the reference's timbers
+            # at a seventh of the triangles. A post extrudes up: local Z -> world +Y (rot -90 deg about X).
+            b.add(f"leg-{n}", f"Leg {n}", parent="root", primitive="extrude", world=(x, 0.0, z), rot=(-math.pi / 2, 0.0, 0.0),
+                  scale=None, material="wood-long", topology="assembled-solid", level="macro", role="post", importance=0.7,
+                  descriptor={"profile2D": {"points": board_profile(LEG, LEG, 0.016), "depth": leg_top}},
+                  edge=("chamfer", 0.016, 1),
                   attachment={"parentId": "root", "parentSocket": "root:underside",
                               "localStart": b.local("root", (x, 0.0, z)), "localEnd": b.local("root", (x, leg_top, z)),
                               "contactType": "butt", "embedDepth": 0.01, "gapTolerance": 0.003, "evidenceRefs": ["full-object"]},
-                  rationale="Leg: a square timber post, box-shaped.",
+                  rationale="Leg: a square timber post with chamfered edges, extruded from its section.",
                   features=[feature(f"leg-bevel-{n}", "bevel", "softened leg edges catch the key light")])
             n += 1
-    # long stretchers on the outer faces of the legs (front and back), two per side
+    # long stretchers on the outer faces of the legs (front and back), two per side; prisms along X
     k = 1
     for z, side in ((LEG_Z + LEG / 2 + 0.02, "front"), (-(LEG_Z + LEG / 2 + 0.02), "back")):
         for x0, x1 in ((LEG_X[0], LEG_X[1]), (LEG_X[1], LEG_X[2])):
-            b.box(f"stretcher-{k}", f"Stretcher {side} {k}", parent="root", center=((x0 + x1) / 2, 0.19, z),
-                  size=(abs(x1 - x0) + LEG, 0.075, 0.045), level="meso", role="beam", material="wood", importance=0.6,
-                  rationale="Stretcher: a straight board bracing two legs, box-shaped.")
+            length = abs(x1 - x0) + LEG
+            b.add(f"stretcher-{k}", f"Stretcher {side} {k}", parent="root", primitive="extrude",
+                  world=((x0 + x1) / 2 - length / 2, 0.19, z), rot=(0.0, math.pi / 2, 0.0), scale=None,
+                  material="wood-long", topology="assembled-solid", level="meso", role="beam", importance=0.6,
+                  descriptor={"profile2D": {"points": board_profile(0.045, 0.075, 0.01), "depth": length}},
+                  rationale="Stretcher: a straight board bracing two legs, a chamfered prism along X.")
             k += 1
-    # X braces between the end legs
+    # X braces between the end legs: prisms along their own (tilted) length
     k = 1
     rise, run_z = 0.31, 2 * LEG_Z
     ang = math.atan2(rise, run_z)
     length = math.hypot(rise, run_z) + 0.05
     for x in (LEG_X[0], LEG_X[2]):
-        for s in (1, -1):
-            b.box(f"brace-{k}", f"Cross brace {k}", parent="root", center=(x + (0.075 if x < 0 else -0.075), 0.22, 0.0),
-                  size=(0.035, 0.065, length), rot=(s * ang, 0.0, 0.0), level="meso", role="beam", material="wood",
-                  importance=0.55, rationale="Cross brace: a flat diagonal board, box-shaped, one of an X between the end legs.")
+        for s_ in (1, -1):
+            cx, cy, cz = x + (0.075 if x < 0 else -0.075), 0.22, 0.0
+            d = (0.0, -math.sin(s_ * ang), math.cos(s_ * ang))          # local Z after the tilt about X
+            b.add(f"brace-{k}", f"Cross brace {k}", parent="root", primitive="extrude",
+                  world=(cx - d[0] * length / 2, cy - d[1] * length / 2, cz - d[2] * length / 2), rot=(s_ * ang, 0.0, 0.0),
+                  scale=None, material="wood-long", topology="assembled-solid", level="meso", role="beam", importance=0.55,
+                  descriptor={"profile2D": {"points": board_profile(0.035, 0.065, 0.008), "depth": length}},
+                  rationale="Cross brace: a flat diagonal board, a chamfered prism, one of an X between the end legs.")
             k += 1
     # the blade: a toothed steel disc through a slot in the top, spinning about Z
     b.add("saw-blade", "Saw blade", level="macro", role="blade", parent="root", primitive="extrude",

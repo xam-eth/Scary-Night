@@ -455,7 +455,7 @@
     {
       "componentId": "stretcher-1",
       "regionId": "stretcher-wood",
-      "materialSpecId": "wood",
+      "materialSpecId": "wood-long",
       "hypothesis": {
         "componentId": "stretcher-1",
         "regionId": "stretcher-wood",
@@ -494,7 +494,7 @@
             "confidence": 0.76,
             "estimatedFidelity": 0.76,
             "targetThreshold": 0.7,
-            "materialId": "wood",
+            "materialId": "wood-long",
             "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/01-stretcher-wood.png",
             "outDir": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood",
             "palette": [
@@ -506,32 +506,32 @@
             ],
             "maps": {
               "albedo": {
-                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood_albedo.png",
-                "url": "wood_albedo.png",
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood-long_albedo.png",
+                "url": "wood-long_albedo.png",
                 "channel": "albedo",
                 "source": "reference-pixel-extraction"
               },
               "roughness": {
-                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood_roughness.png",
-                "url": "wood_roughness.png",
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood-long_roughness.png",
+                "url": "wood-long_roughness.png",
                 "channel": "roughness",
                 "source": "reference-pixel-extraction"
               },
               "height": {
-                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood_height.png",
-                "url": "wood_height.png",
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood-long_height.png",
+                "url": "wood-long_height.png",
                 "channel": "height",
                 "source": "reference-pixel-extraction"
               },
               "normal": {
-                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood_normal.png",
-                "url": "wood_normal.png",
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood-long_normal.png",
+                "url": "wood-long_normal.png",
                 "channel": "normal",
                 "source": "reference-pixel-extraction"
               },
               "ao": {
-                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood_ao.png",
-                "url": "wood_ao.png",
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood-long_ao.png",
+                "url": "wood-long_ao.png",
                 "channel": "ao",
                 "source": "reference-pixel-extraction"
               }
@@ -699,7 +699,7 @@
         "confidence": 0.76,
         "estimatedFidelity": 0.76,
         "targetThreshold": 0.7,
-        "materialId": "wood",
+        "materialId": "wood-long",
         "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/01-stretcher-wood.png",
         "outDir": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood",
         "palette": [
@@ -711,32 +711,32 @@
         ],
         "maps": {
           "albedo": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood_albedo.png",
-            "url": "wood_albedo.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood-long_albedo.png",
+            "url": "wood-long_albedo.png",
             "channel": "albedo",
             "source": "reference-pixel-extraction"
           },
           "roughness": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood_roughness.png",
-            "url": "wood_roughness.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood-long_roughness.png",
+            "url": "wood-long_roughness.png",
             "channel": "roughness",
             "source": "reference-pixel-extraction"
           },
           "height": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood_height.png",
-            "url": "wood_height.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood-long_height.png",
+            "url": "wood-long_height.png",
             "channel": "height",
             "source": "reference-pixel-extraction"
           },
           "normal": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood_normal.png",
-            "url": "wood_normal.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood-long_normal.png",
+            "url": "wood-long_normal.png",
             "channel": "normal",
             "source": "reference-pixel-extraction"
           },
           "ao": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood_ao.png",
-            "url": "wood_ao.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood-long_ao.png",
+            "url": "wood-long_ao.png",
             "channel": "ao",
             "source": "reference-pixel-extraction"
           }
@@ -794,32 +794,32 @@
         "hardLimit": "A single image cannot uniquely recover true albedo/roughness/normal/AO; maps are reference-derived estimates.",
         "maps": {
           "albedo": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood_albedo.png",
-            "url": "wood_albedo.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood-long_albedo.png",
+            "url": "wood-long_albedo.png",
             "channel": "albedo",
             "source": "reference-pixel-extraction"
           },
           "roughness": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood_roughness.png",
-            "url": "wood_roughness.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood-long_roughness.png",
+            "url": "wood-long_roughness.png",
             "channel": "roughness",
             "source": "reference-pixel-extraction"
           },
           "height": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood_height.png",
-            "url": "wood_height.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood-long_height.png",
+            "url": "wood-long_height.png",
             "channel": "height",
             "source": "reference-pixel-extraction"
           },
           "normal": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood_normal.png",
-            "url": "wood_normal.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood-long_normal.png",
+            "url": "wood-long_normal.png",
             "channel": "normal",
             "source": "reference-pixel-extraction"
           },
           "ao": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood_ao.png",
-            "url": "wood_ao.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood-long_ao.png",
+            "url": "wood-long_ao.png",
             "channel": "ao",
             "source": "reference-pixel-extraction"
           }
@@ -865,32 +865,32 @@
       },
       "maps": {
         "albedo": {
-          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood_albedo.png",
-          "url": "wood_albedo.png",
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood-long_albedo.png",
+          "url": "wood-long_albedo.png",
           "channel": "albedo",
           "source": "reference-pixel-extraction"
         },
         "roughness": {
-          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood_roughness.png",
-          "url": "wood_roughness.png",
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood-long_roughness.png",
+          "url": "wood-long_roughness.png",
           "channel": "roughness",
           "source": "reference-pixel-extraction"
         },
         "height": {
-          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood_height.png",
-          "url": "wood_height.png",
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood-long_height.png",
+          "url": "wood-long_height.png",
           "channel": "height",
           "source": "reference-pixel-extraction"
         },
         "normal": {
-          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood_normal.png",
-          "url": "wood_normal.png",
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood-long_normal.png",
+          "url": "wood-long_normal.png",
           "channel": "normal",
           "source": "reference-pixel-extraction"
         },
         "ao": {
-          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood_ao.png",
-          "url": "wood_ao.png",
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood-long_ao.png",
+          "url": "wood-long_ao.png",
           "channel": "ao",
           "source": "reference-pixel-extraction"
         }
