@@ -85,10 +85,19 @@ function exportMeshes(model) {
     const pos = g.attributes.position;
     const vertices = [];
     for (let i = 0; i < pos.count; i++) { v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld); vertices.push([+v.x.toFixed(5), +v.y.toFixed(5), +v.z.toFixed(5)]); }
+    // world-space vertex normals: self_intersection.py steps outward along them (its centroid
+    // fallback points INTO a torus' tube on the ring's inner side)
+    let normals;
+    if (g.attributes.normal) {
+      const nm = new THREE.Matrix3().getNormalMatrix(o.matrixWorld);
+      const nv = new THREE.Vector3();
+      normals = [];
+      for (let i = 0; i < pos.count; i++) { nv.fromBufferAttribute(g.attributes.normal, i).applyMatrix3(nm).normalize(); normals.push([+nv.x.toFixed(4), +nv.y.toFixed(4), +nv.z.toFixed(4)]); }
+    }
     let indices;
     if (g.index) indices = Array.from(g.index.array);
     else { indices = []; for (let i = 0; i < pos.count; i++) indices.push(i); }
-    out.push({ id: o.name, name: o.name, vertices, indices });
+    out.push(normals ? { id: o.name, name: o.name, vertices, indices, normals } : { id: o.name, name: o.name, vertices, indices });
   });
   return out;
 }

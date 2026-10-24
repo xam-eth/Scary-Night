@@ -1,0 +1,136 @@
+{
+  "asset": "assets-src/img2threejs/mine-cart",
+  "pass": "form-refinement",
+  "factory": "assets-src/img2threejs/mine-cart/src/createMineCartModel.ts",
+  "exportName": "createMineCartModel",
+  "bundle": "tools/.cache/img2threejs/mine-cart-form-refinement.js",
+  "reference": {
+    "width": 1408,
+    "height": 768,
+    "bg": "#c0c0c0",
+    "bbox": {
+      "x0": 0.22767857142857142,
+      "y0": 0.10714285714285714,
+      "x1": 0.78125,
+      "y1": 0.96875,
+      "source": "tier1-gate-mask"
+    },
+    "bboxEstimate": {
+      "x0": 0.22798295454545456,
+      "y0": 0.10677083333333333,
+      "x1": 0.7755681818181818,
+      "y1": 0.9661458333333334
+    }
+  },
+  "stats": {
+    "meshes": 96,
+    "instanced": 8,
+    "drawCalls": 104,
+    "triangles": 15094,
+    "materials": 5,
+    "bbox": {
+      "min": [
+        -0.73,
+        -0.02,
+        -0.58
+      ],
+      "max": [
+        0.73,
+        1.3279,
+        0.58
+      ],
+      "size": [
+        1.46,
+        1.3479,
+        1.16
+      ]
+    }
+  },
+  "framing": {
+    "fixed": {
+      "azimuthDeg": 37,
+      "elevationDeg": 6,
+      "fov": 18,
+      "distance": 5.52,
+      "bboxNdc": {
+        "cx": 0.0089,
+        "cy": -0.0759,
+        "w": 1.0825,
+        "h": 1.7232
+      }
+    },
+    "fixed-clay": {
+      "azimuthDeg": 37,
+      "elevationDeg": 6,
+      "fov": 18,
+      "distance": 5.52,
+      "bboxNdc": {
+        "cx": 0.0089,
+        "cy": -0.0759,
+        "w": 1.0825,
+        "h": 1.7232
+      }
+    },
+    "front": {
+      "azimuthDeg": 0,
+      "elevationDeg": 18,
+      "fov": 18,
+      "distance": 6.2619,
+      "bboxNdc": {
+        "cx": 0,
+        "cy": 0,
+        "w": 1.5385,
+        "h": 1.4735
+      }
+    },
+    "right": {
+      "azimuthDeg": 90,
+      "elevationDeg": 18,
+      "fov": 18,
+      "distance": 6.4104,
+      "bboxNdc": {
+        "cx": 0,
+        "cy": 0,
+        "w": 1.2236,
+        "h": 1.5385
+      }
+    },
+    "rear": {
+      "azimuthDeg": 180,
+      "elevationDeg": 18,
+      "fov": 18,
+      "distance": 6.2619,
+      "bboxNdc": {
+        "cx": 0,
+        "cy": 0,
+        "w": 1.5385,
+        "h": 1.4591
+      }
+    },
+    "left": {
+      "azimuthDeg": 270,
+      "elevationDeg": 18,
+      "fov": 18,
+      "distance": 6.4185,
+      "bboxNdc": {
+        "cx": 0,
+        "cy": 0,
+        "w": 1.222,
+        "h": 1.5385
+      }
+    },
+    "top": {
+      "azimuthDeg": 37,
+      "elevationDeg": 62,
+      "fov": 18,
+      "distance": 7.1431,
+      "bboxNdc": {
+        "cx": 0,
+        "cy": 0,
+        "w": 1.4392,
+        "h": 1.5385
+      }
+    }
+  },
+  "errors": []
+}

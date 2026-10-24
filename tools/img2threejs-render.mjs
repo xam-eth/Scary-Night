@@ -59,33 +59,6 @@ await esbuild.build({
   }],
 });
 
-// ---- 2. reference foreground box -----------------------------------------------------------
-const refPath = path.join(ASSET, SPEC.sourceImage || 'reference.png');
-const refImg = await loadImage(fs.readFileSync(refPath));
-const RW = refImg.width, RH = refImg.height;
-const rc = createCanvas(RW, RH);
-const rctx = rc.getContext('2d');
-rctx.drawImage(refImg, 0, 0);
-const rdata = rctx.getImageData(0, 0, RW, RH).data;
-const corner = (x, y) => { const i = (y * RW + x) * 4; return [rdata[i], rdata[i + 1], rdata[i + 2]]; };
-const corners = [corner(4, 4), corner(RW - 5, 4), corner(4, RH - 5), corner(RW - 5, RH - 5)];
-const bg = [0, 1, 2].map((c) => Math.round(corners.reduce((s, p) => s + p[c], 0) / 4));
-const rowCount = new Array(RH).fill(0), colCount = new Array(RW).fill(0);
-for (let y = 0; y < RH; y++) for (let x = 0; x < RW; x++) {
-  const i = (y * RW + x) * 4;
-  const d = Math.abs(rdata[i] - bg[0]) + Math.abs(rdata[i + 1] - bg[1]) + Math.abs(rdata[i + 2] - bg[2]);
-  if (d > 48) { rowCount[y]++; colCount[x]++; }
-}
-const minRun = (arr, n) => arr.findIndex((v) => v > n);
-const maxRun = (arr, n) => arr.length - 1 - [...arr].reverse().findIndex((v) => v > n);
-const y0 = minRun(rowCount, RW * 0.004), y1 = maxRun(rowCount, RW * 0.004);
-const x0 = minRun(colCount, RH * 0.004), x1 = maxRun(colCount, RH * 0.004);
-const ref = { width: RW, height: RH, bg: `#${bg.map((c) => c.toString(16).padStart(2, '0')).join('')}`,
-  bbox: { x0: x0 / RW, y0: y0 / RH, x1: (x1 + 1) / RW, y1: (y1 + 1) / RH } };
-const ndc = { mode: 'match', cx: ref.bbox.x0 + ref.bbox.x1 - 1, cy: 1 - (ref.bbox.y0 + ref.bbox.y1),
-  w: (ref.bbox.x1 - ref.bbox.x0) * 2, h: (ref.bbox.y1 - ref.bbox.y0) * 2 };
-
-
 // ---- the Tier-1 gate's foreground mask, ported from img2threejs forge (extract_pbr_evidence.py
 // build_foreground_mask + diagnose_render.py load_mask/largest_component) so the camera fit
 // optimises the same silhouette the gate measures -------------------------------------------
@@ -129,6 +102,43 @@ async function maskFromDataUrl(url) {
   const c = createCanvas(img.width, img.height); const g = c.getContext('2d'); g.drawImage(img, 0, 0);
   return gateMask(g.getImageData(0, 0, img.width, img.height).data, img.width, img.height);
 }
+
+
+// ---- 2. reference foreground box -----------------------------------------------------------
+const refPath = path.join(ASSET, SPEC.sourceImage || 'reference.png');
+const refImg = await loadImage(fs.readFileSync(refPath));
+const RW = refImg.width, RH = refImg.height;
+const rc = createCanvas(RW, RH);
+const rctx = rc.getContext('2d');
+rctx.drawImage(refImg, 0, 0);
+const rdata = rctx.getImageData(0, 0, RW, RH).data;
+const corner = (x, y) => { const i = (y * RW + x) * 4; return [rdata[i], rdata[i + 1], rdata[i + 2]]; };
+const corners = [corner(4, 4), corner(RW - 5, 4), corner(4, RH - 5), corner(RW - 5, RH - 5)];
+const bg = [0, 1, 2].map((c) => Math.round(corners.reduce((s, p) => s + p[c], 0) / 4));
+const rowCount = new Array(RH).fill(0), colCount = new Array(RW).fill(0);
+for (let y = 0; y < RH; y++) for (let x = 0; x < RW; x++) {
+  const i = (y * RW + x) * 4;
+  const d = Math.abs(rdata[i] - bg[0]) + Math.abs(rdata[i + 1] - bg[1]) + Math.abs(rdata[i + 2] - bg[2]);
+  if (d > 48) { rowCount[y]++; colCount[x]++; }
+}
+const minRun = (arr, n) => arr.findIndex((v) => v > n);
+const maxRun = (arr, n) => arr.length - 1 - [...arr].reverse().findIndex((v) => v > n);
+const y0 = minRun(rowCount, RW * 0.004), y1 = maxRun(rowCount, RW * 0.004);
+const x0 = minRun(colCount, RH * 0.004), x1 = maxRun(colCount, RH * 0.004);
+const ref = { width: RW, height: RH, bg: `#${bg.map((c) => c.toString(16).padStart(2, '0')).join('')}`,
+  bbox: { x0: x0 / RW, y0: y0 / RH, x1: (x1 + 1) / RW, y1: (y1 + 1) / RH } };
+// frame to the box of the Tier-1 gate's own mask (224 grid, largest component), so the fixed view
+// matches what diagnose_render.py measures (aspect / scale deltas), not a private estimate
+{
+  const gm = gateMask(rdata, RW, RH);
+  let gx0 = GRID, gy0 = GRID, gx1 = -1, gy1 = -1;
+  for (let k = 0; k < gm.length; k++) if (gm[k]) { const y = Math.floor(k / GRID), x = k % GRID; gx0 = Math.min(gx0, x); gx1 = Math.max(gx1, x); gy0 = Math.min(gy0, y); gy1 = Math.max(gy1, y); }
+  ref.bboxEstimate = ref.bbox;
+  ref.bbox = { x0: gx0 / GRID, y0: gy0 / GRID, x1: (gx1 + 1) / GRID, y1: (gy1 + 1) / GRID, source: 'tier1-gate-mask' };
+}
+const ndc = { mode: 'match', cx: ref.bbox.x0 + ref.bbox.x1 - 1, cy: 1 - (ref.bbox.y0 + ref.bbox.y1),
+  w: (ref.bbox.x1 - ref.bbox.x0) * 2, h: (ref.bbox.y1 - ref.bbox.y0) * 2 };
+
 
 // ---- 3. render -------------------------------------------------------------------------------
 const cam = SPEC.referenceCamera || {};

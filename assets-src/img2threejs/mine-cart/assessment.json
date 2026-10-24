@@ -877,6 +877,426 @@
           "ore flat at rim height",
           "ore not reading as gold"
         ]
+      },
+      {
+        "id": "tub-taper-and-planks",
+        "name": "Tapered plank tub",
+        "required": true,
+        "qualityCriteria": [
+          "End walls lean out ~10 degrees and long walls ~8.5 degrees.",
+          "Three horizontal planks per wall separated by dark seams; four corner posts."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "tub reads as a plain straight box",
+          "planks merged into one slab"
+        ]
+      },
+      {
+        "id": "wheel-rail-contact",
+        "name": "Wheels on rails",
+        "required": true,
+        "qualityCriteria": [
+          "Four plank wheels with iron rims rest exactly on two rails over three sleepers."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "wheels float above or sink into the rails",
+          "wheels not round"
+        ]
+      },
+      {
+        "id": "iron-hardware",
+        "name": "Iron hardware",
+        "required": true,
+        "qualityCriteria": [
+          "Eight corner brackets with rivets, rims, hub caps and nuts, two bent handle straps with a grip."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "hardware missing or the same colour as the wood"
+        ]
+      },
+      {
+        "id": "ore-heap-read",
+        "name": "Heaped gold ore",
+        "required": true,
+        "qualityCriteria": [
+          "Saturated yellow ore mounds above the rim with chunky faceted nuggets."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "ore flat at rim height",
+          "ore not reading as gold"
+        ]
+      },
+      {
+        "id": "tub-taper-and-planks",
+        "name": "Tapered plank tub",
+        "required": true,
+        "qualityCriteria": [
+          "End walls lean out ~10 degrees and long walls ~8.5 degrees.",
+          "Three horizontal planks per wall separated by dark seams; four corner posts."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "tub reads as a plain straight box",
+          "planks merged into one slab"
+        ]
+      },
+      {
+        "id": "wheel-rail-contact",
+        "name": "Wheels on rails",
+        "required": true,
+        "qualityCriteria": [
+          "Four plank wheels with iron rims rest exactly on two rails over three sleepers."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "wheels float above or sink into the rails",
+          "wheels not round"
+        ]
+      },
+      {
+        "id": "iron-hardware",
+        "name": "Iron hardware",
+        "required": true,
+        "qualityCriteria": [
+          "Eight corner brackets with rivets, rims, hub caps and nuts, two bent handle straps with a grip."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "hardware missing or the same colour as the wood"
+        ]
+      },
+      {
+        "id": "ore-heap-read",
+        "name": "Heaped gold ore",
+        "required": true,
+        "qualityCriteria": [
+          "Saturated yellow ore mounds above the rim with chunky faceted nuggets."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "ore flat at rim height",
+          "ore not reading as gold"
+        ]
+      },
+      {
+        "id": "tub-taper-and-planks",
+        "name": "Tapered plank tub",
+        "required": true,
+        "qualityCriteria": [
+          "End walls lean out ~10 degrees and long walls ~8.5 degrees.",
+          "Three horizontal planks per wall separated by dark seams; four corner posts."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "tub reads as a plain straight box",
+          "planks merged into one slab"
+        ]
+      },
+      {
+        "id": "wheel-rail-contact",
+        "name": "Wheels on rails",
+        "required": true,
+        "qualityCriteria": [
+          "Four plank wheels with iron rims rest exactly on two rails over three sleepers."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "wheels float above or sink into the rails",
+          "wheels not round"
+        ]
+      },
+      {
+        "id": "iron-hardware",
+        "name": "Iron hardware",
+        "required": true,
+        "qualityCriteria": [
+          "Eight corner brackets with rivets, rims, hub caps and nuts, two bent handle straps with a grip."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "hardware missing or the same colour as the wood"
+        ]
+      },
+      {
+        "id": "ore-heap-read",
+        "name": "Heaped gold ore",
+        "required": true,
+        "qualityCriteria": [
+          "Saturated yellow ore mounds above the rim with chunky faceted nuggets."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "ore flat at rim height",
+          "ore not reading as gold"
+        ]
+      },
+      {
+        "id": "tub-taper-and-planks",
+        "name": "Tapered plank tub",
+        "required": true,
+        "qualityCriteria": [
+          "End walls lean out ~10 degrees and long walls ~8.5 degrees.",
+          "Three horizontal planks per wall separated by dark seams; four corner posts."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "tub reads as a plain straight box",
+          "planks merged into one slab"
+        ]
+      },
+      {
+        "id": "wheel-rail-contact",
+        "name": "Wheels on rails",
+        "required": true,
+        "qualityCriteria": [
+          "Four plank wheels with iron rims rest exactly on two rails over three sleepers."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "wheels float above or sink into the rails",
+          "wheels not round"
+        ]
+      },
+      {
+        "id": "iron-hardware",
+        "name": "Iron hardware",
+        "required": true,
+        "qualityCriteria": [
+          "Eight corner brackets with rivets, rims, hub caps and nuts, two bent handle straps with a grip."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "hardware missing or the same colour as the wood"
+        ]
+      },
+      {
+        "id": "ore-heap-read",
+        "name": "Heaped gold ore",
+        "required": true,
+        "qualityCriteria": [
+          "Saturated yellow ore mounds above the rim with chunky faceted nuggets."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "ore flat at rim height",
+          "ore not reading as gold"
+        ]
+      },
+      {
+        "id": "tub-taper-and-planks",
+        "name": "Tapered plank tub",
+        "required": true,
+        "qualityCriteria": [
+          "End walls lean out ~10 degrees and long walls ~8.5 degrees.",
+          "Three horizontal planks per wall separated by dark seams; four corner posts."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "tub reads as a plain straight box",
+          "planks merged into one slab"
+        ]
+      },
+      {
+        "id": "wheel-rail-contact",
+        "name": "Wheels on rails",
+        "required": true,
+        "qualityCriteria": [
+          "Four plank wheels with iron rims rest exactly on two rails over three sleepers."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "wheels float above or sink into the rails",
+          "wheels not round"
+        ]
+      },
+      {
+        "id": "iron-hardware",
+        "name": "Iron hardware",
+        "required": true,
+        "qualityCriteria": [
+          "Eight corner brackets with rivets, rims, hub caps and nuts, two bent handle straps with a grip."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "hardware missing or the same colour as the wood"
+        ]
+      },
+      {
+        "id": "ore-heap-read",
+        "name": "Heaped gold ore",
+        "required": true,
+        "qualityCriteria": [
+          "Saturated yellow ore mounds above the rim with chunky faceted nuggets."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "ore flat at rim height",
+          "ore not reading as gold"
+        ]
+      },
+      {
+        "id": "tub-taper-and-planks",
+        "name": "Tapered plank tub",
+        "required": true,
+        "qualityCriteria": [
+          "End walls lean out ~10 degrees and long walls ~8.5 degrees.",
+          "Three horizontal planks per wall separated by dark seams; four corner posts."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "tub reads as a plain straight box",
+          "planks merged into one slab"
+        ]
+      },
+      {
+        "id": "wheel-rail-contact",
+        "name": "Wheels on rails",
+        "required": true,
+        "qualityCriteria": [
+          "Four plank wheels with iron rims rest exactly on two rails over three sleepers."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "wheels float above or sink into the rails",
+          "wheels not round"
+        ]
+      },
+      {
+        "id": "iron-hardware",
+        "name": "Iron hardware",
+        "required": true,
+        "qualityCriteria": [
+          "Eight corner brackets with rivets, rims, hub caps and nuts, two bent handle straps with a grip."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "hardware missing or the same colour as the wood"
+        ]
+      },
+      {
+        "id": "ore-heap-read",
+        "name": "Heaped gold ore",
+        "required": true,
+        "qualityCriteria": [
+          "Saturated yellow ore mounds above the rim with chunky faceted nuggets."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "ore flat at rim height",
+          "ore not reading as gold"
+        ]
+      },
+      {
+        "id": "tub-taper-and-planks",
+        "name": "Tapered plank tub",
+        "required": true,
+        "qualityCriteria": [
+          "End walls lean out ~10 degrees and long walls ~8.5 degrees.",
+          "Three horizontal planks per wall separated by dark seams; four corner posts."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "tub reads as a plain straight box",
+          "planks merged into one slab"
+        ]
+      },
+      {
+        "id": "wheel-rail-contact",
+        "name": "Wheels on rails",
+        "required": true,
+        "qualityCriteria": [
+          "Four plank wheels with iron rims rest exactly on two rails over three sleepers."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "wheels float above or sink into the rails",
+          "wheels not round"
+        ]
+      },
+      {
+        "id": "iron-hardware",
+        "name": "Iron hardware",
+        "required": true,
+        "qualityCriteria": [
+          "Eight corner brackets with rivets, rims, hub caps and nuts, two bent handle straps with a grip."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "hardware missing or the same colour as the wood"
+        ]
+      },
+      {
+        "id": "ore-heap-read",
+        "name": "Heaped gold ore",
+        "required": true,
+        "qualityCriteria": [
+          "Saturated yellow ore mounds above the rim with chunky faceted nuggets."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "ore flat at rim height",
+          "ore not reading as gold"
+        ]
       }
     ],
     "visualDeltaChecks": [

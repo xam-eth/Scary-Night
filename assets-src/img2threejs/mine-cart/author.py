@@ -62,7 +62,7 @@ MATERIALS = {
 # ~0.16 wide.
 TUB_BASE = 0.47           # tub floor (wheel tops)
 TUB_H = 0.55              # wall height
-HALF_LEN_BOT, HALF_LEN_TOP = 0.45, 0.50   # outer half length along X (end walls lean out)
+HALF_LEN_BOT, HALF_LEN_TOP = 0.45, 0.53   # outer half length along X (end walls lean out; form review: wider top flare)
 HALF_WID_BOT, HALF_WID_TOP = 0.28, 0.35   # outer half width along Z (long walls lean out)
 PLANK_T = 0.04
 TILT_Z = math.atan((HALF_WID_TOP - HALF_WID_BOT) / TUB_H)   # long walls
@@ -87,7 +87,7 @@ def build_components() -> SpecBuilder:
     b = SpecBuilder("mine-cart", MATERIALS)
 
     # root: the gravel patch (the model's ground contact and root motion node)
-    b.box("root", "Gravel bed", parent=None, center=(0.0, 0.0, 0.0), size=(1.42, 0.04, 1.08), level="macro",
+    b.box("root", "Gravel bed", parent=None, center=(0.0, 0.0, 0.0), size=(1.46, 0.04, 0.98), level="macro",
           role="body", material="gravel", anim="root", importance=0.6, confidence=0.7,
           rationale="Gravel bed: a flat slab-like patch with countable faces; the reference shows it as an irregular "
                     "base, kept as a thin box so the prop sits on the bailey ground.",
@@ -96,13 +96,13 @@ def build_components() -> SpecBuilder:
                     "visibility": True, "materialState": True})
 
     # track: 3 sleepers, 2 rails, 6 tie plates
-    sleeper_x = (-0.5, 0.0, 0.5)
+    sleeper_x = (-0.54, 0.0, 0.54)   # form review: the track is wider than first read (aspect delta)
     for i, x in enumerate(sleeper_x):
-        b.box(f"sleeper-{i}", f"Sleeper {i + 1}", parent="root", center=(x, 0.055, 0.0), size=(0.18, 0.07, 1.0),
+        b.box(f"sleeper-{i}", f"Sleeper {i + 1}", parent="root", center=(x, 0.055, 0.0), size=(0.18, 0.07, 1.16),
               level="macro", role="panel", material="wood-dark", importance=0.55,
               features=[feature(f"sleeper-{i}-ends", "chip", "rounded worn sleeper ends", effect="material")])
     for side, z in (("near", RAIL_Z), ("far", -RAIL_Z)):
-        b.box(f"rail-{side}", f"Rail ({side})", parent="root", center=(0.0, RAIL_TOP - 0.035, z), size=(1.36, 0.07, 0.06),
+        b.box(f"rail-{side}", f"Rail ({side})", parent="root", center=(0.0, RAIL_TOP - 0.035, z), size=(1.44, 0.07, 0.06),
               level="macro", role="panel", material="iron", importance=0.7,
               features=[feature(f"rail-{side}-head", "ridge", "rail head catches a highlight along its top edge")])
         for i, x in enumerate(sleeper_x):
@@ -206,22 +206,38 @@ def build_components() -> SpecBuilder:
                      detail=f"{bid}-rivets")
 
     # push handle: two bent iron straps on the rear end wall + a wooden grip with iron end caps
-    grip_y = TUB_BASE + TUB_H - 0.17
-    grip_x = 0.68
+    grip_y = TUB_BASE + TUB_H - 0.22   # blockout review: 0.05 lower ...
+    grip_x = 0.65                     # ... and 0.03 closer to the end wall
     for side, zc in (("near", 0.19), ("far", -0.19)):
-        b.add(f"handle-strap-{side}", f"Handle strap ({side})", level="macro", role="handle", parent="tub-core",
-              primitive="extrude", world=(0.0, 0.0, zc - 0.02), material="iron",
-              descriptor={"profile2D": {"points": [[0.49, TUB_BASE + 0.04], [0.535, TUB_BASE + 0.04],
-                                                   [0.535, grip_y - 0.05], [grip_x - 0.01, grip_y - 0.03],
-                                                   [grip_x - 0.01, grip_y + 0.02], [0.49, grip_y]], "depth": 0.04}},
-              attachment={"parentId": "tub-core", "parentSocket": "tub-core:rear-wall",
-                          "localStart": b.local("tub-core", (0.51, TUB_BASE + 0.04, zc)),
-                          "localEnd": b.local("tub-core", (grip_x, grip_y, zc)),
-                          "contactType": "bolted", "embedDepth": 0.01, "gapTolerance": 0.004, "evidenceRefs": ["full-object"]},
-              importance=0.6, pivot_world=(0.0, 0.0, zc - 0.02),
-              rationale="Handle strap: a flat bent iron bar; its side profile (up the end wall, then out to the grip) "
-                        "is extruded by the strap thickness so the bend reads from every angle.",
+        # structural review: the stepped extrude read as blocks; the reference has round bent bars,
+        # so each strap is a bar up the end wall, a knee, and a bar out to the grip
+        y_foot, y_knee = TUB_BASE + 0.05, grip_y - 0.02
+        x_foot, x_knee = half_len(y_foot) + 0.045, half_len(y_knee) + 0.05
+        b.rod(f"handle-strap-{side}", f"Handle strap ({side})", parent="tub-core", start=(x_foot, y_foot, zc),
+              end=(x_knee, y_knee, zc), radius=0.024, level="macro", role="handle", material="iron",
+              contact="bolted", embed=0.01, socket="tub-core:rear-wall", importance=0.6,
+              rationale="Handle strap: a straight round iron bar up the end wall, a cylinder between its bolted foot "
+                        "and its knee.",
               features=[feature(f"handle-strap-{side}-bolt", "fastener", "strap bolted to the end wall")])
+        b.rod(f"handle-arm-{side}", f"Handle arm ({side})", parent="tub-core", start=(x_knee, y_knee, zc),
+              end=(grip_x, grip_y, zc), radius=0.024, level="meso", role="handle", material="iron",
+              contact="welded", embed=0.012, socket=f"handle-strap-{side}:knee", importance=0.45,
+              rationale="Handle arm: the strap's short outward bar from the knee to the grip, a cylinder.")
+        b.add(f"handle-knee-{side}", f"Handle knee ({side})", level="micro", role="handle", parent="tub-core",
+              primitive="sphere", world=(x_knee, y_knee, zc), scale=(0.054, 0.054, 0.054), material="iron",
+              attachment={"parentId": "tub-core", "parentSocket": f"handle-strap-{side}:knee",
+                          "localStart": b.local("tub-core", (x_knee, y_knee - 0.01, zc)),
+                          "localEnd": b.local("tub-core", (x_knee, y_knee + 0.01, zc)),
+                          "contactType": "welded", "embedDepth": 0.02, "gapTolerance": 0.003, "evidenceRefs": ["full-object"]},
+              importance=0.3, rationale="Handle knee: the rounded bend between the two bars, a sphere.")
+        b.box(f"handle-foot-{side}", f"Handle foot plate ({side})", parent="tub-core",
+              center=(half_len(y_foot) + 0.012, y_foot, zc), size=(0.03, 0.1, 0.075), rot=(0.0, 0.0, -TILT_X),
+              level="micro", role="handle", material="iron", importance=0.3,
+              attachment={"parentId": "tub-core", "parentSocket": "tub-core:rear-wall",
+                          "localStart": b.local("tub-core", (half_len(y_foot), y_foot, zc)),
+                          "localEnd": b.local("tub-core", (half_len(y_foot) + 0.03, y_foot, zc)),
+                          "contactType": "bolted", "embedDepth": 0.006, "gapTolerance": 0.003, "evidenceRefs": ["full-object"]},
+              rationale="Handle foot plate: a flat iron plate bolting the strap to the end wall, a box.")
     b.rod("grip", "Push grip", parent="tub-core", start=(grip_x, grip_y, -0.26), end=(grip_x, grip_y, 0.26),
           radius=0.035, level="macro", role="grip", material="wood", contact="socket", embed=0.01,
           socket="handle-strap-near:hook", importance=0.6,
@@ -235,27 +251,34 @@ def build_components() -> SpecBuilder:
     # ore heap: a domed mass above the rim + chunky faceted nuggets on its surface
     rim_y = TUB_BASE + TUB_H
     heap_c = (0.0, rim_y - 0.02, 0.0)
-    ax, ay, az = 0.47, 0.2, 0.33
+    ax, ay, az = 0.47, 0.18, 0.33
     b.add("ore-heap", "Ore heap", level="macro", role="fill", parent="tub-core", primitive="sphere",
           world=heap_c, scale=(2 * ax, 2 * ay, 2 * az), material="ore", topology="continuous-sculpt",
           importance=0.9, confidence=0.75,
           rationale="Ore heap: one smooth domed mass of ore filling the tub, an ellipsoid; the nuggets on it carry the "
                     "faceted read.",
           features=[feature("ore-dome", "contour", "heap rises ~0.25 above the rim, highest near the centre")])
-    rings = [(0.0, 1, 0.0, 0.2), (0.4, 6, 15.0, 0.17), (0.78, 10, 0.0, 0.13)]
+    rings = [(0.0, 1, 0.0, 0.21), (0.36, 6, 15.0, 0.19), (0.66, 9, 5.0, 0.16), (0.92, 12, 12.0, 0.13)]
     n = 0
     for r, count, start, base_size in rings:
         for i in range(count):
             ang = math.radians(start + i * 360.0 / count)
             x, z = ax * r * math.cos(ang), az * r * math.sin(ang)
-            surf = heap_c[1] + ay * math.sqrt(max(0.0, 1.0 - r * r))
+            # form review: the reference pile slopes down toward the rear (+X) end
+            surf = heap_c[1] + ay * math.sqrt(max(0.0, 1.0 - r * r)) - 0.07 * max(0.0, x / ax)
             size = base_size * (1.0 + 0.18 * math.sin(7 * ang + r * 3))
+            # form review 2: decimated spheres read as crumpled foil; a few-sided revolved bipyramid,
+            # turned and squashed, reads as the reference's chunky faceted nugget
+            sides = 5 + (n % 3)
             b.add(f"nugget-{n:02d}", f"Ore nugget {n + 1}", level="micro", role="nugget", parent="ore-heap",
-                  primitive="sphere", world=(x, surf + size * 0.12, z),
-                  rot=(0.4 * math.sin(3 * ang + r), ang, 0.3 * math.cos(5 * ang + r)),
-                  scale=(size * 1.15, size * 0.85, size), material="ore", topology="assembled-solid",
+                  primitive="lathe", world=(x, surf + size * 0.02, z),
+                  rot=(0.5 * math.sin(3 * ang + r), ang * 1.7, 0.45 * math.cos(5 * ang + r)),
+                  scale=(size * 1.2, size * 0.95, size * 1.05), material="ore", topology="assembled-solid",
+                  descriptor={"latheProfile": {"points": [[0.0, -0.42], [0.36, -0.22], [0.5, 0.04], [0.38, 0.3],
+                                                          [0.12, 0.46], [0.0, 0.48]], "segments": sides}},
                   importance=0.35, confidence=0.6,
-                  rationale="Ore nugget: a chunky faceted lump, a low-segment sphere scaled irregularly.",
+                  rationale=f"Ore nugget: a chunky faceted lump: a {sides}-sided revolved bipyramid, turned and squashed "
+                            "irregularly, so each reads as an angular polyhedron like the reference's nuggets.",
                   features=[feature(f"nugget-{n:02d}-facets", "gloss", "lighter upward facets", effect="material")])
             n += 1
     return b
@@ -397,12 +420,13 @@ def spec() -> None:
     s["scores"] = {"object_isolation": 3, "silhouette_readability": 3, "depth_inference": 2, "primitive_decomposition": 3,
                    "material_procedurality": 2, "occlusion_risk": 1, "interaction_fit": 3}
     s["referenceCamera"] = {
-        "solved": True, "fovDegrees": 14.0, "aspect": 1408 / 768,
-        "orientation": {"yaw": 27.0, "pitch": -7.0, "roll": 0.0},
-        "azimuthDeg": 27.0, "elevationDeg": 7.0, "positionHint": [2.6, 0.6, 5.1],
-        "solveMethod": "silhouette camera fit (renders/camera-fit/camera-fit.json): clay renders of the macro build "
-                       "vs the reference foreground mask on the Tier-1 224 grid, 326 candidates; best IoU 0.861 at "
-                       "az 27, el 7, fov 14 (a long lens: the reference reads as a product shot)",
+        "solved": True, "fovDegrees": 18.0, "aspect": 1408 / 768,
+        "orientation": {"yaw": 37.0, "pitch": -6.0, "roll": 0.0},
+        "azimuthDeg": 37.0, "elevationDeg": 6.0, "positionHint": [2.9, 0.5, 3.8],
+        "solveMethod": "silhouette camera fit (renders/camera-fit/camera-fit.json): clay renders vs the reference "
+                       "foreground mask on the Tier-1 224 grid, 326 candidates; refit after the form review: best IoU "
+                       "0.877 at az 37, el 6, fov 18 (a long lens: the reference reads as a product shot). The first "
+                       "fit (macro build) gave az 27, el 7, fov 14.",
         "note": "Estimated from the image: three-quarter from the front-RIGHT (the long side faces the viewer, the "
                 "handle end face shows on the right, the rim's top edge falls toward the right), ~27 degrees above; the review harness "
                 "frames the model to the reference's foreground box. Not solved for projection (no projection used).",
