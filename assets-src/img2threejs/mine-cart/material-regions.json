@@ -1,10 +1,10 @@
 {
   "referenceId": "mine-cart-reference",
   "regions": [
-    {"componentId": "plank-near-1", "regionId": "plank-wood", "sourceImage": "reference.png",
+    {"componentId": "plank-near-2", "regionId": "plank-wood", "sourceImage": "reference.png",
      "bbox": {"x": 480, "y": 285, "width": 220, "height": 105}, "family": "wood", "subtype": "generic",
      "finish": "unfinished", "materialSpecId": "wood"},
-    {"componentId": "sleeper-1", "regionId": "sleeper-wood", "sourceImage": "reference.png",
+    {"componentId": "sleeper-2", "regionId": "sleeper-wood", "sourceImage": "reference.png",
      "bbox": {"x": 505, "y": 660, "width": 110, "height": 30}, "family": "wood", "subtype": "generic",
      "finish": "unfinished", "materialSpecId": "wood-dark"},
     {"componentId": "bracket-top-nr", "regionId": "bracket-iron", "sourceImage": "reference.png",

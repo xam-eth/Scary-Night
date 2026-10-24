@@ -172,7 +172,7 @@
           "affects": "geometry",
           "mapsTo": {
             "type": "component.localFeatures",
-            "ref": "plank-seam-near-0"
+            "ref": "plank-seam-near-1"
           },
           "evidenceRef": "detail-inventory/zone-r1c1.png",
           "confidence": 0.85
@@ -312,7 +312,7 @@
           "affects": "geometry",
           "mapsTo": {
             "type": "component.localFeatures",
-            "ref": "tie-plate-near-1-spikes"
+            "ref": "tie-plate-near-2-spikes"
           },
           "evidenceRef": "detail-inventory/zone-r2c1.png",
           "confidence": 0.7
@@ -463,6 +463,186 @@
           "model has acceptable shape but reads as flat shaded or plastic",
           "colors are a generic average instead of reference-observed local color zones",
           "lighting is evenly ambient and cannot reproduce the source value range"
+        ]
+      },
+      {
+        "id": "tub-taper-and-planks",
+        "name": "Tapered plank tub",
+        "required": true,
+        "qualityCriteria": [
+          "End walls lean out ~10 degrees and long walls ~8.5 degrees.",
+          "Three horizontal planks per wall separated by dark seams; four corner posts."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "tub reads as a plain straight box",
+          "planks merged into one slab"
+        ]
+      },
+      {
+        "id": "wheel-rail-contact",
+        "name": "Wheels on rails",
+        "required": true,
+        "qualityCriteria": [
+          "Four plank wheels with iron rims rest exactly on two rails over three sleepers."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "wheels float above or sink into the rails",
+          "wheels not round"
+        ]
+      },
+      {
+        "id": "iron-hardware",
+        "name": "Iron hardware",
+        "required": true,
+        "qualityCriteria": [
+          "Eight corner brackets with rivets, rims, hub caps and nuts, two bent handle straps with a grip."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "hardware missing or the same colour as the wood"
+        ]
+      },
+      {
+        "id": "ore-heap-read",
+        "name": "Heaped gold ore",
+        "required": true,
+        "qualityCriteria": [
+          "Saturated yellow ore mounds above the rim with chunky faceted nuggets."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "ore flat at rim height",
+          "ore not reading as gold"
+        ]
+      },
+      {
+        "id": "tub-taper-and-planks",
+        "name": "Tapered plank tub",
+        "required": true,
+        "qualityCriteria": [
+          "End walls lean out ~10 degrees and long walls ~8.5 degrees.",
+          "Three horizontal planks per wall separated by dark seams; four corner posts."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "tub reads as a plain straight box",
+          "planks merged into one slab"
+        ]
+      },
+      {
+        "id": "wheel-rail-contact",
+        "name": "Wheels on rails",
+        "required": true,
+        "qualityCriteria": [
+          "Four plank wheels with iron rims rest exactly on two rails over three sleepers."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "wheels float above or sink into the rails",
+          "wheels not round"
+        ]
+      },
+      {
+        "id": "iron-hardware",
+        "name": "Iron hardware",
+        "required": true,
+        "qualityCriteria": [
+          "Eight corner brackets with rivets, rims, hub caps and nuts, two bent handle straps with a grip."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "hardware missing or the same colour as the wood"
+        ]
+      },
+      {
+        "id": "ore-heap-read",
+        "name": "Heaped gold ore",
+        "required": true,
+        "qualityCriteria": [
+          "Saturated yellow ore mounds above the rim with chunky faceted nuggets."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "ore flat at rim height",
+          "ore not reading as gold"
+        ]
+      },
+      {
+        "id": "tub-taper-and-planks",
+        "name": "Tapered plank tub",
+        "required": true,
+        "qualityCriteria": [
+          "End walls lean out ~10 degrees and long walls ~8.5 degrees.",
+          "Three horizontal planks per wall separated by dark seams; four corner posts."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "tub reads as a plain straight box",
+          "planks merged into one slab"
+        ]
+      },
+      {
+        "id": "wheel-rail-contact",
+        "name": "Wheels on rails",
+        "required": true,
+        "qualityCriteria": [
+          "Four plank wheels with iron rims rest exactly on two rails over three sleepers."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "wheels float above or sink into the rails",
+          "wheels not round"
+        ]
+      },
+      {
+        "id": "iron-hardware",
+        "name": "Iron hardware",
+        "required": true,
+        "qualityCriteria": [
+          "Eight corner brackets with rivets, rims, hub caps and nuts, two bent handle straps with a grip."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "hardware missing or the same colour as the wood"
+        ]
+      },
+      {
+        "id": "ore-heap-read",
+        "name": "Heaped gold ore",
+        "required": true,
+        "qualityCriteria": [
+          "Saturated yellow ore mounds above the rim with chunky faceted nuggets."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "ore flat at rim height",
+          "ore not reading as gold"
         ]
       },
       {
@@ -1701,7 +1881,7 @@
       "mustPass": true,
       "componentRefs": [
         "tub-core",
-        "plank-near-0",
+        "plank-near-1",
         "post-nl"
       ],
       "evidenceRefs": [
@@ -1722,7 +1902,7 @@
         "wheel-fn",
         "wheel-rim-fn",
         "rail-near",
-        "sleeper-1"
+        "sleeper-2"
       ],
       "evidenceRefs": [
         "full-object"
@@ -1799,28 +1979,20 @@
       "interaction-pass",
       "optimization-pass"
     ],
-    "currentPass": "interaction-pass",
+    "currentPass": "complete",
     "completedPasses": [
       "blockout",
       "structural-pass",
       "form-refinement",
       "material-pass",
       "surface-pass",
-      "lighting-pass"
+      "lighting-pass",
+      "interaction-pass",
+      "optimization-pass"
     ],
-    "lastCompletedPass": "lighting-pass",
-    "blockedReason": "",
-    "nextRequiredEvidence": [
-      "Macro and movable meso components have stable pivot nodes.",
-      "Sockets, collider proxies, and destruction metadata are present for future runtime actions.",
-      "AI vision comparison score meets selfCorrectLoop.visualAcceptance.threshold.",
-      "browser render screenshot from your agent's browser/screenshot tool",
-      "side-by-side reference/render comparison sheet for AI vision review",
-      "banded interior difference vs the reference baseline (forge/stage4_review/interior_difference.py --from/--to per region)",
-      "AI vision score at or above the visual acceptance threshold",
-      "all critical semantic feature scores from the shared image pair at or above their thresholds",
-      "self-correction review appended with action=continue before the next pass"
-    ]
+    "lastCompletedPass": "optimization-pass",
+    "blockedReason": "all build passes completed",
+    "nextRequiredEvidence": []
   },
   "lookDevTargets": {
     "qualityPriority": "real-time-stylized",
@@ -2169,7 +2341,7 @@
       ]
     },
     {
-      "id": "sleeper-0",
+      "id": "sleeper-1",
       "name": "Sleeper 1",
       "level": "macro",
       "role": "panel",
@@ -2201,164 +2373,6 @@
       "transform": {
         "position": [
           -0.54,
-          0.055,
-          0.0
-        ],
-        "rotation": [
-          -0.0,
-          0.0,
-          -0.0
-        ],
-        "scale": [
-          0.18,
-          0.07,
-          1.16
-        ]
-      },
-      "actionProfile": {
-        "animationRole": "static",
-        "pivot": {
-          "mode": "center",
-          "localPosition": [
-            0,
-            0,
-            0
-          ],
-          "axis": [
-            0,
-            1,
-            0
-          ],
-          "confidence": 0.75
-        },
-        "transformChannels": {
-          "translate": false,
-          "rotate": false,
-          "scale": false,
-          "bend": false,
-          "twist": false,
-          "detach": false,
-          "visibility": true,
-          "materialState": true
-        },
-        "sockets": [],
-        "collider": {
-          "type": "box",
-          "offset": [
-            0,
-            0,
-            0
-          ],
-          "scale": [
-            1,
-            1,
-            1
-          ],
-          "isTrigger": false,
-          "notes": "Proxy sized to the part's own bounds."
-        },
-        "constraints": [],
-        "destruction": {
-          "breakable": false,
-          "fractureGroup": "sleeper-0",
-          "seamRefs": [],
-          "detachableFragments": [],
-          "breakImpulse": 0.0,
-          "debrisMaterial": "wood-dark"
-        }
-      },
-      "material": "wood-dark",
-      "materialLayers": [
-        "wood-dark"
-      ],
-      "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(110, 70, 40, 1.0)",
-        "secondaryAlbedo": "rgba(87, 55, 31, 1.0)",
-        "materialClass": "wood",
-        "materialClassConfidence": 0.85,
-        "colorGradient": {
-          "type": "linear",
-          "axis": "y",
-          "stops": [
-            {
-              "position": 0.0,
-              "color": "rgba(87, 55, 31, 1.0)"
-            },
-            {
-              "position": 1.0,
-              "color": "rgba(110, 70, 40, 1.0)"
-            }
-          ]
-        },
-        "evidenceRefs": [
-          "full-object"
-        ]
-      },
-      "deformations": [],
-      "joints": [],
-      "seams": [],
-      "localFeatures": [
-        {
-          "id": "sleeper-0-ends",
-          "kind": "chip",
-          "description": "rounded worn sleeper ends",
-          "effect": "material",
-          "evidenceRefs": [
-            "full-object"
-          ],
-          "confidence": 0.75
-        }
-      ],
-      "surfaceDetail": {
-        "macroRoughness": 0.88,
-        "microRoughness": 0.176,
-        "bumpAmplitude": 0.02,
-        "normalPattern": "mottled",
-        "displacementPattern": "",
-        "occlusionPattern": "cavity darkening at seams and contacts",
-        "edgeWearPattern": "",
-        "notes": ""
-      },
-      "evidenceRefs": [
-        "full-object"
-      ],
-      "details": [
-        "sleeper-0-ends"
-      ]
-    },
-    {
-      "id": "sleeper-1",
-      "name": "Sleeper 2",
-      "level": "macro",
-      "role": "panel",
-      "importance": 0.55,
-      "confidence": 0.75,
-      "primitive": "box",
-      "topologyClass": "assembled-solid",
-      "topologyRationale": "Sleeper 2: discrete rigid part with countable flat or simply curved faces.",
-      "geometryDescriptor": {
-        "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
-        "edgeTreatment": {
-          "type": "chamfer",
-          "bevelRadius": 0.01,
-          "segments": 1
-        },
-        "deformationStack": [],
-        "uvStrategy": "generated procedural coordinates",
-        "normalStrategy": "vertex normals from generated geometry"
-      },
-      "parent": "root",
-      "attachment": null,
-      "dimensions": {
-        "width": 0.18,
-        "height": 0.07,
-        "depth": 1.16,
-        "units": "object",
-        "confidence": 0.75
-      },
-      "transform": {
-        "position": [
-          0.0,
           0.055,
           0.0
         ],
@@ -2482,43 +2496,18 @@
       ],
       "details": [
         "sleeper-1-ends"
-      ],
-      "uvContract": {
-        "status": "unwrapped",
-        "strategy": "generated procedural coordinates",
-        "materialId": "wood-dark"
-      },
-      "materialRegions": [
-        {
-          "regionId": "sleeper-wood",
-          "materialId": "wood-dark",
-          "profileId": "wood.unfinished",
-          "crop": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/01-sleeper-wood.png",
-            "bbox": {
-              "x": 505,
-              "y": 660,
-              "width": 110,
-              "height": 30
-            },
-            "sourceWidth": 1408,
-            "sourceHeight": 768,
-            "loaderWarnings": [],
-            "coverage": 0.0031
-          }
-        }
       ]
     },
     {
       "id": "sleeper-2",
-      "name": "Sleeper 3",
+      "name": "Sleeper 2",
       "level": "macro",
       "role": "panel",
       "importance": 0.55,
       "confidence": 0.75,
       "primitive": "box",
       "topologyClass": "assembled-solid",
-      "topologyRationale": "Sleeper 3: discrete rigid part with countable flat or simply curved faces.",
+      "topologyRationale": "Sleeper 2: discrete rigid part with countable flat or simply curved faces.",
       "geometryDescriptor": {
         "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
         "edgeTreatment": {
@@ -2541,7 +2530,7 @@
       },
       "transform": {
         "position": [
-          0.54,
+          0.0,
           0.055,
           0.0
         ],
@@ -2665,6 +2654,189 @@
       ],
       "details": [
         "sleeper-2-ends"
+      ],
+      "uvContract": {
+        "status": "unwrapped",
+        "strategy": "generated procedural coordinates",
+        "materialId": "wood-dark"
+      },
+      "materialRegions": [
+        {
+          "regionId": "sleeper-wood",
+          "materialId": "wood-dark",
+          "profileId": "wood.unfinished",
+          "crop": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/01-sleeper-wood.png",
+            "bbox": {
+              "x": 505,
+              "y": 660,
+              "width": 110,
+              "height": 30
+            },
+            "sourceWidth": 1408,
+            "sourceHeight": 768,
+            "loaderWarnings": [],
+            "coverage": 0.0031
+          }
+        }
+      ]
+    },
+    {
+      "id": "sleeper-3",
+      "name": "Sleeper 3",
+      "level": "macro",
+      "role": "panel",
+      "importance": 0.55,
+      "confidence": 0.75,
+      "primitive": "box",
+      "topologyClass": "assembled-solid",
+      "topologyRationale": "Sleeper 3: discrete rigid part with countable flat or simply curved faces.",
+      "geometryDescriptor": {
+        "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
+        "edgeTreatment": {
+          "type": "chamfer",
+          "bevelRadius": 0.01,
+          "segments": 1
+        },
+        "deformationStack": [],
+        "uvStrategy": "generated procedural coordinates",
+        "normalStrategy": "vertex normals from generated geometry"
+      },
+      "parent": "root",
+      "attachment": null,
+      "dimensions": {
+        "width": 0.18,
+        "height": 0.07,
+        "depth": 1.16,
+        "units": "object",
+        "confidence": 0.75
+      },
+      "transform": {
+        "position": [
+          0.54,
+          0.055,
+          0.0
+        ],
+        "rotation": [
+          -0.0,
+          0.0,
+          -0.0
+        ],
+        "scale": [
+          0.18,
+          0.07,
+          1.16
+        ]
+      },
+      "actionProfile": {
+        "animationRole": "static",
+        "pivot": {
+          "mode": "center",
+          "localPosition": [
+            0,
+            0,
+            0
+          ],
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "confidence": 0.75
+        },
+        "transformChannels": {
+          "translate": false,
+          "rotate": false,
+          "scale": false,
+          "bend": false,
+          "twist": false,
+          "detach": false,
+          "visibility": true,
+          "materialState": true
+        },
+        "sockets": [],
+        "collider": {
+          "type": "box",
+          "offset": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "isTrigger": false,
+          "notes": "Proxy sized to the part's own bounds."
+        },
+        "constraints": [],
+        "destruction": {
+          "breakable": false,
+          "fractureGroup": "sleeper-3",
+          "seamRefs": [],
+          "detachableFragments": [],
+          "breakImpulse": 0.0,
+          "debrisMaterial": "wood-dark"
+        }
+      },
+      "material": "wood-dark",
+      "materialLayers": [
+        "wood-dark"
+      ],
+      "colorMaterialRecipe": {
+        "dominantAlbedo": "rgba(110, 70, 40, 1.0)",
+        "secondaryAlbedo": "rgba(87, 55, 31, 1.0)",
+        "materialClass": "wood",
+        "materialClassConfidence": 0.85,
+        "colorGradient": {
+          "type": "linear",
+          "axis": "y",
+          "stops": [
+            {
+              "position": 0.0,
+              "color": "rgba(87, 55, 31, 1.0)"
+            },
+            {
+              "position": 1.0,
+              "color": "rgba(110, 70, 40, 1.0)"
+            }
+          ]
+        },
+        "evidenceRefs": [
+          "full-object"
+        ]
+      },
+      "deformations": [],
+      "joints": [],
+      "seams": [],
+      "localFeatures": [
+        {
+          "id": "sleeper-3-ends",
+          "kind": "chip",
+          "description": "rounded worn sleeper ends",
+          "effect": "material",
+          "evidenceRefs": [
+            "full-object"
+          ],
+          "confidence": 0.75
+        }
+      ],
+      "surfaceDetail": {
+        "macroRoughness": 0.88,
+        "microRoughness": 0.176,
+        "bumpAmplitude": 0.02,
+        "normalPattern": "mottled",
+        "displacementPattern": "",
+        "occlusionPattern": "cavity darkening at seams and contacts",
+        "edgeWearPattern": "",
+        "notes": ""
+      },
+      "evidenceRefs": [
+        "full-object"
+      ],
+      "details": [
+        "sleeper-3-ends"
       ]
     },
     {
@@ -2826,7 +2998,7 @@
       ]
     },
     {
-      "id": "tie-plate-near-0",
+      "id": "tie-plate-near-1",
       "name": "Tie plate near 1",
       "level": "micro",
       "role": "plate",
@@ -2858,164 +3030,6 @@
       "transform": {
         "position": [
           -0.54,
-          0.094,
-          0.335
-        ],
-        "rotation": [
-          -0.0,
-          0.0,
-          -0.0
-        ],
-        "scale": [
-          0.13,
-          0.012,
-          0.14
-        ]
-      },
-      "actionProfile": {
-        "animationRole": "static",
-        "pivot": {
-          "mode": "center",
-          "localPosition": [
-            0,
-            0,
-            0
-          ],
-          "axis": [
-            0,
-            1,
-            0
-          ],
-          "confidence": 0.75
-        },
-        "transformChannels": {
-          "translate": false,
-          "rotate": false,
-          "scale": false,
-          "bend": false,
-          "twist": false,
-          "detach": false,
-          "visibility": true,
-          "materialState": true
-        },
-        "sockets": [],
-        "collider": {
-          "type": "box",
-          "offset": [
-            0,
-            0,
-            0
-          ],
-          "scale": [
-            1,
-            1,
-            1
-          ],
-          "isTrigger": false,
-          "notes": "Proxy sized to the part's own bounds."
-        },
-        "constraints": [],
-        "destruction": {
-          "breakable": false,
-          "fractureGroup": "tie-plate-near-0",
-          "seamRefs": [],
-          "detachableFragments": [],
-          "breakImpulse": 0.0,
-          "debrisMaterial": "iron"
-        }
-      },
-      "material": "iron",
-      "materialLayers": [
-        "iron"
-      ],
-      "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
-        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
-        "materialClass": "metal",
-        "materialClassConfidence": 0.85,
-        "colorGradient": {
-          "type": "linear",
-          "axis": "y",
-          "stops": [
-            {
-              "position": 0.0,
-              "color": "rgba(59, 60, 66, 1.0)"
-            },
-            {
-              "position": 1.0,
-              "color": "rgba(80, 82, 90, 1.0)"
-            }
-          ]
-        },
-        "evidenceRefs": [
-          "full-object"
-        ]
-      },
-      "deformations": [],
-      "joints": [],
-      "seams": [],
-      "localFeatures": [
-        {
-          "id": "tie-plate-near-0-spikes",
-          "kind": "fastener",
-          "description": "plate pinned to the sleeper",
-          "effect": "geometry",
-          "evidenceRefs": [
-            "full-object"
-          ],
-          "confidence": 0.75
-        }
-      ],
-      "surfaceDetail": {
-        "macroRoughness": 0.55,
-        "microRoughness": 0.11,
-        "bumpAmplitude": 0.0075,
-        "normalPattern": "mottled",
-        "displacementPattern": "",
-        "occlusionPattern": "cavity darkening at seams and contacts",
-        "edgeWearPattern": "lighter worn edges",
-        "notes": ""
-      },
-      "evidenceRefs": [
-        "full-object"
-      ],
-      "details": [
-        "tie-plate-near-0-spikes"
-      ]
-    },
-    {
-      "id": "tie-plate-near-1",
-      "name": "Tie plate near 2",
-      "level": "micro",
-      "role": "plate",
-      "importance": 0.25,
-      "confidence": 0.75,
-      "primitive": "box",
-      "topologyClass": "assembled-solid",
-      "topologyRationale": "Tie plate near 2: discrete rigid part with countable flat or simply curved faces.",
-      "geometryDescriptor": {
-        "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
-        "edgeTreatment": {
-          "type": "chamfer",
-          "bevelRadius": 0.01,
-          "segments": 1
-        },
-        "deformationStack": [],
-        "uvStrategy": "generated procedural coordinates",
-        "normalStrategy": "vertex normals from generated geometry"
-      },
-      "parent": "root",
-      "attachment": null,
-      "dimensions": {
-        "width": 0.13,
-        "height": 0.012,
-        "depth": 0.14,
-        "units": "object",
-        "confidence": 0.75
-      },
-      "transform": {
-        "position": [
-          0.0,
           0.094,
           0.335
         ],
@@ -3143,14 +3157,14 @@
     },
     {
       "id": "tie-plate-near-2",
-      "name": "Tie plate near 3",
+      "name": "Tie plate near 2",
       "level": "micro",
       "role": "plate",
       "importance": 0.25,
       "confidence": 0.75,
       "primitive": "box",
       "topologyClass": "assembled-solid",
-      "topologyRationale": "Tie plate near 3: discrete rigid part with countable flat or simply curved faces.",
+      "topologyRationale": "Tie plate near 2: discrete rigid part with countable flat or simply curved faces.",
       "geometryDescriptor": {
         "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
         "edgeTreatment": {
@@ -3173,7 +3187,7 @@
       },
       "transform": {
         "position": [
-          0.54,
+          0.0,
           0.094,
           0.335
         ],
@@ -3297,6 +3311,164 @@
       ],
       "details": [
         "tie-plate-near-2-spikes"
+      ]
+    },
+    {
+      "id": "tie-plate-near-3",
+      "name": "Tie plate near 3",
+      "level": "micro",
+      "role": "plate",
+      "importance": 0.25,
+      "confidence": 0.75,
+      "primitive": "box",
+      "topologyClass": "assembled-solid",
+      "topologyRationale": "Tie plate near 3: discrete rigid part with countable flat or simply curved faces.",
+      "geometryDescriptor": {
+        "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
+        "edgeTreatment": {
+          "type": "chamfer",
+          "bevelRadius": 0.01,
+          "segments": 1
+        },
+        "deformationStack": [],
+        "uvStrategy": "generated procedural coordinates",
+        "normalStrategy": "vertex normals from generated geometry"
+      },
+      "parent": "root",
+      "attachment": null,
+      "dimensions": {
+        "width": 0.13,
+        "height": 0.012,
+        "depth": 0.14,
+        "units": "object",
+        "confidence": 0.75
+      },
+      "transform": {
+        "position": [
+          0.54,
+          0.094,
+          0.335
+        ],
+        "rotation": [
+          -0.0,
+          0.0,
+          -0.0
+        ],
+        "scale": [
+          0.13,
+          0.012,
+          0.14
+        ]
+      },
+      "actionProfile": {
+        "animationRole": "static",
+        "pivot": {
+          "mode": "center",
+          "localPosition": [
+            0,
+            0,
+            0
+          ],
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "confidence": 0.75
+        },
+        "transformChannels": {
+          "translate": false,
+          "rotate": false,
+          "scale": false,
+          "bend": false,
+          "twist": false,
+          "detach": false,
+          "visibility": true,
+          "materialState": true
+        },
+        "sockets": [],
+        "collider": {
+          "type": "box",
+          "offset": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "isTrigger": false,
+          "notes": "Proxy sized to the part's own bounds."
+        },
+        "constraints": [],
+        "destruction": {
+          "breakable": false,
+          "fractureGroup": "tie-plate-near-3",
+          "seamRefs": [],
+          "detachableFragments": [],
+          "breakImpulse": 0.0,
+          "debrisMaterial": "iron"
+        }
+      },
+      "material": "iron",
+      "materialLayers": [
+        "iron"
+      ],
+      "colorMaterialRecipe": {
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
+        "materialClass": "metal",
+        "materialClassConfidence": 0.85,
+        "colorGradient": {
+          "type": "linear",
+          "axis": "y",
+          "stops": [
+            {
+              "position": 0.0,
+              "color": "rgba(59, 60, 66, 1.0)"
+            },
+            {
+              "position": 1.0,
+              "color": "rgba(80, 82, 90, 1.0)"
+            }
+          ]
+        },
+        "evidenceRefs": [
+          "full-object"
+        ]
+      },
+      "deformations": [],
+      "joints": [],
+      "seams": [],
+      "localFeatures": [
+        {
+          "id": "tie-plate-near-3-spikes",
+          "kind": "fastener",
+          "description": "plate pinned to the sleeper",
+          "effect": "geometry",
+          "evidenceRefs": [
+            "full-object"
+          ],
+          "confidence": 0.75
+        }
+      ],
+      "surfaceDetail": {
+        "macroRoughness": 0.55,
+        "microRoughness": 0.11,
+        "bumpAmplitude": 0.0075,
+        "normalPattern": "mottled",
+        "displacementPattern": "",
+        "occlusionPattern": "cavity darkening at seams and contacts",
+        "edgeWearPattern": "lighter worn edges",
+        "notes": ""
+      },
+      "evidenceRefs": [
+        "full-object"
+      ],
+      "details": [
+        "tie-plate-near-3-spikes"
       ]
     },
     {
@@ -3458,7 +3630,7 @@
       ]
     },
     {
-      "id": "tie-plate-far-0",
+      "id": "tie-plate-far-1",
       "name": "Tie plate far 1",
       "level": "micro",
       "role": "plate",
@@ -3490,164 +3662,6 @@
       "transform": {
         "position": [
           -0.54,
-          0.094,
-          -0.335
-        ],
-        "rotation": [
-          -0.0,
-          0.0,
-          -0.0
-        ],
-        "scale": [
-          0.13,
-          0.012,
-          0.14
-        ]
-      },
-      "actionProfile": {
-        "animationRole": "static",
-        "pivot": {
-          "mode": "center",
-          "localPosition": [
-            0,
-            0,
-            0
-          ],
-          "axis": [
-            0,
-            1,
-            0
-          ],
-          "confidence": 0.75
-        },
-        "transformChannels": {
-          "translate": false,
-          "rotate": false,
-          "scale": false,
-          "bend": false,
-          "twist": false,
-          "detach": false,
-          "visibility": true,
-          "materialState": true
-        },
-        "sockets": [],
-        "collider": {
-          "type": "box",
-          "offset": [
-            0,
-            0,
-            0
-          ],
-          "scale": [
-            1,
-            1,
-            1
-          ],
-          "isTrigger": false,
-          "notes": "Proxy sized to the part's own bounds."
-        },
-        "constraints": [],
-        "destruction": {
-          "breakable": false,
-          "fractureGroup": "tie-plate-far-0",
-          "seamRefs": [],
-          "detachableFragments": [],
-          "breakImpulse": 0.0,
-          "debrisMaterial": "iron"
-        }
-      },
-      "material": "iron",
-      "materialLayers": [
-        "iron"
-      ],
-      "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
-        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
-        "materialClass": "metal",
-        "materialClassConfidence": 0.85,
-        "colorGradient": {
-          "type": "linear",
-          "axis": "y",
-          "stops": [
-            {
-              "position": 0.0,
-              "color": "rgba(59, 60, 66, 1.0)"
-            },
-            {
-              "position": 1.0,
-              "color": "rgba(80, 82, 90, 1.0)"
-            }
-          ]
-        },
-        "evidenceRefs": [
-          "full-object"
-        ]
-      },
-      "deformations": [],
-      "joints": [],
-      "seams": [],
-      "localFeatures": [
-        {
-          "id": "tie-plate-far-0-spikes",
-          "kind": "fastener",
-          "description": "plate pinned to the sleeper",
-          "effect": "geometry",
-          "evidenceRefs": [
-            "full-object"
-          ],
-          "confidence": 0.75
-        }
-      ],
-      "surfaceDetail": {
-        "macroRoughness": 0.55,
-        "microRoughness": 0.11,
-        "bumpAmplitude": 0.0075,
-        "normalPattern": "mottled",
-        "displacementPattern": "",
-        "occlusionPattern": "cavity darkening at seams and contacts",
-        "edgeWearPattern": "lighter worn edges",
-        "notes": ""
-      },
-      "evidenceRefs": [
-        "full-object"
-      ],
-      "details": [
-        "tie-plate-far-0-spikes"
-      ]
-    },
-    {
-      "id": "tie-plate-far-1",
-      "name": "Tie plate far 2",
-      "level": "micro",
-      "role": "plate",
-      "importance": 0.25,
-      "confidence": 0.75,
-      "primitive": "box",
-      "topologyClass": "assembled-solid",
-      "topologyRationale": "Tie plate far 2: discrete rigid part with countable flat or simply curved faces.",
-      "geometryDescriptor": {
-        "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
-        "edgeTreatment": {
-          "type": "chamfer",
-          "bevelRadius": 0.01,
-          "segments": 1
-        },
-        "deformationStack": [],
-        "uvStrategy": "generated procedural coordinates",
-        "normalStrategy": "vertex normals from generated geometry"
-      },
-      "parent": "root",
-      "attachment": null,
-      "dimensions": {
-        "width": 0.13,
-        "height": 0.012,
-        "depth": 0.14,
-        "units": "object",
-        "confidence": 0.75
-      },
-      "transform": {
-        "position": [
-          0.0,
           0.094,
           -0.335
         ],
@@ -3775,14 +3789,14 @@
     },
     {
       "id": "tie-plate-far-2",
-      "name": "Tie plate far 3",
+      "name": "Tie plate far 2",
       "level": "micro",
       "role": "plate",
       "importance": 0.25,
       "confidence": 0.75,
       "primitive": "box",
       "topologyClass": "assembled-solid",
-      "topologyRationale": "Tie plate far 3: discrete rigid part with countable flat or simply curved faces.",
+      "topologyRationale": "Tie plate far 2: discrete rigid part with countable flat or simply curved faces.",
       "geometryDescriptor": {
         "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
         "edgeTreatment": {
@@ -3805,7 +3819,7 @@
       },
       "transform": {
         "position": [
-          0.54,
+          0.0,
           0.094,
           -0.335
         ],
@@ -3932,6 +3946,164 @@
       ]
     },
     {
+      "id": "tie-plate-far-3",
+      "name": "Tie plate far 3",
+      "level": "micro",
+      "role": "plate",
+      "importance": 0.25,
+      "confidence": 0.75,
+      "primitive": "box",
+      "topologyClass": "assembled-solid",
+      "topologyRationale": "Tie plate far 3: discrete rigid part with countable flat or simply curved faces.",
+      "geometryDescriptor": {
+        "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
+        "edgeTreatment": {
+          "type": "chamfer",
+          "bevelRadius": 0.01,
+          "segments": 1
+        },
+        "deformationStack": [],
+        "uvStrategy": "generated procedural coordinates",
+        "normalStrategy": "vertex normals from generated geometry"
+      },
+      "parent": "root",
+      "attachment": null,
+      "dimensions": {
+        "width": 0.13,
+        "height": 0.012,
+        "depth": 0.14,
+        "units": "object",
+        "confidence": 0.75
+      },
+      "transform": {
+        "position": [
+          0.54,
+          0.094,
+          -0.335
+        ],
+        "rotation": [
+          -0.0,
+          0.0,
+          -0.0
+        ],
+        "scale": [
+          0.13,
+          0.012,
+          0.14
+        ]
+      },
+      "actionProfile": {
+        "animationRole": "static",
+        "pivot": {
+          "mode": "center",
+          "localPosition": [
+            0,
+            0,
+            0
+          ],
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "confidence": 0.75
+        },
+        "transformChannels": {
+          "translate": false,
+          "rotate": false,
+          "scale": false,
+          "bend": false,
+          "twist": false,
+          "detach": false,
+          "visibility": true,
+          "materialState": true
+        },
+        "sockets": [],
+        "collider": {
+          "type": "box",
+          "offset": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "isTrigger": false,
+          "notes": "Proxy sized to the part's own bounds."
+        },
+        "constraints": [],
+        "destruction": {
+          "breakable": false,
+          "fractureGroup": "tie-plate-far-3",
+          "seamRefs": [],
+          "detachableFragments": [],
+          "breakImpulse": 0.0,
+          "debrisMaterial": "iron"
+        }
+      },
+      "material": "iron",
+      "materialLayers": [
+        "iron"
+      ],
+      "colorMaterialRecipe": {
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
+        "materialClass": "metal",
+        "materialClassConfidence": 0.85,
+        "colorGradient": {
+          "type": "linear",
+          "axis": "y",
+          "stops": [
+            {
+              "position": 0.0,
+              "color": "rgba(59, 60, 66, 1.0)"
+            },
+            {
+              "position": 1.0,
+              "color": "rgba(80, 82, 90, 1.0)"
+            }
+          ]
+        },
+        "evidenceRefs": [
+          "full-object"
+        ]
+      },
+      "deformations": [],
+      "joints": [],
+      "seams": [],
+      "localFeatures": [
+        {
+          "id": "tie-plate-far-3-spikes",
+          "kind": "fastener",
+          "description": "plate pinned to the sleeper",
+          "effect": "geometry",
+          "evidenceRefs": [
+            "full-object"
+          ],
+          "confidence": 0.75
+        }
+      ],
+      "surfaceDetail": {
+        "macroRoughness": 0.55,
+        "microRoughness": 0.11,
+        "bumpAmplitude": 0.0075,
+        "normalPattern": "mottled",
+        "displacementPattern": "",
+        "occlusionPattern": "cavity darkening at seams and contacts",
+        "edgeWearPattern": "lighter worn edges",
+        "notes": ""
+      },
+      "evidenceRefs": [
+        "full-object"
+      ],
+      "details": [
+        "tie-plate-far-3-spikes"
+      ]
+    },
+    {
       "id": "chassis-frame",
       "name": "Chassis frame",
       "level": "macro",
@@ -3979,9 +4151,9 @@
         ]
       },
       "actionProfile": {
-        "animationRole": "static",
+        "animationRole": "cart-body",
         "pivot": {
-          "mode": "center",
+          "mode": "joint",
           "localPosition": [
             0,
             0,
@@ -3995,16 +4167,40 @@
           "confidence": 0.75
         },
         "transformChannels": {
-          "translate": false,
-          "rotate": false,
+          "translate": true,
+          "rotate": true,
           "scale": false,
           "bend": false,
           "twist": false,
           "detach": false,
           "visibility": true,
-          "materialState": true
+          "materialState": false
         },
-        "sockets": [],
+        "sockets": [
+          {
+            "id": "roll-axis",
+            "localPosition": [
+              0,
+              0,
+              0
+            ],
+            "axis": [
+              1,
+              0,
+              0
+            ],
+            "use": "the cart body (tub, wheels, handle) rolls along the rails by translating this pivot on X; the track stays under root"
+          },
+          {
+            "id": "rail-contact",
+            "localPosition": [
+              0,
+              -0.31,
+              0
+            ],
+            "use": "rail top under the wheels"
+          }
+        ],
         "collider": {
           "type": "box",
           "offset": [
@@ -7346,7 +7542,7 @@
       ]
     },
     {
-      "id": "plank-near-0",
+      "id": "plank-near-1",
       "name": "Plank near 1",
       "level": "meso",
       "role": "plank",
@@ -7388,638 +7584,6 @@
         ],
         "scale": [
           0.8272,
-          0.1667,
-          0.04
-        ]
-      },
-      "actionProfile": {
-        "animationRole": "static",
-        "pivot": {
-          "mode": "center",
-          "localPosition": [
-            0,
-            0,
-            0
-          ],
-          "axis": [
-            0,
-            1,
-            0
-          ],
-          "confidence": 0.75
-        },
-        "transformChannels": {
-          "translate": false,
-          "rotate": false,
-          "scale": false,
-          "bend": false,
-          "twist": false,
-          "detach": false,
-          "visibility": true,
-          "materialState": true
-        },
-        "sockets": [],
-        "collider": {
-          "type": "box",
-          "offset": [
-            0,
-            0,
-            0
-          ],
-          "scale": [
-            1,
-            1,
-            1
-          ],
-          "isTrigger": false,
-          "notes": "Proxy sized to the part's own bounds."
-        },
-        "constraints": [],
-        "destruction": {
-          "breakable": false,
-          "fractureGroup": "plank-near-0",
-          "seamRefs": [],
-          "detachableFragments": [],
-          "breakImpulse": 0.0,
-          "debrisMaterial": "wood"
-        }
-      },
-      "material": "wood",
-      "materialLayers": [
-        "wood"
-      ],
-      "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(160, 99, 47, 1.0)",
-        "secondaryAlbedo": "rgba(127, 74, 34, 1.0)",
-        "materialClass": "wood",
-        "materialClassConfidence": 0.85,
-        "colorGradient": {
-          "type": "linear",
-          "axis": "y",
-          "stops": [
-            {
-              "position": 0.0,
-              "color": "rgba(127, 74, 34, 1.0)"
-            },
-            {
-              "position": 1.0,
-              "color": "rgba(160, 99, 47, 1.0)"
-            }
-          ]
-        },
-        "evidenceRefs": [
-          "full-object"
-        ]
-      },
-      "deformations": [],
-      "joints": [],
-      "seams": [],
-      "localFeatures": [
-        {
-          "id": "plank-seam-near-0",
-          "kind": "seam",
-          "description": "10 mm dark gap to the next plank",
-          "effect": "geometry",
-          "evidenceRefs": [
-            "full-object"
-          ],
-          "confidence": 0.75
-        }
-      ],
-      "surfaceDetail": {
-        "macroRoughness": 0.82,
-        "microRoughness": 0.164,
-        "bumpAmplitude": 0.0175,
-        "normalPattern": "mottled",
-        "displacementPattern": "",
-        "occlusionPattern": "cavity darkening at seams and contacts",
-        "edgeWearPattern": "lighter worn edges",
-        "notes": ""
-      },
-      "evidenceRefs": [
-        "full-object"
-      ],
-      "details": [
-        "plank-seam-near-0"
-      ]
-    },
-    {
-      "id": "plank-far-0",
-      "name": "Plank far 1",
-      "level": "meso",
-      "role": "plank",
-      "importance": 0.6,
-      "confidence": 0.75,
-      "primitive": "box",
-      "topologyClass": "assembled-solid",
-      "topologyRationale": "Plank far 1: discrete rigid part with countable flat or simply curved faces.",
-      "geometryDescriptor": {
-        "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
-        "edgeTreatment": {
-          "type": "chamfer",
-          "bevelRadius": 0.01,
-          "segments": 1
-        },
-        "deformationStack": [],
-        "uvStrategy": "generated procedural coordinates",
-        "normalStrategy": "vertex normals from generated geometry"
-      },
-      "parent": "tub-core",
-      "attachment": null,
-      "dimensions": {
-        "width": 0.8272,
-        "height": 0.1667,
-        "depth": 0.04,
-        "units": "object",
-        "confidence": 0.75
-      },
-      "transform": {
-        "position": [
-          0.0,
-          0.0933,
-          -0.0119
-        ],
-        "rotation": [
-          -0.12659,
-          0.0,
-          -0.0
-        ],
-        "scale": [
-          0.8272,
-          0.1667,
-          0.04
-        ]
-      },
-      "actionProfile": {
-        "animationRole": "static",
-        "pivot": {
-          "mode": "center",
-          "localPosition": [
-            0,
-            0,
-            0
-          ],
-          "axis": [
-            0,
-            1,
-            0
-          ],
-          "confidence": 0.75
-        },
-        "transformChannels": {
-          "translate": false,
-          "rotate": false,
-          "scale": false,
-          "bend": false,
-          "twist": false,
-          "detach": false,
-          "visibility": true,
-          "materialState": true
-        },
-        "sockets": [],
-        "collider": {
-          "type": "box",
-          "offset": [
-            0,
-            0,
-            0
-          ],
-          "scale": [
-            1,
-            1,
-            1
-          ],
-          "isTrigger": false,
-          "notes": "Proxy sized to the part's own bounds."
-        },
-        "constraints": [],
-        "destruction": {
-          "breakable": false,
-          "fractureGroup": "plank-far-0",
-          "seamRefs": [],
-          "detachableFragments": [],
-          "breakImpulse": 0.0,
-          "debrisMaterial": "wood"
-        }
-      },
-      "material": "wood",
-      "materialLayers": [
-        "wood"
-      ],
-      "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(160, 99, 47, 1.0)",
-        "secondaryAlbedo": "rgba(127, 74, 34, 1.0)",
-        "materialClass": "wood",
-        "materialClassConfidence": 0.85,
-        "colorGradient": {
-          "type": "linear",
-          "axis": "y",
-          "stops": [
-            {
-              "position": 0.0,
-              "color": "rgba(127, 74, 34, 1.0)"
-            },
-            {
-              "position": 1.0,
-              "color": "rgba(160, 99, 47, 1.0)"
-            }
-          ]
-        },
-        "evidenceRefs": [
-          "full-object"
-        ]
-      },
-      "deformations": [],
-      "joints": [],
-      "seams": [],
-      "localFeatures": [
-        {
-          "id": "plank-seam-far-0",
-          "kind": "seam",
-          "description": "10 mm dark gap to the next plank",
-          "effect": "geometry",
-          "evidenceRefs": [
-            "full-object"
-          ],
-          "confidence": 0.75
-        }
-      ],
-      "surfaceDetail": {
-        "macroRoughness": 0.82,
-        "microRoughness": 0.164,
-        "bumpAmplitude": 0.0175,
-        "normalPattern": "mottled",
-        "displacementPattern": "",
-        "occlusionPattern": "cavity darkening at seams and contacts",
-        "edgeWearPattern": "lighter worn edges",
-        "notes": ""
-      },
-      "evidenceRefs": [
-        "full-object"
-      ],
-      "details": [
-        "plank-seam-far-0"
-      ]
-    },
-    {
-      "id": "plank-rear-0",
-      "name": "Plank rear 1",
-      "level": "meso",
-      "role": "plank",
-      "importance": 0.5,
-      "confidence": 0.75,
-      "primitive": "box",
-      "topologyClass": "assembled-solid",
-      "topologyRationale": "Plank rear 1: discrete rigid part with countable flat or simply curved faces.",
-      "geometryDescriptor": {
-        "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
-        "edgeTreatment": {
-          "type": "chamfer",
-          "bevelRadius": 0.01,
-          "segments": 1
-        },
-        "deformationStack": [],
-        "uvStrategy": "generated procedural coordinates",
-        "normalStrategy": "vertex normals from generated geometry"
-      },
-      "parent": "tub-core",
-      "attachment": null,
-      "dimensions": {
-        "width": 0.04,
-        "height": 0.1667,
-        "depth": 0.4838,
-        "units": "object",
-        "confidence": 0.75
-      },
-      "transform": {
-        "position": [
-          0.4436,
-          0.0933,
-          0.26
-        ],
-        "rotation": [
-          -0.0,
-          0.0,
-          -0.14444
-        ],
-        "scale": [
-          0.04,
-          0.1667,
-          0.4838
-        ]
-      },
-      "actionProfile": {
-        "animationRole": "static",
-        "pivot": {
-          "mode": "center",
-          "localPosition": [
-            0,
-            0,
-            0
-          ],
-          "axis": [
-            0,
-            1,
-            0
-          ],
-          "confidence": 0.75
-        },
-        "transformChannels": {
-          "translate": false,
-          "rotate": false,
-          "scale": false,
-          "bend": false,
-          "twist": false,
-          "detach": false,
-          "visibility": true,
-          "materialState": true
-        },
-        "sockets": [],
-        "collider": {
-          "type": "box",
-          "offset": [
-            0,
-            0,
-            0
-          ],
-          "scale": [
-            1,
-            1,
-            1
-          ],
-          "isTrigger": false,
-          "notes": "Proxy sized to the part's own bounds."
-        },
-        "constraints": [],
-        "destruction": {
-          "breakable": false,
-          "fractureGroup": "plank-rear-0",
-          "seamRefs": [],
-          "detachableFragments": [],
-          "breakImpulse": 0.0,
-          "debrisMaterial": "wood"
-        }
-      },
-      "material": "wood",
-      "materialLayers": [
-        "wood"
-      ],
-      "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(160, 99, 47, 1.0)",
-        "secondaryAlbedo": "rgba(127, 74, 34, 1.0)",
-        "materialClass": "wood",
-        "materialClassConfidence": 0.85,
-        "colorGradient": {
-          "type": "linear",
-          "axis": "y",
-          "stops": [
-            {
-              "position": 0.0,
-              "color": "rgba(127, 74, 34, 1.0)"
-            },
-            {
-              "position": 1.0,
-              "color": "rgba(160, 99, 47, 1.0)"
-            }
-          ]
-        },
-        "evidenceRefs": [
-          "full-object"
-        ]
-      },
-      "deformations": [],
-      "joints": [],
-      "seams": [],
-      "localFeatures": [
-        {
-          "id": "plank-seam-rear-0",
-          "kind": "seam",
-          "description": "10 mm dark gap to the next plank",
-          "effect": "geometry",
-          "evidenceRefs": [
-            "full-object"
-          ],
-          "confidence": 0.75
-        }
-      ],
-      "surfaceDetail": {
-        "macroRoughness": 0.82,
-        "microRoughness": 0.164,
-        "bumpAmplitude": 0.0175,
-        "normalPattern": "mottled",
-        "displacementPattern": "",
-        "occlusionPattern": "cavity darkening at seams and contacts",
-        "edgeWearPattern": "lighter worn edges",
-        "notes": ""
-      },
-      "evidenceRefs": [
-        "full-object"
-      ],
-      "details": [
-        "plank-seam-rear-0"
-      ]
-    },
-    {
-      "id": "plank-front-0",
-      "name": "Plank front 1",
-      "level": "meso",
-      "role": "plank",
-      "importance": 0.5,
-      "confidence": 0.75,
-      "primitive": "box",
-      "topologyClass": "assembled-solid",
-      "topologyRationale": "Plank front 1: discrete rigid part with countable flat or simply curved faces.",
-      "geometryDescriptor": {
-        "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
-        "edgeTreatment": {
-          "type": "chamfer",
-          "bevelRadius": 0.01,
-          "segments": 1
-        },
-        "deformationStack": [],
-        "uvStrategy": "generated procedural coordinates",
-        "normalStrategy": "vertex normals from generated geometry"
-      },
-      "parent": "tub-core",
-      "attachment": null,
-      "dimensions": {
-        "width": 0.04,
-        "height": 0.1667,
-        "depth": 0.4838,
-        "units": "object",
-        "confidence": 0.75
-      },
-      "transform": {
-        "position": [
-          -0.4436,
-          0.0933,
-          0.26
-        ],
-        "rotation": [
-          -0.0,
-          0.0,
-          0.14444
-        ],
-        "scale": [
-          0.04,
-          0.1667,
-          0.4838
-        ]
-      },
-      "actionProfile": {
-        "animationRole": "static",
-        "pivot": {
-          "mode": "center",
-          "localPosition": [
-            0,
-            0,
-            0
-          ],
-          "axis": [
-            0,
-            1,
-            0
-          ],
-          "confidence": 0.75
-        },
-        "transformChannels": {
-          "translate": false,
-          "rotate": false,
-          "scale": false,
-          "bend": false,
-          "twist": false,
-          "detach": false,
-          "visibility": true,
-          "materialState": true
-        },
-        "sockets": [],
-        "collider": {
-          "type": "box",
-          "offset": [
-            0,
-            0,
-            0
-          ],
-          "scale": [
-            1,
-            1,
-            1
-          ],
-          "isTrigger": false,
-          "notes": "Proxy sized to the part's own bounds."
-        },
-        "constraints": [],
-        "destruction": {
-          "breakable": false,
-          "fractureGroup": "plank-front-0",
-          "seamRefs": [],
-          "detachableFragments": [],
-          "breakImpulse": 0.0,
-          "debrisMaterial": "wood"
-        }
-      },
-      "material": "wood",
-      "materialLayers": [
-        "wood"
-      ],
-      "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(160, 99, 47, 1.0)",
-        "secondaryAlbedo": "rgba(127, 74, 34, 1.0)",
-        "materialClass": "wood",
-        "materialClassConfidence": 0.85,
-        "colorGradient": {
-          "type": "linear",
-          "axis": "y",
-          "stops": [
-            {
-              "position": 0.0,
-              "color": "rgba(127, 74, 34, 1.0)"
-            },
-            {
-              "position": 1.0,
-              "color": "rgba(160, 99, 47, 1.0)"
-            }
-          ]
-        },
-        "evidenceRefs": [
-          "full-object"
-        ]
-      },
-      "deformations": [],
-      "joints": [],
-      "seams": [],
-      "localFeatures": [
-        {
-          "id": "plank-seam-front-0",
-          "kind": "seam",
-          "description": "10 mm dark gap to the next plank",
-          "effect": "geometry",
-          "evidenceRefs": [
-            "full-object"
-          ],
-          "confidence": 0.75
-        }
-      ],
-      "surfaceDetail": {
-        "macroRoughness": 0.82,
-        "microRoughness": 0.164,
-        "bumpAmplitude": 0.0175,
-        "normalPattern": "mottled",
-        "displacementPattern": "",
-        "occlusionPattern": "cavity darkening at seams and contacts",
-        "edgeWearPattern": "lighter worn edges",
-        "notes": ""
-      },
-      "evidenceRefs": [
-        "full-object"
-      ],
-      "details": [
-        "plank-seam-front-0"
-      ]
-    },
-    {
-      "id": "plank-near-1",
-      "name": "Plank near 2",
-      "level": "meso",
-      "role": "plank",
-      "importance": 0.6,
-      "confidence": 0.75,
-      "primitive": "box",
-      "topologyClass": "assembled-solid",
-      "topologyRationale": "Plank near 2: discrete rigid part with countable flat or simply curved faces.",
-      "geometryDescriptor": {
-        "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
-        "edgeTreatment": {
-          "type": "chamfer",
-          "bevelRadius": 0.01,
-          "segments": 1
-        },
-        "deformationStack": [],
-        "uvStrategy": "generated procedural coordinates",
-        "normalStrategy": "vertex normals from generated geometry"
-      },
-      "parent": "tub-core",
-      "attachment": null,
-      "dimensions": {
-        "width": 0.8785,
-        "height": 0.1667,
-        "depth": 0.04,
-        "units": "object",
-        "confidence": 0.75
-      },
-      "transform": {
-        "position": [
-          0.0,
-          0.27,
-          0.5544
-        ],
-        "rotation": [
-          0.12659,
-          0.0,
-          -0.0
-        ],
-        "scale": [
-          0.8785,
           0.1667,
           0.04
         ]
@@ -8133,43 +7697,18 @@
       ],
       "details": [
         "plank-seam-near-1"
-      ],
-      "uvContract": {
-        "status": "unwrapped",
-        "strategy": "generated procedural coordinates",
-        "materialId": "wood"
-      },
-      "materialRegions": [
-        {
-          "regionId": "plank-wood",
-          "materialId": "wood",
-          "profileId": "wood.unfinished",
-          "crop": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/00-plank-wood.png",
-            "bbox": {
-              "x": 480,
-              "y": 285,
-              "width": 220,
-              "height": 105
-            },
-            "sourceWidth": 1408,
-            "sourceHeight": 768,
-            "loaderWarnings": [],
-            "coverage": 0.0214
-          }
-        }
       ]
     },
     {
       "id": "plank-far-1",
-      "name": "Plank far 2",
+      "name": "Plank far 1",
       "level": "meso",
       "role": "plank",
       "importance": 0.6,
       "confidence": 0.75,
       "primitive": "box",
       "topologyClass": "assembled-solid",
-      "topologyRationale": "Plank far 2: discrete rigid part with countable flat or simply curved faces.",
+      "topologyRationale": "Plank far 1: discrete rigid part with countable flat or simply curved faces.",
       "geometryDescriptor": {
         "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
         "edgeTreatment": {
@@ -8184,7 +7723,7 @@
       "parent": "tub-core",
       "attachment": null,
       "dimensions": {
-        "width": 0.8785,
+        "width": 0.8272,
         "height": 0.1667,
         "depth": 0.04,
         "units": "object",
@@ -8193,8 +7732,8 @@
       "transform": {
         "position": [
           0.0,
-          0.27,
-          -0.0344
+          0.0933,
+          -0.0119
         ],
         "rotation": [
           -0.12659,
@@ -8202,7 +7741,7 @@
           -0.0
         ],
         "scale": [
-          0.8785,
+          0.8272,
           0.1667,
           0.04
         ]
@@ -8320,14 +7859,14 @@
     },
     {
       "id": "plank-rear-1",
-      "name": "Plank rear 2",
+      "name": "Plank rear 1",
       "level": "meso",
       "role": "plank",
       "importance": 0.5,
       "confidence": 0.75,
       "primitive": "box",
       "topologyClass": "assembled-solid",
-      "topologyRationale": "Plank rear 2: discrete rigid part with countable flat or simply curved faces.",
+      "topologyRationale": "Plank rear 1: discrete rigid part with countable flat or simply curved faces.",
       "geometryDescriptor": {
         "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
         "edgeTreatment": {
@@ -8344,14 +7883,14 @@
       "dimensions": {
         "width": 0.04,
         "height": 0.1667,
-        "depth": 0.5287,
+        "depth": 0.4838,
         "units": "object",
         "confidence": 0.75
       },
       "transform": {
         "position": [
-          0.4693,
-          0.27,
+          0.4436,
+          0.0933,
           0.26
         ],
         "rotation": [
@@ -8362,7 +7901,7 @@
         "scale": [
           0.04,
           0.1667,
-          0.5287
+          0.4838
         ]
       },
       "actionProfile": {
@@ -8478,14 +8017,14 @@
     },
     {
       "id": "plank-front-1",
-      "name": "Plank front 2",
+      "name": "Plank front 1",
       "level": "meso",
       "role": "plank",
       "importance": 0.5,
       "confidence": 0.75,
       "primitive": "box",
       "topologyClass": "assembled-solid",
-      "topologyRationale": "Plank front 2: discrete rigid part with countable flat or simply curved faces.",
+      "topologyRationale": "Plank front 1: discrete rigid part with countable flat or simply curved faces.",
       "geometryDescriptor": {
         "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
         "edgeTreatment": {
@@ -8502,14 +8041,14 @@
       "dimensions": {
         "width": 0.04,
         "height": 0.1667,
-        "depth": 0.5287,
+        "depth": 0.4838,
         "units": "object",
         "confidence": 0.75
       },
       "transform": {
         "position": [
-          -0.4693,
-          0.27,
+          -0.4436,
+          0.0933,
           0.26
         ],
         "rotation": [
@@ -8520,7 +8059,7 @@
         "scale": [
           0.04,
           0.1667,
-          0.5287
+          0.4838
         ]
       },
       "actionProfile": {
@@ -8636,14 +8175,14 @@
     },
     {
       "id": "plank-near-2",
-      "name": "Plank near 3",
+      "name": "Plank near 2",
       "level": "meso",
       "role": "plank",
       "importance": 0.6,
       "confidence": 0.75,
       "primitive": "box",
       "topologyClass": "assembled-solid",
-      "topologyRationale": "Plank near 3: discrete rigid part with countable flat or simply curved faces.",
+      "topologyRationale": "Plank near 2: discrete rigid part with countable flat or simply curved faces.",
       "geometryDescriptor": {
         "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
         "edgeTreatment": {
@@ -8658,7 +8197,7 @@
       "parent": "tub-core",
       "attachment": null,
       "dimensions": {
-        "width": 0.9299,
+        "width": 0.8785,
         "height": 0.1667,
         "depth": 0.04,
         "units": "object",
@@ -8667,8 +8206,8 @@
       "transform": {
         "position": [
           0.0,
-          0.4467,
-          0.5768
+          0.27,
+          0.5544
         ],
         "rotation": [
           0.12659,
@@ -8676,7 +8215,7 @@
           -0.0
         ],
         "scale": [
-          0.9299,
+          0.8785,
           0.1667,
           0.04
         ]
@@ -8790,18 +8329,43 @@
       ],
       "details": [
         "plank-seam-near-2"
+      ],
+      "uvContract": {
+        "status": "unwrapped",
+        "strategy": "generated procedural coordinates",
+        "materialId": "wood"
+      },
+      "materialRegions": [
+        {
+          "regionId": "plank-wood",
+          "materialId": "wood",
+          "profileId": "wood.unfinished",
+          "crop": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/00-plank-wood.png",
+            "bbox": {
+              "x": 480,
+              "y": 285,
+              "width": 220,
+              "height": 105
+            },
+            "sourceWidth": 1408,
+            "sourceHeight": 768,
+            "loaderWarnings": [],
+            "coverage": 0.0214
+          }
+        }
       ]
     },
     {
       "id": "plank-far-2",
-      "name": "Plank far 3",
+      "name": "Plank far 2",
       "level": "meso",
       "role": "plank",
       "importance": 0.6,
       "confidence": 0.75,
       "primitive": "box",
       "topologyClass": "assembled-solid",
-      "topologyRationale": "Plank far 3: discrete rigid part with countable flat or simply curved faces.",
+      "topologyRationale": "Plank far 2: discrete rigid part with countable flat or simply curved faces.",
       "geometryDescriptor": {
         "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
         "edgeTreatment": {
@@ -8816,7 +8380,7 @@
       "parent": "tub-core",
       "attachment": null,
       "dimensions": {
-        "width": 0.9299,
+        "width": 0.8785,
         "height": 0.1667,
         "depth": 0.04,
         "units": "object",
@@ -8825,8 +8389,8 @@
       "transform": {
         "position": [
           0.0,
-          0.4467,
-          -0.0568
+          0.27,
+          -0.0344
         ],
         "rotation": [
           -0.12659,
@@ -8834,7 +8398,7 @@
           -0.0
         ],
         "scale": [
-          0.9299,
+          0.8785,
           0.1667,
           0.04
         ]
@@ -8952,14 +8516,14 @@
     },
     {
       "id": "plank-rear-2",
-      "name": "Plank rear 3",
+      "name": "Plank rear 2",
       "level": "meso",
       "role": "plank",
       "importance": 0.5,
       "confidence": 0.75,
       "primitive": "box",
       "topologyClass": "assembled-solid",
-      "topologyRationale": "Plank rear 3: discrete rigid part with countable flat or simply curved faces.",
+      "topologyRationale": "Plank rear 2: discrete rigid part with countable flat or simply curved faces.",
       "geometryDescriptor": {
         "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
         "edgeTreatment": {
@@ -8976,14 +8540,14 @@
       "dimensions": {
         "width": 0.04,
         "height": 0.1667,
-        "depth": 0.5737,
+        "depth": 0.5287,
         "units": "object",
         "confidence": 0.75
       },
       "transform": {
         "position": [
-          0.495,
-          0.4467,
+          0.4693,
+          0.27,
           0.26
         ],
         "rotation": [
@@ -8994,7 +8558,7 @@
         "scale": [
           0.04,
           0.1667,
-          0.5737
+          0.5287
         ]
       },
       "actionProfile": {
@@ -9110,14 +8674,14 @@
     },
     {
       "id": "plank-front-2",
-      "name": "Plank front 3",
+      "name": "Plank front 2",
       "level": "meso",
       "role": "plank",
       "importance": 0.5,
       "confidence": 0.75,
       "primitive": "box",
       "topologyClass": "assembled-solid",
-      "topologyRationale": "Plank front 3: discrete rigid part with countable flat or simply curved faces.",
+      "topologyRationale": "Plank front 2: discrete rigid part with countable flat or simply curved faces.",
       "geometryDescriptor": {
         "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
         "edgeTreatment": {
@@ -9134,14 +8698,14 @@
       "dimensions": {
         "width": 0.04,
         "height": 0.1667,
-        "depth": 0.5737,
+        "depth": 0.5287,
         "units": "object",
         "confidence": 0.75
       },
       "transform": {
         "position": [
-          -0.495,
-          0.4467,
+          -0.4693,
+          0.27,
           0.26
         ],
         "rotation": [
@@ -9152,7 +8716,7 @@
         "scale": [
           0.04,
           0.1667,
-          0.5737
+          0.5287
         ]
       },
       "actionProfile": {
@@ -9264,6 +8828,638 @@
       ],
       "details": [
         "plank-seam-front-2"
+      ]
+    },
+    {
+      "id": "plank-near-3",
+      "name": "Plank near 3",
+      "level": "meso",
+      "role": "plank",
+      "importance": 0.6,
+      "confidence": 0.75,
+      "primitive": "box",
+      "topologyClass": "assembled-solid",
+      "topologyRationale": "Plank near 3: discrete rigid part with countable flat or simply curved faces.",
+      "geometryDescriptor": {
+        "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
+        "edgeTreatment": {
+          "type": "chamfer",
+          "bevelRadius": 0.01,
+          "segments": 1
+        },
+        "deformationStack": [],
+        "uvStrategy": "generated procedural coordinates",
+        "normalStrategy": "vertex normals from generated geometry"
+      },
+      "parent": "tub-core",
+      "attachment": null,
+      "dimensions": {
+        "width": 0.9299,
+        "height": 0.1667,
+        "depth": 0.04,
+        "units": "object",
+        "confidence": 0.75
+      },
+      "transform": {
+        "position": [
+          0.0,
+          0.4467,
+          0.5768
+        ],
+        "rotation": [
+          0.12659,
+          0.0,
+          -0.0
+        ],
+        "scale": [
+          0.9299,
+          0.1667,
+          0.04
+        ]
+      },
+      "actionProfile": {
+        "animationRole": "static",
+        "pivot": {
+          "mode": "center",
+          "localPosition": [
+            0,
+            0,
+            0
+          ],
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "confidence": 0.75
+        },
+        "transformChannels": {
+          "translate": false,
+          "rotate": false,
+          "scale": false,
+          "bend": false,
+          "twist": false,
+          "detach": false,
+          "visibility": true,
+          "materialState": true
+        },
+        "sockets": [],
+        "collider": {
+          "type": "box",
+          "offset": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "isTrigger": false,
+          "notes": "Proxy sized to the part's own bounds."
+        },
+        "constraints": [],
+        "destruction": {
+          "breakable": false,
+          "fractureGroup": "plank-near-3",
+          "seamRefs": [],
+          "detachableFragments": [],
+          "breakImpulse": 0.0,
+          "debrisMaterial": "wood"
+        }
+      },
+      "material": "wood",
+      "materialLayers": [
+        "wood"
+      ],
+      "colorMaterialRecipe": {
+        "dominantAlbedo": "rgba(160, 99, 47, 1.0)",
+        "secondaryAlbedo": "rgba(127, 74, 34, 1.0)",
+        "materialClass": "wood",
+        "materialClassConfidence": 0.85,
+        "colorGradient": {
+          "type": "linear",
+          "axis": "y",
+          "stops": [
+            {
+              "position": 0.0,
+              "color": "rgba(127, 74, 34, 1.0)"
+            },
+            {
+              "position": 1.0,
+              "color": "rgba(160, 99, 47, 1.0)"
+            }
+          ]
+        },
+        "evidenceRefs": [
+          "full-object"
+        ]
+      },
+      "deformations": [],
+      "joints": [],
+      "seams": [],
+      "localFeatures": [
+        {
+          "id": "plank-seam-near-3",
+          "kind": "seam",
+          "description": "10 mm dark gap to the next plank",
+          "effect": "geometry",
+          "evidenceRefs": [
+            "full-object"
+          ],
+          "confidence": 0.75
+        }
+      ],
+      "surfaceDetail": {
+        "macroRoughness": 0.82,
+        "microRoughness": 0.164,
+        "bumpAmplitude": 0.0175,
+        "normalPattern": "mottled",
+        "displacementPattern": "",
+        "occlusionPattern": "cavity darkening at seams and contacts",
+        "edgeWearPattern": "lighter worn edges",
+        "notes": ""
+      },
+      "evidenceRefs": [
+        "full-object"
+      ],
+      "details": [
+        "plank-seam-near-3"
+      ]
+    },
+    {
+      "id": "plank-far-3",
+      "name": "Plank far 3",
+      "level": "meso",
+      "role": "plank",
+      "importance": 0.6,
+      "confidence": 0.75,
+      "primitive": "box",
+      "topologyClass": "assembled-solid",
+      "topologyRationale": "Plank far 3: discrete rigid part with countable flat or simply curved faces.",
+      "geometryDescriptor": {
+        "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
+        "edgeTreatment": {
+          "type": "chamfer",
+          "bevelRadius": 0.01,
+          "segments": 1
+        },
+        "deformationStack": [],
+        "uvStrategy": "generated procedural coordinates",
+        "normalStrategy": "vertex normals from generated geometry"
+      },
+      "parent": "tub-core",
+      "attachment": null,
+      "dimensions": {
+        "width": 0.9299,
+        "height": 0.1667,
+        "depth": 0.04,
+        "units": "object",
+        "confidence": 0.75
+      },
+      "transform": {
+        "position": [
+          0.0,
+          0.4467,
+          -0.0568
+        ],
+        "rotation": [
+          -0.12659,
+          0.0,
+          -0.0
+        ],
+        "scale": [
+          0.9299,
+          0.1667,
+          0.04
+        ]
+      },
+      "actionProfile": {
+        "animationRole": "static",
+        "pivot": {
+          "mode": "center",
+          "localPosition": [
+            0,
+            0,
+            0
+          ],
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "confidence": 0.75
+        },
+        "transformChannels": {
+          "translate": false,
+          "rotate": false,
+          "scale": false,
+          "bend": false,
+          "twist": false,
+          "detach": false,
+          "visibility": true,
+          "materialState": true
+        },
+        "sockets": [],
+        "collider": {
+          "type": "box",
+          "offset": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "isTrigger": false,
+          "notes": "Proxy sized to the part's own bounds."
+        },
+        "constraints": [],
+        "destruction": {
+          "breakable": false,
+          "fractureGroup": "plank-far-3",
+          "seamRefs": [],
+          "detachableFragments": [],
+          "breakImpulse": 0.0,
+          "debrisMaterial": "wood"
+        }
+      },
+      "material": "wood",
+      "materialLayers": [
+        "wood"
+      ],
+      "colorMaterialRecipe": {
+        "dominantAlbedo": "rgba(160, 99, 47, 1.0)",
+        "secondaryAlbedo": "rgba(127, 74, 34, 1.0)",
+        "materialClass": "wood",
+        "materialClassConfidence": 0.85,
+        "colorGradient": {
+          "type": "linear",
+          "axis": "y",
+          "stops": [
+            {
+              "position": 0.0,
+              "color": "rgba(127, 74, 34, 1.0)"
+            },
+            {
+              "position": 1.0,
+              "color": "rgba(160, 99, 47, 1.0)"
+            }
+          ]
+        },
+        "evidenceRefs": [
+          "full-object"
+        ]
+      },
+      "deformations": [],
+      "joints": [],
+      "seams": [],
+      "localFeatures": [
+        {
+          "id": "plank-seam-far-3",
+          "kind": "seam",
+          "description": "10 mm dark gap to the next plank",
+          "effect": "geometry",
+          "evidenceRefs": [
+            "full-object"
+          ],
+          "confidence": 0.75
+        }
+      ],
+      "surfaceDetail": {
+        "macroRoughness": 0.82,
+        "microRoughness": 0.164,
+        "bumpAmplitude": 0.0175,
+        "normalPattern": "mottled",
+        "displacementPattern": "",
+        "occlusionPattern": "cavity darkening at seams and contacts",
+        "edgeWearPattern": "lighter worn edges",
+        "notes": ""
+      },
+      "evidenceRefs": [
+        "full-object"
+      ],
+      "details": [
+        "plank-seam-far-3"
+      ]
+    },
+    {
+      "id": "plank-rear-3",
+      "name": "Plank rear 3",
+      "level": "meso",
+      "role": "plank",
+      "importance": 0.5,
+      "confidence": 0.75,
+      "primitive": "box",
+      "topologyClass": "assembled-solid",
+      "topologyRationale": "Plank rear 3: discrete rigid part with countable flat or simply curved faces.",
+      "geometryDescriptor": {
+        "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
+        "edgeTreatment": {
+          "type": "chamfer",
+          "bevelRadius": 0.01,
+          "segments": 1
+        },
+        "deformationStack": [],
+        "uvStrategy": "generated procedural coordinates",
+        "normalStrategy": "vertex normals from generated geometry"
+      },
+      "parent": "tub-core",
+      "attachment": null,
+      "dimensions": {
+        "width": 0.04,
+        "height": 0.1667,
+        "depth": 0.5737,
+        "units": "object",
+        "confidence": 0.75
+      },
+      "transform": {
+        "position": [
+          0.495,
+          0.4467,
+          0.26
+        ],
+        "rotation": [
+          -0.0,
+          0.0,
+          -0.14444
+        ],
+        "scale": [
+          0.04,
+          0.1667,
+          0.5737
+        ]
+      },
+      "actionProfile": {
+        "animationRole": "static",
+        "pivot": {
+          "mode": "center",
+          "localPosition": [
+            0,
+            0,
+            0
+          ],
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "confidence": 0.75
+        },
+        "transformChannels": {
+          "translate": false,
+          "rotate": false,
+          "scale": false,
+          "bend": false,
+          "twist": false,
+          "detach": false,
+          "visibility": true,
+          "materialState": true
+        },
+        "sockets": [],
+        "collider": {
+          "type": "box",
+          "offset": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "isTrigger": false,
+          "notes": "Proxy sized to the part's own bounds."
+        },
+        "constraints": [],
+        "destruction": {
+          "breakable": false,
+          "fractureGroup": "plank-rear-3",
+          "seamRefs": [],
+          "detachableFragments": [],
+          "breakImpulse": 0.0,
+          "debrisMaterial": "wood"
+        }
+      },
+      "material": "wood",
+      "materialLayers": [
+        "wood"
+      ],
+      "colorMaterialRecipe": {
+        "dominantAlbedo": "rgba(160, 99, 47, 1.0)",
+        "secondaryAlbedo": "rgba(127, 74, 34, 1.0)",
+        "materialClass": "wood",
+        "materialClassConfidence": 0.85,
+        "colorGradient": {
+          "type": "linear",
+          "axis": "y",
+          "stops": [
+            {
+              "position": 0.0,
+              "color": "rgba(127, 74, 34, 1.0)"
+            },
+            {
+              "position": 1.0,
+              "color": "rgba(160, 99, 47, 1.0)"
+            }
+          ]
+        },
+        "evidenceRefs": [
+          "full-object"
+        ]
+      },
+      "deformations": [],
+      "joints": [],
+      "seams": [],
+      "localFeatures": [
+        {
+          "id": "plank-seam-rear-3",
+          "kind": "seam",
+          "description": "10 mm dark gap to the next plank",
+          "effect": "geometry",
+          "evidenceRefs": [
+            "full-object"
+          ],
+          "confidence": 0.75
+        }
+      ],
+      "surfaceDetail": {
+        "macroRoughness": 0.82,
+        "microRoughness": 0.164,
+        "bumpAmplitude": 0.0175,
+        "normalPattern": "mottled",
+        "displacementPattern": "",
+        "occlusionPattern": "cavity darkening at seams and contacts",
+        "edgeWearPattern": "lighter worn edges",
+        "notes": ""
+      },
+      "evidenceRefs": [
+        "full-object"
+      ],
+      "details": [
+        "plank-seam-rear-3"
+      ]
+    },
+    {
+      "id": "plank-front-3",
+      "name": "Plank front 3",
+      "level": "meso",
+      "role": "plank",
+      "importance": 0.5,
+      "confidence": 0.75,
+      "primitive": "box",
+      "topologyClass": "assembled-solid",
+      "topologyRationale": "Plank front 3: discrete rigid part with countable flat or simply curved faces.",
+      "geometryDescriptor": {
+        "topologyIntent": "low-poly stylized game prop, bevel-ready edges",
+        "edgeTreatment": {
+          "type": "chamfer",
+          "bevelRadius": 0.01,
+          "segments": 1
+        },
+        "deformationStack": [],
+        "uvStrategy": "generated procedural coordinates",
+        "normalStrategy": "vertex normals from generated geometry"
+      },
+      "parent": "tub-core",
+      "attachment": null,
+      "dimensions": {
+        "width": 0.04,
+        "height": 0.1667,
+        "depth": 0.5737,
+        "units": "object",
+        "confidence": 0.75
+      },
+      "transform": {
+        "position": [
+          -0.495,
+          0.4467,
+          0.26
+        ],
+        "rotation": [
+          -0.0,
+          0.0,
+          0.14444
+        ],
+        "scale": [
+          0.04,
+          0.1667,
+          0.5737
+        ]
+      },
+      "actionProfile": {
+        "animationRole": "static",
+        "pivot": {
+          "mode": "center",
+          "localPosition": [
+            0,
+            0,
+            0
+          ],
+          "axis": [
+            0,
+            1,
+            0
+          ],
+          "confidence": 0.75
+        },
+        "transformChannels": {
+          "translate": false,
+          "rotate": false,
+          "scale": false,
+          "bend": false,
+          "twist": false,
+          "detach": false,
+          "visibility": true,
+          "materialState": true
+        },
+        "sockets": [],
+        "collider": {
+          "type": "box",
+          "offset": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "isTrigger": false,
+          "notes": "Proxy sized to the part's own bounds."
+        },
+        "constraints": [],
+        "destruction": {
+          "breakable": false,
+          "fractureGroup": "plank-front-3",
+          "seamRefs": [],
+          "detachableFragments": [],
+          "breakImpulse": 0.0,
+          "debrisMaterial": "wood"
+        }
+      },
+      "material": "wood",
+      "materialLayers": [
+        "wood"
+      ],
+      "colorMaterialRecipe": {
+        "dominantAlbedo": "rgba(160, 99, 47, 1.0)",
+        "secondaryAlbedo": "rgba(127, 74, 34, 1.0)",
+        "materialClass": "wood",
+        "materialClassConfidence": 0.85,
+        "colorGradient": {
+          "type": "linear",
+          "axis": "y",
+          "stops": [
+            {
+              "position": 0.0,
+              "color": "rgba(127, 74, 34, 1.0)"
+            },
+            {
+              "position": 1.0,
+              "color": "rgba(160, 99, 47, 1.0)"
+            }
+          ]
+        },
+        "evidenceRefs": [
+          "full-object"
+        ]
+      },
+      "deformations": [],
+      "joints": [],
+      "seams": [],
+      "localFeatures": [
+        {
+          "id": "plank-seam-front-3",
+          "kind": "seam",
+          "description": "10 mm dark gap to the next plank",
+          "effect": "geometry",
+          "evidenceRefs": [
+            "full-object"
+          ],
+          "confidence": 0.75
+        }
+      ],
+      "surfaceDetail": {
+        "macroRoughness": 0.82,
+        "microRoughness": 0.164,
+        "bumpAmplitude": 0.0175,
+        "normalPattern": "mottled",
+        "displacementPattern": "",
+        "occlusionPattern": "cavity darkening at seams and contacts",
+        "edgeWearPattern": "lighter worn edges",
+        "notes": ""
+      },
+      "evidenceRefs": [
+        "full-object"
+      ],
+      "details": [
+        "plank-seam-front-3"
       ]
     },
     {
@@ -13105,7 +13301,17 @@
           "visibility": true,
           "materialState": true
         },
-        "sockets": [],
+        "sockets": [
+          {
+            "id": "loot-fx",
+            "localPosition": [
+              0,
+              0.22,
+              0
+            ],
+            "use": "where the game spawns gold sparkle / coin pops"
+          }
+        ],
         "collider": {
           "type": "box",
           "offset": [
@@ -18739,7 +18945,7 @@
         }
       },
       "materialEvidence": {
-        "componentId": "plank-near-1",
+        "componentId": "plank-near-2",
         "regionId": "plank-wood",
         "crop": {
           "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/00-plank-wood.png",
@@ -19045,7 +19251,7 @@
         }
       },
       "materialEvidence": {
-        "componentId": "sleeper-1",
+        "componentId": "sleeper-2",
         "regionId": "sleeper-wood",
         "crop": {
           "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/01-sleeper-wood.png",
@@ -19686,7 +19892,8 @@
         },
         "alternatives": []
       },
-      "needsEnvironment": true
+      "needsEnvironment": true,
+      "flatShading": true
     },
     {
       "id": "gravel",
@@ -19996,12 +20203,12 @@
       "level": "micro",
       "parent": "bracket-top-nl",
       "count": 4,
-      "primitive": "sphere",
+      "primitive": "box",
       "material": "iron",
       "instanceScale": [
-        0.034,
-        0.034,
-        0.034
+        0.03,
+        0.03,
+        0.03
       ],
       "placement": {
         "mode": "radial",
@@ -20025,12 +20232,12 @@
       "level": "micro",
       "parent": "bracket-bot-nl",
       "count": 4,
-      "primitive": "sphere",
+      "primitive": "box",
       "material": "iron",
       "instanceScale": [
-        0.034,
-        0.034,
-        0.034
+        0.03,
+        0.03,
+        0.03
       ],
       "placement": {
         "mode": "radial",
@@ -20054,12 +20261,12 @@
       "level": "micro",
       "parent": "bracket-top-nr",
       "count": 4,
-      "primitive": "sphere",
+      "primitive": "box",
       "material": "iron",
       "instanceScale": [
-        0.034,
-        0.034,
-        0.034
+        0.03,
+        0.03,
+        0.03
       ],
       "placement": {
         "mode": "radial",
@@ -20083,12 +20290,12 @@
       "level": "micro",
       "parent": "bracket-bot-nr",
       "count": 4,
-      "primitive": "sphere",
+      "primitive": "box",
       "material": "iron",
       "instanceScale": [
-        0.034,
-        0.034,
-        0.034
+        0.03,
+        0.03,
+        0.03
       ],
       "placement": {
         "mode": "radial",
@@ -20112,12 +20319,12 @@
       "level": "micro",
       "parent": "bracket-top-fl",
       "count": 4,
-      "primitive": "sphere",
+      "primitive": "box",
       "material": "iron",
       "instanceScale": [
-        0.034,
-        0.034,
-        0.034
+        0.03,
+        0.03,
+        0.03
       ],
       "placement": {
         "mode": "radial",
@@ -20141,12 +20348,12 @@
       "level": "micro",
       "parent": "bracket-bot-fl",
       "count": 4,
-      "primitive": "sphere",
+      "primitive": "box",
       "material": "iron",
       "instanceScale": [
-        0.034,
-        0.034,
-        0.034
+        0.03,
+        0.03,
+        0.03
       ],
       "placement": {
         "mode": "radial",
@@ -20170,12 +20377,12 @@
       "level": "micro",
       "parent": "bracket-top-fr",
       "count": 4,
-      "primitive": "sphere",
+      "primitive": "box",
       "material": "iron",
       "instanceScale": [
-        0.034,
-        0.034,
-        0.034
+        0.03,
+        0.03,
+        0.03
       ],
       "placement": {
         "mode": "radial",
@@ -20199,12 +20406,12 @@
       "level": "micro",
       "parent": "bracket-bot-fr",
       "count": 4,
-      "primitive": "sphere",
+      "primitive": "box",
       "material": "iron",
       "instanceScale": [
-        0.034,
-        0.034,
-        0.034
+        0.03,
+        0.03,
+        0.03
       ],
       "placement": {
         "mode": "radial",
@@ -20230,9 +20437,9 @@
       "goal": "Match macro silhouette and proportions.",
       "componentRefs": [
         "root",
-        "sleeper-0",
         "sleeper-1",
         "sleeper-2",
+        "sleeper-3",
         "rail-near",
         "rail-far",
         "chassis-frame",
@@ -20269,9 +20476,9 @@
       "goal": "Build the component hierarchy implied by the pre-spec complexity assessment.",
       "componentRefs": [
         "root",
-        "sleeper-0",
         "sleeper-1",
         "sleeper-2",
+        "sleeper-3",
         "rail-near",
         "rail-far",
         "chassis-frame",
@@ -20306,10 +20513,6 @@
         "hub-cap-ff",
         "wheel-rim-rf",
         "hub-cap-rf",
-        "plank-near-0",
-        "plank-far-0",
-        "plank-rear-0",
-        "plank-front-0",
         "plank-near-1",
         "plank-far-1",
         "plank-rear-1",
@@ -20318,6 +20521,10 @@
         "plank-far-2",
         "plank-rear-2",
         "plank-front-2",
+        "plank-near-3",
+        "plank-far-3",
+        "plank-rear-3",
+        "plank-front-3",
         "handle-arm-near",
         "handle-arm-far"
       ],
@@ -20684,6 +20891,48 @@
       "cameraView": "fixed: az 37, el 6, fov 18",
       "notes": "",
       "aiVisionNotes": "Viewed renders/lighting-pass/cmp.jpg and lighting-checks.jpg (neutral, grazing, reference-matched)."
+    },
+    {
+      "timestamp": "2026-10-24T01:59:12.766660+00:00",
+      "passId": "interaction-pass",
+      "estimatedFidelity": 0.77,
+      "aiVisionScore": 0.78,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.87,
+        "componentStructure": 0.86,
+        "formDetail": 0.75,
+        "materialSurface": 0.74,
+        "lightingCamera": 0.76
+      },
+      "featureReviews": [],
+      "referenceScreenshot": "reference.png",
+      "renderScreenshot": "renders/interaction-pass/fixed.png",
+      "comparisonImage": "renders/interaction-pass/cmp.jpg",
+      "cameraView": "fixed: az 37, el 6, fov 18",
+      "notes": "",
+      "aiVisionNotes": "Viewed renders/interaction-pass/cmp.jpg and pose-check.jpg (rest vs posed, fixed and front)."
+    },
+    {
+      "timestamp": "2026-10-24T02:01:28.869472+00:00",
+      "passId": "optimization-pass",
+      "estimatedFidelity": 0.8,
+      "aiVisionScore": 0.8,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.88,
+        "componentStructure": 0.86,
+        "formDetail": 0.8,
+        "materialSurface": 0.76,
+        "lightingCamera": 0.76
+      },
+      "featureReviews": [],
+      "referenceScreenshot": "reference.png",
+      "renderScreenshot": "renders/optimization-pass/fixed.png",
+      "comparisonImage": "renders/optimization-pass/cmp.jpg",
+      "cameraView": "fixed: az 37, el 6, fov 18",
+      "notes": "",
+      "aiVisionNotes": "Viewed renders/optimization-pass/cmp.jpg, turntable.jpg and the pose renders."
     }
   ],
   "reviewHistory": [
@@ -21136,6 +21385,83 @@
         "notes": "",
         "aiVisionNotes": "Viewed renders/lighting-pass/cmp.jpg and lighting-checks.jpg (neutral, grazing, reference-matched)."
       }
+    },
+    {
+      "timestamp": "2026-10-24T01:59:12.766660+00:00",
+      "passId": "interaction-pass",
+      "estimatedFidelity": 0.77,
+      "aiVisionScore": 0.78,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.87,
+        "componentStructure": 0.86,
+        "formDetail": 0.75,
+        "materialSurface": 0.74,
+        "lightingCamera": 0.76
+      },
+      "featureReviews": [],
+      "action": "continue",
+      "summary": "Interaction pass: chassis-frame is the cart-body pivot (sockets roll-axis on X and rail-contact), the four wheel pivots spin about their local Y (the axle), the heap carries a loot-fx socket, every component keeps its collider proxy and destruction metadata. Pose check (pose-check.jpg): translating chassis-frame +0.22 on X rolls tub, wheels and handle along the rails while sleepers and rails stay; wheel pivots turned -1.33 rad (= 0.22 / 0.165) rotate in place on their axles.",
+      "matched": [
+        "stable pivot per macro/meso part",
+        "cart rolls on the rails by one translation",
+        "wheels spin in place",
+        "sockets for roll axis, rail contact and loot fx",
+        "collider proxies on every part"
+      ],
+      "mismatches": [
+        "none new",
+        "visual state as the lighting pass"
+      ],
+      "specFixes": [],
+      "codeFixes": [],
+      "evidence": [],
+      "visualEvidence": {
+        "referenceScreenshot": "reference.png",
+        "renderScreenshot": "renders/interaction-pass/fixed.png",
+        "comparisonImage": "renders/interaction-pass/cmp.jpg",
+        "cameraView": "fixed: az 37, el 6, fov 18",
+        "notes": "",
+        "aiVisionNotes": "Viewed renders/interaction-pass/cmp.jpg and pose-check.jpg (rest vs posed, fixed and front)."
+      }
+    },
+    {
+      "timestamp": "2026-10-24T02:01:28.869472+00:00",
+      "passId": "optimization-pass",
+      "estimatedFidelity": 0.8,
+      "aiVisionScore": 0.8,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.88,
+        "componentStructure": 0.86,
+        "formDetail": 0.8,
+        "materialSurface": 0.76,
+        "lightingCamera": 0.76
+      },
+      "featureReviews": [],
+      "action": "continue",
+      "summary": "Optimization pass: rivets switched from 320-triangle spheres to 12-triangle boxes (factory 15,094 -> 6,262 triangles, target 6,000); ore material flat-shaded (a late visual fix noted here: the few-sided nuggets now read as the reference's faceted chunks). Draw calls stay 104 in the review factory; the game build strips review metadata and the game merges static parts per material under track / cart body / wheel groups (measured in docs/IMG2THREEJS-ASSETS.md). Tier-1 IoU 0.899, colour delta-E 19.29; all gates clean.",
+      "matched": [
+        "triangles 6.3k at the low tessellation tier",
+        "repeated rivets instanced as boxes",
+        "faceted gold nuggets",
+        "all gates clean"
+      ],
+      "mismatches": [
+        "draw calls 104 in the review factory until the game-side merge",
+        "grain subtler than the reference's painted gouges"
+      ],
+      "specFixes": [],
+      "codeFixes": [],
+      "evidence": [],
+      "visualEvidence": {
+        "referenceScreenshot": "reference.png",
+        "renderScreenshot": "renders/optimization-pass/fixed.png",
+        "comparisonImage": "renders/optimization-pass/cmp.jpg",
+        "cameraView": "fixed: az 37, el 6, fov 18",
+        "notes": "",
+        "aiVisionNotes": "Viewed renders/optimization-pass/cmp.jpg, turntable.jpg and the pose renders."
+      }
     }
   ],
   "lodPlan": [
@@ -21153,10 +21479,11 @@
   "performanceBudget": {
     "qualityPriority": "real-time game prop",
     "targetTriangles": 6000,
-    "maxDrawCalls": 12,
+    "maxDrawCalls": 16,
     "textureSize": 256,
     "fpsTarget": 60,
-    "optimizationPolicy": "Reach accepted fidelity, then merge static parts per material at load in the game (wheels stay separate to spin)."
+    "optimizationPolicy": "Reach accepted fidelity, then: rivets as 12-triangle boxes; the game build strips review metadata from the factory; the game builds the model once and clones it (shared geometry, materials, 256 px maps) and merges static parts per material under three groups (track, cart body, each wheel) so the wheels and the rolling body stay animatable.",
+    "measured": "see renders/optimization-pass/render.json (factory) and the game-side merge report in docs/IMG2THREEJS-ASSETS.md"
   },
   "lightingFromPhoto": [
     {
@@ -21204,8 +21531,9 @@
   ],
   "animationAnchors": [
     "root (gravel bed) carries whole-prop placement",
-    "wheel-fn/rn/ff/rf pivots spin about local Z (the axle) while the cart rolls",
-    "the cart above the rails can translate along X on the rails (game-side: the tub group rolls, track stays)"
+    "chassis-frame pivot (animationRole cart-body, socket roll-axis): translate on X to roll the whole cart along the rails; the track (sleepers, rails, plates) stays under root",
+    "wheel-fn/rn/ff/rf pivots (animationRole wheel): rotate about their local Y (the axle) by distance / 0.165 rad",
+    "ore-heap socket loot-fx: anchor for gold sparkle when the mine pays"
   ],
   "destructionAnchors": [
     "actionProfile.destruction.fractureGroup marks detachable or breakable component sets",
@@ -21256,14 +21584,14 @@
     "unresolvedNotObservedMaterials": [],
     "regions": [
       {
-        "componentId": "plank-near-1",
+        "componentId": "plank-near-2",
         "regionId": "plank-wood",
         "specMaterialId": "wood",
         "profileId": "wood.unfinished",
         "status": "proceed"
       },
       {
-        "componentId": "sleeper-1",
+        "componentId": "sleeper-2",
         "regionId": "sleeper-wood",
         "specMaterialId": "wood-dark",
         "profileId": "wood.unfinished",
@@ -26299,6 +26627,1218 @@
       "maskWarnings": [],
       "renderHash": "58745d9bfff22118",
       "passId": "lighting-pass"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "silhouetteIoU": 0.8992,
+        "aspectRatioDelta": 0.0242,
+        "scaleDelta": 0.0242,
+        "bilateralSymmetryError": 0.0517,
+        "colorDelta": {
+          "checked": 96,
+          "maxDeltaE": 18.85,
+          "perComponent": [
+            {
+              "componentId": null,
+              "deltaE": 7.9
+            },
+            {
+              "componentId": null,
+              "deltaE": 10.41
+            },
+            {
+              "componentId": null,
+              "deltaE": 10.41
+            },
+            {
+              "componentId": null,
+              "deltaE": 10.41
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 10.41
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            }
+          ],
+          "gated": true
+        }
+      },
+      "failures": [],
+      "maskWarnings": [],
+      "renderHash": "58745d9bfff22118",
+      "passId": "interaction-pass"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "silhouetteIoU": 0.8992,
+        "aspectRatioDelta": 0.0242,
+        "scaleDelta": 0.0242,
+        "bilateralSymmetryError": 0.0517,
+        "colorDelta": {
+          "checked": 96,
+          "maxDeltaE": 19.29,
+          "perComponent": [
+            {
+              "componentId": null,
+              "deltaE": 8.39
+            },
+            {
+              "componentId": null,
+              "deltaE": 10.37
+            },
+            {
+              "componentId": null,
+              "deltaE": 10.37
+            },
+            {
+              "componentId": null,
+              "deltaE": 10.37
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 10.37
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            }
+          ],
+          "gated": true
+        }
+      },
+      "failures": [],
+      "maskWarnings": [],
+      "renderHash": "3eb46d1820334efe",
+      "passId": "optimization-pass"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "silhouetteIoU": 0.8992,
+        "aspectRatioDelta": 0.0242,
+        "scaleDelta": 0.0242,
+        "bilateralSymmetryError": 0.0517,
+        "colorDelta": {
+          "checked": 96,
+          "maxDeltaE": 19.29,
+          "perComponent": [
+            {
+              "componentId": null,
+              "deltaE": 8.39
+            },
+            {
+              "componentId": null,
+              "deltaE": 10.37
+            },
+            {
+              "componentId": null,
+              "deltaE": 10.37
+            },
+            {
+              "componentId": null,
+              "deltaE": 10.37
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 10.37
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.52
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.29
+            }
+          ],
+          "gated": true
+        }
+      },
+      "failures": [],
+      "maskWarnings": [],
+      "renderHash": "3eb46d1820334efe",
+      "passId": "optimization-pass"
     }
   ]
 }

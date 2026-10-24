@@ -156,6 +156,12 @@ const views = [
   // fixed view, and a grazing close-up of one named part (--focus=<mesh name>)
   { id: 'fixed-reference', azimuthDeg: az, elevationDeg: el, fov, width: RW, height: RH, frame: ndc, light: 'reference' },
   { id: 'fixed-grazing', azimuthDeg: az, elevationDeg: el, fov, width: RW, height: RH, frame: ndc, light: 'grazing' },
+  // --pose=<json>: an action pose on the factory's pivot nodes (interaction pass evidence), rendered
+  // from the fixed camera and from the front orbit
+  ...(args.pose ? [
+    { id: 'posed-fixed', azimuthDeg: az, elevationDeg: el, fov, width: RW, height: RH, frame: ndc, pose: JSON.parse(String(args.pose)) },
+    { id: 'posed-front', azimuthDeg: 0, elevationDeg: orbitEl, fov, width: 768, height: 768, frame: { mode: 'fit', margin: 1.3 }, pose: JSON.parse(String(args.pose)) },
+  ] : []),
   ...(args.focus ? [{ id: 'closeup-grazing', azimuthDeg: az + 8, elevationDeg: 10, fov: 24, width: 768, height: 768,
     frame: { mode: 'fit', margin: 1.15 }, focus: String(args.focus), light: 'grazing' }] : []),
 ];
@@ -225,6 +231,7 @@ try {
 for (const [id, url] of Object.entries(result.shots)) fs.writeFileSync(path.join(OUT, `${id}.png`), Buffer.from(url.split(',')[1], 'base64'));
 fs.writeFileSync(path.join(OUT, 'meshes.json'), JSON.stringify({ meshes: result.meshes }));
 fs.writeFileSync(path.join(OUT, 'nodes.json'), JSON.stringify(result.nodes, null, 1));
+fs.writeFileSync(path.join(OUT, 'parts.json'), JSON.stringify(result.parts, null, 1));
 const report = { asset: path.relative(ROOT, ASSET), pass: args.pass, factory: path.relative(ROOT, TS), exportName,
   bundle: path.relative(ROOT, path.join(cacheDir, bundleName)), reference: ref, stats: result.info, framing: result.framing, errors };
 fs.writeFileSync(path.join(OUT, 'render.json'), JSON.stringify(report, null, 2));

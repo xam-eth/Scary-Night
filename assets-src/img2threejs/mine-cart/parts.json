@@ -1,0 +1,631 @@
+{
+ "model": "Mine cart",
+ "parts": [
+  {
+   "name": "Gravel bed",
+   "kind": "part",
+   "module": "root",
+   "triangles": 12
+  },
+  {
+   "name": "Sleeper 1",
+   "kind": "part",
+   "module": "sleeper-1",
+   "triangles": 12
+  },
+  {
+   "name": "Sleeper 2",
+   "kind": "part",
+   "module": "sleeper-2",
+   "triangles": 12
+  },
+  {
+   "name": "Sleeper 3",
+   "kind": "part",
+   "module": "sleeper-3",
+   "triangles": 12
+  },
+  {
+   "name": "Rail (near)",
+   "kind": "part",
+   "module": "rail-near",
+   "triangles": 12
+  },
+  {
+   "name": "Tie plate near 1",
+   "kind": "part",
+   "module": "tie-plate-near-1",
+   "triangles": 12
+  },
+  {
+   "name": "Tie plate near 2",
+   "kind": "part",
+   "module": "tie-plate-near-2",
+   "triangles": 12
+  },
+  {
+   "name": "Tie plate near 3",
+   "kind": "part",
+   "module": "tie-plate-near-3",
+   "triangles": 12
+  },
+  {
+   "name": "Rail (far)",
+   "kind": "part",
+   "module": "rail-far",
+   "triangles": 12
+  },
+  {
+   "name": "Tie plate far 1",
+   "kind": "part",
+   "module": "tie-plate-far-1",
+   "triangles": 12
+  },
+  {
+   "name": "Tie plate far 2",
+   "kind": "part",
+   "module": "tie-plate-far-2",
+   "triangles": 12
+  },
+  {
+   "name": "Tie plate far 3",
+   "kind": "part",
+   "module": "tie-plate-far-3",
+   "triangles": 12
+  },
+  {
+   "name": "Chassis frame",
+   "kind": "part",
+   "module": "chassis-frame",
+   "triangles": 12
+  },
+  {
+   "name": "Axle (front)",
+   "kind": "part",
+   "module": "axle-front",
+   "triangles": 80
+  },
+  {
+   "name": "Axle (rear)",
+   "kind": "part",
+   "module": "axle-rear",
+   "triangles": 80
+  },
+  {
+   "name": "Wheel fn",
+   "kind": "part",
+   "module": "wheel-fn",
+   "triangles": 120
+  },
+  {
+   "name": "Wheel rim fn",
+   "kind": "part",
+   "module": "wheel-rim-fn",
+   "triangles": 256
+  },
+  {
+   "name": "Hub cap fn",
+   "kind": "part",
+   "module": "hub-cap-fn",
+   "triangles": 80
+  },
+  {
+   "name": "Axle nut fn",
+   "kind": "part",
+   "module": "axle-nut-fn",
+   "triangles": 80
+  },
+  {
+   "name": "Wheel rn",
+   "kind": "part",
+   "module": "wheel-rn",
+   "triangles": 120
+  },
+  {
+   "name": "Wheel rim rn",
+   "kind": "part",
+   "module": "wheel-rim-rn",
+   "triangles": 256
+  },
+  {
+   "name": "Hub cap rn",
+   "kind": "part",
+   "module": "hub-cap-rn",
+   "triangles": 80
+  },
+  {
+   "name": "Axle nut rn",
+   "kind": "part",
+   "module": "axle-nut-rn",
+   "triangles": 80
+  },
+  {
+   "name": "Wheel ff",
+   "kind": "part",
+   "module": "wheel-ff",
+   "triangles": 120
+  },
+  {
+   "name": "Wheel rim ff",
+   "kind": "part",
+   "module": "wheel-rim-ff",
+   "triangles": 256
+  },
+  {
+   "name": "Hub cap ff",
+   "kind": "part",
+   "module": "hub-cap-ff",
+   "triangles": 80
+  },
+  {
+   "name": "Axle nut ff",
+   "kind": "part",
+   "module": "axle-nut-ff",
+   "triangles": 80
+  },
+  {
+   "name": "Wheel rf",
+   "kind": "part",
+   "module": "wheel-rf",
+   "triangles": 120
+  },
+  {
+   "name": "Wheel rim rf",
+   "kind": "part",
+   "module": "wheel-rim-rf",
+   "triangles": 256
+  },
+  {
+   "name": "Hub cap rf",
+   "kind": "part",
+   "module": "hub-cap-rf",
+   "triangles": 80
+  },
+  {
+   "name": "Axle nut rf",
+   "kind": "part",
+   "module": "axle-nut-rf",
+   "triangles": 80
+  },
+  {
+   "name": "Tub body",
+   "kind": "part",
+   "module": "tub-core",
+   "triangles": 12
+  },
+  {
+   "name": "Plank near 1",
+   "kind": "part",
+   "module": "plank-near-1",
+   "triangles": 12
+  },
+  {
+   "name": "Plank far 1",
+   "kind": "part",
+   "module": "plank-far-1",
+   "triangles": 12
+  },
+  {
+   "name": "Plank rear 1",
+   "kind": "part",
+   "module": "plank-rear-1",
+   "triangles": 12
+  },
+  {
+   "name": "Plank front 1",
+   "kind": "part",
+   "module": "plank-front-1",
+   "triangles": 12
+  },
+  {
+   "name": "Plank near 2",
+   "kind": "part",
+   "module": "plank-near-2",
+   "triangles": 12
+  },
+  {
+   "name": "Plank far 2",
+   "kind": "part",
+   "module": "plank-far-2",
+   "triangles": 12
+  },
+  {
+   "name": "Plank rear 2",
+   "kind": "part",
+   "module": "plank-rear-2",
+   "triangles": 12
+  },
+  {
+   "name": "Plank front 2",
+   "kind": "part",
+   "module": "plank-front-2",
+   "triangles": 12
+  },
+  {
+   "name": "Plank near 3",
+   "kind": "part",
+   "module": "plank-near-3",
+   "triangles": 12
+  },
+  {
+   "name": "Plank far 3",
+   "kind": "part",
+   "module": "plank-far-3",
+   "triangles": 12
+  },
+  {
+   "name": "Plank rear 3",
+   "kind": "part",
+   "module": "plank-rear-3",
+   "triangles": 12
+  },
+  {
+   "name": "Plank front 3",
+   "kind": "part",
+   "module": "plank-front-3",
+   "triangles": 12
+  },
+  {
+   "name": "Corner post nl",
+   "kind": "part",
+   "module": "post-nl",
+   "triangles": 12
+  },
+  {
+   "name": "Bracket top nl",
+   "kind": "part",
+   "module": "bracket-top-nl",
+   "triangles": 12
+  },
+  {
+   "name": "rivets-top-nl",
+   "kind": "instanced-part",
+   "module": "rivets-top-nl",
+   "triangles": 48
+  },
+  {
+   "name": "Bracket bot nl",
+   "kind": "part",
+   "module": "bracket-bot-nl",
+   "triangles": 12
+  },
+  {
+   "name": "rivets-bot-nl",
+   "kind": "instanced-part",
+   "module": "rivets-bot-nl",
+   "triangles": 48
+  },
+  {
+   "name": "Corner post nr",
+   "kind": "part",
+   "module": "post-nr",
+   "triangles": 12
+  },
+  {
+   "name": "Bracket top nr",
+   "kind": "part",
+   "module": "bracket-top-nr",
+   "triangles": 12
+  },
+  {
+   "name": "rivets-top-nr",
+   "kind": "instanced-part",
+   "module": "rivets-top-nr",
+   "triangles": 48
+  },
+  {
+   "name": "Bracket bot nr",
+   "kind": "part",
+   "module": "bracket-bot-nr",
+   "triangles": 12
+  },
+  {
+   "name": "rivets-bot-nr",
+   "kind": "instanced-part",
+   "module": "rivets-bot-nr",
+   "triangles": 48
+  },
+  {
+   "name": "Corner post fl",
+   "kind": "part",
+   "module": "post-fl",
+   "triangles": 12
+  },
+  {
+   "name": "Bracket top fl",
+   "kind": "part",
+   "module": "bracket-top-fl",
+   "triangles": 12
+  },
+  {
+   "name": "rivets-top-fl",
+   "kind": "instanced-part",
+   "module": "rivets-top-fl",
+   "triangles": 48
+  },
+  {
+   "name": "Bracket bot fl",
+   "kind": "part",
+   "module": "bracket-bot-fl",
+   "triangles": 12
+  },
+  {
+   "name": "rivets-bot-fl",
+   "kind": "instanced-part",
+   "module": "rivets-bot-fl",
+   "triangles": 48
+  },
+  {
+   "name": "Corner post fr",
+   "kind": "part",
+   "module": "post-fr",
+   "triangles": 12
+  },
+  {
+   "name": "Bracket top fr",
+   "kind": "part",
+   "module": "bracket-top-fr",
+   "triangles": 12
+  },
+  {
+   "name": "rivets-top-fr",
+   "kind": "instanced-part",
+   "module": "rivets-top-fr",
+   "triangles": 48
+  },
+  {
+   "name": "Bracket bot fr",
+   "kind": "part",
+   "module": "bracket-bot-fr",
+   "triangles": 12
+  },
+  {
+   "name": "rivets-bot-fr",
+   "kind": "instanced-part",
+   "module": "rivets-bot-fr",
+   "triangles": 48
+  },
+  {
+   "name": "Handle strap (near)",
+   "kind": "part",
+   "module": "handle-strap-near",
+   "triangles": 80
+  },
+  {
+   "name": "Handle arm (near)",
+   "kind": "part",
+   "module": "handle-arm-near",
+   "triangles": 80
+  },
+  {
+   "name": "Handle knee (near)",
+   "kind": "part",
+   "module": "handle-knee-near",
+   "triangles": 288
+  },
+  {
+   "name": "Handle foot plate (near)",
+   "kind": "part",
+   "module": "handle-foot-near",
+   "triangles": 12
+  },
+  {
+   "name": "Handle strap (far)",
+   "kind": "part",
+   "module": "handle-strap-far",
+   "triangles": 80
+  },
+  {
+   "name": "Handle arm (far)",
+   "kind": "part",
+   "module": "handle-arm-far",
+   "triangles": 80
+  },
+  {
+   "name": "Handle knee (far)",
+   "kind": "part",
+   "module": "handle-knee-far",
+   "triangles": 288
+  },
+  {
+   "name": "Handle foot plate (far)",
+   "kind": "part",
+   "module": "handle-foot-far",
+   "triangles": 12
+  },
+  {
+   "name": "Push grip",
+   "kind": "part",
+   "module": "grip",
+   "triangles": 80
+  },
+  {
+   "name": "Grip end cap (near)",
+   "kind": "part",
+   "module": "grip-cap-near",
+   "triangles": 80
+  },
+  {
+   "name": "Grip end cap (far)",
+   "kind": "part",
+   "module": "grip-cap-far",
+   "triangles": 80
+  },
+  {
+   "name": "Ore heap",
+   "kind": "part",
+   "module": "ore-heap",
+   "triangles": 288
+  },
+  {
+   "name": "Ore nugget 1",
+   "kind": "part",
+   "module": "nugget-00",
+   "triangles": 50
+  },
+  {
+   "name": "Ore nugget 2",
+   "kind": "part",
+   "module": "nugget-01",
+   "triangles": 60
+  },
+  {
+   "name": "Ore nugget 3",
+   "kind": "part",
+   "module": "nugget-02",
+   "triangles": 70
+  },
+  {
+   "name": "Ore nugget 4",
+   "kind": "part",
+   "module": "nugget-03",
+   "triangles": 50
+  },
+  {
+   "name": "Ore nugget 5",
+   "kind": "part",
+   "module": "nugget-04",
+   "triangles": 60
+  },
+  {
+   "name": "Ore nugget 6",
+   "kind": "part",
+   "module": "nugget-05",
+   "triangles": 70
+  },
+  {
+   "name": "Ore nugget 7",
+   "kind": "part",
+   "module": "nugget-06",
+   "triangles": 50
+  },
+  {
+   "name": "Ore nugget 8",
+   "kind": "part",
+   "module": "nugget-07",
+   "triangles": 60
+  },
+  {
+   "name": "Ore nugget 9",
+   "kind": "part",
+   "module": "nugget-08",
+   "triangles": 70
+  },
+  {
+   "name": "Ore nugget 10",
+   "kind": "part",
+   "module": "nugget-09",
+   "triangles": 50
+  },
+  {
+   "name": "Ore nugget 11",
+   "kind": "part",
+   "module": "nugget-10",
+   "triangles": 60
+  },
+  {
+   "name": "Ore nugget 12",
+   "kind": "part",
+   "module": "nugget-11",
+   "triangles": 70
+  },
+  {
+   "name": "Ore nugget 13",
+   "kind": "part",
+   "module": "nugget-12",
+   "triangles": 50
+  },
+  {
+   "name": "Ore nugget 14",
+   "kind": "part",
+   "module": "nugget-13",
+   "triangles": 60
+  },
+  {
+   "name": "Ore nugget 15",
+   "kind": "part",
+   "module": "nugget-14",
+   "triangles": 70
+  },
+  {
+   "name": "Ore nugget 16",
+   "kind": "part",
+   "module": "nugget-15",
+   "triangles": 50
+  },
+  {
+   "name": "Ore nugget 17",
+   "kind": "part",
+   "module": "nugget-16",
+   "triangles": 60
+  },
+  {
+   "name": "Ore nugget 18",
+   "kind": "part",
+   "module": "nugget-17",
+   "triangles": 70
+  },
+  {
+   "name": "Ore nugget 19",
+   "kind": "part",
+   "module": "nugget-18",
+   "triangles": 50
+  },
+  {
+   "name": "Ore nugget 20",
+   "kind": "part",
+   "module": "nugget-19",
+   "triangles": 60
+  },
+  {
+   "name": "Ore nugget 21",
+   "kind": "part",
+   "module": "nugget-20",
+   "triangles": 70
+  },
+  {
+   "name": "Ore nugget 22",
+   "kind": "part",
+   "module": "nugget-21",
+   "triangles": 50
+  },
+  {
+   "name": "Ore nugget 23",
+   "kind": "part",
+   "module": "nugget-22",
+   "triangles": 60
+  },
+  {
+   "name": "Ore nugget 24",
+   "kind": "part",
+   "module": "nugget-23",
+   "triangles": 70
+  },
+  {
+   "name": "Ore nugget 25",
+   "kind": "part",
+   "module": "nugget-24",
+   "triangles": 50
+  },
+  {
+   "name": "Ore nugget 26",
+   "kind": "part",
+   "module": "nugget-25",
+   "triangles": 60
+  },
+  {
+   "name": "Ore nugget 27",
+   "kind": "part",
+   "module": "nugget-26",
+   "triangles": 70
+  },
+  {
+   "name": "Ore nugget 28",
+   "kind": "part",
+   "module": "nugget-27",
+   "triangles": 50
+  }
+ ],
+ "unnamedMeshes": 0,
+ "integralMeshes": 0
+}

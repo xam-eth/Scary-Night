@@ -112,21 +112,27 @@ def build_components() -> SpecBuilder:
     # track: 3 sleepers, 2 rails, 6 tie plates
     sleeper_x = (-0.54, 0.0, 0.54)   # form review: the track is wider than first read (aspect delta)
     for i, x in enumerate(sleeper_x):
-        b.box(f"sleeper-{i}", f"Sleeper {i + 1}", parent="root", center=(x, 0.055, 0.0), size=(0.18, 0.07, 1.16),
+        b.box(f"sleeper-{i + 1}", f"Sleeper {i + 1}", parent="root", center=(x, 0.055, 0.0), size=(0.18, 0.07, 1.16),
               level="macro", role="panel", material="wood-dark", importance=0.55,
-              features=[feature(f"sleeper-{i}-ends", "chip", "rounded worn sleeper ends", effect="material")])
+              features=[feature(f"sleeper-{i + 1}-ends", "chip", "rounded worn sleeper ends", effect="material")])
     for side, z in (("near", RAIL_Z), ("far", -RAIL_Z)):
         b.box(f"rail-{side}", f"Rail ({side})", parent="root", center=(0.0, RAIL_TOP - 0.035, z), size=(1.44, 0.07, 0.06),
               level="macro", role="panel", material="iron", importance=0.7,
               features=[feature(f"rail-{side}-head", "ridge", "rail head catches a highlight along its top edge")])
         for i, x in enumerate(sleeper_x):
-            b.box(f"tie-plate-{side}-{i}", f"Tie plate {side} {i + 1}", parent="root", center=(x, 0.094, z),
+            b.box(f"tie-plate-{side}-{i + 1}", f"Tie plate {side} {i + 1}", parent="root", center=(x, 0.094, z),
                   size=(0.13, 0.012, 0.14), level="micro", role="plate", material="iron", importance=0.25,
-                  features=[feature(f"tie-plate-{side}-{i}-spikes", "fastener", "plate pinned to the sleeper")])
+                  features=[feature(f"tie-plate-{side}-{i + 1}-spikes", "fastener", "plate pinned to the sleeper")])
 
     # chassis frame + axles + wheels (+ rim, hub cap, axle nut per wheel)
     b.box("chassis-frame", "Chassis frame", parent="root", center=(0.0, TUB_BASE - 0.06, 0.0), size=(0.84, 0.12, 0.5),
-          level="macro", role="frame", material="wood-dark", importance=0.5,
+          level="macro", role="frame", material="wood-dark", importance=0.5, anim="cart-body",
+          channels={"translate": True, "rotate": True, "scale": False, "bend": False, "twist": False, "detach": False,
+                    "visibility": True, "materialState": False},
+          sockets=[{"id": "roll-axis", "localPosition": [0, 0, 0], "axis": [1, 0, 0],
+                    "use": "the cart body (tub, wheels, handle) rolls along the rails by translating this pivot on X; "
+                           "the track stays under root"},
+                   {"id": "rail-contact", "localPosition": [0, -0.31, 0], "use": "rail top under the wheels"}],
           rationale="Chassis frame: a flat rigid beam frame under the tub, box-shaped; the axles run through it.")
     for name, x in AXLES:
         b.rod(f"axle-{name}", f"Axle ({name})", parent="chassis-frame", start=(x, WHEEL_Y, -0.39),
@@ -186,18 +192,18 @@ def build_components() -> SpecBuilder:
         for side, s in (("near", 1.0), ("far", -1.0)):
             zc = s * (half_wid(y) - PLANK_T / 2)
             length = 2 * half_len(y) - 0.1
-            b.box(f"plank-{side}-{k}", f"Plank {side} {k + 1}", parent="tub-core", center=(0.0, y, zc),
+            b.box(f"plank-{side}-{k + 1}", f"Plank {side} {k + 1}", parent="tub-core", center=(0.0, y, zc),
                   size=(length, plank_h, PLANK_T), rot=(s * TILT_Z, 0.0, 0.0), level="meso", role="plank",
                   material="wood", importance=0.6,
-                  features=[feature(f"plank-seam-{side}-{k}", "seam", "10 mm dark gap to the next plank")])
+                  features=[feature(f"plank-seam-{side}-{k + 1}", "seam", "10 mm dark gap to the next plank")])
         # end walls (planks along Z)
         for side, s in (("rear", 1.0), ("front", -1.0)):
             xc = s * (half_len(y) - PLANK_T / 2)
             length = 2 * half_wid(y) - 0.1
-            b.box(f"plank-{side}-{k}", f"Plank {side} {k + 1}", parent="tub-core", center=(xc, y, 0.0),
+            b.box(f"plank-{side}-{k + 1}", f"Plank {side} {k + 1}", parent="tub-core", center=(xc, y, 0.0),
                   size=(PLANK_T, plank_h, length), rot=(0.0, 0.0, -s * TILT_X), level="meso", role="plank",
                   material="wood", importance=0.5,
-                  features=[feature(f"plank-seam-{side}-{k}", "seam", "10 mm dark gap to the next plank")])
+                  features=[feature(f"plank-seam-{side}-{k + 1}", "seam", "10 mm dark gap to the next plank")])
 
     yc = TUB_BASE + TUB_H / 2
     for key, sx, sz in (("nl", -1, 1), ("nr", 1, 1), ("fl", -1, -1), ("fr", 1, -1)):
@@ -215,7 +221,8 @@ def build_components() -> SpecBuilder:
                   edge=("chamfer", 0.01, 1),
                   features=[feature(f"{bid}-chamfer", "bevel", "chamfered iron corner-cap edges catch the key light"),
                             feature(f"{bid}-rivets", "fastener", "round rivet heads, one per face centre")])
-            b.repeat(f"rivets-{tier}-{key}", parent=bid, count=4, primitive="sphere", instance_scale=(0.034, 0.034, 0.034),
+            # optimization pass: a rivet is < 2 px in game; a 12-triangle box replaces the 320-triangle sphere
+            b.repeat(f"rivets-{tier}-{key}", parent=bid, count=4, primitive="box", instance_scale=(0.03, 0.03, 0.03),
                      axis=(0, 1, 0), radius=w + 0.012, material="iron", purpose="rivet heads on the bracket faces",
                      detail=f"{bid}-rivets")
 
@@ -269,6 +276,7 @@ def build_components() -> SpecBuilder:
     b.add("ore-heap", "Ore heap", level="macro", role="fill", parent="tub-core", primitive="sphere",
           world=heap_c, scale=(2 * ax, 2 * ay, 2 * az), material="ore", topology="continuous-sculpt",
           importance=0.9, confidence=0.75,
+          sockets=[{"id": "loot-fx", "localPosition": [0, 0.22, 0], "use": "where the game spawns gold sparkle / coin pops"}],
           rationale="Ore heap: one smooth domed mass of ore filling the tub, an ellipsoid; the nuggets on it carry the "
                     "faceted read.",
           features=[feature("ore-dome", "contour", "heap rises ~0.25 above the rim, highest near the centre")])
@@ -312,7 +320,7 @@ def detail_inventory() -> dict:
              "evidenceRef": zone.format("r0c1"), "confidence": 0.8},
             {"id": "d-plank-seams", "kind": "seam", "description": "dark gaps between the three horizontal planks of each wall",
              "region": {"x": 0.3, "y": 0.25, "width": 0.4, "height": 0.4, "units": "normalized"}, "scale": "meso",
-             "affects": "geometry", "mapsTo": {"type": "component.localFeatures", "ref": "plank-seam-near-0"},
+             "affects": "geometry", "mapsTo": {"type": "component.localFeatures", "ref": "plank-seam-near-1"},
              "evidenceRef": zone.format("r1c1"), "confidence": 0.85},
             {"id": "d-bracket-bevel", "kind": "bevel", "description": "chamfered edges of the iron L-brackets catch the key light",
              "region": {"x": 0.27, "y": 0.23, "width": 0.46, "height": 0.4, "units": "normalized"}, "scale": "micro",
@@ -340,7 +348,7 @@ def detail_inventory() -> dict:
              "evidenceRef": zone.format("r1c0"), "confidence": 0.6},
             {"id": "d-tie-plates", "kind": "fastener", "description": "iron tie plates pin the rails to the sleepers",
              "region": {"x": 0.25, "y": 0.72, "width": 0.5, "height": 0.2, "units": "normalized"}, "scale": "micro",
-             "affects": "geometry", "mapsTo": {"type": "component.localFeatures", "ref": "tie-plate-near-1-spikes"},
+             "affects": "geometry", "mapsTo": {"type": "component.localFeatures", "ref": "tie-plate-near-2-spikes"},
              "evidenceRef": zone.format("r2c1"), "confidence": 0.7},
             {"id": "d-gravel", "kind": "stain", "description": "speckled pebble mottle on the gravel bed",
              "region": {"x": 0.22, "y": 0.75, "width": 0.56, "height": 0.2, "units": "normalized"}, "scale": "micro",
@@ -470,10 +478,10 @@ def spec() -> None:
          "componentRefs": ["tub-core", "ore-heap", "wheel-fn", "rail-near", "grip"], "evidenceRefs": ["full-object"]},
         {"id": "tub-taper-and-planks", "name": "Tapered plank tub with corner posts", "tier": "critical",
          "passIds": ["structural-pass", "form-refinement"], "minimumScore": 0.75, "mustPass": True,
-         "componentRefs": ["tub-core", "plank-near-0", "post-nl"], "evidenceRefs": ["full-object"]},
+         "componentRefs": ["tub-core", "plank-near-1", "post-nl"], "evidenceRefs": ["full-object"]},
         {"id": "wheel-rail-contact", "name": "Rimmed wheels resting on the rails", "tier": "critical",
          "passIds": ["structural-pass", "form-refinement"], "minimumScore": 0.75, "mustPass": True,
-         "componentRefs": ["wheel-fn", "wheel-rim-fn", "rail-near", "sleeper-1"], "evidenceRefs": ["full-object"]},
+         "componentRefs": ["wheel-fn", "wheel-rim-fn", "rail-near", "sleeper-2"], "evidenceRefs": ["full-object"]},
         {"id": "iron-hardware", "name": "Brackets, rivets, rims and handle", "tier": "important",
          "passIds": ["form-refinement", "material-pass"], "minimumScore": 0.65, "mustPass": False,
          "componentRefs": ["bracket-top-nl", "handle-strap-near", "grip"], "evidenceRefs": ["full-object"]},
@@ -493,10 +501,15 @@ def spec() -> None:
             bp["componentRefs"] = macro + meso
         else:
             bp["componentRefs"] = ["root"]
-    s["performanceBudget"] = {"qualityPriority": "real-time game prop", "targetTriangles": 6000, "maxDrawCalls": 12,
+    s["performanceBudget"] = {"qualityPriority": "real-time game prop", "targetTriangles": 6000, "maxDrawCalls": 16,
                               "textureSize": 256, "fpsTarget": 60,
-                              "optimizationPolicy": "Reach accepted fidelity, then merge static parts per material at "
-                                                    "load in the game (wheels stay separate to spin)."}
+                              "optimizationPolicy": "Reach accepted fidelity, then: rivets as 12-triangle boxes; the game "
+                                                    "build strips review metadata from the factory; the game builds the "
+                                                    "model once and clones it (shared geometry, materials, 256 px maps) "
+                                                    "and merges static parts per material under three groups (track, cart "
+                                                    "body, each wheel) so the wheels and the rolling body stay animatable.",
+                              "measured": "see renders/optimization-pass/render.json (factory) and the game-side merge "
+                                          "report in docs/IMG2THREEJS-ASSETS.md"}
     s["lodPlan"] = [{"tier": "near", "distance": 0, "strategy": "full component tree (game camera never gets closer)"},
                     {"tier": "far", "distance": 30, "strategy": "static parts merged per material; wheels kept"}]
     s["lightingFromPhoto"] = [
@@ -517,8 +530,10 @@ def spec() -> None:
     s["lookDevTargets"] = look
     s["animationAnchors"] = [
         "root (gravel bed) carries whole-prop placement",
-        "wheel-fn/rn/ff/rf pivots spin about local Z (the axle) while the cart rolls",
-        "the cart above the rails can translate along X on the rails (game-side: the tub group rolls, track stays)",
+        "chassis-frame pivot (animationRole cart-body, socket roll-axis): translate on X to roll the whole cart along "
+        "the rails; the track (sleepers, rails, plates) stays under root",
+        "wheel-fn/rn/ff/rf pivots (animationRole wheel): rotate about their local Y (the axle) by distance / 0.165 rad",
+        "ore-heap socket loot-fx: anchor for gold sparkle when the mine pays",
     ]
     s["assumptions"] = p_assumptions()
     s["risks"] = []
@@ -541,6 +556,9 @@ def p_assumptions() -> list[str]:
 # material-pass review: wood/gravel at the registry's 0.72 roughness flashed white at grazing angles;
 # gold at metalness 0.45 shaded orange in its shadows (colour gate delta-E 20.0) -> 0.25
 METAL_OVERRIDES = {"iron": {"metalness": 0.45, "roughness": 0.5}, "ore": {"metalness": 0.25, "roughness": 0.34}}
+# optimization pass (noted as a late visual fix): flat-shaded ore turns the few-sided nuggets into the
+# reference's faceted chunks at no cost
+FLAT_SHADED = {"ore"}
 ROUGHNESS_OVERRIDES = {"wood": 0.88, "wood-dark": 0.92, "gravel": 0.96}
 
 
@@ -554,6 +572,8 @@ def lock() -> None:
             ref["shippingNote"] = ("Extracted from an AI concept image: kept as palette/roughness evidence only, never "
                                    "loaded as textures (DUSKHOLD rule: AI images are concepts only). The factory "
                                    "falls back to its procedural canvas maps.")
+        if m["id"] in FLAT_SHADED:
+            m["flatShading"] = True
         if m["id"] in ROUGHNESS_OVERRIDES:
             m["roughness"]["base"] = ROUGHNESS_OVERRIDES[m["id"]]
         o = METAL_OVERRIDES.get(m["id"])

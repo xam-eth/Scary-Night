@@ -9,7 +9,7 @@
   "unresolvedNotObservedMaterials": [],
   "regions": [
     {
-      "componentId": "plank-near-1",
+      "componentId": "plank-near-2",
       "regionId": "plank-wood",
       "materialSpecId": "wood",
       "hypothesis": {
@@ -451,7 +451,7 @@
       }
     },
     {
-      "componentId": "sleeper-1",
+      "componentId": "sleeper-2",
       "regionId": "sleeper-wood",
       "materialSpecId": "wood-dark",
       "hypothesis": {

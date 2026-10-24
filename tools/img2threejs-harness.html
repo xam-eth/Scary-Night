@@ -108,6 +108,22 @@ function exportMeshes(model) {
   return out;
 }
 
+// the part tree for check_part_coverage.py (img2threejs assembly gate)
+function partsManifest(model) {
+  const parts = [];
+  let unnamed = 0;
+  const rt = model.userData.sculptRuntime || {};
+  const byMesh = new Map(Object.entries(rt.meshes || {}).map(([id, m]) => [m, id]));
+  model.traverse((o) => {
+    if (!o.isMesh) return;
+    const g = o.geometry;
+    const tris = (g.index ? g.index.count : g.attributes.position.count) / 3 * (o.isInstancedMesh ? o.count : 1);
+    if (!o.name) { unnamed++; return; }
+    parts.push({ name: o.name, kind: o.isInstancedMesh ? 'instanced-part' : 'part', module: byMesh.get(o) || o.name, triangles: Math.round(tris) });
+  });
+  return { model: model.name, parts, unnamedMeshes: unnamed, integralMeshes: 0 };
+}
+
 function nodePositions(model) {
   const out = {};
   const rt = model.userData && model.userData.sculptRuntime;
@@ -143,6 +159,18 @@ window.renderModel = async (opts) => {
   // map-stripped "clay" materials for the blockout's silhouette-without-materials evidence
   const originals = new Map();
   const clay = new THREE.MeshStandardMaterial({ color: 0xb07a52, roughness: 0.85, metalness: 0 }); // saturated clay: always separable from the grey plate
+  // optional pose: proves the action-ready pivots work (interaction pass); applied before the views
+  // that ask for it and undone after: [{ node, translate: [x,y,z], rotate: [x,y,z] }] on sculptRuntime nodes
+  const rtNodes = (model.userData.sculptRuntime && model.userData.sculptRuntime.nodes) || {};
+  const applyPose = (pose, sign) => {
+    for (const step of pose || []) {
+      const n = rtNodes[step.node];
+      if (!n) continue;
+      if (step.translate) n.position.add(new THREE.Vector3(...step.translate).multiplyScalar(sign));
+      if (step.rotate) { n.rotation.x += sign * step.rotate[0]; n.rotation.y += sign * step.rotate[1]; n.rotation.z += sign * step.rotate[2]; }
+    }
+    model.updateMatrixWorld(true);
+  };
   const setClay = (on) => model.traverse((o) => {
     if (!o.isMesh) return;
     if (on) { if (!originals.has(o)) originals.set(o, o.material); o.material = clay; }
@@ -183,14 +211,16 @@ window.renderModel = async (opts) => {
     camera.setViewOffset(view.width, view.height, off.x, off.y, view.width, view.height);
     camera.updateProjectionMatrix();
     setClay(!!view.clay);
+    applyPose(view.pose, 1);
     renderer.render(scene, camera);
     shots[view.id] = renderer.domElement.toDataURL('image/png');
+    applyPose(view.pose, -1);
     setClay(false);
     const pb = projectedBox(model, camera);
     framing[view.id] = { azimuthDeg: view.azimuthDeg, elevationDeg: view.elevationDeg, fov: view.fov || 30, distance: +distance.toFixed(4),
       bboxNdc: { cx: +pb.cx.toFixed(4), cy: +pb.cy.toFixed(4), w: +pb.w.toFixed(4), h: +pb.h.toFixed(4) } };
   }
-  return { shots, info, framing, meshes: opts.exportMeshes ? exportMeshes(model) : null, nodes: nodePositions(model) };
+  return { shots, info, framing, meshes: opts.exportMeshes ? exportMeshes(model) : null, nodes: nodePositions(model), parts: partsManifest(model) };
 };
 window.harnessReady = true;
 </script>

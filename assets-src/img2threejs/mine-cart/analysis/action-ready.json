@@ -1,0 +1,28 @@
+{
+  "sculptRuntimeExposed": true,
+  "pivotNodes": 96,
+  "componentCount": 96,
+  "everyComponentHasPivot": true,
+  "namedParts": 104,
+  "unnamedMeshes": 0,
+  "animatedPivots": {
+    "root": "root",
+    "chassis-frame": "cart-body",
+    "wheel-fn": "wheel",
+    "wheel-rn": "wheel",
+    "wheel-ff": "wheel",
+    "wheel-rf": "wheel"
+  },
+  "sockets": {
+    "chassis-frame": [
+      "roll-axis",
+      "rail-contact"
+    ],
+    "ore-heap": [
+      "loot-fx"
+    ]
+  },
+  "collidersOnEveryComponent": true,
+  "destructionMetadataOnEveryComponent": true,
+  "poseCheck": "renders/interaction-pass/pose-check.jpg and renders/optimization-pass/posed-fixed.png: chassis-frame +0.22 X rolls the cart body on the rails, wheel pivots -1.33 rad spin in place"
+}
