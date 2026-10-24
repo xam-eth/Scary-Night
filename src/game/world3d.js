@@ -12,6 +12,7 @@ import { Enemy3D, ENEMY_HEIGHT } from './enemy3d.js';
 import { Troop3D } from './troop3d.js';
 import { Crowd3D } from './crowd3d.js';
 import { Buildings3D, BUILDING_MODEL, BUILDING_COLOR, SAW_NODE, KIT_DECOR } from './buildings3d.js';
+import { Props3D } from './props3d.js';
 import { PLAZA_R, TOWER_RISE, NEAR_SIDES } from './fortress.js';
 import { ROOM_MARKS } from './narrative.js';
 import { ROOM } from './mansion.js';
@@ -28,6 +29,8 @@ const GUARD_TROOP_HEIGHT = 84;
  */
 const KIT_FOOTPRINT = Object.freeze({ barracks: 132, sawmill: 134, mine: 136, tower: 110 });
 const KIT_LEVEL_GROW = 0.07;
+/** The img2threejs mine cart: kit units per model unit (its body ~0.62 kit long, ~0.58 tall on a 1.14 tall mine). */
+const MINE_CART_SCALE = 0.5;
 /** World px across a plot's foundation pad (the pack's dirt hex). */
 const PLOT_PAD_ACROSS = 158;
 /**
@@ -1200,11 +1203,28 @@ class World3DRuntime {
       const saw = body.getObjectByName(SAW_NODE);
       if (saw) { group.userData.saw = saw; group.userData.sawAxis = 'x'; }
     } else if (type === 'mine') {
-      // a cart of gold rolls out along the mine's rails and back while it digs
-      const cart = new THREE.Group();
-      cart.name = 'survival-mine-cart';
-      const barrow = Buildings3D.clone('wheelbarrow');
+      // a cart of gold rolls out along the mine's rails and back while it digs.
+      // 2026-10-24: the cart is the img2threejs mine cart (props3d.js — rebuilt in code from a concept
+      // image): its body rolls on the mine's own rails and its four wheels spin with the distance.
+      const prop = Props3D.clone('mineCart', { part: 'chassis-frame' });
+      if (prop) {
+        const cart = prop.object;
+        cart.name = 'survival-mine-cart';
+        cart.scale.setScalar(MINE_CART_SCALE);
+        // the handle (model +X) toward the mine's door (kit -Z): it is pushed out of the mine
+        cart.rotation.y = Math.PI / 2;
+        cart.position.set(-cx, 0.02, 0.5 - cz);
+        group.add(cart);
+        group.userData.cart = cart;
+        group.userData.cartZ = [0.42 - cz, 0.86 - cz];
+        group.userData.cartWheels = prop.def.wheels.map((id) => prop.nodes[id]).filter(Boolean);
+        group.userData.cartWheelR = prop.def.wheelRadius * MINE_CART_SCALE;
+        group.userData.cartProp = 'img2threejs';
+      }
+      const barrow = prop ? null : Buildings3D.clone('wheelbarrow');
       if (barrow) {
+        const cart = new THREE.Group();
+        cart.name = 'survival-mine-cart';
         barrow.scale.setScalar(1.6);
         cart.add(barrow);
         const goldMat = new THREE.MeshStandardMaterial({ color: 0xffcc3a, emissive: 0x8a5a00, emissiveIntensity: 0.55, metalness: 0.5, roughness: 0.4, flatShading: true });
@@ -1638,7 +1658,15 @@ class World3DRuntime {
       // out of the mine and back: brisk through the night, slow by day
       mesh.userData.cartT = (mesh.userData.cartT || 0) + dt * (night ? 0.55 : 0.18);
       const k = 0.5 - 0.5 * Math.cos(mesh.userData.cartT * Math.PI * 2);
-      cart.position.z = cartZ[0] + (cartZ[1] - cartZ[0]) * k;
+      const z = cartZ[0] + (cartZ[1] - cartZ[0]) * k;
+      // the img2threejs cart's wheels roll with the distance (kit +Z = the model's -X; the wheel
+      // pivots spin about their local Y, the axle): angle = distance / radius
+      const wheels = mesh.userData.cartWheels;
+      if (wheels && wheels.length) {
+        const step = (z - cart.position.z) / (mesh.userData.cartWheelR || 0.07);
+        for (const w of wheels) w.rotation.y += step;
+      }
+      cart.position.z = z;
     }
   }
 
