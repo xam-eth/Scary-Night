@@ -1,0 +1,19 @@
+{
+  "pass": "blockout",
+  "fidelity": 0.56,
+  "aiVisionScore": 0.73,
+  "action": "continue",
+  "layerScores": {"silhouetteProportion": 0.84, "componentStructure": 0.72, "formDetail": 0.45, "materialSurface": 0.4, "lightingCamera": 0.78},
+  "featureReviews": [
+    {"id": "overall-silhouette", "score": 0.84, "notes": "Long five-board top on six square legs, two stretchers per side, an X brace at each end, the toothed blade standing through the top and the log in front of the blade's right half all sit where the reference has them (Tier-1 IoU 0.898 at the fitted camera az 31 / el 6 / fov 24, with the reference's floor shadow reproduced by the contact-shadow decal). The blade's lower half shows between the front-left and front-middle legs as in the reference."},
+    {"id": "blade-read", "score": 0.7, "notes": "20 hooked teeth read at the rim; no arbor hub yet (meso, structural-pass), so the blade centre is empty compared with the reference's dark boss."},
+    {"id": "log-read", "score": 0.65, "notes": "Log lies on the top against the blade with the right length; no pale cut face yet (micro), its end reads as a dark octagon."}
+  ],
+  "summary": "Blockout matches the reference's macro silhouette at the fitted camera (az 31, el 6, fov 24): Tier-1 IoU 0.898, aspect delta 0.011, scale delta 0.0003; turntable complete with the bench's real openings allowed, no degenerate view, no self-intersection.",
+  "matched": ["long thick top on six square legs", "front and back stretchers, X braces at both ends", "large toothed blade through the top, lower half visible under it", "log on the top in front of the blade's right half"],
+  "mismatches": ["no arbor hub or nut yet (meso)", "top reads as one slab: board seams and the blade slot are meso/micro", "log end has no pale cut face yet (micro)", "wood albedo too orange-red and streaky; blade too bright and bluish; log too red (material-pass)"],
+  "specFixes": ["structural-pass: hub and nut at the blade centre, board seams and slot in the top"],
+  "codeFixes": ["none for blockout"],
+  "notes": "Viewed renders/blockout/cmp.jpg (reference left, render right) and renders/blockout/turntable.jpg. The camera fit and the contact-shadow settings are recorded in renders/camera-fit/.",
+  "cameraView": "fixed: az 31, el 6, fov 24 (fitted)"
+}

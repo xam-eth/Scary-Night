@@ -1,0 +1,20 @@
+{
+  "pass": "structural-pass",
+  "fidelity": 0.62,
+  "aiVisionScore": 0.76,
+  "action": "continue",
+  "layerScores": {"silhouetteProportion": 0.84, "componentStructure": 0.82, "formDetail": 0.52, "materialSurface": 0.4, "lightingCamera": 0.78},
+  "featureReviews": [
+    {"id": "overall-silhouette", "score": 0.84, "notes": "Silhouette holds (Tier-1 IoU 0.898): top, six legs, stretchers, end X braces, blade and log in place."},
+    {"id": "blade-read", "score": 0.77, "notes": "After the refine-spec the arbor hub is round (16-sided) and about a quarter of the blade diameter, sitting at the blade centre just above the top line like the reference's boss; it still reads flat black until the iron material lands."},
+    {"id": "table-structure", "score": 0.8, "notes": "Stretchers on the outer leg faces front and back, back pair visible through the gaps; X braces at both ends read in the side views."},
+    {"id": "log-read", "score": 0.68, "notes": "Log is now round (16 sides) and rests in front of the blade's right half; the pale cut face is still to come (micro)."}
+  ],
+  "summary": "Structural pass after one refine-spec: the hub is round and correctly sized, the frame members and hierarchy are complete. Tier-1 IoU 0.898, aspect 0.011, scale 0.0003; turntable, self-intersection and attachment pass; 4.3k triangles at the standard tessellation tier.",
+  "matched": ["round arbor hub at the blade centre, about a quarter of the blade diameter", "stretchers and end braces as separate members", "round log in front of the blade's right half"],
+  "mismatches": ["no nut, slot or pale log end yet (micro, form-refinement)", "materials still blockout-grade (material-pass)"],
+  "specFixes": ["form-refinement: arbor nut, blade slot and the log's pale cut face"],
+  "codeFixes": ["none"],
+  "notes": "Viewed renders/structural-pass/cmp.jpg and renders/structural-pass/turntable.jpg after the hub refine (review-1.json holds the first verdict).",
+  "cameraView": "fixed: az 31, el 6, fov 24 (fitted)"
+}

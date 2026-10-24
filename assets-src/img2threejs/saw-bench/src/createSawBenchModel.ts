@@ -612,7 +612,7 @@ function makeAttachmentEndpoint(attachment: unknown): AttachmentEndpoint | null 
 }
 
 // Generated from ObjectSculptSpec target: Saw bench
-// Sculpt build pass: blockout
+// Sculpt build pass: structural-pass
 // This factory is intentionally pass-gated. Finish browser screenshot review before unlocking deeper passes.
 export function createSawBenchModel(options: ProceduralModelOptions = {}): THREE.Group {
   const root = new THREE.Group();
@@ -675,8 +675,8 @@ export function createSawBenchModel(options: ProceduralModelOptions = {}): THREE
   (nodes["root"] ?? root).add(node_root_0);
   nodes["root"] = node_root_0;
   const mesh_root_0Geometry = endpoint_root_0
-    ? new THREE.CylinderGeometry(endpoint_root_0.endRadius, endpoint_root_0.baseRadius, endpoint_root_0.length, 8, 4)
-    : new THREE.BoxGeometry(1, 1, 1, 1, 1, 1);
+    ? new THREE.CylinderGeometry(endpoint_root_0.endRadius, endpoint_root_0.baseRadius, endpoint_root_0.length, 16, 6)
+    : new THREE.BoxGeometry(1, 1, 1, 4, 4, 4);
   if (!endpoint_root_0) {
     mesh_root_0Geometry.scale(2.0, 0.18, 0.118);
   }
@@ -714,8 +714,8 @@ export function createSawBenchModel(options: ProceduralModelOptions = {}): THREE
   (nodes["root"] ?? root).add(node_top_board_1_1);
   nodes["top-board-1"] = node_top_board_1_1;
   const mesh_top_board_1_1Geometry = endpoint_top_board_1_1
-    ? new THREE.CylinderGeometry(endpoint_top_board_1_1.endRadius, endpoint_top_board_1_1.baseRadius, endpoint_top_board_1_1.length, 8, 4)
-    : new THREE.BoxGeometry(1, 1, 1, 1, 1, 1);
+    ? new THREE.CylinderGeometry(endpoint_top_board_1_1.endRadius, endpoint_top_board_1_1.baseRadius, endpoint_top_board_1_1.length, 16, 6)
+    : new THREE.BoxGeometry(1, 1, 1, 4, 4, 4);
   if (!endpoint_top_board_1_1) {
     mesh_top_board_1_1Geometry.scale(2.0, 0.18, 0.118);
   }
@@ -753,8 +753,8 @@ export function createSawBenchModel(options: ProceduralModelOptions = {}): THREE
   (nodes["root"] ?? root).add(node_top_board_2_2);
   nodes["top-board-2"] = node_top_board_2_2;
   const mesh_top_board_2_2Geometry = endpoint_top_board_2_2
-    ? new THREE.CylinderGeometry(endpoint_top_board_2_2.endRadius, endpoint_top_board_2_2.baseRadius, endpoint_top_board_2_2.length, 8, 4)
-    : new THREE.BoxGeometry(1, 1, 1, 1, 1, 1);
+    ? new THREE.CylinderGeometry(endpoint_top_board_2_2.endRadius, endpoint_top_board_2_2.baseRadius, endpoint_top_board_2_2.length, 16, 6)
+    : new THREE.BoxGeometry(1, 1, 1, 4, 4, 4);
   if (!endpoint_top_board_2_2) {
     mesh_top_board_2_2Geometry.scale(1.98, 0.18, 0.118);
   }
@@ -792,8 +792,8 @@ export function createSawBenchModel(options: ProceduralModelOptions = {}): THREE
   (nodes["root"] ?? root).add(node_top_board_4_3);
   nodes["top-board-4"] = node_top_board_4_3;
   const mesh_top_board_4_3Geometry = endpoint_top_board_4_3
-    ? new THREE.CylinderGeometry(endpoint_top_board_4_3.endRadius, endpoint_top_board_4_3.baseRadius, endpoint_top_board_4_3.length, 8, 4)
-    : new THREE.BoxGeometry(1, 1, 1, 1, 1, 1);
+    ? new THREE.CylinderGeometry(endpoint_top_board_4_3.endRadius, endpoint_top_board_4_3.baseRadius, endpoint_top_board_4_3.length, 16, 6)
+    : new THREE.BoxGeometry(1, 1, 1, 4, 4, 4);
   if (!endpoint_top_board_4_3) {
     mesh_top_board_4_3Geometry.scale(1.98, 0.18, 0.118);
   }
@@ -831,8 +831,8 @@ export function createSawBenchModel(options: ProceduralModelOptions = {}): THREE
   (nodes["root"] ?? root).add(node_top_board_5_4);
   nodes["top-board-5"] = node_top_board_5_4;
   const mesh_top_board_5_4Geometry = endpoint_top_board_5_4
-    ? new THREE.CylinderGeometry(endpoint_top_board_5_4.endRadius, endpoint_top_board_5_4.baseRadius, endpoint_top_board_5_4.length, 8, 4)
-    : new THREE.BoxGeometry(1, 1, 1, 1, 1, 1);
+    ? new THREE.CylinderGeometry(endpoint_top_board_5_4.endRadius, endpoint_top_board_5_4.baseRadius, endpoint_top_board_5_4.length, 16, 6)
+    : new THREE.BoxGeometry(1, 1, 1, 4, 4, 4);
   if (!endpoint_top_board_5_4) {
     mesh_top_board_5_4Geometry.scale(2.0, 0.18, 0.118);
   }
@@ -870,8 +870,8 @@ export function createSawBenchModel(options: ProceduralModelOptions = {}): THREE
   (nodes["root"] ?? root).add(node_leg_1_5);
   nodes["leg-1"] = node_leg_1_5;
   const mesh_leg_1_5Geometry = endpoint_leg_1_5
-    ? new THREE.CylinderGeometry(endpoint_leg_1_5.endRadius, endpoint_leg_1_5.baseRadius, endpoint_leg_1_5.length, 8, 4)
-    : new THREE.BoxGeometry(1, 1, 1, 1, 1, 1);
+    ? new THREE.CylinderGeometry(endpoint_leg_1_5.endRadius, endpoint_leg_1_5.baseRadius, endpoint_leg_1_5.length, 16, 6)
+    : new THREE.BoxGeometry(1, 1, 1, 4, 4, 4);
   if (!endpoint_leg_1_5) {
     mesh_leg_1_5Geometry.scale(0.13, 0.4, 0.13);
   }
@@ -909,8 +909,8 @@ export function createSawBenchModel(options: ProceduralModelOptions = {}): THREE
   (nodes["root"] ?? root).add(node_leg_2_6);
   nodes["leg-2"] = node_leg_2_6;
   const mesh_leg_2_6Geometry = endpoint_leg_2_6
-    ? new THREE.CylinderGeometry(endpoint_leg_2_6.endRadius, endpoint_leg_2_6.baseRadius, endpoint_leg_2_6.length, 8, 4)
-    : new THREE.BoxGeometry(1, 1, 1, 1, 1, 1);
+    ? new THREE.CylinderGeometry(endpoint_leg_2_6.endRadius, endpoint_leg_2_6.baseRadius, endpoint_leg_2_6.length, 16, 6)
+    : new THREE.BoxGeometry(1, 1, 1, 4, 4, 4);
   if (!endpoint_leg_2_6) {
     mesh_leg_2_6Geometry.scale(0.13, 0.4, 0.13);
   }
@@ -948,8 +948,8 @@ export function createSawBenchModel(options: ProceduralModelOptions = {}): THREE
   (nodes["root"] ?? root).add(node_leg_3_7);
   nodes["leg-3"] = node_leg_3_7;
   const mesh_leg_3_7Geometry = endpoint_leg_3_7
-    ? new THREE.CylinderGeometry(endpoint_leg_3_7.endRadius, endpoint_leg_3_7.baseRadius, endpoint_leg_3_7.length, 8, 4)
-    : new THREE.BoxGeometry(1, 1, 1, 1, 1, 1);
+    ? new THREE.CylinderGeometry(endpoint_leg_3_7.endRadius, endpoint_leg_3_7.baseRadius, endpoint_leg_3_7.length, 16, 6)
+    : new THREE.BoxGeometry(1, 1, 1, 4, 4, 4);
   if (!endpoint_leg_3_7) {
     mesh_leg_3_7Geometry.scale(0.13, 0.4, 0.13);
   }
@@ -987,8 +987,8 @@ export function createSawBenchModel(options: ProceduralModelOptions = {}): THREE
   (nodes["root"] ?? root).add(node_leg_4_8);
   nodes["leg-4"] = node_leg_4_8;
   const mesh_leg_4_8Geometry = endpoint_leg_4_8
-    ? new THREE.CylinderGeometry(endpoint_leg_4_8.endRadius, endpoint_leg_4_8.baseRadius, endpoint_leg_4_8.length, 8, 4)
-    : new THREE.BoxGeometry(1, 1, 1, 1, 1, 1);
+    ? new THREE.CylinderGeometry(endpoint_leg_4_8.endRadius, endpoint_leg_4_8.baseRadius, endpoint_leg_4_8.length, 16, 6)
+    : new THREE.BoxGeometry(1, 1, 1, 4, 4, 4);
   if (!endpoint_leg_4_8) {
     mesh_leg_4_8Geometry.scale(0.13, 0.4, 0.13);
   }
@@ -1026,8 +1026,8 @@ export function createSawBenchModel(options: ProceduralModelOptions = {}): THREE
   (nodes["root"] ?? root).add(node_leg_5_9);
   nodes["leg-5"] = node_leg_5_9;
   const mesh_leg_5_9Geometry = endpoint_leg_5_9
-    ? new THREE.CylinderGeometry(endpoint_leg_5_9.endRadius, endpoint_leg_5_9.baseRadius, endpoint_leg_5_9.length, 8, 4)
-    : new THREE.BoxGeometry(1, 1, 1, 1, 1, 1);
+    ? new THREE.CylinderGeometry(endpoint_leg_5_9.endRadius, endpoint_leg_5_9.baseRadius, endpoint_leg_5_9.length, 16, 6)
+    : new THREE.BoxGeometry(1, 1, 1, 4, 4, 4);
   if (!endpoint_leg_5_9) {
     mesh_leg_5_9Geometry.scale(0.13, 0.4, 0.13);
   }
@@ -1065,8 +1065,8 @@ export function createSawBenchModel(options: ProceduralModelOptions = {}): THREE
   (nodes["root"] ?? root).add(node_leg_6_10);
   nodes["leg-6"] = node_leg_6_10;
   const mesh_leg_6_10Geometry = endpoint_leg_6_10
-    ? new THREE.CylinderGeometry(endpoint_leg_6_10.endRadius, endpoint_leg_6_10.baseRadius, endpoint_leg_6_10.length, 8, 4)
-    : new THREE.BoxGeometry(1, 1, 1, 1, 1, 1);
+    ? new THREE.CylinderGeometry(endpoint_leg_6_10.endRadius, endpoint_leg_6_10.baseRadius, endpoint_leg_6_10.length, 16, 6)
+    : new THREE.BoxGeometry(1, 1, 1, 4, 4, 4);
   if (!endpoint_leg_6_10) {
     mesh_leg_6_10Geometry.scale(0.13, 0.4, 0.13);
   }
@@ -1104,8 +1104,8 @@ export function createSawBenchModel(options: ProceduralModelOptions = {}): THREE
   (nodes["root"] ?? root).add(node_stretcher_1_11);
   nodes["stretcher-1"] = node_stretcher_1_11;
   const mesh_stretcher_1_11Geometry = endpoint_stretcher_1_11
-    ? new THREE.CylinderGeometry(endpoint_stretcher_1_11.endRadius, endpoint_stretcher_1_11.baseRadius, endpoint_stretcher_1_11.length, 8, 4)
-    : new THREE.BoxGeometry(1, 1, 1, 1, 1, 1);
+    ? new THREE.CylinderGeometry(endpoint_stretcher_1_11.endRadius, endpoint_stretcher_1_11.baseRadius, endpoint_stretcher_1_11.length, 16, 6)
+    : new THREE.BoxGeometry(1, 1, 1, 4, 4, 4);
   if (!endpoint_stretcher_1_11) {
     mesh_stretcher_1_11Geometry.scale(0.98, 0.075, 0.045);
   }
@@ -1143,8 +1143,8 @@ export function createSawBenchModel(options: ProceduralModelOptions = {}): THREE
   (nodes["root"] ?? root).add(node_stretcher_2_12);
   nodes["stretcher-2"] = node_stretcher_2_12;
   const mesh_stretcher_2_12Geometry = endpoint_stretcher_2_12
-    ? new THREE.CylinderGeometry(endpoint_stretcher_2_12.endRadius, endpoint_stretcher_2_12.baseRadius, endpoint_stretcher_2_12.length, 8, 4)
-    : new THREE.BoxGeometry(1, 1, 1, 1, 1, 1);
+    ? new THREE.CylinderGeometry(endpoint_stretcher_2_12.endRadius, endpoint_stretcher_2_12.baseRadius, endpoint_stretcher_2_12.length, 16, 6)
+    : new THREE.BoxGeometry(1, 1, 1, 4, 4, 4);
   if (!endpoint_stretcher_2_12) {
     mesh_stretcher_2_12Geometry.scale(0.98, 0.075, 0.045);
   }
@@ -1182,8 +1182,8 @@ export function createSawBenchModel(options: ProceduralModelOptions = {}): THREE
   (nodes["root"] ?? root).add(node_stretcher_3_13);
   nodes["stretcher-3"] = node_stretcher_3_13;
   const mesh_stretcher_3_13Geometry = endpoint_stretcher_3_13
-    ? new THREE.CylinderGeometry(endpoint_stretcher_3_13.endRadius, endpoint_stretcher_3_13.baseRadius, endpoint_stretcher_3_13.length, 8, 4)
-    : new THREE.BoxGeometry(1, 1, 1, 1, 1, 1);
+    ? new THREE.CylinderGeometry(endpoint_stretcher_3_13.endRadius, endpoint_stretcher_3_13.baseRadius, endpoint_stretcher_3_13.length, 16, 6)
+    : new THREE.BoxGeometry(1, 1, 1, 4, 4, 4);
   if (!endpoint_stretcher_3_13) {
     mesh_stretcher_3_13Geometry.scale(0.98, 0.075, 0.045);
   }
@@ -1221,8 +1221,8 @@ export function createSawBenchModel(options: ProceduralModelOptions = {}): THREE
   (nodes["root"] ?? root).add(node_stretcher_4_14);
   nodes["stretcher-4"] = node_stretcher_4_14;
   const mesh_stretcher_4_14Geometry = endpoint_stretcher_4_14
-    ? new THREE.CylinderGeometry(endpoint_stretcher_4_14.endRadius, endpoint_stretcher_4_14.baseRadius, endpoint_stretcher_4_14.length, 8, 4)
-    : new THREE.BoxGeometry(1, 1, 1, 1, 1, 1);
+    ? new THREE.CylinderGeometry(endpoint_stretcher_4_14.endRadius, endpoint_stretcher_4_14.baseRadius, endpoint_stretcher_4_14.length, 16, 6)
+    : new THREE.BoxGeometry(1, 1, 1, 4, 4, 4);
   if (!endpoint_stretcher_4_14) {
     mesh_stretcher_4_14Geometry.scale(0.98, 0.075, 0.045);
   }
@@ -1260,8 +1260,8 @@ export function createSawBenchModel(options: ProceduralModelOptions = {}): THREE
   (nodes["root"] ?? root).add(node_brace_1_15);
   nodes["brace-1"] = node_brace_1_15;
   const mesh_brace_1_15Geometry = endpoint_brace_1_15
-    ? new THREE.CylinderGeometry(endpoint_brace_1_15.endRadius, endpoint_brace_1_15.baseRadius, endpoint_brace_1_15.length, 8, 4)
-    : new THREE.BoxGeometry(1, 1, 1, 1, 1, 1);
+    ? new THREE.CylinderGeometry(endpoint_brace_1_15.endRadius, endpoint_brace_1_15.baseRadius, endpoint_brace_1_15.length, 16, 6)
+    : new THREE.BoxGeometry(1, 1, 1, 4, 4, 4);
   if (!endpoint_brace_1_15) {
     mesh_brace_1_15Geometry.scale(0.035, 0.065, 0.6047);
   }
@@ -1299,8 +1299,8 @@ export function createSawBenchModel(options: ProceduralModelOptions = {}): THREE
   (nodes["root"] ?? root).add(node_brace_2_16);
   nodes["brace-2"] = node_brace_2_16;
   const mesh_brace_2_16Geometry = endpoint_brace_2_16
-    ? new THREE.CylinderGeometry(endpoint_brace_2_16.endRadius, endpoint_brace_2_16.baseRadius, endpoint_brace_2_16.length, 8, 4)
-    : new THREE.BoxGeometry(1, 1, 1, 1, 1, 1);
+    ? new THREE.CylinderGeometry(endpoint_brace_2_16.endRadius, endpoint_brace_2_16.baseRadius, endpoint_brace_2_16.length, 16, 6)
+    : new THREE.BoxGeometry(1, 1, 1, 4, 4, 4);
   if (!endpoint_brace_2_16) {
     mesh_brace_2_16Geometry.scale(0.035, 0.065, 0.6047);
   }
@@ -1338,8 +1338,8 @@ export function createSawBenchModel(options: ProceduralModelOptions = {}): THREE
   (nodes["root"] ?? root).add(node_brace_3_17);
   nodes["brace-3"] = node_brace_3_17;
   const mesh_brace_3_17Geometry = endpoint_brace_3_17
-    ? new THREE.CylinderGeometry(endpoint_brace_3_17.endRadius, endpoint_brace_3_17.baseRadius, endpoint_brace_3_17.length, 8, 4)
-    : new THREE.BoxGeometry(1, 1, 1, 1, 1, 1);
+    ? new THREE.CylinderGeometry(endpoint_brace_3_17.endRadius, endpoint_brace_3_17.baseRadius, endpoint_brace_3_17.length, 16, 6)
+    : new THREE.BoxGeometry(1, 1, 1, 4, 4, 4);
   if (!endpoint_brace_3_17) {
     mesh_brace_3_17Geometry.scale(0.035, 0.065, 0.6047);
   }
@@ -1377,8 +1377,8 @@ export function createSawBenchModel(options: ProceduralModelOptions = {}): THREE
   (nodes["root"] ?? root).add(node_brace_4_18);
   nodes["brace-4"] = node_brace_4_18;
   const mesh_brace_4_18Geometry = endpoint_brace_4_18
-    ? new THREE.CylinderGeometry(endpoint_brace_4_18.endRadius, endpoint_brace_4_18.baseRadius, endpoint_brace_4_18.length, 8, 4)
-    : new THREE.BoxGeometry(1, 1, 1, 1, 1, 1);
+    ? new THREE.CylinderGeometry(endpoint_brace_4_18.endRadius, endpoint_brace_4_18.baseRadius, endpoint_brace_4_18.length, 16, 6)
+    : new THREE.BoxGeometry(1, 1, 1, 4, 4, 4);
   if (!endpoint_brace_4_18) {
     mesh_brace_4_18Geometry.scale(0.035, 0.065, 0.6047);
   }
@@ -1416,7 +1416,7 @@ export function createSawBenchModel(options: ProceduralModelOptions = {}): THREE
   (nodes["root"] ?? root).add(node_saw_blade_19);
   nodes["saw-blade"] = node_saw_blade_19;
   const mesh_saw_blade_19Geometry = endpoint_saw_blade_19
-    ? new THREE.CylinderGeometry(endpoint_saw_blade_19.endRadius, endpoint_saw_blade_19.baseRadius, endpoint_saw_blade_19.length, 8, 4)
+    ? new THREE.CylinderGeometry(endpoint_saw_blade_19.endRadius, endpoint_saw_blade_19.baseRadius, endpoint_saw_blade_19.length, 16, 6)
     : buildExtrudeGeometry({"points": [[0.31, 0.0], [0.363, 0.0716], [0.3119, 0.0801], [0.2948, 0.0958], [0.3231, 0.1803], [0.2719, 0.1725], [0.2508, 0.1822], [0.2516, 0.2713], [0.2053, 0.2481], [0.1822, 0.2508], [0.1554, 0.3358], [0.1185, 0.2994], [0.0958, 0.2948], [0.0441, 0.3674], [0.0202, 0.3214], [0.0, 0.31], [-0.0716, 0.363], [-0.0801, 0.3119], [-0.0958, 0.2948], [-0.1803, 0.3231], [-0.1725, 0.2719], [-0.1822, 0.2508], [-0.2713, 0.2516], [-0.2481, 0.2053], [-0.2508, 0.1822], [-0.3358, 0.1554], [-0.2994, 0.1185], [-0.2948, 0.0958], [-0.3674, 0.0441], [-0.3214, 0.0202], [-0.31, 0.0], [-0.363, -0.0716], [-0.3119, -0.0801], [-0.2948, -0.0958], [-0.3231, -0.1803], [-0.2719, -0.1725], [-0.2508, -0.1822], [-0.2516, -0.2713], [-0.2053, -0.2481], [-0.1822, -0.2508], [-0.1554, -0.3358], [-0.1185, -0.2994], [-0.0958, -0.2948], [-0.0441, -0.3674], [-0.0202, -0.3214], [-0.0, -0.31], [0.0716, -0.363], [0.0801, -0.3119], [0.0958, -0.2948], [0.1803, -0.3231], [0.1725, -0.2719], [0.1822, -0.2508], [0.2713, -0.2516], [0.2481, -0.2053], [0.2508, -0.1822], [0.3358, -0.1554], [0.2994, -0.1185], [0.2948, -0.0958], [0.3674, -0.0441], [0.3214, -0.0202]], "depth": 0.022});
   if (!endpoint_saw_blade_19) {
     mesh_saw_blade_19Geometry.scale(1.0, 1.0, 1.0);
@@ -1439,45 +1439,85 @@ export function createSawBenchModel(options: ProceduralModelOptions = {}): THREE
   destructionGroups["saw-blade"] ??= [];
   destructionGroups["saw-blade"].push(node_saw_blade_19);
 
-  const attachment_log_20 = {"parentId": "root", "parentSocket": "root:top", "localStart": [0.2, 0.19, 0.12], "localEnd": [0.7, 0.19, 0.12], "baseRadius": 0.1, "endRadius": 0.1, "contactType": "rests-on", "embedDepth": 0.008, "gapTolerance": 0.004, "evidenceRefs": ["full-object"]};
-  const endpoint_log_20 = makeAttachmentEndpoint(attachment_log_20);
-  const node_log_20 = new THREE.Group();
-  node_log_20.name = "Log__pivot";
-  node_log_20.scale.set(1, 1, 1);
-  if (endpoint_log_20) {
-    node_log_20.position.copy(endpoint_log_20.start);
-    node_log_20.rotation.set(-0.0, 0.0, -0.0);
+  const attachment_hub_20 = {"parentId": "saw-blade", "parentSocket": "saw-blade:centre", "localStart": [0.0, 0.0, -0.039], "localEnd": [0.0, 0.0, 0.061], "baseRadius": 0.08, "endRadius": 0.08, "contactType": "socket", "embedDepth": 0.02, "gapTolerance": 0.004, "evidenceRefs": ["full-object"]};
+  const endpoint_hub_20 = makeAttachmentEndpoint(attachment_hub_20);
+  const node_hub_20 = new THREE.Group();
+  node_hub_20.name = "Arbor hub__pivot";
+  node_hub_20.scale.set(1, 1, 1);
+  if (endpoint_hub_20) {
+    node_hub_20.position.copy(endpoint_hub_20.start);
+    node_hub_20.rotation.set(-0.0, 0.0, -0.0);
   } else {
-    node_log_20.position.set(0.2, 0.19, 0.12);
-    node_log_20.rotation.set(-0.0, 0.0, -0.0);
+    node_hub_20.position.set(0.0, 0.0, -0.039);
+    node_hub_20.rotation.set(-0.0, 0.0, -0.0);
   }
-  node_log_20.userData.sculptComponent = {"id": "log", "name": "Log", "level": "macro", "role": "log", "importance": 0.8, "confidence": 0.75, "primitive": "cylinder", "topologyClass": "assembled-solid", "topologyRationale": "Log: a round length of trunk, a cylinder lying on the top.", "geometryDescriptor": {"topologyIntent": "low-poly stylized game prop, bevel-ready edges", "edgeTreatment": {"type": "chamfer", "bevelRadius": 0.01, "segments": 1}, "deformationStack": [], "uvStrategy": "generated procedural coordinates", "normalStrategy": "vertex normals from generated geometry"}, "parent": "root", "attachment": {"parentId": "root", "parentSocket": "root:top", "localStart": [0.2, 0.19, 0.12], "localEnd": [0.7, 0.19, 0.12], "baseRadius": 0.1, "endRadius": 0.1, "contactType": "rests-on", "embedDepth": 0.008, "gapTolerance": 0.004, "evidenceRefs": ["full-object"]}, "dimensions": {"width": 1.0, "height": 1.0, "depth": 1.0, "units": "object", "confidence": 0.75}, "transform": {"position": [0.2, 0.19, 0.12], "rotation": [-0.0, 0.0, -0.0]}, "actionProfile": {"animationRole": "feed", "pivot": {"mode": "joint", "localPosition": [0, 0, 0], "axis": [1, 0, 0], "confidence": 0.75}, "transformChannels": {"translate": false, "rotate": true, "scale": false, "bend": false, "twist": false, "detach": false, "visibility": true, "materialState": true}, "sockets": [], "collider": {"type": "capsule", "offset": [0, 0, 0], "scale": [1, 1, 1], "isTrigger": false, "notes": "Proxy sized to the part's own bounds."}, "constraints": [], "destruction": {"breakable": false, "fractureGroup": "log", "seamRefs": [], "detachableFragments": [], "breakImpulse": 0.0, "debrisMaterial": "bark"}}, "material": "bark", "materialLayers": ["bark"], "colorMaterialRecipe": {"dominantAlbedo": "rgba(155, 92, 44, 1.0)", "secondaryAlbedo": "rgba(125, 71, 34, 1.0)", "materialClass": "wood", "materialClassConfidence": 0.85, "colorGradient": {"type": "linear", "axis": "y", "stops": [{"position": 0.0, "color": "rgba(125, 71, 34, 1.0)"}, {"position": 1.0, "color": "rgba(155, 92, 44, 1.0)"}]}, "evidenceRefs": ["full-object"]}, "deformations": [], "joints": [], "seams": [], "localFeatures": [{"id": "log-streaks", "kind": "scratch", "description": "long grain streaks along the log", "effect": "material", "evidenceRefs": ["full-object"], "confidence": 0.75}], "surfaceDetail": {"macroRoughness": 0.9, "microRoughness": 0.18, "bumpAmplitude": 0.0225, "normalPattern": "mottled", "displacementPattern": "", "occlusionPattern": "cavity darkening at seams and contacts", "edgeWearPattern": "", "notes": ""}, "evidenceRefs": ["full-object"], "details": ["log-streaks"], "uvContract": {"status": "unwrapped", "strategy": "generated procedural coordinates", "materialId": "bark"}, "materialRegions": [{"regionId": "log-side", "materialId": "bark", "profileId": "wood.unfinished", "crop": {"path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/03-log-side.png", "bbox": {"x": 850, "y": 225, "width": 120, "height": 45}, "sourceWidth": 1408, "sourceHeight": 768, "loaderWarnings": [], "coverage": 0.005}}]};
-  node_log_20.userData.actionProfile = {"animationRole": "feed", "pivot": {"mode": "joint", "localPosition": [0, 0, 0], "axis": [1, 0, 0], "confidence": 0.75}, "transformChannels": {"translate": false, "rotate": true, "scale": false, "bend": false, "twist": false, "detach": false, "visibility": true, "materialState": true}, "sockets": [], "collider": {"type": "capsule", "offset": [0, 0, 0], "scale": [1, 1, 1], "isTrigger": false, "notes": "Proxy sized to the part's own bounds."}, "constraints": [], "destruction": {"breakable": false, "fractureGroup": "log", "seamRefs": [], "detachableFragments": [], "breakImpulse": 0.0, "debrisMaterial": "bark"}};
-  (nodes["root"] ?? root).add(node_log_20);
-  nodes["log"] = node_log_20;
-  const mesh_log_20Geometry = endpoint_log_20
-    ? new THREE.CylinderGeometry(endpoint_log_20.endRadius, endpoint_log_20.baseRadius, endpoint_log_20.length, 8, 4)
-    : new THREE.CylinderGeometry(0.5, 0.5, 1, 10, 4);
-  if (!endpoint_log_20) {
-    mesh_log_20Geometry.scale(1.0, 1.0, 1.0);
+  node_hub_20.userData.sculptComponent = {"id": "hub", "name": "Arbor hub", "level": "meso", "role": "hub", "importance": 0.6, "confidence": 0.75, "primitive": "cylinder", "topologyClass": "assembled-solid", "topologyRationale": "Arbor hub: a short round iron boss through the blade centre, a cylinder.", "geometryDescriptor": {"topologyIntent": "low-poly stylized game prop, bevel-ready edges", "edgeTreatment": {"type": "chamfer", "bevelRadius": 0.01, "segments": 1}, "deformationStack": [], "uvStrategy": "generated procedural coordinates", "normalStrategy": "vertex normals from generated geometry"}, "parent": "saw-blade", "attachment": {"parentId": "saw-blade", "parentSocket": "saw-blade:centre", "localStart": [0.0, 0.0, -0.039], "localEnd": [0.0, 0.0, 0.061], "baseRadius": 0.08, "endRadius": 0.08, "contactType": "socket", "embedDepth": 0.02, "gapTolerance": 0.004, "evidenceRefs": ["full-object"]}, "dimensions": {"width": 1.0, "height": 1.0, "depth": 1.0, "units": "object", "confidence": 0.75}, "transform": {"position": [0.0, 0.0, -0.039], "rotation": [-0.0, 0.0, -0.0]}, "actionProfile": {"animationRole": "static", "pivot": {"mode": "center", "localPosition": [0, 0, 0], "axis": [0, 1, 0], "confidence": 0.75}, "transformChannels": {"translate": false, "rotate": false, "scale": false, "bend": false, "twist": false, "detach": false, "visibility": true, "materialState": true}, "sockets": [], "collider": {"type": "capsule", "offset": [0, 0, 0], "scale": [1, 1, 1], "isTrigger": false, "notes": "Proxy sized to the part's own bounds."}, "constraints": [], "destruction": {"breakable": false, "fractureGroup": "hub", "seamRefs": [], "detachableFragments": [], "breakImpulse": 0.0, "debrisMaterial": "iron"}}, "material": "iron", "materialLayers": ["iron"], "colorMaterialRecipe": {"dominantAlbedo": "rgba(62, 64, 70, 1.0)", "secondaryAlbedo": "rgba(45, 46, 51, 1.0)", "materialClass": "metal", "materialClassConfidence": 0.85, "colorGradient": {"type": "linear", "axis": "y", "stops": [{"position": 0.0, "color": "rgba(45, 46, 51, 1.0)"}, {"position": 1.0, "color": "rgba(62, 64, 70, 1.0)"}]}, "evidenceRefs": ["full-object"]}, "deformations": [], "joints": [], "seams": [], "localFeatures": [], "surfaceDetail": {"macroRoughness": 0.5, "microRoughness": 0.1, "bumpAmplitude": 0.006, "normalPattern": "mottled", "displacementPattern": "", "occlusionPattern": "cavity darkening at seams and contacts", "edgeWearPattern": "", "notes": ""}, "evidenceRefs": ["full-object"], "details": [], "uvContract": {"status": "unwrapped", "strategy": "generated procedural coordinates", "materialId": "iron"}, "materialRegions": [{"regionId": "hub-iron", "materialId": "iron", "profileId": "metal.steel-brushed", "crop": {"path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/02-hub-iron.png", "bbox": {"x": 628, "y": 268, "width": 55, "height": 35}, "sourceWidth": 1408, "sourceHeight": 768, "loaderWarnings": [], "coverage": 0.0018}}]};
+  node_hub_20.userData.actionProfile = {"animationRole": "static", "pivot": {"mode": "center", "localPosition": [0, 0, 0], "axis": [0, 1, 0], "confidence": 0.75}, "transformChannels": {"translate": false, "rotate": false, "scale": false, "bend": false, "twist": false, "detach": false, "visibility": true, "materialState": true}, "sockets": [], "collider": {"type": "capsule", "offset": [0, 0, 0], "scale": [1, 1, 1], "isTrigger": false, "notes": "Proxy sized to the part's own bounds."}, "constraints": [], "destruction": {"breakable": false, "fractureGroup": "hub", "seamRefs": [], "detachableFragments": [], "breakImpulse": 0.0, "debrisMaterial": "iron"}};
+  (nodes["saw-blade"] ?? root).add(node_hub_20);
+  nodes["hub"] = node_hub_20;
+  const mesh_hub_20Geometry = endpoint_hub_20
+    ? new THREE.CylinderGeometry(endpoint_hub_20.endRadius, endpoint_hub_20.baseRadius, endpoint_hub_20.length, 16, 6)
+    : new THREE.CylinderGeometry(0.5, 0.5, 1, 24, 8);
+  if (!endpoint_hub_20) {
+    mesh_hub_20Geometry.scale(1.0, 1.0, 1.0);
   }
-  const mesh_log_20 = new THREE.Mesh(
-    mesh_log_20Geometry,
+  const mesh_hub_20 = new THREE.Mesh(
+    mesh_hub_20Geometry,
+    materialMap["iron"] ?? new THREE.MeshStandardMaterial({ color: 0x888888 })
+  );
+  mesh_hub_20.name = "Arbor hub";
+  if (endpoint_hub_20) {
+    mesh_hub_20.position.copy(endpoint_hub_20.midpoint);
+    mesh_hub_20.quaternion.copy(endpoint_hub_20.quaternion);
+  }
+  mesh_hub_20.castShadow = options.castShadow ?? true;
+  mesh_hub_20.receiveShadow = options.receiveShadow ?? true;
+  mesh_hub_20.userData.sculptComponent = {"id": "hub", "name": "Arbor hub", "level": "meso", "role": "hub", "importance": 0.6, "confidence": 0.75, "primitive": "cylinder", "topologyClass": "assembled-solid", "topologyRationale": "Arbor hub: a short round iron boss through the blade centre, a cylinder.", "geometryDescriptor": {"topologyIntent": "low-poly stylized game prop, bevel-ready edges", "edgeTreatment": {"type": "chamfer", "bevelRadius": 0.01, "segments": 1}, "deformationStack": [], "uvStrategy": "generated procedural coordinates", "normalStrategy": "vertex normals from generated geometry"}, "parent": "saw-blade", "attachment": {"parentId": "saw-blade", "parentSocket": "saw-blade:centre", "localStart": [0.0, 0.0, -0.039], "localEnd": [0.0, 0.0, 0.061], "baseRadius": 0.08, "endRadius": 0.08, "contactType": "socket", "embedDepth": 0.02, "gapTolerance": 0.004, "evidenceRefs": ["full-object"]}, "dimensions": {"width": 1.0, "height": 1.0, "depth": 1.0, "units": "object", "confidence": 0.75}, "transform": {"position": [0.0, 0.0, -0.039], "rotation": [-0.0, 0.0, -0.0]}, "actionProfile": {"animationRole": "static", "pivot": {"mode": "center", "localPosition": [0, 0, 0], "axis": [0, 1, 0], "confidence": 0.75}, "transformChannels": {"translate": false, "rotate": false, "scale": false, "bend": false, "twist": false, "detach": false, "visibility": true, "materialState": true}, "sockets": [], "collider": {"type": "capsule", "offset": [0, 0, 0], "scale": [1, 1, 1], "isTrigger": false, "notes": "Proxy sized to the part's own bounds."}, "constraints": [], "destruction": {"breakable": false, "fractureGroup": "hub", "seamRefs": [], "detachableFragments": [], "breakImpulse": 0.0, "debrisMaterial": "iron"}}, "material": "iron", "materialLayers": ["iron"], "colorMaterialRecipe": {"dominantAlbedo": "rgba(62, 64, 70, 1.0)", "secondaryAlbedo": "rgba(45, 46, 51, 1.0)", "materialClass": "metal", "materialClassConfidence": 0.85, "colorGradient": {"type": "linear", "axis": "y", "stops": [{"position": 0.0, "color": "rgba(45, 46, 51, 1.0)"}, {"position": 1.0, "color": "rgba(62, 64, 70, 1.0)"}]}, "evidenceRefs": ["full-object"]}, "deformations": [], "joints": [], "seams": [], "localFeatures": [], "surfaceDetail": {"macroRoughness": 0.5, "microRoughness": 0.1, "bumpAmplitude": 0.006, "normalPattern": "mottled", "displacementPattern": "", "occlusionPattern": "cavity darkening at seams and contacts", "edgeWearPattern": "", "notes": ""}, "evidenceRefs": ["full-object"], "details": [], "uvContract": {"status": "unwrapped", "strategy": "generated procedural coordinates", "materialId": "iron"}, "materialRegions": [{"regionId": "hub-iron", "materialId": "iron", "profileId": "metal.steel-brushed", "crop": {"path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/02-hub-iron.png", "bbox": {"x": 628, "y": 268, "width": 55, "height": 35}, "sourceWidth": 1408, "sourceHeight": 768, "loaderWarnings": [], "coverage": 0.0018}}]};
+  node_hub_20.add(mesh_hub_20);
+  meshes["hub"] = mesh_hub_20;
+  colliders["hub"] = {"type": "capsule", "offset": [0, 0, 0], "scale": [1, 1, 1], "isTrigger": false, "notes": "Proxy sized to the part's own bounds."};
+  destructionGroups["hub"] ??= [];
+  destructionGroups["hub"].push(node_hub_20);
+
+  const attachment_log_21 = {"parentId": "root", "parentSocket": "root:top", "localStart": [0.2, 0.19, 0.12], "localEnd": [0.7, 0.19, 0.12], "baseRadius": 0.1, "endRadius": 0.1, "contactType": "rests-on", "embedDepth": 0.008, "gapTolerance": 0.004, "evidenceRefs": ["full-object"]};
+  const endpoint_log_21 = makeAttachmentEndpoint(attachment_log_21);
+  const node_log_21 = new THREE.Group();
+  node_log_21.name = "Log__pivot";
+  node_log_21.scale.set(1, 1, 1);
+  if (endpoint_log_21) {
+    node_log_21.position.copy(endpoint_log_21.start);
+    node_log_21.rotation.set(-0.0, 0.0, -0.0);
+  } else {
+    node_log_21.position.set(0.2, 0.19, 0.12);
+    node_log_21.rotation.set(-0.0, 0.0, -0.0);
+  }
+  node_log_21.userData.sculptComponent = {"id": "log", "name": "Log", "level": "macro", "role": "log", "importance": 0.8, "confidence": 0.75, "primitive": "cylinder", "topologyClass": "assembled-solid", "topologyRationale": "Log: a round length of trunk, a cylinder lying on the top.", "geometryDescriptor": {"topologyIntent": "low-poly stylized game prop, bevel-ready edges", "edgeTreatment": {"type": "chamfer", "bevelRadius": 0.01, "segments": 1}, "deformationStack": [], "uvStrategy": "generated procedural coordinates", "normalStrategy": "vertex normals from generated geometry"}, "parent": "root", "attachment": {"parentId": "root", "parentSocket": "root:top", "localStart": [0.2, 0.19, 0.12], "localEnd": [0.7, 0.19, 0.12], "baseRadius": 0.1, "endRadius": 0.1, "contactType": "rests-on", "embedDepth": 0.008, "gapTolerance": 0.004, "evidenceRefs": ["full-object"]}, "dimensions": {"width": 1.0, "height": 1.0, "depth": 1.0, "units": "object", "confidence": 0.75}, "transform": {"position": [0.2, 0.19, 0.12], "rotation": [-0.0, 0.0, -0.0]}, "actionProfile": {"animationRole": "feed", "pivot": {"mode": "joint", "localPosition": [0, 0, 0], "axis": [1, 0, 0], "confidence": 0.75}, "transformChannels": {"translate": false, "rotate": true, "scale": false, "bend": false, "twist": false, "detach": false, "visibility": true, "materialState": true}, "sockets": [], "collider": {"type": "capsule", "offset": [0, 0, 0], "scale": [1, 1, 1], "isTrigger": false, "notes": "Proxy sized to the part's own bounds."}, "constraints": [], "destruction": {"breakable": false, "fractureGroup": "log", "seamRefs": [], "detachableFragments": [], "breakImpulse": 0.0, "debrisMaterial": "bark"}}, "material": "bark", "materialLayers": ["bark"], "colorMaterialRecipe": {"dominantAlbedo": "rgba(155, 92, 44, 1.0)", "secondaryAlbedo": "rgba(125, 71, 34, 1.0)", "materialClass": "wood", "materialClassConfidence": 0.85, "colorGradient": {"type": "linear", "axis": "y", "stops": [{"position": 0.0, "color": "rgba(125, 71, 34, 1.0)"}, {"position": 1.0, "color": "rgba(155, 92, 44, 1.0)"}]}, "evidenceRefs": ["full-object"]}, "deformations": [], "joints": [], "seams": [], "localFeatures": [{"id": "log-streaks", "kind": "scratch", "description": "long grain streaks along the log", "effect": "material", "evidenceRefs": ["full-object"], "confidence": 0.75}], "surfaceDetail": {"macroRoughness": 0.9, "microRoughness": 0.18, "bumpAmplitude": 0.0225, "normalPattern": "mottled", "displacementPattern": "", "occlusionPattern": "cavity darkening at seams and contacts", "edgeWearPattern": "", "notes": ""}, "evidenceRefs": ["full-object"], "details": ["log-streaks"], "uvContract": {"status": "unwrapped", "strategy": "generated procedural coordinates", "materialId": "bark"}, "materialRegions": [{"regionId": "log-side", "materialId": "bark", "profileId": "wood.unfinished", "crop": {"path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/03-log-side.png", "bbox": {"x": 850, "y": 225, "width": 120, "height": 45}, "sourceWidth": 1408, "sourceHeight": 768, "loaderWarnings": [], "coverage": 0.005}}]};
+  node_log_21.userData.actionProfile = {"animationRole": "feed", "pivot": {"mode": "joint", "localPosition": [0, 0, 0], "axis": [1, 0, 0], "confidence": 0.75}, "transformChannels": {"translate": false, "rotate": true, "scale": false, "bend": false, "twist": false, "detach": false, "visibility": true, "materialState": true}, "sockets": [], "collider": {"type": "capsule", "offset": [0, 0, 0], "scale": [1, 1, 1], "isTrigger": false, "notes": "Proxy sized to the part's own bounds."}, "constraints": [], "destruction": {"breakable": false, "fractureGroup": "log", "seamRefs": [], "detachableFragments": [], "breakImpulse": 0.0, "debrisMaterial": "bark"}};
+  (nodes["root"] ?? root).add(node_log_21);
+  nodes["log"] = node_log_21;
+  const mesh_log_21Geometry = endpoint_log_21
+    ? new THREE.CylinderGeometry(endpoint_log_21.endRadius, endpoint_log_21.baseRadius, endpoint_log_21.length, 16, 6)
+    : new THREE.CylinderGeometry(0.5, 0.5, 1, 24, 8);
+  if (!endpoint_log_21) {
+    mesh_log_21Geometry.scale(1.0, 1.0, 1.0);
+  }
+  const mesh_log_21 = new THREE.Mesh(
+    mesh_log_21Geometry,
     materialMap["bark"] ?? new THREE.MeshStandardMaterial({ color: 0x888888 })
   );
-  mesh_log_20.name = "Log";
-  if (endpoint_log_20) {
-    mesh_log_20.position.copy(endpoint_log_20.midpoint);
-    mesh_log_20.quaternion.copy(endpoint_log_20.quaternion);
+  mesh_log_21.name = "Log";
+  if (endpoint_log_21) {
+    mesh_log_21.position.copy(endpoint_log_21.midpoint);
+    mesh_log_21.quaternion.copy(endpoint_log_21.quaternion);
   }
-  mesh_log_20.castShadow = options.castShadow ?? true;
-  mesh_log_20.receiveShadow = options.receiveShadow ?? true;
-  mesh_log_20.userData.sculptComponent = {"id": "log", "name": "Log", "level": "macro", "role": "log", "importance": 0.8, "confidence": 0.75, "primitive": "cylinder", "topologyClass": "assembled-solid", "topologyRationale": "Log: a round length of trunk, a cylinder lying on the top.", "geometryDescriptor": {"topologyIntent": "low-poly stylized game prop, bevel-ready edges", "edgeTreatment": {"type": "chamfer", "bevelRadius": 0.01, "segments": 1}, "deformationStack": [], "uvStrategy": "generated procedural coordinates", "normalStrategy": "vertex normals from generated geometry"}, "parent": "root", "attachment": {"parentId": "root", "parentSocket": "root:top", "localStart": [0.2, 0.19, 0.12], "localEnd": [0.7, 0.19, 0.12], "baseRadius": 0.1, "endRadius": 0.1, "contactType": "rests-on", "embedDepth": 0.008, "gapTolerance": 0.004, "evidenceRefs": ["full-object"]}, "dimensions": {"width": 1.0, "height": 1.0, "depth": 1.0, "units": "object", "confidence": 0.75}, "transform": {"position": [0.2, 0.19, 0.12], "rotation": [-0.0, 0.0, -0.0]}, "actionProfile": {"animationRole": "feed", "pivot": {"mode": "joint", "localPosition": [0, 0, 0], "axis": [1, 0, 0], "confidence": 0.75}, "transformChannels": {"translate": false, "rotate": true, "scale": false, "bend": false, "twist": false, "detach": false, "visibility": true, "materialState": true}, "sockets": [], "collider": {"type": "capsule", "offset": [0, 0, 0], "scale": [1, 1, 1], "isTrigger": false, "notes": "Proxy sized to the part's own bounds."}, "constraints": [], "destruction": {"breakable": false, "fractureGroup": "log", "seamRefs": [], "detachableFragments": [], "breakImpulse": 0.0, "debrisMaterial": "bark"}}, "material": "bark", "materialLayers": ["bark"], "colorMaterialRecipe": {"dominantAlbedo": "rgba(155, 92, 44, 1.0)", "secondaryAlbedo": "rgba(125, 71, 34, 1.0)", "materialClass": "wood", "materialClassConfidence": 0.85, "colorGradient": {"type": "linear", "axis": "y", "stops": [{"position": 0.0, "color": "rgba(125, 71, 34, 1.0)"}, {"position": 1.0, "color": "rgba(155, 92, 44, 1.0)"}]}, "evidenceRefs": ["full-object"]}, "deformations": [], "joints": [], "seams": [], "localFeatures": [{"id": "log-streaks", "kind": "scratch", "description": "long grain streaks along the log", "effect": "material", "evidenceRefs": ["full-object"], "confidence": 0.75}], "surfaceDetail": {"macroRoughness": 0.9, "microRoughness": 0.18, "bumpAmplitude": 0.0225, "normalPattern": "mottled", "displacementPattern": "", "occlusionPattern": "cavity darkening at seams and contacts", "edgeWearPattern": "", "notes": ""}, "evidenceRefs": ["full-object"], "details": ["log-streaks"], "uvContract": {"status": "unwrapped", "strategy": "generated procedural coordinates", "materialId": "bark"}, "materialRegions": [{"regionId": "log-side", "materialId": "bark", "profileId": "wood.unfinished", "crop": {"path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/03-log-side.png", "bbox": {"x": 850, "y": 225, "width": 120, "height": 45}, "sourceWidth": 1408, "sourceHeight": 768, "loaderWarnings": [], "coverage": 0.005}}]};
-  node_log_20.add(mesh_log_20);
-  meshes["log"] = mesh_log_20;
+  mesh_log_21.castShadow = options.castShadow ?? true;
+  mesh_log_21.receiveShadow = options.receiveShadow ?? true;
+  mesh_log_21.userData.sculptComponent = {"id": "log", "name": "Log", "level": "macro", "role": "log", "importance": 0.8, "confidence": 0.75, "primitive": "cylinder", "topologyClass": "assembled-solid", "topologyRationale": "Log: a round length of trunk, a cylinder lying on the top.", "geometryDescriptor": {"topologyIntent": "low-poly stylized game prop, bevel-ready edges", "edgeTreatment": {"type": "chamfer", "bevelRadius": 0.01, "segments": 1}, "deformationStack": [], "uvStrategy": "generated procedural coordinates", "normalStrategy": "vertex normals from generated geometry"}, "parent": "root", "attachment": {"parentId": "root", "parentSocket": "root:top", "localStart": [0.2, 0.19, 0.12], "localEnd": [0.7, 0.19, 0.12], "baseRadius": 0.1, "endRadius": 0.1, "contactType": "rests-on", "embedDepth": 0.008, "gapTolerance": 0.004, "evidenceRefs": ["full-object"]}, "dimensions": {"width": 1.0, "height": 1.0, "depth": 1.0, "units": "object", "confidence": 0.75}, "transform": {"position": [0.2, 0.19, 0.12], "rotation": [-0.0, 0.0, -0.0]}, "actionProfile": {"animationRole": "feed", "pivot": {"mode": "joint", "localPosition": [0, 0, 0], "axis": [1, 0, 0], "confidence": 0.75}, "transformChannels": {"translate": false, "rotate": true, "scale": false, "bend": false, "twist": false, "detach": false, "visibility": true, "materialState": true}, "sockets": [], "collider": {"type": "capsule", "offset": [0, 0, 0], "scale": [1, 1, 1], "isTrigger": false, "notes": "Proxy sized to the part's own bounds."}, "constraints": [], "destruction": {"breakable": false, "fractureGroup": "log", "seamRefs": [], "detachableFragments": [], "breakImpulse": 0.0, "debrisMaterial": "bark"}}, "material": "bark", "materialLayers": ["bark"], "colorMaterialRecipe": {"dominantAlbedo": "rgba(155, 92, 44, 1.0)", "secondaryAlbedo": "rgba(125, 71, 34, 1.0)", "materialClass": "wood", "materialClassConfidence": 0.85, "colorGradient": {"type": "linear", "axis": "y", "stops": [{"position": 0.0, "color": "rgba(125, 71, 34, 1.0)"}, {"position": 1.0, "color": "rgba(155, 92, 44, 1.0)"}]}, "evidenceRefs": ["full-object"]}, "deformations": [], "joints": [], "seams": [], "localFeatures": [{"id": "log-streaks", "kind": "scratch", "description": "long grain streaks along the log", "effect": "material", "evidenceRefs": ["full-object"], "confidence": 0.75}], "surfaceDetail": {"macroRoughness": 0.9, "microRoughness": 0.18, "bumpAmplitude": 0.0225, "normalPattern": "mottled", "displacementPattern": "", "occlusionPattern": "cavity darkening at seams and contacts", "edgeWearPattern": "", "notes": ""}, "evidenceRefs": ["full-object"], "details": ["log-streaks"], "uvContract": {"status": "unwrapped", "strategy": "generated procedural coordinates", "materialId": "bark"}, "materialRegions": [{"regionId": "log-side", "materialId": "bark", "profileId": "wood.unfinished", "crop": {"path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/03-log-side.png", "bbox": {"x": 850, "y": 225, "width": 120, "height": 45}, "sourceWidth": 1408, "sourceHeight": 768, "loaderWarnings": [], "coverage": 0.005}}]};
+  node_log_21.add(mesh_log_21);
+  meshes["log"] = mesh_log_21;
   colliders["log"] = {"type": "capsule", "offset": [0, 0, 0], "scale": [1, 1, 1], "isTrigger": false, "notes": "Proxy sized to the part's own bounds."};
   destructionGroups["log"] ??= [];
-  destructionGroups["log"].push(node_log_20);
+  destructionGroups["log"].push(node_log_21);
 
   root.userData.sculptRuntime = { nodes, meshes, sockets, colliders, destructionGroups } satisfies ProceduralModelRuntime;
   root.userData.lookDevTargets = {"qualityPriority": "real-time-stylized", "materialPass": {"albedoPaletteRequired": true, "roughnessVariationRequired": true, "normalOrBumpRequired": true, "localOverridesRequired": true, "minimumTextureResolution": 1024, "preferredTextureResolution": 2048, "independentMapChannels": ["albedo", "roughness", "height", "normal", "ambient-occlusion"], "requiredSurfaceFrequencyBands": ["macro", "meso", "micro"], "geometryReliefRequiredWhenSilhouetteAffected": true, "referencePbrExtraction": {"requiredWhenSourceImagePresent": true, "targetThreshold": 0.7, "stopOnLowConfidence": true, "script": "forge/stage1_intake/extract_pbr_evidence.py", "acceptedLimitation": "single-image extraction is reference-derived inference, not exact photogrammetry"}, "mustAvoid": ["single flat albedo per material", "uniform roughness", "albedo texture reused as roughness/height/normal/AO", "single-frequency random noise", "plastic-looking smooth bark, stone, cloth, foliage, or aged material", "local color/detail described only in prose without material masks", "claiming exact PBR recovery when confidence is below the target threshold"]}, "lightingPass": {"requiredTerms": ["key light", "fill light", "rim or environment light", "exposure", "tone mapping", "background", "contact shadow"], "mustAvoid": ["ambient-only lighting", "flat value range", "missing contact shadow", "reference lighting copied without separating material readability"]}, "screenshotReview": ["Compare albedo palette and local color zones.", "Compare roughness/normal/bump response under light.", "Compare cavity dirt, edge wear, stains, moss, scratches, or other local masks.", "Compare key/fill/rim structure, exposure, tone mapping, background, and contact shadows.", "Capture a neutral-light render to verify material readability without reference lighting.", "Capture a grazing-light close-up to expose flat normals, uniform roughness, tiling, and plastic highlights.", "Capture a reference-matched render from the same camera framing as the source."], "note": "Stylized KayKit-like game prop seen at ~100 px: flat readable albedo with subtle procedural breakup; the 1024 px quality-first texture bar does not apply (textures are 256 px)."};

@@ -722,16 +722,25 @@
       "interaction-pass",
       "optimization-pass"
     ],
-    "currentPass": "blockout",
-    "completedPasses": [],
-    "lastCompletedPass": "",
-    "blockedReason": "blockout requires a browser screenshot and self-correction review before structural-pass unlocks",
+    "currentPass": "form-refinement",
+    "completedPasses": [
+      "blockout",
+      "structural-pass"
+    ],
+    "lastCompletedPass": "structural-pass",
+    "blockedReason": "",
     "nextRequiredEvidence": [
-      "blockout browser render screenshot from your agent's browser/screenshot tool",
-      "side-by-side reference/render comparison sheet",
-      "AI vision score >= 0.7 with layer scores and mismatch critique",
-      "critical semantic feature scores from the same image pair meeting their individual thresholds",
-      "reviewHistory entry for blockout with action=continue"
+      "Important visible forms are represented in component geometryDescriptor, deformations, localFeatures, or repetitionSystems.",
+      "Endpoint-based child parts are rooted at their attachment sockets and do not visibly float away from parents.",
+      "AI vision comparison score meets selfCorrectLoop.visualAcceptance.threshold.",
+      "attachment contracts for child appendages/connectors",
+      "no floating child roots/joints in the browser screenshot",
+      "browser render screenshot from your agent's browser/screenshot tool",
+      "side-by-side reference/render comparison sheet for AI vision review",
+      "banded interior difference vs the reference baseline (forge/stage4_review/interior_difference.py --from/--to per region)",
+      "AI vision score at or above the visual acceptance threshold",
+      "all critical semantic feature scores from the shared image pair at or above their thresholds",
+      "self-correction review appended with action=continue before the next pass"
     ]
   },
   "lookDevTargets": {
@@ -4393,8 +4402,8 @@
           0.0,
           0.061
         ],
-        "baseRadius": 0.065,
-        "endRadius": 0.065,
+        "baseRadius": 0.08,
+        "endRadius": 0.08,
         "contactType": "socket",
         "embedDepth": 0.02,
         "gapTolerance": 0.004,
@@ -7082,8 +7091,309 @@
       ]
     }
   ],
-  "visualEvidence": [],
-  "reviewHistory": [],
+  "visualEvidence": [
+    {
+      "timestamp": "2026-10-24T03:29:41.003275+00:00",
+      "passId": "blockout",
+      "estimatedFidelity": 0.56,
+      "aiVisionScore": 0.73,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.84,
+        "componentStructure": 0.72,
+        "formDetail": 0.45,
+        "materialSurface": 0.4,
+        "lightingCamera": 0.78
+      },
+      "featureReviews": [
+        {
+          "id": "overall-silhouette",
+          "score": 0.84,
+          "notes": "Long five-board top on six square legs, two stretchers per side, an X brace at each end, the toothed blade standing through the top and the log in front of the blade's right half all sit where the reference has them (Tier-1 IoU 0.898 at the fitted camera az 31 / el 6 / fov 24, with the reference's floor shadow reproduced by the contact-shadow decal). The blade's lower half shows between the front-left and front-middle legs as in the reference."
+        },
+        {
+          "id": "blade-read",
+          "score": 0.7,
+          "notes": "20 hooked teeth read at the rim; no arbor hub yet (meso, structural-pass), so the blade centre is empty compared with the reference's dark boss."
+        },
+        {
+          "id": "log-read",
+          "score": 0.65,
+          "notes": "Log lies on the top against the blade with the right length; no pale cut face yet (micro), its end reads as a dark octagon."
+        }
+      ],
+      "referenceScreenshot": "reference.png",
+      "renderScreenshot": "renders/blockout/fixed.png",
+      "comparisonImage": "renders/blockout/cmp.jpg",
+      "cameraView": "fixed: az 31, el 6, fov 24 (fitted)",
+      "notes": "",
+      "aiVisionNotes": "Viewed renders/blockout/cmp.jpg (reference left, render right) and renders/blockout/turntable.jpg. The camera fit and the contact-shadow settings are recorded in renders/camera-fit/."
+    },
+    {
+      "timestamp": "2026-10-24T03:31:01.770190+00:00",
+      "passId": "structural-pass",
+      "estimatedFidelity": 0.6,
+      "aiVisionScore": 0.75,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.84,
+        "componentStructure": 0.8,
+        "formDetail": 0.5,
+        "materialSurface": 0.4,
+        "lightingCamera": 0.78
+      },
+      "featureReviews": [
+        {
+          "id": "overall-silhouette",
+          "score": 0.84,
+          "notes": "Silhouette unchanged from the blockout (Tier-1 IoU 0.898): top, six legs, stretchers, end X braces, blade and log in place."
+        },
+        {
+          "id": "blade-read",
+          "score": 0.74,
+          "notes": "The iron arbor hub now sits at the blade centre just above the top line, as in the reference; it is a little small (reference boss is about a quarter of the blade diameter) and still faceted."
+        },
+        {
+          "id": "table-structure",
+          "score": 0.8,
+          "notes": "Stretchers sit on the outer leg faces front and back with the back pair visible through the gaps; X braces at both ends read in the side views."
+        }
+      ],
+      "referenceScreenshot": "reference.png",
+      "renderScreenshot": "renders/structural-pass/fixed.png",
+      "comparisonImage": "renders/structural-pass/cmp.jpg",
+      "cameraView": "fixed: az 31, el 6, fov 24 (fitted)",
+      "notes": "",
+      "aiVisionNotes": "Viewed renders/structural-pass/cmp.jpg and renders/structural-pass/turntable.jpg."
+    },
+    {
+      "timestamp": "2026-10-24T03:32:40.362631+00:00",
+      "passId": "structural-pass",
+      "estimatedFidelity": 0.62,
+      "aiVisionScore": 0.76,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.84,
+        "componentStructure": 0.82,
+        "formDetail": 0.52,
+        "materialSurface": 0.4,
+        "lightingCamera": 0.78
+      },
+      "featureReviews": [
+        {
+          "id": "overall-silhouette",
+          "score": 0.84,
+          "notes": "Silhouette holds (Tier-1 IoU 0.898): top, six legs, stretchers, end X braces, blade and log in place."
+        },
+        {
+          "id": "blade-read",
+          "score": 0.77,
+          "notes": "After the refine-spec the arbor hub is round (16-sided) and about a quarter of the blade diameter, sitting at the blade centre just above the top line like the reference's boss; it still reads flat black until the iron material lands."
+        },
+        {
+          "id": "table-structure",
+          "score": 0.8,
+          "notes": "Stretchers on the outer leg faces front and back, back pair visible through the gaps; X braces at both ends read in the side views."
+        },
+        {
+          "id": "log-read",
+          "score": 0.68,
+          "notes": "Log is now round (16 sides) and rests in front of the blade's right half; the pale cut face is still to come (micro)."
+        }
+      ],
+      "referenceScreenshot": "reference.png",
+      "renderScreenshot": "renders/structural-pass/fixed.png",
+      "comparisonImage": "renders/structural-pass/cmp.jpg",
+      "cameraView": "fixed: az 31, el 6, fov 24 (fitted)",
+      "notes": "",
+      "aiVisionNotes": "Viewed renders/structural-pass/cmp.jpg and renders/structural-pass/turntable.jpg after the hub refine (review-1.json holds the first verdict)."
+    }
+  ],
+  "reviewHistory": [
+    {
+      "timestamp": "2026-10-24T03:29:41.003275+00:00",
+      "passId": "blockout",
+      "estimatedFidelity": 0.56,
+      "aiVisionScore": 0.73,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.84,
+        "componentStructure": 0.72,
+        "formDetail": 0.45,
+        "materialSurface": 0.4,
+        "lightingCamera": 0.78
+      },
+      "featureReviews": [
+        {
+          "id": "overall-silhouette",
+          "score": 0.84,
+          "notes": "Long five-board top on six square legs, two stretchers per side, an X brace at each end, the toothed blade standing through the top and the log in front of the blade's right half all sit where the reference has them (Tier-1 IoU 0.898 at the fitted camera az 31 / el 6 / fov 24, with the reference's floor shadow reproduced by the contact-shadow decal). The blade's lower half shows between the front-left and front-middle legs as in the reference."
+        },
+        {
+          "id": "blade-read",
+          "score": 0.7,
+          "notes": "20 hooked teeth read at the rim; no arbor hub yet (meso, structural-pass), so the blade centre is empty compared with the reference's dark boss."
+        },
+        {
+          "id": "log-read",
+          "score": 0.65,
+          "notes": "Log lies on the top against the blade with the right length; no pale cut face yet (micro), its end reads as a dark octagon."
+        }
+      ],
+      "action": "continue",
+      "summary": "Blockout matches the reference's macro silhouette at the fitted camera (az 31, el 6, fov 24): Tier-1 IoU 0.898, aspect delta 0.011, scale delta 0.0003; turntable complete with the bench's real openings allowed, no degenerate view, no self-intersection.",
+      "matched": [
+        "long thick top on six square legs",
+        "front and back stretchers, X braces at both ends",
+        "large toothed blade through the top, lower half visible under it",
+        "log on the top in front of the blade's right half"
+      ],
+      "mismatches": [
+        "no arbor hub or nut yet (meso)",
+        "top reads as one slab: board seams and the blade slot are meso/micro",
+        "log end has no pale cut face yet (micro)",
+        "wood albedo too orange-red and streaky",
+        "blade too bright and bluish",
+        "log too red (material-pass)"
+      ],
+      "specFixes": [
+        "structural-pass: hub and nut at the blade centre, board seams and slot in the top"
+      ],
+      "codeFixes": [
+        "none for blockout"
+      ],
+      "evidence": [],
+      "mapStrippedRender": "renders/blockout/fixed-clay.png",
+      "visualEvidence": {
+        "referenceScreenshot": "reference.png",
+        "renderScreenshot": "renders/blockout/fixed.png",
+        "comparisonImage": "renders/blockout/cmp.jpg",
+        "cameraView": "fixed: az 31, el 6, fov 24 (fitted)",
+        "notes": "",
+        "aiVisionNotes": "Viewed renders/blockout/cmp.jpg (reference left, render right) and renders/blockout/turntable.jpg. The camera fit and the contact-shadow settings are recorded in renders/camera-fit/."
+      }
+    },
+    {
+      "timestamp": "2026-10-24T03:31:01.770190+00:00",
+      "passId": "structural-pass",
+      "estimatedFidelity": 0.6,
+      "aiVisionScore": 0.75,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.84,
+        "componentStructure": 0.8,
+        "formDetail": 0.5,
+        "materialSurface": 0.4,
+        "lightingCamera": 0.78
+      },
+      "featureReviews": [
+        {
+          "id": "overall-silhouette",
+          "score": 0.84,
+          "notes": "Silhouette unchanged from the blockout (Tier-1 IoU 0.898): top, six legs, stretchers, end X braces, blade and log in place."
+        },
+        {
+          "id": "blade-read",
+          "score": 0.74,
+          "notes": "The iron arbor hub now sits at the blade centre just above the top line, as in the reference; it is a little small (reference boss is about a quarter of the blade diameter) and still faceted."
+        },
+        {
+          "id": "table-structure",
+          "score": 0.8,
+          "notes": "Stretchers sit on the outer leg faces front and back with the back pair visible through the gaps; X braces at both ends read in the side views."
+        }
+      ],
+      "action": "refine-spec",
+      "summary": "Structural pass adds the arbor hub; frame members and hierarchy are complete (Tier-1 IoU 0.898, aspect 0.011, scale 0.0003; turntable, self-intersection and attachment pass), but the critical blade read is held back by an undersized, faceted hub: refine the spec and rebuild this pass.",
+      "matched": [
+        "arbor hub at the blade centre",
+        "stretchers and end braces as separate members",
+        "log in front of the blade's right half"
+      ],
+      "mismatches": [
+        "hub a little small and faceted",
+        "no nut, slot or pale log end yet (micro)",
+        "materials still blockout-grade (material-pass)"
+      ],
+      "specFixes": [
+        "structural-pass: hub radius 0.065 -> 0.08 (about a quarter of the blade diameter, as in the reference) with 24 radial segments"
+      ],
+      "codeFixes": [
+        "none"
+      ],
+      "evidence": [],
+      "visualEvidence": {
+        "referenceScreenshot": "reference.png",
+        "renderScreenshot": "renders/structural-pass/fixed.png",
+        "comparisonImage": "renders/structural-pass/cmp.jpg",
+        "cameraView": "fixed: az 31, el 6, fov 24 (fitted)",
+        "notes": "",
+        "aiVisionNotes": "Viewed renders/structural-pass/cmp.jpg and renders/structural-pass/turntable.jpg."
+      }
+    },
+    {
+      "timestamp": "2026-10-24T03:32:40.362631+00:00",
+      "passId": "structural-pass",
+      "estimatedFidelity": 0.62,
+      "aiVisionScore": 0.76,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.84,
+        "componentStructure": 0.82,
+        "formDetail": 0.52,
+        "materialSurface": 0.4,
+        "lightingCamera": 0.78
+      },
+      "featureReviews": [
+        {
+          "id": "overall-silhouette",
+          "score": 0.84,
+          "notes": "Silhouette holds (Tier-1 IoU 0.898): top, six legs, stretchers, end X braces, blade and log in place."
+        },
+        {
+          "id": "blade-read",
+          "score": 0.77,
+          "notes": "After the refine-spec the arbor hub is round (16-sided) and about a quarter of the blade diameter, sitting at the blade centre just above the top line like the reference's boss; it still reads flat black until the iron material lands."
+        },
+        {
+          "id": "table-structure",
+          "score": 0.8,
+          "notes": "Stretchers on the outer leg faces front and back, back pair visible through the gaps; X braces at both ends read in the side views."
+        },
+        {
+          "id": "log-read",
+          "score": 0.68,
+          "notes": "Log is now round (16 sides) and rests in front of the blade's right half; the pale cut face is still to come (micro)."
+        }
+      ],
+      "action": "continue",
+      "summary": "Structural pass after one refine-spec: the hub is round and correctly sized, the frame members and hierarchy are complete. Tier-1 IoU 0.898, aspect 0.011, scale 0.0003; turntable, self-intersection and attachment pass; 4.3k triangles at the standard tessellation tier.",
+      "matched": [
+        "round arbor hub at the blade centre, about a quarter of the blade diameter",
+        "stretchers and end braces as separate members",
+        "round log in front of the blade's right half"
+      ],
+      "mismatches": [
+        "no nut, slot or pale log end yet (micro, form-refinement)",
+        "materials still blockout-grade (material-pass)"
+      ],
+      "specFixes": [
+        "form-refinement: arbor nut, blade slot and the log's pale cut face"
+      ],
+      "codeFixes": [
+        "none"
+      ],
+      "evidence": [],
+      "visualEvidence": {
+        "referenceScreenshot": "reference.png",
+        "renderScreenshot": "renders/structural-pass/fixed.png",
+        "comparisonImage": "renders/structural-pass/cmp.jpg",
+        "cameraView": "fixed: az 31, el 6, fov 24 (fitted)",
+        "notes": "",
+        "aiVisionNotes": "Viewed renders/structural-pass/cmp.jpg and renders/structural-pass/turntable.jpg after the hub refine (review-1.json holds the first verdict)."
+      }
+    }
+  ],
   "lodPlan": [
     {
       "tier": "near",
@@ -7098,7 +7408,7 @@
   ],
   "performanceBudget": {
     "qualityPriority": "real-time game prop",
-    "targetTriangles": 6000,
+    "targetTriangles": 8000,
     "maxDrawCalls": 8,
     "textureSize": 256,
     "fpsTarget": 60,
@@ -7543,6 +7853,246 @@
       "renderHash": "91b2bb17f76deab4",
       "passId": "blockout",
       "mapStrippedRender": "renders/blockout/fixed-clay.png"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "silhouetteIoU": 0.8982,
+        "aspectRatioDelta": 0.0112,
+        "scaleDelta": 0.0003,
+        "bilateralSymmetryError": 0.146,
+        "colorDelta": {
+          "checked": 25,
+          "maxDeltaE": 31.43,
+          "perComponent": [
+            {
+              "componentId": null,
+              "deltaE": 3.58
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.58
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.58
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.58
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.58
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.58
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.58
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.58
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.58
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.58
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.58
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.58
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.58
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.58
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.58
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.58
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.58
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.58
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.58
+            },
+            {
+              "componentId": null,
+              "deltaE": 5.31
+            },
+            {
+              "componentId": null,
+              "deltaE": 30.12
+            },
+            {
+              "componentId": null,
+              "deltaE": 30.12
+            },
+            {
+              "componentId": null,
+              "deltaE": 23.26
+            },
+            {
+              "componentId": null,
+              "deltaE": 4.15
+            },
+            {
+              "componentId": null,
+              "deltaE": 31.43
+            }
+          ],
+          "gated": false
+        }
+      },
+      "failures": [],
+      "maskWarnings": [],
+      "renderHash": "448be8e5bab0171d",
+      "passId": "structural-pass"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "silhouetteIoU": 0.8984,
+        "aspectRatioDelta": 0.0112,
+        "scaleDelta": 0.0003,
+        "bilateralSymmetryError": 0.1461,
+        "colorDelta": {
+          "checked": 25,
+          "maxDeltaE": 30.41,
+          "perComponent": [
+            {
+              "componentId": null,
+              "deltaE": 4.84
+            },
+            {
+              "componentId": null,
+              "deltaE": 4.84
+            },
+            {
+              "componentId": null,
+              "deltaE": 4.84
+            },
+            {
+              "componentId": null,
+              "deltaE": 4.84
+            },
+            {
+              "componentId": null,
+              "deltaE": 4.84
+            },
+            {
+              "componentId": null,
+              "deltaE": 4.84
+            },
+            {
+              "componentId": null,
+              "deltaE": 4.84
+            },
+            {
+              "componentId": null,
+              "deltaE": 4.84
+            },
+            {
+              "componentId": null,
+              "deltaE": 4.84
+            },
+            {
+              "componentId": null,
+              "deltaE": 4.84
+            },
+            {
+              "componentId": null,
+              "deltaE": 4.84
+            },
+            {
+              "componentId": null,
+              "deltaE": 4.84
+            },
+            {
+              "componentId": null,
+              "deltaE": 4.84
+            },
+            {
+              "componentId": null,
+              "deltaE": 4.84
+            },
+            {
+              "componentId": null,
+              "deltaE": 4.84
+            },
+            {
+              "componentId": null,
+              "deltaE": 4.84
+            },
+            {
+              "componentId": null,
+              "deltaE": 4.84
+            },
+            {
+              "componentId": null,
+              "deltaE": 4.84
+            },
+            {
+              "componentId": null,
+              "deltaE": 4.84
+            },
+            {
+              "componentId": null,
+              "deltaE": 4.03
+            },
+            {
+              "componentId": null,
+              "deltaE": 7.98
+            },
+            {
+              "componentId": null,
+              "deltaE": 7.98
+            },
+            {
+              "componentId": null,
+              "deltaE": 20.89
+            },
+            {
+              "componentId": null,
+              "deltaE": 4.68
+            },
+            {
+              "componentId": null,
+              "deltaE": 30.41
+            }
+          ],
+          "gated": false
+        }
+      },
+      "failures": [],
+      "maskWarnings": [],
+      "renderHash": "32a033aa5992ef5f",
+      "passId": "structural-pass"
     }
   ]
 }

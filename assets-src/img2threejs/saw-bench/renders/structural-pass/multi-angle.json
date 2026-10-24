@@ -1,0 +1,26 @@
+{
+  "referenceAreaFraction": 0.3722756125710227,
+  "angles": [
+    {
+      "path": "renders/structural-pass/right.png",
+      "areaFraction": 0.24640401204427084,
+      "ratio": 0.6618859890997074,
+      "degenerate": false
+    },
+    {
+      "path": "renders/structural-pass/rear.png",
+      "areaFraction": 0.1710781521267361,
+      "ratio": 0.45954703007599734,
+      "degenerate": false
+    },
+    {
+      "path": "renders/structural-pass/top.png",
+      "areaFraction": 0.1978674994574653,
+      "ratio": 0.5315080891035164,
+      "degenerate": false
+    }
+  ],
+  "degenerate": false,
+  "collapseRatio": 0.15,
+  "note": "deterministic; zero token; a flat-plane-faking-a-volume collapses in silhouette area when orbited"
+}

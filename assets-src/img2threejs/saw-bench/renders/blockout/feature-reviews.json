@@ -1,0 +1,17 @@
+[
+  {
+    "id": "overall-silhouette",
+    "score": 0.84,
+    "notes": "Long five-board top on six square legs, two stretchers per side, an X brace at each end, the toothed blade standing through the top and the log in front of the blade's right half all sit where the reference has them (Tier-1 IoU 0.898 at the fitted camera az 31 / el 6 / fov 24, with the reference's floor shadow reproduced by the contact-shadow decal). The blade's lower half shows between the front-left and front-middle legs as in the reference."
+  },
+  {
+    "id": "blade-read",
+    "score": 0.7,
+    "notes": "20 hooked teeth read at the rim; no arbor hub yet (meso, structural-pass), so the blade centre is empty compared with the reference's dark boss."
+  },
+  {
+    "id": "log-read",
+    "score": 0.65,
+    "notes": "Log lies on the top against the blade with the right length; no pale cut face yet (micro), its end reads as a dark octagon."
+  }
+]

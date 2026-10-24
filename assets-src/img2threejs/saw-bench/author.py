@@ -165,7 +165,7 @@ def build_components() -> SpecBuilder:
                     "extruded from its measured toothed outline, so it is a flat part by design, not a curved form.",
           features=[feature("saw-teeth", "ridge", "20 hooked triangular teeth around the rim")])
     b.rod("hub", "Arbor hub", parent="saw-blade", start=(BLADE_C[0], BLADE_C[1], -0.05), end=(BLADE_C[0], BLADE_C[1], 0.05),
-          radius=0.065, level="meso", role="hub", material="iron", contact="socket", embed=0.02, socket="saw-blade:centre",
+          radius=0.08, level="meso", role="hub", material="iron", contact="socket", embed=0.02, socket="saw-blade:centre",
           importance=0.6, rationale="Arbor hub: a short round iron boss through the blade centre, a cylinder.")
     b.rod("arbor-nut", "Arbor nut", parent="saw-blade", start=(BLADE_C[0], BLADE_C[1], 0.05), end=(BLADE_C[0], BLADE_C[1], 0.072),
           radius=0.03, level="micro", role="cap", material="iron", contact="threaded", embed=0.004, socket="hub:end",
@@ -328,7 +328,9 @@ class Config:
          "passIds": ["material-pass", "surface-pass", "lighting-pass"], "minimumScore": 0.72, "mustPass": True,
          "componentRefs": ["root", "saw-blade", "log-end"], "evidenceRefs": ["full-object"]},
     ]
-    PERFORMANCE = {"qualityPriority": "real-time game prop", "targetTriangles": 6000, "maxDrawCalls": 8,
+    # 8000 selects the skill's "standard" tessellation tier (16-sided attachment cylinders): the bench
+    # is ~1k triangles of boxes, so the few round parts (log, hub, nut) can afford to read round
+    PERFORMANCE = {"qualityPriority": "real-time game prop", "targetTriangles": 8000, "maxDrawCalls": 8,
                    "textureSize": 256, "fpsTarget": 60,
                    "optimizationPolicy": "Boxes and one extruded blade; the game builds the prop once, merges static "
                                          "parts per material and keeps the blade (spin) and the log (feed) live."}

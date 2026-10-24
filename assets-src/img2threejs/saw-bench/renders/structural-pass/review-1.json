@@ -1,0 +1,49 @@
+{
+  "pass": "structural-pass",
+  "fidelity": 0.6,
+  "aiVisionScore": 0.75,
+  "action": "refine-spec",
+  "layerScores": {
+    "silhouetteProportion": 0.84,
+    "componentStructure": 0.8,
+    "formDetail": 0.5,
+    "materialSurface": 0.4,
+    "lightingCamera": 0.78
+  },
+  "featureReviews": [
+    {
+      "id": "overall-silhouette",
+      "score": 0.84,
+      "notes": "Silhouette unchanged from the blockout (Tier-1 IoU 0.898): top, six legs, stretchers, end X braces, blade and log in place."
+    },
+    {
+      "id": "blade-read",
+      "score": 0.74,
+      "notes": "The iron arbor hub now sits at the blade centre just above the top line, as in the reference; it is a little small (reference boss is about a quarter of the blade diameter) and still faceted."
+    },
+    {
+      "id": "table-structure",
+      "score": 0.8,
+      "notes": "Stretchers sit on the outer leg faces front and back with the back pair visible through the gaps; X braces at both ends read in the side views."
+    }
+  ],
+  "summary": "Structural pass adds the arbor hub; frame members and hierarchy are complete (Tier-1 IoU 0.898, aspect 0.011, scale 0.0003; turntable, self-intersection and attachment pass), but the critical blade read is held back by an undersized, faceted hub: refine the spec and rebuild this pass.",
+  "matched": [
+    "arbor hub at the blade centre",
+    "stretchers and end braces as separate members",
+    "log in front of the blade's right half"
+  ],
+  "mismatches": [
+    "hub a little small and faceted",
+    "no nut, slot or pale log end yet (micro)",
+    "materials still blockout-grade (material-pass)"
+  ],
+  "specFixes": [
+    "structural-pass: hub radius 0.065 -> 0.08 (about a quarter of the blade diameter, as in the reference) with 24 radial segments"
+  ],
+  "codeFixes": [
+    "none"
+  ],
+  "notes": "Viewed renders/structural-pass/cmp.jpg and renders/structural-pass/turntable.jpg.",
+  "cameraView": "fixed: az 31, el 6, fov 24 (fitted)"
+}
