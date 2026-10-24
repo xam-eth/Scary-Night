@@ -1,0 +1,20 @@
+{
+  "pass": "surface-pass",
+  "fidelity": 0.73,
+  "aiVisionScore": 0.79,
+  "action": "continue",
+  "layerScores": {"silhouetteProportion": 0.85, "componentStructure": 0.83, "formDetail": 0.7, "materialSurface": 0.72, "lightingCamera": 0.76},
+  "featureReviews": [
+    {"id": "reference-material-system", "score": 0.77, "notes": "Surface detail holds under all three lights (renders/surface-pass/lighting-checks.jpg): long grain on the boards, legs and log breaks the grazing highlight instead of a plastic sheen, the blade's lower roughness gives a soft brushed sheen and its streaks are calmer, the cut face keeps its rings. The reference paints the grain bolder and the blade's rim brighter; ours stays subtler, which suits the prop's ~100 px in-game size."},
+    {"id": "blade-read", "score": 0.76, "notes": "Brushed sheen visible in the grazing close-up; the bright rim of the reference is not modelled (no bevel on the extruded disc)."},
+    {"id": "table-structure", "score": 0.83, "notes": "Plank seams, chamfers and grain read; under-top members fall into shadow."},
+    {"id": "log-read", "score": 0.8, "notes": "Log streaks run along its length; pale ringed cut face toward the viewer."}
+  ],
+  "summary": "Surface pass: calmer brushing and a lower-roughness sheen on the blade, grain on boards, legs and log, rings on the cut face; materials stay distinct under the gate, reference-matched and grazing lights. Tier-1 IoU 0.887, aspect 0.012, scale 0.012, colour max dE 16.2; orbit gates pass.",
+  "matched": ["grain along boards, legs and log", "brushed blade sheen", "ringed pale cut face", "materials distinct under three lights"],
+  "mismatches": ["blade rim highlight not modelled", "grain painted subtler than the reference's"],
+  "specFixes": ["lighting-pass: confirm the gate light / contact shadow choice and the in-game read"],
+  "codeFixes": ["none"],
+  "notes": "Viewed renders/surface-pass/cmp.jpg, turntable.jpg and lighting-checks.jpg (fixed under the gate light, reference-matched light, grazing key, and a grazing close-up of the blade).",
+  "cameraView": "fixed: az 31, el 6, fov 24 (fitted), studio light, exposure 1.45"
+}

@@ -348,7 +348,7 @@
     "definitionOfDone": [
       "From the reference camera the render reads as the same saw bench: long low thick-board table on six legs with stretchers and end cross braces, a big toothed steel blade through the top, a log against the blade.",
       "From the orbits the blade stays a thin round disc with teeth, the legs and braces stay separate parts.",
-      "Materials read as warm orange-brown wood, light steel and a pale cut face at ~100 px in game.",
+      "Materials read as muted warm-brown wood, a mid steel-grey blade, a dark iron hub and a pale cut face at ~100 px in game.",
       "Hierarchy exposes the blade's spin pivot and the log's feed pivot."
     ],
     "minimumSpecDepth": {
@@ -722,20 +722,24 @@
       "interaction-pass",
       "optimization-pass"
     ],
-    "currentPass": "surface-pass",
+    "currentPass": "lighting-pass",
     "completedPasses": [
       "blockout",
       "structural-pass",
       "form-refinement",
-      "material-pass"
+      "material-pass",
+      "surface-pass"
     ],
-    "lastCompletedPass": "material-pass",
+    "lastCompletedPass": "surface-pass",
     "blockedReason": "",
     "nextRequiredEvidence": [
-      "Every required material feature group has local overrides or surfaceDetail tied to evidenceRefs.",
-      "A grazing-angle close-up proves that normal/height detail breaks highlights naturally and does not read as smooth plastic.",
+      "lightingFromPhoto identifies key light direction/color/intensity, fill light, rim or environment light, and ambient color.",
+      "Exposure, tone mapping, background color/gradient, shadow softness, and contact shadow behavior are specified.",
+      "Lighting does not hide geometry/material gaps and screenshots can be compared fairly to the reference.",
+      "Neutral, grazing, and reference-matched lighting checks distinguish material errors from lighting errors.",
       "AI vision comparison score meets selfCorrectLoop.visualAcceptance.threshold.",
-      "component surfaceDetail for tactile normal/bump/displacement and locality",
+      "lightingFromPhoto with key/fill/rim or environment light",
+      "exposure, tone mapping, background, shadow softness, and contact shadow behavior",
       "browser render screenshot from your agent's browser/screenshot tool",
       "side-by-side reference/render comparison sheet for AI vision review",
       "banded interior difference vs the reference baseline (forge/stage4_review/interior_difference.py --from/--to per region)",
@@ -863,8 +867,8 @@
   "silhouette": {
     "boundingShape": "long low table with a big disc standing up through its middle and a log on its right half",
     "aspectRatios": [
-      "top length : height : width = 2.0 : 0.55 : 0.62",
-      "blade diameter 0.76"
+      "top length : height : width = 2.0 : 0.57 : 0.62",
+      "blade diameter 0.74"
     ],
     "symmetry": "near bilateral about the long axis; blade and log break the end-to-end symmetry",
     "dominantCurves": [
@@ -7915,6 +7919,48 @@
       "cameraView": "fixed: az 31, el 6, fov 24 (fitted), studio light, exposure 1.45",
       "notes": "",
       "aiVisionNotes": "Viewed renders/material-pass/cmp.jpg and turntable.jpg (review-1.json holds the refine verdict, cmp-loop1.jpg its sheet)."
+    },
+    {
+      "timestamp": "2026-10-24T04:14:16.117200+00:00",
+      "passId": "surface-pass",
+      "estimatedFidelity": 0.73,
+      "aiVisionScore": 0.79,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.85,
+        "componentStructure": 0.83,
+        "formDetail": 0.7,
+        "materialSurface": 0.72,
+        "lightingCamera": 0.76
+      },
+      "featureReviews": [
+        {
+          "id": "reference-material-system",
+          "score": 0.77,
+          "notes": "Surface detail holds under all three lights (renders/surface-pass/lighting-checks.jpg): long grain on the boards, legs and log breaks the grazing highlight instead of a plastic sheen, the blade's lower roughness gives a soft brushed sheen and its streaks are calmer, the cut face keeps its rings. The reference paints the grain bolder and the blade's rim brighter; ours stays subtler, which suits the prop's ~100 px in-game size."
+        },
+        {
+          "id": "blade-read",
+          "score": 0.76,
+          "notes": "Brushed sheen visible in the grazing close-up; the bright rim of the reference is not modelled (no bevel on the extruded disc)."
+        },
+        {
+          "id": "table-structure",
+          "score": 0.83,
+          "notes": "Plank seams, chamfers and grain read; under-top members fall into shadow."
+        },
+        {
+          "id": "log-read",
+          "score": 0.8,
+          "notes": "Log streaks run along its length; pale ringed cut face toward the viewer."
+        }
+      ],
+      "referenceScreenshot": "reference.png",
+      "renderScreenshot": "renders/surface-pass/fixed.png",
+      "comparisonImage": "renders/surface-pass/cmp.jpg",
+      "cameraView": "fixed: az 31, el 6, fov 24 (fitted), studio light, exposure 1.45",
+      "notes": "",
+      "aiVisionNotes": "Viewed renders/surface-pass/cmp.jpg, turntable.jpg and lighting-checks.jpg (fixed under the gate light, reference-matched light, grazing key, and a grazing close-up of the blade)."
     }
   ],
   "reviewHistory": [
@@ -8417,6 +8463,69 @@
         "notes": "",
         "aiVisionNotes": "Viewed renders/material-pass/cmp.jpg and turntable.jpg (review-1.json holds the refine verdict, cmp-loop1.jpg its sheet)."
       }
+    },
+    {
+      "timestamp": "2026-10-24T04:14:16.117200+00:00",
+      "passId": "surface-pass",
+      "estimatedFidelity": 0.73,
+      "aiVisionScore": 0.79,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.85,
+        "componentStructure": 0.83,
+        "formDetail": 0.7,
+        "materialSurface": 0.72,
+        "lightingCamera": 0.76
+      },
+      "featureReviews": [
+        {
+          "id": "reference-material-system",
+          "score": 0.77,
+          "notes": "Surface detail holds under all three lights (renders/surface-pass/lighting-checks.jpg): long grain on the boards, legs and log breaks the grazing highlight instead of a plastic sheen, the blade's lower roughness gives a soft brushed sheen and its streaks are calmer, the cut face keeps its rings. The reference paints the grain bolder and the blade's rim brighter; ours stays subtler, which suits the prop's ~100 px in-game size."
+        },
+        {
+          "id": "blade-read",
+          "score": 0.76,
+          "notes": "Brushed sheen visible in the grazing close-up; the bright rim of the reference is not modelled (no bevel on the extruded disc)."
+        },
+        {
+          "id": "table-structure",
+          "score": 0.83,
+          "notes": "Plank seams, chamfers and grain read; under-top members fall into shadow."
+        },
+        {
+          "id": "log-read",
+          "score": 0.8,
+          "notes": "Log streaks run along its length; pale ringed cut face toward the viewer."
+        }
+      ],
+      "action": "continue",
+      "summary": "Surface pass: calmer brushing and a lower-roughness sheen on the blade, grain on boards, legs and log, rings on the cut face; materials stay distinct under the gate, reference-matched and grazing lights. Tier-1 IoU 0.887, aspect 0.012, scale 0.012, colour max dE 16.2; orbit gates pass.",
+      "matched": [
+        "grain along boards, legs and log",
+        "brushed blade sheen",
+        "ringed pale cut face",
+        "materials distinct under three lights"
+      ],
+      "mismatches": [
+        "blade rim highlight not modelled",
+        "grain painted subtler than the reference's"
+      ],
+      "specFixes": [
+        "lighting-pass: confirm the gate light / contact shadow choice and the in-game read"
+      ],
+      "codeFixes": [
+        "none"
+      ],
+      "evidence": [],
+      "visualEvidence": {
+        "referenceScreenshot": "reference.png",
+        "renderScreenshot": "renders/surface-pass/fixed.png",
+        "comparisonImage": "renders/surface-pass/cmp.jpg",
+        "cameraView": "fixed: az 31, el 6, fov 24 (fitted), studio light, exposure 1.45",
+        "notes": "",
+        "aiVisionNotes": "Viewed renders/surface-pass/cmp.jpg, turntable.jpg and lighting-checks.jpg (fixed under the gate light, reference-matched light, grazing key, and a grazing close-up of the blade)."
+      }
     }
   ],
   "lodPlan": [
@@ -8442,37 +8551,41 @@
   "lightingFromPhoto": [
     {
       "role": "key light",
-      "direction": "upper left, slightly in front",
+      "direction": "high, slightly in front and to the camera's right",
       "color": "#fff4e6",
-      "softness": "soft studio"
+      "softness": "soft studio",
+      "notes": "harness light mode 'studio' for the fixed (gate) view"
     },
     {
       "role": "fill light",
-      "direction": "right",
+      "direction": "front right, from the camera side",
       "color": "#dfe6ff",
-      "intensity": "low"
+      "intensity": "medium",
+      "notes": "lights the log's cut face as in the reference"
     },
     {
       "role": "environment light",
       "type": "hemisphere",
       "sky": "#f2f4ff",
       "ground": "#4a4036",
-      "notes": "soft studio ambience; the game renderer has no environment map, so neither do the review renders"
+      "intensity": "low",
+      "notes": "low ambience so the space under the top falls into the reference's deep occlusion; no environment map (the game has none)"
     },
     {
       "role": "shadow",
-      "softness": "soft PCF, contact shadow faint (kept off the plate in gate renders so the silhouette mask measures the object, not its shadow)"
+      "softness": "soft PCF self-shadowing; contact shadow on the floor",
+      "notes": "the reference's floor shadow is part of its foreground mask, so gate renders carry a matching contact shadow: an ambient-occlusion decal (opacity 0.36, falloff 1.2, blur 0.04) offset 15% of the footprint toward the back, no light involved (render-options.json)"
     },
     {
       "role": "background",
-      "color": "#c9c9c9",
-      "notes": "flat light grey, faint contact shadow"
+      "color": "#cbcbcb",
+      "notes": "flat light grey studio floor with the contact shadow"
     },
     {
       "role": "exposure and tone mapping",
-      "exposure": 1.0,
+      "exposure": 1.45,
       "toneMapping": "ACES Filmic, sRGB output",
-      "notes": "review renders and the game both use ACES-style tone mapping at exposure ~1"
+      "notes": "the concept is lit brighter than the game's default; the game keeps its own lights and exposure"
     }
   ],
   "proceduralStrategy": [
@@ -9845,6 +9958,126 @@
       "maskWarnings": [],
       "renderHash": "baec38f26623e3b5",
       "passId": "surface-pass"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "silhouetteIoU": 0.8872,
+        "aspectRatioDelta": 0.0115,
+        "scaleDelta": 0.0115,
+        "bilateralSymmetryError": 0.1606,
+        "colorDelta": {
+          "checked": 25,
+          "maxDeltaE": 16.16,
+          "perComponent": [
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.93
+            },
+            {
+              "componentId": null,
+              "deltaE": 16.16
+            },
+            {
+              "componentId": null,
+              "deltaE": 16.16
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.19
+            },
+            {
+              "componentId": null,
+              "deltaE": 8.8
+            },
+            {
+              "componentId": null,
+              "deltaE": 15.57
+            }
+          ],
+          "gated": true
+        }
+      },
+      "failures": [],
+      "maskWarnings": [],
+      "renderHash": "baec38f26623e3b5",
+      "passId": "lighting-pass"
     }
   ]
 }

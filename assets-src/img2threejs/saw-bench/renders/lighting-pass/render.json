@@ -1,0 +1,172 @@
+{
+  "asset": "assets-src/img2threejs/saw-bench",
+  "pass": "lighting-pass",
+  "factory": "assets-src/img2threejs/saw-bench/src/createSawBenchModel.ts",
+  "exportName": "createSawBenchModel",
+  "bundle": "tools/.cache/img2threejs/saw-bench-lighting-pass.js",
+  "reference": {
+    "width": 1408,
+    "height": 768,
+    "bg": "#cbcbcc",
+    "bbox": {
+      "x0": 0.11160714285714286,
+      "y0": 0.125,
+      "x1": 0.8883928571428571,
+      "y1": 0.9330357142857143,
+      "source": "tier1-gate-mask"
+    },
+    "bboxEstimate": {
+      "x0": 0.10795454545454546,
+      "y0": 0.125,
+      "x1": 0.8842329545454546,
+      "y1": 0.9296875
+    }
+  },
+  "stats": {
+    "meshes": 25,
+    "instanced": 0,
+    "drawCalls": 25,
+    "triangles": 4152,
+    "materials": 7,
+    "bbox": {
+      "min": [
+        -1,
+        -0.005,
+        -0.3375
+      ],
+      "max": [
+        1,
+        0.9474,
+        0.3787
+      ],
+      "size": [
+        2,
+        0.9524,
+        0.7162
+      ]
+    }
+  },
+  "framing": {
+    "fixed": {
+      "azimuthDeg": 31,
+      "elevationDeg": 6,
+      "fov": 24,
+      "distance": 3.3766,
+      "bboxNdc": {
+        "cx": 0,
+        "cy": -0.058,
+        "w": 1.5488,
+        "h": 1.6161
+      }
+    },
+    "fixed-clay": {
+      "azimuthDeg": 31,
+      "elevationDeg": 6,
+      "fov": 24,
+      "distance": 3.3766,
+      "bboxNdc": {
+        "cx": 0,
+        "cy": -0.058,
+        "w": 1.5488,
+        "h": 1.6161
+      }
+    },
+    "front": {
+      "azimuthDeg": 0,
+      "elevationDeg": 18,
+      "fov": 24,
+      "distance": 6.4137,
+      "bboxNdc": {
+        "cx": 0,
+        "cy": 0,
+        "w": 1.5385,
+        "h": 0.7472
+      }
+    },
+    "right": {
+      "azimuthDeg": 90,
+      "elevationDeg": 18,
+      "fov": 24,
+      "distance": 4.1863,
+      "bboxNdc": {
+        "cx": 0,
+        "cy": 0,
+        "w": 0.9603,
+        "h": 1.5385
+      }
+    },
+    "rear": {
+      "azimuthDeg": 180,
+      "elevationDeg": 18,
+      "fov": 24,
+      "distance": 6.4529,
+      "bboxNdc": {
+        "cx": 0,
+        "cy": 0,
+        "w": 1.5385,
+        "h": 0.7472
+      }
+    },
+    "left": {
+      "azimuthDeg": 270,
+      "elevationDeg": 18,
+      "fov": 24,
+      "distance": 4.1832,
+      "bboxNdc": {
+        "cx": 0,
+        "cy": 0,
+        "w": 0.9372,
+        "h": 1.5385
+      }
+    },
+    "top": {
+      "azimuthDeg": 31,
+      "elevationDeg": 62,
+      "fov": 24,
+      "distance": 6.2769,
+      "bboxNdc": {
+        "cx": 0,
+        "cy": 0,
+        "w": 1.5385,
+        "h": 1.1562
+      }
+    },
+    "fixed-reference": {
+      "azimuthDeg": 31,
+      "elevationDeg": 6,
+      "fov": 24,
+      "distance": 3.3766,
+      "bboxNdc": {
+        "cx": 0,
+        "cy": -0.058,
+        "w": 1.5488,
+        "h": 1.6161
+      }
+    },
+    "fixed-grazing": {
+      "azimuthDeg": 31,
+      "elevationDeg": 6,
+      "fov": 24,
+      "distance": 3.3766,
+      "bboxNdc": {
+        "cx": 0,
+        "cy": -0.058,
+        "w": 1.5488,
+        "h": 1.6161
+      }
+    },
+    "closeup-grazing": {
+      "azimuthDeg": 39,
+      "elevationDeg": 10,
+      "fov": 24,
+      "distance": 1.9993,
+      "bboxNdc": {
+        "cx": 0.3805,
+        "cy": -0.8581,
+        "w": 4.7305,
+        "h": 3.4554
+      }
+    }
+  },
+  "errors": []
+}

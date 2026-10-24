@@ -1,0 +1,98 @@
+{
+  "angles": [
+    {
+      "azimuth": 0.0,
+      "path": "renders/lighting-pass/front.png",
+      "isReference": true,
+      "segmented": true,
+      "holed": true,
+      "interiorHolePixelCount": 13582,
+      "interiorHoleFraction": 0.14019839590408456,
+      "largestHolePixelCount": 6795,
+      "largestHoleBBox": {
+        "x": 176,
+        "y": 428,
+        "width": 189,
+        "height": 37
+      },
+      "areaFraction": 0.16424730088975695,
+      "ratio": 1.0,
+      "degenerate": false
+    },
+    {
+      "azimuth": 90.0,
+      "path": "renders/lighting-pass/right.png",
+      "isReference": false,
+      "segmented": true,
+      "holed": true,
+      "interiorHolePixelCount": 3025,
+      "interiorHoleFraction": 0.020568157093124456,
+      "largestHolePixelCount": 1387,
+      "largestHoleBBox": {
+        "x": 425,
+        "y": 512,
+        "width": 48,
+        "height": 57
+      },
+      "areaFraction": 0.24934895833333334,
+      "ratio": 1.518131238580881,
+      "degenerate": false
+    },
+    {
+      "azimuth": 180.0,
+      "path": "renders/lighting-pass/rear.png",
+      "isReference": false,
+      "segmented": true,
+      "holed": true,
+      "interiorHolePixelCount": 13580,
+      "interiorHoleFraction": 0.13481049099608872,
+      "largestHolePixelCount": 6793,
+      "largestHoleBBox": {
+        "x": 403,
+        "y": 428,
+        "width": 189,
+        "height": 37
+      },
+      "areaFraction": 0.17078653971354166,
+      "ratio": 1.039813371594909,
+      "degenerate": false
+    },
+    {
+      "azimuth": 270.0,
+      "path": "renders/lighting-pass/left.png",
+      "isReference": false,
+      "segmented": true,
+      "holed": true,
+      "interiorHolePixelCount": 2998,
+      "interiorHoleFraction": 0.02022041466013786,
+      "largestHolePixelCount": 1394,
+      "largestHoleBBox": {
+        "x": 299,
+        "y": 511,
+        "width": 48,
+        "height": 59
+      },
+      "areaFraction": 0.251373291015625,
+      "ratio": 1.5304561454215138,
+      "degenerate": false
+    }
+  ],
+  "referenceAzimuth": 0.0,
+  "requiredAzimuths": [
+    0.0,
+    90.0,
+    180.0,
+    270.0
+  ],
+  "azimuthTolerance": 5.0,
+  "missingAzimuths": [],
+  "covered": true,
+  "collapseRatio": 0.15,
+  "degenerate": false,
+  "allowHoles": true,
+  "holed": true,
+  "unsegmentedAzimuths": [],
+  "segmentationReliable": true,
+  "passed": true,
+  "note": "deterministic; zero token; mandatory azimuth coverage catches off-axis-only defects, interior-hole flood fill catches silhouette-enclosed background that an area-only check misses"
+}

@@ -1,0 +1,22 @@
+[
+  {
+    "id": "reference-material-system",
+    "score": 0.77,
+    "notes": "Surface detail holds under all three lights (renders/surface-pass/lighting-checks.jpg): long grain on the boards, legs and log breaks the grazing highlight instead of a plastic sheen, the blade's lower roughness gives a soft brushed sheen and its streaks are calmer, the cut face keeps its rings. The reference paints the grain bolder and the blade's rim brighter; ours stays subtler, which suits the prop's ~100 px in-game size."
+  },
+  {
+    "id": "blade-read",
+    "score": 0.76,
+    "notes": "Brushed sheen visible in the grazing close-up; the bright rim of the reference is not modelled (no bevel on the extruded disc)."
+  },
+  {
+    "id": "table-structure",
+    "score": 0.83,
+    "notes": "Plank seams, chamfers and grain read; under-top members fall into shadow."
+  },
+  {
+    "id": "log-read",
+    "score": 0.8,
+    "notes": "Log streaks run along its length; pale ringed cut face toward the viewer."
+  }
+]

@@ -81,7 +81,7 @@ def spec(here: Path, cfg: Any) -> None:
     s["performanceBudget"] = cfg.PERFORMANCE
     s["lodPlan"] = [{"tier": "near", "distance": 0, "strategy": "full component tree (the game camera never gets closer)"},
                     {"tier": "far", "distance": 30, "strategy": "static parts merged per material at load; animated pivots kept"}]
-    s["lightingFromPhoto"] = LIGHTING
+    s["lightingFromPhoto"] = getattr(cfg, "LIGHTING", LIGHTING)
     look = s.get("lookDevTargets", {})
     look["qualityPriority"] = "real-time-stylized"
     look["note"] = ("Stylized KayKit-like game prop seen at ~100 px: flat readable albedo with subtle procedural "

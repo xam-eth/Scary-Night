@@ -281,7 +281,7 @@
     "definitionOfDone": [
       "From the reference camera the render reads as the same saw bench: long low thick-board table on six legs with stretchers and end cross braces, a big toothed steel blade through the top, a log against the blade.",
       "From the orbits the blade stays a thin round disc with teeth, the legs and braces stay separate parts.",
-      "Materials read as warm orange-brown wood, light steel and a pale cut face at ~100 px in game.",
+      "Materials read as muted warm-brown wood, a mid steel-grey blade, a dark iron hub and a pale cut face at ~100 px in game.",
       "Hierarchy exposes the blade's spin pivot and the log's feed pivot."
     ],
     "minimumSpecDepth": {

@@ -275,6 +275,24 @@ class Config:
     MATERIALS = MATERIALS
     FLAT_SHADED = FLAT_SHADED
     METAL_OVERRIDES = METAL_OVERRIDES
+    # the reference's lighting as the gate view reproduces it (render-options.json): a product-style
+    # studio light, the floor's contact shadow thrown slightly behind the bench
+    LIGHTING = [
+        {"role": "key light", "direction": "high, slightly in front and to the camera's right", "color": "#fff4e6",
+         "softness": "soft studio", "notes": "harness light mode 'studio' for the fixed (gate) view"},
+        {"role": "fill light", "direction": "front right, from the camera side", "color": "#dfe6ff", "intensity": "medium",
+         "notes": "lights the log's cut face as in the reference"},
+        {"role": "environment light", "type": "hemisphere", "sky": "#f2f4ff", "ground": "#4a4036", "intensity": "low",
+         "notes": "low ambience so the space under the top falls into the reference's deep occlusion; no environment map "
+                  "(the game has none)"},
+        {"role": "shadow", "softness": "soft PCF self-shadowing; contact shadow on the floor",
+         "notes": "the reference's floor shadow is part of its foreground mask, so gate renders carry a matching contact "
+                  "shadow: an ambient-occlusion decal (opacity 0.36, falloff 1.2, blur 0.04) offset 15% of the footprint "
+                  "toward the back, no light involved (render-options.json)"},
+        {"role": "background", "color": "#cbcbcb", "notes": "flat light grey studio floor with the contact shadow"},
+        {"role": "exposure and tone mapping", "exposure": 1.45, "toneMapping": "ACES Filmic, sRGB output",
+         "notes": "the concept is lit brighter than the game's default; the game keeps its own lights and exposure"},
+    ]
     ROUGHNESS_OVERRIDES = ROUGHNESS_OVERRIDES
     build_components = staticmethod(build_components)
     detail_inventory = staticmethod(detail_inventory)
@@ -310,7 +328,7 @@ class Config:
         "From the reference camera the render reads as the same saw bench: long low thick-board table on six legs with "
         "stretchers and end cross braces, a big toothed steel blade through the top, a log against the blade.",
         "From the orbits the blade stays a thin round disc with teeth, the legs and braces stay separate parts.",
-        "Materials read as warm orange-brown wood, light steel and a pale cut face at ~100 px in game.",
+        "Materials read as muted warm-brown wood, a mid steel-grey blade, a dark iron hub and a pale cut face at ~100 px in game.",
         "Hierarchy exposes the blade's spin pivot and the log's feed pivot.",
     ]
     MIN_SPEC_DEPTH = {"macroComponents": 8, "mesoComponents": 6, "microFeatureGroups": 3, "materialLayers": 4,
@@ -344,7 +362,7 @@ class Config:
                         "right": "+X, the log's side of the blade", "scaleReference": "table top length = 2.0 object units"}
     SILHOUETTE = {
         "boundingShape": "long low table with a big disc standing up through its middle and a log on its right half",
-        "aspectRatios": ["top length : height : width = 2.0 : 0.55 : 0.62", "blade diameter 0.76"],
+        "aspectRatios": ["top length : height : width = 2.0 : 0.57 : 0.62", "blade diameter 0.74"],
         "symmetry": "near bilateral about the long axis; blade and log break the end-to-end symmetry",
         "dominantCurves": ["blade rim with teeth", "log cylinder"],
         "negativeSpaces": ["under the top between the legs (the blade's lower part shows there)", "X braces at the ends"],
