@@ -1,0 +1,20 @@
+{
+  "pass": "optimization-pass",
+  "fidelity": 0.76,
+  "aiVisionScore": 0.8,
+  "action": "continue",
+  "layerScores": {"silhouetteProportion": 0.84, "componentStructure": 0.86, "formDetail": 0.74, "materialSurface": 0.73, "lightingCamera": 0.8},
+  "featureReviews": [
+    {"id": "reference-material-system", "score": 0.77, "notes": "One bench wood for every member (all prisms with grain along v), steel, iron, bark and end grain; colour clusters line up with the reference's (gate max dE 17.9)."},
+    {"id": "blade-read", "score": 0.77, "notes": "Unchanged: toothed blade, hub, nut, slot; spin pivot proven by the pose render."},
+    {"id": "table-structure", "score": 0.84, "notes": "Legs, stretchers and braces are now chamfered prisms: their softened edges read closer to the reference's timbers than the old sharp boxes."},
+    {"id": "log-read", "score": 0.8, "notes": "Unchanged: log on the top turned toward the viewer, pale ringed cut face."}
+  ],
+  "summary": "Optimization pass: frame members rebuilt as chamfered extruded prisms (28 triangles each instead of 192-triangle subdivided boxes) and one bench wood material: 4152 -> 1856 triangles, 25 meshes, 6 materials. The game build merges static parts per material and keeps the blade and the log live. Tier-1 IoU 0.874, aspect 0.035, scale 0.023, colour max dE 17.9; orbit, self-intersection and attachment gates pass.",
+  "matched": ["silhouette and materials kept", "chamfered frame members", "triangles more than halved"],
+  "mismatches": ["blade rim highlight not modelled", "grain subtler than the reference's painted grain"],
+  "specFixes": [],
+  "codeFixes": [],
+  "notes": "Viewed renders/optimization-pass/cmp.jpg and turntable.jpg; posed renders (blade +0.55 rad, log +0.1) re-captured in this pass.",
+  "cameraView": "fixed: az 31, el 6, fov 24 (fitted), studio light, exposure 1.45"
+}

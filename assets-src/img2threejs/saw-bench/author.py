@@ -106,6 +106,8 @@ LOG_YAW = math.radians(22.0)
 LOG_A = (0.37, 0.1)                       # (x, z) of the end near the blade
 LOG_LEN = 0.47
 LOG_B = (LOG_A[0] + LOG_LEN * math.cos(LOG_YAW), LOG_A[1] + LOG_LEN * math.sin(LOG_YAW))
+# the log's axis in the root's frame (the root board is turned +90 deg about Y: world x -> local z, world z -> local -x)
+LOG_AXIS_ROOT = (round(-math.sin(LOG_YAW), 4), 0, round(math.cos(LOG_YAW), 4))
 
 
 BOARD_CHAMFER = 0.014
@@ -209,6 +211,10 @@ def build_components() -> SpecBuilder:
           channels={"translate": False, "rotate": True, "scale": False, "bend": False, "twist": False, "detach": False,
                     "visibility": True, "materialState": True},
           pivot_world=(BLADE_C[0], BLADE_C[1], BLADE_C[2] - 0.011),
+          sockets=[{"id": "arbor-axis", "localPosition": [0, 0, 0.011], "axis": [0, 0, 1],
+                    "use": "spin the blade (hub and nut ride on it) about this axis: slow by day, fast at night in the game"},
+                   {"id": "sawdust-fx", "localPosition": [0.36, 0.0, 0.011],
+                    "use": "where the blade's rim leaves the top on the log side: the game spawns sawdust here"}],
           rationale="Saw blade: a genuinely flat rigid steel plate (2.2 cm thick) whose rim is 20 hooked teeth; "
                     "extruded from its measured toothed outline, so it is a flat part by design, not a curved form.",
           features=[feature("saw-teeth", "ridge", "20 hooked triangular teeth around the rim")])
@@ -226,7 +232,10 @@ def build_components() -> SpecBuilder:
     # the log being cut, lying along X on the +X side of the blade
     b.rod("log", "Log", parent="root", start=(LOG_A[0], LOG_Y, LOG_A[1]), end=(LOG_B[0], LOG_Y, LOG_B[1]), radius=LOG_R,
           level="macro", role="log", material="bark", contact="rests-on", embed=0.008, socket="root:top",
-          importance=0.8, anim="feed", pivot_axis=(round(math.cos(LOG_YAW), 4), 0, round(math.sin(LOG_YAW), 4)),
+          importance=0.8, anim="feed", pivot_axis=LOG_AXIS_ROOT,
+          sockets=[{"id": "feed-axis", "localPosition": [0, 0, 0], "axis": list(LOG_AXIS_ROOT),
+                    "use": "translate the log pivot along this axis (the root frame: the log's own 22 deg direction) to "
+                           "feed it toward the blade (negative) or reload it (positive)"}],
           rationale="Log: a round length of trunk, a cylinder lying on the top.",
           features=[feature("log-streaks", "scratch", "long grain streaks along the log", effect="material")])
     b.rod("log-end", "Log cut face", parent="log", start=(LOG_B[0], LOG_Y, LOG_B[1]),
@@ -403,8 +412,10 @@ class Config:
                                          "parts per material and keeps the blade (spin) and the log (feed) live."}
     ANIMATION_ANCHORS = [
         "root (middle top board) carries whole-prop placement",
-        "saw-blade pivot (animationRole spin): rotate about local Z at the blade centre; the hub and nut ride on it",
-        "log pivot (animationRole feed): translate along -X into the blade, then reset",
+        "saw-blade pivot (animationRole spin, socket arbor-axis): rotate about local Z at the blade centre; the hub and "
+        "nut ride on it; socket sawdust-fx marks where the rim leaves the top on the log side",
+        "log pivot (animationRole feed, socket feed-axis): translate along the log's own axis (root frame "
+        "[-0.3746, 0, 0.9272]) toward the blade, then reset",
     ]
     ASSUMPTIONS = [
         "Single view: the hidden back legs, stretchers and brace mirror the visible ones (inferred).",

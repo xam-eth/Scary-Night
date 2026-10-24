@@ -1,0 +1,42 @@
+{
+  "sculptRuntimeExposed": true,
+  "pivotNodes": 25,
+  "componentCount": 25,
+  "everyComponentHasPivot": true,
+  "namedParts": 25,
+  "unnamedMeshes": 0,
+  "animatedPivots": {
+    "root": "root",
+    "saw-blade": "spin",
+    "log": "feed"
+  },
+  "pivotAxes (node-local)": {
+    "root": [
+      0,
+      1,
+      0
+    ],
+    "saw-blade": [
+      0,
+      0,
+      1
+    ],
+    "log": [
+      -0.3746,
+      0,
+      0.9272
+    ]
+  },
+  "sockets": {
+    "saw-blade": [
+      "arbor-axis",
+      "sawdust-fx"
+    ],
+    "log": [
+      "feed-axis"
+    ]
+  },
+  "collidersOnEveryComponent": true,
+  "destructionMetadataOnEveryComponent": true,
+  "poseCheck": "renders/interaction-pass/pose-check.jpg and renders/optimization-pass/posed-fixed.png: saw-blade +0.55 rad about its local Z (the arbor) turns blade, hub and nut; log +0.1 along its feed axis slides the log with its cut face; nothing else moves"
+}

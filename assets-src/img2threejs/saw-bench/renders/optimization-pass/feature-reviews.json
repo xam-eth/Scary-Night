@@ -1,0 +1,22 @@
+[
+  {
+    "id": "reference-material-system",
+    "score": 0.77,
+    "notes": "One bench wood for every member (all prisms with grain along v), steel, iron, bark and end grain; colour clusters line up with the reference's (gate max dE 17.9)."
+  },
+  {
+    "id": "blade-read",
+    "score": 0.77,
+    "notes": "Unchanged: toothed blade, hub, nut, slot; spin pivot proven by the pose render."
+  },
+  {
+    "id": "table-structure",
+    "score": 0.84,
+    "notes": "Legs, stretchers and braces are now chamfered prisms: their softened edges read closer to the reference's timbers than the old sharp boxes."
+  },
+  {
+    "id": "log-read",
+    "score": 0.8,
+    "notes": "Unchanged: log on the top turned toward the viewer, pale ringed cut face."
+  }
+]

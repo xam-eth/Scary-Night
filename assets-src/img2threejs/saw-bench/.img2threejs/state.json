@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "status": "active",
+  "status": "complete",
   "profile": "generic",
-  "currentStep": "ai-review-recorded",
-  "currentPass": "optimization-pass",
+  "currentStep": "complete",
+  "currentPass": "complete",
   "checklist": [
     {
       "id": "image-analysis",
@@ -120,69 +120,48 @@
     {
       "id": "build-current-pass",
       "scope": "pass",
-      "status": "done",
-      "evidence": [
-        "src/createSawBenchModel.ts"
-      ],
+      "status": "pending",
+      "evidence": [],
       "reason": "",
       "command": "python3 forge/stage3_build/generate_threejs_factory.py {spec} --out src/createObjectModel.ts --pass-id {pass_id}"
     },
     {
       "id": "render-capture",
       "scope": "pass",
-      "status": "done",
-      "evidence": [
-        "renders/optimization-pass/fixed.png",
-        "renders/optimization-pass/front.png",
-        "renders/optimization-pass/right.png",
-        "renders/optimization-pass/rear.png",
-        "renders/optimization-pass/left.png"
-      ],
+      "status": "pending",
+      "evidence": [],
       "reason": "",
       "command": "Render {pass_id} and capture the fixed review view plus meaningful orbit views"
     },
     {
       "id": "review-contract-read",
       "scope": "pass",
-      "status": "done",
-      "evidence": [
-        "/home/user/Scary-Night/.agents/skills/img2threejs/grimoire/review/gates_reference.md",
-        "/home/user/Scary-Night/.agents/skills/img2threejs/grimoire/review/self_correction.md"
-      ],
+      "status": "pending",
+      "evidence": [],
       "reason": "",
       "command": "Read grimoire/review/gates_reference.md and grimoire/review/self_correction.md completely"
     },
     {
       "id": "tier1-diagnostics",
       "scope": "pass",
-      "status": "done",
-      "evidence": [
-        "renders/optimization-pass/tier1.json",
-        "renders/optimization-pass/fixed.png"
-      ],
+      "status": "pending",
+      "evidence": [],
       "reason": "",
       "command": "python3 forge/stage4_review/diagnose_render.py --reference {reference} --render <shot> --spec {spec} --pass-id {pass_id} --in-place"
     },
     {
       "id": "multi-angle-review",
       "scope": "pass",
-      "status": "done",
-      "evidence": [
-        "renders/optimization-pass/multi-angle.json",
-        "renders/optimization-pass/turntable.json",
-        "renders/optimization-pass/self-intersection.json",
-        "renders/optimization-pass/attachment.json"
-      ],
+      "status": "pending",
+      "evidence": [],
       "reason": "",
       "command": "python3 forge/stage4_review/diagnose_render_multi_angle.py --reference <fixed-shot> --orbit <orbit-shot> --orbit <orbit-shot>"
     },
     {
       "id": "pass-gate-check",
       "scope": "pass",
-      "status": "done",
-      "evidence": [
-        "renders/optimization-pass/pass-check.txt"
-      ],
+      "status": "pending",
+      "evidence": [],
       "reason": "",
       "command": "python3 forge/stage3_build/orchestrate_passes.py check {spec} --pass-id {pass_id}"
     },
@@ -205,32 +184,40 @@
     {
       "id": "part-coverage",
       "scope": "final",
-      "status": "pending",
-      "evidence": [],
+      "status": "done",
+      "evidence": [
+        "analysis/part-coverage.json",
+        "parts.json"
+      ],
       "reason": "",
       "command": "python3 forge/stage4_review/check_part_coverage.py --spec {spec} --manifest parts.json"
     },
     {
       "id": "action-ready",
       "scope": "final",
-      "status": "pending",
-      "evidence": [],
+      "status": "done",
+      "evidence": [
+        "analysis/action-ready.json",
+        "renders/interaction-pass/pose-check.jpg"
+      ],
       "reason": "",
       "command": "Verify explodable/clickable hierarchy, pivots, sockets, and root.userData.sculptRuntime"
     },
     {
       "id": "emission-target",
       "scope": "final",
-      "status": "pending",
+      "status": "skipped",
       "evidence": [],
-      "reason": "",
+      "reason": "No --target selected: the deliverable is the procedural factory itself (tools/img2threejs-build.mjs bundles it into src/game/props/ for the game); no GLB/other export is shipped.",
       "command": "python3 forge/stage3_build/emit_target.py --spec {spec} --workspace . [--target <kind> [--plugin <id>]]"
     },
     {
       "id": "plugin-gates",
       "scope": "final",
-      "status": "pending",
-      "evidence": [],
+      "status": "done",
+      "evidence": [
+        "analysis/plugin-gates.txt"
+      ],
       "reason": "",
       "command": "python3 forge/stage3_build/run_gates.py --workspace ."
     }
@@ -1309,9 +1296,105 @@
           "command": "python3 forge/stage3_build/orchestrate_passes.py sync {spec} --in-place"
         }
       ]
+    },
+    {
+      "passId": "optimization-pass",
+      "checklist": [
+        {
+          "id": "build-current-pass",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "src/createSawBenchModel.ts"
+          ],
+          "reason": "",
+          "command": "python3 forge/stage3_build/generate_threejs_factory.py {spec} --out src/createObjectModel.ts --pass-id {pass_id}"
+        },
+        {
+          "id": "render-capture",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "renders/optimization-pass/fixed.png",
+            "renders/optimization-pass/front.png",
+            "renders/optimization-pass/right.png",
+            "renders/optimization-pass/rear.png",
+            "renders/optimization-pass/left.png"
+          ],
+          "reason": "",
+          "command": "Render {pass_id} and capture the fixed review view plus meaningful orbit views"
+        },
+        {
+          "id": "review-contract-read",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "/home/user/Scary-Night/.agents/skills/img2threejs/grimoire/review/gates_reference.md",
+            "/home/user/Scary-Night/.agents/skills/img2threejs/grimoire/review/self_correction.md"
+          ],
+          "reason": "",
+          "command": "Read grimoire/review/gates_reference.md and grimoire/review/self_correction.md completely"
+        },
+        {
+          "id": "tier1-diagnostics",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "renders/optimization-pass/tier1.json",
+            "renders/optimization-pass/fixed.png"
+          ],
+          "reason": "",
+          "command": "python3 forge/stage4_review/diagnose_render.py --reference {reference} --render <shot> --spec {spec} --pass-id {pass_id} --in-place"
+        },
+        {
+          "id": "multi-angle-review",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "renders/optimization-pass/multi-angle.json",
+            "renders/optimization-pass/turntable.json",
+            "renders/optimization-pass/self-intersection.json",
+            "renders/optimization-pass/attachment.json"
+          ],
+          "reason": "",
+          "command": "python3 forge/stage4_review/diagnose_render_multi_angle.py --reference <fixed-shot> --orbit <orbit-shot> --orbit <orbit-shot>"
+        },
+        {
+          "id": "pass-gate-check",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "renders/optimization-pass/pass-check.txt"
+          ],
+          "reason": "",
+          "command": "python3 forge/stage3_build/orchestrate_passes.py check {spec} --pass-id {pass_id}"
+        },
+        {
+          "id": "ai-review-recorded",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "renders/optimization-pass/cmp.jpg",
+            "object-sculpt-spec.json#reviewHistory",
+            "renders/optimization-pass/review.json"
+          ],
+          "reason": "",
+          "command": "Create the comparison sheet, inspect it with agent vision, and append exactly one review action"
+        },
+        {
+          "id": "pipeline-sync",
+          "scope": "pass",
+          "status": "done",
+          "evidence": [
+            "object-sculpt-spec.json#sculptPipeline"
+          ],
+          "reason": "",
+          "command": "python3 forge/stage3_build/orchestrate_passes.py sync {spec} --in-place"
+        }
+      ]
     }
   ],
-  "reviewCursor": 11,
+  "reviewCursor": 12,
   "iterationAction": "new-pass",
   "stopReason": ""
 }

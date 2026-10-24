@@ -722,7 +722,7 @@
       "interaction-pass",
       "optimization-pass"
     ],
-    "currentPass": "optimization-pass",
+    "currentPass": "complete",
     "completedPasses": [
       "blockout",
       "structural-pass",
@@ -730,14 +730,12 @@
       "material-pass",
       "surface-pass",
       "lighting-pass",
-      "interaction-pass"
+      "interaction-pass",
+      "optimization-pass"
     ],
-    "lastCompletedPass": "interaction-pass",
-    "blockedReason": "",
-    "nextRequiredEvidence": [
-      "Triangle count, draw calls, instancing, LOD strategy, and FPS target are documented or verified.",
-      "Repeated detail is instanced or simplified where possible without breaking silhouette/material believability."
-    ]
+    "lastCompletedPass": "optimization-pass",
+    "blockedReason": "all build passes completed",
+    "nextRequiredEvidence": []
   },
   "lookDevTargets": {
     "qualityPriority": "real-time-stylized",
@@ -4886,7 +4884,31 @@
           "visibility": true,
           "materialState": true
         },
-        "sockets": [],
+        "sockets": [
+          {
+            "id": "arbor-axis",
+            "localPosition": [
+              0,
+              0,
+              0.011
+            ],
+            "axis": [
+              0,
+              0,
+              1
+            ],
+            "use": "spin the blade (hub and nut ride on it) about this axis: slow by day, fast at night in the game"
+          },
+          {
+            "id": "sawdust-fx",
+            "localPosition": [
+              0.36,
+              0.0,
+              0.011
+            ],
+            "use": "where the blade's rim leaves the top on the log side: the game spawns sawdust here"
+          }
+        ],
         "collider": {
           "type": "box",
           "offset": [
@@ -5587,9 +5609,9 @@
             0
           ],
           "axis": [
-            0.9272,
+            -0.3746,
             0,
-            0.3746
+            0.9272
           ],
           "confidence": 0.75
         },
@@ -5603,7 +5625,22 @@
           "visibility": true,
           "materialState": true
         },
-        "sockets": [],
+        "sockets": [
+          {
+            "id": "feed-axis",
+            "localPosition": [
+              0,
+              0,
+              0
+            ],
+            "axis": [
+              -0.3746,
+              0,
+              0.9272
+            ],
+            "use": "translate the log pivot along this axis (the root frame: the log's own 22 deg direction) to feed it toward the blade (negative) or reload it (positive)"
+          }
+        ],
         "collider": {
           "type": "capsule",
           "offset": [
@@ -8172,6 +8209,48 @@
       "cameraView": "fixed: az 31, el 6, fov 24 (fitted), studio light, exposure 1.45",
       "notes": "",
       "aiVisionNotes": "Viewed renders/interaction-pass/cmp.jpg, turntable.jpg and pose-check.jpg (rest vs posed, fixed and front views)."
+    },
+    {
+      "timestamp": "2026-10-24T04:22:31.845227+00:00",
+      "passId": "optimization-pass",
+      "estimatedFidelity": 0.76,
+      "aiVisionScore": 0.8,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.84,
+        "componentStructure": 0.86,
+        "formDetail": 0.74,
+        "materialSurface": 0.73,
+        "lightingCamera": 0.8
+      },
+      "featureReviews": [
+        {
+          "id": "reference-material-system",
+          "score": 0.77,
+          "notes": "One bench wood for every member (all prisms with grain along v), steel, iron, bark and end grain; colour clusters line up with the reference's (gate max dE 17.9)."
+        },
+        {
+          "id": "blade-read",
+          "score": 0.77,
+          "notes": "Unchanged: toothed blade, hub, nut, slot; spin pivot proven by the pose render."
+        },
+        {
+          "id": "table-structure",
+          "score": 0.84,
+          "notes": "Legs, stretchers and braces are now chamfered prisms: their softened edges read closer to the reference's timbers than the old sharp boxes."
+        },
+        {
+          "id": "log-read",
+          "score": 0.8,
+          "notes": "Unchanged: log on the top turned toward the viewer, pale ringed cut face."
+        }
+      ],
+      "referenceScreenshot": "reference.png",
+      "renderScreenshot": "renders/optimization-pass/fixed.png",
+      "comparisonImage": "renders/optimization-pass/cmp.jpg",
+      "cameraView": "fixed: az 31, el 6, fov 24 (fitted), studio light, exposure 1.45",
+      "notes": "",
+      "aiVisionNotes": "Viewed renders/optimization-pass/cmp.jpg and turntable.jpg; posed renders (blade +0.55 rad, log +0.1) re-captured in this pass."
     }
   ],
   "reviewHistory": [
@@ -8856,6 +8935,68 @@
         "notes": "",
         "aiVisionNotes": "Viewed renders/interaction-pass/cmp.jpg, turntable.jpg and pose-check.jpg (rest vs posed, fixed and front views)."
       }
+    },
+    {
+      "timestamp": "2026-10-24T04:22:31.845227+00:00",
+      "passId": "optimization-pass",
+      "estimatedFidelity": 0.76,
+      "aiVisionScore": 0.8,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.84,
+        "componentStructure": 0.86,
+        "formDetail": 0.74,
+        "materialSurface": 0.73,
+        "lightingCamera": 0.8
+      },
+      "featureReviews": [
+        {
+          "id": "reference-material-system",
+          "score": 0.77,
+          "notes": "One bench wood for every member (all prisms with grain along v), steel, iron, bark and end grain; colour clusters line up with the reference's (gate max dE 17.9)."
+        },
+        {
+          "id": "blade-read",
+          "score": 0.77,
+          "notes": "Unchanged: toothed blade, hub, nut, slot; spin pivot proven by the pose render."
+        },
+        {
+          "id": "table-structure",
+          "score": 0.84,
+          "notes": "Legs, stretchers and braces are now chamfered prisms: their softened edges read closer to the reference's timbers than the old sharp boxes."
+        },
+        {
+          "id": "log-read",
+          "score": 0.8,
+          "notes": "Unchanged: log on the top turned toward the viewer, pale ringed cut face."
+        }
+      ],
+      "action": "continue",
+      "summary": "Optimization pass: frame members rebuilt as chamfered extruded prisms (28 triangles each instead of 192-triangle subdivided boxes) and one bench wood material: 4152 -> 1856 triangles, 25 meshes, 6 materials. The game build merges static parts per material and keeps the blade and the log live. Tier-1 IoU 0.874, aspect 0.035, scale 0.023, colour max dE 17.9; orbit, self-intersection and attachment gates pass.",
+      "matched": [
+        "silhouette and materials kept",
+        "chamfered frame members",
+        "triangles more than halved"
+      ],
+      "mismatches": [
+        "blade rim highlight not modelled",
+        "grain subtler than the reference's painted grain"
+      ],
+      "specFixes": [
+        "none"
+      ],
+      "codeFixes": [
+        "none"
+      ],
+      "evidence": [],
+      "visualEvidence": {
+        "referenceScreenshot": "reference.png",
+        "renderScreenshot": "renders/optimization-pass/fixed.png",
+        "comparisonImage": "renders/optimization-pass/cmp.jpg",
+        "cameraView": "fixed: az 31, el 6, fov 24 (fitted), studio light, exposure 1.45",
+        "notes": "",
+        "aiVisionNotes": "Viewed renders/optimization-pass/cmp.jpg and turntable.jpg; posed renders (blade +0.55 rad, log +0.1) re-captured in this pass."
+      }
     }
   ],
   "lodPlan": [
@@ -8928,8 +9069,8 @@
   ],
   "animationAnchors": [
     "root (middle top board) carries whole-prop placement",
-    "saw-blade pivot (animationRole spin): rotate about local Z at the blade centre; the hub and nut ride on it",
-    "log pivot (animationRole feed): translate along -X into the blade, then reset"
+    "saw-blade pivot (animationRole spin, socket arbor-axis): rotate about local Z at the blade centre; the hub and nut ride on it; socket sawdust-fx marks where the rim leaves the top on the log side",
+    "log pivot (animationRole feed, socket feed-axis): translate along the log's own axis (root frame [-0.3746, 0, 0.9272]) toward the blade, then reset"
   ],
   "destructionAnchors": [
     "actionProfile.destruction.fractureGroup marks detachable or breakable component sets",
