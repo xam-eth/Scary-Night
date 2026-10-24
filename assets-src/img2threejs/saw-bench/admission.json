@@ -1,0 +1,14 @@
+{
+  "admitted": true,
+  "reasons": [],
+  "provenance": {
+    "viewpoint": "reference",
+    "sourcePath": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/reference.png",
+    "width": 1408,
+    "height": 768,
+    "foregroundCoverage": 0.3824,
+    "largestComponentFraction": 0.9997,
+    "pHash": 12391934378615316512,
+    "duplicateOfHash": null
+  }
+}

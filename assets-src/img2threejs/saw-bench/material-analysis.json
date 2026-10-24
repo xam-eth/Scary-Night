@@ -1,0 +1,2236 @@
+{
+  "schemaVersion": 1,
+  "kind": "img2threejs.material-analysis",
+  "referenceId": "saw-bench-reference",
+  "manifest": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-regions.json",
+  "registry": "/home/user/Scary-Night/.agents/skills/img2threejs/docs/materials/material-reference.json",
+  "targetThreshold": 0.7,
+  "notObservedMaterials": [],
+  "unresolvedNotObservedMaterials": [],
+  "regions": [
+    {
+      "componentId": "top-board-5",
+      "regionId": "bench-wood",
+      "materialSpecId": "wood",
+      "hypothesis": {
+        "componentId": "top-board-5",
+        "regionId": "bench-wood",
+        "materialId": null,
+        "family": "wood",
+        "subtype": "generic",
+        "finish": "unfinished",
+        "aliases": [],
+        "confidence": 0.766,
+        "source": "vision"
+      },
+      "assignment": {
+        "materialId": "wood.unfinished",
+        "status": "proceed",
+        "source": "vision",
+        "confidence": 0.766,
+        "method": "family-subtype-finish",
+        "alternatives": [],
+        "evidence": {
+          "crop": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/00-bench-wood.png",
+            "bbox": {
+              "x": 200,
+              "y": 325,
+              "width": 280,
+              "height": 60
+            },
+            "sourceWidth": 1408,
+            "sourceHeight": 768,
+            "loaderWarnings": [],
+            "coverage": 0.0155
+          },
+          "pbr": {
+            "ok": true,
+            "verdict": "pass",
+            "confidence": 0.766,
+            "estimatedFidelity": 0.766,
+            "targetThreshold": 0.7,
+            "materialId": "wood",
+            "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/00-bench-wood.png",
+            "outDir": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood",
+            "palette": [
+              "#8A5632",
+              "#A06A3C",
+              "#945F36",
+              "#BF8E5E",
+              "#5B3620"
+            ],
+            "maps": {
+              "albedo": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood_albedo.png",
+                "url": "wood_albedo.png",
+                "channel": "albedo",
+                "source": "reference-pixel-extraction"
+              },
+              "roughness": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood_roughness.png",
+                "url": "wood_roughness.png",
+                "channel": "roughness",
+                "source": "reference-pixel-extraction"
+              },
+              "height": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood_height.png",
+                "url": "wood_height.png",
+                "channel": "height",
+                "source": "reference-pixel-extraction"
+              },
+              "normal": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood_normal.png",
+                "url": "wood_normal.png",
+                "channel": "normal",
+                "source": "reference-pixel-extraction"
+              },
+              "ao": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood_ao.png",
+                "url": "wood_ao.png",
+                "channel": "ao",
+                "source": "reference-pixel-extraction"
+              }
+            },
+            "diagnostics": {
+              "sourceWidth": 280,
+              "sourceHeight": 60,
+              "mapSize": 512,
+              "cropBBoxPixels": {
+                "x": 0,
+                "y": 0,
+                "width": 280,
+                "height": 60
+              },
+              "mask": {
+                "backgroundColor": "#B58765",
+                "backgroundNoise": 81.664,
+                "transparentPixelFraction": 0.0,
+                "foregroundCoverage": 0.9973
+              },
+              "mapStats": {
+                "valueRange": 0.2288,
+                "heightP90Gradient": 0.02073,
+                "roughnessBase": 0.698,
+                "roughnessVariation": 0.05,
+                "normalStrength": 0.181,
+                "blurRadius": 10
+              },
+              "palette": [
+                "#8A5632",
+                "#A06A3C",
+                "#945F36",
+                "#BF8E5E",
+                "#5B3620"
+              ]
+            },
+            "warnings": [
+              "image is not clearly isolated from background; using most pixels as material evidence",
+              "object/background separation is weak",
+              "single-image inverse rendering cannot prove true physical PBR; confidence is capped",
+              "low value range weakens height/roughness inference"
+            ],
+            "limitation": "single-image PBR extraction is an estimate; 70%+ extraction confidence still needs render screenshot review"
+          },
+          "texture": {
+            "finishClass": "painted-metal",
+            "recipe": {
+              "metalness": 0.0,
+              "roughness": 0.5,
+              "clearcoat": 1.0,
+              "clearcoatRoughness": 0.05,
+              "transmission": 0.0,
+              "ior": 1.5,
+              "envMapIntensity": 1.0,
+              "anisotropy": 0.0,
+              "procedural": "flat-clearcoat"
+            },
+            "palette": [
+              "#B18056",
+              "#9D693E",
+              "#915D35",
+              "#8F5A34",
+              "#815534"
+            ],
+            "paletteHueRisk": [],
+            "gradientAxis": "vertical",
+            "stats": {
+              "meanLum": 109.6,
+              "meanSaturation": 0.615,
+              "gradientStrength": 0.171,
+              "mottle": 0.007,
+              "streakRatio": 0.85,
+              "hueSpread": 0.001,
+              "specularFraction": 0.0
+            }
+          }
+        },
+        "profileId": "wood.unfinished",
+        "family": "wood",
+        "subtype": "generic",
+        "finish": "unfinished",
+        "renderPrior": {
+          "metalness": 0.0,
+          "roughness": 0.72,
+          "anisotropy": 0.12
+        },
+        "requiredMaps": [
+          "map",
+          "roughnessMap",
+          "normalMap"
+        ],
+        "optionalMaps": [
+          "aoMap",
+          "anisotropyMap"
+        ],
+        "validationViews": [
+          "albedo-unlit",
+          "neutral-studio",
+          "grazing"
+        ],
+        "sourceRefs": [
+          "three.mesh-standard",
+          "three.texture",
+          "adobe.pbr-guide-1",
+          "mit.material-recognition"
+        ],
+        "visualCues": [
+          "directional grain",
+          "pores and growth rings",
+          "roughness follows grain and wear"
+        ]
+      },
+      "observations": [
+        "chromatic base-colour response",
+        "single-image PBR inference requires controlled render validation"
+      ],
+      "crop": {
+        "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/00-bench-wood.png",
+        "bbox": {
+          "x": 200,
+          "y": 325,
+          "width": 280,
+          "height": 60
+        },
+        "sourceWidth": 1408,
+        "sourceHeight": 768,
+        "loaderWarnings": [],
+        "coverage": 0.0155
+      },
+      "textureAnalysis": {
+        "finishClass": "painted-metal",
+        "recipe": {
+          "metalness": 0.0,
+          "roughness": 0.5,
+          "clearcoat": 1.0,
+          "clearcoatRoughness": 0.05,
+          "transmission": 0.0,
+          "ior": 1.5,
+          "envMapIntensity": 1.0,
+          "anisotropy": 0.0,
+          "procedural": "flat-clearcoat"
+        },
+        "palette": [
+          "#B18056",
+          "#9D693E",
+          "#915D35",
+          "#8F5A34",
+          "#815534"
+        ],
+        "paletteHueRisk": [],
+        "gradientAxis": "vertical",
+        "stats": {
+          "meanLum": 109.6,
+          "meanSaturation": 0.615,
+          "gradientStrength": 0.171,
+          "mottle": 0.007,
+          "streakRatio": 0.85,
+          "hueSpread": 0.001,
+          "specularFraction": 0.0
+        }
+      },
+      "pbrReport": {
+        "ok": true,
+        "verdict": "pass",
+        "confidence": 0.766,
+        "estimatedFidelity": 0.766,
+        "targetThreshold": 0.7,
+        "materialId": "wood",
+        "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/00-bench-wood.png",
+        "outDir": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood",
+        "palette": [
+          "#8A5632",
+          "#A06A3C",
+          "#945F36",
+          "#BF8E5E",
+          "#5B3620"
+        ],
+        "maps": {
+          "albedo": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood_albedo.png",
+            "url": "wood_albedo.png",
+            "channel": "albedo",
+            "source": "reference-pixel-extraction"
+          },
+          "roughness": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood_roughness.png",
+            "url": "wood_roughness.png",
+            "channel": "roughness",
+            "source": "reference-pixel-extraction"
+          },
+          "height": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood_height.png",
+            "url": "wood_height.png",
+            "channel": "height",
+            "source": "reference-pixel-extraction"
+          },
+          "normal": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood_normal.png",
+            "url": "wood_normal.png",
+            "channel": "normal",
+            "source": "reference-pixel-extraction"
+          },
+          "ao": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood_ao.png",
+            "url": "wood_ao.png",
+            "channel": "ao",
+            "source": "reference-pixel-extraction"
+          }
+        },
+        "diagnostics": {
+          "sourceWidth": 280,
+          "sourceHeight": 60,
+          "mapSize": 512,
+          "cropBBoxPixels": {
+            "x": 0,
+            "y": 0,
+            "width": 280,
+            "height": 60
+          },
+          "mask": {
+            "backgroundColor": "#B58765",
+            "backgroundNoise": 81.664,
+            "transparentPixelFraction": 0.0,
+            "foregroundCoverage": 0.9973
+          },
+          "mapStats": {
+            "valueRange": 0.2288,
+            "heightP90Gradient": 0.02073,
+            "roughnessBase": 0.698,
+            "roughnessVariation": 0.05,
+            "normalStrength": 0.181,
+            "blurRadius": 10
+          },
+          "palette": [
+            "#8A5632",
+            "#A06A3C",
+            "#945F36",
+            "#BF8E5E",
+            "#5B3620"
+          ]
+        },
+        "warnings": [
+          "image is not clearly isolated from background; using most pixels as material evidence",
+          "object/background separation is weak",
+          "single-image inverse rendering cannot prove true physical PBR; confidence is capped",
+          "low value range weakens height/roughness inference"
+        ],
+        "limitation": "single-image PBR extraction is an estimate; 70%+ extraction confidence still needs render screenshot review"
+      },
+      "referencePbr": {
+        "version": "1.0",
+        "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/00-bench-wood.png",
+        "extractor": "stage1_intake/extract_pbr_evidence.py",
+        "method": "single-image pixel evidence with de-lighting estimate; not photogrammetry",
+        "usable": true,
+        "verdict": "pass",
+        "confidence": 0.766,
+        "estimatedFidelity": 0.766,
+        "targetThreshold": 0.7,
+        "hardLimit": "A single image cannot uniquely recover true albedo/roughness/normal/AO; maps are reference-derived estimates.",
+        "maps": {
+          "albedo": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood_albedo.png",
+            "url": "wood_albedo.png",
+            "channel": "albedo",
+            "source": "reference-pixel-extraction"
+          },
+          "roughness": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood_roughness.png",
+            "url": "wood_roughness.png",
+            "channel": "roughness",
+            "source": "reference-pixel-extraction"
+          },
+          "height": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood_height.png",
+            "url": "wood_height.png",
+            "channel": "height",
+            "source": "reference-pixel-extraction"
+          },
+          "normal": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood_normal.png",
+            "url": "wood_normal.png",
+            "channel": "normal",
+            "source": "reference-pixel-extraction"
+          },
+          "ao": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood_ao.png",
+            "url": "wood_ao.png",
+            "channel": "ao",
+            "source": "reference-pixel-extraction"
+          }
+        },
+        "diagnostics": {
+          "sourceWidth": 280,
+          "sourceHeight": 60,
+          "mapSize": 512,
+          "cropBBoxPixels": {
+            "x": 0,
+            "y": 0,
+            "width": 280,
+            "height": 60
+          },
+          "mask": {
+            "backgroundColor": "#B58765",
+            "backgroundNoise": 81.664,
+            "transparentPixelFraction": 0.0,
+            "foregroundCoverage": 0.9973
+          },
+          "mapStats": {
+            "valueRange": 0.2288,
+            "heightP90Gradient": 0.02073,
+            "roughnessBase": 0.698,
+            "roughnessVariation": 0.05,
+            "normalStrength": 0.181,
+            "blurRadius": 10
+          },
+          "palette": [
+            "#8A5632",
+            "#A06A3C",
+            "#945F36",
+            "#BF8E5E",
+            "#5B3620"
+          ]
+        },
+        "warnings": [
+          "image is not clearly isolated from background; using most pixels as material evidence",
+          "object/background separation is weak",
+          "single-image inverse rendering cannot prove true physical PBR; confidence is capped",
+          "low value range weakens height/roughness inference"
+        ]
+      },
+      "maps": {
+        "albedo": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood_albedo.png",
+          "url": "wood_albedo.png",
+          "channel": "albedo",
+          "source": "reference-pixel-extraction"
+        },
+        "roughness": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood_roughness.png",
+          "url": "wood_roughness.png",
+          "channel": "roughness",
+          "source": "reference-pixel-extraction"
+        },
+        "height": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood_height.png",
+          "url": "wood_height.png",
+          "channel": "height",
+          "source": "reference-pixel-extraction"
+        },
+        "normal": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood_normal.png",
+          "url": "wood_normal.png",
+          "channel": "normal",
+          "source": "reference-pixel-extraction"
+        },
+        "ao": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood_ao.png",
+          "url": "wood_ao.png",
+          "channel": "ao",
+          "source": "reference-pixel-extraction"
+        }
+      }
+    },
+    {
+      "componentId": "saw-blade",
+      "regionId": "blade-steel",
+      "materialSpecId": "steel",
+      "hypothesis": {
+        "componentId": "saw-blade",
+        "regionId": "blade-steel",
+        "materialId": null,
+        "family": "metal",
+        "subtype": "steel",
+        "finish": "brushed",
+        "aliases": [],
+        "confidence": 0.716,
+        "source": "vision"
+      },
+      "assignment": {
+        "materialId": "metal.steel-brushed",
+        "status": "proceed",
+        "source": "vision",
+        "confidence": 0.716,
+        "method": "family-subtype-finish",
+        "alternatives": [],
+        "evidence": {
+          "crop": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/01-blade-steel.png",
+            "bbox": {
+              "x": 525,
+              "y": 190,
+              "width": 80,
+              "height": 80
+            },
+            "sourceWidth": 1408,
+            "sourceHeight": 768,
+            "loaderWarnings": [],
+            "coverage": 0.0059
+          },
+          "pbr": {
+            "ok": true,
+            "verdict": "pass",
+            "confidence": 0.716,
+            "estimatedFidelity": 0.716,
+            "targetThreshold": 0.7,
+            "materialId": "steel",
+            "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/01-blade-steel.png",
+            "outDir": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-blade-steel",
+            "palette": [
+              "#747275",
+              "#6F6D72",
+              "#746C6C",
+              "#C9C9CA",
+              "#8F949D"
+            ],
+            "maps": {
+              "albedo": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-blade-steel/steel_albedo.png",
+                "url": "steel_albedo.png",
+                "channel": "albedo",
+                "source": "reference-pixel-extraction"
+              },
+              "roughness": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-blade-steel/steel_roughness.png",
+                "url": "steel_roughness.png",
+                "channel": "roughness",
+                "source": "reference-pixel-extraction"
+              },
+              "height": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-blade-steel/steel_height.png",
+                "url": "steel_height.png",
+                "channel": "height",
+                "source": "reference-pixel-extraction"
+              },
+              "normal": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-blade-steel/steel_normal.png",
+                "url": "steel_normal.png",
+                "channel": "normal",
+                "source": "reference-pixel-extraction"
+              },
+              "ao": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-blade-steel/steel_ao.png",
+                "url": "steel_ao.png",
+                "channel": "ao",
+                "source": "reference-pixel-extraction"
+              }
+            },
+            "diagnostics": {
+              "sourceWidth": 80,
+              "sourceHeight": 80,
+              "mapSize": 512,
+              "cropBBoxPixels": {
+                "x": 0,
+                "y": 0,
+                "width": 80,
+                "height": 80
+              },
+              "mask": {
+                "backgroundColor": "#767078",
+                "backgroundNoise": 18.493,
+                "transparentPixelFraction": 0.0,
+                "foregroundCoverage": 1.0
+              },
+              "mapStats": {
+                "valueRange": 0.08,
+                "heightP90Gradient": 0.0441,
+                "roughnessBase": 0.729,
+                "roughnessVariation": 0.077,
+                "normalStrength": 0.208,
+                "blurRadius": 10
+              },
+              "palette": [
+                "#747275",
+                "#6F6D72",
+                "#746C6C",
+                "#C9C9CA",
+                "#8F949D"
+              ]
+            },
+            "warnings": [
+              "foreground mask is tiny; material extraction is likely unreliable",
+              "image is not clearly isolated from background; using most pixels as material evidence",
+              "object/background separation is weak",
+              "single-image inverse rendering cannot prove true physical PBR; confidence is capped",
+              "low value range weakens height/roughness inference"
+            ],
+            "limitation": "single-image PBR extraction is an estimate; 70%+ extraction confidence still needs render screenshot review"
+          },
+          "texture": {
+            "finishClass": "worn-composite",
+            "recipe": {
+              "metalness": 0.0,
+              "roughness": 0.9,
+              "clearcoat": 0.0,
+              "clearcoatRoughness": 0.0,
+              "transmission": 0.0,
+              "ior": 1.5,
+              "envMapIntensity": 0.5,
+              "anisotropy": 0.0,
+              "procedural": "mottle"
+            },
+            "palette": [
+              "#827E80",
+              "#747072",
+              "#726E71",
+              "#716D71",
+              "#6E6B70"
+            ],
+            "paletteHueRisk": [],
+            "gradientAxis": "horizontal",
+            "stats": {
+              "meanLum": 114.3,
+              "meanSaturation": 0.053,
+              "gradientStrength": 0.091,
+              "mottle": 0.006,
+              "streakRatio": 1.28,
+              "hueSpread": 0.0,
+              "specularFraction": 0.0
+            }
+          }
+        },
+        "profileId": "metal.steel-brushed",
+        "family": "metal",
+        "subtype": "steel",
+        "finish": "brushed",
+        "renderPrior": {
+          "metalness": 1.0,
+          "roughness": 0.35,
+          "anisotropy": 0.85
+        },
+        "requiredMaps": [
+          "map",
+          "roughnessMap",
+          "normalMap",
+          "anisotropyMap"
+        ],
+        "optionalMaps": [
+          "metalnessMap"
+        ],
+        "validationViews": [
+          "neutral-studio",
+          "grazing",
+          "environment-reflection",
+          "reference-beauty"
+        ],
+        "sourceRefs": [
+          "three.mesh-physical",
+          "three.pmrem",
+          "gltf.2",
+          "khronos.gltf-pbr",
+          "adobe.pbr-guide-2",
+          "google.filament-pbr"
+        ],
+        "visualCues": [
+          "elongated highlight aligned to brushing",
+          "neutral conductor reflection",
+          "parallel micro-scratches"
+        ]
+      },
+      "observations": [
+        "near-neutral colour response",
+        "single-image PBR inference requires controlled render validation"
+      ],
+      "crop": {
+        "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/01-blade-steel.png",
+        "bbox": {
+          "x": 525,
+          "y": 190,
+          "width": 80,
+          "height": 80
+        },
+        "sourceWidth": 1408,
+        "sourceHeight": 768,
+        "loaderWarnings": [],
+        "coverage": 0.0059
+      },
+      "textureAnalysis": {
+        "finishClass": "worn-composite",
+        "recipe": {
+          "metalness": 0.0,
+          "roughness": 0.9,
+          "clearcoat": 0.0,
+          "clearcoatRoughness": 0.0,
+          "transmission": 0.0,
+          "ior": 1.5,
+          "envMapIntensity": 0.5,
+          "anisotropy": 0.0,
+          "procedural": "mottle"
+        },
+        "palette": [
+          "#827E80",
+          "#747072",
+          "#726E71",
+          "#716D71",
+          "#6E6B70"
+        ],
+        "paletteHueRisk": [],
+        "gradientAxis": "horizontal",
+        "stats": {
+          "meanLum": 114.3,
+          "meanSaturation": 0.053,
+          "gradientStrength": 0.091,
+          "mottle": 0.006,
+          "streakRatio": 1.28,
+          "hueSpread": 0.0,
+          "specularFraction": 0.0
+        }
+      },
+      "pbrReport": {
+        "ok": true,
+        "verdict": "pass",
+        "confidence": 0.716,
+        "estimatedFidelity": 0.716,
+        "targetThreshold": 0.7,
+        "materialId": "steel",
+        "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/01-blade-steel.png",
+        "outDir": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-blade-steel",
+        "palette": [
+          "#747275",
+          "#6F6D72",
+          "#746C6C",
+          "#C9C9CA",
+          "#8F949D"
+        ],
+        "maps": {
+          "albedo": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-blade-steel/steel_albedo.png",
+            "url": "steel_albedo.png",
+            "channel": "albedo",
+            "source": "reference-pixel-extraction"
+          },
+          "roughness": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-blade-steel/steel_roughness.png",
+            "url": "steel_roughness.png",
+            "channel": "roughness",
+            "source": "reference-pixel-extraction"
+          },
+          "height": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-blade-steel/steel_height.png",
+            "url": "steel_height.png",
+            "channel": "height",
+            "source": "reference-pixel-extraction"
+          },
+          "normal": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-blade-steel/steel_normal.png",
+            "url": "steel_normal.png",
+            "channel": "normal",
+            "source": "reference-pixel-extraction"
+          },
+          "ao": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-blade-steel/steel_ao.png",
+            "url": "steel_ao.png",
+            "channel": "ao",
+            "source": "reference-pixel-extraction"
+          }
+        },
+        "diagnostics": {
+          "sourceWidth": 80,
+          "sourceHeight": 80,
+          "mapSize": 512,
+          "cropBBoxPixels": {
+            "x": 0,
+            "y": 0,
+            "width": 80,
+            "height": 80
+          },
+          "mask": {
+            "backgroundColor": "#767078",
+            "backgroundNoise": 18.493,
+            "transparentPixelFraction": 0.0,
+            "foregroundCoverage": 1.0
+          },
+          "mapStats": {
+            "valueRange": 0.08,
+            "heightP90Gradient": 0.0441,
+            "roughnessBase": 0.729,
+            "roughnessVariation": 0.077,
+            "normalStrength": 0.208,
+            "blurRadius": 10
+          },
+          "palette": [
+            "#747275",
+            "#6F6D72",
+            "#746C6C",
+            "#C9C9CA",
+            "#8F949D"
+          ]
+        },
+        "warnings": [
+          "foreground mask is tiny; material extraction is likely unreliable",
+          "image is not clearly isolated from background; using most pixels as material evidence",
+          "object/background separation is weak",
+          "single-image inverse rendering cannot prove true physical PBR; confidence is capped",
+          "low value range weakens height/roughness inference"
+        ],
+        "limitation": "single-image PBR extraction is an estimate; 70%+ extraction confidence still needs render screenshot review"
+      },
+      "referencePbr": {
+        "version": "1.0",
+        "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/01-blade-steel.png",
+        "extractor": "stage1_intake/extract_pbr_evidence.py",
+        "method": "single-image pixel evidence with de-lighting estimate; not photogrammetry",
+        "usable": true,
+        "verdict": "pass",
+        "confidence": 0.716,
+        "estimatedFidelity": 0.716,
+        "targetThreshold": 0.7,
+        "hardLimit": "A single image cannot uniquely recover true albedo/roughness/normal/AO; maps are reference-derived estimates.",
+        "maps": {
+          "albedo": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-blade-steel/steel_albedo.png",
+            "url": "steel_albedo.png",
+            "channel": "albedo",
+            "source": "reference-pixel-extraction"
+          },
+          "roughness": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-blade-steel/steel_roughness.png",
+            "url": "steel_roughness.png",
+            "channel": "roughness",
+            "source": "reference-pixel-extraction"
+          },
+          "height": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-blade-steel/steel_height.png",
+            "url": "steel_height.png",
+            "channel": "height",
+            "source": "reference-pixel-extraction"
+          },
+          "normal": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-blade-steel/steel_normal.png",
+            "url": "steel_normal.png",
+            "channel": "normal",
+            "source": "reference-pixel-extraction"
+          },
+          "ao": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-blade-steel/steel_ao.png",
+            "url": "steel_ao.png",
+            "channel": "ao",
+            "source": "reference-pixel-extraction"
+          }
+        },
+        "diagnostics": {
+          "sourceWidth": 80,
+          "sourceHeight": 80,
+          "mapSize": 512,
+          "cropBBoxPixels": {
+            "x": 0,
+            "y": 0,
+            "width": 80,
+            "height": 80
+          },
+          "mask": {
+            "backgroundColor": "#767078",
+            "backgroundNoise": 18.493,
+            "transparentPixelFraction": 0.0,
+            "foregroundCoverage": 1.0
+          },
+          "mapStats": {
+            "valueRange": 0.08,
+            "heightP90Gradient": 0.0441,
+            "roughnessBase": 0.729,
+            "roughnessVariation": 0.077,
+            "normalStrength": 0.208,
+            "blurRadius": 10
+          },
+          "palette": [
+            "#747275",
+            "#6F6D72",
+            "#746C6C",
+            "#C9C9CA",
+            "#8F949D"
+          ]
+        },
+        "warnings": [
+          "foreground mask is tiny; material extraction is likely unreliable",
+          "image is not clearly isolated from background; using most pixels as material evidence",
+          "object/background separation is weak",
+          "single-image inverse rendering cannot prove true physical PBR; confidence is capped",
+          "low value range weakens height/roughness inference"
+        ]
+      },
+      "maps": {
+        "albedo": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-blade-steel/steel_albedo.png",
+          "url": "steel_albedo.png",
+          "channel": "albedo",
+          "source": "reference-pixel-extraction"
+        },
+        "roughness": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-blade-steel/steel_roughness.png",
+          "url": "steel_roughness.png",
+          "channel": "roughness",
+          "source": "reference-pixel-extraction"
+        },
+        "height": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-blade-steel/steel_height.png",
+          "url": "steel_height.png",
+          "channel": "height",
+          "source": "reference-pixel-extraction"
+        },
+        "normal": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-blade-steel/steel_normal.png",
+          "url": "steel_normal.png",
+          "channel": "normal",
+          "source": "reference-pixel-extraction"
+        },
+        "ao": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-blade-steel/steel_ao.png",
+          "url": "steel_ao.png",
+          "channel": "ao",
+          "source": "reference-pixel-extraction"
+        }
+      }
+    },
+    {
+      "componentId": "hub",
+      "regionId": "hub-iron",
+      "materialSpecId": "iron",
+      "hypothesis": {
+        "componentId": "hub",
+        "regionId": "hub-iron",
+        "materialId": null,
+        "family": "metal",
+        "subtype": "steel",
+        "finish": "brushed",
+        "aliases": [],
+        "confidence": 0.86,
+        "source": "vision"
+      },
+      "assignment": {
+        "materialId": "metal.steel-brushed",
+        "status": "proceed",
+        "source": "vision",
+        "confidence": 0.86,
+        "method": "family-subtype-finish",
+        "alternatives": [],
+        "evidence": {
+          "crop": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/02-hub-iron.png",
+            "bbox": {
+              "x": 628,
+              "y": 268,
+              "width": 55,
+              "height": 35
+            },
+            "sourceWidth": 1408,
+            "sourceHeight": 768,
+            "loaderWarnings": [],
+            "coverage": 0.0018
+          },
+          "pbr": {
+            "ok": true,
+            "verdict": "pass",
+            "confidence": 0.86,
+            "estimatedFidelity": 0.86,
+            "targetThreshold": 0.7,
+            "materialId": "iron",
+            "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/02-hub-iron.png",
+            "outDir": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-02-hub-iron",
+            "palette": [
+              "#413635",
+              "#867D7C",
+              "#3D3332",
+              "#A19794",
+              "#555762"
+            ],
+            "maps": {
+              "albedo": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-02-hub-iron/iron_albedo.png",
+                "url": "iron_albedo.png",
+                "channel": "albedo",
+                "source": "reference-pixel-extraction"
+              },
+              "roughness": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-02-hub-iron/iron_roughness.png",
+                "url": "iron_roughness.png",
+                "channel": "roughness",
+                "source": "reference-pixel-extraction"
+              },
+              "height": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-02-hub-iron/iron_height.png",
+                "url": "iron_height.png",
+                "channel": "height",
+                "source": "reference-pixel-extraction"
+              },
+              "normal": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-02-hub-iron/iron_normal.png",
+                "url": "iron_normal.png",
+                "channel": "normal",
+                "source": "reference-pixel-extraction"
+              },
+              "ao": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-02-hub-iron/iron_ao.png",
+                "url": "iron_ao.png",
+                "channel": "ao",
+                "source": "reference-pixel-extraction"
+              }
+            },
+            "diagnostics": {
+              "sourceWidth": 55,
+              "sourceHeight": 35,
+              "mapSize": 512,
+              "cropBBoxPixels": {
+                "x": 0,
+                "y": 0,
+                "width": 55,
+                "height": 35
+              },
+              "mask": {
+                "backgroundColor": "#3F3F46",
+                "backgroundNoise": 35.861,
+                "transparentPixelFraction": 0.0,
+                "foregroundCoverage": 0.2348
+              },
+              "mapStats": {
+                "valueRange": 0.4092,
+                "heightP90Gradient": 0.02608,
+                "roughnessBase": 0.68,
+                "roughnessVariation": 0.05,
+                "normalStrength": 0.187,
+                "blurRadius": 10
+              },
+              "palette": [
+                "#413635",
+                "#867D7C",
+                "#3D3332",
+                "#A19794",
+                "#555762"
+              ]
+            },
+            "warnings": [
+              "single-image inverse rendering cannot prove true physical PBR; confidence is capped"
+            ],
+            "limitation": "single-image PBR extraction is an estimate; 70%+ extraction confidence still needs render screenshot review"
+          },
+          "texture": {
+            "finishClass": "worn-composite",
+            "recipe": {
+              "metalness": 0.0,
+              "roughness": 0.9,
+              "clearcoat": 0.0,
+              "clearcoatRoughness": 0.0,
+              "transmission": 0.0,
+              "ior": 1.5,
+              "envMapIntensity": 0.5,
+              "anisotropy": 0.0,
+              "procedural": "mottle"
+            },
+            "palette": [
+              "#443F42",
+              "#454044",
+              "#5F5959",
+              "#494747",
+              "#5F5857"
+            ],
+            "paletteHueRisk": [],
+            "gradientAxis": "horizontal",
+            "stats": {
+              "meanLum": 75.8,
+              "meanSaturation": 0.09,
+              "gradientStrength": 0.15,
+              "mottle": 0.012,
+              "streakRatio": 1.47,
+              "hueSpread": 0.014,
+              "specularFraction": 0.0
+            }
+          }
+        },
+        "profileId": "metal.steel-brushed",
+        "family": "metal",
+        "subtype": "steel",
+        "finish": "brushed",
+        "renderPrior": {
+          "metalness": 1.0,
+          "roughness": 0.35,
+          "anisotropy": 0.85
+        },
+        "requiredMaps": [
+          "map",
+          "roughnessMap",
+          "normalMap",
+          "anisotropyMap"
+        ],
+        "optionalMaps": [
+          "metalnessMap"
+        ],
+        "validationViews": [
+          "neutral-studio",
+          "grazing",
+          "environment-reflection",
+          "reference-beauty"
+        ],
+        "sourceRefs": [
+          "three.mesh-physical",
+          "three.pmrem",
+          "gltf.2",
+          "khronos.gltf-pbr",
+          "adobe.pbr-guide-2",
+          "google.filament-pbr"
+        ],
+        "visualCues": [
+          "elongated highlight aligned to brushing",
+          "neutral conductor reflection",
+          "parallel micro-scratches"
+        ]
+      },
+      "observations": [
+        "near-neutral colour response",
+        "single-image PBR inference requires controlled render validation"
+      ],
+      "crop": {
+        "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/02-hub-iron.png",
+        "bbox": {
+          "x": 628,
+          "y": 268,
+          "width": 55,
+          "height": 35
+        },
+        "sourceWidth": 1408,
+        "sourceHeight": 768,
+        "loaderWarnings": [],
+        "coverage": 0.0018
+      },
+      "textureAnalysis": {
+        "finishClass": "worn-composite",
+        "recipe": {
+          "metalness": 0.0,
+          "roughness": 0.9,
+          "clearcoat": 0.0,
+          "clearcoatRoughness": 0.0,
+          "transmission": 0.0,
+          "ior": 1.5,
+          "envMapIntensity": 0.5,
+          "anisotropy": 0.0,
+          "procedural": "mottle"
+        },
+        "palette": [
+          "#443F42",
+          "#454044",
+          "#5F5959",
+          "#494747",
+          "#5F5857"
+        ],
+        "paletteHueRisk": [],
+        "gradientAxis": "horizontal",
+        "stats": {
+          "meanLum": 75.8,
+          "meanSaturation": 0.09,
+          "gradientStrength": 0.15,
+          "mottle": 0.012,
+          "streakRatio": 1.47,
+          "hueSpread": 0.014,
+          "specularFraction": 0.0
+        }
+      },
+      "pbrReport": {
+        "ok": true,
+        "verdict": "pass",
+        "confidence": 0.86,
+        "estimatedFidelity": 0.86,
+        "targetThreshold": 0.7,
+        "materialId": "iron",
+        "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/02-hub-iron.png",
+        "outDir": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-02-hub-iron",
+        "palette": [
+          "#413635",
+          "#867D7C",
+          "#3D3332",
+          "#A19794",
+          "#555762"
+        ],
+        "maps": {
+          "albedo": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-02-hub-iron/iron_albedo.png",
+            "url": "iron_albedo.png",
+            "channel": "albedo",
+            "source": "reference-pixel-extraction"
+          },
+          "roughness": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-02-hub-iron/iron_roughness.png",
+            "url": "iron_roughness.png",
+            "channel": "roughness",
+            "source": "reference-pixel-extraction"
+          },
+          "height": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-02-hub-iron/iron_height.png",
+            "url": "iron_height.png",
+            "channel": "height",
+            "source": "reference-pixel-extraction"
+          },
+          "normal": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-02-hub-iron/iron_normal.png",
+            "url": "iron_normal.png",
+            "channel": "normal",
+            "source": "reference-pixel-extraction"
+          },
+          "ao": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-02-hub-iron/iron_ao.png",
+            "url": "iron_ao.png",
+            "channel": "ao",
+            "source": "reference-pixel-extraction"
+          }
+        },
+        "diagnostics": {
+          "sourceWidth": 55,
+          "sourceHeight": 35,
+          "mapSize": 512,
+          "cropBBoxPixels": {
+            "x": 0,
+            "y": 0,
+            "width": 55,
+            "height": 35
+          },
+          "mask": {
+            "backgroundColor": "#3F3F46",
+            "backgroundNoise": 35.861,
+            "transparentPixelFraction": 0.0,
+            "foregroundCoverage": 0.2348
+          },
+          "mapStats": {
+            "valueRange": 0.4092,
+            "heightP90Gradient": 0.02608,
+            "roughnessBase": 0.68,
+            "roughnessVariation": 0.05,
+            "normalStrength": 0.187,
+            "blurRadius": 10
+          },
+          "palette": [
+            "#413635",
+            "#867D7C",
+            "#3D3332",
+            "#A19794",
+            "#555762"
+          ]
+        },
+        "warnings": [
+          "single-image inverse rendering cannot prove true physical PBR; confidence is capped"
+        ],
+        "limitation": "single-image PBR extraction is an estimate; 70%+ extraction confidence still needs render screenshot review"
+      },
+      "referencePbr": {
+        "version": "1.0",
+        "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/02-hub-iron.png",
+        "extractor": "stage1_intake/extract_pbr_evidence.py",
+        "method": "single-image pixel evidence with de-lighting estimate; not photogrammetry",
+        "usable": true,
+        "verdict": "pass",
+        "confidence": 0.86,
+        "estimatedFidelity": 0.86,
+        "targetThreshold": 0.7,
+        "hardLimit": "A single image cannot uniquely recover true albedo/roughness/normal/AO; maps are reference-derived estimates.",
+        "maps": {
+          "albedo": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-02-hub-iron/iron_albedo.png",
+            "url": "iron_albedo.png",
+            "channel": "albedo",
+            "source": "reference-pixel-extraction"
+          },
+          "roughness": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-02-hub-iron/iron_roughness.png",
+            "url": "iron_roughness.png",
+            "channel": "roughness",
+            "source": "reference-pixel-extraction"
+          },
+          "height": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-02-hub-iron/iron_height.png",
+            "url": "iron_height.png",
+            "channel": "height",
+            "source": "reference-pixel-extraction"
+          },
+          "normal": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-02-hub-iron/iron_normal.png",
+            "url": "iron_normal.png",
+            "channel": "normal",
+            "source": "reference-pixel-extraction"
+          },
+          "ao": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-02-hub-iron/iron_ao.png",
+            "url": "iron_ao.png",
+            "channel": "ao",
+            "source": "reference-pixel-extraction"
+          }
+        },
+        "diagnostics": {
+          "sourceWidth": 55,
+          "sourceHeight": 35,
+          "mapSize": 512,
+          "cropBBoxPixels": {
+            "x": 0,
+            "y": 0,
+            "width": 55,
+            "height": 35
+          },
+          "mask": {
+            "backgroundColor": "#3F3F46",
+            "backgroundNoise": 35.861,
+            "transparentPixelFraction": 0.0,
+            "foregroundCoverage": 0.2348
+          },
+          "mapStats": {
+            "valueRange": 0.4092,
+            "heightP90Gradient": 0.02608,
+            "roughnessBase": 0.68,
+            "roughnessVariation": 0.05,
+            "normalStrength": 0.187,
+            "blurRadius": 10
+          },
+          "palette": [
+            "#413635",
+            "#867D7C",
+            "#3D3332",
+            "#A19794",
+            "#555762"
+          ]
+        },
+        "warnings": [
+          "single-image inverse rendering cannot prove true physical PBR; confidence is capped"
+        ]
+      },
+      "maps": {
+        "albedo": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-02-hub-iron/iron_albedo.png",
+          "url": "iron_albedo.png",
+          "channel": "albedo",
+          "source": "reference-pixel-extraction"
+        },
+        "roughness": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-02-hub-iron/iron_roughness.png",
+          "url": "iron_roughness.png",
+          "channel": "roughness",
+          "source": "reference-pixel-extraction"
+        },
+        "height": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-02-hub-iron/iron_height.png",
+          "url": "iron_height.png",
+          "channel": "height",
+          "source": "reference-pixel-extraction"
+        },
+        "normal": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-02-hub-iron/iron_normal.png",
+          "url": "iron_normal.png",
+          "channel": "normal",
+          "source": "reference-pixel-extraction"
+        },
+        "ao": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-02-hub-iron/iron_ao.png",
+          "url": "iron_ao.png",
+          "channel": "ao",
+          "source": "reference-pixel-extraction"
+        }
+      }
+    },
+    {
+      "componentId": "log",
+      "regionId": "log-side",
+      "materialSpecId": "bark",
+      "hypothesis": {
+        "componentId": "log",
+        "regionId": "log-side",
+        "materialId": null,
+        "family": "wood",
+        "subtype": "generic",
+        "finish": "unfinished",
+        "aliases": [],
+        "confidence": 0.776,
+        "source": "vision"
+      },
+      "assignment": {
+        "materialId": "wood.unfinished",
+        "status": "proceed",
+        "source": "vision",
+        "confidence": 0.776,
+        "method": "family-subtype-finish",
+        "alternatives": [],
+        "evidence": {
+          "crop": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/03-log-side.png",
+            "bbox": {
+              "x": 850,
+              "y": 225,
+              "width": 120,
+              "height": 45
+            },
+            "sourceWidth": 1408,
+            "sourceHeight": 768,
+            "loaderWarnings": [],
+            "coverage": 0.005
+          },
+          "pbr": {
+            "ok": true,
+            "verdict": "pass",
+            "confidence": 0.776,
+            "estimatedFidelity": 0.776,
+            "targetThreshold": 0.7,
+            "materialId": "bark",
+            "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/03-log-side.png",
+            "outDir": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-03-log-side",
+            "palette": [
+              "#956946",
+              "#9F7450",
+              "#815534",
+              "#6C4025",
+              "#AC815D"
+            ],
+            "maps": {
+              "albedo": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-03-log-side/bark_albedo.png",
+                "url": "bark_albedo.png",
+                "channel": "albedo",
+                "source": "reference-pixel-extraction"
+              },
+              "roughness": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-03-log-side/bark_roughness.png",
+                "url": "bark_roughness.png",
+                "channel": "roughness",
+                "source": "reference-pixel-extraction"
+              },
+              "height": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-03-log-side/bark_height.png",
+                "url": "bark_height.png",
+                "channel": "height",
+                "source": "reference-pixel-extraction"
+              },
+              "normal": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-03-log-side/bark_normal.png",
+                "url": "bark_normal.png",
+                "channel": "normal",
+                "source": "reference-pixel-extraction"
+              },
+              "ao": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-03-log-side/bark_ao.png",
+                "url": "bark_ao.png",
+                "channel": "ao",
+                "source": "reference-pixel-extraction"
+              }
+            },
+            "diagnostics": {
+              "sourceWidth": 120,
+              "sourceHeight": 45,
+              "mapSize": 512,
+              "cropBBoxPixels": {
+                "x": 0,
+                "y": 0,
+                "width": 120,
+                "height": 45
+              },
+              "mask": {
+                "backgroundColor": "#8F6343",
+                "backgroundNoise": 69.34,
+                "transparentPixelFraction": 0.0,
+                "foregroundCoverage": 1.0
+              },
+              "mapStats": {
+                "valueRange": 0.2686,
+                "heightP90Gradient": 0.02072,
+                "roughnessBase": 0.703,
+                "roughnessVariation": 0.05,
+                "normalStrength": 0.181,
+                "blurRadius": 10
+              },
+              "palette": [
+                "#956946",
+                "#9F7450",
+                "#815534",
+                "#6C4025",
+                "#AC815D"
+              ]
+            },
+            "warnings": [
+              "image is not clearly isolated from background; using most pixels as material evidence",
+              "object/background separation is weak",
+              "single-image inverse rendering cannot prove true physical PBR; confidence is capped"
+            ],
+            "limitation": "single-image PBR extraction is an estimate; 70%+ extraction confidence still needs render screenshot review"
+          },
+          "texture": {
+            "finishClass": "painted-metal",
+            "recipe": {
+              "metalness": 0.0,
+              "roughness": 0.5,
+              "clearcoat": 1.0,
+              "clearcoatRoughness": 0.05,
+              "transmission": 0.0,
+              "ior": 1.5,
+              "envMapIntensity": 1.0,
+              "anisotropy": 0.0,
+              "procedural": "flat-clearcoat"
+            },
+            "palette": [
+              "#A97E5A",
+              "#9D714F",
+              "#966A47",
+              "#815535",
+              "#6F4325"
+            ],
+            "paletteHueRisk": [],
+            "gradientAxis": "vertical",
+            "stats": {
+              "meanLum": 111.1,
+              "meanSaturation": 0.543,
+              "gradientStrength": 0.228,
+              "mottle": 0.006,
+              "streakRatio": 0.78,
+              "hueSpread": 0.001,
+              "specularFraction": 0.0
+            }
+          }
+        },
+        "profileId": "wood.unfinished",
+        "family": "wood",
+        "subtype": "generic",
+        "finish": "unfinished",
+        "renderPrior": {
+          "metalness": 0.0,
+          "roughness": 0.72,
+          "anisotropy": 0.12
+        },
+        "requiredMaps": [
+          "map",
+          "roughnessMap",
+          "normalMap"
+        ],
+        "optionalMaps": [
+          "aoMap",
+          "anisotropyMap"
+        ],
+        "validationViews": [
+          "albedo-unlit",
+          "neutral-studio",
+          "grazing"
+        ],
+        "sourceRefs": [
+          "three.mesh-standard",
+          "three.texture",
+          "adobe.pbr-guide-1",
+          "mit.material-recognition"
+        ],
+        "visualCues": [
+          "directional grain",
+          "pores and growth rings",
+          "roughness follows grain and wear"
+        ]
+      },
+      "observations": [
+        "chromatic base-colour response",
+        "strong image-space gradient; verify it is material pattern, not lighting",
+        "single-image PBR inference requires controlled render validation"
+      ],
+      "crop": {
+        "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/03-log-side.png",
+        "bbox": {
+          "x": 850,
+          "y": 225,
+          "width": 120,
+          "height": 45
+        },
+        "sourceWidth": 1408,
+        "sourceHeight": 768,
+        "loaderWarnings": [],
+        "coverage": 0.005
+      },
+      "textureAnalysis": {
+        "finishClass": "painted-metal",
+        "recipe": {
+          "metalness": 0.0,
+          "roughness": 0.5,
+          "clearcoat": 1.0,
+          "clearcoatRoughness": 0.05,
+          "transmission": 0.0,
+          "ior": 1.5,
+          "envMapIntensity": 1.0,
+          "anisotropy": 0.0,
+          "procedural": "flat-clearcoat"
+        },
+        "palette": [
+          "#A97E5A",
+          "#9D714F",
+          "#966A47",
+          "#815535",
+          "#6F4325"
+        ],
+        "paletteHueRisk": [],
+        "gradientAxis": "vertical",
+        "stats": {
+          "meanLum": 111.1,
+          "meanSaturation": 0.543,
+          "gradientStrength": 0.228,
+          "mottle": 0.006,
+          "streakRatio": 0.78,
+          "hueSpread": 0.001,
+          "specularFraction": 0.0
+        }
+      },
+      "pbrReport": {
+        "ok": true,
+        "verdict": "pass",
+        "confidence": 0.776,
+        "estimatedFidelity": 0.776,
+        "targetThreshold": 0.7,
+        "materialId": "bark",
+        "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/03-log-side.png",
+        "outDir": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-03-log-side",
+        "palette": [
+          "#956946",
+          "#9F7450",
+          "#815534",
+          "#6C4025",
+          "#AC815D"
+        ],
+        "maps": {
+          "albedo": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-03-log-side/bark_albedo.png",
+            "url": "bark_albedo.png",
+            "channel": "albedo",
+            "source": "reference-pixel-extraction"
+          },
+          "roughness": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-03-log-side/bark_roughness.png",
+            "url": "bark_roughness.png",
+            "channel": "roughness",
+            "source": "reference-pixel-extraction"
+          },
+          "height": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-03-log-side/bark_height.png",
+            "url": "bark_height.png",
+            "channel": "height",
+            "source": "reference-pixel-extraction"
+          },
+          "normal": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-03-log-side/bark_normal.png",
+            "url": "bark_normal.png",
+            "channel": "normal",
+            "source": "reference-pixel-extraction"
+          },
+          "ao": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-03-log-side/bark_ao.png",
+            "url": "bark_ao.png",
+            "channel": "ao",
+            "source": "reference-pixel-extraction"
+          }
+        },
+        "diagnostics": {
+          "sourceWidth": 120,
+          "sourceHeight": 45,
+          "mapSize": 512,
+          "cropBBoxPixels": {
+            "x": 0,
+            "y": 0,
+            "width": 120,
+            "height": 45
+          },
+          "mask": {
+            "backgroundColor": "#8F6343",
+            "backgroundNoise": 69.34,
+            "transparentPixelFraction": 0.0,
+            "foregroundCoverage": 1.0
+          },
+          "mapStats": {
+            "valueRange": 0.2686,
+            "heightP90Gradient": 0.02072,
+            "roughnessBase": 0.703,
+            "roughnessVariation": 0.05,
+            "normalStrength": 0.181,
+            "blurRadius": 10
+          },
+          "palette": [
+            "#956946",
+            "#9F7450",
+            "#815534",
+            "#6C4025",
+            "#AC815D"
+          ]
+        },
+        "warnings": [
+          "image is not clearly isolated from background; using most pixels as material evidence",
+          "object/background separation is weak",
+          "single-image inverse rendering cannot prove true physical PBR; confidence is capped"
+        ],
+        "limitation": "single-image PBR extraction is an estimate; 70%+ extraction confidence still needs render screenshot review"
+      },
+      "referencePbr": {
+        "version": "1.0",
+        "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/03-log-side.png",
+        "extractor": "stage1_intake/extract_pbr_evidence.py",
+        "method": "single-image pixel evidence with de-lighting estimate; not photogrammetry",
+        "usable": true,
+        "verdict": "pass",
+        "confidence": 0.776,
+        "estimatedFidelity": 0.776,
+        "targetThreshold": 0.7,
+        "hardLimit": "A single image cannot uniquely recover true albedo/roughness/normal/AO; maps are reference-derived estimates.",
+        "maps": {
+          "albedo": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-03-log-side/bark_albedo.png",
+            "url": "bark_albedo.png",
+            "channel": "albedo",
+            "source": "reference-pixel-extraction"
+          },
+          "roughness": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-03-log-side/bark_roughness.png",
+            "url": "bark_roughness.png",
+            "channel": "roughness",
+            "source": "reference-pixel-extraction"
+          },
+          "height": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-03-log-side/bark_height.png",
+            "url": "bark_height.png",
+            "channel": "height",
+            "source": "reference-pixel-extraction"
+          },
+          "normal": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-03-log-side/bark_normal.png",
+            "url": "bark_normal.png",
+            "channel": "normal",
+            "source": "reference-pixel-extraction"
+          },
+          "ao": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-03-log-side/bark_ao.png",
+            "url": "bark_ao.png",
+            "channel": "ao",
+            "source": "reference-pixel-extraction"
+          }
+        },
+        "diagnostics": {
+          "sourceWidth": 120,
+          "sourceHeight": 45,
+          "mapSize": 512,
+          "cropBBoxPixels": {
+            "x": 0,
+            "y": 0,
+            "width": 120,
+            "height": 45
+          },
+          "mask": {
+            "backgroundColor": "#8F6343",
+            "backgroundNoise": 69.34,
+            "transparentPixelFraction": 0.0,
+            "foregroundCoverage": 1.0
+          },
+          "mapStats": {
+            "valueRange": 0.2686,
+            "heightP90Gradient": 0.02072,
+            "roughnessBase": 0.703,
+            "roughnessVariation": 0.05,
+            "normalStrength": 0.181,
+            "blurRadius": 10
+          },
+          "palette": [
+            "#956946",
+            "#9F7450",
+            "#815534",
+            "#6C4025",
+            "#AC815D"
+          ]
+        },
+        "warnings": [
+          "image is not clearly isolated from background; using most pixels as material evidence",
+          "object/background separation is weak",
+          "single-image inverse rendering cannot prove true physical PBR; confidence is capped"
+        ]
+      },
+      "maps": {
+        "albedo": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-03-log-side/bark_albedo.png",
+          "url": "bark_albedo.png",
+          "channel": "albedo",
+          "source": "reference-pixel-extraction"
+        },
+        "roughness": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-03-log-side/bark_roughness.png",
+          "url": "bark_roughness.png",
+          "channel": "roughness",
+          "source": "reference-pixel-extraction"
+        },
+        "height": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-03-log-side/bark_height.png",
+          "url": "bark_height.png",
+          "channel": "height",
+          "source": "reference-pixel-extraction"
+        },
+        "normal": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-03-log-side/bark_normal.png",
+          "url": "bark_normal.png",
+          "channel": "normal",
+          "source": "reference-pixel-extraction"
+        },
+        "ao": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-03-log-side/bark_ao.png",
+          "url": "bark_ao.png",
+          "channel": "ao",
+          "source": "reference-pixel-extraction"
+        }
+      }
+    },
+    {
+      "componentId": "log-end",
+      "regionId": "log-end-grain",
+      "materialSpecId": "end-grain",
+      "hypothesis": {
+        "componentId": "log-end",
+        "regionId": "log-end-grain",
+        "materialId": null,
+        "family": "wood",
+        "subtype": "generic",
+        "finish": "unfinished",
+        "aliases": [],
+        "confidence": 0.751,
+        "source": "vision"
+      },
+      "assignment": {
+        "materialId": "wood.unfinished",
+        "status": "proceed",
+        "source": "vision",
+        "confidence": 0.751,
+        "method": "family-subtype-finish",
+        "alternatives": [],
+        "evidence": {
+          "crop": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/04-log-end-grain.png",
+            "bbox": {
+              "x": 995,
+              "y": 240,
+              "width": 40,
+              "height": 60
+            },
+            "sourceWidth": 1408,
+            "sourceHeight": 768,
+            "loaderWarnings": [],
+            "coverage": 0.0022
+          },
+          "pbr": {
+            "ok": true,
+            "verdict": "pass",
+            "confidence": 0.751,
+            "estimatedFidelity": 0.751,
+            "targetThreshold": 0.7,
+            "materialId": "end-grain",
+            "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/04-log-end-grain.png",
+            "outDir": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-04-log-end-grain",
+            "palette": [
+              "#E7C6A4",
+              "#E6C5A2",
+              "#E5C29E",
+              "#E7C8A7",
+              "#E2BE98"
+            ],
+            "maps": {
+              "albedo": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-04-log-end-grain/end-grain_albedo.png",
+                "url": "end-grain_albedo.png",
+                "channel": "albedo",
+                "source": "reference-pixel-extraction"
+              },
+              "roughness": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-04-log-end-grain/end-grain_roughness.png",
+                "url": "end-grain_roughness.png",
+                "channel": "roughness",
+                "source": "reference-pixel-extraction"
+              },
+              "height": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-04-log-end-grain/end-grain_height.png",
+                "url": "end-grain_height.png",
+                "channel": "height",
+                "source": "reference-pixel-extraction"
+              },
+              "normal": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-04-log-end-grain/end-grain_normal.png",
+                "url": "end-grain_normal.png",
+                "channel": "normal",
+                "source": "reference-pixel-extraction"
+              },
+              "ao": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-04-log-end-grain/end-grain_ao.png",
+                "url": "end-grain_ao.png",
+                "channel": "ao",
+                "source": "reference-pixel-extraction"
+              }
+            },
+            "diagnostics": {
+              "sourceWidth": 40,
+              "sourceHeight": 60,
+              "mapSize": 512,
+              "cropBBoxPixels": {
+                "x": 0,
+                "y": 0,
+                "width": 40,
+                "height": 60
+              },
+              "mask": {
+                "backgroundColor": "#E5C8A8",
+                "backgroundNoise": 6.0,
+                "transparentPixelFraction": 0.0,
+                "foregroundCoverage": 1.0
+              },
+              "mapStats": {
+                "valueRange": 0.08,
+                "heightP90Gradient": 0.03253,
+                "roughnessBase": 0.711,
+                "roughnessVariation": 0.06,
+                "normalStrength": 0.194,
+                "blurRadius": 10
+              },
+              "palette": [
+                "#E7C6A4",
+                "#E6C5A2",
+                "#E5C29E",
+                "#E7C8A7",
+                "#E2BE98"
+              ]
+            },
+            "warnings": [
+              "image is not clearly isolated from background; using most pixels as material evidence",
+              "object/background separation is weak",
+              "single-image inverse rendering cannot prove true physical PBR; confidence is capped",
+              "low value range weakens height/roughness inference"
+            ],
+            "limitation": "single-image PBR extraction is an estimate; 70%+ extraction confidence still needs render screenshot review"
+          },
+          "texture": {
+            "finishClass": "painted-metal",
+            "recipe": {
+              "metalness": 0.0,
+              "roughness": 0.5,
+              "clearcoat": 1.0,
+              "clearcoatRoughness": 0.05,
+              "transmission": 0.0,
+              "ior": 1.5,
+              "envMapIntensity": 1.0,
+              "anisotropy": 0.0,
+              "procedural": "flat-clearcoat"
+            },
+            "palette": [
+              "#E4C4A2",
+              "#E6C3A0",
+              "#E6C6A4",
+              "#E6C5A2",
+              "#E4C29E"
+            ],
+            "paletteHueRisk": [],
+            "gradientAxis": "vertical",
+            "stats": {
+              "meanLum": 202.6,
+              "meanSaturation": 0.297,
+              "gradientStrength": 0.02,
+              "mottle": 0.002,
+              "streakRatio": 0.64,
+              "hueSpread": 0.0,
+              "specularFraction": 0.0
+            }
+          }
+        },
+        "profileId": "wood.unfinished",
+        "family": "wood",
+        "subtype": "generic",
+        "finish": "unfinished",
+        "renderPrior": {
+          "metalness": 0.0,
+          "roughness": 0.72,
+          "anisotropy": 0.12
+        },
+        "requiredMaps": [
+          "map",
+          "roughnessMap",
+          "normalMap"
+        ],
+        "optionalMaps": [
+          "aoMap",
+          "anisotropyMap"
+        ],
+        "validationViews": [
+          "albedo-unlit",
+          "neutral-studio",
+          "grazing"
+        ],
+        "sourceRefs": [
+          "three.mesh-standard",
+          "three.texture",
+          "adobe.pbr-guide-1",
+          "mit.material-recognition"
+        ],
+        "visualCues": [
+          "directional grain",
+          "pores and growth rings",
+          "roughness follows grain and wear"
+        ]
+      },
+      "observations": [
+        "chromatic base-colour response",
+        "single-image PBR inference requires controlled render validation"
+      ],
+      "crop": {
+        "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/04-log-end-grain.png",
+        "bbox": {
+          "x": 995,
+          "y": 240,
+          "width": 40,
+          "height": 60
+        },
+        "sourceWidth": 1408,
+        "sourceHeight": 768,
+        "loaderWarnings": [],
+        "coverage": 0.0022
+      },
+      "textureAnalysis": {
+        "finishClass": "painted-metal",
+        "recipe": {
+          "metalness": 0.0,
+          "roughness": 0.5,
+          "clearcoat": 1.0,
+          "clearcoatRoughness": 0.05,
+          "transmission": 0.0,
+          "ior": 1.5,
+          "envMapIntensity": 1.0,
+          "anisotropy": 0.0,
+          "procedural": "flat-clearcoat"
+        },
+        "palette": [
+          "#E4C4A2",
+          "#E6C3A0",
+          "#E6C6A4",
+          "#E6C5A2",
+          "#E4C29E"
+        ],
+        "paletteHueRisk": [],
+        "gradientAxis": "vertical",
+        "stats": {
+          "meanLum": 202.6,
+          "meanSaturation": 0.297,
+          "gradientStrength": 0.02,
+          "mottle": 0.002,
+          "streakRatio": 0.64,
+          "hueSpread": 0.0,
+          "specularFraction": 0.0
+        }
+      },
+      "pbrReport": {
+        "ok": true,
+        "verdict": "pass",
+        "confidence": 0.751,
+        "estimatedFidelity": 0.751,
+        "targetThreshold": 0.7,
+        "materialId": "end-grain",
+        "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/04-log-end-grain.png",
+        "outDir": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-04-log-end-grain",
+        "palette": [
+          "#E7C6A4",
+          "#E6C5A2",
+          "#E5C29E",
+          "#E7C8A7",
+          "#E2BE98"
+        ],
+        "maps": {
+          "albedo": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-04-log-end-grain/end-grain_albedo.png",
+            "url": "end-grain_albedo.png",
+            "channel": "albedo",
+            "source": "reference-pixel-extraction"
+          },
+          "roughness": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-04-log-end-grain/end-grain_roughness.png",
+            "url": "end-grain_roughness.png",
+            "channel": "roughness",
+            "source": "reference-pixel-extraction"
+          },
+          "height": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-04-log-end-grain/end-grain_height.png",
+            "url": "end-grain_height.png",
+            "channel": "height",
+            "source": "reference-pixel-extraction"
+          },
+          "normal": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-04-log-end-grain/end-grain_normal.png",
+            "url": "end-grain_normal.png",
+            "channel": "normal",
+            "source": "reference-pixel-extraction"
+          },
+          "ao": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-04-log-end-grain/end-grain_ao.png",
+            "url": "end-grain_ao.png",
+            "channel": "ao",
+            "source": "reference-pixel-extraction"
+          }
+        },
+        "diagnostics": {
+          "sourceWidth": 40,
+          "sourceHeight": 60,
+          "mapSize": 512,
+          "cropBBoxPixels": {
+            "x": 0,
+            "y": 0,
+            "width": 40,
+            "height": 60
+          },
+          "mask": {
+            "backgroundColor": "#E5C8A8",
+            "backgroundNoise": 6.0,
+            "transparentPixelFraction": 0.0,
+            "foregroundCoverage": 1.0
+          },
+          "mapStats": {
+            "valueRange": 0.08,
+            "heightP90Gradient": 0.03253,
+            "roughnessBase": 0.711,
+            "roughnessVariation": 0.06,
+            "normalStrength": 0.194,
+            "blurRadius": 10
+          },
+          "palette": [
+            "#E7C6A4",
+            "#E6C5A2",
+            "#E5C29E",
+            "#E7C8A7",
+            "#E2BE98"
+          ]
+        },
+        "warnings": [
+          "image is not clearly isolated from background; using most pixels as material evidence",
+          "object/background separation is weak",
+          "single-image inverse rendering cannot prove true physical PBR; confidence is capped",
+          "low value range weakens height/roughness inference"
+        ],
+        "limitation": "single-image PBR extraction is an estimate; 70%+ extraction confidence still needs render screenshot review"
+      },
+      "referencePbr": {
+        "version": "1.0",
+        "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/04-log-end-grain.png",
+        "extractor": "stage1_intake/extract_pbr_evidence.py",
+        "method": "single-image pixel evidence with de-lighting estimate; not photogrammetry",
+        "usable": true,
+        "verdict": "pass",
+        "confidence": 0.751,
+        "estimatedFidelity": 0.751,
+        "targetThreshold": 0.7,
+        "hardLimit": "A single image cannot uniquely recover true albedo/roughness/normal/AO; maps are reference-derived estimates.",
+        "maps": {
+          "albedo": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-04-log-end-grain/end-grain_albedo.png",
+            "url": "end-grain_albedo.png",
+            "channel": "albedo",
+            "source": "reference-pixel-extraction"
+          },
+          "roughness": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-04-log-end-grain/end-grain_roughness.png",
+            "url": "end-grain_roughness.png",
+            "channel": "roughness",
+            "source": "reference-pixel-extraction"
+          },
+          "height": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-04-log-end-grain/end-grain_height.png",
+            "url": "end-grain_height.png",
+            "channel": "height",
+            "source": "reference-pixel-extraction"
+          },
+          "normal": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-04-log-end-grain/end-grain_normal.png",
+            "url": "end-grain_normal.png",
+            "channel": "normal",
+            "source": "reference-pixel-extraction"
+          },
+          "ao": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-04-log-end-grain/end-grain_ao.png",
+            "url": "end-grain_ao.png",
+            "channel": "ao",
+            "source": "reference-pixel-extraction"
+          }
+        },
+        "diagnostics": {
+          "sourceWidth": 40,
+          "sourceHeight": 60,
+          "mapSize": 512,
+          "cropBBoxPixels": {
+            "x": 0,
+            "y": 0,
+            "width": 40,
+            "height": 60
+          },
+          "mask": {
+            "backgroundColor": "#E5C8A8",
+            "backgroundNoise": 6.0,
+            "transparentPixelFraction": 0.0,
+            "foregroundCoverage": 1.0
+          },
+          "mapStats": {
+            "valueRange": 0.08,
+            "heightP90Gradient": 0.03253,
+            "roughnessBase": 0.711,
+            "roughnessVariation": 0.06,
+            "normalStrength": 0.194,
+            "blurRadius": 10
+          },
+          "palette": [
+            "#E7C6A4",
+            "#E6C5A2",
+            "#E5C29E",
+            "#E7C8A7",
+            "#E2BE98"
+          ]
+        },
+        "warnings": [
+          "image is not clearly isolated from background; using most pixels as material evidence",
+          "object/background separation is weak",
+          "single-image inverse rendering cannot prove true physical PBR; confidence is capped",
+          "low value range weakens height/roughness inference"
+        ]
+      },
+      "maps": {
+        "albedo": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-04-log-end-grain/end-grain_albedo.png",
+          "url": "end-grain_albedo.png",
+          "channel": "albedo",
+          "source": "reference-pixel-extraction"
+        },
+        "roughness": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-04-log-end-grain/end-grain_roughness.png",
+          "url": "end-grain_roughness.png",
+          "channel": "roughness",
+          "source": "reference-pixel-extraction"
+        },
+        "height": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-04-log-end-grain/end-grain_height.png",
+          "url": "end-grain_height.png",
+          "channel": "height",
+          "source": "reference-pixel-extraction"
+        },
+        "normal": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-04-log-end-grain/end-grain_normal.png",
+          "url": "end-grain_normal.png",
+          "channel": "normal",
+          "source": "reference-pixel-extraction"
+        },
+        "ao": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-04-log-end-grain/end-grain_ao.png",
+          "url": "end-grain_ao.png",
+          "channel": "ao",
+          "source": "reference-pixel-extraction"
+        }
+      }
+    }
+  ],
+  "status": "proceed",
+  "limitations": [
+    "PBR extraction is reference-derived inference, not inverse rendering.",
+    "A crop must be checked against the component visible footprint before accepting material scores."
+  ],
+  "artifact": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-analysis.json"
+}
