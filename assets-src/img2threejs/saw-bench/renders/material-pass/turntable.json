@@ -6,16 +6,16 @@
       "isReference": true,
       "segmented": true,
       "holed": true,
-      "interiorHolePixelCount": 12856,
-      "interiorHoleFraction": 0.1320907867292735,
-      "largestHolePixelCount": 6432,
+      "interiorHolePixelCount": 13582,
+      "interiorHoleFraction": 0.14020129032258064,
+      "largestHolePixelCount": 6795,
       "largestHoleBBox": {
         "x": 176,
-        "y": 429,
+        "y": 428,
         "width": 189,
-        "height": 35
+        "height": 37
       },
-      "areaFraction": 0.16501024034288195,
+      "areaFraction": 0.16424391004774305,
       "ratio": 1.0,
       "degenerate": false
     },
@@ -25,17 +25,17 @@
       "isReference": false,
       "segmented": true,
       "holed": true,
-      "interiorHolePixelCount": 3179,
-      "interiorHoleFraction": 0.021157225002662122,
-      "largestHolePixelCount": 1388,
+      "interiorHolePixelCount": 3025,
+      "interiorHoleFraction": 0.020568157093124456,
+      "largestHolePixelCount": 1387,
       "largestHoleBBox": {
-        "x": 441,
+        "x": 425,
         "y": 512,
         "width": 48,
-        "height": 58
+        "height": 57
       },
-      "areaFraction": 0.2547471788194444,
-      "ratio": 1.5438264818601208,
+      "areaFraction": 0.24934895833333334,
+      "ratio": 1.5181625806451613,
       "degenerate": false
     },
     {
@@ -44,17 +44,17 @@
       "isReference": false,
       "segmented": true,
       "holed": true,
-      "interiorHolePixelCount": 13579,
-      "interiorHoleFraction": 0.13430326287991928,
-      "largestHolePixelCount": 6792,
+      "interiorHolePixelCount": 13580,
+      "interiorHoleFraction": 0.1348386007764638,
+      "largestHolePixelCount": 6793,
       "largestHoleBBox": {
         "x": 403,
         "y": 428,
         "width": 189,
         "height": 37
       },
-      "areaFraction": 0.17141893174913195,
-      "ratio": 1.0388381435778355,
+      "areaFraction": 0.17075093587239584,
+      "ratio": 1.039618064516129,
       "degenerate": false
     },
     {
@@ -63,17 +63,17 @@
       "isReference": false,
       "segmented": true,
       "holed": true,
-      "interiorHolePixelCount": 3233,
-      "interiorHoleFraction": 0.02165380699780314,
+      "interiorHolePixelCount": 2998,
+      "interiorHoleFraction": 0.02022041466013786,
       "largestHolePixelCount": 1394,
       "largestHoleBBox": {
-        "x": 300,
-        "y": 512,
+        "x": 299,
+        "y": 511,
         "width": 48,
-        "height": 58
+        "height": 59
       },
-      "areaFraction": 0.2531331380208333,
-      "ratio": 1.534045023477555,
+      "areaFraction": 0.251373291015625,
+      "ratio": 1.5304877419354839,
       "degenerate": false
     }
   ],

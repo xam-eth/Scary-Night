@@ -40,7 +40,7 @@ function lights(scene, radius) {
     // studio: a concept-art product light (soft overhead key, low ambient so the space under a table top
     // falls into deep occlusion, a frontal fill from the camera's right), for assets whose reference was
     // lit that way (render-options.json fixedLight: 'studio')
-    studio: () => { hemi.intensity = 0.75; key.color.set(0xfff4e6); key.intensity = 3.1; key.position.set(-1.5, 7, 3.5).multiplyScalar(radius); fill.intensity = 0.9; fill.position.set(3.5, 2.5, 4.5).multiplyScalar(radius); },
+    studio: () => { hemi.intensity = 0.75; key.color.set(0xfff4e6); key.intensity = 3.1; key.position.set(1.5, 7, 4).multiplyScalar(radius); fill.intensity = 0.9; fill.position.set(3.5, 2.5, 4.5).multiplyScalar(radius); },
     reference: () => { hemi.intensity = 1.1; key.color.set(0xffe2b8); key.intensity = 2.6; key.position.set(-4.5, 6.5, 5).multiplyScalar(radius); fill.intensity = 0.45; fill.position.set(5, 2.5, 1).multiplyScalar(radius); },
   };
   return (mode) => (modes[mode] || modes.neutral)();
@@ -156,7 +156,7 @@ window.renderModel = async (opts) => {
   ground.position.y = box.min.y + 0.0005;
   ground.receiveShadow = true;
   scene.add(ground);
-  // optional contact shadow (opts.contactShadow = opacity, or { opacity, falloff, blur }): the
+  // optional contact shadow (opts.contactShadow = opacity, or { opacity, falloff, blur, power }): the
   // studio-floor shadow a concept render has under its subject. Built like an ambient-occlusion
   // decal: a top-down orthographic pass writes, per floor texel, how close the lowest geometry
   // above it is to the floor (max blending, 1 at the floor -> 0 at falloff x model height), the
@@ -175,9 +175,9 @@ window.renderModel = async (opts) => {
     ortho.updateMatrixWorld(true);
     const H = size.y * (cso.falloff || 1.4);
     const aoMat = new THREE.ShaderMaterial({
-      uniforms: { groundY: { value: box.min.y }, H: { value: H } },
+      uniforms: { groundY: { value: box.min.y }, H: { value: H }, P: { value: cso.power || 2 } },
       vertexShader: 'varying float vY; void main() { vec4 wp = modelMatrix * vec4(position, 1.0); vY = wp.y; gl_Position = projectionMatrix * viewMatrix * wp; }',
-      fragmentShader: 'uniform float groundY; uniform float H; varying float vY; void main() { float k = clamp(1.0 - (vY - groundY) / H, 0.0, 1.0); gl_FragColor = vec4(vec3(k * k), 1.0); }',
+      fragmentShader: 'uniform float groundY; uniform float H; uniform float P; varying float vY; void main() { float k = clamp(1.0 - (vY - groundY) / H, 0.0, 1.0); gl_FragColor = vec4(vec3(pow(k, P)), 1.0); }',
       depthTest: false, depthWrite: false, side: THREE.DoubleSide,
       blending: THREE.CustomBlending, blendEquation: THREE.MaxEquation, blendSrc: THREE.OneFactor, blendDst: THREE.OneFactor,
     });
@@ -204,7 +204,10 @@ window.renderModel = async (opts) => {
     tex.flipY = false; // readRenderTargetPixels row 0 = screen bottom = world +z = plane v 0
     decal = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: cso.opacity, alphaMap: tex, depthWrite: false, toneMapped: false }));
     decal.rotation.x = -Math.PI / 2;
-    decal.position.set(center.x, box.min.y + 0.001, center.z);
+    // offset: [dx, dz] as fractions of the footprint, for a reference whose floor shadow is thrown to one
+    // side by its key light (e.g. behind the object under a frontal key)
+    const off = Array.isArray(cso.offset) ? cso.offset : [0, 0];
+    decal.position.set(center.x + (off[0] || 0) * size.x, box.min.y + 0.001, center.z + (off[1] || 0) * size.z);
     decal.renderOrder = -1;
     scene.add(decal);
   }

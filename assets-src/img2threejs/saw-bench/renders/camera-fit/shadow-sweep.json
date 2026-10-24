@@ -3,165 +3,201 @@
  "rows": [
   {
    "opacity": 0.17,
-   "falloff": 1.4,
-   "blur": 0.08,
-   "iou": 0.8957
-  },
-  {
-   "opacity": 0.22,
-   "falloff": 1,
-   "blur": 0.08,
-   "iou": 0.8952
-  },
-  {
-   "opacity": 0.17,
    "falloff": 1.2,
    "blur": 0.06,
-   "iou": 0.8946
+   "power": 2,
+   "offset": [
+    0,
+    0
+   ],
+   "iou": 0.8989
   },
   {
-   "opacity": 0.17,
+   "opacity": 0.24,
    "falloff": 1.2,
-   "blur": 0.08,
-   "iou": 0.8922
+   "blur": 0.06,
+   "power": 2,
+   "offset": [
+    0,
+    -0.15
+   ],
+   "iou": 0.8933
   },
   {
-   "opacity": 0.17,
-   "falloff": 1.4,
-   "blur": 0.06,
-   "iou": 0.8902
-  },
-  {
-   "opacity": 0.22,
-   "falloff": 1,
-   "blur": 0.06,
-   "iou": 0.8875
+   "opacity": 0.24,
+   "falloff": 1.2,
+   "blur": 0.04,
+   "power": 2,
+   "offset": [
+    0,
+    -0.15
+   ],
+   "iou": 0.8924
   },
   {
    "opacity": 0.17,
    "falloff": 1.2,
    "blur": 0.04,
-   "iou": 0.8871
-  },
-  {
-   "opacity": 0.22,
-   "falloff": 1.2,
-   "blur": 0.08,
-   "iou": 0.8854
+   "power": 2,
+   "offset": [
+    0,
+    -0.15
+   ],
+   "iou": 0.8915
   },
   {
    "opacity": 0.17,
-   "falloff": 1.4,
-   "blur": 0.04,
-   "iou": 0.8828
-  },
-  {
-   "opacity": 0.22,
-   "falloff": 1,
-   "blur": 0.04,
-   "iou": 0.88
-  },
-  {
-   "opacity": 0.22,
-   "falloff": 1.2,
-   "blur": 0.06,
-   "iou": 0.8792
-  },
-  {
-   "opacity": 0.22,
-   "falloff": 1.4,
-   "blur": 0.08,
-   "iou": 0.8784
-  },
-  {
-   "opacity": 0.28,
-   "falloff": 1,
-   "blur": 0.08,
-   "iou": 0.8769
-  },
-  {
-   "opacity": 0.22,
    "falloff": 1.2,
    "blur": 0.04,
-   "iou": 0.8746
+   "power": 2,
+   "offset": [
+    0,
+    0
+   ],
+   "iou": 0.8905
   },
   {
-   "opacity": 0.22,
-   "falloff": 1.4,
-   "blur": 0.06,
-   "iou": 0.8739
-  },
-  {
-   "opacity": 0.28,
-   "falloff": 1,
-   "blur": 0.06,
-   "iou": 0.8715
-  },
-  {
-   "opacity": 0.22,
-   "falloff": 1.4,
-   "blur": 0.04,
-   "iou": 0.871
-  },
-  {
-   "opacity": 0.28,
-   "falloff": 1,
-   "blur": 0.04,
-   "iou": 0.869
-  },
-  {
-   "opacity": 0.28,
+   "opacity": 0.3,
    "falloff": 1.2,
-   "blur": 0.08,
+   "blur": 0.04,
+   "power": 2,
+   "offset": [
+    0,
+    -0.15
+   ],
+   "iou": 0.89
+  },
+  {
+   "opacity": 0.3,
+   "falloff": 1.2,
+   "blur": 0.06,
+   "power": 2,
+   "offset": [
+    0,
+    -0.15
+   ],
+   "iou": 0.8893
+  },
+  {
+   "opacity": 0.17,
+   "falloff": 1.2,
+   "blur": 0.06,
+   "power": 2,
+   "offset": [
+    0,
+    -0.15
+   ],
+   "iou": 0.888
+  },
+  {
+   "opacity": 0.24,
+   "falloff": 1.2,
+   "blur": 0.06,
+   "power": 2,
+   "offset": [
+    0,
+    0
+   ],
+   "iou": 0.8775
+  },
+  {
+   "opacity": 0.24,
+   "falloff": 1.2,
+   "blur": 0.04,
+   "power": 2,
+   "offset": [
+    0,
+    0
+   ],
+   "iou": 0.8745
+  },
+  {
+   "opacity": 0.3,
+   "falloff": 1.2,
+   "blur": 0.06,
+   "power": 2,
+   "offset": [
+    0,
+    -0.3
+   ],
+   "iou": 0.8683
+  },
+  {
+   "opacity": 0.3,
+   "falloff": 1.2,
+   "blur": 0.04,
+   "power": 2,
+   "offset": [
+    0,
+    -0.3
+   ],
+   "iou": 0.868
+  },
+  {
+   "opacity": 0.24,
+   "falloff": 1.2,
+   "blur": 0.04,
+   "power": 2,
+   "offset": [
+    0,
+    -0.3
+   ],
+   "iou": 0.8679
+  },
+  {
+   "opacity": 0.24,
+   "falloff": 1.2,
+   "blur": 0.06,
+   "power": 2,
+   "offset": [
+    0,
+    -0.3
+   ],
+   "iou": 0.8679
+  },
+  {
+   "opacity": 0.3,
+   "falloff": 1.2,
+   "blur": 0.04,
+   "power": 2,
+   "offset": [
+    0,
+    0
+   ],
+   "iou": 0.8664
+  },
+  {
+   "opacity": 0.17,
+   "falloff": 1.2,
+   "blur": 0.04,
+   "power": 2,
+   "offset": [
+    0,
+    -0.3
+   ],
    "iou": 0.8662
   },
   {
-   "opacity": 0.28,
-   "falloff": 1.2,
-   "blur": 0.04,
-   "iou": 0.8646
-  },
-  {
-   "opacity": 0.28,
+   "opacity": 0.3,
    "falloff": 1.2,
    "blur": 0.06,
-   "iou": 0.8642
+   "power": 2,
+   "offset": [
+    0,
+    0
+   ],
+   "iou": 0.8644
   },
   {
-   "opacity": 0.28,
-   "falloff": 1.4,
-   "blur": 0.04,
-   "iou": 0.862
-  },
-  {
-   "opacity": 0.28,
-   "falloff": 1.4,
+   "opacity": 0.17,
+   "falloff": 1.2,
    "blur": 0.06,
-   "iou": 0.8595
-  },
-  {
-   "opacity": 0.28,
-   "falloff": 1.4,
-   "blur": 0.08,
-   "iou": 0.8584
-  },
-  {
-   "opacity": 0.17,
-   "falloff": 1,
-   "blur": 0.06,
-   "iou": 0.8223
-  },
-  {
-   "opacity": 0.17,
-   "falloff": 1,
-   "blur": 0.04,
-   "iou": 0.8185
-  },
-  {
-   "opacity": 0.17,
-   "falloff": 1,
-   "blur": 0.08,
-   "iou": 0.8019
+   "power": 2,
+   "offset": [
+    0,
+    -0.3
+   ],
+   "iou": 0.8629
   }
  ]
 }

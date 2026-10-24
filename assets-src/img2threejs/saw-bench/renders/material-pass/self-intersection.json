@@ -459,7 +459,7 @@
       "worstRegions": [],
       "normalSource": "vertexNormals",
       "normalFallbackCount": 0,
-      "epsilon": 0.000668987268488721,
+      "epsilon": 0.0006243017092720474,
       "rayDirectionCount": 3
     },
     {
@@ -478,7 +478,7 @@
       "worstRegions": [],
       "normalSource": "vertexNormals",
       "normalFallbackCount": 0,
-      "epsilon": 0.000225794389655722,
+      "epsilon": 0.00022637355167951932,
       "rayDirectionCount": 3
     }
   ],

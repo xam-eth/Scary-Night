@@ -1,0 +1,22 @@
+[
+  {
+    "id": "overall-silhouette",
+    "score": 0.85,
+    "notes": "Tier-1 IoU 0.895, aspect 0.006, scale 0.006: the log now lies turned toward the viewer as in the reference."
+  },
+  {
+    "id": "blade-read",
+    "score": 0.76,
+    "notes": "Toothed blade with hub, nut and slot; base colour within dE 4.4 of the reference's blade region but it reads flat mid-grey with a faint blue cast: the reference's sheen and bright rim are surface/lighting work."
+  },
+  {
+    "id": "table-structure",
+    "score": 0.82,
+    "notes": "Muted brown wood within dE 3.2 of the reference's top front; grain now runs along the top boards and up the legs."
+  },
+  {
+    "id": "log-read",
+    "score": 0.7,
+    "notes": "The cut face now faces the camera but reads grey-beige instead of pale peach (the gate light's key comes from the left and leaves the face to the fill), and the log overhangs the front edge enough to drop a dark shadow down the top's front face that the reference does not have."
+  }
+]

@@ -232,8 +232,8 @@ try {
     const fixedView = views.find((v) => v.id === 'fixed');
     const rows = [];
     const sg = Object.assign({ opacity: [0.2, 0.26, 0.32, 0.38], falloff: [0.8, 1.1, 1.4], blur: [0.02, 0.035, 0.05] }, args['shadow-grid'] ? JSON.parse(String(args['shadow-grid'])) : {});
-    for (const opacity of sg.opacity) for (const falloff of sg.falloff) for (const blur of sg.blur) {
-      const cs = { opacity, falloff, blur };
+    for (const opacity of sg.opacity) for (const falloff of sg.falloff) for (const blur of sg.blur) for (const power of (sg.power || [2])) for (const oz of (sg.offsetZ || [0])) {
+      const cs = { opacity, falloff, blur, power, offset: [0, oz] };
       const res = await page.evaluate((o) => window.renderModel(o), {
         moduleUrl: `/tools/.cache/img2threejs/${bundleName}?v=sweep`, exportName, bg: ref.bg, views: [fixedView],
         exposure: Number(args.exposure || renderOpts.exposure || 1.25), buildOptions: { textureSize: 256 }, shadowOpacity: 0, contactShadow: cs,

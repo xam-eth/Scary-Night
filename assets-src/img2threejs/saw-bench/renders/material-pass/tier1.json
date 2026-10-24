@@ -1,113 +1,113 @@
 {
   "passed": true,
   "checks": {
-    "silhouetteIoU": 0.8946,
+    "silhouetteIoU": 0.89,
     "aspectRatioDelta": 0.0057,
     "scaleDelta": 0.0057,
-    "bilateralSymmetryError": 0.1484,
+    "bilateralSymmetryError": 0.158,
     "colorDelta": {
       "checked": 25,
-      "maxDeltaE": 17.58,
+      "maxDeltaE": 16.17,
       "perComponent": [
         {
           "componentId": null,
-          "deltaE": 3.42
+          "deltaE": 2.75
         },
         {
           "componentId": null,
-          "deltaE": 3.42
+          "deltaE": 2.75
         },
         {
           "componentId": null,
-          "deltaE": 3.42
+          "deltaE": 2.75
         },
         {
           "componentId": null,
-          "deltaE": 3.42
+          "deltaE": 2.75
         },
         {
           "componentId": null,
-          "deltaE": 3.42
+          "deltaE": 2.75
         },
         {
           "componentId": null,
-          "deltaE": 3.42
+          "deltaE": 2.75
         },
         {
           "componentId": null,
-          "deltaE": 3.42
+          "deltaE": 2.75
         },
         {
           "componentId": null,
-          "deltaE": 3.42
+          "deltaE": 2.75
         },
         {
           "componentId": null,
-          "deltaE": 3.42
+          "deltaE": 2.75
         },
         {
           "componentId": null,
-          "deltaE": 3.42
+          "deltaE": 2.75
         },
         {
           "componentId": null,
-          "deltaE": 3.42
+          "deltaE": 2.75
         },
         {
           "componentId": null,
-          "deltaE": 3.42
+          "deltaE": 2.75
         },
         {
           "componentId": null,
-          "deltaE": 3.42
+          "deltaE": 2.75
         },
         {
           "componentId": null,
-          "deltaE": 3.42
+          "deltaE": 2.75
         },
         {
           "componentId": null,
-          "deltaE": 3.42
+          "deltaE": 2.75
         },
         {
           "componentId": null,
-          "deltaE": 3.42
+          "deltaE": 2.75
         },
         {
           "componentId": null,
-          "deltaE": 3.42
+          "deltaE": 2.75
         },
         {
           "componentId": null,
-          "deltaE": 3.42
+          "deltaE": 2.75
         },
         {
           "componentId": null,
-          "deltaE": 3.42
+          "deltaE": 2.75
         },
         {
           "componentId": null,
-          "deltaE": 11.54
+          "deltaE": 10.77
         },
         {
           "componentId": null,
-          "deltaE": 17.09
+          "deltaE": 16.17
         },
         {
           "componentId": null,
-          "deltaE": 17.09
+          "deltaE": 16.17
         },
         {
           "componentId": null,
-          "deltaE": 13.93
+          "deltaE": 12.27
         },
         {
           "componentId": null,
-          "deltaE": 7.43
+          "deltaE": 8.81
         },
         {
           "componentId": null,
-          "deltaE": 17.58
+          "deltaE": 15.57
         }
       ],
       "gated": true
@@ -115,6 +115,6 @@
   },
   "failures": [],
   "maskWarnings": [],
-  "renderHash": "f5bcf341c897ee5c",
+  "renderHash": "9d2818a02f01cf73",
   "passId": "material-pass"
 }

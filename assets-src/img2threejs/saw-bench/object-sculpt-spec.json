@@ -4484,8 +4484,8 @@
         "steel"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(124, 125, 131, 1.0)",
-        "secondaryAlbedo": "rgba(102, 102, 108, 1.0)",
+        "dominantAlbedo": "rgba(128, 127, 132, 1.0)",
+        "secondaryAlbedo": "rgba(106, 105, 110, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.9,
         "colorGradient": {
@@ -4494,11 +4494,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(102, 102, 108, 1.0)"
+              "color": "rgba(106, 105, 110, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(124, 125, 131, 1.0)"
+              "color": "rgba(128, 127, 132, 1.0)"
             }
           ]
         },
@@ -5107,14 +5107,14 @@
         "parentId": "root",
         "parentSocket": "root:top",
         "localStart": [
-          -0.105,
+          -0.1,
           0.175,
-          1.4
+          1.37
         ],
         "localEnd": [
-          -0.3397,
+          -0.2761,
           0.175,
-          1.8415
+          1.8058
         ],
         "baseRadius": 0.085,
         "endRadius": 0.085,
@@ -5134,9 +5134,9 @@
       },
       "transform": {
         "position": [
-          -0.105,
+          -0.1,
           0.175,
-          1.4
+          1.37
         ],
         "rotation": [
           -0.0,
@@ -5154,9 +5154,9 @@
             0
           ],
           "axis": [
-            0.8829,
+            0.9272,
             0,
-            0.4695
+            0.3746
           ],
           "confidence": 0.75
         },
@@ -5306,14 +5306,14 @@
         "parentId": "log",
         "parentSocket": "log:end",
         "localStart": [
-          -0.2347,
+          -0.1761,
           0.0,
-          0.4415
+          0.4358
         ],
         "localEnd": [
-          -0.2376,
+          -0.1783,
           0.0,
-          0.4468
+          0.4413
         ],
         "baseRadius": 0.079,
         "endRadius": 0.079,
@@ -5333,9 +5333,9 @@
       },
       "transform": {
         "position": [
-          -0.2347,
+          -0.1761,
           0.0,
-          0.4415
+          0.4358
         ],
         "rotation": [
           -0.0,
@@ -6719,21 +6719,21 @@
       "name": "Saw steel",
       "type": "standard",
       "shaderModel": "MeshStandardMaterial / PBR approximation (stylized, low-amplitude variation)",
-      "baseColor": "#7c7d83",
-      "color": "#7c7d83",
+      "baseColor": "#807f84",
+      "color": "#807f84",
       "albedo": {
-        "dominant": "#7c7d83",
+        "dominant": "#807f84",
         "secondary": [
-          "#66666c",
-          "#96979b"
+          "#6a696e",
+          "#9a999d"
         ],
         "samplingNotes": "Sampled from the de-shaded mid tones of the reference region; highlights and core shadows of the illustration are lighting, not albedo."
       },
       "colorVariation": {
         "palette": [
-          "#7c7d83",
-          "#66666c",
-          "#96979b"
+          "#807f84",
+          "#6a696e",
+          "#9a999d"
         ],
         "pattern": "mottled",
         "amplitude": 0.1,
@@ -7836,6 +7836,48 @@
       "cameraView": "fixed: az 31, el 6, fov 24 (fitted)",
       "notes": "",
       "aiVisionNotes": "Viewed renders/form-refinement/cmp.jpg and renders/form-refinement/turntable.jpg (review-1/review-2 hold the two refine verdicts)."
+    },
+    {
+      "timestamp": "2026-10-24T04:04:14.780823+00:00",
+      "passId": "material-pass",
+      "estimatedFidelity": 0.68,
+      "aiVisionScore": 0.76,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.85,
+        "componentStructure": 0.83,
+        "formDetail": 0.7,
+        "materialSurface": 0.62,
+        "lightingCamera": 0.72
+      },
+      "featureReviews": [
+        {
+          "id": "overall-silhouette",
+          "score": 0.85,
+          "notes": "Tier-1 IoU 0.895, aspect 0.006, scale 0.006: the log now lies turned toward the viewer as in the reference."
+        },
+        {
+          "id": "blade-read",
+          "score": 0.76,
+          "notes": "Toothed blade with hub, nut and slot; base colour within dE 4.4 of the reference's blade region but it reads flat mid-grey with a faint blue cast: the reference's sheen and bright rim are surface/lighting work."
+        },
+        {
+          "id": "table-structure",
+          "score": 0.82,
+          "notes": "Muted brown wood within dE 3.2 of the reference's top front; grain now runs along the top boards and up the legs."
+        },
+        {
+          "id": "log-read",
+          "score": 0.7,
+          "notes": "The cut face now faces the camera but reads grey-beige instead of pale peach (the gate light's key comes from the left and leaves the face to the fill), and the log overhangs the front edge enough to drop a dark shadow down the top's front face that the reference does not have."
+        }
+      ],
+      "referenceScreenshot": "reference.png",
+      "renderScreenshot": "renders/material-pass/fixed.png",
+      "comparisonImage": "renders/material-pass/cmp-loop1.jpg",
+      "cameraView": "fixed: az 31, el 6, fov 24 (fitted), studio light, exposure 1.45",
+      "notes": "",
+      "aiVisionNotes": "Viewed renders/material-pass/cmp-loop1.jpg (this build's sheet) and turntable.jpg."
     }
   ],
   "reviewHistory": [
@@ -8204,6 +8246,71 @@
         "cameraView": "fixed: az 31, el 6, fov 24 (fitted)",
         "notes": "",
         "aiVisionNotes": "Viewed renders/form-refinement/cmp.jpg and renders/form-refinement/turntable.jpg (review-1/review-2 hold the two refine verdicts)."
+      }
+    },
+    {
+      "timestamp": "2026-10-24T04:04:14.780823+00:00",
+      "passId": "material-pass",
+      "estimatedFidelity": 0.68,
+      "aiVisionScore": 0.76,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.85,
+        "componentStructure": 0.83,
+        "formDetail": 0.7,
+        "materialSurface": 0.62,
+        "lightingCamera": 0.72
+      },
+      "featureReviews": [
+        {
+          "id": "overall-silhouette",
+          "score": 0.85,
+          "notes": "Tier-1 IoU 0.895, aspect 0.006, scale 0.006: the log now lies turned toward the viewer as in the reference."
+        },
+        {
+          "id": "blade-read",
+          "score": 0.76,
+          "notes": "Toothed blade with hub, nut and slot; base colour within dE 4.4 of the reference's blade region but it reads flat mid-grey with a faint blue cast: the reference's sheen and bright rim are surface/lighting work."
+        },
+        {
+          "id": "table-structure",
+          "score": 0.82,
+          "notes": "Muted brown wood within dE 3.2 of the reference's top front; grain now runs along the top boards and up the legs."
+        },
+        {
+          "id": "log-read",
+          "score": 0.7,
+          "notes": "The cut face now faces the camera but reads grey-beige instead of pale peach (the gate light's key comes from the left and leaves the face to the fill), and the log overhangs the front edge enough to drop a dark shadow down the top's front face that the reference does not have."
+        }
+      ],
+      "action": "refine-spec",
+      "summary": "Material pass: evidence-based albedos (muted wood, mid steel, warm-grey iron, peach cut face), long-grain material for boards and legs, the log turned toward the viewer; Tier-1 IoU 0.895 and colour max dE 17.6 pass. The log read is held back by its unlit cut face and its overhang shadow: refine the spec.",
+      "matched": [
+        "muted brown wood with grain along boards and legs",
+        "mid-grey blade, dark hub",
+        "log turned toward the viewer with its cut face visible"
+      ],
+      "mismatches": [
+        "cut face unlit (grey-beige)",
+        "log overhangs the front edge and shadows the front face",
+        "blade flat and faintly blue (sheen comes in the surface pass)"
+      ],
+      "specFixes": [
+        "material-pass: log turned 22 deg (not 28) and shortened to 0.47 so it rests on the top",
+        "the gate view's studio key moved to the camera's side (x +1.5) so the cut face is lit as in the reference",
+        "steel albedo neutral #807f84"
+      ],
+      "codeFixes": [
+        "none"
+      ],
+      "evidence": [],
+      "visualEvidence": {
+        "referenceScreenshot": "reference.png",
+        "renderScreenshot": "renders/material-pass/fixed.png",
+        "comparisonImage": "renders/material-pass/cmp-loop1.jpg",
+        "cameraView": "fixed: az 31, el 6, fov 24 (fitted), studio light, exposure 1.45",
+        "notes": "",
+        "aiVisionNotes": "Viewed renders/material-pass/cmp-loop1.jpg (this build's sheet) and turntable.jpg."
       }
     }
   ],
@@ -9392,6 +9499,126 @@
       "failures": [],
       "maskWarnings": [],
       "renderHash": "f5bcf341c897ee5c",
+      "passId": "material-pass"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "silhouetteIoU": 0.89,
+        "aspectRatioDelta": 0.0057,
+        "scaleDelta": 0.0057,
+        "bilateralSymmetryError": 0.158,
+        "colorDelta": {
+          "checked": 25,
+          "maxDeltaE": 16.17,
+          "perComponent": [
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 10.77
+            },
+            {
+              "componentId": null,
+              "deltaE": 16.17
+            },
+            {
+              "componentId": null,
+              "deltaE": 16.17
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.27
+            },
+            {
+              "componentId": null,
+              "deltaE": 8.81
+            },
+            {
+              "componentId": null,
+              "deltaE": 15.57
+            }
+          ],
+          "gated": true
+        }
+      },
+      "failures": [],
+      "maskWarnings": [],
+      "renderHash": "9d2818a02f01cf73",
       "passId": "material-pass"
     }
   ]

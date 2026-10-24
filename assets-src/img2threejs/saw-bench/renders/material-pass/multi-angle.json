@@ -1,22 +1,22 @@
 {
-  "referenceAreaFraction": 0.3761948094223485,
+  "referenceAreaFraction": 0.37896728515625,
   "angles": [
     {
       "path": "renders/material-pass/right.png",
-      "areaFraction": 0.2547471788194444,
-      "ratio": 0.6771682448532761,
+      "areaFraction": 0.24934895833333334,
+      "ratio": 0.6579696140011811,
       "degenerate": false
     },
     {
       "path": "renders/material-pass/rear.png",
-      "areaFraction": 0.17141893174913195,
-      "ratio": 0.4556653293870474,
+      "areaFraction": 0.17075093587239584,
+      "ratio": 0.45056906640897626,
       "degenerate": false
     },
     {
       "path": "renders/material-pass/top.png",
-      "areaFraction": 0.19588724772135416,
-      "ratio": 0.5207069391046125,
+      "areaFraction": 0.195953369140625,
+      "ratio": 0.5170719922692866,
       "degenerate": false
     }
   ],

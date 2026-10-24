@@ -72,7 +72,7 @@ MATERIALS = {
                           overrides=[dict(id="log-end-rings", kind="decal", region="the log's cut face",
                                           evidenceRefs=["full-object"], confidence=0.7, pattern="growth rings")],
                           notes="Pale peach cut face with faint rings."),
-    "steel": Material("steel", "Saw steel", "#7c7d83", ["#66666c", "#96979b"], material_class="metal",
+    "steel": Material("steel", "Saw steel", "#807f84", ["#6a696e", "#9a999d"], material_class="metal",
                       roughness=0.4, metalness=0.25, normal=0.12, amplitude=0.1, bands=BRUSHED,
                       overrides=[dict(id="blade-sheen", kind="gloss", region="blade faces", evidenceRefs=["full-object"],
                                       confidence=0.7, roughness=0.28, note="brushed sheen catching the key light")],
@@ -107,9 +107,9 @@ LOG_R = 0.085
 LOG_Y = TOP_Y + LOG_R
 # the log lies on the top in front of the blade plane, turned ~20 deg toward the viewer so its pale
 # cut face looks at the camera as in the reference (its far end clears the blade: z - r > 0.011)
-LOG_YAW = math.radians(28.0)
-LOG_A = (0.4, 0.105)                      # (x, z) of the end near the blade
-LOG_LEN = 0.5
+LOG_YAW = math.radians(22.0)
+LOG_A = (0.37, 0.1)                       # (x, z) of the end near the blade
+LOG_LEN = 0.47
 LOG_B = (LOG_A[0] + LOG_LEN * math.cos(LOG_YAW), LOG_A[1] + LOG_LEN * math.sin(LOG_YAW))
 
 

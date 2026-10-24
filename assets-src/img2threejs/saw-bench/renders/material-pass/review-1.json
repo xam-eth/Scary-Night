@@ -1,0 +1,21 @@
+{
+  "pass": "material-pass",
+  "fidelity": 0.68,
+  "aiVisionScore": 0.76,
+  "action": "refine-spec",
+  "layerScores": {"silhouetteProportion": 0.85, "componentStructure": 0.83, "formDetail": 0.7, "materialSurface": 0.62, "lightingCamera": 0.72},
+  "featureReviews": [
+    {"id": "overall-silhouette", "score": 0.85, "notes": "Tier-1 IoU 0.895, aspect 0.006, scale 0.006: the log now lies turned toward the viewer as in the reference."},
+    {"id": "blade-read", "score": 0.76, "notes": "Toothed blade with hub, nut and slot; base colour within dE 4.4 of the reference's blade region but it reads flat mid-grey with a faint blue cast: the reference's sheen and bright rim are surface/lighting work."},
+    {"id": "table-structure", "score": 0.82, "notes": "Muted brown wood within dE 3.2 of the reference's top front; grain now runs along the top boards and up the legs."},
+    {"id": "log-read", "score": 0.7, "notes": "The cut face now faces the camera but reads grey-beige instead of pale peach (the gate light's key comes from the left and leaves the face to the fill), and the log overhangs the front edge enough to drop a dark shadow down the top's front face that the reference does not have."}
+  ],
+  "summary": "Material pass: evidence-based albedos (muted wood, mid steel, warm-grey iron, peach cut face), long-grain material for boards and legs, the log turned toward the viewer; Tier-1 IoU 0.895 and colour max dE 17.6 pass. The log read is held back by its unlit cut face and its overhang shadow: refine the spec.",
+  "matched": ["muted brown wood with grain along boards and legs", "mid-grey blade, dark hub", "log turned toward the viewer with its cut face visible"],
+  "mismatches": ["cut face unlit (grey-beige)", "log overhangs the front edge and shadows the front face", "blade flat and faintly blue (sheen comes in the surface pass)"],
+  "specFixes": ["material-pass: log turned 22 deg (not 28) and shortened to 0.47 so it rests on the top; the gate view's studio key moved to the camera's side (x +1.5) so the cut face is lit as in the reference; steel albedo neutral #807f84"],
+  "codeFixes": ["none"],
+  "notes": "Viewed renders/material-pass/cmp-loop1.jpg (this build's sheet) and turntable.jpg.",
+  "comparisonImage": "renders/material-pass/cmp-loop1.jpg",
+  "cameraView": "fixed: az 31, el 6, fov 24 (fitted), studio light, exposure 1.45"
+}

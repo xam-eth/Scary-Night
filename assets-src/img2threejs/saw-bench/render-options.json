@@ -1,11 +1,15 @@
 {
   "contactShadow": {
-    "opacity": 0.17,
+    "opacity": 0.3,
     "falloff": 1.2,
-    "blur": 0.06
+    "blur": 0.04,
+    "offset": [
+      0,
+      -0.15
+    ]
   },
   "why": "The reference concept has a soft floor shadow under the bench and the Tier-1 foreground mask counts it (analysis/reference-suitability.md). Gate renders carry a matching contact shadow (an ambient-occlusion floor decal computed from the model's height above the floor, blurred; no light involved) so the silhouette comparison measures the same thing on both sides; the model's own lighting and key-light self-shadowing are unchanged.",
-  "how": "Contact-shadow settings from shadow sweeps (renders/camera-fit/shadow-sweep.json: settings scored by Tier-1 IoU on the fixed view); among the top settings the one whose floor pixels stay in the reference's grey range (no separate light-grey colour cluster) was kept.",
+  "how": "Contact-shadow settings from shadow sweeps (renders/camera-fit/shadow-sweep.json: settings scored by Tier-1 IoU on the fixed view). The reference's floor shadow is darker in its core (L 60-76) than a faint IoU-optimal decal and is thrown a little behind the bench by the concept's frontal key, so the kept setting (IoU 0.890, within 0.01 of the sweep's best) has opacity 0.3 and sits 15% of the footprint depth toward the back: its floor pixels merge with the blade's grey exactly as the reference's do (render colour clusters #a26d4b #9d9b9e #462e24 #c5956d #724931 vs reference #966138 #8d8c8e #2e1d17 #bc8d65 #693e25).",
   "allowHoles": true,
   "allowHolesWhy": "The bench frame encloses real negative spaces (under the top between the legs, stretchers and cross braces; declared in silhouetteAnalysis.negativeSpaces), so turntable views are holed by design.",
   "exposure": 1.45,
