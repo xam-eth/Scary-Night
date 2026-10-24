@@ -32,8 +32,8 @@ RINGS = [
 ]
 BRUSHED = [
     {"id": "macro", "frequency": 2.0, "amplitude": 0.2, "role": "broad tone breakup across the disc"},
-    {"id": "meso", "frequency": 8.0, "amplitude": 0.3, "stretch": [4.0, 0.3], "pattern": "striated",
-     "role": "brushing streaks on the steel"},
+    {"id": "meso", "frequency": 8.0, "amplitude": 0.18, "stretch": [4.0, 0.3], "pattern": "striated",
+     "role": "soft brushing streaks on the steel"},
     {"id": "micro", "frequency": 40.0, "amplitude": 0.06, "role": "highlight breakup under grazing light"},
 ]
 
@@ -89,7 +89,7 @@ MATERIALS = {
                      notes="The dark gap the blade runs through."),
 }
 FLAT_SHADED: set[str] = set()
-METAL_OVERRIDES = {"steel": {"metalness": 0.25, "roughness": 0.4}, "iron": {"metalness": 0.25, "roughness": 0.45}}
+METAL_OVERRIDES = {"steel": {"metalness": 0.25, "roughness": 0.32}, "iron": {"metalness": 0.25, "roughness": 0.45}}
 ROUGHNESS_OVERRIDES = {"wood": 0.88, "wood-long": 0.88, "bark": 0.92, "end-grain": 0.93, "slot": 0.96}
 
 # ---- geometry -----------------------------------------------------------------------------------

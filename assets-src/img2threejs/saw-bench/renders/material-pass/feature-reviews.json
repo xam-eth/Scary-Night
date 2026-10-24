@@ -1,22 +1,27 @@
 [
   {
+    "id": "reference-material-system",
+    "score": 0.77,
+    "notes": "Five material families read apart as in the reference: muted brown bench wood with long grain (two UV orientations), a mid steel-grey blade, a dark warm-grey iron hub and nut, a greyer brown log and its pale peach cut face, plus the dark slot. Albedos come from the material-evidence palettes; region means land within dE 3-8 of the reference (_lib/region_compare.py) and the per-part colour gate is 16.2. The steel still lacks its brushed sheen (surface pass)."
+  },
+  {
     "id": "overall-silhouette",
     "score": 0.85,
-    "notes": "Tier-1 IoU 0.895, aspect 0.006, scale 0.006: the log now lies turned toward the viewer as in the reference."
+    "notes": "Tier-1 IoU 0.890, aspect 0.006, scale 0.006; the log lies turned toward the viewer on the top."
   },
   {
     "id": "blade-read",
     "score": 0.76,
-    "notes": "Toothed blade with hub, nut and slot; base colour within dE 4.4 of the reference's blade region but it reads flat mid-grey with a faint blue cast: the reference's sheen and bright rim are surface/lighting work."
+    "notes": "Toothed blade with hub, nut and slot; base colour within dE 7 of the reference's blade region. Still flat with linear streaks where the reference has a bright brushed sheen and rim: surface-pass work."
   },
   {
     "id": "table-structure",
-    "score": 0.82,
-    "notes": "Muted brown wood within dE 3.2 of the reference's top front; grain now runs along the top boards and up the legs."
+    "score": 0.83,
+    "notes": "Muted brown wood (front face within dE 3 of the reference), grain along the top boards and up the legs, darker shadowed members under the top."
   },
   {
     "id": "log-read",
-    "score": 0.7,
-    "notes": "The cut face now faces the camera but reads grey-beige instead of pale peach (the gate light's key comes from the left and leaves the face to the fill), and the log overhangs the front edge enough to drop a dark shadow down the top's front face that the reference does not have."
+    "score": 0.8,
+    "notes": "After the refine the log rests fully on the top, turned toward the viewer, with its cut face lit pale peach (region within dE 8 of the reference's) and no overhang shadow."
   }
 ]

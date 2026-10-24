@@ -1,0 +1,59 @@
+{
+  "pass": "material-pass",
+  "fidelity": 0.72,
+  "aiVisionScore": 0.79,
+  "action": "continue",
+  "layerScores": {
+    "silhouetteProportion": 0.85,
+    "componentStructure": 0.83,
+    "formDetail": 0.7,
+    "materialSurface": 0.68,
+    "lightingCamera": 0.76
+  },
+  "featureReviews": [
+    {
+      "id": "reference-material-system",
+      "score": 0.77,
+      "notes": "Five material families read apart as in the reference: muted brown bench wood with long grain (two UV orientations), a mid steel-grey blade, a dark warm-grey iron hub and nut, a greyer brown log and its pale peach cut face, plus the dark slot. Albedos come from the material-evidence palettes; region means land within dE 3-8 of the reference (_lib/region_compare.py) and the per-part colour gate is 16.2. The steel still lacks its brushed sheen (surface pass)."
+    },
+    {
+      "id": "overall-silhouette",
+      "score": 0.85,
+      "notes": "Tier-1 IoU 0.890, aspect 0.006, scale 0.006; the log lies turned toward the viewer on the top."
+    },
+    {
+      "id": "blade-read",
+      "score": 0.76,
+      "notes": "Toothed blade with hub, nut and slot; base colour within dE 7 of the reference's blade region. Still flat with linear streaks where the reference has a bright brushed sheen and rim: surface-pass work."
+    },
+    {
+      "id": "table-structure",
+      "score": 0.83,
+      "notes": "Muted brown wood (front face within dE 3 of the reference), grain along the top boards and up the legs, darker shadowed members under the top."
+    },
+    {
+      "id": "log-read",
+      "score": 0.8,
+      "notes": "After the refine the log rests fully on the top, turned toward the viewer, with its cut face lit pale peach (region within dE 8 of the reference's) and no overhang shadow."
+    }
+  ],
+  "summary": "Material pass after one refine-spec: evidence-based albedos, long-grain material, the log resting on the top with a lit pale cut face. Tier-1 IoU 0.890, aspect 0.006, scale 0.006, per-part colour max dE 16.2 (gate 20) with the render's five colour clusters matching the reference's; all orbit gates pass.",
+  "matched": [
+    "muted brown wood with grain along boards and legs",
+    "mid-grey blade, dark iron hub and nut",
+    "log on the top with a pale peach cut face toward the viewer",
+    "colour clusters line up with the reference's"
+  ],
+  "mismatches": [
+    "blade flat with linear streaks, no brushed sheen or bright rim (surface-pass)",
+    "wood lacks the reference's soft edge highlights and worn edges (surface-pass)"
+  ],
+  "specFixes": [
+    "surface-pass: blade sheen (lower roughness, softer streaks), edge wear and grain contrast on the wood, bark streaks on the log"
+  ],
+  "codeFixes": [
+    "none"
+  ],
+  "notes": "Viewed renders/material-pass/cmp.jpg and turntable.jpg (review-1.json holds the refine verdict, cmp-loop1.jpg its sheet).",
+  "cameraView": "fixed: az 31, el 6, fov 24 (fitted), studio light, exposure 1.45"
+}
