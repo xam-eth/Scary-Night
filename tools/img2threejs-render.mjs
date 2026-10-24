@@ -152,6 +152,12 @@ const views = [
   { id: 'rear', azimuthDeg: 180, elevationDeg: orbitEl, fov, width: 768, height: 768, frame: { mode: 'fit', margin: 1.3 } },
   { id: 'left', azimuthDeg: 270, elevationDeg: orbitEl, fov, width: 768, height: 768, frame: { mode: 'fit', margin: 1.3 } },
   { id: 'top', azimuthDeg: az, elevationDeg: 62, fov, width: 768, height: 768, frame: { mode: 'fit', margin: 1.3 } },
+  // lighting checks (img2threejs surface + lighting passes): reference-matched and grazing light on the
+  // fixed view, and a grazing close-up of one named part (--focus=<mesh name>)
+  { id: 'fixed-reference', azimuthDeg: az, elevationDeg: el, fov, width: RW, height: RH, frame: ndc, light: 'reference' },
+  { id: 'fixed-grazing', azimuthDeg: az, elevationDeg: el, fov, width: RW, height: RH, frame: ndc, light: 'grazing' },
+  ...(args.focus ? [{ id: 'closeup-grazing', azimuthDeg: az + 8, elevationDeg: 10, fov: 24, width: 768, height: 768,
+    frame: { mode: 'fit', margin: 1.15 }, focus: String(args.focus), light: 'grazing' }] : []),
 ];
 
 const server = spawn('python3', ['-m', 'http.server', String(PORT), '--bind', '127.0.0.1'], { cwd: ROOT, stdio: 'ignore' });

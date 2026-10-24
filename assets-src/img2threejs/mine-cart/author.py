@@ -20,9 +20,23 @@ from i2t_spec import Material, SpecBuilder, feature, load_json, override, write_
 NAME = "Mine cart"
 
 # ---- materials (albedo = de-shaded mid tones of the reference regions) -----------------------
+# surface-pass review: grain as stretched, ridged noise (the generator reads `stretch` and turns a band
+# described as grain into ridges), pebbles as a fine high-contrast band on the gravel
+WOOD_GRAIN = [
+    {"id": "macro", "frequency": 2.0, "amplitude": 0.25, "role": "broad tone breakup across a plank"},
+    {"id": "meso", "frequency": 6.0, "amplitude": 0.45, "stretch": [0.35, 4.0], "pattern": "grain",
+     "role": "long grain streaks along the plank"},
+    {"id": "micro", "frequency": 28.0, "amplitude": 0.08, "role": "highlight breakup under grazing light"},
+]
+PEBBLES = [
+    {"id": "macro", "frequency": 2.0, "amplitude": 0.2, "role": "damp and dry patches of the bed"},
+    {"id": "meso", "frequency": 22.0, "amplitude": 0.55, "role": "pebbles and grit"},
+    {"id": "micro", "frequency": 56.0, "amplitude": 0.12, "role": "grain of the grit under grazing light"},
+]
+
 MATERIALS = {
-    "wood": Material("wood", "Cart wood planks", "#9a5a2c", ["#7a4321", "#b9773f"], material_class="wood",
-                     roughness=0.82, normal=0.25, amplitude=0.12, edge_wear=0.2, dirt=0.15,
+    "wood": Material("wood", "Cart wood planks", "#a0632f", ["#7f4a22", "#c07f45"], material_class="wood",
+                     roughness=0.82, normal=0.35, amplitude=0.2, edge_wear=0.2, dirt=0.15, bands=WOOD_GRAIN,
                      overrides=[
                          dict(id="wood-grain-streaks", kind="groove", region="all plank faces, along the plank length",
                               evidenceRefs=["full-object"], confidence=0.7, roughnessDelta=0.05,
@@ -32,24 +46,24 @@ MATERIALS = {
                      ],
                      notes="Warm mid-brown planks; the reference's painted grain gouges become a low-amplitude streak "
                            "override and light edge wear."),
-    "wood-dark": Material("wood-dark", "Sleeper wood", "#704324", ["#58341c", "#8a5630"], material_class="wood",
-                          roughness=0.88, normal=0.3, amplitude=0.14, dirt=0.25,
+    "wood-dark": Material("wood-dark", "Sleeper wood", "#6e4628", ["#57371f", "#8c5a33"], material_class="wood",
+                          roughness=0.88, normal=0.4, amplitude=0.2, dirt=0.25, bands=WOOD_GRAIN,
                           overrides=[dict(id="sleeper-dirt", kind="stain", region="sleeper ends and sides",
                                           evidenceRefs=["full-object"], confidence=0.6, dirtAmount=0.3, cavityBias=0.6)],
                           notes="Darker, dirtier wood of the rail sleepers."),
-    "iron": Material("iron", "Forged iron", "#4b4d53", ["#38393e", "#676a72"], material_class="metal",
+    "iron": Material("iron", "Forged iron", "#50525a", ["#3b3c42", "#6b6e76"], material_class="metal",
                      roughness=0.55, metalness=0.6, normal=0.15, amplitude=0.08, edge_wear=0.15,
                      overrides=[dict(id="iron-edge-highlight", kind="bevel", region="bracket and rim edges",
                                      evidenceRefs=["full-object"], confidence=0.6, roughnessDelta=-0.15)],
                      notes="Dark neutral grey, satin; brackets, rims, rails, rivets, handle straps."),
-    "ore": Material("ore", "Gold ore", "#f0bf2e", ["#d49a17", "#ffe168"], material_class="metal",
+    "ore": Material("ore", "Gold ore", "#f4c63a", ["#e0a42c", "#ffe57a"], material_class="metal",
                     roughness=0.38, metalness=0.55, normal=0.2, amplitude=0.1, clearcoat=0.3,
                     overrides=[dict(id="ore-facet-gloss", kind="gloss", region="upward-facing nugget facets",
                                     evidenceRefs=["full-object"], confidence=0.7, roughness=0.18,
                                     note="hotspots toward the upper-left key light")],
                     notes="Saturated yellow gold, lighter on the upward facets."),
-    "gravel": Material("gravel", "Gravel bed", "#6b6358", ["#4f483f", "#8f8678"], material_class="stone",
-                       roughness=0.98, normal=0.4, amplitude=0.25, dirt=0.2,
+    "gravel": Material("gravel", "Gravel bed", "#5f5244", ["#3f352b", "#9a8f7d"], material_class="stone",
+                       roughness=0.98, normal=0.55, amplitude=0.4, dirt=0.2, bands=PEBBLES,
                        overrides=[dict(id="pebble-mottle", kind="stain", region="whole bed top", evidenceRefs=["full-object"],
                                        confidence=0.6, dirtAmount=0.2, pattern="speckled pebbles")],
                        notes="Irregular grey-brown gravel patch the track lies on."),
@@ -488,6 +502,10 @@ def spec() -> None:
     s["lightingFromPhoto"] = [
         {"role": "key light", "direction": "upper left, slightly in front", "color": "#fff4e6", "softness": "soft studio"},
         {"role": "fill light", "direction": "right", "color": "#dfe6ff", "intensity": "low"},
+        {"role": "environment light", "type": "hemisphere", "sky": "#f2f4ff", "ground": "#4a4036",
+         "notes": "soft studio ambience; the game renderer has no environment map, so neither do the review renders"},
+        {"role": "shadow", "softness": "soft PCF, contact shadow faint (kept off the plate in gate renders so the "
+                                      "silhouette mask measures the object, not its shadow)"},
         {"role": "background", "color": "#c9c9c9", "notes": "flat light grey, faint contact shadow"},
         {"role": "exposure and tone mapping", "exposure": 1.0, "toneMapping": "ACES Filmic, sRGB output",
          "notes": "review renders and the game both use ACES-style tone mapping at exposure ~1"},
@@ -520,7 +538,10 @@ def p_assumptions() -> list[str]:
 # the game renderer (src/game/envkit.js) has no environment map, so a metalness-1 prior (steel,
 # gold) renders near-black there; and the reference is an AI concept image, so its extracted
 # crop maps must never ship as textures (project rule: AI images are concepts only).
-METAL_OVERRIDES = {"iron": {"metalness": 0.45, "roughness": 0.5}, "ore": {"metalness": 0.45, "roughness": 0.3}}
+# material-pass review: wood/gravel at the registry's 0.72 roughness flashed white at grazing angles;
+# gold at metalness 0.45 shaded orange in its shadows (colour gate delta-E 20.0) -> 0.25
+METAL_OVERRIDES = {"iron": {"metalness": 0.45, "roughness": 0.5}, "ore": {"metalness": 0.25, "roughness": 0.34}}
+ROUGHNESS_OVERRIDES = {"wood": 0.88, "wood-dark": 0.92, "gravel": 0.96}
 
 
 def lock() -> None:
@@ -533,6 +554,8 @@ def lock() -> None:
             ref["shippingNote"] = ("Extracted from an AI concept image: kept as palette/roughness evidence only, never "
                                    "loaded as textures (DUSKHOLD rule: AI images are concepts only). The factory "
                                    "falls back to its procedural canvas maps.")
+        if m["id"] in ROUGHNESS_OVERRIDES:
+            m["roughness"]["base"] = ROUGHNESS_OVERRIDES[m["id"]]
         o = METAL_OVERRIDES.get(m["id"])
         if o:
             m["metalness"] = {"base": o["metalness"], "variation": 0.05}

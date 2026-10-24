@@ -34,7 +34,7 @@ class Material:
                  amplitude: float = 0.1, pattern: str = "mottled", resolution: int = 256,
                  repeat: tuple[float, float] = (2.0, 2.0), edge_wear: float = 0.0, dirt: float = 0.0,
                  overrides: list[dict[str, Any]] | None = None, notes: str = "", evidence: str = "full-object",
-                 clearcoat: float | None = None):
+                 clearcoat: float | None = None, bands: list[dict[str, Any]] | None = None):
         self.id = mid
         self.name = name
         self.base = base
@@ -54,6 +54,7 @@ class Material:
         self.notes = notes
         self.evidence = evidence
         self.clearcoat = clearcoat
+        self.bands = bands
 
     def recipe(self, confidence: float = 0.8) -> dict[str, Any]:
         second = self.secondary[0] if self.secondary else self.base
@@ -96,9 +97,9 @@ class Material:
                 "anisotropy": 4,
                 "texelDensityIntent": "Stable object-scale detail sized for a ~100 px on-screen game prop.",
             },
-            "surfaceFrequencyBands": [
+            "surfaceFrequencyBands": self.bands or [
                 {"id": "macro", "frequency": 2.0, "amplitude": round(self.amplitude * 2.5, 3), "role": "broad tone breakup across a part"},
-                {"id": "meso", "frequency": 10.0, "amplitude": round(self.amplitude * 1.4, 3), "role": "grain, facets, hammer marks"},
+                {"id": "meso", "frequency": 10.0, "amplitude": round(self.amplitude * 1.4, 3), "role": "facets, hammer marks"},
                 {"id": "micro", "frequency": 40.0, "amplitude": round(self.amplitude * 0.5, 3), "role": "highlight breakup under grazing light"},
             ],
             "roughness": {

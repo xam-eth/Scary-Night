@@ -38,3 +38,5 @@ assets-src/img2threejs/*/renders/*/cmp.png
 assets-src/img2threejs/*/renders/*/cmp2.png
 assets-src/img2threejs/*/renders/*/turntable.png
 assets-src/img2threejs/*/.img2threejs/keep.json
+assets-src/img2threejs/*/renders/*/fixed-reference.png
+assets-src/img2threejs/*/renders/*/fixed-grazing.png

@@ -1364,6 +1364,186 @@
           "ore flat at rim height",
           "ore not reading as gold"
         ]
+      },
+      {
+        "id": "tub-taper-and-planks",
+        "name": "Tapered plank tub",
+        "required": true,
+        "qualityCriteria": [
+          "End walls lean out ~10 degrees and long walls ~8.5 degrees.",
+          "Three horizontal planks per wall separated by dark seams; four corner posts."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "tub reads as a plain straight box",
+          "planks merged into one slab"
+        ]
+      },
+      {
+        "id": "wheel-rail-contact",
+        "name": "Wheels on rails",
+        "required": true,
+        "qualityCriteria": [
+          "Four plank wheels with iron rims rest exactly on two rails over three sleepers."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "wheels float above or sink into the rails",
+          "wheels not round"
+        ]
+      },
+      {
+        "id": "iron-hardware",
+        "name": "Iron hardware",
+        "required": true,
+        "qualityCriteria": [
+          "Eight corner brackets with rivets, rims, hub caps and nuts, two bent handle straps with a grip."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "hardware missing or the same colour as the wood"
+        ]
+      },
+      {
+        "id": "ore-heap-read",
+        "name": "Heaped gold ore",
+        "required": true,
+        "qualityCriteria": [
+          "Saturated yellow ore mounds above the rim with chunky faceted nuggets."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "ore flat at rim height",
+          "ore not reading as gold"
+        ]
+      },
+      {
+        "id": "tub-taper-and-planks",
+        "name": "Tapered plank tub",
+        "required": true,
+        "qualityCriteria": [
+          "End walls lean out ~10 degrees and long walls ~8.5 degrees.",
+          "Three horizontal planks per wall separated by dark seams; four corner posts."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "tub reads as a plain straight box",
+          "planks merged into one slab"
+        ]
+      },
+      {
+        "id": "wheel-rail-contact",
+        "name": "Wheels on rails",
+        "required": true,
+        "qualityCriteria": [
+          "Four plank wheels with iron rims rest exactly on two rails over three sleepers."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "wheels float above or sink into the rails",
+          "wheels not round"
+        ]
+      },
+      {
+        "id": "iron-hardware",
+        "name": "Iron hardware",
+        "required": true,
+        "qualityCriteria": [
+          "Eight corner brackets with rivets, rims, hub caps and nuts, two bent handle straps with a grip."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "hardware missing or the same colour as the wood"
+        ]
+      },
+      {
+        "id": "ore-heap-read",
+        "name": "Heaped gold ore",
+        "required": true,
+        "qualityCriteria": [
+          "Saturated yellow ore mounds above the rim with chunky faceted nuggets."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "ore flat at rim height",
+          "ore not reading as gold"
+        ]
+      },
+      {
+        "id": "tub-taper-and-planks",
+        "name": "Tapered plank tub",
+        "required": true,
+        "qualityCriteria": [
+          "End walls lean out ~10 degrees and long walls ~8.5 degrees.",
+          "Three horizontal planks per wall separated by dark seams; four corner posts."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "tub reads as a plain straight box",
+          "planks merged into one slab"
+        ]
+      },
+      {
+        "id": "wheel-rail-contact",
+        "name": "Wheels on rails",
+        "required": true,
+        "qualityCriteria": [
+          "Four plank wheels with iron rims rest exactly on two rails over three sleepers."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "wheels float above or sink into the rails",
+          "wheels not round"
+        ]
+      },
+      {
+        "id": "iron-hardware",
+        "name": "Iron hardware",
+        "required": true,
+        "qualityCriteria": [
+          "Eight corner brackets with rivets, rims, hub caps and nuts, two bent handle straps with a grip."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "hardware missing or the same colour as the wood"
+        ]
+      },
+      {
+        "id": "ore-heap-read",
+        "name": "Heaped gold ore",
+        "required": true,
+        "qualityCriteria": [
+          "Saturated yellow ore mounds above the rim with chunky faceted nuggets."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "ore flat at rim height",
+          "ore not reading as gold"
+        ]
       }
     ],
     "visualDeltaChecks": [
@@ -1619,30 +1799,21 @@
       "interaction-pass",
       "optimization-pass"
     ],
-    "currentPass": "material-pass",
+    "currentPass": "interaction-pass",
     "completedPasses": [
       "blockout",
       "structural-pass",
-      "form-refinement"
+      "form-refinement",
+      "material-pass",
+      "surface-pass",
+      "lighting-pass"
     ],
-    "lastCompletedPass": "form-refinement",
+    "lastCompletedPass": "lighting-pass",
     "blockedReason": "",
     "nextRequiredEvidence": [
-      "Reference-derived albedo palette records dominant, secondary, and accent colors per visible material.",
-      "Each important material defines roughness variation and at least one normal/bump/displacement response.",
-      "Local material overrides, dirt/wear/stains/moss/chips/scratches or equivalent masks are tied to evidenceRefs.",
-      "Thin, transparent, reflective, wet, or fibrous materials document alpha/transmission/clearcoat/metalness/fiber response when relevant.",
-      "Generated preview uses procedural albedo/roughness/bump texture or vertex color variation instead of one flat color.",
-      "Generated preview uses independent PBR maps at 1024px or higher for the quality-first tier.",
-      "If source pixels are available, referencePbr extraction passed at confidence >= 0.7 or the pass is stopped/requesting better references.",
-      "Macro, meso, and micro surface frequency bands are visible at the intended review distance without obvious tiling.",
+      "Macro and movable meso components have stable pivot nodes.",
+      "Sockets, collider proxies, and destruction metadata are present for future runtime actions.",
       "AI vision comparison score meets selfCorrectLoop.visualAcceptance.threshold.",
-      "reference-derived albedo palette with dominant, secondary, and accent colors",
-      "independent albedo, roughness, height/normal, and AO maps",
-      "macro, meso, and micro surface-frequency response at 1024px or higher",
-      "local material masks: AO, dirt, wear, stains, moss, chips, scratches, wetness, or equivalent",
-      "neutral, grazing-light close-up, and reference-matched browser screenshots",
-      "AI vision comparison sheet score meeting the visual acceptance threshold",
       "browser render screenshot from your agent's browser/screenshot tool",
       "side-by-side reference/render comparison sheet for AI vision review",
       "banded interior difference vs the reference baseline (forge/stage4_review/interior_difference.py --from/--to per region)",
@@ -1918,8 +2089,8 @@
         "gravel"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(107, 99, 88, 1.0)",
-        "secondaryAlbedo": "rgba(79, 72, 63, 1.0)",
+        "dominantAlbedo": "rgba(95, 82, 68, 1.0)",
+        "secondaryAlbedo": "rgba(63, 53, 43, 1.0)",
         "materialClass": "stone",
         "materialClassConfidence": 0.7999999999999999,
         "colorGradient": {
@@ -1928,11 +2099,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(79, 72, 63, 1.0)"
+              "color": "rgba(63, 53, 43, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(107, 99, 88, 1.0)"
+              "color": "rgba(95, 82, 68, 1.0)"
             }
           ]
         },
@@ -1958,7 +2129,7 @@
       "surfaceDetail": {
         "macroRoughness": 0.98,
         "microRoughness": 0.196,
-        "bumpAmplitude": 0.02,
+        "bumpAmplitude": 0.0275,
         "normalPattern": "mottled",
         "displacementPattern": "",
         "occlusionPattern": "cavity darkening at seams and contacts",
@@ -2101,8 +2272,8 @@
         "wood-dark"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(112, 67, 36, 1.0)",
-        "secondaryAlbedo": "rgba(88, 52, 28, 1.0)",
+        "dominantAlbedo": "rgba(110, 70, 40, 1.0)",
+        "secondaryAlbedo": "rgba(87, 55, 31, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -2111,11 +2282,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(88, 52, 28, 1.0)"
+              "color": "rgba(87, 55, 31, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(112, 67, 36, 1.0)"
+              "color": "rgba(110, 70, 40, 1.0)"
             }
           ]
         },
@@ -2141,7 +2312,7 @@
       "surfaceDetail": {
         "macroRoughness": 0.88,
         "microRoughness": 0.176,
-        "bumpAmplitude": 0.015,
+        "bumpAmplitude": 0.02,
         "normalPattern": "mottled",
         "displacementPattern": "",
         "occlusionPattern": "cavity darkening at seams and contacts",
@@ -2259,8 +2430,8 @@
         "wood-dark"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(112, 67, 36, 1.0)",
-        "secondaryAlbedo": "rgba(88, 52, 28, 1.0)",
+        "dominantAlbedo": "rgba(110, 70, 40, 1.0)",
+        "secondaryAlbedo": "rgba(87, 55, 31, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -2269,11 +2440,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(88, 52, 28, 1.0)"
+              "color": "rgba(87, 55, 31, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(112, 67, 36, 1.0)"
+              "color": "rgba(110, 70, 40, 1.0)"
             }
           ]
         },
@@ -2299,7 +2470,7 @@
       "surfaceDetail": {
         "macroRoughness": 0.88,
         "microRoughness": 0.176,
-        "bumpAmplitude": 0.015,
+        "bumpAmplitude": 0.02,
         "normalPattern": "mottled",
         "displacementPattern": "",
         "occlusionPattern": "cavity darkening at seams and contacts",
@@ -2442,8 +2613,8 @@
         "wood-dark"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(112, 67, 36, 1.0)",
-        "secondaryAlbedo": "rgba(88, 52, 28, 1.0)",
+        "dominantAlbedo": "rgba(110, 70, 40, 1.0)",
+        "secondaryAlbedo": "rgba(87, 55, 31, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -2452,11 +2623,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(88, 52, 28, 1.0)"
+              "color": "rgba(87, 55, 31, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(112, 67, 36, 1.0)"
+              "color": "rgba(110, 70, 40, 1.0)"
             }
           ]
         },
@@ -2482,7 +2653,7 @@
       "surfaceDetail": {
         "macroRoughness": 0.88,
         "microRoughness": 0.176,
-        "bumpAmplitude": 0.015,
+        "bumpAmplitude": 0.02,
         "normalPattern": "mottled",
         "displacementPattern": "",
         "occlusionPattern": "cavity darkening at seams and contacts",
@@ -2600,8 +2771,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -2610,11 +2781,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -2758,8 +2929,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -2768,11 +2939,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -2916,8 +3087,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -2926,11 +3097,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -3074,8 +3245,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -3084,11 +3255,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -3232,8 +3403,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -3242,11 +3413,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -3390,8 +3561,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -3400,11 +3571,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -3548,8 +3719,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -3558,11 +3729,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -3706,8 +3877,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -3716,11 +3887,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -3864,8 +4035,8 @@
         "wood-dark"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(112, 67, 36, 1.0)",
-        "secondaryAlbedo": "rgba(88, 52, 28, 1.0)",
+        "dominantAlbedo": "rgba(110, 70, 40, 1.0)",
+        "secondaryAlbedo": "rgba(87, 55, 31, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -3874,11 +4045,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(88, 52, 28, 1.0)"
+              "color": "rgba(87, 55, 31, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(112, 67, 36, 1.0)"
+              "color": "rgba(110, 70, 40, 1.0)"
             }
           ]
         },
@@ -3893,7 +4064,7 @@
       "surfaceDetail": {
         "macroRoughness": 0.88,
         "microRoughness": 0.176,
-        "bumpAmplitude": 0.015,
+        "bumpAmplitude": 0.02,
         "normalPattern": "mottled",
         "displacementPattern": "",
         "occlusionPattern": "cavity darkening at seams and contacts",
@@ -4025,8 +4196,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -4035,11 +4206,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -4186,8 +4357,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -4196,11 +4367,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -4371,8 +4542,8 @@
         "wood"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(154, 90, 44, 1.0)",
-        "secondaryAlbedo": "rgba(122, 67, 33, 1.0)",
+        "dominantAlbedo": "rgba(160, 99, 47, 1.0)",
+        "secondaryAlbedo": "rgba(127, 74, 34, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -4381,11 +4552,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(122, 67, 33, 1.0)"
+              "color": "rgba(127, 74, 34, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(154, 90, 44, 1.0)"
+              "color": "rgba(160, 99, 47, 1.0)"
             }
           ]
         },
@@ -4411,7 +4582,7 @@
       "surfaceDetail": {
         "macroRoughness": 0.82,
         "microRoughness": 0.164,
-        "bumpAmplitude": 0.0125,
+        "bumpAmplitude": 0.0175,
         "normalPattern": "mottled",
         "displacementPattern": "",
         "occlusionPattern": "cavity darkening at seams and contacts",
@@ -4530,8 +4701,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -4540,11 +4711,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -4704,8 +4875,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -4714,11 +4885,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -4865,8 +5036,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -4875,11 +5046,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -5063,8 +5234,8 @@
         "wood"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(154, 90, 44, 1.0)",
-        "secondaryAlbedo": "rgba(122, 67, 33, 1.0)",
+        "dominantAlbedo": "rgba(160, 99, 47, 1.0)",
+        "secondaryAlbedo": "rgba(127, 74, 34, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -5073,11 +5244,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(122, 67, 33, 1.0)"
+              "color": "rgba(127, 74, 34, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(154, 90, 44, 1.0)"
+              "color": "rgba(160, 99, 47, 1.0)"
             }
           ]
         },
@@ -5103,7 +5274,7 @@
       "surfaceDetail": {
         "macroRoughness": 0.82,
         "microRoughness": 0.164,
-        "bumpAmplitude": 0.0125,
+        "bumpAmplitude": 0.0175,
         "normalPattern": "mottled",
         "displacementPattern": "",
         "occlusionPattern": "cavity darkening at seams and contacts",
@@ -5222,8 +5393,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -5232,11 +5403,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -5396,8 +5567,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -5406,11 +5577,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -5557,8 +5728,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -5567,11 +5738,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -5755,8 +5926,8 @@
         "wood"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(154, 90, 44, 1.0)",
-        "secondaryAlbedo": "rgba(122, 67, 33, 1.0)",
+        "dominantAlbedo": "rgba(160, 99, 47, 1.0)",
+        "secondaryAlbedo": "rgba(127, 74, 34, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -5765,11 +5936,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(122, 67, 33, 1.0)"
+              "color": "rgba(127, 74, 34, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(154, 90, 44, 1.0)"
+              "color": "rgba(160, 99, 47, 1.0)"
             }
           ]
         },
@@ -5795,7 +5966,7 @@
       "surfaceDetail": {
         "macroRoughness": 0.82,
         "microRoughness": 0.164,
-        "bumpAmplitude": 0.0125,
+        "bumpAmplitude": 0.0175,
         "normalPattern": "mottled",
         "displacementPattern": "",
         "occlusionPattern": "cavity darkening at seams and contacts",
@@ -5914,8 +6085,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -5924,11 +6095,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -6088,8 +6259,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -6098,11 +6269,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -6249,8 +6420,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -6259,11 +6430,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -6447,8 +6618,8 @@
         "wood"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(154, 90, 44, 1.0)",
-        "secondaryAlbedo": "rgba(122, 67, 33, 1.0)",
+        "dominantAlbedo": "rgba(160, 99, 47, 1.0)",
+        "secondaryAlbedo": "rgba(127, 74, 34, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -6457,11 +6628,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(122, 67, 33, 1.0)"
+              "color": "rgba(127, 74, 34, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(154, 90, 44, 1.0)"
+              "color": "rgba(160, 99, 47, 1.0)"
             }
           ]
         },
@@ -6487,7 +6658,7 @@
       "surfaceDetail": {
         "macroRoughness": 0.82,
         "microRoughness": 0.164,
-        "bumpAmplitude": 0.0125,
+        "bumpAmplitude": 0.0175,
         "normalPattern": "mottled",
         "displacementPattern": "",
         "occlusionPattern": "cavity darkening at seams and contacts",
@@ -6606,8 +6777,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -6616,11 +6787,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -6780,8 +6951,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -6790,11 +6961,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -6941,8 +7112,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -6951,11 +7122,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -7120,8 +7291,8 @@
         "wood"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(154, 90, 44, 1.0)",
-        "secondaryAlbedo": "rgba(122, 67, 33, 1.0)",
+        "dominantAlbedo": "rgba(160, 99, 47, 1.0)",
+        "secondaryAlbedo": "rgba(127, 74, 34, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.9,
         "colorGradient": {
@@ -7130,11 +7301,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(122, 67, 33, 1.0)"
+              "color": "rgba(127, 74, 34, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(154, 90, 44, 1.0)"
+              "color": "rgba(160, 99, 47, 1.0)"
             }
           ]
         },
@@ -7160,7 +7331,7 @@
       "surfaceDetail": {
         "macroRoughness": 0.82,
         "microRoughness": 0.164,
-        "bumpAmplitude": 0.0125,
+        "bumpAmplitude": 0.0175,
         "normalPattern": "mottled",
         "displacementPattern": "",
         "occlusionPattern": "cavity darkening at seams and contacts",
@@ -7278,8 +7449,8 @@
         "wood"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(154, 90, 44, 1.0)",
-        "secondaryAlbedo": "rgba(122, 67, 33, 1.0)",
+        "dominantAlbedo": "rgba(160, 99, 47, 1.0)",
+        "secondaryAlbedo": "rgba(127, 74, 34, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -7288,11 +7459,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(122, 67, 33, 1.0)"
+              "color": "rgba(127, 74, 34, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(154, 90, 44, 1.0)"
+              "color": "rgba(160, 99, 47, 1.0)"
             }
           ]
         },
@@ -7318,7 +7489,7 @@
       "surfaceDetail": {
         "macroRoughness": 0.82,
         "microRoughness": 0.164,
-        "bumpAmplitude": 0.0125,
+        "bumpAmplitude": 0.0175,
         "normalPattern": "mottled",
         "displacementPattern": "",
         "occlusionPattern": "cavity darkening at seams and contacts",
@@ -7436,8 +7607,8 @@
         "wood"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(154, 90, 44, 1.0)",
-        "secondaryAlbedo": "rgba(122, 67, 33, 1.0)",
+        "dominantAlbedo": "rgba(160, 99, 47, 1.0)",
+        "secondaryAlbedo": "rgba(127, 74, 34, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -7446,11 +7617,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(122, 67, 33, 1.0)"
+              "color": "rgba(127, 74, 34, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(154, 90, 44, 1.0)"
+              "color": "rgba(160, 99, 47, 1.0)"
             }
           ]
         },
@@ -7476,7 +7647,7 @@
       "surfaceDetail": {
         "macroRoughness": 0.82,
         "microRoughness": 0.164,
-        "bumpAmplitude": 0.0125,
+        "bumpAmplitude": 0.0175,
         "normalPattern": "mottled",
         "displacementPattern": "",
         "occlusionPattern": "cavity darkening at seams and contacts",
@@ -7594,8 +7765,8 @@
         "wood"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(154, 90, 44, 1.0)",
-        "secondaryAlbedo": "rgba(122, 67, 33, 1.0)",
+        "dominantAlbedo": "rgba(160, 99, 47, 1.0)",
+        "secondaryAlbedo": "rgba(127, 74, 34, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -7604,11 +7775,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(122, 67, 33, 1.0)"
+              "color": "rgba(127, 74, 34, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(154, 90, 44, 1.0)"
+              "color": "rgba(160, 99, 47, 1.0)"
             }
           ]
         },
@@ -7634,7 +7805,7 @@
       "surfaceDetail": {
         "macroRoughness": 0.82,
         "microRoughness": 0.164,
-        "bumpAmplitude": 0.0125,
+        "bumpAmplitude": 0.0175,
         "normalPattern": "mottled",
         "displacementPattern": "",
         "occlusionPattern": "cavity darkening at seams and contacts",
@@ -7752,8 +7923,8 @@
         "wood"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(154, 90, 44, 1.0)",
-        "secondaryAlbedo": "rgba(122, 67, 33, 1.0)",
+        "dominantAlbedo": "rgba(160, 99, 47, 1.0)",
+        "secondaryAlbedo": "rgba(127, 74, 34, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -7762,11 +7933,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(122, 67, 33, 1.0)"
+              "color": "rgba(127, 74, 34, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(154, 90, 44, 1.0)"
+              "color": "rgba(160, 99, 47, 1.0)"
             }
           ]
         },
@@ -7792,7 +7963,7 @@
       "surfaceDetail": {
         "macroRoughness": 0.82,
         "microRoughness": 0.164,
-        "bumpAmplitude": 0.0125,
+        "bumpAmplitude": 0.0175,
         "normalPattern": "mottled",
         "displacementPattern": "",
         "occlusionPattern": "cavity darkening at seams and contacts",
@@ -7910,8 +8081,8 @@
         "wood"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(154, 90, 44, 1.0)",
-        "secondaryAlbedo": "rgba(122, 67, 33, 1.0)",
+        "dominantAlbedo": "rgba(160, 99, 47, 1.0)",
+        "secondaryAlbedo": "rgba(127, 74, 34, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -7920,11 +8091,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(122, 67, 33, 1.0)"
+              "color": "rgba(127, 74, 34, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(154, 90, 44, 1.0)"
+              "color": "rgba(160, 99, 47, 1.0)"
             }
           ]
         },
@@ -7950,7 +8121,7 @@
       "surfaceDetail": {
         "macroRoughness": 0.82,
         "microRoughness": 0.164,
-        "bumpAmplitude": 0.0125,
+        "bumpAmplitude": 0.0175,
         "normalPattern": "mottled",
         "displacementPattern": "",
         "occlusionPattern": "cavity darkening at seams and contacts",
@@ -8093,8 +8264,8 @@
         "wood"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(154, 90, 44, 1.0)",
-        "secondaryAlbedo": "rgba(122, 67, 33, 1.0)",
+        "dominantAlbedo": "rgba(160, 99, 47, 1.0)",
+        "secondaryAlbedo": "rgba(127, 74, 34, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -8103,11 +8274,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(122, 67, 33, 1.0)"
+              "color": "rgba(127, 74, 34, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(154, 90, 44, 1.0)"
+              "color": "rgba(160, 99, 47, 1.0)"
             }
           ]
         },
@@ -8133,7 +8304,7 @@
       "surfaceDetail": {
         "macroRoughness": 0.82,
         "microRoughness": 0.164,
-        "bumpAmplitude": 0.0125,
+        "bumpAmplitude": 0.0175,
         "normalPattern": "mottled",
         "displacementPattern": "",
         "occlusionPattern": "cavity darkening at seams and contacts",
@@ -8251,8 +8422,8 @@
         "wood"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(154, 90, 44, 1.0)",
-        "secondaryAlbedo": "rgba(122, 67, 33, 1.0)",
+        "dominantAlbedo": "rgba(160, 99, 47, 1.0)",
+        "secondaryAlbedo": "rgba(127, 74, 34, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -8261,11 +8432,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(122, 67, 33, 1.0)"
+              "color": "rgba(127, 74, 34, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(154, 90, 44, 1.0)"
+              "color": "rgba(160, 99, 47, 1.0)"
             }
           ]
         },
@@ -8291,7 +8462,7 @@
       "surfaceDetail": {
         "macroRoughness": 0.82,
         "microRoughness": 0.164,
-        "bumpAmplitude": 0.0125,
+        "bumpAmplitude": 0.0175,
         "normalPattern": "mottled",
         "displacementPattern": "",
         "occlusionPattern": "cavity darkening at seams and contacts",
@@ -8409,8 +8580,8 @@
         "wood"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(154, 90, 44, 1.0)",
-        "secondaryAlbedo": "rgba(122, 67, 33, 1.0)",
+        "dominantAlbedo": "rgba(160, 99, 47, 1.0)",
+        "secondaryAlbedo": "rgba(127, 74, 34, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -8419,11 +8590,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(122, 67, 33, 1.0)"
+              "color": "rgba(127, 74, 34, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(154, 90, 44, 1.0)"
+              "color": "rgba(160, 99, 47, 1.0)"
             }
           ]
         },
@@ -8449,7 +8620,7 @@
       "surfaceDetail": {
         "macroRoughness": 0.82,
         "microRoughness": 0.164,
-        "bumpAmplitude": 0.0125,
+        "bumpAmplitude": 0.0175,
         "normalPattern": "mottled",
         "displacementPattern": "",
         "occlusionPattern": "cavity darkening at seams and contacts",
@@ -8567,8 +8738,8 @@
         "wood"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(154, 90, 44, 1.0)",
-        "secondaryAlbedo": "rgba(122, 67, 33, 1.0)",
+        "dominantAlbedo": "rgba(160, 99, 47, 1.0)",
+        "secondaryAlbedo": "rgba(127, 74, 34, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -8577,11 +8748,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(122, 67, 33, 1.0)"
+              "color": "rgba(127, 74, 34, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(154, 90, 44, 1.0)"
+              "color": "rgba(160, 99, 47, 1.0)"
             }
           ]
         },
@@ -8607,7 +8778,7 @@
       "surfaceDetail": {
         "macroRoughness": 0.82,
         "microRoughness": 0.164,
-        "bumpAmplitude": 0.0125,
+        "bumpAmplitude": 0.0175,
         "normalPattern": "mottled",
         "displacementPattern": "",
         "occlusionPattern": "cavity darkening at seams and contacts",
@@ -8725,8 +8896,8 @@
         "wood"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(154, 90, 44, 1.0)",
-        "secondaryAlbedo": "rgba(122, 67, 33, 1.0)",
+        "dominantAlbedo": "rgba(160, 99, 47, 1.0)",
+        "secondaryAlbedo": "rgba(127, 74, 34, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -8735,11 +8906,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(122, 67, 33, 1.0)"
+              "color": "rgba(127, 74, 34, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(154, 90, 44, 1.0)"
+              "color": "rgba(160, 99, 47, 1.0)"
             }
           ]
         },
@@ -8765,7 +8936,7 @@
       "surfaceDetail": {
         "macroRoughness": 0.82,
         "microRoughness": 0.164,
-        "bumpAmplitude": 0.0125,
+        "bumpAmplitude": 0.0175,
         "normalPattern": "mottled",
         "displacementPattern": "",
         "occlusionPattern": "cavity darkening at seams and contacts",
@@ -8883,8 +9054,8 @@
         "wood"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(154, 90, 44, 1.0)",
-        "secondaryAlbedo": "rgba(122, 67, 33, 1.0)",
+        "dominantAlbedo": "rgba(160, 99, 47, 1.0)",
+        "secondaryAlbedo": "rgba(127, 74, 34, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -8893,11 +9064,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(122, 67, 33, 1.0)"
+              "color": "rgba(127, 74, 34, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(154, 90, 44, 1.0)"
+              "color": "rgba(160, 99, 47, 1.0)"
             }
           ]
         },
@@ -8923,7 +9094,7 @@
       "surfaceDetail": {
         "macroRoughness": 0.82,
         "microRoughness": 0.164,
-        "bumpAmplitude": 0.0125,
+        "bumpAmplitude": 0.0175,
         "normalPattern": "mottled",
         "displacementPattern": "",
         "occlusionPattern": "cavity darkening at seams and contacts",
@@ -9041,8 +9212,8 @@
         "wood"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(154, 90, 44, 1.0)",
-        "secondaryAlbedo": "rgba(122, 67, 33, 1.0)",
+        "dominantAlbedo": "rgba(160, 99, 47, 1.0)",
+        "secondaryAlbedo": "rgba(127, 74, 34, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -9051,11 +9222,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(122, 67, 33, 1.0)"
+              "color": "rgba(127, 74, 34, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(154, 90, 44, 1.0)"
+              "color": "rgba(160, 99, 47, 1.0)"
             }
           ]
         },
@@ -9081,7 +9252,7 @@
       "surfaceDetail": {
         "macroRoughness": 0.82,
         "microRoughness": 0.164,
-        "bumpAmplitude": 0.0125,
+        "bumpAmplitude": 0.0175,
         "normalPattern": "mottled",
         "displacementPattern": "",
         "occlusionPattern": "cavity darkening at seams and contacts",
@@ -9199,8 +9370,8 @@
         "wood"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(154, 90, 44, 1.0)",
-        "secondaryAlbedo": "rgba(122, 67, 33, 1.0)",
+        "dominantAlbedo": "rgba(160, 99, 47, 1.0)",
+        "secondaryAlbedo": "rgba(127, 74, 34, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -9209,11 +9380,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(122, 67, 33, 1.0)"
+              "color": "rgba(127, 74, 34, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(154, 90, 44, 1.0)"
+              "color": "rgba(160, 99, 47, 1.0)"
             }
           ]
         },
@@ -9228,7 +9399,7 @@
       "surfaceDetail": {
         "macroRoughness": 0.82,
         "microRoughness": 0.164,
-        "bumpAmplitude": 0.0125,
+        "bumpAmplitude": 0.0175,
         "normalPattern": "mottled",
         "displacementPattern": "",
         "occlusionPattern": "cavity darkening at seams and contacts",
@@ -9344,8 +9515,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -9354,11 +9525,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -9513,8 +9684,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -9523,11 +9694,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -9682,8 +9853,8 @@
         "wood"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(154, 90, 44, 1.0)",
-        "secondaryAlbedo": "rgba(122, 67, 33, 1.0)",
+        "dominantAlbedo": "rgba(160, 99, 47, 1.0)",
+        "secondaryAlbedo": "rgba(127, 74, 34, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -9692,11 +9863,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(122, 67, 33, 1.0)"
+              "color": "rgba(127, 74, 34, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(154, 90, 44, 1.0)"
+              "color": "rgba(160, 99, 47, 1.0)"
             }
           ]
         },
@@ -9711,7 +9882,7 @@
       "surfaceDetail": {
         "macroRoughness": 0.82,
         "microRoughness": 0.164,
-        "bumpAmplitude": 0.0125,
+        "bumpAmplitude": 0.0175,
         "normalPattern": "mottled",
         "displacementPattern": "",
         "occlusionPattern": "cavity darkening at seams and contacts",
@@ -9827,8 +9998,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -9837,11 +10008,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -10021,8 +10192,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -10031,11 +10202,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -10190,8 +10361,8 @@
         "wood"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(154, 90, 44, 1.0)",
-        "secondaryAlbedo": "rgba(122, 67, 33, 1.0)",
+        "dominantAlbedo": "rgba(160, 99, 47, 1.0)",
+        "secondaryAlbedo": "rgba(127, 74, 34, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -10200,11 +10371,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(122, 67, 33, 1.0)"
+              "color": "rgba(127, 74, 34, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(154, 90, 44, 1.0)"
+              "color": "rgba(160, 99, 47, 1.0)"
             }
           ]
         },
@@ -10219,7 +10390,7 @@
       "surfaceDetail": {
         "macroRoughness": 0.82,
         "microRoughness": 0.164,
-        "bumpAmplitude": 0.0125,
+        "bumpAmplitude": 0.0175,
         "normalPattern": "mottled",
         "displacementPattern": "",
         "occlusionPattern": "cavity darkening at seams and contacts",
@@ -10335,8 +10506,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -10345,11 +10516,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -10504,8 +10675,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -10514,11 +10685,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -10673,8 +10844,8 @@
         "wood"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(154, 90, 44, 1.0)",
-        "secondaryAlbedo": "rgba(122, 67, 33, 1.0)",
+        "dominantAlbedo": "rgba(160, 99, 47, 1.0)",
+        "secondaryAlbedo": "rgba(127, 74, 34, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -10683,11 +10854,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(122, 67, 33, 1.0)"
+              "color": "rgba(127, 74, 34, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(154, 90, 44, 1.0)"
+              "color": "rgba(160, 99, 47, 1.0)"
             }
           ]
         },
@@ -10702,7 +10873,7 @@
       "surfaceDetail": {
         "macroRoughness": 0.82,
         "microRoughness": 0.164,
-        "bumpAmplitude": 0.0125,
+        "bumpAmplitude": 0.0175,
         "normalPattern": "mottled",
         "displacementPattern": "",
         "occlusionPattern": "cavity darkening at seams and contacts",
@@ -10818,8 +10989,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -10828,11 +10999,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -10987,8 +11158,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -10997,11 +11168,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -11172,8 +11343,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -11182,11 +11353,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -11346,8 +11517,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -11356,11 +11527,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -11510,8 +11681,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -11520,11 +11691,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -11674,8 +11845,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -11684,11 +11855,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -11835,8 +12006,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -11845,11 +12016,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -12009,8 +12180,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -12019,11 +12190,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -12173,8 +12344,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -12183,11 +12354,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -12337,8 +12508,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -12347,11 +12518,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -12498,8 +12669,8 @@
         "wood"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(154, 90, 44, 1.0)",
-        "secondaryAlbedo": "rgba(122, 67, 33, 1.0)",
+        "dominantAlbedo": "rgba(160, 99, 47, 1.0)",
+        "secondaryAlbedo": "rgba(127, 74, 34, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -12508,11 +12679,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(122, 67, 33, 1.0)"
+              "color": "rgba(127, 74, 34, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(154, 90, 44, 1.0)"
+              "color": "rgba(160, 99, 47, 1.0)"
             }
           ]
         },
@@ -12527,7 +12698,7 @@
       "surfaceDetail": {
         "macroRoughness": 0.82,
         "microRoughness": 0.164,
-        "bumpAmplitude": 0.0125,
+        "bumpAmplitude": 0.0175,
         "normalPattern": "mottled",
         "displacementPattern": "",
         "occlusionPattern": "cavity darkening at seams and contacts",
@@ -12659,8 +12830,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -12669,11 +12840,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -12820,8 +12991,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(75, 77, 83, 1.0)",
-        "secondaryAlbedo": "rgba(56, 57, 62, 1.0)",
+        "dominantAlbedo": "rgba(80, 82, 90, 1.0)",
+        "secondaryAlbedo": "rgba(59, 60, 66, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -12830,11 +13001,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(56, 57, 62, 1.0)"
+              "color": "rgba(59, 60, 66, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(75, 77, 83, 1.0)"
+              "color": "rgba(80, 82, 90, 1.0)"
             }
           ]
         },
@@ -12965,8 +13136,8 @@
         "ore"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(240, 191, 46, 1.0)",
-        "secondaryAlbedo": "rgba(212, 154, 23, 1.0)",
+        "dominantAlbedo": "rgba(244, 198, 58, 1.0)",
+        "secondaryAlbedo": "rgba(224, 164, 44, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -12975,11 +13146,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(212, 154, 23, 1.0)"
+              "color": "rgba(224, 164, 44, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(240, 191, 46, 1.0)"
+              "color": "rgba(244, 198, 58, 1.0)"
             }
           ]
         },
@@ -13177,8 +13348,8 @@
         "ore"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(240, 191, 46, 1.0)",
-        "secondaryAlbedo": "rgba(212, 154, 23, 1.0)",
+        "dominantAlbedo": "rgba(244, 198, 58, 1.0)",
+        "secondaryAlbedo": "rgba(224, 164, 44, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.7,
         "colorGradient": {
@@ -13187,11 +13358,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(212, 154, 23, 1.0)"
+              "color": "rgba(224, 164, 44, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(240, 191, 46, 1.0)"
+              "color": "rgba(244, 198, 58, 1.0)"
             }
           ]
         },
@@ -13364,8 +13535,8 @@
         "ore"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(240, 191, 46, 1.0)",
-        "secondaryAlbedo": "rgba(212, 154, 23, 1.0)",
+        "dominantAlbedo": "rgba(244, 198, 58, 1.0)",
+        "secondaryAlbedo": "rgba(224, 164, 44, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.7,
         "colorGradient": {
@@ -13374,11 +13545,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(212, 154, 23, 1.0)"
+              "color": "rgba(224, 164, 44, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(240, 191, 46, 1.0)"
+              "color": "rgba(244, 198, 58, 1.0)"
             }
           ]
         },
@@ -13551,8 +13722,8 @@
         "ore"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(240, 191, 46, 1.0)",
-        "secondaryAlbedo": "rgba(212, 154, 23, 1.0)",
+        "dominantAlbedo": "rgba(244, 198, 58, 1.0)",
+        "secondaryAlbedo": "rgba(224, 164, 44, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.7,
         "colorGradient": {
@@ -13561,11 +13732,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(212, 154, 23, 1.0)"
+              "color": "rgba(224, 164, 44, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(240, 191, 46, 1.0)"
+              "color": "rgba(244, 198, 58, 1.0)"
             }
           ]
         },
@@ -13738,8 +13909,8 @@
         "ore"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(240, 191, 46, 1.0)",
-        "secondaryAlbedo": "rgba(212, 154, 23, 1.0)",
+        "dominantAlbedo": "rgba(244, 198, 58, 1.0)",
+        "secondaryAlbedo": "rgba(224, 164, 44, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.7,
         "colorGradient": {
@@ -13748,11 +13919,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(212, 154, 23, 1.0)"
+              "color": "rgba(224, 164, 44, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(240, 191, 46, 1.0)"
+              "color": "rgba(244, 198, 58, 1.0)"
             }
           ]
         },
@@ -13925,8 +14096,8 @@
         "ore"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(240, 191, 46, 1.0)",
-        "secondaryAlbedo": "rgba(212, 154, 23, 1.0)",
+        "dominantAlbedo": "rgba(244, 198, 58, 1.0)",
+        "secondaryAlbedo": "rgba(224, 164, 44, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.7,
         "colorGradient": {
@@ -13935,11 +14106,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(212, 154, 23, 1.0)"
+              "color": "rgba(224, 164, 44, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(240, 191, 46, 1.0)"
+              "color": "rgba(244, 198, 58, 1.0)"
             }
           ]
         },
@@ -14112,8 +14283,8 @@
         "ore"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(240, 191, 46, 1.0)",
-        "secondaryAlbedo": "rgba(212, 154, 23, 1.0)",
+        "dominantAlbedo": "rgba(244, 198, 58, 1.0)",
+        "secondaryAlbedo": "rgba(224, 164, 44, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.7,
         "colorGradient": {
@@ -14122,11 +14293,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(212, 154, 23, 1.0)"
+              "color": "rgba(224, 164, 44, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(240, 191, 46, 1.0)"
+              "color": "rgba(244, 198, 58, 1.0)"
             }
           ]
         },
@@ -14299,8 +14470,8 @@
         "ore"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(240, 191, 46, 1.0)",
-        "secondaryAlbedo": "rgba(212, 154, 23, 1.0)",
+        "dominantAlbedo": "rgba(244, 198, 58, 1.0)",
+        "secondaryAlbedo": "rgba(224, 164, 44, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.7,
         "colorGradient": {
@@ -14309,11 +14480,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(212, 154, 23, 1.0)"
+              "color": "rgba(224, 164, 44, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(240, 191, 46, 1.0)"
+              "color": "rgba(244, 198, 58, 1.0)"
             }
           ]
         },
@@ -14486,8 +14657,8 @@
         "ore"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(240, 191, 46, 1.0)",
-        "secondaryAlbedo": "rgba(212, 154, 23, 1.0)",
+        "dominantAlbedo": "rgba(244, 198, 58, 1.0)",
+        "secondaryAlbedo": "rgba(224, 164, 44, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.7,
         "colorGradient": {
@@ -14496,11 +14667,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(212, 154, 23, 1.0)"
+              "color": "rgba(224, 164, 44, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(240, 191, 46, 1.0)"
+              "color": "rgba(244, 198, 58, 1.0)"
             }
           ]
         },
@@ -14673,8 +14844,8 @@
         "ore"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(240, 191, 46, 1.0)",
-        "secondaryAlbedo": "rgba(212, 154, 23, 1.0)",
+        "dominantAlbedo": "rgba(244, 198, 58, 1.0)",
+        "secondaryAlbedo": "rgba(224, 164, 44, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.7,
         "colorGradient": {
@@ -14683,11 +14854,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(212, 154, 23, 1.0)"
+              "color": "rgba(224, 164, 44, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(240, 191, 46, 1.0)"
+              "color": "rgba(244, 198, 58, 1.0)"
             }
           ]
         },
@@ -14860,8 +15031,8 @@
         "ore"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(240, 191, 46, 1.0)",
-        "secondaryAlbedo": "rgba(212, 154, 23, 1.0)",
+        "dominantAlbedo": "rgba(244, 198, 58, 1.0)",
+        "secondaryAlbedo": "rgba(224, 164, 44, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.7,
         "colorGradient": {
@@ -14870,11 +15041,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(212, 154, 23, 1.0)"
+              "color": "rgba(224, 164, 44, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(240, 191, 46, 1.0)"
+              "color": "rgba(244, 198, 58, 1.0)"
             }
           ]
         },
@@ -15047,8 +15218,8 @@
         "ore"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(240, 191, 46, 1.0)",
-        "secondaryAlbedo": "rgba(212, 154, 23, 1.0)",
+        "dominantAlbedo": "rgba(244, 198, 58, 1.0)",
+        "secondaryAlbedo": "rgba(224, 164, 44, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.7,
         "colorGradient": {
@@ -15057,11 +15228,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(212, 154, 23, 1.0)"
+              "color": "rgba(224, 164, 44, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(240, 191, 46, 1.0)"
+              "color": "rgba(244, 198, 58, 1.0)"
             }
           ]
         },
@@ -15234,8 +15405,8 @@
         "ore"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(240, 191, 46, 1.0)",
-        "secondaryAlbedo": "rgba(212, 154, 23, 1.0)",
+        "dominantAlbedo": "rgba(244, 198, 58, 1.0)",
+        "secondaryAlbedo": "rgba(224, 164, 44, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.7,
         "colorGradient": {
@@ -15244,11 +15415,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(212, 154, 23, 1.0)"
+              "color": "rgba(224, 164, 44, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(240, 191, 46, 1.0)"
+              "color": "rgba(244, 198, 58, 1.0)"
             }
           ]
         },
@@ -15421,8 +15592,8 @@
         "ore"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(240, 191, 46, 1.0)",
-        "secondaryAlbedo": "rgba(212, 154, 23, 1.0)",
+        "dominantAlbedo": "rgba(244, 198, 58, 1.0)",
+        "secondaryAlbedo": "rgba(224, 164, 44, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.7,
         "colorGradient": {
@@ -15431,11 +15602,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(212, 154, 23, 1.0)"
+              "color": "rgba(224, 164, 44, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(240, 191, 46, 1.0)"
+              "color": "rgba(244, 198, 58, 1.0)"
             }
           ]
         },
@@ -15608,8 +15779,8 @@
         "ore"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(240, 191, 46, 1.0)",
-        "secondaryAlbedo": "rgba(212, 154, 23, 1.0)",
+        "dominantAlbedo": "rgba(244, 198, 58, 1.0)",
+        "secondaryAlbedo": "rgba(224, 164, 44, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.7,
         "colorGradient": {
@@ -15618,11 +15789,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(212, 154, 23, 1.0)"
+              "color": "rgba(224, 164, 44, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(240, 191, 46, 1.0)"
+              "color": "rgba(244, 198, 58, 1.0)"
             }
           ]
         },
@@ -15795,8 +15966,8 @@
         "ore"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(240, 191, 46, 1.0)",
-        "secondaryAlbedo": "rgba(212, 154, 23, 1.0)",
+        "dominantAlbedo": "rgba(244, 198, 58, 1.0)",
+        "secondaryAlbedo": "rgba(224, 164, 44, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.7,
         "colorGradient": {
@@ -15805,11 +15976,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(212, 154, 23, 1.0)"
+              "color": "rgba(224, 164, 44, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(240, 191, 46, 1.0)"
+              "color": "rgba(244, 198, 58, 1.0)"
             }
           ]
         },
@@ -15982,8 +16153,8 @@
         "ore"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(240, 191, 46, 1.0)",
-        "secondaryAlbedo": "rgba(212, 154, 23, 1.0)",
+        "dominantAlbedo": "rgba(244, 198, 58, 1.0)",
+        "secondaryAlbedo": "rgba(224, 164, 44, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.7,
         "colorGradient": {
@@ -15992,11 +16163,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(212, 154, 23, 1.0)"
+              "color": "rgba(224, 164, 44, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(240, 191, 46, 1.0)"
+              "color": "rgba(244, 198, 58, 1.0)"
             }
           ]
         },
@@ -16169,8 +16340,8 @@
         "ore"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(240, 191, 46, 1.0)",
-        "secondaryAlbedo": "rgba(212, 154, 23, 1.0)",
+        "dominantAlbedo": "rgba(244, 198, 58, 1.0)",
+        "secondaryAlbedo": "rgba(224, 164, 44, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.7,
         "colorGradient": {
@@ -16179,11 +16350,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(212, 154, 23, 1.0)"
+              "color": "rgba(224, 164, 44, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(240, 191, 46, 1.0)"
+              "color": "rgba(244, 198, 58, 1.0)"
             }
           ]
         },
@@ -16356,8 +16527,8 @@
         "ore"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(240, 191, 46, 1.0)",
-        "secondaryAlbedo": "rgba(212, 154, 23, 1.0)",
+        "dominantAlbedo": "rgba(244, 198, 58, 1.0)",
+        "secondaryAlbedo": "rgba(224, 164, 44, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.7,
         "colorGradient": {
@@ -16366,11 +16537,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(212, 154, 23, 1.0)"
+              "color": "rgba(224, 164, 44, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(240, 191, 46, 1.0)"
+              "color": "rgba(244, 198, 58, 1.0)"
             }
           ]
         },
@@ -16543,8 +16714,8 @@
         "ore"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(240, 191, 46, 1.0)",
-        "secondaryAlbedo": "rgba(212, 154, 23, 1.0)",
+        "dominantAlbedo": "rgba(244, 198, 58, 1.0)",
+        "secondaryAlbedo": "rgba(224, 164, 44, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.7,
         "colorGradient": {
@@ -16553,11 +16724,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(212, 154, 23, 1.0)"
+              "color": "rgba(224, 164, 44, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(240, 191, 46, 1.0)"
+              "color": "rgba(244, 198, 58, 1.0)"
             }
           ]
         },
@@ -16730,8 +16901,8 @@
         "ore"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(240, 191, 46, 1.0)",
-        "secondaryAlbedo": "rgba(212, 154, 23, 1.0)",
+        "dominantAlbedo": "rgba(244, 198, 58, 1.0)",
+        "secondaryAlbedo": "rgba(224, 164, 44, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.7,
         "colorGradient": {
@@ -16740,11 +16911,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(212, 154, 23, 1.0)"
+              "color": "rgba(224, 164, 44, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(240, 191, 46, 1.0)"
+              "color": "rgba(244, 198, 58, 1.0)"
             }
           ]
         },
@@ -16917,8 +17088,8 @@
         "ore"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(240, 191, 46, 1.0)",
-        "secondaryAlbedo": "rgba(212, 154, 23, 1.0)",
+        "dominantAlbedo": "rgba(244, 198, 58, 1.0)",
+        "secondaryAlbedo": "rgba(224, 164, 44, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.7,
         "colorGradient": {
@@ -16927,11 +17098,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(212, 154, 23, 1.0)"
+              "color": "rgba(224, 164, 44, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(240, 191, 46, 1.0)"
+              "color": "rgba(244, 198, 58, 1.0)"
             }
           ]
         },
@@ -17104,8 +17275,8 @@
         "ore"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(240, 191, 46, 1.0)",
-        "secondaryAlbedo": "rgba(212, 154, 23, 1.0)",
+        "dominantAlbedo": "rgba(244, 198, 58, 1.0)",
+        "secondaryAlbedo": "rgba(224, 164, 44, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.7,
         "colorGradient": {
@@ -17114,11 +17285,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(212, 154, 23, 1.0)"
+              "color": "rgba(224, 164, 44, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(240, 191, 46, 1.0)"
+              "color": "rgba(244, 198, 58, 1.0)"
             }
           ]
         },
@@ -17291,8 +17462,8 @@
         "ore"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(240, 191, 46, 1.0)",
-        "secondaryAlbedo": "rgba(212, 154, 23, 1.0)",
+        "dominantAlbedo": "rgba(244, 198, 58, 1.0)",
+        "secondaryAlbedo": "rgba(224, 164, 44, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.7,
         "colorGradient": {
@@ -17301,11 +17472,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(212, 154, 23, 1.0)"
+              "color": "rgba(224, 164, 44, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(240, 191, 46, 1.0)"
+              "color": "rgba(244, 198, 58, 1.0)"
             }
           ]
         },
@@ -17478,8 +17649,8 @@
         "ore"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(240, 191, 46, 1.0)",
-        "secondaryAlbedo": "rgba(212, 154, 23, 1.0)",
+        "dominantAlbedo": "rgba(244, 198, 58, 1.0)",
+        "secondaryAlbedo": "rgba(224, 164, 44, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.7,
         "colorGradient": {
@@ -17488,11 +17659,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(212, 154, 23, 1.0)"
+              "color": "rgba(224, 164, 44, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(240, 191, 46, 1.0)"
+              "color": "rgba(244, 198, 58, 1.0)"
             }
           ]
         },
@@ -17665,8 +17836,8 @@
         "ore"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(240, 191, 46, 1.0)",
-        "secondaryAlbedo": "rgba(212, 154, 23, 1.0)",
+        "dominantAlbedo": "rgba(244, 198, 58, 1.0)",
+        "secondaryAlbedo": "rgba(224, 164, 44, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.7,
         "colorGradient": {
@@ -17675,11 +17846,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(212, 154, 23, 1.0)"
+              "color": "rgba(224, 164, 44, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(240, 191, 46, 1.0)"
+              "color": "rgba(244, 198, 58, 1.0)"
             }
           ]
         },
@@ -17852,8 +18023,8 @@
         "ore"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(240, 191, 46, 1.0)",
-        "secondaryAlbedo": "rgba(212, 154, 23, 1.0)",
+        "dominantAlbedo": "rgba(244, 198, 58, 1.0)",
+        "secondaryAlbedo": "rgba(224, 164, 44, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.7,
         "colorGradient": {
@@ -17862,11 +18033,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(212, 154, 23, 1.0)"
+              "color": "rgba(224, 164, 44, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(240, 191, 46, 1.0)"
+              "color": "rgba(244, 198, 58, 1.0)"
             }
           ]
         },
@@ -18039,8 +18210,8 @@
         "ore"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(240, 191, 46, 1.0)",
-        "secondaryAlbedo": "rgba(212, 154, 23, 1.0)",
+        "dominantAlbedo": "rgba(244, 198, 58, 1.0)",
+        "secondaryAlbedo": "rgba(224, 164, 44, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.7,
         "colorGradient": {
@@ -18049,11 +18220,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(212, 154, 23, 1.0)"
+              "color": "rgba(224, 164, 44, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(240, 191, 46, 1.0)"
+              "color": "rgba(244, 198, 58, 1.0)"
             }
           ]
         },
@@ -18226,8 +18397,8 @@
         "ore"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(240, 191, 46, 1.0)",
-        "secondaryAlbedo": "rgba(212, 154, 23, 1.0)",
+        "dominantAlbedo": "rgba(244, 198, 58, 1.0)",
+        "secondaryAlbedo": "rgba(224, 164, 44, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.7,
         "colorGradient": {
@@ -18236,11 +18407,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(212, 154, 23, 1.0)"
+              "color": "rgba(224, 164, 44, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(240, 191, 46, 1.0)"
+              "color": "rgba(244, 198, 58, 1.0)"
             }
           ]
         },
@@ -18287,24 +18458,24 @@
       "name": "Cart wood planks",
       "type": "standard",
       "shaderModel": "MeshStandardMaterial / PBR approximation (stylized, low-amplitude variation)",
-      "baseColor": "#9a5a2c",
-      "color": "#9a5a2c",
+      "baseColor": "#a0632f",
+      "color": "#a0632f",
       "albedo": {
-        "dominant": "#9a5a2c",
+        "dominant": "#a0632f",
         "secondary": [
-          "#7a4321",
-          "#b9773f"
+          "#7f4a22",
+          "#c07f45"
         ],
         "samplingNotes": "Sampled from the de-shaded mid tones of the reference region; highlights and core shadows of the illustration are lighting, not albedo."
       },
       "colorVariation": {
         "palette": [
-          "#9a5a2c",
-          "#7a4321",
-          "#b9773f"
+          "#a0632f",
+          "#7f4a22",
+          "#c07f45"
         ],
         "pattern": "mottled",
-        "amplitude": 0.12,
+        "amplitude": 0.2,
         "heightCorrelation": 0.3
       },
       "textureResolution": 256,
@@ -18321,24 +18492,29 @@
         {
           "id": "macro",
           "frequency": 2.0,
-          "amplitude": 0.3,
-          "role": "broad tone breakup across a part"
+          "amplitude": 0.25,
+          "role": "broad tone breakup across a plank"
         },
         {
           "id": "meso",
-          "frequency": 10.0,
-          "amplitude": 0.168,
-          "role": "grain, facets, hammer marks"
+          "frequency": 6.0,
+          "amplitude": 0.45,
+          "stretch": [
+            0.35,
+            4.0
+          ],
+          "pattern": "grain",
+          "role": "long grain streaks along the plank"
         },
         {
           "id": "micro",
-          "frequency": 40.0,
-          "amplitude": 0.06,
+          "frequency": 28.0,
+          "amplitude": 0.08,
           "role": "highlight breakup under grazing light"
         }
       ],
       "roughness": {
-        "base": 0.72,
+        "base": 0.88,
         "variation": 0.12,
         "map": "independent-procedural-field",
         "localResponse": "slightly rougher in cavities, smoother on worn edges"
@@ -18349,7 +18525,7 @@
       },
       "normal": {
         "pattern": "derived-from-independent-height-field",
-        "strength": 0.25,
+        "strength": 0.35,
         "scale": 18.0,
         "space": "tangent"
       },
@@ -18602,24 +18778,24 @@
       "name": "Sleeper wood",
       "type": "standard",
       "shaderModel": "MeshStandardMaterial / PBR approximation (stylized, low-amplitude variation)",
-      "baseColor": "#704324",
-      "color": "#704324",
+      "baseColor": "#6e4628",
+      "color": "#6e4628",
       "albedo": {
-        "dominant": "#704324",
+        "dominant": "#6e4628",
         "secondary": [
-          "#58341c",
-          "#8a5630"
+          "#57371f",
+          "#8c5a33"
         ],
         "samplingNotes": "Sampled from the de-shaded mid tones of the reference region; highlights and core shadows of the illustration are lighting, not albedo."
       },
       "colorVariation": {
         "palette": [
-          "#704324",
-          "#58341c",
-          "#8a5630"
+          "#6e4628",
+          "#57371f",
+          "#8c5a33"
         ],
         "pattern": "mottled",
-        "amplitude": 0.14,
+        "amplitude": 0.2,
         "heightCorrelation": 0.3
       },
       "textureResolution": 256,
@@ -18636,24 +18812,29 @@
         {
           "id": "macro",
           "frequency": 2.0,
-          "amplitude": 0.35,
-          "role": "broad tone breakup across a part"
+          "amplitude": 0.25,
+          "role": "broad tone breakup across a plank"
         },
         {
           "id": "meso",
-          "frequency": 10.0,
-          "amplitude": 0.196,
-          "role": "grain, facets, hammer marks"
+          "frequency": 6.0,
+          "amplitude": 0.45,
+          "stretch": [
+            0.35,
+            4.0
+          ],
+          "pattern": "grain",
+          "role": "long grain streaks along the plank"
         },
         {
           "id": "micro",
-          "frequency": 40.0,
-          "amplitude": 0.07,
+          "frequency": 28.0,
+          "amplitude": 0.08,
           "role": "highlight breakup under grazing light"
         }
       ],
       "roughness": {
-        "base": 0.72,
+        "base": 0.92,
         "variation": 0.12,
         "map": "independent-procedural-field",
         "localResponse": "slightly rougher in cavities, smoother on worn edges"
@@ -18664,7 +18845,7 @@
       },
       "normal": {
         "pattern": "derived-from-independent-height-field",
-        "strength": 0.3,
+        "strength": 0.4,
         "scale": 18.0,
         "space": "tangent"
       },
@@ -18904,21 +19085,21 @@
       "name": "Forged iron",
       "type": "standard",
       "shaderModel": "MeshStandardMaterial / PBR approximation (stylized, low-amplitude variation)",
-      "baseColor": "#4b4d53",
-      "color": "#4b4d53",
+      "baseColor": "#50525a",
+      "color": "#50525a",
       "albedo": {
-        "dominant": "#4b4d53",
+        "dominant": "#50525a",
         "secondary": [
-          "#38393e",
-          "#676a72"
+          "#3b3c42",
+          "#6b6e76"
         ],
         "samplingNotes": "Sampled from the de-shaded mid tones of the reference region; highlights and core shadows of the illustration are lighting, not albedo."
       },
       "colorVariation": {
         "palette": [
-          "#4b4d53",
-          "#38393e",
-          "#676a72"
+          "#50525a",
+          "#3b3c42",
+          "#6b6e76"
         ],
         "pattern": "mottled",
         "amplitude": 0.08,
@@ -18945,7 +19126,7 @@
           "id": "meso",
           "frequency": 10.0,
           "amplitude": 0.112,
-          "role": "grain, facets, hammer marks"
+          "role": "facets, hammer marks"
         },
         {
           "id": "micro",
@@ -19209,21 +19390,21 @@
       "name": "Gold ore",
       "type": "standard",
       "shaderModel": "MeshStandardMaterial / PBR approximation (stylized, low-amplitude variation)",
-      "baseColor": "#f0bf2e",
-      "color": "#f0bf2e",
+      "baseColor": "#f4c63a",
+      "color": "#f4c63a",
       "albedo": {
-        "dominant": "#f0bf2e",
+        "dominant": "#f4c63a",
         "secondary": [
-          "#d49a17",
-          "#ffe168"
+          "#e0a42c",
+          "#ffe57a"
         ],
         "samplingNotes": "Sampled from the de-shaded mid tones of the reference region; highlights and core shadows of the illustration are lighting, not albedo."
       },
       "colorVariation": {
         "palette": [
-          "#f0bf2e",
-          "#d49a17",
-          "#ffe168"
+          "#f4c63a",
+          "#e0a42c",
+          "#ffe57a"
         ],
         "pattern": "mottled",
         "amplitude": 0.1,
@@ -19250,7 +19431,7 @@
           "id": "meso",
           "frequency": 10.0,
           "amplitude": 0.14,
-          "role": "grain, facets, hammer marks"
+          "role": "facets, hammer marks"
         },
         {
           "id": "micro",
@@ -19260,13 +19441,13 @@
         }
       ],
       "roughness": {
-        "base": 0.3,
+        "base": 0.34,
         "variation": 0.12,
         "map": "independent-procedural-field",
         "localResponse": "slightly rougher in cavities, smoother on worn edges"
       },
       "metalness": {
-        "base": 0.45,
+        "base": 0.25,
         "variation": 0.05
       },
       "normal": {
@@ -19318,7 +19499,7 @@
         "Stylized game prop: keep albedo flat-ish and readable at ~100 px; the procedural maps add only subtle breakup.",
         "Albedo, roughness, height/normal and AO are generated independently; albedo is never reused as another channel."
       ],
-      "notes": "Saturated yellow gold, lighter on the upward facets. Real-time override of the registry prior (metalness 1.0): metalness 0.45, roughness 0.3, because the game renderer has no environment map.",
+      "notes": "Saturated yellow gold, lighter on the upward facets. Real-time override of the registry prior (metalness 1.0): metalness 0.25, roughness 0.34, because the game renderer has no environment map.",
       "evidenceRefs": [
         "full-object"
       ],
@@ -19512,24 +19693,24 @@
       "name": "Gravel bed",
       "type": "standard",
       "shaderModel": "MeshStandardMaterial / PBR approximation (stylized, low-amplitude variation)",
-      "baseColor": "#6b6358",
-      "color": "#6b6358",
+      "baseColor": "#5f5244",
+      "color": "#5f5244",
       "albedo": {
-        "dominant": "#6b6358",
+        "dominant": "#5f5244",
         "secondary": [
-          "#4f483f",
-          "#8f8678"
+          "#3f352b",
+          "#9a8f7d"
         ],
         "samplingNotes": "Sampled from the de-shaded mid tones of the reference region; highlights and core shadows of the illustration are lighting, not albedo."
       },
       "colorVariation": {
         "palette": [
-          "#6b6358",
-          "#4f483f",
-          "#8f8678"
+          "#5f5244",
+          "#3f352b",
+          "#9a8f7d"
         ],
         "pattern": "mottled",
-        "amplitude": 0.25,
+        "amplitude": 0.4,
         "heightCorrelation": 0.3
       },
       "textureResolution": 256,
@@ -19546,24 +19727,24 @@
         {
           "id": "macro",
           "frequency": 2.0,
-          "amplitude": 0.625,
-          "role": "broad tone breakup across a part"
+          "amplitude": 0.2,
+          "role": "damp and dry patches of the bed"
         },
         {
           "id": "meso",
-          "frequency": 10.0,
-          "amplitude": 0.35,
-          "role": "grain, facets, hammer marks"
+          "frequency": 22.0,
+          "amplitude": 0.55,
+          "role": "pebbles and grit"
         },
         {
           "id": "micro",
-          "frequency": 40.0,
-          "amplitude": 0.125,
-          "role": "highlight breakup under grazing light"
+          "frequency": 56.0,
+          "amplitude": 0.12,
+          "role": "grain of the grit under grazing light"
         }
       ],
       "roughness": {
-        "base": 0.78,
+        "base": 0.96,
         "variation": 0.12,
         "map": "independent-procedural-field",
         "localResponse": "slightly rougher in cavities, smoother on worn edges"
@@ -19574,7 +19755,7 @@
       },
       "normal": {
         "pattern": "derived-from-independent-height-field",
-        "strength": 0.4,
+        "strength": 0.55,
         "scale": 18.0,
         "space": "tangent"
       },
@@ -20412,6 +20593,97 @@
       "cameraView": "fixed: az 37, el 6, fov 18 (refitted)",
       "notes": "",
       "aiVisionNotes": "Viewed renders/form-refinement/cmp.jpg (reference left, render right) and turntable.jpg."
+    },
+    {
+      "timestamp": "2026-10-24T01:54:07.098587+00:00",
+      "passId": "material-pass",
+      "estimatedFidelity": 0.75,
+      "aiVisionScore": 0.76,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.87,
+        "componentStructure": 0.85,
+        "formDetail": 0.74,
+        "materialSurface": 0.7,
+        "lightingCamera": 0.72
+      },
+      "featureReviews": [
+        {
+          "id": "reference-material-system",
+          "score": 0.73,
+          "notes": "Warm brown planks, dark satin iron, yellow gold and a dark gravel bed read like the reference's palette; the reference's wood is more saturated orange with painted grain, and its gravel is lighter with visible pebbles. Colour gate: max per-part delta-E 19.3 (<= 20)."
+        },
+        {
+          "id": "ore-heap-read",
+          "score": 0.76,
+          "notes": "Gold now reads yellow rather than orange; the lower nuggets drift slightly olive in shade, the reference keeps a warm orange-yellow there."
+        },
+        {
+          "id": "iron-hardware",
+          "score": 0.76,
+          "notes": "Iron caps, rims, handle bars and rails separate clearly from the wood."
+        }
+      ],
+      "referenceScreenshot": "reference.png",
+      "renderScreenshot": "renders/material-pass/fixed.png",
+      "comparisonImage": "renders/material-pass/cmp.jpg",
+      "cameraView": "fixed: az 37, el 6, fov 18 (refitted)",
+      "notes": "",
+      "aiVisionNotes": "Viewed renders/material-pass/cmp.jpg and turntable.jpg."
+    },
+    {
+      "timestamp": "2026-10-24T01:56:16.179321+00:00",
+      "passId": "surface-pass",
+      "estimatedFidelity": 0.77,
+      "aiVisionScore": 0.78,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.87,
+        "componentStructure": 0.85,
+        "formDetail": 0.75,
+        "materialSurface": 0.74,
+        "lightingCamera": 0.73
+      },
+      "featureReviews": [
+        {
+          "id": "reference-material-system",
+          "score": 0.76,
+          "notes": "Planks, posts and wheels now carry long grain streaks and the gravel a pebble speckle; the grazing close-up (lighting-checks.jpg) shows the grain breaking the highlight instead of a plastic sheen. The reference's grain is painted bolder and its gold facets flatter; ours stays subtler, which suits the ~100 px in-game size."
+        }
+      ],
+      "referenceScreenshot": "reference.png",
+      "renderScreenshot": "renders/surface-pass/fixed.png",
+      "comparisonImage": "renders/surface-pass/cmp.jpg",
+      "cameraView": "fixed: az 37, el 6, fov 18; closeup: az 45, el 10, fov 24, grazing key",
+      "notes": "",
+      "aiVisionNotes": "Viewed renders/surface-pass/cmp.jpg, turntable.jpg and lighting-checks.jpg (grazing close-up of Plank near 2, grazing-lit and reference-lit fixed views)."
+    },
+    {
+      "timestamp": "2026-10-24T01:57:32.410790+00:00",
+      "passId": "lighting-pass",
+      "estimatedFidelity": 0.77,
+      "aiVisionScore": 0.78,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.87,
+        "componentStructure": 0.85,
+        "formDetail": 0.75,
+        "materialSurface": 0.74,
+        "lightingCamera": 0.78
+      },
+      "featureReviews": [
+        {
+          "id": "reference-material-system",
+          "score": 0.76,
+          "notes": "Under neutral, grazing and reference-matched light the materials stay distinct: wood stays warm brown with grain, iron dark satin, gold yellow; the grazing key brightens the planks' sheen but reveals grain rather than plastic. The reference-matched light gives the warmest, closest read."
+        }
+      ],
+      "referenceScreenshot": "reference.png",
+      "renderScreenshot": "renders/lighting-pass/fixed.png",
+      "comparisonImage": "renders/lighting-pass/cmp.jpg",
+      "cameraView": "fixed: az 37, el 6, fov 18",
+      "notes": "",
+      "aiVisionNotes": "Viewed renders/lighting-pass/cmp.jpg and lighting-checks.jpg (neutral, grazing, reference-matched)."
     }
   ],
   "reviewHistory": [
@@ -20718,6 +20990,152 @@
         "notes": "",
         "aiVisionNotes": "Viewed renders/form-refinement/cmp.jpg (reference left, render right) and turntable.jpg."
       }
+    },
+    {
+      "timestamp": "2026-10-24T01:54:07.098587+00:00",
+      "passId": "material-pass",
+      "estimatedFidelity": 0.75,
+      "aiVisionScore": 0.76,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.87,
+        "componentStructure": 0.85,
+        "formDetail": 0.74,
+        "materialSurface": 0.7,
+        "lightingCamera": 0.72
+      },
+      "featureReviews": [
+        {
+          "id": "reference-material-system",
+          "score": 0.73,
+          "notes": "Warm brown planks, dark satin iron, yellow gold and a dark gravel bed read like the reference's palette; the reference's wood is more saturated orange with painted grain, and its gravel is lighter with visible pebbles. Colour gate: max per-part delta-E 19.3 (<= 20)."
+        },
+        {
+          "id": "ore-heap-read",
+          "score": 0.76,
+          "notes": "Gold now reads yellow rather than orange; the lower nuggets drift slightly olive in shade, the reference keeps a warm orange-yellow there."
+        },
+        {
+          "id": "iron-hardware",
+          "score": 0.76,
+          "notes": "Iron caps, rims, handle bars and rails separate clearly from the wood."
+        }
+      ],
+      "action": "continue",
+      "summary": "Material pass: wood warmed (#a0632f) and roughened (0.88, sleepers 0.92) so the grazing white flash is gone from the planks, gold lifted to #f4c63a at metalness 0.25, iron #50525a, gravel a dark soil brown from its crop palette. Tier-1 IoU 0.899, colour gate max delta-E 19.3 (gated from this pass).",
+      "matched": [
+        "warm brown plank wood",
+        "dark satin iron hardware",
+        "yellow gold ore",
+        "dark gravel bed",
+        "material regions bound to the registry (wood.unfinished, metal.steel-brushed, metal.gold, stone.natural)"
+      ],
+      "mismatches": [
+        "reference wood more saturated orange with painted grain",
+        "lower nuggets slightly olive in shade",
+        "gravel bed lacks the reference's light pebbles",
+        "sleeper tops still a little light at the 6 degree view"
+      ],
+      "specFixes": [
+        "surface-pass: stronger wood grain breakup (colour variation + normal), pebble speckle on the gravel, warmer gold shadow tone"
+      ],
+      "codeFixes": [],
+      "evidence": [],
+      "visualEvidence": {
+        "referenceScreenshot": "reference.png",
+        "renderScreenshot": "renders/material-pass/fixed.png",
+        "comparisonImage": "renders/material-pass/cmp.jpg",
+        "cameraView": "fixed: az 37, el 6, fov 18 (refitted)",
+        "notes": "",
+        "aiVisionNotes": "Viewed renders/material-pass/cmp.jpg and turntable.jpg."
+      }
+    },
+    {
+      "timestamp": "2026-10-24T01:56:16.179321+00:00",
+      "passId": "surface-pass",
+      "estimatedFidelity": 0.77,
+      "aiVisionScore": 0.78,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.87,
+        "componentStructure": 0.85,
+        "formDetail": 0.75,
+        "materialSurface": 0.74,
+        "lightingCamera": 0.73
+      },
+      "featureReviews": [
+        {
+          "id": "reference-material-system",
+          "score": 0.76,
+          "notes": "Planks, posts and wheels now carry long grain streaks and the gravel a pebble speckle; the grazing close-up (lighting-checks.jpg) shows the grain breaking the highlight instead of a plastic sheen. The reference's grain is painted bolder and its gold facets flatter; ours stays subtler, which suits the ~100 px in-game size."
+        }
+      ],
+      "action": "continue",
+      "summary": "Surface pass: wood bands are now stretched ridged grain (stretch 0.35 x 4, 'grain' -> ridges) with stronger normal (0.35-0.4), the gravel has a fine high-contrast pebble band, the gold shadow tone is warmer. Grazing close-up and grazing/reference-lit fixed views recorded. Tier-1 IoU 0.899, colour delta-E 18.85.",
+      "matched": [
+        "grain streaks along planks and wheel faces",
+        "pebble speckle on the gravel",
+        "grain breaks the grazing highlight",
+        "edge wear and dirt overrides declared per material"
+      ],
+      "mismatches": [
+        "grain subtler than the reference's painted gouges",
+        "gold facets shade softer than the reference's flat facets",
+        "grain runs across the corner posts (UV direction)"
+      ],
+      "specFixes": [],
+      "codeFixes": [],
+      "evidence": [],
+      "visualEvidence": {
+        "referenceScreenshot": "reference.png",
+        "renderScreenshot": "renders/surface-pass/fixed.png",
+        "comparisonImage": "renders/surface-pass/cmp.jpg",
+        "cameraView": "fixed: az 37, el 6, fov 18; closeup: az 45, el 10, fov 24, grazing key",
+        "notes": "",
+        "aiVisionNotes": "Viewed renders/surface-pass/cmp.jpg, turntable.jpg and lighting-checks.jpg (grazing close-up of Plank near 2, grazing-lit and reference-lit fixed views)."
+      }
+    },
+    {
+      "timestamp": "2026-10-24T01:57:32.410790+00:00",
+      "passId": "lighting-pass",
+      "estimatedFidelity": 0.77,
+      "aiVisionScore": 0.78,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.87,
+        "componentStructure": 0.85,
+        "formDetail": 0.75,
+        "materialSurface": 0.74,
+        "lightingCamera": 0.78
+      },
+      "featureReviews": [
+        {
+          "id": "reference-material-system",
+          "score": 0.76,
+          "notes": "Under neutral, grazing and reference-matched light the materials stay distinct: wood stays warm brown with grain, iron dark satin, gold yellow; the grazing key brightens the planks' sheen but reveals grain rather than plastic. The reference-matched light gives the warmest, closest read."
+        }
+      ],
+      "action": "continue",
+      "summary": "Lighting pass: lightingFromPhoto names key (upper left, warm), fill (right, cool, low), hemisphere environment, soft PCF shadow with the contact shadow kept off gate renders, exposure 1.0-1.25 with ACES Filmic. Neutral, grazing and reference-matched renders of the fixed view (lighting-checks.jpg) separate lighting from material: no material error appears under a single light only.",
+      "matched": [
+        "key/fill/environment and exposure/tone mapping specified",
+        "materials distinct under all three lights",
+        "game-matched review lighting (no environment map)"
+      ],
+      "mismatches": [
+        "the reference's soft studio light has a stronger warm key on the tub face than our neutral review light"
+      ],
+      "specFixes": [],
+      "codeFixes": [],
+      "evidence": [],
+      "visualEvidence": {
+        "referenceScreenshot": "reference.png",
+        "renderScreenshot": "renders/lighting-pass/fixed.png",
+        "comparisonImage": "renders/lighting-pass/cmp.jpg",
+        "cameraView": "fixed: az 37, el 6, fov 18",
+        "notes": "",
+        "aiVisionNotes": "Viewed renders/lighting-pass/cmp.jpg and lighting-checks.jpg (neutral, grazing, reference-matched)."
+      }
     }
   ],
   "lodPlan": [
@@ -20752,6 +21170,17 @@
       "direction": "right",
       "color": "#dfe6ff",
       "intensity": "low"
+    },
+    {
+      "role": "environment light",
+      "type": "hemisphere",
+      "sky": "#f2f4ff",
+      "ground": "#4a4036",
+      "notes": "soft studio ambience; the game renderer has no environment map, so neither do the review renders"
+    },
+    {
+      "role": "shadow",
+      "softness": "soft PCF, contact shadow faint (kept off the plate in gate renders so the silhouette mask measures the object, not its shadow)"
     },
     {
       "role": "background",
@@ -24658,6 +25087,1218 @@
       "maskWarnings": [],
       "renderHash": "bda6d00e0d79006d",
       "passId": "form-refinement"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "silhouetteIoU": 0.8994,
+        "aspectRatioDelta": 0.0242,
+        "scaleDelta": 0.0242,
+        "bilateralSymmetryError": 0.0516,
+        "colorDelta": {
+          "checked": 96,
+          "maxDeltaE": 19.3,
+          "perComponent": [
+            {
+              "componentId": null,
+              "deltaE": 18.54
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.48
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.48
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.48
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.48
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 13.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 13.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 13.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 13.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 13.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 13.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 13.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 13.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 13.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 13.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 13.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 13.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 13.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 13.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 13.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 13.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 13.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 13.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 13.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 13.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 13.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 13.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 19.3
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.13
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.13
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.13
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.13
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.13
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.13
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.13
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.13
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.13
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.13
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.13
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.13
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.13
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.13
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.13
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.13
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.13
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.13
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.13
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.13
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.13
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.13
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.13
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.13
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.13
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.13
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.13
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.13
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.13
+            }
+          ],
+          "gated": true
+        }
+      },
+      "failures": [],
+      "maskWarnings": [],
+      "renderHash": "48fc87764a5ffdd3",
+      "passId": "material-pass"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "silhouetteIoU": 0.8992,
+        "aspectRatioDelta": 0.0242,
+        "scaleDelta": 0.0242,
+        "bilateralSymmetryError": 0.0517,
+        "colorDelta": {
+          "checked": 96,
+          "maxDeltaE": 18.85,
+          "perComponent": [
+            {
+              "componentId": null,
+              "deltaE": 7.9
+            },
+            {
+              "componentId": null,
+              "deltaE": 10.41
+            },
+            {
+              "componentId": null,
+              "deltaE": 10.41
+            },
+            {
+              "componentId": null,
+              "deltaE": 10.41
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 10.41
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            }
+          ],
+          "gated": true
+        }
+      },
+      "failures": [],
+      "maskWarnings": [],
+      "renderHash": "58745d9bfff22118",
+      "passId": "surface-pass"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "silhouetteIoU": 0.8992,
+        "aspectRatioDelta": 0.0242,
+        "scaleDelta": 0.0242,
+        "bilateralSymmetryError": 0.0517,
+        "colorDelta": {
+          "checked": 96,
+          "maxDeltaE": 18.85,
+          "perComponent": [
+            {
+              "componentId": null,
+              "deltaE": 7.9
+            },
+            {
+              "componentId": null,
+              "deltaE": 10.41
+            },
+            {
+              "componentId": null,
+              "deltaE": 10.41
+            },
+            {
+              "componentId": null,
+              "deltaE": 10.41
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 10.41
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.25
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.55
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            },
+            {
+              "componentId": null,
+              "deltaE": 18.85
+            }
+          ],
+          "gated": true
+        }
+      },
+      "failures": [],
+      "maskWarnings": [],
+      "renderHash": "58745d9bfff22118",
+      "passId": "lighting-pass"
     }
   ]
 }

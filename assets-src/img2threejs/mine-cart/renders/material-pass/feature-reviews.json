@@ -1,0 +1,5 @@
+[
+  {"id": "reference-material-system", "score": 0.73, "notes": "Warm brown planks, dark satin iron, yellow gold and a dark gravel bed read like the reference's palette; the reference's wood is more saturated orange with painted grain, and its gravel is lighter with visible pebbles. Colour gate: max per-part delta-E 19.3 (<= 20)."},
+  {"id": "ore-heap-read", "score": 0.76, "notes": "Gold now reads yellow rather than orange; the lower nuggets drift slightly olive in shade, the reference keeps a warm orange-yellow there."},
+  {"id": "iron-hardware", "score": 0.76, "notes": "Iron caps, rims, handle bars and rails separate clearly from the wood."}
+]
