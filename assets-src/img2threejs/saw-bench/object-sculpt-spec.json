@@ -40,21 +40,22 @@
   },
   "sourceImage": "reference.png",
   "referenceCamera": {
-    "solved": false,
-    "fovDegrees": 20.0,
+    "solved": true,
+    "fovDegrees": 24.0,
     "aspect": 1.8333333333333333,
     "orientation": {
-      "yaw": 24.0,
-      "pitch": -14.0,
+      "yaw": 31.0,
+      "pitch": -6.0,
       "roll": 0.0
     },
-    "azimuthDeg": 24.0,
-    "elevationDeg": 14.0,
+    "azimuthDeg": 31.0,
+    "elevationDeg": 6.0,
     "positionHint": [
-      2.4,
-      1.4,
-      5.2
+      2.5,
+      0.55,
+      4.1
     ],
+    "solveMethod": "silhouette camera fit (renders/camera-fit/camera-fit.json): clay renders of the blockout, with the reference's floor shadow reproduced by a contact shadow (render-options.json, settings from renders/camera-fit/shadow-sweep.json), vs the reference foreground mask on the Tier-1 224 grid; 667 candidates over four lenses; best IoU 0.901 at az 31, el 6, fov 24",
     "note": "Estimated from the image: three-quarter from the front-right (the long face toward the viewer, the right end face showing), ~14 degrees above; refined by the silhouette camera fit."
   },
   "suitability": "pass",
@@ -853,7 +854,7 @@
     "boundingShape": "long low table with a big disc standing up through its middle and a log on its right half",
     "aspectRatios": [
       "top length : height : width = 2.0 : 0.55 : 0.62",
-      "blade diameter 0.69"
+      "blade diameter 0.76"
     ],
     "symmetry": "near bilateral about the long axis; blade and log break the end-to-end symmetry",
     "dominantCurves": [
@@ -917,7 +918,7 @@
       "attachment": null,
       "dimensions": {
         "width": 2.0,
-        "height": 0.15,
+        "height": 0.18,
         "depth": 0.118,
         "units": "object",
         "confidence": 0.75
@@ -925,7 +926,7 @@
       "transform": {
         "position": [
           0.0,
-          0.475,
+          0.48,
           0.0
         ],
         "rotation": [
@@ -935,7 +936,7 @@
         ],
         "scale": [
           2.0,
-          0.15,
+          0.18,
           0.118
         ]
       },
@@ -1075,7 +1076,7 @@
       "attachment": null,
       "dimensions": {
         "width": 2.0,
-        "height": 0.15,
+        "height": 0.18,
         "depth": 0.118,
         "units": "object",
         "confidence": 0.75
@@ -1093,7 +1094,7 @@
         ],
         "scale": [
           2.0,
-          0.15,
+          0.18,
           0.118
         ]
       },
@@ -1233,7 +1234,7 @@
       "attachment": null,
       "dimensions": {
         "width": 1.98,
-        "height": 0.15,
+        "height": 0.18,
         "depth": 0.118,
         "units": "object",
         "confidence": 0.75
@@ -1251,7 +1252,7 @@
         ],
         "scale": [
           1.98,
-          0.15,
+          0.18,
           0.118
         ]
       },
@@ -1391,7 +1392,7 @@
       "attachment": null,
       "dimensions": {
         "width": 1.98,
-        "height": 0.15,
+        "height": 0.18,
         "depth": 0.118,
         "units": "object",
         "confidence": 0.75
@@ -1409,7 +1410,7 @@
         ],
         "scale": [
           1.98,
-          0.15,
+          0.18,
           0.118
         ]
       },
@@ -1549,7 +1550,7 @@
       "attachment": null,
       "dimensions": {
         "width": 2.0,
-        "height": 0.15,
+        "height": 0.18,
         "depth": 0.118,
         "units": "object",
         "confidence": 0.75
@@ -1567,7 +1568,7 @@
         ],
         "scale": [
           2.0,
-          0.15,
+          0.18,
           0.118
         ]
       },
@@ -1734,12 +1735,12 @@
         "parentSocket": "root:underside",
         "localStart": [
           -0.85,
-          -0.475,
+          -0.48,
           0.23
         ],
         "localEnd": [
           -0.85,
-          -0.065,
+          -0.08,
           0.23
         ],
         "contactType": "butt",
@@ -1751,7 +1752,7 @@
       },
       "dimensions": {
         "width": 0.13,
-        "height": 0.41,
+        "height": 0.4,
         "depth": 0.13,
         "units": "object",
         "confidence": 0.75
@@ -1759,7 +1760,7 @@
       "transform": {
         "position": [
           -0.85,
-          -0.275,
+          -0.285,
           0.23
         ],
         "rotation": [
@@ -1769,7 +1770,7 @@
         ],
         "scale": [
           0.13,
-          0.41,
+          0.4,
           0.13
         ]
       },
@@ -1911,12 +1912,12 @@
         "parentSocket": "root:underside",
         "localStart": [
           -0.85,
-          -0.475,
+          -0.48,
           -0.23
         ],
         "localEnd": [
           -0.85,
-          -0.065,
+          -0.08,
           -0.23
         ],
         "contactType": "butt",
@@ -1928,7 +1929,7 @@
       },
       "dimensions": {
         "width": 0.13,
-        "height": 0.41,
+        "height": 0.4,
         "depth": 0.13,
         "units": "object",
         "confidence": 0.75
@@ -1936,7 +1937,7 @@
       "transform": {
         "position": [
           -0.85,
-          -0.275,
+          -0.285,
           -0.23
         ],
         "rotation": [
@@ -1946,7 +1947,7 @@
         ],
         "scale": [
           0.13,
-          0.41,
+          0.4,
           0.13
         ]
       },
@@ -2088,12 +2089,12 @@
         "parentSocket": "root:underside",
         "localStart": [
           0.0,
-          -0.475,
+          -0.48,
           0.23
         ],
         "localEnd": [
           0.0,
-          -0.065,
+          -0.08,
           0.23
         ],
         "contactType": "butt",
@@ -2105,7 +2106,7 @@
       },
       "dimensions": {
         "width": 0.13,
-        "height": 0.41,
+        "height": 0.4,
         "depth": 0.13,
         "units": "object",
         "confidence": 0.75
@@ -2113,7 +2114,7 @@
       "transform": {
         "position": [
           0.0,
-          -0.275,
+          -0.285,
           0.23
         ],
         "rotation": [
@@ -2123,7 +2124,7 @@
         ],
         "scale": [
           0.13,
-          0.41,
+          0.4,
           0.13
         ]
       },
@@ -2265,12 +2266,12 @@
         "parentSocket": "root:underside",
         "localStart": [
           0.0,
-          -0.475,
+          -0.48,
           -0.23
         ],
         "localEnd": [
           0.0,
-          -0.065,
+          -0.08,
           -0.23
         ],
         "contactType": "butt",
@@ -2282,7 +2283,7 @@
       },
       "dimensions": {
         "width": 0.13,
-        "height": 0.41,
+        "height": 0.4,
         "depth": 0.13,
         "units": "object",
         "confidence": 0.75
@@ -2290,7 +2291,7 @@
       "transform": {
         "position": [
           0.0,
-          -0.275,
+          -0.285,
           -0.23
         ],
         "rotation": [
@@ -2300,7 +2301,7 @@
         ],
         "scale": [
           0.13,
-          0.41,
+          0.4,
           0.13
         ]
       },
@@ -2442,12 +2443,12 @@
         "parentSocket": "root:underside",
         "localStart": [
           0.85,
-          -0.475,
+          -0.48,
           0.23
         ],
         "localEnd": [
           0.85,
-          -0.065,
+          -0.08,
           0.23
         ],
         "contactType": "butt",
@@ -2459,7 +2460,7 @@
       },
       "dimensions": {
         "width": 0.13,
-        "height": 0.41,
+        "height": 0.4,
         "depth": 0.13,
         "units": "object",
         "confidence": 0.75
@@ -2467,7 +2468,7 @@
       "transform": {
         "position": [
           0.85,
-          -0.275,
+          -0.285,
           0.23
         ],
         "rotation": [
@@ -2477,7 +2478,7 @@
         ],
         "scale": [
           0.13,
-          0.41,
+          0.4,
           0.13
         ]
       },
@@ -2619,12 +2620,12 @@
         "parentSocket": "root:underside",
         "localStart": [
           0.85,
-          -0.475,
+          -0.48,
           -0.23
         ],
         "localEnd": [
           0.85,
-          -0.065,
+          -0.08,
           -0.23
         ],
         "contactType": "butt",
@@ -2636,7 +2637,7 @@
       },
       "dimensions": {
         "width": 0.13,
-        "height": 0.41,
+        "height": 0.4,
         "depth": 0.13,
         "units": "object",
         "confidence": 0.75
@@ -2644,7 +2645,7 @@
       "transform": {
         "position": [
           0.85,
-          -0.275,
+          -0.285,
           -0.23
         ],
         "rotation": [
@@ -2654,7 +2655,7 @@
         ],
         "scale": [
           0.13,
-          0.41,
+          0.4,
           0.13
         ]
       },
@@ -2802,7 +2803,7 @@
       "transform": {
         "position": [
           -0.425,
-          -0.285,
+          -0.29,
           0.315
         ],
         "rotation": [
@@ -2947,7 +2948,7 @@
       "transform": {
         "position": [
           0.425,
-          -0.285,
+          -0.29,
           0.315
         ],
         "rotation": [
@@ -3092,7 +3093,7 @@
       "transform": {
         "position": [
           -0.425,
-          -0.285,
+          -0.29,
           -0.315
         ],
         "rotation": [
@@ -3237,7 +3238,7 @@
       "transform": {
         "position": [
           0.425,
-          -0.285,
+          -0.29,
           -0.315
         ],
         "rotation": [
@@ -3382,7 +3383,7 @@
       "transform": {
         "position": [
           -0.775,
-          -0.255,
+          -0.26,
           0.0
         ],
         "rotation": [
@@ -3527,7 +3528,7 @@
       "transform": {
         "position": [
           -0.775,
-          -0.255,
+          -0.26,
           0.0
         ],
         "rotation": [
@@ -3672,7 +3673,7 @@
       "transform": {
         "position": [
           0.775,
-          -0.255,
+          -0.26,
           0.0
         ],
         "rotation": [
@@ -3817,7 +3818,7 @@
       "transform": {
         "position": [
           0.775,
-          -0.255,
+          -0.26,
           0.0
         ],
         "rotation": [
@@ -3952,244 +3953,244 @@
         "profile2D": {
           "points": [
             [
-              0.29,
+              0.31,
               0.0
             ],
             [
-              0.3385,
-              0.0668
+              0.363,
+              0.0716
             ],
             [
-              0.2925,
-              0.0751
+              0.3119,
+              0.0801
             ],
             [
-              0.2758,
-              0.0896
+              0.2948,
+              0.0958
             ],
             [
-              0.3013,
-              0.1681
+              0.3231,
+              0.1803
             ],
             [
-              0.255,
-              0.1618
+              0.2719,
+              0.1725
             ],
             [
-              0.2346,
-              0.1705
+              0.2508,
+              0.1822
             ],
             [
-              0.2346,
-              0.253
+              0.2516,
+              0.2713
             ],
             [
-              0.1925,
-              0.2327
+              0.2053,
+              0.2481
             ],
             [
-              0.1705,
-              0.2346
+              0.1822,
+              0.2508
             ],
             [
-              0.1449,
-              0.3131
+              0.1554,
+              0.3358
             ],
             [
-              0.1112,
-              0.2808
+              0.1185,
+              0.2994
             ],
             [
-              0.0896,
-              0.2758
+              0.0958,
+              0.2948
             ],
             [
-              0.0411,
-              0.3425
+              0.0441,
+              0.3674
             ],
             [
-              0.019,
-              0.3014
+              0.0202,
+              0.3214
             ],
             [
               0.0,
-              0.29
+              0.31
             ],
             [
-              -0.0668,
-              0.3385
+              -0.0716,
+              0.363
             ],
             [
-              -0.0751,
-              0.2925
+              -0.0801,
+              0.3119
             ],
             [
-              -0.0896,
-              0.2758
+              -0.0958,
+              0.2948
             ],
             [
-              -0.1681,
-              0.3013
+              -0.1803,
+              0.3231
             ],
             [
-              -0.1618,
-              0.255
+              -0.1725,
+              0.2719
             ],
             [
-              -0.1705,
-              0.2346
+              -0.1822,
+              0.2508
             ],
             [
-              -0.253,
-              0.2346
+              -0.2713,
+              0.2516
             ],
             [
-              -0.2327,
-              0.1925
+              -0.2481,
+              0.2053
             ],
             [
-              -0.2346,
-              0.1705
+              -0.2508,
+              0.1822
             ],
             [
-              -0.3131,
-              0.1449
+              -0.3358,
+              0.1554
             ],
             [
-              -0.2808,
-              0.1112
+              -0.2994,
+              0.1185
             ],
             [
-              -0.2758,
-              0.0896
+              -0.2948,
+              0.0958
             ],
             [
-              -0.3425,
-              0.0411
+              -0.3674,
+              0.0441
             ],
             [
-              -0.3014,
-              0.019
+              -0.3214,
+              0.0202
             ],
             [
-              -0.29,
+              -0.31,
               0.0
             ],
             [
-              -0.3385,
-              -0.0668
+              -0.363,
+              -0.0716
             ],
             [
-              -0.2925,
-              -0.0751
+              -0.3119,
+              -0.0801
             ],
             [
-              -0.2758,
-              -0.0896
+              -0.2948,
+              -0.0958
             ],
             [
-              -0.3013,
-              -0.1681
+              -0.3231,
+              -0.1803
             ],
             [
-              -0.255,
-              -0.1618
+              -0.2719,
+              -0.1725
             ],
             [
-              -0.2346,
-              -0.1705
+              -0.2508,
+              -0.1822
             ],
             [
-              -0.2346,
-              -0.253
+              -0.2516,
+              -0.2713
             ],
             [
-              -0.1925,
-              -0.2327
+              -0.2053,
+              -0.2481
             ],
             [
-              -0.1705,
-              -0.2346
+              -0.1822,
+              -0.2508
             ],
             [
-              -0.1449,
-              -0.3131
+              -0.1554,
+              -0.3358
             ],
             [
-              -0.1112,
-              -0.2808
+              -0.1185,
+              -0.2994
             ],
             [
-              -0.0896,
-              -0.2758
+              -0.0958,
+              -0.2948
             ],
             [
-              -0.0411,
-              -0.3425
+              -0.0441,
+              -0.3674
             ],
             [
-              -0.019,
-              -0.3014
+              -0.0202,
+              -0.3214
             ],
             [
               -0.0,
-              -0.29
+              -0.31
             ],
             [
-              0.0668,
-              -0.3385
+              0.0716,
+              -0.363
             ],
             [
-              0.0751,
-              -0.2925
+              0.0801,
+              -0.3119
             ],
             [
-              0.0896,
-              -0.2758
+              0.0958,
+              -0.2948
             ],
             [
-              0.1681,
-              -0.3013
+              0.1803,
+              -0.3231
             ],
             [
-              0.1618,
-              -0.255
+              0.1725,
+              -0.2719
             ],
             [
-              0.1705,
-              -0.2346
+              0.1822,
+              -0.2508
             ],
             [
-              0.253,
-              -0.2346
+              0.2713,
+              -0.2516
             ],
             [
-              0.2327,
-              -0.1925
+              0.2481,
+              -0.2053
             ],
             [
-              0.2346,
-              -0.1705
+              0.2508,
+              -0.1822
             ],
             [
-              0.3131,
-              -0.1449
+              0.3358,
+              -0.1554
             ],
             [
-              0.2808,
-              -0.1112
+              0.2994,
+              -0.1185
             ],
             [
-              0.2758,
-              -0.0896
+              0.2948,
+              -0.0958
             ],
             [
-              0.3425,
-              -0.0411
+              0.3674,
+              -0.0441
             ],
             [
-              0.3014,
-              -0.019
+              0.3214,
+              -0.0202
             ]
           ],
           "depth": 0.022
@@ -4206,8 +4207,8 @@
       },
       "transform": {
         "position": [
-          -0.05,
-          0.105,
+          0.0,
+          0.1,
           -0.011
         ],
         "rotation": [
@@ -4741,7 +4742,7 @@
       "parent": "root",
       "attachment": null,
       "dimensions": {
-        "width": 0.74,
+        "width": 0.82,
         "height": 0.006,
         "depth": 0.036,
         "units": "object",
@@ -4749,8 +4750,8 @@
       },
       "transform": {
         "position": [
-          -0.05,
-          0.077,
+          0.0,
+          0.092,
           0.0
         ],
         "rotation": [
@@ -4759,7 +4760,7 @@
           -0.0
         ],
         "scale": [
-          0.74,
+          0.82,
           0.006,
           0.036
         ]
@@ -4901,17 +4902,17 @@
         "parentId": "root",
         "parentSocket": "root:top",
         "localStart": [
-          0.27,
-          0.165,
-          0.0
+          0.2,
+          0.19,
+          0.12
         ],
         "localEnd": [
-          0.78,
-          0.165,
-          0.0
+          0.7,
+          0.19,
+          0.12
         ],
-        "baseRadius": 0.09,
-        "endRadius": 0.09,
+        "baseRadius": 0.1,
+        "endRadius": 0.1,
         "contactType": "rests-on",
         "embedDepth": 0.008,
         "gapTolerance": 0.004,
@@ -4928,9 +4929,9 @@
       },
       "transform": {
         "position": [
-          0.27,
-          0.165,
-          0.0
+          0.2,
+          0.19,
+          0.12
         ],
         "rotation": [
           -0.0,
@@ -5100,17 +5101,17 @@
         "parentId": "log",
         "parentSocket": "log:end",
         "localStart": [
-          0.51,
+          0.5,
           0.0,
           0.0
         ],
         "localEnd": [
-          0.516,
+          0.506,
           0.0,
           0.0
         ],
-        "baseRadius": 0.08399999999999999,
-        "endRadius": 0.08399999999999999,
+        "baseRadius": 0.094,
+        "endRadius": 0.094,
         "contactType": "flush",
         "embedDepth": 0.002,
         "gapTolerance": 0.004,
@@ -5127,7 +5128,7 @@
       },
       "transform": {
         "position": [
-          0.51,
+          0.5,
           0.0,
           0.0
         ],
@@ -7298,6 +7299,250 @@
       "status": "proceed",
       "unresolvedNotObservedMaterials": [],
       "regions": 5
+    }
+  ],
+  "tier1Results": [
+    {
+      "passed": true,
+      "checks": {
+        "silhouetteIoU": 0.8982,
+        "aspectRatioDelta": 0.0112,
+        "scaleDelta": 0.0003,
+        "bilateralSymmetryError": 0.146,
+        "colorDelta": {
+          "checked": 25,
+          "maxDeltaE": 31.47,
+          "perComponent": [
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 5.38
+            },
+            {
+              "componentId": null,
+              "deltaE": 30.77
+            },
+            {
+              "componentId": null,
+              "deltaE": 30.77
+            },
+            {
+              "componentId": null,
+              "deltaE": 23.93
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.93
+            },
+            {
+              "componentId": null,
+              "deltaE": 31.47
+            }
+          ],
+          "gated": false
+        }
+      },
+      "failures": [],
+      "maskWarnings": [],
+      "renderHash": "91b2bb17f76deab4",
+      "passId": "blockout",
+      "mapStrippedRender": "renders/blockout/fixed-clay.png"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "silhouetteIoU": 0.8982,
+        "aspectRatioDelta": 0.0112,
+        "scaleDelta": 0.0003,
+        "bilateralSymmetryError": 0.146,
+        "colorDelta": {
+          "checked": 25,
+          "maxDeltaE": 31.47,
+          "perComponent": [
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.51
+            },
+            {
+              "componentId": null,
+              "deltaE": 5.38
+            },
+            {
+              "componentId": null,
+              "deltaE": 30.77
+            },
+            {
+              "componentId": null,
+              "deltaE": 30.77
+            },
+            {
+              "componentId": null,
+              "deltaE": 23.93
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.93
+            },
+            {
+              "componentId": null,
+              "deltaE": 31.47
+            }
+          ],
+          "gated": false
+        }
+      },
+      "failures": [],
+      "maskWarnings": [],
+      "renderHash": "91b2bb17f76deab4",
+      "passId": "blockout",
+      "mapStrippedRender": "renders/blockout/fixed-clay.png"
     }
   ]
 }

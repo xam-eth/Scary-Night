@@ -1,0 +1,133 @@
+{
+ "model": "Saw bench",
+ "parts": [
+  {
+   "name": "Top board 3",
+   "kind": "part",
+   "module": "root",
+   "triangles": 12
+  },
+  {
+   "name": "Top board 1",
+   "kind": "part",
+   "module": "top-board-1",
+   "triangles": 12
+  },
+  {
+   "name": "Top board 2",
+   "kind": "part",
+   "module": "top-board-2",
+   "triangles": 12
+  },
+  {
+   "name": "Top board 4",
+   "kind": "part",
+   "module": "top-board-4",
+   "triangles": 12
+  },
+  {
+   "name": "Top board 5",
+   "kind": "part",
+   "module": "top-board-5",
+   "triangles": 12
+  },
+  {
+   "name": "Leg 1",
+   "kind": "part",
+   "module": "leg-1",
+   "triangles": 12
+  },
+  {
+   "name": "Leg 2",
+   "kind": "part",
+   "module": "leg-2",
+   "triangles": 12
+  },
+  {
+   "name": "Leg 3",
+   "kind": "part",
+   "module": "leg-3",
+   "triangles": 12
+  },
+  {
+   "name": "Leg 4",
+   "kind": "part",
+   "module": "leg-4",
+   "triangles": 12
+  },
+  {
+   "name": "Leg 5",
+   "kind": "part",
+   "module": "leg-5",
+   "triangles": 12
+  },
+  {
+   "name": "Leg 6",
+   "kind": "part",
+   "module": "leg-6",
+   "triangles": 12
+  },
+  {
+   "name": "Stretcher front 1",
+   "kind": "part",
+   "module": "stretcher-1",
+   "triangles": 12
+  },
+  {
+   "name": "Stretcher front 2",
+   "kind": "part",
+   "module": "stretcher-2",
+   "triangles": 12
+  },
+  {
+   "name": "Stretcher back 3",
+   "kind": "part",
+   "module": "stretcher-3",
+   "triangles": 12
+  },
+  {
+   "name": "Stretcher back 4",
+   "kind": "part",
+   "module": "stretcher-4",
+   "triangles": 12
+  },
+  {
+   "name": "Cross brace 1",
+   "kind": "part",
+   "module": "brace-1",
+   "triangles": 12
+  },
+  {
+   "name": "Cross brace 2",
+   "kind": "part",
+   "module": "brace-2",
+   "triangles": 12
+  },
+  {
+   "name": "Cross brace 3",
+   "kind": "part",
+   "module": "brace-3",
+   "triangles": 12
+  },
+  {
+   "name": "Cross brace 4",
+   "kind": "part",
+   "module": "brace-4",
+   "triangles": 12
+  },
+  {
+   "name": "Saw blade",
+   "kind": "part",
+   "module": "saw-blade",
+   "triangles": 236
+  },
+  {
+   "name": "Log",
+   "kind": "part",
+   "module": "log",
+   "triangles": 80
+  }
+ ],
+ "unnamedMeshes": 0,
+ "integralMeshes": 0
+}

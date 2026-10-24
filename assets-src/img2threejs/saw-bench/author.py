@@ -77,18 +77,20 @@ METAL_OVERRIDES = {"steel": {"metalness": 0.3, "roughness": 0.38}, "iron": {"met
 ROUGHNESS_OVERRIDES = {"wood": 0.88, "bark": 0.92, "end-grain": 0.93, "slot": 0.96}
 
 # ---- geometry -----------------------------------------------------------------------------------
-TOP_Y = 0.55          # table top surface
-TOP_T = 0.15          # top thickness (the boards run the full thickness; their ends show at x = +-1)
+TOP_Y = 0.57          # table top surface
+TOP_T = 0.18          # top thickness (the boards run the full thickness; their ends show at x = +-1)
 TOP_LEN = 2.0
 PLANK_W = 0.118
 LEG_X = (-0.85, 0.0, 0.85)
 LEG_Z = 0.23
 LEG = 0.13
-BLADE_C = (-0.05, TOP_Y + 0.03, 0.0)
-R_TIP, R_ROOT = 0.345, 0.29
+BLADE_C = (0.0, TOP_Y + 0.01, 0.0)
+R_TIP, R_ROOT = 0.37, 0.31
 TEETH = 20
-LOG_Y = TOP_Y + 0.09
-LOG_R = 0.09
+LOG_Y = TOP_Y + 0.1
+LOG_R = 0.1
+LOG_Z = 0.12          # the log lies just in front of the blade plane (it hides the blade's right teeth in the reference)
+LOG_X = (0.2, 0.7)
 
 
 def blade_profile() -> list[list[float]]:
@@ -169,17 +171,17 @@ def build_components() -> SpecBuilder:
           radius=0.03, level="micro", role="cap", material="iron", contact="threaded", embed=0.004, socket="hub:end",
           importance=0.3, rationale="Arbor nut: a small round nut on the hub, a cylinder.",
           features=[feature("arbor-nut-head", "fastener", "the arbor nut at the blade centre")])
-    b.box("slot", "Blade slot", parent="root", center=(BLADE_C[0], TOP_Y + 0.002, 0.0), size=(0.74, 0.006, 0.036),
+    b.box("slot", "Blade slot", parent="root", center=(BLADE_C[0], TOP_Y + 0.002, 0.0), size=(0.82, 0.006, 0.036),
           level="micro", role="slot", material="slot", importance=0.3,
           rationale="Blade slot: the dark gap in the top the blade runs through, a thin flat box on the surface.",
           features=[feature("blade-slot", "seam", "dark slit along the blade line in the top")])
     # the log being cut, lying along X on the +X side of the blade
-    b.rod("log", "Log", parent="root", start=(0.27, LOG_Y, 0.0), end=(0.78, LOG_Y, 0.0), radius=LOG_R,
+    b.rod("log", "Log", parent="root", start=(LOG_X[0], LOG_Y, LOG_Z), end=(LOG_X[1], LOG_Y, LOG_Z), radius=LOG_R,
           level="macro", role="log", material="bark", contact="rests-on", embed=0.008, socket="root:top",
           importance=0.8, anim="feed", pivot_axis=(1, 0, 0),
           rationale="Log: a round length of trunk, a cylinder lying on the top.",
           features=[feature("log-streaks", "scratch", "long grain streaks along the log", effect="material")])
-    b.rod("log-end", "Log cut face", parent="log", start=(0.78, LOG_Y, 0.0), end=(0.786, LOG_Y, 0.0), radius=LOG_R - 0.006,
+    b.rod("log-end", "Log cut face", parent="log", start=(LOG_X[1], LOG_Y, LOG_Z), end=(LOG_X[1] + 0.006, LOG_Y, LOG_Z), radius=LOG_R - 0.006,
           level="micro", role="cap", material="end-grain", contact="flush", embed=0.002, socket="log:end",
           importance=0.4, rationale="Log cut face: the pale sawn end, a thin disc.",
           features=[feature("log-end-rings", "decal", "pale cut face with growth rings", effect="material")])
@@ -285,9 +287,13 @@ class Config:
     SCORES = {"object_isolation": 3, "silhouette_readability": 3, "depth_inference": 2, "primitive_decomposition": 3,
               "material_procedurality": 2, "occlusion_risk": 1, "interaction_fit": 3}
     REFERENCE_CAMERA = {
-        "solved": False, "fovDegrees": 20.0, "aspect": 1408 / 768,
-        "orientation": {"yaw": 24.0, "pitch": -14.0, "roll": 0.0},
-        "azimuthDeg": 24.0, "elevationDeg": 14.0, "positionHint": [2.4, 1.4, 5.2],
+        "solved": True, "fovDegrees": 24.0, "aspect": 1408 / 768,
+        "orientation": {"yaw": 31.0, "pitch": -6.0, "roll": 0.0},
+        "azimuthDeg": 31.0, "elevationDeg": 6.0, "positionHint": [2.5, 0.55, 4.1],
+        "solveMethod": "silhouette camera fit (renders/camera-fit/camera-fit.json): clay renders of the blockout, with the "
+                       "reference's floor shadow reproduced by a contact shadow (render-options.json, settings from "
+                       "renders/camera-fit/shadow-sweep.json), vs the reference foreground mask on the Tier-1 224 grid; 667 "
+                       "candidates over four lenses; best IoU 0.901 at az 31, el 6, fov 24",
         "note": "Estimated from the image: three-quarter from the front-right (the long face toward the viewer, the "
                 "right end face showing), ~14 degrees above; refined by the silhouette camera fit.",
     }
@@ -295,7 +301,7 @@ class Config:
                         "right": "+X, the log's side of the blade", "scaleReference": "table top length = 2.0 object units"}
     SILHOUETTE = {
         "boundingShape": "long low table with a big disc standing up through its middle and a log on its right half",
-        "aspectRatios": ["top length : height : width = 2.0 : 0.55 : 0.62", "blade diameter 0.69"],
+        "aspectRatios": ["top length : height : width = 2.0 : 0.55 : 0.62", "blade diameter 0.76"],
         "symmetry": "near bilateral about the long axis; blade and log break the end-to-end symmetry",
         "dominantCurves": ["blade rim with teeth", "log cylinder"],
         "negativeSpaces": ["under the top between the legs (the blade's lower part shows there)", "X braces at the ends"],

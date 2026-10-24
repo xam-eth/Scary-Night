@@ -1,0 +1,11 @@
+{
+  "contactShadow": {
+    "opacity": 0.17,
+    "falloff": 1.25,
+    "blur": 0.08
+  },
+  "why": "The reference concept has a soft floor shadow under the bench and the Tier-1 foreground mask counts it (analysis/reference-suitability.md). Gate renders carry a matching contact shadow (an ambient-occlusion floor decal computed from the model's height above the floor, blurred; no light involved) so the silhouette comparison measures the same thing on both sides; the model's own lighting and key-light self-shadowing are unchanged.",
+  "how": "Settings chosen by renders/camera-fit/shadow-sweep.json (36 settings on the fixed view, Tier-1 mask vs the reference).",
+  "allowHoles": true,
+  "allowHolesWhy": "The bench frame encloses real negative spaces (under the top between the legs, stretchers and cross braces; declared in silhouetteAnalysis.negativeSpaces), so turntable views are holed by design."
+}

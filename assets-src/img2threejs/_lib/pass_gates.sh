@@ -32,8 +32,13 @@ python3 "$SKILL/forge/stage4_review/diagnose_render_multi_angle.py" --reference 
   --orbit "$R/rear.png" --orbit "$R/top.png" --json > "$R/multi-angle.json" 2>/dev/null
 ma=$?
 python3 -c "import json;d=json.load(open('$R/multi-angle.json'));print('multi-angle:', {k:d[k] for k in d if k in ('passed','verdict','degenerate','failures','degenerateViews')})"
+# an asset whose frame genuinely encloses background (a table between its legs and stretchers)
+# declares "allowHoles": true in render-options.json (with the reason) so the hole signal is
+# recorded but does not fail the gate
+holes=()
+[ -f render-options.json ] && python3 -c "import json,sys;sys.exit(0 if json.load(open('render-options.json')).get('allowHoles') else 1)" && holes=(--allow-holes)
 python3 "$SKILL/forge/stage4_review/turntable_gate.py" --capture "0=$R/front.png" --capture "90=$R/right.png" \
-  --capture "180=$R/rear.png" --capture "270=$R/left.png" --json > "$R/turntable.json" 2>/dev/null
+  --capture "180=$R/rear.png" --capture "270=$R/left.png" "${holes[@]}" --json > "$R/turntable.json" 2>/dev/null
 tt=$?
 python3 -c "import json;d=json.load(open('$R/turntable.json'));print('turntable:', {k:d[k] for k in d if k in ('passed','verdict','failures','missingAzimuths')})"
 python3 "$SKILL/forge/stage4_review/self_intersection.py" "$R/meshes.json" --json > "$R/self-intersection.json" 2>/dev/null

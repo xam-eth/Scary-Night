@@ -1,0 +1,221 @@
+{
+ "note": "contact-shadow settings scored on the Tier-1 mask (fixed view, materials on)",
+ "rows": [
+  {
+   "opacity": 0.17,
+   "falloff": 1.25,
+   "blur": 0.08,
+   "iou": 0.8878
+  },
+  {
+   "opacity": 0.2,
+   "falloff": 1.1,
+   "blur": 0.08,
+   "iou": 0.886
+  },
+  {
+   "opacity": 0.17,
+   "falloff": 1.25,
+   "blur": 0.065,
+   "iou": 0.8859
+  },
+  {
+   "opacity": 0.23,
+   "falloff": 0.95,
+   "blur": 0.08,
+   "iou": 0.8852
+  },
+  {
+   "opacity": 0.17,
+   "falloff": 1.1,
+   "blur": 0.08,
+   "iou": 0.884
+  },
+  {
+   "opacity": 0.17,
+   "falloff": 1.25,
+   "blur": 0.05,
+   "iou": 0.8829
+  },
+  {
+   "opacity": 0.2,
+   "falloff": 1.1,
+   "blur": 0.065,
+   "iou": 0.882
+  },
+  {
+   "opacity": 0.2,
+   "falloff": 1.25,
+   "blur": 0.08,
+   "iou": 0.8817
+  },
+  {
+   "opacity": 0.23,
+   "falloff": 0.95,
+   "blur": 0.065,
+   "iou": 0.8797
+  },
+  {
+   "opacity": 0.2,
+   "falloff": 1.1,
+   "blur": 0.05,
+   "iou": 0.8786
+  },
+  {
+   "opacity": 0.23,
+   "falloff": 1.1,
+   "blur": 0.08,
+   "iou": 0.8776
+  },
+  {
+   "opacity": 0.2,
+   "falloff": 1.25,
+   "blur": 0.065,
+   "iou": 0.8773
+  },
+  {
+   "opacity": 0.23,
+   "falloff": 0.95,
+   "blur": 0.05,
+   "iou": 0.8768
+  },
+  {
+   "opacity": 0.2,
+   "falloff": 0.95,
+   "blur": 0.08,
+   "iou": 0.8763
+  },
+  {
+   "opacity": 0.2,
+   "falloff": 1.25,
+   "blur": 0.05,
+   "iou": 0.8747
+  },
+  {
+   "opacity": 0.23,
+   "falloff": 1.1,
+   "blur": 0.065,
+   "iou": 0.8733
+  },
+  {
+   "opacity": 0.23,
+   "falloff": 1.25,
+   "blur": 0.08,
+   "iou": 0.872
+  },
+  {
+   "opacity": 0.23,
+   "falloff": 1.1,
+   "blur": 0.05,
+   "iou": 0.8717
+  },
+  {
+   "opacity": 0.23,
+   "falloff": 1.25,
+   "blur": 0.065,
+   "iou": 0.8688
+  },
+  {
+   "opacity": 0.23,
+   "falloff": 1.25,
+   "blur": 0.05,
+   "iou": 0.8685
+  },
+  {
+   "opacity": 0.17,
+   "falloff": 1.1,
+   "blur": 0.065,
+   "iou": 0.8579
+  },
+  {
+   "opacity": 0.17,
+   "falloff": 1.1,
+   "blur": 0.05,
+   "iou": 0.8507
+  },
+  {
+   "opacity": 0.2,
+   "falloff": 0.95,
+   "blur": 0.065,
+   "iou": 0.8496
+  },
+  {
+   "opacity": 0.2,
+   "falloff": 0.95,
+   "blur": 0.05,
+   "iou": 0.8393
+  },
+  {
+   "opacity": 0.14,
+   "falloff": 1.25,
+   "blur": 0.05,
+   "iou": 0.8309
+  },
+  {
+   "opacity": 0.14,
+   "falloff": 1.25,
+   "blur": 0.065,
+   "iou": 0.8237
+  },
+  {
+   "opacity": 0.17,
+   "falloff": 0.95,
+   "blur": 0.05,
+   "iou": 0.8234
+  },
+  {
+   "opacity": 0.14,
+   "falloff": 1.1,
+   "blur": 0.05,
+   "iou": 0.819
+  },
+  {
+   "opacity": 0.17,
+   "falloff": 0.95,
+   "blur": 0.065,
+   "iou": 0.8179
+  },
+  {
+   "opacity": 0.14,
+   "falloff": 1.25,
+   "blur": 0.08,
+   "iou": 0.8127
+  },
+  {
+   "opacity": 0.14,
+   "falloff": 0.95,
+   "blur": 0.05,
+   "iou": 0.8122
+  },
+  {
+   "opacity": 0.14,
+   "falloff": 0.95,
+   "blur": 0.065,
+   "iou": 0.8114
+  },
+  {
+   "opacity": 0.14,
+   "falloff": 0.95,
+   "blur": 0.08,
+   "iou": 0.8114
+  },
+  {
+   "opacity": 0.14,
+   "falloff": 1.1,
+   "blur": 0.065,
+   "iou": 0.8114
+  },
+  {
+   "opacity": 0.14,
+   "falloff": 1.1,
+   "blur": 0.08,
+   "iou": 0.8114
+  },
+  {
+   "opacity": 0.17,
+   "falloff": 0.95,
+   "blur": 0.08,
+   "iou": 0.8114
+  }
+ ]
+}

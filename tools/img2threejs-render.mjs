@@ -32,6 +32,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v === undefined ? true : v]; }));
 if (!args.asset || !args.pass) { console.error('usage: --asset=<dir> --pass=<pass-id> [--ts=] [--out=]'); process.exit(2); }
 const ASSET = path.resolve(ROOT, args.asset);
+// per-asset render options (render-options.json), e.g. { "contactShadow": 0.22 } when the reference
+// concept has a floor shadow that its own foreground mask counts as subject
+const renderOpts = fs.existsSync(path.join(ASSET, 'render-options.json')) ? JSON.parse(fs.readFileSync(path.join(ASSET, 'render-options.json'), 'utf8')) : {};
 const SPEC = JSON.parse(fs.readFileSync(path.join(ASSET, 'object-sculpt-spec.json'), 'utf8'));
 const TS = path.resolve(ASSET, args.ts || fs.readdirSync(path.join(ASSET, 'src')).filter((f) => f.endsWith('.ts')).map((f) => `src/${f}`)[0]);
 const OUT = path.resolve(ASSET, args.out || `renders/${args.pass}`);
@@ -198,7 +201,7 @@ try {
     const fitW = 352, fitH = Math.round(352 * RH / RW);
     const evalSet = async (cands) => {
       const res = await page.evaluate((o) => window.renderModel(o), {
-        moduleUrl: `/tools/.cache/img2threejs/${bundleName}?v=fit`, exportName, bg: ref.bg, exposure: 1.25, shadowOpacity: 0,
+        moduleUrl: `/tools/.cache/img2threejs/${bundleName}?v=fit`, exportName, bg: ref.bg, exposure: 1.25, shadowOpacity: 0, contactShadow: renderOpts.contactShadow || 0,
         views: cands.map((c, k) => ({ id: `c${k}`, azimuthDeg: c.az, elevationDeg: c.el, fov: c.fov, width: fitW, height: fitH, frame: ndc, clay: true })),
       });
       const out = [];
@@ -206,12 +209,15 @@ try {
       return out;
     };
     const grid = [];
-    for (let a = az - 24; a <= az + 24; a += 4) for (let e = 4; e <= 40; e += 4) grid.push({ az: a, el: e, fov });
+    // the lens matters too: an AI concept's perspective can be strong (a wide, close camera) or flat
+    // (a product shot), so the coarse grid tries four focal lengths
+    const fovs = String(args['fit-fovs'] || `${fov},16,26,38`).split(',').map(Number).filter((v, i, a) => v > 0 && a.indexOf(v) === i);
+    for (const f of fovs) for (let a = az - 24; a <= az + 24; a += 4) for (let e = 4; e <= 40; e += 4) grid.push({ az: a, el: e, fov: f });
     let results = await evalSet(grid);
     results.sort((p, q) => q.iou - p.iou);
     const top = results[0];
     const fine = [];
-    for (let a = top.az - 3; a <= top.az + 3; a += 1) for (let e = Math.max(1, top.el - 3); e <= top.el + 3; e += 1) for (const f of [fov - 8, fov - 4, fov, fov + 4]) fine.push({ az: a, el: e, fov: f });
+    for (let a = top.az - 3; a <= top.az + 3; a += 1) for (let e = Math.max(1, top.el - 3); e <= top.el + 3; e += 1) for (const f of [top.fov - 4, top.fov, top.fov + 4].filter((v) => v > 4)) fine.push({ az: a, el: e, fov: f });
     const fineRes = (await evalSet(fine)).sort((p, q) => q.iou - p.iou);
     const fit = { coarse: results.slice(0, 12), fine: fineRes.slice(0, 12), best: fineRes[0], evaluated: grid.length + fine.length,
       note: 'Silhouette camera fit (analysis-by-synthesis): clay renders vs the reference foreground mask, IoU on the Tier-1 224 grid.' };
@@ -219,10 +225,31 @@ try {
     console.log(JSON.stringify({ best: fit.best, coarseBest: results[0], evaluated: fit.evaluated }));
     await browser.close(); server.kill('SIGTERM'); process.exit(0);
   }
+  if (args['shadow-sweep']) {
+    // match the reference's floor shadow (lighting evidence): render the fixed view with a grid of
+    // contact-shadow settings and score each on the Tier-1 mask against the reference
+    const refMask = gateMask(rdata, RW, RH);
+    const fixedView = views.find((v) => v.id === 'fixed');
+    const rows = [];
+    const sg = Object.assign({ opacity: [0.2, 0.26, 0.32, 0.38], falloff: [0.8, 1.1, 1.4], blur: [0.02, 0.035, 0.05] }, args['shadow-grid'] ? JSON.parse(String(args['shadow-grid'])) : {});
+    for (const opacity of sg.opacity) for (const falloff of sg.falloff) for (const blur of sg.blur) {
+      const cs = { opacity, falloff, blur };
+      const res = await page.evaluate((o) => window.renderModel(o), {
+        moduleUrl: `/tools/.cache/img2threejs/${bundleName}?v=sweep`, exportName, bg: ref.bg, views: [fixedView],
+        exposure: Number(args.exposure || 1.25), buildOptions: { textureSize: 256 }, shadowOpacity: 0, contactShadow: cs,
+      });
+      rows.push({ ...cs, iou: +iouOf(refMask, await maskFromDataUrl(res.shots.fixed)).toFixed(4) });
+    }
+    rows.sort((p, q) => q.iou - p.iou);
+    fs.mkdirSync(path.join(ASSET, 'renders/camera-fit'), { recursive: true });
+    fs.writeFileSync(path.join(ASSET, 'renders/camera-fit/shadow-sweep.json'), JSON.stringify({ note: 'contact-shadow settings scored on the Tier-1 mask (fixed view, materials on)', rows }, null, 1));
+    console.log(JSON.stringify(rows.slice(0, 6)));
+    await browser.close(); server.kill('SIGTERM'); process.exit(0);
+  }
   result = await page.evaluate((o) => window.renderModel(o), {
     moduleUrl: `/tools/.cache/img2threejs/${bundleName}?v=${Date.now()}`, exportName, bg: ref.bg, views,
     exposure: Number(args.exposure || 1.25), exportMeshes: true, buildOptions: { textureSize: 256 },
-    shadowOpacity: Number(args.shadow ?? 0),
+    shadowOpacity: Number(args.shadow ?? 0), contactShadow: args['contact-shadow'] !== undefined ? Number(args['contact-shadow']) : (renderOpts.contactShadow || 0),
   });
 } finally {
   await browser.close();

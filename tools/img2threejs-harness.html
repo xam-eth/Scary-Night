@@ -152,6 +152,64 @@ window.renderModel = async (opts) => {
   ground.position.y = box.min.y + 0.0005;
   ground.receiveShadow = true;
   scene.add(ground);
+  // optional contact shadow (opts.contactShadow = opacity, or { opacity, falloff, blur }): the
+  // studio-floor shadow a concept render has under its subject. Built like an ambient-occlusion
+  // decal: a top-down orthographic pass writes, per floor texel, how close the lowest geometry
+  // above it is to the floor (max blending, 1 at the floor -> 0 at falloff x model height), the
+  // result is blurred and used as the alpha of a black floor plane. No light is involved, so the
+  // model's own lighting and key-light self-shadowing are unchanged.
+  let decal = null;
+  const cso = typeof opts.contactShadow === 'object' && opts.contactShadow ? opts.contactShadow : { opacity: Number(opts.contactShadow || 0) };
+  if (cso.opacity > 0) {
+    const size = box.getSize(new THREE.Vector3());
+    const pad = Math.max(size.x, size.z) * 0.18;
+    const w = size.x + pad * 2, d = size.z + pad * 2;
+    const ortho = new THREE.OrthographicCamera(-w / 2, w / 2, d / 2, -d / 2, 0.001, size.y * 4 + 1);
+    ortho.up.set(0, 0, -1);
+    ortho.position.set(center.x, box.max.y + size.y + 0.5, center.z);
+    ortho.lookAt(center.x, box.min.y, center.z);
+    ortho.updateMatrixWorld(true);
+    const H = size.y * (cso.falloff || 1.4);
+    const aoMat = new THREE.ShaderMaterial({
+      uniforms: { groundY: { value: box.min.y }, H: { value: H } },
+      vertexShader: 'varying float vY; void main() { vec4 wp = modelMatrix * vec4(position, 1.0); vY = wp.y; gl_Position = projectionMatrix * viewMatrix * wp; }',
+      fragmentShader: 'uniform float groundY; uniform float H; varying float vY; void main() { float k = clamp(1.0 - (vY - groundY) / H, 0.0, 1.0); gl_FragColor = vec4(vec3(k * k), 1.0); }',
+      depthTest: false, depthWrite: false, side: THREE.DoubleSide,
+      blending: THREE.CustomBlending, blendEquation: THREE.MaxEquation, blendSrc: THREE.OneFactor, blendDst: THREE.OneFactor,
+    });
+    const N = 256;
+    const rt = new THREE.WebGLRenderTarget(N, N);
+    const prevBg = scene.background, prevTm = renderer.toneMapping, prevCs = renderer.outputColorSpace;
+    scene.background = null; scene.overrideMaterial = aoMat; ground.visible = false;
+    renderer.toneMapping = THREE.NoToneMapping;
+    renderer.setRenderTarget(rt); renderer.setClearColor(0x000000, 1); renderer.clear();
+    renderer.render(scene, ortho);
+    const buf = new Uint8Array(N * N * 4);
+    renderer.readRenderTargetPixels(rt, 0, 0, N, N, buf);
+    renderer.setRenderTarget(null); renderer.setClearColor(0x000000, 0);
+    scene.background = prevBg; scene.overrideMaterial = null; ground.visible = true;
+    renderer.toneMapping = prevTm; renderer.outputColorSpace = prevCs;
+    rt.dispose(); aoMat.dispose();
+    const c0 = document.createElement('canvas'); c0.width = c0.height = N;
+    c0.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(buf.buffer), N, N), 0, 0);
+    const c1 = document.createElement('canvas'); c1.width = c1.height = N;
+    const g1 = c1.getContext('2d');
+    g1.filter = `blur(${(cso.blur || 0.07) * N}px)`;
+    g1.drawImage(c0, 0, 0);
+    const tex = new THREE.CanvasTexture(c1);
+    tex.flipY = false; // readRenderTargetPixels row 0 = screen bottom = world +z = plane v 0
+    decal = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: cso.opacity, alphaMap: tex, depthWrite: false, toneMapped: false }));
+    decal.rotation.x = -Math.PI / 2;
+    decal.position.set(center.x, box.min.y + 0.001, center.z);
+    decal.renderOrder = -1;
+    scene.add(decal);
+  }
+  // the floor shadow belongs to the reference-matched views (fixed*, posed-fixed, camera-fit
+  // candidates); orbit views stay shadow-free so the multi-angle gates measure only the model
+  const renderShot = (camera, viewId) => {
+    if (decal) decal.visible = /^(fixed|posed-fixed|c\d)/.test(viewId);
+    renderer.render(scene, camera);
+  };
   model.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   renderer.toneMappingExposure = opts.exposure ?? 1.25;
   const shots = {};
@@ -212,7 +270,7 @@ window.renderModel = async (opts) => {
     camera.updateProjectionMatrix();
     setClay(!!view.clay);
     applyPose(view.pose, 1);
-    renderer.render(scene, camera);
+    renderShot(camera, view.id);
     shots[view.id] = renderer.domElement.toDataURL('image/png');
     applyPose(view.pose, -1);
     setClay(false);
