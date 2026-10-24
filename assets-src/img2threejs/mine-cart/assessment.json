@@ -1,0 +1,939 @@
+{
+  "targetName": "Mine cart",
+  "sourceImage": "reference.png",
+  "preSpecAssessment": {
+    "objectClass": {
+      "primaryType": "mine cart (ore tub on a short rail section)",
+      "primaryDomain": "object",
+      "formLanguage": [
+        "hard-surface",
+        "mechanical"
+      ],
+      "structureKind": [
+        "compound object",
+        "repeated modules",
+        "articulated assembly"
+      ],
+      "motionPotential": [
+        "whole-object transform",
+        "articulated"
+      ],
+      "materialFamilies": [
+        "wood",
+        "metal",
+        "stone"
+      ],
+      "notes": "Wheeled open tub of planks with iron hardware, heaped with gold ore, standing on two rails over three sleepers on a gravel patch. Stylized low-poly target to match the DUSKHOLD KayKit world."
+    },
+    "complexity": {
+      "tier": "moderate",
+      "scores": {
+        "silhouetteComplexity": 2,
+        "componentCount": 2,
+        "hierarchyDepth": 2,
+        "repetitionDensity": 2,
+        "materialLayerCount": 2,
+        "localDetailDensity": 1,
+        "occlusionRisk": 1,
+        "actionReadinessNeed": 2
+      },
+      "estimatedCounts": {
+        "macroComponents": 9,
+        "mesoComponents": 30,
+        "microFeatureGroups": 6,
+        "materialLayers": 5,
+        "repetitionSystems": 8
+      },
+      "reasoning": [
+        "Several distinct parts (tub, ore heap, four wheels, handle, two rails, sleepers) with a shallow hierarchy.",
+        "Repeated planks, brackets, rivets and nuggets, but no dense microstructure.",
+        "Four materials plus the gravel bed; local detail is mostly edge wear and grain.",
+        "Wheels must spin and the cart must be able to roll along the rails (action readiness)."
+      ]
+    },
+    "specDepthDecision": {
+      "requiredDepth": "moderate",
+      "minimumComponentLevels": [
+        "macro",
+        "meso",
+        "micro"
+      ],
+      "needsRepetitionSystems": true,
+      "needsMaterialLocalOverrides": true,
+      "needsMultipleReviewViews": true,
+      "needsActionReadyHierarchy": true,
+      "rationale": "Planks, brackets and nuggets repeat; wheel pivots and a root motion node are needed for the in-game rolling animation."
+    },
+    "unknownsToResolveBeforeImplementation": [],
+    "detailInventory": {
+      "scanMethod": "grid-3x3",
+      "targetMinDetails": 6,
+      "note": "Zones from build_detail_inventory.py (di.json); every detail maps to a component.localFeatures or material.localOverrides entry of object-sculpt-spec.json.",
+      "details": [
+        {
+          "id": "d-rivets",
+          "kind": "fastener",
+          "description": "round rivet heads on every iron corner bracket",
+          "region": {
+            "x": 0.26,
+            "y": 0.22,
+            "width": 0.5,
+            "height": 0.42,
+            "units": "normalized"
+          },
+          "scale": "micro",
+          "affects": "geometry",
+          "mapsTo": {
+            "type": "component.localFeatures",
+            "ref": "bracket-top-nl-rivets"
+          },
+          "evidenceRef": "detail-inventory/zone-r0c1.png",
+          "confidence": 0.8
+        },
+        {
+          "id": "d-plank-seams",
+          "kind": "seam",
+          "description": "dark gaps between the three horizontal planks of each wall",
+          "region": {
+            "x": 0.3,
+            "y": 0.25,
+            "width": 0.4,
+            "height": 0.4,
+            "units": "normalized"
+          },
+          "scale": "meso",
+          "affects": "geometry",
+          "mapsTo": {
+            "type": "component.localFeatures",
+            "ref": "plank-seam-near-0"
+          },
+          "evidenceRef": "detail-inventory/zone-r1c1.png",
+          "confidence": 0.85
+        },
+        {
+          "id": "d-bracket-bevel",
+          "kind": "bevel",
+          "description": "chamfered edges of the iron L-brackets catch the key light",
+          "region": {
+            "x": 0.27,
+            "y": 0.23,
+            "width": 0.46,
+            "height": 0.4,
+            "units": "normalized"
+          },
+          "scale": "micro",
+          "affects": "geometry",
+          "mapsTo": {
+            "type": "component.localFeatures",
+            "ref": "bracket-top-nl-chamfer"
+          },
+          "evidenceRef": "detail-inventory/zone-r0c2.png",
+          "confidence": 0.7
+        },
+        {
+          "id": "d-ore-gloss",
+          "kind": "gloss",
+          "description": "light, low-roughness upward facets on the gold nuggets",
+          "region": {
+            "x": 0.34,
+            "y": 0.1,
+            "width": 0.32,
+            "height": 0.2,
+            "units": "normalized"
+          },
+          "scale": "micro",
+          "affects": "material",
+          "mapsTo": {
+            "type": "material.localOverrides",
+            "ref": "ore-facet-gloss"
+          },
+          "evidenceRef": "detail-inventory/zone-r0c1.png",
+          "confidence": 0.75
+        },
+        {
+          "id": "d-wood-grain",
+          "kind": "groove",
+          "description": "streaky darker grain gouges along the planks",
+          "region": {
+            "x": 0.3,
+            "y": 0.28,
+            "width": 0.4,
+            "height": 0.35,
+            "units": "normalized"
+          },
+          "scale": "micro",
+          "affects": "material",
+          "mapsTo": {
+            "type": "material.localOverrides",
+            "ref": "wood-grain-streaks"
+          },
+          "evidenceRef": "detail-inventory/zone-r1c1.png",
+          "confidence": 0.65
+        },
+        {
+          "id": "d-wheel-rim",
+          "kind": "ridge",
+          "description": "iron tyre ring standing proud of each plank wheel",
+          "region": {
+            "x": 0.3,
+            "y": 0.56,
+            "width": 0.25,
+            "height": 0.25,
+            "units": "normalized"
+          },
+          "scale": "meso",
+          "affects": "geometry",
+          "mapsTo": {
+            "type": "component.localFeatures",
+            "ref": "rim-ridge-fn"
+          },
+          "evidenceRef": "detail-inventory/zone-r2c1.png",
+          "confidence": 0.85
+        },
+        {
+          "id": "d-axle-nut",
+          "kind": "fastener",
+          "description": "a hub cap and axle nut on every wheel face",
+          "region": {
+            "x": 0.33,
+            "y": 0.64,
+            "width": 0.18,
+            "height": 0.12,
+            "units": "normalized"
+          },
+          "scale": "micro",
+          "affects": "geometry",
+          "mapsTo": {
+            "type": "component.localFeatures",
+            "ref": "hex-nut-fn"
+          },
+          "evidenceRef": "detail-inventory/zone-r2c1.png",
+          "confidence": 0.8
+        },
+        {
+          "id": "d-edge-wear",
+          "kind": "chip",
+          "description": "lighter worn edges on planks and posts",
+          "region": {
+            "x": 0.28,
+            "y": 0.25,
+            "width": 0.45,
+            "height": 0.4,
+            "units": "normalized"
+          },
+          "scale": "micro",
+          "affects": "material",
+          "mapsTo": {
+            "type": "material.localOverrides",
+            "ref": "plank-edge-wear"
+          },
+          "evidenceRef": "detail-inventory/zone-r1c0.png",
+          "confidence": 0.6
+        },
+        {
+          "id": "d-tie-plates",
+          "kind": "fastener",
+          "description": "iron tie plates pin the rails to the sleepers",
+          "region": {
+            "x": 0.25,
+            "y": 0.72,
+            "width": 0.5,
+            "height": 0.2,
+            "units": "normalized"
+          },
+          "scale": "micro",
+          "affects": "geometry",
+          "mapsTo": {
+            "type": "component.localFeatures",
+            "ref": "tie-plate-near-1-spikes"
+          },
+          "evidenceRef": "detail-inventory/zone-r2c1.png",
+          "confidence": 0.7
+        },
+        {
+          "id": "d-gravel",
+          "kind": "stain",
+          "description": "speckled pebble mottle on the gravel bed",
+          "region": {
+            "x": 0.22,
+            "y": 0.75,
+            "width": 0.56,
+            "height": 0.2,
+            "units": "normalized"
+          },
+          "scale": "micro",
+          "affects": "material",
+          "mapsTo": {
+            "type": "material.localOverrides",
+            "ref": "pebble-mottle"
+          },
+          "evidenceRef": "detail-inventory/zone-r2c0.png",
+          "confidence": 0.6
+        }
+      ]
+    },
+    "anatomy": {
+      "applies": false,
+      "styleHeads": 0.0,
+      "proportions": {
+        "headUnit": 0.0,
+        "torso": 0.0,
+        "legs": 0.0,
+        "shoulderWidth": 0.0,
+        "hipWidth": 0.0
+      },
+      "pose": {
+        "type": "unassessed",
+        "jointAngles": {}
+      },
+      "faceLandmarks": {
+        "eyeLine": 0.0,
+        "eyeSpacing": 0.0,
+        "noseBase": 0.0,
+        "mouthLine": 0.0,
+        "hairline": 0.0
+      },
+      "features": [],
+      "confidence": 0.0,
+      "note": "Only meaningful when objectClass.primaryDomain is character or hybrid. Set applies=true and fill from forge/stage1_intake/extract_landmarks.py. See grimoire/character/reconstruction.md and grimoire/character/likeness_maximization.md."
+    },
+    "sourceImage": "reference.png"
+  },
+  "qualityContract": {
+    "qualityBar": "moderate",
+    "definitionOfDone": [
+      "From the reference camera the render reads as the same cart: outward-tapered plank tub, heaped gold ore above the rim, four iron-rimmed plank wheels resting on two rails over three sleepers, rear push handle.",
+      "From the side and rear orbits the tub stays a hollow-looking tapered box (no flat card), wheels stay round.",
+      "Materials read as warm wood, dark iron and saturated gold at a ~100 px in-game size.",
+      "Hierarchy exposes spinning wheel pivots and a root node so the game can roll the cart along its rails."
+    ],
+    "minimumSpecDepth": {
+      "macroComponents": 6,
+      "mesoComponents": 12,
+      "microFeatureGroups": 4,
+      "materialLayers": 4,
+      "repetitionSystems": 4,
+      "reviewViewpoints": 4
+    },
+    "featureGroups": [
+      {
+        "id": "overall-silhouette",
+        "name": "Overall silhouette and proportions",
+        "required": true,
+        "qualityCriteria": [
+          "Bounding shape, dominant curves, negative spaces, and scale relationships are explicitly described."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "model reads as a generic placeholder instead of the reference object",
+          "major proportions are guessed without evidence"
+        ]
+      },
+      {
+        "id": "primary-structure",
+        "name": "Primary structure and hierarchy",
+        "required": true,
+        "qualityCriteria": [
+          "Major parts, joints, seams, contact points, and parent-child relationships are named before code generation."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "large visible parts are merged into one mesh",
+          "component hierarchy is too shallow for the observed complexity"
+        ]
+      },
+      {
+        "id": "attachment-joint-correctness",
+        "name": "Attachment and joint correctness",
+        "required": true,
+        "qualityCriteria": [
+          "Every visible child appendage, branch, limb, handle, connector, tube, cable, horn, wing, leg, or hinged part has an attachment contract with parent socket, localStart/localEnd, contact type, embed/overlap, and gap tolerance."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "child part root floats away from the parent",
+          "branch/limb/tube is centered in space instead of pivoting from its root",
+          "parent-child transform mixes world and local coordinates"
+        ]
+      },
+      {
+        "id": "surface-material-response",
+        "name": "Surface material response",
+        "required": true,
+        "qualityCriteria": [
+          "Albedo zones, roughness, normal/bump/displacement intent, cavity dirt, edge wear, and local overrides are specified where visible.",
+          "Important materials define independent albedo, roughness, height/normal, and AO responses instead of reusing one texture for unrelated PBR channels.",
+          "Surface response is decomposed into macro, meso, and micro frequency bands with scale and amplitude tied to object scale."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "surface looks like flat plastic",
+          "local material variation is missing or not tied to image evidence"
+        ]
+      },
+      {
+        "id": "reference-lookdev",
+        "name": "Reference color, material, and lighting response",
+        "required": true,
+        "qualityCriteria": [
+          "Material-pass names the reference-derived albedo palette, roughness variation, tactile normal/bump/displacement response, and local masks.",
+          "When a source image is available, run reference PBR extraction and require confidence >= 0.7 before treating maps as implementation-ready.",
+          "Lighting-pass names key/fill/rim or environment light, exposure, tone mapping, background, and contact shadow behavior.",
+          "Neutral, grazing-angle, and reference-matched renders prove that surface relief survives relighting and is not painted into albedo."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "model has acceptable shape but reads as flat shaded or plastic",
+          "colors are a generic average instead of reference-observed local color zones",
+          "lighting is evenly ambient and cannot reproduce the source value range"
+        ]
+      },
+      {
+        "id": "tub-taper-and-planks",
+        "name": "Tapered plank tub",
+        "required": true,
+        "qualityCriteria": [
+          "End walls lean out ~10 degrees and long walls ~8.5 degrees.",
+          "Three horizontal planks per wall separated by dark seams; four corner posts."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "tub reads as a plain straight box",
+          "planks merged into one slab"
+        ]
+      },
+      {
+        "id": "wheel-rail-contact",
+        "name": "Wheels on rails",
+        "required": true,
+        "qualityCriteria": [
+          "Four plank wheels with iron rims rest exactly on two rails over three sleepers."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "wheels float above or sink into the rails",
+          "wheels not round"
+        ]
+      },
+      {
+        "id": "iron-hardware",
+        "name": "Iron hardware",
+        "required": true,
+        "qualityCriteria": [
+          "Eight corner brackets with rivets, rims, hub caps and nuts, two bent handle straps with a grip."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "hardware missing or the same colour as the wood"
+        ]
+      },
+      {
+        "id": "ore-heap-read",
+        "name": "Heaped gold ore",
+        "required": true,
+        "qualityCriteria": [
+          "Saturated yellow ore mounds above the rim with chunky faceted nuggets."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "ore flat at rim height",
+          "ore not reading as gold"
+        ]
+      },
+      {
+        "id": "tub-taper-and-planks",
+        "name": "Tapered plank tub",
+        "required": true,
+        "qualityCriteria": [
+          "End walls lean out ~10 degrees and long walls ~8.5 degrees.",
+          "Three horizontal planks per wall separated by dark seams; four corner posts."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "tub reads as a plain straight box",
+          "planks merged into one slab"
+        ]
+      },
+      {
+        "id": "wheel-rail-contact",
+        "name": "Wheels on rails",
+        "required": true,
+        "qualityCriteria": [
+          "Four plank wheels with iron rims rest exactly on two rails over three sleepers."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "wheels float above or sink into the rails",
+          "wheels not round"
+        ]
+      },
+      {
+        "id": "iron-hardware",
+        "name": "Iron hardware",
+        "required": true,
+        "qualityCriteria": [
+          "Eight corner brackets with rivets, rims, hub caps and nuts, two bent handle straps with a grip."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "hardware missing or the same colour as the wood"
+        ]
+      },
+      {
+        "id": "ore-heap-read",
+        "name": "Heaped gold ore",
+        "required": true,
+        "qualityCriteria": [
+          "Saturated yellow ore mounds above the rim with chunky faceted nuggets."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "ore flat at rim height",
+          "ore not reading as gold"
+        ]
+      },
+      {
+        "id": "tub-taper-and-planks",
+        "name": "Tapered plank tub",
+        "required": true,
+        "qualityCriteria": [
+          "End walls lean out ~10 degrees and long walls ~8.5 degrees.",
+          "Three horizontal planks per wall separated by dark seams; four corner posts."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "tub reads as a plain straight box",
+          "planks merged into one slab"
+        ]
+      },
+      {
+        "id": "wheel-rail-contact",
+        "name": "Wheels on rails",
+        "required": true,
+        "qualityCriteria": [
+          "Four plank wheels with iron rims rest exactly on two rails over three sleepers."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "wheels float above or sink into the rails",
+          "wheels not round"
+        ]
+      },
+      {
+        "id": "iron-hardware",
+        "name": "Iron hardware",
+        "required": true,
+        "qualityCriteria": [
+          "Eight corner brackets with rivets, rims, hub caps and nuts, two bent handle straps with a grip."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "hardware missing or the same colour as the wood"
+        ]
+      },
+      {
+        "id": "ore-heap-read",
+        "name": "Heaped gold ore",
+        "required": true,
+        "qualityCriteria": [
+          "Saturated yellow ore mounds above the rim with chunky faceted nuggets."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "ore flat at rim height",
+          "ore not reading as gold"
+        ]
+      },
+      {
+        "id": "tub-taper-and-planks",
+        "name": "Tapered plank tub",
+        "required": true,
+        "qualityCriteria": [
+          "End walls lean out ~10 degrees and long walls ~8.5 degrees.",
+          "Three horizontal planks per wall separated by dark seams; four corner posts."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "tub reads as a plain straight box",
+          "planks merged into one slab"
+        ]
+      },
+      {
+        "id": "wheel-rail-contact",
+        "name": "Wheels on rails",
+        "required": true,
+        "qualityCriteria": [
+          "Four plank wheels with iron rims rest exactly on two rails over three sleepers."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "wheels float above or sink into the rails",
+          "wheels not round"
+        ]
+      },
+      {
+        "id": "iron-hardware",
+        "name": "Iron hardware",
+        "required": true,
+        "qualityCriteria": [
+          "Eight corner brackets with rivets, rims, hub caps and nuts, two bent handle straps with a grip."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "hardware missing or the same colour as the wood"
+        ]
+      },
+      {
+        "id": "ore-heap-read",
+        "name": "Heaped gold ore",
+        "required": true,
+        "qualityCriteria": [
+          "Saturated yellow ore mounds above the rim with chunky faceted nuggets."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "ore flat at rim height",
+          "ore not reading as gold"
+        ]
+      },
+      {
+        "id": "tub-taper-and-planks",
+        "name": "Tapered plank tub",
+        "required": true,
+        "qualityCriteria": [
+          "End walls lean out ~10 degrees and long walls ~8.5 degrees.",
+          "Three horizontal planks per wall separated by dark seams; four corner posts."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "tub reads as a plain straight box",
+          "planks merged into one slab"
+        ]
+      },
+      {
+        "id": "wheel-rail-contact",
+        "name": "Wheels on rails",
+        "required": true,
+        "qualityCriteria": [
+          "Four plank wheels with iron rims rest exactly on two rails over three sleepers."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "wheels float above or sink into the rails",
+          "wheels not round"
+        ]
+      },
+      {
+        "id": "iron-hardware",
+        "name": "Iron hardware",
+        "required": true,
+        "qualityCriteria": [
+          "Eight corner brackets with rivets, rims, hub caps and nuts, two bent handle straps with a grip."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "hardware missing or the same colour as the wood"
+        ]
+      },
+      {
+        "id": "ore-heap-read",
+        "name": "Heaped gold ore",
+        "required": true,
+        "qualityCriteria": [
+          "Saturated yellow ore mounds above the rim with chunky faceted nuggets."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "ore flat at rim height",
+          "ore not reading as gold"
+        ]
+      },
+      {
+        "id": "tub-taper-and-planks",
+        "name": "Tapered plank tub",
+        "required": true,
+        "qualityCriteria": [
+          "End walls lean out ~10 degrees and long walls ~8.5 degrees.",
+          "Three horizontal planks per wall separated by dark seams; four corner posts."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "tub reads as a plain straight box",
+          "planks merged into one slab"
+        ]
+      },
+      {
+        "id": "wheel-rail-contact",
+        "name": "Wheels on rails",
+        "required": true,
+        "qualityCriteria": [
+          "Four plank wheels with iron rims rest exactly on two rails over three sleepers."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "wheels float above or sink into the rails",
+          "wheels not round"
+        ]
+      },
+      {
+        "id": "iron-hardware",
+        "name": "Iron hardware",
+        "required": true,
+        "qualityCriteria": [
+          "Eight corner brackets with rivets, rims, hub caps and nuts, two bent handle straps with a grip."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "hardware missing or the same colour as the wood"
+        ]
+      },
+      {
+        "id": "ore-heap-read",
+        "name": "Heaped gold ore",
+        "required": true,
+        "qualityCriteria": [
+          "Saturated yellow ore mounds above the rim with chunky faceted nuggets."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "ore flat at rim height",
+          "ore not reading as gold"
+        ]
+      },
+      {
+        "id": "tub-taper-and-planks",
+        "name": "Tapered plank tub",
+        "required": true,
+        "qualityCriteria": [
+          "End walls lean out ~10 degrees and long walls ~8.5 degrees.",
+          "Three horizontal planks per wall separated by dark seams; four corner posts."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "tub reads as a plain straight box",
+          "planks merged into one slab"
+        ]
+      },
+      {
+        "id": "wheel-rail-contact",
+        "name": "Wheels on rails",
+        "required": true,
+        "qualityCriteria": [
+          "Four plank wheels with iron rims rest exactly on two rails over three sleepers."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "wheels float above or sink into the rails",
+          "wheels not round"
+        ]
+      },
+      {
+        "id": "iron-hardware",
+        "name": "Iron hardware",
+        "required": true,
+        "qualityCriteria": [
+          "Eight corner brackets with rivets, rims, hub caps and nuts, two bent handle straps with a grip."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "hardware missing or the same colour as the wood"
+        ]
+      },
+      {
+        "id": "ore-heap-read",
+        "name": "Heaped gold ore",
+        "required": true,
+        "qualityCriteria": [
+          "Saturated yellow ore mounds above the rim with chunky faceted nuggets."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "ore flat at rim height",
+          "ore not reading as gold"
+        ]
+      },
+      {
+        "id": "tub-taper-and-planks",
+        "name": "Tapered plank tub",
+        "required": true,
+        "qualityCriteria": [
+          "End walls lean out ~10 degrees and long walls ~8.5 degrees.",
+          "Three horizontal planks per wall separated by dark seams; four corner posts."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "tub reads as a plain straight box",
+          "planks merged into one slab"
+        ]
+      },
+      {
+        "id": "wheel-rail-contact",
+        "name": "Wheels on rails",
+        "required": true,
+        "qualityCriteria": [
+          "Four plank wheels with iron rims rest exactly on two rails over three sleepers."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "wheels float above or sink into the rails",
+          "wheels not round"
+        ]
+      },
+      {
+        "id": "iron-hardware",
+        "name": "Iron hardware",
+        "required": true,
+        "qualityCriteria": [
+          "Eight corner brackets with rivets, rims, hub caps and nuts, two bent handle straps with a grip."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "hardware missing or the same colour as the wood"
+        ]
+      },
+      {
+        "id": "ore-heap-read",
+        "name": "Heaped gold ore",
+        "required": true,
+        "qualityCriteria": [
+          "Saturated yellow ore mounds above the rim with chunky faceted nuggets."
+        ],
+        "evidenceRefs": [
+          "full-object"
+        ],
+        "failureModes": [
+          "ore flat at rim height",
+          "ore not reading as gold"
+        ]
+      }
+    ],
+    "visualDeltaChecks": [
+      "silhouette and negative-space delta",
+      "component hierarchy depth delta",
+      "repetition density and distribution delta",
+      "material albedo/roughness/normal response delta",
+      "local feature placement and scale delta"
+    ],
+    "antiShallowSpecRules": [
+      "Do not proceed to code if qualityContract.qualityBar is unassessed.",
+      "Do not proceed to code if the spec only contains a root component for a moderate or complex object.",
+      "Do not proceed to code if required featureGroups are not represented by componentTree, materials, or repetitionSystems.",
+      "Do not proceed to code if visible local features are described only in prose and not attached to components/materials/evidenceRefs.",
+      "Do not proceed past structural-pass if attached child parts lack attachment.parentSocket, localStart, localEnd, embedDepth/overlap, and gapTolerance.",
+      "Do not pass material look-dev when albedo is reused as roughness, height, normal, or AO.",
+      "Do not pass material look-dev without macro, meso, and micro surface frequency bands for close-up materials.",
+      "Do not pass reference-fidelity material look-dev from a source image without usable referencePbr maps or an explicit documented limitation.",
+      "Do not patch a spec with extracted PBR maps when extraction confidence is below the target threshold unless the user explicitly accepts lower fidelity.",
+      "Do not place adjacent separate-geometry parts below 0.02 world-unit seam overlap (source: grimoire/build/geometry_patterns.md).",
+      "Do not satisfy raised or recessed relief, fasteners, or grip structure with a map alone when the feature affects form; use geometry or displacement (source: grimoire/build/geometry_patterns.md)."
+    ]
+  },
+  "authoringInstruction": "Fill observed object class, complexity reasoning, featureGroups, visualDeltaChecks, and unknowns before generating or implementing ObjectSculptSpec.",
+  "localSpecSearch": {
+    "collection": "core_3d",
+    "query": "Mine cart wooden mine cart ore tub wheels rails iron bracket rivet wood plank",
+    "index": {
+      "status": "rebuilt",
+      "reason": "missing",
+      "fingerprint": "62f2831e1d52eeb6dbb94a87c44fa25b1f4926626a7b1f8c2bcadc63e04e9471"
+    },
+    "matches": [
+      {
+        "record_id": "core.shader-mapping-lathegeometry-turnedradially-symmetric-parts",
+        "file_path": "docs/raw/img2threejs-skill-dataset.json",
+        "heading": null,
+        "key_path": "categories.rendering_shader_mapping[9]",
+        "score": 3.510601679118,
+        "snippets": [
+          "... ra bằng cách xoay một biên dạng 2D quanh một trục. Recognition cues: Contoured, fully radially-symmetric part — turned wood/metal handle, some muzzle device shapes, adjustment knobs Dấu hiệu nhận diện: Bộ phận có biên dạng, đối xứng trục ..."
+        ],
+        "source_refs": [
+          {
+            "path": "docs/raw/img2threejs-skill-dataset.json",
+            "heading": null,
+            "key_path": "categories.rendering_shader_mapping[9]"
+          }
+        ],
+        "evidence_refs": [
+          {
+            "kind": "source",
+            "ref": "docs/raw/img2threejs-skill-dataset.json",
+            "note": "img2threejs NotebookLM research distillation"
+          }
+        ]
+      }
+    ]
+  }
+}

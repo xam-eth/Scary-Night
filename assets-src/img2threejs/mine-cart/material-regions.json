@@ -1,0 +1,20 @@
+{
+  "referenceId": "mine-cart-reference",
+  "regions": [
+    {"componentId": "plank-near-1", "regionId": "plank-wood", "sourceImage": "reference.png",
+     "bbox": {"x": 480, "y": 285, "width": 220, "height": 105}, "family": "wood", "subtype": "generic",
+     "finish": "unfinished", "materialSpecId": "wood"},
+    {"componentId": "sleeper-1", "regionId": "sleeper-wood", "sourceImage": "reference.png",
+     "bbox": {"x": 505, "y": 660, "width": 110, "height": 30}, "family": "wood", "subtype": "generic",
+     "finish": "unfinished", "materialSpecId": "wood-dark"},
+    {"componentId": "bracket-top-nr", "regionId": "bracket-iron", "sourceImage": "reference.png",
+     "bbox": {"x": 740, "y": 232, "width": 80, "height": 50}, "family": "metal", "subtype": "steel",
+     "finish": "brushed", "materialSpecId": "iron"},
+    {"componentId": "ore-heap", "regionId": "gold-ore", "sourceImage": "reference.png",
+     "bbox": {"x": 600, "y": 110, "width": 180, "height": 80}, "family": "metal", "subtype": "gold",
+     "finish": "polished", "materialSpecId": "ore"},
+    {"componentId": "root", "regionId": "gravel", "sourceImage": "reference.png",
+     "bbox": {"x": 880, "y": 600, "width": 150, "height": 40}, "family": "stone", "subtype": "natural",
+     "finish": "rough-or-polished", "materialSpecId": "gravel"}
+  ]
+}

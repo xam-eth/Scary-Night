@@ -22,3 +22,19 @@ android/signing.local.json
 android/*
 !android/twa-manifest.json
 !android/README.md
+
+# ---- img2threejs reconstructions (assets-src/img2threejs/<asset>) ----
+# Review renders are re-created by tools/img2threejs-render.mjs. Committed evidence per build pass:
+# fixed.png (the reviewed render), cmp.jpg (reference | render sheet), turntable.jpg and the gate
+# JSON; the full-size orbit shots, mesh dumps and PNG sheets stay local (the final pass's are
+# added with git add -f).
+assets-src/img2threejs/*/renders/*/front.png
+assets-src/img2threejs/*/renders/*/right.png
+assets-src/img2threejs/*/renders/*/rear.png
+assets-src/img2threejs/*/renders/*/left.png
+assets-src/img2threejs/*/renders/*/top.png
+assets-src/img2threejs/*/renders/*/meshes.json
+assets-src/img2threejs/*/renders/*/cmp.png
+assets-src/img2threejs/*/renders/*/cmp2.png
+assets-src/img2threejs/*/renders/*/turntable.png
+assets-src/img2threejs/*/.img2threejs/keep.json

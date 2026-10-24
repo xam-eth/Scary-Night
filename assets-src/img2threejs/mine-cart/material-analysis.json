@@ -1,0 +1,2230 @@
+{
+  "schemaVersion": 1,
+  "kind": "img2threejs.material-analysis",
+  "referenceId": "mine-cart-reference",
+  "manifest": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-regions.json",
+  "registry": "/home/user/Scary-Night/.agents/skills/img2threejs/docs/materials/material-reference.json",
+  "targetThreshold": 0.7,
+  "notObservedMaterials": [],
+  "unresolvedNotObservedMaterials": [],
+  "regions": [
+    {
+      "componentId": "plank-near-1",
+      "regionId": "plank-wood",
+      "materialSpecId": "wood",
+      "hypothesis": {
+        "componentId": "plank-near-1",
+        "regionId": "plank-wood",
+        "materialId": null,
+        "family": "wood",
+        "subtype": "generic",
+        "finish": "unfinished",
+        "aliases": [],
+        "confidence": 0.779,
+        "source": "vision"
+      },
+      "assignment": {
+        "materialId": "wood.unfinished",
+        "status": "proceed",
+        "source": "vision",
+        "confidence": 0.779,
+        "method": "family-subtype-finish",
+        "alternatives": [],
+        "evidence": {
+          "crop": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/00-plank-wood.png",
+            "bbox": {
+              "x": 480,
+              "y": 285,
+              "width": 220,
+              "height": 105
+            },
+            "sourceWidth": 1408,
+            "sourceHeight": 768,
+            "loaderWarnings": [],
+            "coverage": 0.0214
+          },
+          "pbr": {
+            "ok": true,
+            "verdict": "pass",
+            "confidence": 0.779,
+            "estimatedFidelity": 0.779,
+            "targetThreshold": 0.7,
+            "materialId": "wood",
+            "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/00-plank-wood.png",
+            "outDir": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-00-plank-wood",
+            "palette": [
+              "#804826",
+              "#8E532C",
+              "#65381F",
+              "#36190B",
+              "#A66A3B"
+            ],
+            "maps": {
+              "albedo": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-00-plank-wood/wood_albedo.png",
+                "url": "wood_albedo.png",
+                "channel": "albedo",
+                "source": "reference-pixel-extraction"
+              },
+              "roughness": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-00-plank-wood/wood_roughness.png",
+                "url": "wood_roughness.png",
+                "channel": "roughness",
+                "source": "reference-pixel-extraction"
+              },
+              "height": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-00-plank-wood/wood_height.png",
+                "url": "wood_height.png",
+                "channel": "height",
+                "source": "reference-pixel-extraction"
+              },
+              "normal": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-00-plank-wood/wood_normal.png",
+                "url": "wood_normal.png",
+                "channel": "normal",
+                "source": "reference-pixel-extraction"
+              },
+              "ao": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-00-plank-wood/wood_ao.png",
+                "url": "wood_ao.png",
+                "channel": "ao",
+                "source": "reference-pixel-extraction"
+              }
+            },
+            "diagnostics": {
+              "sourceWidth": 220,
+              "sourceHeight": 105,
+              "mapSize": 512,
+              "cropBBoxPixels": {
+                "x": 0,
+                "y": 0,
+                "width": 220,
+                "height": 105
+              },
+              "mask": {
+                "backgroundColor": "#58311A",
+                "backgroundNoise": 49.437,
+                "transparentPixelFraction": 0.0,
+                "foregroundCoverage": 1.0
+              },
+              "mapStats": {
+                "valueRange": 0.2801,
+                "heightP90Gradient": 0.06858,
+                "roughnessBase": 0.708,
+                "roughnessVariation": 0.111,
+                "normalStrength": 0.237,
+                "blurRadius": 10
+              },
+              "palette": [
+                "#804826",
+                "#8E532C",
+                "#65381F",
+                "#36190B",
+                "#A66A3B"
+              ]
+            },
+            "warnings": [
+              "image is not clearly isolated from background; using most pixels as material evidence",
+              "object/background separation is weak",
+              "single-image inverse rendering cannot prove true physical PBR; confidence is capped"
+            ],
+            "limitation": "single-image PBR extraction is an estimate; 70%+ extraction confidence still needs render screenshot review"
+          },
+          "texture": {
+            "finishClass": "painted-metal",
+            "recipe": {
+              "metalness": 0.0,
+              "roughness": 0.5,
+              "clearcoat": 1.0,
+              "clearcoatRoughness": 0.05,
+              "transmission": 0.0,
+              "ior": 1.5,
+              "envMapIntensity": 1.0,
+              "anisotropy": 0.0,
+              "procedural": "flat-clearcoat"
+            },
+            "palette": [
+              "#66381D",
+              "#874D29",
+              "#7E4927",
+              "#814827",
+              "#724123"
+            ],
+            "paletteHueRisk": [],
+            "gradientAxis": "vertical",
+            "stats": {
+              "meanLum": 84.7,
+              "meanSaturation": 0.7,
+              "gradientStrength": 0.124,
+              "mottle": 0.013,
+              "streakRatio": 0.43,
+              "hueSpread": 0.001,
+              "specularFraction": 0.0
+            }
+          }
+        },
+        "profileId": "wood.unfinished",
+        "family": "wood",
+        "subtype": "generic",
+        "finish": "unfinished",
+        "renderPrior": {
+          "metalness": 0.0,
+          "roughness": 0.72,
+          "anisotropy": 0.12
+        },
+        "requiredMaps": [
+          "map",
+          "roughnessMap",
+          "normalMap"
+        ],
+        "optionalMaps": [
+          "aoMap",
+          "anisotropyMap"
+        ],
+        "validationViews": [
+          "albedo-unlit",
+          "neutral-studio",
+          "grazing"
+        ],
+        "sourceRefs": [
+          "three.mesh-standard",
+          "three.texture",
+          "adobe.pbr-guide-1",
+          "mit.material-recognition"
+        ],
+        "visualCues": [
+          "directional grain",
+          "pores and growth rings",
+          "roughness follows grain and wear"
+        ]
+      },
+      "observations": [
+        "chromatic base-colour response",
+        "directional surface frequency",
+        "single-image PBR inference requires controlled render validation"
+      ],
+      "crop": {
+        "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/00-plank-wood.png",
+        "bbox": {
+          "x": 480,
+          "y": 285,
+          "width": 220,
+          "height": 105
+        },
+        "sourceWidth": 1408,
+        "sourceHeight": 768,
+        "loaderWarnings": [],
+        "coverage": 0.0214
+      },
+      "textureAnalysis": {
+        "finishClass": "painted-metal",
+        "recipe": {
+          "metalness": 0.0,
+          "roughness": 0.5,
+          "clearcoat": 1.0,
+          "clearcoatRoughness": 0.05,
+          "transmission": 0.0,
+          "ior": 1.5,
+          "envMapIntensity": 1.0,
+          "anisotropy": 0.0,
+          "procedural": "flat-clearcoat"
+        },
+        "palette": [
+          "#66381D",
+          "#874D29",
+          "#7E4927",
+          "#814827",
+          "#724123"
+        ],
+        "paletteHueRisk": [],
+        "gradientAxis": "vertical",
+        "stats": {
+          "meanLum": 84.7,
+          "meanSaturation": 0.7,
+          "gradientStrength": 0.124,
+          "mottle": 0.013,
+          "streakRatio": 0.43,
+          "hueSpread": 0.001,
+          "specularFraction": 0.0
+        }
+      },
+      "pbrReport": {
+        "ok": true,
+        "verdict": "pass",
+        "confidence": 0.779,
+        "estimatedFidelity": 0.779,
+        "targetThreshold": 0.7,
+        "materialId": "wood",
+        "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/00-plank-wood.png",
+        "outDir": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-00-plank-wood",
+        "palette": [
+          "#804826",
+          "#8E532C",
+          "#65381F",
+          "#36190B",
+          "#A66A3B"
+        ],
+        "maps": {
+          "albedo": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-00-plank-wood/wood_albedo.png",
+            "url": "wood_albedo.png",
+            "channel": "albedo",
+            "source": "reference-pixel-extraction"
+          },
+          "roughness": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-00-plank-wood/wood_roughness.png",
+            "url": "wood_roughness.png",
+            "channel": "roughness",
+            "source": "reference-pixel-extraction"
+          },
+          "height": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-00-plank-wood/wood_height.png",
+            "url": "wood_height.png",
+            "channel": "height",
+            "source": "reference-pixel-extraction"
+          },
+          "normal": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-00-plank-wood/wood_normal.png",
+            "url": "wood_normal.png",
+            "channel": "normal",
+            "source": "reference-pixel-extraction"
+          },
+          "ao": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-00-plank-wood/wood_ao.png",
+            "url": "wood_ao.png",
+            "channel": "ao",
+            "source": "reference-pixel-extraction"
+          }
+        },
+        "diagnostics": {
+          "sourceWidth": 220,
+          "sourceHeight": 105,
+          "mapSize": 512,
+          "cropBBoxPixels": {
+            "x": 0,
+            "y": 0,
+            "width": 220,
+            "height": 105
+          },
+          "mask": {
+            "backgroundColor": "#58311A",
+            "backgroundNoise": 49.437,
+            "transparentPixelFraction": 0.0,
+            "foregroundCoverage": 1.0
+          },
+          "mapStats": {
+            "valueRange": 0.2801,
+            "heightP90Gradient": 0.06858,
+            "roughnessBase": 0.708,
+            "roughnessVariation": 0.111,
+            "normalStrength": 0.237,
+            "blurRadius": 10
+          },
+          "palette": [
+            "#804826",
+            "#8E532C",
+            "#65381F",
+            "#36190B",
+            "#A66A3B"
+          ]
+        },
+        "warnings": [
+          "image is not clearly isolated from background; using most pixels as material evidence",
+          "object/background separation is weak",
+          "single-image inverse rendering cannot prove true physical PBR; confidence is capped"
+        ],
+        "limitation": "single-image PBR extraction is an estimate; 70%+ extraction confidence still needs render screenshot review"
+      },
+      "referencePbr": {
+        "version": "1.0",
+        "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/00-plank-wood.png",
+        "extractor": "stage1_intake/extract_pbr_evidence.py",
+        "method": "single-image pixel evidence with de-lighting estimate; not photogrammetry",
+        "usable": true,
+        "verdict": "pass",
+        "confidence": 0.779,
+        "estimatedFidelity": 0.779,
+        "targetThreshold": 0.7,
+        "hardLimit": "A single image cannot uniquely recover true albedo/roughness/normal/AO; maps are reference-derived estimates.",
+        "maps": {
+          "albedo": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-00-plank-wood/wood_albedo.png",
+            "url": "wood_albedo.png",
+            "channel": "albedo",
+            "source": "reference-pixel-extraction"
+          },
+          "roughness": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-00-plank-wood/wood_roughness.png",
+            "url": "wood_roughness.png",
+            "channel": "roughness",
+            "source": "reference-pixel-extraction"
+          },
+          "height": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-00-plank-wood/wood_height.png",
+            "url": "wood_height.png",
+            "channel": "height",
+            "source": "reference-pixel-extraction"
+          },
+          "normal": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-00-plank-wood/wood_normal.png",
+            "url": "wood_normal.png",
+            "channel": "normal",
+            "source": "reference-pixel-extraction"
+          },
+          "ao": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-00-plank-wood/wood_ao.png",
+            "url": "wood_ao.png",
+            "channel": "ao",
+            "source": "reference-pixel-extraction"
+          }
+        },
+        "diagnostics": {
+          "sourceWidth": 220,
+          "sourceHeight": 105,
+          "mapSize": 512,
+          "cropBBoxPixels": {
+            "x": 0,
+            "y": 0,
+            "width": 220,
+            "height": 105
+          },
+          "mask": {
+            "backgroundColor": "#58311A",
+            "backgroundNoise": 49.437,
+            "transparentPixelFraction": 0.0,
+            "foregroundCoverage": 1.0
+          },
+          "mapStats": {
+            "valueRange": 0.2801,
+            "heightP90Gradient": 0.06858,
+            "roughnessBase": 0.708,
+            "roughnessVariation": 0.111,
+            "normalStrength": 0.237,
+            "blurRadius": 10
+          },
+          "palette": [
+            "#804826",
+            "#8E532C",
+            "#65381F",
+            "#36190B",
+            "#A66A3B"
+          ]
+        },
+        "warnings": [
+          "image is not clearly isolated from background; using most pixels as material evidence",
+          "object/background separation is weak",
+          "single-image inverse rendering cannot prove true physical PBR; confidence is capped"
+        ]
+      },
+      "maps": {
+        "albedo": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-00-plank-wood/wood_albedo.png",
+          "url": "wood_albedo.png",
+          "channel": "albedo",
+          "source": "reference-pixel-extraction"
+        },
+        "roughness": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-00-plank-wood/wood_roughness.png",
+          "url": "wood_roughness.png",
+          "channel": "roughness",
+          "source": "reference-pixel-extraction"
+        },
+        "height": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-00-plank-wood/wood_height.png",
+          "url": "wood_height.png",
+          "channel": "height",
+          "source": "reference-pixel-extraction"
+        },
+        "normal": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-00-plank-wood/wood_normal.png",
+          "url": "wood_normal.png",
+          "channel": "normal",
+          "source": "reference-pixel-extraction"
+        },
+        "ao": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-00-plank-wood/wood_ao.png",
+          "url": "wood_ao.png",
+          "channel": "ao",
+          "source": "reference-pixel-extraction"
+        }
+      }
+    },
+    {
+      "componentId": "sleeper-1",
+      "regionId": "sleeper-wood",
+      "materialSpecId": "wood-dark",
+      "hypothesis": {
+        "componentId": "sleeper-1",
+        "regionId": "sleeper-wood",
+        "materialId": null,
+        "family": "wood",
+        "subtype": "generic",
+        "finish": "unfinished",
+        "aliases": [],
+        "confidence": 0.8,
+        "source": "vision"
+      },
+      "assignment": {
+        "materialId": "wood.unfinished",
+        "status": "proceed",
+        "source": "vision",
+        "confidence": 0.8,
+        "method": "family-subtype-finish",
+        "alternatives": [],
+        "evidence": {
+          "crop": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/01-sleeper-wood.png",
+            "bbox": {
+              "x": 505,
+              "y": 660,
+              "width": 110,
+              "height": 30
+            },
+            "sourceWidth": 1408,
+            "sourceHeight": 768,
+            "loaderWarnings": [],
+            "coverage": 0.0031
+          },
+          "pbr": {
+            "ok": true,
+            "verdict": "pass",
+            "confidence": 0.8,
+            "estimatedFidelity": 0.8,
+            "targetThreshold": 0.7,
+            "materialId": "wood-dark",
+            "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/01-sleeper-wood.png",
+            "outDir": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-01-sleeper-wood",
+            "palette": [
+              "#6B4C36",
+              "#543C2E",
+              "#3F291D",
+              "#866344",
+              "#B4936D"
+            ],
+            "maps": {
+              "albedo": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-01-sleeper-wood/wood-dark_albedo.png",
+                "url": "wood-dark_albedo.png",
+                "channel": "albedo",
+                "source": "reference-pixel-extraction"
+              },
+              "roughness": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-01-sleeper-wood/wood-dark_roughness.png",
+                "url": "wood-dark_roughness.png",
+                "channel": "roughness",
+                "source": "reference-pixel-extraction"
+              },
+              "height": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-01-sleeper-wood/wood-dark_height.png",
+                "url": "wood-dark_height.png",
+                "channel": "height",
+                "source": "reference-pixel-extraction"
+              },
+              "normal": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-01-sleeper-wood/wood-dark_normal.png",
+                "url": "wood-dark_normal.png",
+                "channel": "normal",
+                "source": "reference-pixel-extraction"
+              },
+              "ao": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-01-sleeper-wood/wood-dark_ao.png",
+                "url": "wood-dark_ao.png",
+                "channel": "ao",
+                "source": "reference-pixel-extraction"
+              }
+            },
+            "diagnostics": {
+              "sourceWidth": 110,
+              "sourceHeight": 30,
+              "mapSize": 512,
+              "cropBBoxPixels": {
+                "x": 0,
+                "y": 0,
+                "width": 110,
+                "height": 30
+              },
+              "mask": {
+                "backgroundColor": "#7A604D",
+                "backgroundNoise": 99.985,
+                "transparentPixelFraction": 0.0,
+                "foregroundCoverage": 0.9203
+              },
+              "mapStats": {
+                "valueRange": 0.3636,
+                "heightP90Gradient": 0.04136,
+                "roughnessBase": 0.7,
+                "roughnessVariation": 0.071,
+                "normalStrength": 0.205,
+                "blurRadius": 10
+              },
+              "palette": [
+                "#6B4C36",
+                "#543C2E",
+                "#3F291D",
+                "#866344",
+                "#B4936D"
+              ]
+            },
+            "warnings": [
+              "image is not clearly isolated from background; using most pixels as material evidence",
+              "object/background separation is weak",
+              "single-image inverse rendering cannot prove true physical PBR; confidence is capped"
+            ],
+            "limitation": "single-image PBR extraction is an estimate; 70%+ extraction confidence still needs render screenshot review"
+          },
+          "texture": {
+            "finishClass": "painted-metal",
+            "recipe": {
+              "metalness": 0.0,
+              "roughness": 0.5,
+              "clearcoat": 1.0,
+              "clearcoatRoughness": 0.05,
+              "transmission": 0.0,
+              "ior": 1.5,
+              "envMapIntensity": 1.0,
+              "anisotropy": 0.0,
+              "procedural": "flat-clearcoat"
+            },
+            "palette": [
+              "#88613D",
+              "#6C4A32",
+              "#644937",
+              "#655042",
+              "#887D73"
+            ],
+            "paletteHueRisk": [],
+            "gradientAxis": "vertical",
+            "stats": {
+              "meanLum": 89.6,
+              "meanSaturation": 0.448,
+              "gradientStrength": 0.217,
+              "mottle": 0.025,
+              "streakRatio": 1.96,
+              "hueSpread": 0.003,
+              "specularFraction": 0.0
+            }
+          }
+        },
+        "profileId": "wood.unfinished",
+        "family": "wood",
+        "subtype": "generic",
+        "finish": "unfinished",
+        "renderPrior": {
+          "metalness": 0.0,
+          "roughness": 0.72,
+          "anisotropy": 0.12
+        },
+        "requiredMaps": [
+          "map",
+          "roughnessMap",
+          "normalMap"
+        ],
+        "optionalMaps": [
+          "aoMap",
+          "anisotropyMap"
+        ],
+        "validationViews": [
+          "albedo-unlit",
+          "neutral-studio",
+          "grazing"
+        ],
+        "sourceRefs": [
+          "three.mesh-standard",
+          "three.texture",
+          "adobe.pbr-guide-1",
+          "mit.material-recognition"
+        ],
+        "visualCues": [
+          "directional grain",
+          "pores and growth rings",
+          "roughness follows grain and wear"
+        ]
+      },
+      "observations": [
+        "chromatic base-colour response",
+        "directional surface frequency",
+        "strong image-space gradient; verify it is material pattern, not lighting",
+        "single-image PBR inference requires controlled render validation"
+      ],
+      "crop": {
+        "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/01-sleeper-wood.png",
+        "bbox": {
+          "x": 505,
+          "y": 660,
+          "width": 110,
+          "height": 30
+        },
+        "sourceWidth": 1408,
+        "sourceHeight": 768,
+        "loaderWarnings": [],
+        "coverage": 0.0031
+      },
+      "textureAnalysis": {
+        "finishClass": "painted-metal",
+        "recipe": {
+          "metalness": 0.0,
+          "roughness": 0.5,
+          "clearcoat": 1.0,
+          "clearcoatRoughness": 0.05,
+          "transmission": 0.0,
+          "ior": 1.5,
+          "envMapIntensity": 1.0,
+          "anisotropy": 0.0,
+          "procedural": "flat-clearcoat"
+        },
+        "palette": [
+          "#88613D",
+          "#6C4A32",
+          "#644937",
+          "#655042",
+          "#887D73"
+        ],
+        "paletteHueRisk": [],
+        "gradientAxis": "vertical",
+        "stats": {
+          "meanLum": 89.6,
+          "meanSaturation": 0.448,
+          "gradientStrength": 0.217,
+          "mottle": 0.025,
+          "streakRatio": 1.96,
+          "hueSpread": 0.003,
+          "specularFraction": 0.0
+        }
+      },
+      "pbrReport": {
+        "ok": true,
+        "verdict": "pass",
+        "confidence": 0.8,
+        "estimatedFidelity": 0.8,
+        "targetThreshold": 0.7,
+        "materialId": "wood-dark",
+        "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/01-sleeper-wood.png",
+        "outDir": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-01-sleeper-wood",
+        "palette": [
+          "#6B4C36",
+          "#543C2E",
+          "#3F291D",
+          "#866344",
+          "#B4936D"
+        ],
+        "maps": {
+          "albedo": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-01-sleeper-wood/wood-dark_albedo.png",
+            "url": "wood-dark_albedo.png",
+            "channel": "albedo",
+            "source": "reference-pixel-extraction"
+          },
+          "roughness": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-01-sleeper-wood/wood-dark_roughness.png",
+            "url": "wood-dark_roughness.png",
+            "channel": "roughness",
+            "source": "reference-pixel-extraction"
+          },
+          "height": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-01-sleeper-wood/wood-dark_height.png",
+            "url": "wood-dark_height.png",
+            "channel": "height",
+            "source": "reference-pixel-extraction"
+          },
+          "normal": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-01-sleeper-wood/wood-dark_normal.png",
+            "url": "wood-dark_normal.png",
+            "channel": "normal",
+            "source": "reference-pixel-extraction"
+          },
+          "ao": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-01-sleeper-wood/wood-dark_ao.png",
+            "url": "wood-dark_ao.png",
+            "channel": "ao",
+            "source": "reference-pixel-extraction"
+          }
+        },
+        "diagnostics": {
+          "sourceWidth": 110,
+          "sourceHeight": 30,
+          "mapSize": 512,
+          "cropBBoxPixels": {
+            "x": 0,
+            "y": 0,
+            "width": 110,
+            "height": 30
+          },
+          "mask": {
+            "backgroundColor": "#7A604D",
+            "backgroundNoise": 99.985,
+            "transparentPixelFraction": 0.0,
+            "foregroundCoverage": 0.9203
+          },
+          "mapStats": {
+            "valueRange": 0.3636,
+            "heightP90Gradient": 0.04136,
+            "roughnessBase": 0.7,
+            "roughnessVariation": 0.071,
+            "normalStrength": 0.205,
+            "blurRadius": 10
+          },
+          "palette": [
+            "#6B4C36",
+            "#543C2E",
+            "#3F291D",
+            "#866344",
+            "#B4936D"
+          ]
+        },
+        "warnings": [
+          "image is not clearly isolated from background; using most pixels as material evidence",
+          "object/background separation is weak",
+          "single-image inverse rendering cannot prove true physical PBR; confidence is capped"
+        ],
+        "limitation": "single-image PBR extraction is an estimate; 70%+ extraction confidence still needs render screenshot review"
+      },
+      "referencePbr": {
+        "version": "1.0",
+        "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/01-sleeper-wood.png",
+        "extractor": "stage1_intake/extract_pbr_evidence.py",
+        "method": "single-image pixel evidence with de-lighting estimate; not photogrammetry",
+        "usable": true,
+        "verdict": "pass",
+        "confidence": 0.8,
+        "estimatedFidelity": 0.8,
+        "targetThreshold": 0.7,
+        "hardLimit": "A single image cannot uniquely recover true albedo/roughness/normal/AO; maps are reference-derived estimates.",
+        "maps": {
+          "albedo": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-01-sleeper-wood/wood-dark_albedo.png",
+            "url": "wood-dark_albedo.png",
+            "channel": "albedo",
+            "source": "reference-pixel-extraction"
+          },
+          "roughness": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-01-sleeper-wood/wood-dark_roughness.png",
+            "url": "wood-dark_roughness.png",
+            "channel": "roughness",
+            "source": "reference-pixel-extraction"
+          },
+          "height": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-01-sleeper-wood/wood-dark_height.png",
+            "url": "wood-dark_height.png",
+            "channel": "height",
+            "source": "reference-pixel-extraction"
+          },
+          "normal": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-01-sleeper-wood/wood-dark_normal.png",
+            "url": "wood-dark_normal.png",
+            "channel": "normal",
+            "source": "reference-pixel-extraction"
+          },
+          "ao": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-01-sleeper-wood/wood-dark_ao.png",
+            "url": "wood-dark_ao.png",
+            "channel": "ao",
+            "source": "reference-pixel-extraction"
+          }
+        },
+        "diagnostics": {
+          "sourceWidth": 110,
+          "sourceHeight": 30,
+          "mapSize": 512,
+          "cropBBoxPixels": {
+            "x": 0,
+            "y": 0,
+            "width": 110,
+            "height": 30
+          },
+          "mask": {
+            "backgroundColor": "#7A604D",
+            "backgroundNoise": 99.985,
+            "transparentPixelFraction": 0.0,
+            "foregroundCoverage": 0.9203
+          },
+          "mapStats": {
+            "valueRange": 0.3636,
+            "heightP90Gradient": 0.04136,
+            "roughnessBase": 0.7,
+            "roughnessVariation": 0.071,
+            "normalStrength": 0.205,
+            "blurRadius": 10
+          },
+          "palette": [
+            "#6B4C36",
+            "#543C2E",
+            "#3F291D",
+            "#866344",
+            "#B4936D"
+          ]
+        },
+        "warnings": [
+          "image is not clearly isolated from background; using most pixels as material evidence",
+          "object/background separation is weak",
+          "single-image inverse rendering cannot prove true physical PBR; confidence is capped"
+        ]
+      },
+      "maps": {
+        "albedo": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-01-sleeper-wood/wood-dark_albedo.png",
+          "url": "wood-dark_albedo.png",
+          "channel": "albedo",
+          "source": "reference-pixel-extraction"
+        },
+        "roughness": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-01-sleeper-wood/wood-dark_roughness.png",
+          "url": "wood-dark_roughness.png",
+          "channel": "roughness",
+          "source": "reference-pixel-extraction"
+        },
+        "height": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-01-sleeper-wood/wood-dark_height.png",
+          "url": "wood-dark_height.png",
+          "channel": "height",
+          "source": "reference-pixel-extraction"
+        },
+        "normal": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-01-sleeper-wood/wood-dark_normal.png",
+          "url": "wood-dark_normal.png",
+          "channel": "normal",
+          "source": "reference-pixel-extraction"
+        },
+        "ao": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-01-sleeper-wood/wood-dark_ao.png",
+          "url": "wood-dark_ao.png",
+          "channel": "ao",
+          "source": "reference-pixel-extraction"
+        }
+      }
+    },
+    {
+      "componentId": "bracket-top-nr",
+      "regionId": "bracket-iron",
+      "materialSpecId": "iron",
+      "hypothesis": {
+        "componentId": "bracket-top-nr",
+        "regionId": "bracket-iron",
+        "materialId": null,
+        "family": "metal",
+        "subtype": "steel",
+        "finish": "brushed",
+        "aliases": [],
+        "confidence": 0.768,
+        "source": "vision"
+      },
+      "assignment": {
+        "materialId": "metal.steel-brushed",
+        "status": "proceed",
+        "source": "vision",
+        "confidence": 0.768,
+        "method": "family-subtype-finish",
+        "alternatives": [],
+        "evidence": {
+          "crop": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/02-bracket-iron.png",
+            "bbox": {
+              "x": 740,
+              "y": 232,
+              "width": 80,
+              "height": 50
+            },
+            "sourceWidth": 1408,
+            "sourceHeight": 768,
+            "loaderWarnings": [],
+            "coverage": 0.0037
+          },
+          "pbr": {
+            "ok": true,
+            "verdict": "pass",
+            "confidence": 0.768,
+            "estimatedFidelity": 0.768,
+            "targetThreshold": 0.7,
+            "materialId": "iron",
+            "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/02-bracket-iron.png",
+            "outDir": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-02-bracket-iron",
+            "palette": [
+              "#362D2D",
+              "#2A2324",
+              "#1D1819",
+              "#110E0E",
+              "#403636"
+            ],
+            "maps": {
+              "albedo": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-02-bracket-iron/iron_albedo.png",
+                "url": "iron_albedo.png",
+                "channel": "albedo",
+                "source": "reference-pixel-extraction"
+              },
+              "roughness": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-02-bracket-iron/iron_roughness.png",
+                "url": "iron_roughness.png",
+                "channel": "roughness",
+                "source": "reference-pixel-extraction"
+              },
+              "height": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-02-bracket-iron/iron_height.png",
+                "url": "iron_height.png",
+                "channel": "height",
+                "source": "reference-pixel-extraction"
+              },
+              "normal": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-02-bracket-iron/iron_normal.png",
+                "url": "iron_normal.png",
+                "channel": "normal",
+                "source": "reference-pixel-extraction"
+              },
+              "ao": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-02-bracket-iron/iron_ao.png",
+                "url": "iron_ao.png",
+                "channel": "ao",
+                "source": "reference-pixel-extraction"
+              }
+            },
+            "diagnostics": {
+              "sourceWidth": 80,
+              "sourceHeight": 50,
+              "mapSize": 512,
+              "cropBBoxPixels": {
+                "x": 7,
+                "y": 17,
+                "width": 73,
+                "height": 33
+              },
+              "mask": {
+                "backgroundColor": "#67666B",
+                "backgroundNoise": 83.247,
+                "transparentPixelFraction": 0.0,
+                "foregroundCoverage": 0.044
+              },
+              "mapStats": {
+                "valueRange": 0.1683,
+                "heightP90Gradient": 0.02549,
+                "roughnessBase": 0.68,
+                "roughnessVariation": 0.05,
+                "normalStrength": 0.186,
+                "blurRadius": 10
+              },
+              "palette": [
+                "#362D2D",
+                "#2A2324",
+                "#1D1819",
+                "#110E0E",
+                "#403636"
+              ]
+            },
+            "warnings": [
+              "foreground mask is very small",
+              "single-image inverse rendering cannot prove true physical PBR; confidence is capped",
+              "low value range weakens height/roughness inference"
+            ],
+            "limitation": "single-image PBR extraction is an estimate; 70%+ extraction confidence still needs render screenshot review"
+          },
+          "texture": {
+            "finishClass": "worn-composite",
+            "recipe": {
+              "metalness": 0.0,
+              "roughness": 0.9,
+              "clearcoat": 0.0,
+              "clearcoatRoughness": 0.0,
+              "transmission": 0.0,
+              "ior": 1.5,
+              "envMapIntensity": 0.5,
+              "anisotropy": 0.0,
+              "procedural": "mottle"
+            },
+            "palette": [
+              "#544D4F",
+              "#3C373A",
+              "#4B4649",
+              "#353031",
+              "#48444B"
+            ],
+            "paletteHueRisk": [],
+            "gradientAxis": "horizontal",
+            "stats": {
+              "meanLum": 65.2,
+              "meanSaturation": 0.09,
+              "gradientStrength": 0.209,
+              "mottle": 0.021,
+              "streakRatio": 2.55,
+              "hueSpread": 0.125,
+              "specularFraction": 0.0
+            }
+          }
+        },
+        "profileId": "metal.steel-brushed",
+        "family": "metal",
+        "subtype": "steel",
+        "finish": "brushed",
+        "renderPrior": {
+          "metalness": 1.0,
+          "roughness": 0.35,
+          "anisotropy": 0.85
+        },
+        "requiredMaps": [
+          "map",
+          "roughnessMap",
+          "normalMap",
+          "anisotropyMap"
+        ],
+        "optionalMaps": [
+          "metalnessMap"
+        ],
+        "validationViews": [
+          "neutral-studio",
+          "grazing",
+          "environment-reflection",
+          "reference-beauty"
+        ],
+        "sourceRefs": [
+          "three.mesh-physical",
+          "three.pmrem",
+          "gltf.2",
+          "khronos.gltf-pbr",
+          "adobe.pbr-guide-2",
+          "google.filament-pbr"
+        ],
+        "visualCues": [
+          "elongated highlight aligned to brushing",
+          "neutral conductor reflection",
+          "parallel micro-scratches"
+        ]
+      },
+      "observations": [
+        "near-neutral colour response",
+        "directional surface frequency",
+        "strong image-space gradient; verify it is material pattern, not lighting",
+        "single-image PBR inference requires controlled render validation"
+      ],
+      "crop": {
+        "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/02-bracket-iron.png",
+        "bbox": {
+          "x": 740,
+          "y": 232,
+          "width": 80,
+          "height": 50
+        },
+        "sourceWidth": 1408,
+        "sourceHeight": 768,
+        "loaderWarnings": [],
+        "coverage": 0.0037
+      },
+      "textureAnalysis": {
+        "finishClass": "worn-composite",
+        "recipe": {
+          "metalness": 0.0,
+          "roughness": 0.9,
+          "clearcoat": 0.0,
+          "clearcoatRoughness": 0.0,
+          "transmission": 0.0,
+          "ior": 1.5,
+          "envMapIntensity": 0.5,
+          "anisotropy": 0.0,
+          "procedural": "mottle"
+        },
+        "palette": [
+          "#544D4F",
+          "#3C373A",
+          "#4B4649",
+          "#353031",
+          "#48444B"
+        ],
+        "paletteHueRisk": [],
+        "gradientAxis": "horizontal",
+        "stats": {
+          "meanLum": 65.2,
+          "meanSaturation": 0.09,
+          "gradientStrength": 0.209,
+          "mottle": 0.021,
+          "streakRatio": 2.55,
+          "hueSpread": 0.125,
+          "specularFraction": 0.0
+        }
+      },
+      "pbrReport": {
+        "ok": true,
+        "verdict": "pass",
+        "confidence": 0.768,
+        "estimatedFidelity": 0.768,
+        "targetThreshold": 0.7,
+        "materialId": "iron",
+        "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/02-bracket-iron.png",
+        "outDir": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-02-bracket-iron",
+        "palette": [
+          "#362D2D",
+          "#2A2324",
+          "#1D1819",
+          "#110E0E",
+          "#403636"
+        ],
+        "maps": {
+          "albedo": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-02-bracket-iron/iron_albedo.png",
+            "url": "iron_albedo.png",
+            "channel": "albedo",
+            "source": "reference-pixel-extraction"
+          },
+          "roughness": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-02-bracket-iron/iron_roughness.png",
+            "url": "iron_roughness.png",
+            "channel": "roughness",
+            "source": "reference-pixel-extraction"
+          },
+          "height": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-02-bracket-iron/iron_height.png",
+            "url": "iron_height.png",
+            "channel": "height",
+            "source": "reference-pixel-extraction"
+          },
+          "normal": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-02-bracket-iron/iron_normal.png",
+            "url": "iron_normal.png",
+            "channel": "normal",
+            "source": "reference-pixel-extraction"
+          },
+          "ao": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-02-bracket-iron/iron_ao.png",
+            "url": "iron_ao.png",
+            "channel": "ao",
+            "source": "reference-pixel-extraction"
+          }
+        },
+        "diagnostics": {
+          "sourceWidth": 80,
+          "sourceHeight": 50,
+          "mapSize": 512,
+          "cropBBoxPixels": {
+            "x": 7,
+            "y": 17,
+            "width": 73,
+            "height": 33
+          },
+          "mask": {
+            "backgroundColor": "#67666B",
+            "backgroundNoise": 83.247,
+            "transparentPixelFraction": 0.0,
+            "foregroundCoverage": 0.044
+          },
+          "mapStats": {
+            "valueRange": 0.1683,
+            "heightP90Gradient": 0.02549,
+            "roughnessBase": 0.68,
+            "roughnessVariation": 0.05,
+            "normalStrength": 0.186,
+            "blurRadius": 10
+          },
+          "palette": [
+            "#362D2D",
+            "#2A2324",
+            "#1D1819",
+            "#110E0E",
+            "#403636"
+          ]
+        },
+        "warnings": [
+          "foreground mask is very small",
+          "single-image inverse rendering cannot prove true physical PBR; confidence is capped",
+          "low value range weakens height/roughness inference"
+        ],
+        "limitation": "single-image PBR extraction is an estimate; 70%+ extraction confidence still needs render screenshot review"
+      },
+      "referencePbr": {
+        "version": "1.0",
+        "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/02-bracket-iron.png",
+        "extractor": "stage1_intake/extract_pbr_evidence.py",
+        "method": "single-image pixel evidence with de-lighting estimate; not photogrammetry",
+        "usable": true,
+        "verdict": "pass",
+        "confidence": 0.768,
+        "estimatedFidelity": 0.768,
+        "targetThreshold": 0.7,
+        "hardLimit": "A single image cannot uniquely recover true albedo/roughness/normal/AO; maps are reference-derived estimates.",
+        "maps": {
+          "albedo": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-02-bracket-iron/iron_albedo.png",
+            "url": "iron_albedo.png",
+            "channel": "albedo",
+            "source": "reference-pixel-extraction"
+          },
+          "roughness": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-02-bracket-iron/iron_roughness.png",
+            "url": "iron_roughness.png",
+            "channel": "roughness",
+            "source": "reference-pixel-extraction"
+          },
+          "height": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-02-bracket-iron/iron_height.png",
+            "url": "iron_height.png",
+            "channel": "height",
+            "source": "reference-pixel-extraction"
+          },
+          "normal": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-02-bracket-iron/iron_normal.png",
+            "url": "iron_normal.png",
+            "channel": "normal",
+            "source": "reference-pixel-extraction"
+          },
+          "ao": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-02-bracket-iron/iron_ao.png",
+            "url": "iron_ao.png",
+            "channel": "ao",
+            "source": "reference-pixel-extraction"
+          }
+        },
+        "diagnostics": {
+          "sourceWidth": 80,
+          "sourceHeight": 50,
+          "mapSize": 512,
+          "cropBBoxPixels": {
+            "x": 7,
+            "y": 17,
+            "width": 73,
+            "height": 33
+          },
+          "mask": {
+            "backgroundColor": "#67666B",
+            "backgroundNoise": 83.247,
+            "transparentPixelFraction": 0.0,
+            "foregroundCoverage": 0.044
+          },
+          "mapStats": {
+            "valueRange": 0.1683,
+            "heightP90Gradient": 0.02549,
+            "roughnessBase": 0.68,
+            "roughnessVariation": 0.05,
+            "normalStrength": 0.186,
+            "blurRadius": 10
+          },
+          "palette": [
+            "#362D2D",
+            "#2A2324",
+            "#1D1819",
+            "#110E0E",
+            "#403636"
+          ]
+        },
+        "warnings": [
+          "foreground mask is very small",
+          "single-image inverse rendering cannot prove true physical PBR; confidence is capped",
+          "low value range weakens height/roughness inference"
+        ]
+      },
+      "maps": {
+        "albedo": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-02-bracket-iron/iron_albedo.png",
+          "url": "iron_albedo.png",
+          "channel": "albedo",
+          "source": "reference-pixel-extraction"
+        },
+        "roughness": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-02-bracket-iron/iron_roughness.png",
+          "url": "iron_roughness.png",
+          "channel": "roughness",
+          "source": "reference-pixel-extraction"
+        },
+        "height": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-02-bracket-iron/iron_height.png",
+          "url": "iron_height.png",
+          "channel": "height",
+          "source": "reference-pixel-extraction"
+        },
+        "normal": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-02-bracket-iron/iron_normal.png",
+          "url": "iron_normal.png",
+          "channel": "normal",
+          "source": "reference-pixel-extraction"
+        },
+        "ao": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-02-bracket-iron/iron_ao.png",
+          "url": "iron_ao.png",
+          "channel": "ao",
+          "source": "reference-pixel-extraction"
+        }
+      }
+    },
+    {
+      "componentId": "ore-heap",
+      "regionId": "gold-ore",
+      "materialSpecId": "ore",
+      "hypothesis": {
+        "componentId": "ore-heap",
+        "regionId": "gold-ore",
+        "materialId": null,
+        "family": "metal",
+        "subtype": "gold",
+        "finish": "polished",
+        "aliases": [],
+        "confidence": 0.829,
+        "source": "vision"
+      },
+      "assignment": {
+        "materialId": "metal.gold",
+        "status": "proceed",
+        "source": "vision",
+        "confidence": 0.829,
+        "method": "family-subtype-finish",
+        "alternatives": [],
+        "evidence": {
+          "crop": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/03-gold-ore.png",
+            "bbox": {
+              "x": 600,
+              "y": 110,
+              "width": 180,
+              "height": 80
+            },
+            "sourceWidth": 1408,
+            "sourceHeight": 768,
+            "loaderWarnings": [],
+            "coverage": 0.0133
+          },
+          "pbr": {
+            "ok": true,
+            "verdict": "pass",
+            "confidence": 0.829,
+            "estimatedFidelity": 0.829,
+            "targetThreshold": 0.7,
+            "materialId": "ore",
+            "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/03-gold-ore.png",
+            "outDir": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-03-gold-ore",
+            "palette": [
+              "#FADB6E",
+              "#F1C356",
+              "#DEA440",
+              "#B3782C",
+              "#5C300C"
+            ],
+            "maps": {
+              "albedo": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-03-gold-ore/ore_albedo.png",
+                "url": "ore_albedo.png",
+                "channel": "albedo",
+                "source": "reference-pixel-extraction"
+              },
+              "roughness": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-03-gold-ore/ore_roughness.png",
+                "url": "ore_roughness.png",
+                "channel": "roughness",
+                "source": "reference-pixel-extraction"
+              },
+              "height": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-03-gold-ore/ore_height.png",
+                "url": "ore_height.png",
+                "channel": "height",
+                "source": "reference-pixel-extraction"
+              },
+              "normal": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-03-gold-ore/ore_normal.png",
+                "url": "ore_normal.png",
+                "channel": "normal",
+                "source": "reference-pixel-extraction"
+              },
+              "ao": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-03-gold-ore/ore_ao.png",
+                "url": "ore_ao.png",
+                "channel": "ao",
+                "source": "reference-pixel-extraction"
+              }
+            },
+            "diagnostics": {
+              "sourceWidth": 180,
+              "sourceHeight": 80,
+              "mapSize": 512,
+              "cropBBoxPixels": {
+                "x": 0,
+                "y": 0,
+                "width": 180,
+                "height": 80
+              },
+              "mask": {
+                "backgroundColor": "#BF8D38",
+                "backgroundNoise": 37.108,
+                "transparentPixelFraction": 0.0,
+                "foregroundCoverage": 1.0
+              },
+              "mapStats": {
+                "valueRange": 0.6068,
+                "heightP90Gradient": 0.06753,
+                "roughnessBase": 0.705,
+                "roughnessVariation": 0.122,
+                "normalStrength": 0.235,
+                "blurRadius": 10
+              },
+              "palette": [
+                "#FADB6E",
+                "#F1C356",
+                "#DEA440",
+                "#B3782C",
+                "#5C300C"
+              ]
+            },
+            "warnings": [
+              "image is not clearly isolated from background; using most pixels as material evidence",
+              "object/background separation is weak",
+              "single-image inverse rendering cannot prove true physical PBR; confidence is capped"
+            ],
+            "limitation": "single-image PBR extraction is an estimate; 70%+ extraction confidence still needs render screenshot review"
+          },
+          "texture": {
+            "finishClass": "gemstone",
+            "recipe": {
+              "metalness": 0.0,
+              "roughness": 0.05,
+              "clearcoat": 1.0,
+              "clearcoatRoughness": 0.0,
+              "transmission": 0.9,
+              "ior": 1.54,
+              "envMapIntensity": 1.0,
+              "anisotropy": 0.0,
+              "procedural": "gradient-smoke"
+            },
+            "palette": [
+              "#D8B667",
+              "#E2B650",
+              "#CA9741",
+              "#E2AD46",
+              "#CD993D"
+            ],
+            "paletteHueRisk": [],
+            "gradientAxis": "horizontal",
+            "stats": {
+              "meanLum": 173.7,
+              "meanSaturation": 0.672,
+              "gradientStrength": 0.309,
+              "mottle": 0.052,
+              "streakRatio": 1.5,
+              "hueSpread": 0.007,
+              "specularFraction": 0.0
+            }
+          }
+        },
+        "profileId": "metal.gold",
+        "family": "metal",
+        "subtype": "gold",
+        "finish": "polished",
+        "renderPrior": {
+          "metalness": 1.0,
+          "roughness": 0.22
+        },
+        "requiredMaps": [
+          "map",
+          "roughnessMap"
+        ],
+        "optionalMaps": [
+          "normalMap",
+          "metalnessMap"
+        ],
+        "validationViews": [
+          "albedo-unlit",
+          "environment-reflection",
+          "grazing",
+          "reference-beauty"
+        ],
+        "sourceRefs": [
+          "three.mesh-standard",
+          "three.pmrem",
+          "gltf.2",
+          "khronos.gltf-pbr",
+          "adobe.pbr-guide-2",
+          "google.filament-pbr"
+        ],
+        "visualCues": [
+          "yellow conductor reflection rather than yellow diffuse paint",
+          "strong environment-dependent highlight"
+        ]
+      },
+      "observations": [
+        "chromatic base-colour response",
+        "visible meso/micro variation",
+        "strong image-space gradient; verify it is material pattern, not lighting",
+        "single-image PBR inference requires controlled render validation"
+      ],
+      "crop": {
+        "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/03-gold-ore.png",
+        "bbox": {
+          "x": 600,
+          "y": 110,
+          "width": 180,
+          "height": 80
+        },
+        "sourceWidth": 1408,
+        "sourceHeight": 768,
+        "loaderWarnings": [],
+        "coverage": 0.0133
+      },
+      "textureAnalysis": {
+        "finishClass": "gemstone",
+        "recipe": {
+          "metalness": 0.0,
+          "roughness": 0.05,
+          "clearcoat": 1.0,
+          "clearcoatRoughness": 0.0,
+          "transmission": 0.9,
+          "ior": 1.54,
+          "envMapIntensity": 1.0,
+          "anisotropy": 0.0,
+          "procedural": "gradient-smoke"
+        },
+        "palette": [
+          "#D8B667",
+          "#E2B650",
+          "#CA9741",
+          "#E2AD46",
+          "#CD993D"
+        ],
+        "paletteHueRisk": [],
+        "gradientAxis": "horizontal",
+        "stats": {
+          "meanLum": 173.7,
+          "meanSaturation": 0.672,
+          "gradientStrength": 0.309,
+          "mottle": 0.052,
+          "streakRatio": 1.5,
+          "hueSpread": 0.007,
+          "specularFraction": 0.0
+        }
+      },
+      "pbrReport": {
+        "ok": true,
+        "verdict": "pass",
+        "confidence": 0.829,
+        "estimatedFidelity": 0.829,
+        "targetThreshold": 0.7,
+        "materialId": "ore",
+        "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/03-gold-ore.png",
+        "outDir": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-03-gold-ore",
+        "palette": [
+          "#FADB6E",
+          "#F1C356",
+          "#DEA440",
+          "#B3782C",
+          "#5C300C"
+        ],
+        "maps": {
+          "albedo": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-03-gold-ore/ore_albedo.png",
+            "url": "ore_albedo.png",
+            "channel": "albedo",
+            "source": "reference-pixel-extraction"
+          },
+          "roughness": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-03-gold-ore/ore_roughness.png",
+            "url": "ore_roughness.png",
+            "channel": "roughness",
+            "source": "reference-pixel-extraction"
+          },
+          "height": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-03-gold-ore/ore_height.png",
+            "url": "ore_height.png",
+            "channel": "height",
+            "source": "reference-pixel-extraction"
+          },
+          "normal": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-03-gold-ore/ore_normal.png",
+            "url": "ore_normal.png",
+            "channel": "normal",
+            "source": "reference-pixel-extraction"
+          },
+          "ao": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-03-gold-ore/ore_ao.png",
+            "url": "ore_ao.png",
+            "channel": "ao",
+            "source": "reference-pixel-extraction"
+          }
+        },
+        "diagnostics": {
+          "sourceWidth": 180,
+          "sourceHeight": 80,
+          "mapSize": 512,
+          "cropBBoxPixels": {
+            "x": 0,
+            "y": 0,
+            "width": 180,
+            "height": 80
+          },
+          "mask": {
+            "backgroundColor": "#BF8D38",
+            "backgroundNoise": 37.108,
+            "transparentPixelFraction": 0.0,
+            "foregroundCoverage": 1.0
+          },
+          "mapStats": {
+            "valueRange": 0.6068,
+            "heightP90Gradient": 0.06753,
+            "roughnessBase": 0.705,
+            "roughnessVariation": 0.122,
+            "normalStrength": 0.235,
+            "blurRadius": 10
+          },
+          "palette": [
+            "#FADB6E",
+            "#F1C356",
+            "#DEA440",
+            "#B3782C",
+            "#5C300C"
+          ]
+        },
+        "warnings": [
+          "image is not clearly isolated from background; using most pixels as material evidence",
+          "object/background separation is weak",
+          "single-image inverse rendering cannot prove true physical PBR; confidence is capped"
+        ],
+        "limitation": "single-image PBR extraction is an estimate; 70%+ extraction confidence still needs render screenshot review"
+      },
+      "referencePbr": {
+        "version": "1.0",
+        "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/03-gold-ore.png",
+        "extractor": "stage1_intake/extract_pbr_evidence.py",
+        "method": "single-image pixel evidence with de-lighting estimate; not photogrammetry",
+        "usable": true,
+        "verdict": "pass",
+        "confidence": 0.829,
+        "estimatedFidelity": 0.829,
+        "targetThreshold": 0.7,
+        "hardLimit": "A single image cannot uniquely recover true albedo/roughness/normal/AO; maps are reference-derived estimates.",
+        "maps": {
+          "albedo": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-03-gold-ore/ore_albedo.png",
+            "url": "ore_albedo.png",
+            "channel": "albedo",
+            "source": "reference-pixel-extraction"
+          },
+          "roughness": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-03-gold-ore/ore_roughness.png",
+            "url": "ore_roughness.png",
+            "channel": "roughness",
+            "source": "reference-pixel-extraction"
+          },
+          "height": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-03-gold-ore/ore_height.png",
+            "url": "ore_height.png",
+            "channel": "height",
+            "source": "reference-pixel-extraction"
+          },
+          "normal": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-03-gold-ore/ore_normal.png",
+            "url": "ore_normal.png",
+            "channel": "normal",
+            "source": "reference-pixel-extraction"
+          },
+          "ao": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-03-gold-ore/ore_ao.png",
+            "url": "ore_ao.png",
+            "channel": "ao",
+            "source": "reference-pixel-extraction"
+          }
+        },
+        "diagnostics": {
+          "sourceWidth": 180,
+          "sourceHeight": 80,
+          "mapSize": 512,
+          "cropBBoxPixels": {
+            "x": 0,
+            "y": 0,
+            "width": 180,
+            "height": 80
+          },
+          "mask": {
+            "backgroundColor": "#BF8D38",
+            "backgroundNoise": 37.108,
+            "transparentPixelFraction": 0.0,
+            "foregroundCoverage": 1.0
+          },
+          "mapStats": {
+            "valueRange": 0.6068,
+            "heightP90Gradient": 0.06753,
+            "roughnessBase": 0.705,
+            "roughnessVariation": 0.122,
+            "normalStrength": 0.235,
+            "blurRadius": 10
+          },
+          "palette": [
+            "#FADB6E",
+            "#F1C356",
+            "#DEA440",
+            "#B3782C",
+            "#5C300C"
+          ]
+        },
+        "warnings": [
+          "image is not clearly isolated from background; using most pixels as material evidence",
+          "object/background separation is weak",
+          "single-image inverse rendering cannot prove true physical PBR; confidence is capped"
+        ]
+      },
+      "maps": {
+        "albedo": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-03-gold-ore/ore_albedo.png",
+          "url": "ore_albedo.png",
+          "channel": "albedo",
+          "source": "reference-pixel-extraction"
+        },
+        "roughness": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-03-gold-ore/ore_roughness.png",
+          "url": "ore_roughness.png",
+          "channel": "roughness",
+          "source": "reference-pixel-extraction"
+        },
+        "height": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-03-gold-ore/ore_height.png",
+          "url": "ore_height.png",
+          "channel": "height",
+          "source": "reference-pixel-extraction"
+        },
+        "normal": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-03-gold-ore/ore_normal.png",
+          "url": "ore_normal.png",
+          "channel": "normal",
+          "source": "reference-pixel-extraction"
+        },
+        "ao": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-03-gold-ore/ore_ao.png",
+          "url": "ore_ao.png",
+          "channel": "ao",
+          "source": "reference-pixel-extraction"
+        }
+      }
+    },
+    {
+      "componentId": "root",
+      "regionId": "gravel",
+      "materialSpecId": "gravel",
+      "hypothesis": {
+        "componentId": "root",
+        "regionId": "gravel",
+        "materialId": null,
+        "family": "stone",
+        "subtype": "natural",
+        "finish": "rough-or-polished",
+        "aliases": [],
+        "confidence": 0.86,
+        "source": "vision"
+      },
+      "assignment": {
+        "materialId": "stone.natural",
+        "status": "proceed",
+        "source": "vision",
+        "confidence": 0.86,
+        "method": "family-subtype-finish",
+        "alternatives": [],
+        "evidence": {
+          "crop": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/04-gravel.png",
+            "bbox": {
+              "x": 880,
+              "y": 600,
+              "width": 150,
+              "height": 40
+            },
+            "sourceWidth": 1408,
+            "sourceHeight": 768,
+            "loaderWarnings": [],
+            "coverage": 0.0055
+          },
+          "pbr": {
+            "ok": true,
+            "verdict": "pass",
+            "confidence": 0.86,
+            "estimatedFidelity": 0.86,
+            "targetThreshold": 0.7,
+            "materialId": "gravel",
+            "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/04-gravel.png",
+            "outDir": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-04-gravel",
+            "palette": [
+              "#6A4D39",
+              "#573E2E",
+              "#17120F",
+              "#392C21",
+              "#8B725E"
+            ],
+            "maps": {
+              "albedo": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-04-gravel/gravel_albedo.png",
+                "url": "gravel_albedo.png",
+                "channel": "albedo",
+                "source": "reference-pixel-extraction"
+              },
+              "roughness": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-04-gravel/gravel_roughness.png",
+                "url": "gravel_roughness.png",
+                "channel": "roughness",
+                "source": "reference-pixel-extraction"
+              },
+              "height": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-04-gravel/gravel_height.png",
+                "url": "gravel_height.png",
+                "channel": "height",
+                "source": "reference-pixel-extraction"
+              },
+              "normal": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-04-gravel/gravel_normal.png",
+                "url": "gravel_normal.png",
+                "channel": "normal",
+                "source": "reference-pixel-extraction"
+              },
+              "ao": {
+                "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-04-gravel/gravel_ao.png",
+                "url": "gravel_ao.png",
+                "channel": "ao",
+                "source": "reference-pixel-extraction"
+              }
+            },
+            "diagnostics": {
+              "sourceWidth": 150,
+              "sourceHeight": 40,
+              "mapSize": 512,
+              "cropBBoxPixels": {
+                "x": 0,
+                "y": 0,
+                "width": 150,
+                "height": 40
+              },
+              "mask": {
+                "backgroundColor": "#37241D",
+                "backgroundNoise": 42.0,
+                "transparentPixelFraction": 0.0,
+                "foregroundCoverage": 0.8198
+              },
+              "mapStats": {
+                "valueRange": 0.3647,
+                "heightP90Gradient": 0.0823,
+                "roughnessBase": 0.721,
+                "roughnessVariation": 0.138,
+                "normalStrength": 0.253,
+                "blurRadius": 10
+              },
+              "palette": [
+                "#6A4D39",
+                "#573E2E",
+                "#17120F",
+                "#392C21",
+                "#8B725E"
+              ]
+            },
+            "warnings": [
+              "single-image inverse rendering cannot prove true physical PBR; confidence is capped"
+            ],
+            "limitation": "single-image PBR extraction is an estimate; 70%+ extraction confidence still needs render screenshot review"
+          },
+          "texture": {
+            "finishClass": "painted-metal",
+            "recipe": {
+              "metalness": 0.0,
+              "roughness": 0.5,
+              "clearcoat": 1.0,
+              "clearcoatRoughness": 0.05,
+              "transmission": 0.0,
+              "ior": 1.5,
+              "envMapIntensity": 1.0,
+              "anisotropy": 0.0,
+              "procedural": "flat-clearcoat"
+            },
+            "palette": [
+              "#2C2928",
+              "#211D1A",
+              "#3D2F25",
+              "#654A37",
+              "#664834"
+            ],
+            "paletteHueRisk": [],
+            "gradientAxis": "vertical",
+            "stats": {
+              "meanLum": 57.6,
+              "meanSaturation": 0.376,
+              "gradientStrength": 0.213,
+              "mottle": 0.026,
+              "streakRatio": 1.21,
+              "hueSpread": 0.026,
+              "specularFraction": 0.0
+            }
+          }
+        },
+        "profileId": "stone.natural",
+        "family": "stone",
+        "subtype": "natural",
+        "finish": "rough-or-polished",
+        "renderPrior": {
+          "metalness": 0.0,
+          "roughness": 0.78,
+          "clearcoat": 0.0
+        },
+        "requiredMaps": [
+          "map",
+          "roughnessMap",
+          "normalMap"
+        ],
+        "optionalMaps": [
+          "aoMap",
+          "displacementMap",
+          "clearcoatMap"
+        ],
+        "validationViews": [
+          "albedo-unlit",
+          "neutral-studio",
+          "grazing",
+          "reference-beauty"
+        ],
+        "sourceRefs": [
+          "three.mesh-standard",
+          "three.mesh-physical",
+          "adobe.pbr-guide-1",
+          "mit.material-recognition"
+        ],
+        "visualCues": [
+          "multi-scale mineral pattern",
+          "fracture or pore relief",
+          "polished stone retains dielectric reflection"
+        ]
+      },
+      "observations": [
+        "chromatic base-colour response",
+        "strong image-space gradient; verify it is material pattern, not lighting",
+        "single-image PBR inference requires controlled render validation"
+      ],
+      "crop": {
+        "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/04-gravel.png",
+        "bbox": {
+          "x": 880,
+          "y": 600,
+          "width": 150,
+          "height": 40
+        },
+        "sourceWidth": 1408,
+        "sourceHeight": 768,
+        "loaderWarnings": [],
+        "coverage": 0.0055
+      },
+      "textureAnalysis": {
+        "finishClass": "painted-metal",
+        "recipe": {
+          "metalness": 0.0,
+          "roughness": 0.5,
+          "clearcoat": 1.0,
+          "clearcoatRoughness": 0.05,
+          "transmission": 0.0,
+          "ior": 1.5,
+          "envMapIntensity": 1.0,
+          "anisotropy": 0.0,
+          "procedural": "flat-clearcoat"
+        },
+        "palette": [
+          "#2C2928",
+          "#211D1A",
+          "#3D2F25",
+          "#654A37",
+          "#664834"
+        ],
+        "paletteHueRisk": [],
+        "gradientAxis": "vertical",
+        "stats": {
+          "meanLum": 57.6,
+          "meanSaturation": 0.376,
+          "gradientStrength": 0.213,
+          "mottle": 0.026,
+          "streakRatio": 1.21,
+          "hueSpread": 0.026,
+          "specularFraction": 0.0
+        }
+      },
+      "pbrReport": {
+        "ok": true,
+        "verdict": "pass",
+        "confidence": 0.86,
+        "estimatedFidelity": 0.86,
+        "targetThreshold": 0.7,
+        "materialId": "gravel",
+        "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/04-gravel.png",
+        "outDir": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-04-gravel",
+        "palette": [
+          "#6A4D39",
+          "#573E2E",
+          "#17120F",
+          "#392C21",
+          "#8B725E"
+        ],
+        "maps": {
+          "albedo": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-04-gravel/gravel_albedo.png",
+            "url": "gravel_albedo.png",
+            "channel": "albedo",
+            "source": "reference-pixel-extraction"
+          },
+          "roughness": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-04-gravel/gravel_roughness.png",
+            "url": "gravel_roughness.png",
+            "channel": "roughness",
+            "source": "reference-pixel-extraction"
+          },
+          "height": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-04-gravel/gravel_height.png",
+            "url": "gravel_height.png",
+            "channel": "height",
+            "source": "reference-pixel-extraction"
+          },
+          "normal": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-04-gravel/gravel_normal.png",
+            "url": "gravel_normal.png",
+            "channel": "normal",
+            "source": "reference-pixel-extraction"
+          },
+          "ao": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-04-gravel/gravel_ao.png",
+            "url": "gravel_ao.png",
+            "channel": "ao",
+            "source": "reference-pixel-extraction"
+          }
+        },
+        "diagnostics": {
+          "sourceWidth": 150,
+          "sourceHeight": 40,
+          "mapSize": 512,
+          "cropBBoxPixels": {
+            "x": 0,
+            "y": 0,
+            "width": 150,
+            "height": 40
+          },
+          "mask": {
+            "backgroundColor": "#37241D",
+            "backgroundNoise": 42.0,
+            "transparentPixelFraction": 0.0,
+            "foregroundCoverage": 0.8198
+          },
+          "mapStats": {
+            "valueRange": 0.3647,
+            "heightP90Gradient": 0.0823,
+            "roughnessBase": 0.721,
+            "roughnessVariation": 0.138,
+            "normalStrength": 0.253,
+            "blurRadius": 10
+          },
+          "palette": [
+            "#6A4D39",
+            "#573E2E",
+            "#17120F",
+            "#392C21",
+            "#8B725E"
+          ]
+        },
+        "warnings": [
+          "single-image inverse rendering cannot prove true physical PBR; confidence is capped"
+        ],
+        "limitation": "single-image PBR extraction is an estimate; 70%+ extraction confidence still needs render screenshot review"
+      },
+      "referencePbr": {
+        "version": "1.0",
+        "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/04-gravel.png",
+        "extractor": "stage1_intake/extract_pbr_evidence.py",
+        "method": "single-image pixel evidence with de-lighting estimate; not photogrammetry",
+        "usable": true,
+        "verdict": "pass",
+        "confidence": 0.86,
+        "estimatedFidelity": 0.86,
+        "targetThreshold": 0.7,
+        "hardLimit": "A single image cannot uniquely recover true albedo/roughness/normal/AO; maps are reference-derived estimates.",
+        "maps": {
+          "albedo": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-04-gravel/gravel_albedo.png",
+            "url": "gravel_albedo.png",
+            "channel": "albedo",
+            "source": "reference-pixel-extraction"
+          },
+          "roughness": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-04-gravel/gravel_roughness.png",
+            "url": "gravel_roughness.png",
+            "channel": "roughness",
+            "source": "reference-pixel-extraction"
+          },
+          "height": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-04-gravel/gravel_height.png",
+            "url": "gravel_height.png",
+            "channel": "height",
+            "source": "reference-pixel-extraction"
+          },
+          "normal": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-04-gravel/gravel_normal.png",
+            "url": "gravel_normal.png",
+            "channel": "normal",
+            "source": "reference-pixel-extraction"
+          },
+          "ao": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-04-gravel/gravel_ao.png",
+            "url": "gravel_ao.png",
+            "channel": "ao",
+            "source": "reference-pixel-extraction"
+          }
+        },
+        "diagnostics": {
+          "sourceWidth": 150,
+          "sourceHeight": 40,
+          "mapSize": 512,
+          "cropBBoxPixels": {
+            "x": 0,
+            "y": 0,
+            "width": 150,
+            "height": 40
+          },
+          "mask": {
+            "backgroundColor": "#37241D",
+            "backgroundNoise": 42.0,
+            "transparentPixelFraction": 0.0,
+            "foregroundCoverage": 0.8198
+          },
+          "mapStats": {
+            "valueRange": 0.3647,
+            "heightP90Gradient": 0.0823,
+            "roughnessBase": 0.721,
+            "roughnessVariation": 0.138,
+            "normalStrength": 0.253,
+            "blurRadius": 10
+          },
+          "palette": [
+            "#6A4D39",
+            "#573E2E",
+            "#17120F",
+            "#392C21",
+            "#8B725E"
+          ]
+        },
+        "warnings": [
+          "single-image inverse rendering cannot prove true physical PBR; confidence is capped"
+        ]
+      },
+      "maps": {
+        "albedo": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-04-gravel/gravel_albedo.png",
+          "url": "gravel_albedo.png",
+          "channel": "albedo",
+          "source": "reference-pixel-extraction"
+        },
+        "roughness": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-04-gravel/gravel_roughness.png",
+          "url": "gravel_roughness.png",
+          "channel": "roughness",
+          "source": "reference-pixel-extraction"
+        },
+        "height": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-04-gravel/gravel_height.png",
+          "url": "gravel_height.png",
+          "channel": "height",
+          "source": "reference-pixel-extraction"
+        },
+        "normal": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-04-gravel/gravel_normal.png",
+          "url": "gravel_normal.png",
+          "channel": "normal",
+          "source": "reference-pixel-extraction"
+        },
+        "ao": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-evidence/pbr-04-gravel/gravel_ao.png",
+          "url": "gravel_ao.png",
+          "channel": "ao",
+          "source": "reference-pixel-extraction"
+        }
+      }
+    }
+  ],
+  "status": "proceed",
+  "limitations": [
+    "PBR extraction is reference-derived inference, not inverse rendering.",
+    "A crop must be checked against the component visible footprint before accepting material scores."
+  ],
+  "artifact": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/material-analysis.json"
+}

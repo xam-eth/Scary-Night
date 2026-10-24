@@ -1,0 +1,14 @@
+{
+  "admitted": true,
+  "reasons": [],
+  "provenance": {
+    "viewpoint": "reference",
+    "sourcePath": "/home/user/Scary-Night/assets-src/img2threejs/mine-cart/reference.png",
+    "width": 1408,
+    "height": 768,
+    "foregroundCoverage": 0.3171,
+    "largestComponentFraction": 1.0,
+    "pHash": 18373748289878818976,
+    "duplicateOfHash": null
+  }
+}
