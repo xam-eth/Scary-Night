@@ -148,7 +148,7 @@ const cam = SPEC.referenceCamera || {};
 const az = Number(cam.azimuthDeg ?? 0), el = Number(cam.elevationDeg ?? 25), fov = Number(cam.fovDegrees ?? 30);
 const orbitEl = Number(args.orbitElevation ?? 18);
 const views = [
-  { id: 'fixed', azimuthDeg: az, elevationDeg: el, fov, width: RW, height: RH, frame: ndc },
+  { id: 'fixed', azimuthDeg: az, elevationDeg: el, fov, width: RW, height: RH, frame: ndc, ...(renderOpts.fixedLight ? { light: renderOpts.fixedLight } : {}) },
   { id: 'fixed-clay', azimuthDeg: az, elevationDeg: el, fov, width: RW, height: RH, frame: ndc, clay: true },
   { id: 'front', azimuthDeg: 0, elevationDeg: orbitEl, fov, width: 768, height: 768, frame: { mode: 'fit', margin: 1.3 } },
   { id: 'right', azimuthDeg: 90, elevationDeg: orbitEl, fov, width: 768, height: 768, frame: { mode: 'fit', margin: 1.3 } },
@@ -236,7 +236,7 @@ try {
       const cs = { opacity, falloff, blur };
       const res = await page.evaluate((o) => window.renderModel(o), {
         moduleUrl: `/tools/.cache/img2threejs/${bundleName}?v=sweep`, exportName, bg: ref.bg, views: [fixedView],
-        exposure: Number(args.exposure || 1.25), buildOptions: { textureSize: 256 }, shadowOpacity: 0, contactShadow: cs,
+        exposure: Number(args.exposure || renderOpts.exposure || 1.25), buildOptions: { textureSize: 256 }, shadowOpacity: 0, contactShadow: cs,
       });
       rows.push({ ...cs, iou: +iouOf(refMask, await maskFromDataUrl(res.shots.fixed)).toFixed(4) });
     }
@@ -248,7 +248,7 @@ try {
   }
   result = await page.evaluate((o) => window.renderModel(o), {
     moduleUrl: `/tools/.cache/img2threejs/${bundleName}?v=${Date.now()}`, exportName, bg: ref.bg, views,
-    exposure: Number(args.exposure || 1.25), exportMeshes: true, buildOptions: { textureSize: 256 },
+    exposure: Number(args.exposure || renderOpts.exposure || 1.25), exportMeshes: true, buildOptions: { textureSize: 256 },
     shadowOpacity: Number(args.shadow ?? 0), contactShadow: args['contact-shadow'] !== undefined ? Number(args['contact-shadow']) : (renderOpts.contactShadow || 0),
   });
 } finally {

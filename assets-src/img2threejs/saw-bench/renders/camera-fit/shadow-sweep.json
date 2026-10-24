@@ -3,219 +3,165 @@
  "rows": [
   {
    "opacity": 0.17,
-   "falloff": 1.25,
+   "falloff": 1.4,
    "blur": 0.08,
-   "iou": 0.8878
+   "iou": 0.8957
   },
   {
-   "opacity": 0.2,
-   "falloff": 1.1,
+   "opacity": 0.22,
+   "falloff": 1,
    "blur": 0.08,
-   "iou": 0.886
+   "iou": 0.8952
   },
   {
    "opacity": 0.17,
-   "falloff": 1.25,
-   "blur": 0.065,
-   "iou": 0.8859
-  },
-  {
-   "opacity": 0.23,
-   "falloff": 0.95,
-   "blur": 0.08,
-   "iou": 0.8852
+   "falloff": 1.2,
+   "blur": 0.06,
+   "iou": 0.8946
   },
   {
    "opacity": 0.17,
-   "falloff": 1.1,
+   "falloff": 1.2,
    "blur": 0.08,
-   "iou": 0.884
+   "iou": 0.8922
   },
   {
    "opacity": 0.17,
-   "falloff": 1.25,
-   "blur": 0.05,
-   "iou": 0.8829
+   "falloff": 1.4,
+   "blur": 0.06,
+   "iou": 0.8902
   },
   {
-   "opacity": 0.2,
-   "falloff": 1.1,
-   "blur": 0.065,
-   "iou": 0.882
-  },
-  {
-   "opacity": 0.2,
-   "falloff": 1.25,
-   "blur": 0.08,
-   "iou": 0.8817
-  },
-  {
-   "opacity": 0.23,
-   "falloff": 0.95,
-   "blur": 0.065,
-   "iou": 0.8797
-  },
-  {
-   "opacity": 0.2,
-   "falloff": 1.1,
-   "blur": 0.05,
-   "iou": 0.8786
-  },
-  {
-   "opacity": 0.23,
-   "falloff": 1.1,
-   "blur": 0.08,
-   "iou": 0.8776
-  },
-  {
-   "opacity": 0.2,
-   "falloff": 1.25,
-   "blur": 0.065,
-   "iou": 0.8773
-  },
-  {
-   "opacity": 0.23,
-   "falloff": 0.95,
-   "blur": 0.05,
-   "iou": 0.8768
-  },
-  {
-   "opacity": 0.2,
-   "falloff": 0.95,
-   "blur": 0.08,
-   "iou": 0.8763
-  },
-  {
-   "opacity": 0.2,
-   "falloff": 1.25,
-   "blur": 0.05,
-   "iou": 0.8747
-  },
-  {
-   "opacity": 0.23,
-   "falloff": 1.1,
-   "blur": 0.065,
-   "iou": 0.8733
-  },
-  {
-   "opacity": 0.23,
-   "falloff": 1.25,
-   "blur": 0.08,
-   "iou": 0.872
-  },
-  {
-   "opacity": 0.23,
-   "falloff": 1.1,
-   "blur": 0.05,
-   "iou": 0.8717
-  },
-  {
-   "opacity": 0.23,
-   "falloff": 1.25,
-   "blur": 0.065,
-   "iou": 0.8688
-  },
-  {
-   "opacity": 0.23,
-   "falloff": 1.25,
-   "blur": 0.05,
-   "iou": 0.8685
+   "opacity": 0.22,
+   "falloff": 1,
+   "blur": 0.06,
+   "iou": 0.8875
   },
   {
    "opacity": 0.17,
-   "falloff": 1.1,
-   "blur": 0.065,
-   "iou": 0.8579
+   "falloff": 1.2,
+   "blur": 0.04,
+   "iou": 0.8871
+  },
+  {
+   "opacity": 0.22,
+   "falloff": 1.2,
+   "blur": 0.08,
+   "iou": 0.8854
   },
   {
    "opacity": 0.17,
-   "falloff": 1.1,
-   "blur": 0.05,
-   "iou": 0.8507
+   "falloff": 1.4,
+   "blur": 0.04,
+   "iou": 0.8828
   },
   {
-   "opacity": 0.2,
-   "falloff": 0.95,
-   "blur": 0.065,
-   "iou": 0.8496
+   "opacity": 0.22,
+   "falloff": 1,
+   "blur": 0.04,
+   "iou": 0.88
   },
   {
-   "opacity": 0.2,
-   "falloff": 0.95,
-   "blur": 0.05,
-   "iou": 0.8393
+   "opacity": 0.22,
+   "falloff": 1.2,
+   "blur": 0.06,
+   "iou": 0.8792
   },
   {
-   "opacity": 0.14,
-   "falloff": 1.25,
-   "blur": 0.05,
-   "iou": 0.8309
+   "opacity": 0.22,
+   "falloff": 1.4,
+   "blur": 0.08,
+   "iou": 0.8784
   },
   {
-   "opacity": 0.14,
-   "falloff": 1.25,
-   "blur": 0.065,
-   "iou": 0.8237
+   "opacity": 0.28,
+   "falloff": 1,
+   "blur": 0.08,
+   "iou": 0.8769
+  },
+  {
+   "opacity": 0.22,
+   "falloff": 1.2,
+   "blur": 0.04,
+   "iou": 0.8746
+  },
+  {
+   "opacity": 0.22,
+   "falloff": 1.4,
+   "blur": 0.06,
+   "iou": 0.8739
+  },
+  {
+   "opacity": 0.28,
+   "falloff": 1,
+   "blur": 0.06,
+   "iou": 0.8715
+  },
+  {
+   "opacity": 0.22,
+   "falloff": 1.4,
+   "blur": 0.04,
+   "iou": 0.871
+  },
+  {
+   "opacity": 0.28,
+   "falloff": 1,
+   "blur": 0.04,
+   "iou": 0.869
+  },
+  {
+   "opacity": 0.28,
+   "falloff": 1.2,
+   "blur": 0.08,
+   "iou": 0.8662
+  },
+  {
+   "opacity": 0.28,
+   "falloff": 1.2,
+   "blur": 0.04,
+   "iou": 0.8646
+  },
+  {
+   "opacity": 0.28,
+   "falloff": 1.2,
+   "blur": 0.06,
+   "iou": 0.8642
+  },
+  {
+   "opacity": 0.28,
+   "falloff": 1.4,
+   "blur": 0.04,
+   "iou": 0.862
+  },
+  {
+   "opacity": 0.28,
+   "falloff": 1.4,
+   "blur": 0.06,
+   "iou": 0.8595
+  },
+  {
+   "opacity": 0.28,
+   "falloff": 1.4,
+   "blur": 0.08,
+   "iou": 0.8584
   },
   {
    "opacity": 0.17,
-   "falloff": 0.95,
-   "blur": 0.05,
-   "iou": 0.8234
-  },
-  {
-   "opacity": 0.14,
-   "falloff": 1.1,
-   "blur": 0.05,
-   "iou": 0.819
+   "falloff": 1,
+   "blur": 0.06,
+   "iou": 0.8223
   },
   {
    "opacity": 0.17,
-   "falloff": 0.95,
-   "blur": 0.065,
-   "iou": 0.8179
-  },
-  {
-   "opacity": 0.14,
-   "falloff": 1.25,
-   "blur": 0.08,
-   "iou": 0.8127
-  },
-  {
-   "opacity": 0.14,
-   "falloff": 0.95,
-   "blur": 0.05,
-   "iou": 0.8122
-  },
-  {
-   "opacity": 0.14,
-   "falloff": 0.95,
-   "blur": 0.065,
-   "iou": 0.8114
-  },
-  {
-   "opacity": 0.14,
-   "falloff": 0.95,
-   "blur": 0.08,
-   "iou": 0.8114
-  },
-  {
-   "opacity": 0.14,
-   "falloff": 1.1,
-   "blur": 0.065,
-   "iou": 0.8114
-  },
-  {
-   "opacity": 0.14,
-   "falloff": 1.1,
-   "blur": 0.08,
-   "iou": 0.8114
+   "falloff": 1,
+   "blur": 0.04,
+   "iou": 0.8185
   },
   {
    "opacity": 0.17,
-   "falloff": 0.95,
+   "falloff": 1,
    "blur": 0.08,
-   "iou": 0.8114
+   "iou": 0.8019
   }
  ]
 }

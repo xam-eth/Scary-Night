@@ -1,15 +1,95 @@
 {
   "referenceId": "saw-bench-reference",
   "regions": [
-    {"componentId": "top-board-5", "regionId": "bench-wood", "sourceImage": "reference.png",
-     "bbox": {"x": 200, "y": 325, "width": 280, "height": 60}, "family": "wood", "subtype": "generic", "finish": "unfinished", "materialSpecId": "wood"},
-    {"componentId": "saw-blade", "regionId": "blade-steel", "sourceImage": "reference.png",
-     "bbox": {"x": 525, "y": 190, "width": 80, "height": 80}, "family": "metal", "subtype": "steel", "finish": "brushed", "materialSpecId": "steel"},
-    {"componentId": "hub", "regionId": "hub-iron", "sourceImage": "reference.png",
-     "bbox": {"x": 628, "y": 268, "width": 55, "height": 35}, "family": "metal", "subtype": "steel", "finish": "brushed", "materialSpecId": "iron"},
-    {"componentId": "log", "regionId": "log-side", "sourceImage": "reference.png",
-     "bbox": {"x": 850, "y": 225, "width": 120, "height": 45}, "family": "wood", "subtype": "generic", "finish": "unfinished", "materialSpecId": "bark"},
-    {"componentId": "log-end", "regionId": "log-end-grain", "sourceImage": "reference.png",
-     "bbox": {"x": 995, "y": 240, "width": 40, "height": 60}, "family": "wood", "subtype": "generic", "finish": "unfinished", "materialSpecId": "end-grain"}
+    {
+      "componentId": "top-board-5",
+      "regionId": "bench-wood",
+      "sourceImage": "reference.png",
+      "bbox": {
+        "x": 200,
+        "y": 325,
+        "width": 280,
+        "height": 60
+      },
+      "family": "wood",
+      "subtype": "generic",
+      "finish": "unfinished",
+      "materialSpecId": "wood-long"
+    },
+    {
+      "componentId": "stretcher-1",
+      "regionId": "stretcher-wood",
+      "sourceImage": "reference.png",
+      "bbox": {
+        "x": 300,
+        "y": 500,
+        "width": 200,
+        "height": 30
+      },
+      "family": "wood",
+      "subtype": "generic",
+      "finish": "unfinished",
+      "materialSpecId": "wood"
+    },
+    {
+      "componentId": "saw-blade",
+      "regionId": "blade-steel",
+      "sourceImage": "reference.png",
+      "bbox": {
+        "x": 525,
+        "y": 190,
+        "width": 80,
+        "height": 80
+      },
+      "family": "metal",
+      "subtype": "steel",
+      "finish": "brushed",
+      "materialSpecId": "steel"
+    },
+    {
+      "componentId": "hub",
+      "regionId": "hub-iron",
+      "sourceImage": "reference.png",
+      "bbox": {
+        "x": 628,
+        "y": 268,
+        "width": 55,
+        "height": 35
+      },
+      "family": "metal",
+      "subtype": "steel",
+      "finish": "brushed",
+      "materialSpecId": "iron"
+    },
+    {
+      "componentId": "log",
+      "regionId": "log-side",
+      "sourceImage": "reference.png",
+      "bbox": {
+        "x": 850,
+        "y": 225,
+        "width": 120,
+        "height": 45
+      },
+      "family": "wood",
+      "subtype": "generic",
+      "finish": "unfinished",
+      "materialSpecId": "bark"
+    },
+    {
+      "componentId": "log-end",
+      "regionId": "log-end-grain",
+      "sourceImage": "reference.png",
+      "bbox": {
+        "x": 995,
+        "y": 240,
+        "width": 40,
+        "height": 60
+      },
+      "family": "wood",
+      "subtype": "generic",
+      "finish": "unfinished",
+      "materialSpecId": "end-grain"
+    }
   ]
 }

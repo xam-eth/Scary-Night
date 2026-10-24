@@ -1041,16 +1041,16 @@
           "seamRefs": [],
           "detachableFragments": [],
           "breakImpulse": 0.0,
-          "debrisMaterial": "wood"
+          "debrisMaterial": "wood-long"
         }
       },
-      "material": "wood",
+      "material": "wood-long",
       "materialLayers": [
-        "wood"
+        "wood-long"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(173, 106, 53, 1.0)",
-        "secondaryAlbedo": "rgba(138, 80, 39, 1.0)",
+        "dominantAlbedo": "rgba(162, 111, 71, 1.0)",
+        "secondaryAlbedo": "rgba(132, 88, 58, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -1059,11 +1059,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(138, 80, 39, 1.0)"
+              "color": "rgba(132, 88, 58, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(173, 106, 53, 1.0)"
+              "color": "rgba(162, 111, 71, 1.0)"
             }
           ]
         },
@@ -1231,16 +1231,16 @@
           "seamRefs": [],
           "detachableFragments": [],
           "breakImpulse": 0.0,
-          "debrisMaterial": "wood"
+          "debrisMaterial": "wood-long"
         }
       },
-      "material": "wood",
+      "material": "wood-long",
       "materialLayers": [
-        "wood"
+        "wood-long"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(173, 106, 53, 1.0)",
-        "secondaryAlbedo": "rgba(138, 80, 39, 1.0)",
+        "dominantAlbedo": "rgba(162, 111, 71, 1.0)",
+        "secondaryAlbedo": "rgba(132, 88, 58, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -1249,11 +1249,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(138, 80, 39, 1.0)"
+              "color": "rgba(132, 88, 58, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(173, 106, 53, 1.0)"
+              "color": "rgba(162, 111, 71, 1.0)"
             }
           ]
         },
@@ -1421,16 +1421,16 @@
           "seamRefs": [],
           "detachableFragments": [],
           "breakImpulse": 0.0,
-          "debrisMaterial": "wood"
+          "debrisMaterial": "wood-long"
         }
       },
-      "material": "wood",
+      "material": "wood-long",
       "materialLayers": [
-        "wood"
+        "wood-long"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(173, 106, 53, 1.0)",
-        "secondaryAlbedo": "rgba(138, 80, 39, 1.0)",
+        "dominantAlbedo": "rgba(162, 111, 71, 1.0)",
+        "secondaryAlbedo": "rgba(132, 88, 58, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -1439,11 +1439,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(138, 80, 39, 1.0)"
+              "color": "rgba(132, 88, 58, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(173, 106, 53, 1.0)"
+              "color": "rgba(162, 111, 71, 1.0)"
             }
           ]
         },
@@ -1611,16 +1611,16 @@
           "seamRefs": [],
           "detachableFragments": [],
           "breakImpulse": 0.0,
-          "debrisMaterial": "wood"
+          "debrisMaterial": "wood-long"
         }
       },
-      "material": "wood",
+      "material": "wood-long",
       "materialLayers": [
-        "wood"
+        "wood-long"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(173, 106, 53, 1.0)",
-        "secondaryAlbedo": "rgba(138, 80, 39, 1.0)",
+        "dominantAlbedo": "rgba(162, 111, 71, 1.0)",
+        "secondaryAlbedo": "rgba(132, 88, 58, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -1629,11 +1629,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(138, 80, 39, 1.0)"
+              "color": "rgba(132, 88, 58, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(173, 106, 53, 1.0)"
+              "color": "rgba(162, 111, 71, 1.0)"
             }
           ]
         },
@@ -1801,16 +1801,16 @@
           "seamRefs": [],
           "detachableFragments": [],
           "breakImpulse": 0.0,
-          "debrisMaterial": "wood"
+          "debrisMaterial": "wood-long"
         }
       },
-      "material": "wood",
+      "material": "wood-long",
       "materialLayers": [
-        "wood"
+        "wood-long"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(173, 106, 53, 1.0)",
-        "secondaryAlbedo": "rgba(138, 80, 39, 1.0)",
+        "dominantAlbedo": "rgba(162, 111, 71, 1.0)",
+        "secondaryAlbedo": "rgba(132, 88, 58, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -1819,11 +1819,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(138, 80, 39, 1.0)"
+              "color": "rgba(132, 88, 58, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(173, 106, 53, 1.0)"
+              "color": "rgba(162, 111, 71, 1.0)"
             }
           ]
         },
@@ -1865,12 +1865,12 @@
       "uvContract": {
         "status": "unwrapped",
         "strategy": "generated procedural coordinates",
-        "materialId": "wood"
+        "materialId": "wood-long"
       },
       "materialRegions": [
         {
           "regionId": "bench-wood",
-          "materialId": "wood",
+          "materialId": "wood-long",
           "profileId": "wood.unfinished",
           "crop": {
             "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/00-bench-wood.png",
@@ -2003,16 +2003,16 @@
           "seamRefs": [],
           "detachableFragments": [],
           "breakImpulse": 0.0,
-          "debrisMaterial": "wood"
+          "debrisMaterial": "wood-long"
         }
       },
-      "material": "wood",
+      "material": "wood-long",
       "materialLayers": [
-        "wood"
+        "wood-long"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(173, 106, 53, 1.0)",
-        "secondaryAlbedo": "rgba(138, 80, 39, 1.0)",
+        "dominantAlbedo": "rgba(162, 111, 71, 1.0)",
+        "secondaryAlbedo": "rgba(132, 88, 58, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -2021,11 +2021,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(138, 80, 39, 1.0)"
+              "color": "rgba(132, 88, 58, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(173, 106, 53, 1.0)"
+              "color": "rgba(162, 111, 71, 1.0)"
             }
           ]
         },
@@ -2180,16 +2180,16 @@
           "seamRefs": [],
           "detachableFragments": [],
           "breakImpulse": 0.0,
-          "debrisMaterial": "wood"
+          "debrisMaterial": "wood-long"
         }
       },
-      "material": "wood",
+      "material": "wood-long",
       "materialLayers": [
-        "wood"
+        "wood-long"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(173, 106, 53, 1.0)",
-        "secondaryAlbedo": "rgba(138, 80, 39, 1.0)",
+        "dominantAlbedo": "rgba(162, 111, 71, 1.0)",
+        "secondaryAlbedo": "rgba(132, 88, 58, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -2198,11 +2198,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(138, 80, 39, 1.0)"
+              "color": "rgba(132, 88, 58, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(173, 106, 53, 1.0)"
+              "color": "rgba(162, 111, 71, 1.0)"
             }
           ]
         },
@@ -2357,16 +2357,16 @@
           "seamRefs": [],
           "detachableFragments": [],
           "breakImpulse": 0.0,
-          "debrisMaterial": "wood"
+          "debrisMaterial": "wood-long"
         }
       },
-      "material": "wood",
+      "material": "wood-long",
       "materialLayers": [
-        "wood"
+        "wood-long"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(173, 106, 53, 1.0)",
-        "secondaryAlbedo": "rgba(138, 80, 39, 1.0)",
+        "dominantAlbedo": "rgba(162, 111, 71, 1.0)",
+        "secondaryAlbedo": "rgba(132, 88, 58, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -2375,11 +2375,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(138, 80, 39, 1.0)"
+              "color": "rgba(132, 88, 58, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(173, 106, 53, 1.0)"
+              "color": "rgba(162, 111, 71, 1.0)"
             }
           ]
         },
@@ -2534,16 +2534,16 @@
           "seamRefs": [],
           "detachableFragments": [],
           "breakImpulse": 0.0,
-          "debrisMaterial": "wood"
+          "debrisMaterial": "wood-long"
         }
       },
-      "material": "wood",
+      "material": "wood-long",
       "materialLayers": [
-        "wood"
+        "wood-long"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(173, 106, 53, 1.0)",
-        "secondaryAlbedo": "rgba(138, 80, 39, 1.0)",
+        "dominantAlbedo": "rgba(162, 111, 71, 1.0)",
+        "secondaryAlbedo": "rgba(132, 88, 58, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -2552,11 +2552,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(138, 80, 39, 1.0)"
+              "color": "rgba(132, 88, 58, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(173, 106, 53, 1.0)"
+              "color": "rgba(162, 111, 71, 1.0)"
             }
           ]
         },
@@ -2711,16 +2711,16 @@
           "seamRefs": [],
           "detachableFragments": [],
           "breakImpulse": 0.0,
-          "debrisMaterial": "wood"
+          "debrisMaterial": "wood-long"
         }
       },
-      "material": "wood",
+      "material": "wood-long",
       "materialLayers": [
-        "wood"
+        "wood-long"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(173, 106, 53, 1.0)",
-        "secondaryAlbedo": "rgba(138, 80, 39, 1.0)",
+        "dominantAlbedo": "rgba(162, 111, 71, 1.0)",
+        "secondaryAlbedo": "rgba(132, 88, 58, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -2729,11 +2729,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(138, 80, 39, 1.0)"
+              "color": "rgba(132, 88, 58, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(173, 106, 53, 1.0)"
+              "color": "rgba(162, 111, 71, 1.0)"
             }
           ]
         },
@@ -2888,16 +2888,16 @@
           "seamRefs": [],
           "detachableFragments": [],
           "breakImpulse": 0.0,
-          "debrisMaterial": "wood"
+          "debrisMaterial": "wood-long"
         }
       },
-      "material": "wood",
+      "material": "wood-long",
       "materialLayers": [
-        "wood"
+        "wood-long"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(173, 106, 53, 1.0)",
-        "secondaryAlbedo": "rgba(138, 80, 39, 1.0)",
+        "dominantAlbedo": "rgba(162, 111, 71, 1.0)",
+        "secondaryAlbedo": "rgba(132, 88, 58, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -2906,11 +2906,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(138, 80, 39, 1.0)"
+              "color": "rgba(132, 88, 58, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(173, 106, 53, 1.0)"
+              "color": "rgba(162, 111, 71, 1.0)"
             }
           ]
         },
@@ -3054,8 +3054,8 @@
         "wood"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(173, 106, 53, 1.0)",
-        "secondaryAlbedo": "rgba(138, 80, 39, 1.0)",
+        "dominantAlbedo": "rgba(162, 111, 71, 1.0)",
+        "secondaryAlbedo": "rgba(132, 88, 58, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -3064,11 +3064,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(138, 80, 39, 1.0)"
+              "color": "rgba(132, 88, 58, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(173, 106, 53, 1.0)"
+              "color": "rgba(162, 111, 71, 1.0)"
             }
           ]
         },
@@ -3093,7 +3093,32 @@
       "evidenceRefs": [
         "full-object"
       ],
-      "details": []
+      "details": [],
+      "uvContract": {
+        "status": "unwrapped",
+        "strategy": "generated procedural coordinates",
+        "materialId": "wood"
+      },
+      "materialRegions": [
+        {
+          "regionId": "stretcher-wood",
+          "materialId": "wood",
+          "profileId": "wood.unfinished",
+          "crop": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/01-stretcher-wood.png",
+            "bbox": {
+              "x": 300,
+              "y": 500,
+              "width": 200,
+              "height": 30
+            },
+            "sourceWidth": 1408,
+            "sourceHeight": 768,
+            "loaderWarnings": [],
+            "coverage": 0.0055
+          }
+        }
+      ]
     },
     {
       "id": "stretcher-2",
@@ -3199,8 +3224,8 @@
         "wood"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(173, 106, 53, 1.0)",
-        "secondaryAlbedo": "rgba(138, 80, 39, 1.0)",
+        "dominantAlbedo": "rgba(162, 111, 71, 1.0)",
+        "secondaryAlbedo": "rgba(132, 88, 58, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -3209,11 +3234,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(138, 80, 39, 1.0)"
+              "color": "rgba(132, 88, 58, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(173, 106, 53, 1.0)"
+              "color": "rgba(162, 111, 71, 1.0)"
             }
           ]
         },
@@ -3344,8 +3369,8 @@
         "wood"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(173, 106, 53, 1.0)",
-        "secondaryAlbedo": "rgba(138, 80, 39, 1.0)",
+        "dominantAlbedo": "rgba(162, 111, 71, 1.0)",
+        "secondaryAlbedo": "rgba(132, 88, 58, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -3354,11 +3379,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(138, 80, 39, 1.0)"
+              "color": "rgba(132, 88, 58, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(173, 106, 53, 1.0)"
+              "color": "rgba(162, 111, 71, 1.0)"
             }
           ]
         },
@@ -3489,8 +3514,8 @@
         "wood"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(173, 106, 53, 1.0)",
-        "secondaryAlbedo": "rgba(138, 80, 39, 1.0)",
+        "dominantAlbedo": "rgba(162, 111, 71, 1.0)",
+        "secondaryAlbedo": "rgba(132, 88, 58, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -3499,11 +3524,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(138, 80, 39, 1.0)"
+              "color": "rgba(132, 88, 58, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(173, 106, 53, 1.0)"
+              "color": "rgba(162, 111, 71, 1.0)"
             }
           ]
         },
@@ -3634,8 +3659,8 @@
         "wood"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(173, 106, 53, 1.0)",
-        "secondaryAlbedo": "rgba(138, 80, 39, 1.0)",
+        "dominantAlbedo": "rgba(162, 111, 71, 1.0)",
+        "secondaryAlbedo": "rgba(132, 88, 58, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -3644,11 +3669,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(138, 80, 39, 1.0)"
+              "color": "rgba(132, 88, 58, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(173, 106, 53, 1.0)"
+              "color": "rgba(162, 111, 71, 1.0)"
             }
           ]
         },
@@ -3779,8 +3804,8 @@
         "wood"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(173, 106, 53, 1.0)",
-        "secondaryAlbedo": "rgba(138, 80, 39, 1.0)",
+        "dominantAlbedo": "rgba(162, 111, 71, 1.0)",
+        "secondaryAlbedo": "rgba(132, 88, 58, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -3789,11 +3814,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(138, 80, 39, 1.0)"
+              "color": "rgba(132, 88, 58, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(173, 106, 53, 1.0)"
+              "color": "rgba(162, 111, 71, 1.0)"
             }
           ]
         },
@@ -3924,8 +3949,8 @@
         "wood"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(173, 106, 53, 1.0)",
-        "secondaryAlbedo": "rgba(138, 80, 39, 1.0)",
+        "dominantAlbedo": "rgba(162, 111, 71, 1.0)",
+        "secondaryAlbedo": "rgba(132, 88, 58, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -3934,11 +3959,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(138, 80, 39, 1.0)"
+              "color": "rgba(132, 88, 58, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(173, 106, 53, 1.0)"
+              "color": "rgba(162, 111, 71, 1.0)"
             }
           ]
         },
@@ -4069,8 +4094,8 @@
         "wood"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(173, 106, 53, 1.0)",
-        "secondaryAlbedo": "rgba(138, 80, 39, 1.0)",
+        "dominantAlbedo": "rgba(162, 111, 71, 1.0)",
+        "secondaryAlbedo": "rgba(132, 88, 58, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -4079,11 +4104,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(138, 80, 39, 1.0)"
+              "color": "rgba(132, 88, 58, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(173, 106, 53, 1.0)"
+              "color": "rgba(162, 111, 71, 1.0)"
             }
           ]
         },
@@ -4459,8 +4484,8 @@
         "steel"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(182, 186, 192, 1.0)",
-        "secondaryAlbedo": "rgba(154, 159, 166, 1.0)",
+        "dominantAlbedo": "rgba(124, 125, 131, 1.0)",
+        "secondaryAlbedo": "rgba(102, 102, 108, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.9,
         "colorGradient": {
@@ -4469,11 +4494,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(154, 159, 166, 1.0)"
+              "color": "rgba(102, 102, 108, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(182, 186, 192, 1.0)"
+              "color": "rgba(124, 125, 131, 1.0)"
             }
           ]
         },
@@ -4497,8 +4522,8 @@
         }
       ],
       "surfaceDetail": {
-        "macroRoughness": 0.38,
-        "microRoughness": 0.076,
+        "macroRoughness": 0.4,
+        "microRoughness": 0.08,
         "bumpAmplitude": 0.006,
         "normalPattern": "mottled",
         "displacementPattern": "",
@@ -4523,7 +4548,7 @@
           "materialId": "steel",
           "profileId": "metal.steel-brushed",
           "crop": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/01-blade-steel.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/02-blade-steel.png",
             "bbox": {
               "x": 525,
               "y": 190,
@@ -4658,8 +4683,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(62, 64, 70, 1.0)",
-        "secondaryAlbedo": "rgba(45, 46, 51, 1.0)",
+        "dominantAlbedo": "rgba(77, 71, 73, 1.0)",
+        "secondaryAlbedo": "rgba(58, 53, 55, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -4668,11 +4693,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(45, 46, 51, 1.0)"
+              "color": "rgba(58, 53, 55, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(62, 64, 70, 1.0)"
+              "color": "rgba(77, 71, 73, 1.0)"
             }
           ]
         },
@@ -4685,8 +4710,8 @@
       "seams": [],
       "localFeatures": [],
       "surfaceDetail": {
-        "macroRoughness": 0.5,
-        "microRoughness": 0.1,
+        "macroRoughness": 0.45,
+        "microRoughness": 0.09,
         "bumpAmplitude": 0.006,
         "normalPattern": "mottled",
         "displacementPattern": "",
@@ -4709,7 +4734,7 @@
           "materialId": "iron",
           "profileId": "metal.steel-brushed",
           "crop": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/02-hub-iron.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/03-hub-iron.png",
             "bbox": {
               "x": 628,
               "y": 268,
@@ -4844,8 +4869,8 @@
         "iron"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(62, 64, 70, 1.0)",
-        "secondaryAlbedo": "rgba(45, 46, 51, 1.0)",
+        "dominantAlbedo": "rgba(77, 71, 73, 1.0)",
+        "secondaryAlbedo": "rgba(58, 53, 55, 1.0)",
         "materialClass": "metal",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -4854,11 +4879,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(45, 46, 51, 1.0)"
+              "color": "rgba(58, 53, 55, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(62, 64, 70, 1.0)"
+              "color": "rgba(77, 71, 73, 1.0)"
             }
           ]
         },
@@ -4882,8 +4907,8 @@
         }
       ],
       "surfaceDetail": {
-        "macroRoughness": 0.5,
-        "microRoughness": 0.1,
+        "macroRoughness": 0.45,
+        "microRoughness": 0.09,
         "bumpAmplitude": 0.006,
         "normalPattern": "mottled",
         "displacementPattern": "",
@@ -5082,17 +5107,17 @@
         "parentId": "root",
         "parentSocket": "root:top",
         "localStart": [
-          -0.12,
-          0.19,
-          1.2
+          -0.105,
+          0.175,
+          1.4
         ],
         "localEnd": [
-          -0.12,
-          0.19,
-          1.7
+          -0.3397,
+          0.175,
+          1.8415
         ],
-        "baseRadius": 0.1,
-        "endRadius": 0.1,
+        "baseRadius": 0.085,
+        "endRadius": 0.085,
         "contactType": "rests-on",
         "embedDepth": 0.008,
         "gapTolerance": 0.004,
@@ -5109,9 +5134,9 @@
       },
       "transform": {
         "position": [
-          -0.12,
-          0.19,
-          1.2
+          -0.105,
+          0.175,
+          1.4
         ],
         "rotation": [
           -0.0,
@@ -5129,9 +5154,9 @@
             0
           ],
           "axis": [
-            1,
+            0.8829,
             0,
-            0
+            0.4695
           ],
           "confidence": 0.75
         },
@@ -5176,8 +5201,8 @@
         "bark"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(155, 92, 44, 1.0)",
-        "secondaryAlbedo": "rgba(125, 71, 34, 1.0)",
+        "dominantAlbedo": "rgba(140, 101, 72, 1.0)",
+        "secondaryAlbedo": "rgba(110, 76, 51, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -5186,11 +5211,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(125, 71, 34, 1.0)"
+              "color": "rgba(110, 76, 51, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(155, 92, 44, 1.0)"
+              "color": "rgba(140, 101, 72, 1.0)"
             }
           ]
         },
@@ -5240,7 +5265,7 @@
           "materialId": "bark",
           "profileId": "wood.unfinished",
           "crop": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/03-log-side.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/04-log-side.png",
             "bbox": {
               "x": 850,
               "y": 225,
@@ -5281,17 +5306,17 @@
         "parentId": "log",
         "parentSocket": "log:end",
         "localStart": [
+          -0.2347,
           0.0,
-          0.0,
-          0.5
+          0.4415
         ],
         "localEnd": [
+          -0.2376,
           0.0,
-          0.0,
-          0.506
+          0.4468
         ],
-        "baseRadius": 0.094,
-        "endRadius": 0.094,
+        "baseRadius": 0.079,
+        "endRadius": 0.079,
         "contactType": "flush",
         "embedDepth": 0.002,
         "gapTolerance": 0.004,
@@ -5308,9 +5333,9 @@
       },
       "transform": {
         "position": [
+          -0.2347,
           0.0,
-          0.0,
-          0.5
+          0.4415
         ],
         "rotation": [
           -0.0,
@@ -5375,8 +5400,8 @@
         "end-grain"
       ],
       "colorMaterialRecipe": {
-        "dominantAlbedo": "rgba(239, 196, 154, 1.0)",
-        "secondaryAlbedo": "rgba(219, 169, 122, 1.0)",
+        "dominantAlbedo": "rgba(226, 190, 152, 1.0)",
+        "secondaryAlbedo": "rgba(214, 176, 138, 1.0)",
         "materialClass": "wood",
         "materialClassConfidence": 0.85,
         "colorGradient": {
@@ -5385,11 +5410,11 @@
           "stops": [
             {
               "position": 0.0,
-              "color": "rgba(219, 169, 122, 1.0)"
+              "color": "rgba(214, 176, 138, 1.0)"
             },
             {
               "position": 1.0,
-              "color": "rgba(239, 196, 154, 1.0)"
+              "color": "rgba(226, 190, 152, 1.0)"
             }
           ]
         },
@@ -5439,7 +5464,7 @@
           "materialId": "end-grain",
           "profileId": "wood.unfinished",
           "crop": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/04-log-end-grain.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/05-log-end-grain.png",
             "bbox": {
               "x": 995,
               "y": 240,
@@ -5461,24 +5486,24 @@
       "name": "Bench wood",
       "type": "standard",
       "shaderModel": "MeshStandardMaterial / PBR approximation (stylized, low-amplitude variation)",
-      "baseColor": "#ad6a35",
-      "color": "#ad6a35",
+      "baseColor": "#a26f47",
+      "color": "#a26f47",
       "albedo": {
-        "dominant": "#ad6a35",
+        "dominant": "#a26f47",
         "secondary": [
-          "#8a5027",
-          "#c88a52"
+          "#84583a",
+          "#bb8c63"
         ],
         "samplingNotes": "Sampled from the de-shaded mid tones of the reference region; highlights and core shadows of the illustration are lighting, not albedo."
       },
       "colorVariation": {
         "palette": [
-          "#ad6a35",
-          "#8a5027",
-          "#c88a52"
+          "#a26f47",
+          "#84583a",
+          "#bb8c63"
         ],
         "pattern": "mottled",
-        "amplitude": 0.2,
+        "amplitude": 0.16,
         "heightCorrelation": 0.3
       },
       "textureResolution": 256,
@@ -5567,9 +5592,9 @@
             "full-object"
           ],
           "confidence": 0.7,
-          "albedoShift": "#7a441f",
+          "albedoShift": "#7a4f30",
           "pattern": "streaked along the board",
-          "amplitude": 0.15
+          "amplitude": 0.12
         },
         {
           "id": "bench-edge-wear",
@@ -5579,7 +5604,7 @@
             "full-object"
           ],
           "confidence": 0.6,
-          "albedoShift": "#d29a62",
+          "albedoShift": "#c99a70",
           "roughnessDelta": -0.06,
           "edgeWear": 0.25
         }
@@ -5588,7 +5613,314 @@
         "Stylized game prop: keep albedo flat-ish and readable at ~100 px; the procedural maps add only subtle breakup.",
         "Albedo, roughness, height/normal and AO are generated independently; albedo is never reused as another channel."
       ],
-      "notes": "Warm orange-brown boards, lighter than the mine cart's wood.",
+      "notes": "Muted warm brown boards (stretchers, braces), grain along u (box faces).",
+      "evidenceRefs": [
+        "full-object"
+      ],
+      "referenceMaterialId": "wood.unfinished",
+      "materialFamily": "wood",
+      "materialSubtype": "generic",
+      "materialFinish": "unfinished",
+      "materialReference": {
+        "registry": "/home/user/Scary-Night/.agents/skills/img2threejs/docs/materials/material-reference.json",
+        "profileId": "wood.unfinished",
+        "method": "family-subtype-finish",
+        "confidence": 0.76,
+        "sourceRefs": [
+          "three.mesh-standard",
+          "three.texture",
+          "adobe.pbr-guide-1",
+          "mit.material-recognition"
+        ],
+        "requiredMaps": [
+          "map",
+          "roughnessMap",
+          "normalMap"
+        ],
+        "optionalMaps": [
+          "aoMap",
+          "anisotropyMap"
+        ],
+        "validationViews": [
+          "albedo-unlit",
+          "neutral-studio",
+          "grazing"
+        ]
+      },
+      "anisotropy": {
+        "base": 0.12,
+        "variation": 0.0
+      },
+      "referencePbr": {
+        "version": "1.0",
+        "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/01-stretcher-wood.png",
+        "extractor": "stage1_intake/extract_pbr_evidence.py",
+        "method": "single-image pixel evidence with de-lighting estimate; not photogrammetry",
+        "usable": false,
+        "verdict": "pass",
+        "confidence": 0.76,
+        "estimatedFidelity": 0.76,
+        "targetThreshold": 0.7,
+        "hardLimit": "A single image cannot uniquely recover true albedo/roughness/normal/AO; maps are reference-derived estimates.",
+        "maps": {
+          "albedo": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood_albedo.png",
+            "url": "wood_albedo.png",
+            "channel": "albedo",
+            "source": "reference-pixel-extraction"
+          },
+          "roughness": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood_roughness.png",
+            "url": "wood_roughness.png",
+            "channel": "roughness",
+            "source": "reference-pixel-extraction"
+          },
+          "height": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood_height.png",
+            "url": "wood_height.png",
+            "channel": "height",
+            "source": "reference-pixel-extraction"
+          },
+          "normal": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood_normal.png",
+            "url": "wood_normal.png",
+            "channel": "normal",
+            "source": "reference-pixel-extraction"
+          },
+          "ao": {
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-stretcher-wood/wood_ao.png",
+            "url": "wood_ao.png",
+            "channel": "ao",
+            "source": "reference-pixel-extraction"
+          }
+        },
+        "diagnostics": {
+          "sourceWidth": 200,
+          "sourceHeight": 30,
+          "mapSize": 512,
+          "cropBBoxPixels": {
+            "x": 0,
+            "y": 0,
+            "width": 200,
+            "height": 30
+          },
+          "mask": {
+            "backgroundColor": "#955F34",
+            "backgroundNoise": 37.269,
+            "transparentPixelFraction": 0.0,
+            "foregroundCoverage": 0.9998
+          },
+          "mapStats": {
+            "valueRange": 0.2027,
+            "heightP90Gradient": 0.03006,
+            "roughnessBase": 0.706,
+            "roughnessVariation": 0.05,
+            "normalStrength": 0.191,
+            "blurRadius": 10
+          },
+          "palette": [
+            "#955F34",
+            "#9F6A3A",
+            "#7D4D2E",
+            "#8B5631",
+            "#B38454"
+          ]
+        },
+        "warnings": [
+          "image is not clearly isolated from background; using most pixels as material evidence",
+          "object/background separation is weak",
+          "single-image inverse rendering cannot prove true physical PBR; confidence is capped",
+          "low value range weakens height/roughness inference"
+        ],
+        "shippingNote": "Extracted from an AI concept image: kept as palette/roughness evidence only, never loaded as textures (DUSKHOLD rule: AI images are concepts only). The factory falls back to its procedural canvas maps."
+      },
+      "textureAnalysis": {
+        "finishClass": "painted-metal",
+        "recipe": {
+          "metalness": 0.0,
+          "roughness": 0.5,
+          "clearcoat": 1.0,
+          "clearcoatRoughness": 0.05,
+          "transmission": 0.0,
+          "ior": 1.5,
+          "envMapIntensity": 1.0,
+          "anisotropy": 0.0,
+          "procedural": "flat-clearcoat"
+        },
+        "palette": [
+          "#82502F",
+          "#8C5732",
+          "#996438",
+          "#9D673A",
+          "#9E744D"
+        ],
+        "paletteHueRisk": [],
+        "gradientAxis": "horizontal",
+        "stats": {
+          "meanLum": 108.7,
+          "meanSaturation": 0.627,
+          "gradientStrength": 0.13,
+          "mottle": 0.009,
+          "streakRatio": 1.44,
+          "hueSpread": 0.001,
+          "specularFraction": 0.0
+        }
+      },
+      "materialEvidence": {
+        "componentId": "stretcher-1",
+        "regionId": "stretcher-wood",
+        "crop": {
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/01-stretcher-wood.png",
+          "bbox": {
+            "x": 300,
+            "y": 500,
+            "width": 200,
+            "height": 30
+          },
+          "sourceWidth": 1408,
+          "sourceHeight": 768,
+          "loaderWarnings": [],
+          "coverage": 0.0055
+        },
+        "observations": [
+          "chromatic base-colour response",
+          "single-image PBR inference requires controlled render validation"
+        ],
+        "hypothesis": {
+          "componentId": "stretcher-1",
+          "regionId": "stretcher-wood",
+          "materialId": null,
+          "family": "wood",
+          "subtype": "generic",
+          "finish": "unfinished",
+          "aliases": [],
+          "confidence": 0.76,
+          "source": "vision"
+        },
+        "alternatives": []
+      }
+    },
+    {
+      "id": "wood-long",
+      "name": "Bench wood (long grain on v)",
+      "type": "standard",
+      "shaderModel": "MeshStandardMaterial / PBR approximation (stylized, low-amplitude variation)",
+      "baseColor": "#a26f47",
+      "color": "#a26f47",
+      "albedo": {
+        "dominant": "#a26f47",
+        "secondary": [
+          "#84583a",
+          "#bb8c63"
+        ],
+        "samplingNotes": "Sampled from the de-shaded mid tones of the reference region; highlights and core shadows of the illustration are lighting, not albedo."
+      },
+      "colorVariation": {
+        "palette": [
+          "#a26f47",
+          "#84583a",
+          "#bb8c63"
+        ],
+        "pattern": "mottled",
+        "amplitude": 0.16,
+        "heightCorrelation": 0.3
+      },
+      "textureResolution": 256,
+      "textureProjection": {
+        "mode": "uv",
+        "repeat": [
+          2.0,
+          2.0
+        ],
+        "anisotropy": 4,
+        "texelDensityIntent": "Stable object-scale detail sized for a ~100 px on-screen game prop."
+      },
+      "surfaceFrequencyBands": [
+        {
+          "id": "macro",
+          "frequency": 2.0,
+          "amplitude": 0.25,
+          "role": "broad tone breakup across a plank"
+        },
+        {
+          "id": "meso",
+          "frequency": 6.0,
+          "amplitude": 0.45,
+          "stretch": [
+            4.0,
+            0.35
+          ],
+          "pattern": "grain",
+          "role": "long grain streaks along the board"
+        },
+        {
+          "id": "micro",
+          "frequency": 28.0,
+          "amplitude": 0.08,
+          "role": "highlight breakup under grazing light"
+        }
+      ],
+      "roughness": {
+        "base": 0.88,
+        "variation": 0.12,
+        "map": "independent-procedural-field",
+        "localResponse": "slightly rougher in cavities, smoother on worn edges"
+      },
+      "metalness": {
+        "base": 0.0,
+        "variation": 0.0
+      },
+      "normal": {
+        "pattern": "derived-from-independent-height-field",
+        "strength": 0.35,
+        "scale": 18.0,
+        "space": "tangent"
+      },
+      "bump": {
+        "pattern": "none",
+        "amplitude": 0.0,
+        "scale": 1.0
+      },
+      "displacement": {
+        "pattern": "none",
+        "amplitude": 0.0,
+        "scale": 1.0,
+        "silhouetteAffects": false
+      },
+      "ambientOcclusion": {
+        "cavityStrength": 0.25,
+        "contactShadowBias": 0.3,
+        "notes": "Darken plank seams, bracket edges and the contact with the parts below."
+      },
+      "wear": {
+        "edgeWear": 0.2,
+        "scratches": [],
+        "chips": []
+      },
+      "dirt": {
+        "amount": 0.1,
+        "cavityBias": 0.6,
+        "color": "#3a2c1e"
+      },
+      "localOverrides": [
+        {
+          "id": "top-grain",
+          "kind": "groove",
+          "region": "top boards and legs, along their length",
+          "evidenceRefs": [
+            "full-object"
+          ],
+          "confidence": 0.7,
+          "albedoShift": "#7a4f30",
+          "pattern": "streaked along the board",
+          "amplitude": 0.12
+        }
+      ],
+      "shaderNotes": [
+        "Stylized game prop: keep albedo flat-ish and readable at ~100 px; the procedural maps add only subtle breakup.",
+        "Albedo, roughness, height/normal and AO are generated independently; albedo is never reused as another channel."
+      ],
+      "notes": "The same wood for the extruded top boards and the legs, whose UVs run v along the grain (extrude side walls, post faces).",
       "evidenceRefs": [
         "full-object"
       ],
@@ -5639,32 +5971,32 @@
         "hardLimit": "A single image cannot uniquely recover true albedo/roughness/normal/AO; maps are reference-derived estimates.",
         "maps": {
           "albedo": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood_albedo.png",
-            "url": "wood_albedo.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood-long_albedo.png",
+            "url": "wood-long_albedo.png",
             "channel": "albedo",
             "source": "reference-pixel-extraction"
           },
           "roughness": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood_roughness.png",
-            "url": "wood_roughness.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood-long_roughness.png",
+            "url": "wood-long_roughness.png",
             "channel": "roughness",
             "source": "reference-pixel-extraction"
           },
           "height": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood_height.png",
-            "url": "wood_height.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood-long_height.png",
+            "url": "wood-long_height.png",
             "channel": "height",
             "source": "reference-pixel-extraction"
           },
           "normal": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood_normal.png",
-            "url": "wood_normal.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood-long_normal.png",
+            "url": "wood-long_normal.png",
             "channel": "normal",
             "source": "reference-pixel-extraction"
           },
           "ao": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood_ao.png",
-            "url": "wood_ao.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-00-bench-wood/wood-long_ao.png",
+            "url": "wood-long_ao.png",
             "channel": "ao",
             "source": "reference-pixel-extraction"
           }
@@ -5780,24 +6112,24 @@
       "name": "Log wood",
       "type": "standard",
       "shaderModel": "MeshStandardMaterial / PBR approximation (stylized, low-amplitude variation)",
-      "baseColor": "#9b5c2c",
-      "color": "#9b5c2c",
+      "baseColor": "#8c6548",
+      "color": "#8c6548",
       "albedo": {
-        "dominant": "#9b5c2c",
+        "dominant": "#8c6548",
         "secondary": [
-          "#7d4722",
-          "#b4733c"
+          "#6e4c33",
+          "#a27858"
         ],
         "samplingNotes": "Sampled from the de-shaded mid tones of the reference region; highlights and core shadows of the illustration are lighting, not albedo."
       },
       "colorVariation": {
         "palette": [
-          "#9b5c2c",
-          "#7d4722",
-          "#b4733c"
+          "#8c6548",
+          "#6e4c33",
+          "#a27858"
         ],
         "pattern": "mottled",
-        "amplitude": 0.22,
+        "amplitude": 0.18,
         "heightCorrelation": 0.3
       },
       "textureResolution": 256,
@@ -5822,8 +6154,8 @@
           "frequency": 6.0,
           "amplitude": 0.45,
           "stretch": [
-            0.35,
-            4.0
+            4.0,
+            0.35
           ],
           "pattern": "grain",
           "role": "long grain streaks along the board"
@@ -5886,15 +6218,15 @@
             "full-object"
           ],
           "confidence": 0.6,
-          "albedoShift": "#6f3d1b",
-          "pattern": "long streaks"
+          "albedoShift": "#6f4a2e",
+          "pattern": "long streaks along the log"
         }
       ],
       "shaderNotes": [
         "Stylized game prop: keep albedo flat-ish and readable at ~100 px; the procedural maps add only subtle breakup.",
         "Albedo, roughness, height/normal and AO are generated independently; albedo is never reused as another channel."
       ],
-      "notes": "The log's side: the same wood family, a little darker and rougher.",
+      "notes": "The log's side: a lighter, greyer brown than the bench, streaks along its length.",
       "evidenceRefs": [
         "full-object"
       ],
@@ -5934,7 +6266,7 @@
       },
       "referencePbr": {
         "version": "1.0",
-        "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/03-log-side.png",
+        "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/04-log-side.png",
         "extractor": "stage1_intake/extract_pbr_evidence.py",
         "method": "single-image pixel evidence with de-lighting estimate; not photogrammetry",
         "usable": false,
@@ -5945,31 +6277,31 @@
         "hardLimit": "A single image cannot uniquely recover true albedo/roughness/normal/AO; maps are reference-derived estimates.",
         "maps": {
           "albedo": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-03-log-side/bark_albedo.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-04-log-side/bark_albedo.png",
             "url": "bark_albedo.png",
             "channel": "albedo",
             "source": "reference-pixel-extraction"
           },
           "roughness": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-03-log-side/bark_roughness.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-04-log-side/bark_roughness.png",
             "url": "bark_roughness.png",
             "channel": "roughness",
             "source": "reference-pixel-extraction"
           },
           "height": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-03-log-side/bark_height.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-04-log-side/bark_height.png",
             "url": "bark_height.png",
             "channel": "height",
             "source": "reference-pixel-extraction"
           },
           "normal": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-03-log-side/bark_normal.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-04-log-side/bark_normal.png",
             "url": "bark_normal.png",
             "channel": "normal",
             "source": "reference-pixel-extraction"
           },
           "ao": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-03-log-side/bark_ao.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-04-log-side/bark_ao.png",
             "url": "bark_ao.png",
             "channel": "ao",
             "source": "reference-pixel-extraction"
@@ -6050,7 +6382,7 @@
         "componentId": "log",
         "regionId": "log-side",
         "crop": {
-          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/03-log-side.png",
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/04-log-side.png",
           "bbox": {
             "x": 850,
             "y": 225,
@@ -6086,24 +6418,24 @@
       "name": "Log end grain",
       "type": "standard",
       "shaderModel": "MeshStandardMaterial / PBR approximation (stylized, low-amplitude variation)",
-      "baseColor": "#efc49a",
-      "color": "#efc49a",
+      "baseColor": "#e2be98",
+      "color": "#e2be98",
       "albedo": {
-        "dominant": "#efc49a",
+        "dominant": "#e2be98",
         "secondary": [
-          "#dba97a",
-          "#f8dcbc"
+          "#d6b08a",
+          "#e7c8a7"
         ],
         "samplingNotes": "Sampled from the de-shaded mid tones of the reference region; highlights and core shadows of the illustration are lighting, not albedo."
       },
       "colorVariation": {
         "palette": [
-          "#efc49a",
-          "#dba97a",
-          "#f8dcbc"
+          "#e2be98",
+          "#d6b08a",
+          "#e7c8a7"
         ],
         "pattern": "mottled",
-        "amplitude": 0.18,
+        "amplitude": 0.14,
         "heightCorrelation": 0.3
       },
       "textureResolution": 256,
@@ -6235,7 +6567,7 @@
       },
       "referencePbr": {
         "version": "1.0",
-        "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/04-log-end-grain.png",
+        "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/05-log-end-grain.png",
         "extractor": "stage1_intake/extract_pbr_evidence.py",
         "method": "single-image pixel evidence with de-lighting estimate; not photogrammetry",
         "usable": false,
@@ -6246,31 +6578,31 @@
         "hardLimit": "A single image cannot uniquely recover true albedo/roughness/normal/AO; maps are reference-derived estimates.",
         "maps": {
           "albedo": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-04-log-end-grain/end-grain_albedo.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-05-log-end-grain/end-grain_albedo.png",
             "url": "end-grain_albedo.png",
             "channel": "albedo",
             "source": "reference-pixel-extraction"
           },
           "roughness": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-04-log-end-grain/end-grain_roughness.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-05-log-end-grain/end-grain_roughness.png",
             "url": "end-grain_roughness.png",
             "channel": "roughness",
             "source": "reference-pixel-extraction"
           },
           "height": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-04-log-end-grain/end-grain_height.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-05-log-end-grain/end-grain_height.png",
             "url": "end-grain_height.png",
             "channel": "height",
             "source": "reference-pixel-extraction"
           },
           "normal": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-04-log-end-grain/end-grain_normal.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-05-log-end-grain/end-grain_normal.png",
             "url": "end-grain_normal.png",
             "channel": "normal",
             "source": "reference-pixel-extraction"
           },
           "ao": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-04-log-end-grain/end-grain_ao.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-05-log-end-grain/end-grain_ao.png",
             "url": "end-grain_ao.png",
             "channel": "ao",
             "source": "reference-pixel-extraction"
@@ -6352,7 +6684,7 @@
         "componentId": "log-end",
         "regionId": "log-end-grain",
         "crop": {
-          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/04-log-end-grain.png",
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/05-log-end-grain.png",
           "bbox": {
             "x": 995,
             "y": 240,
@@ -6387,24 +6719,24 @@
       "name": "Saw steel",
       "type": "standard",
       "shaderModel": "MeshStandardMaterial / PBR approximation (stylized, low-amplitude variation)",
-      "baseColor": "#b6bac0",
-      "color": "#b6bac0",
+      "baseColor": "#7c7d83",
+      "color": "#7c7d83",
       "albedo": {
-        "dominant": "#b6bac0",
+        "dominant": "#7c7d83",
         "secondary": [
-          "#9a9fa6",
-          "#d3d7db"
+          "#66666c",
+          "#96979b"
         ],
         "samplingNotes": "Sampled from the de-shaded mid tones of the reference region; highlights and core shadows of the illustration are lighting, not albedo."
       },
       "colorVariation": {
         "palette": [
-          "#b6bac0",
-          "#9a9fa6",
-          "#d3d7db"
+          "#7c7d83",
+          "#66666c",
+          "#96979b"
         ],
         "pattern": "mottled",
-        "amplitude": 0.08,
+        "amplitude": 0.1,
         "heightCorrelation": 0.3
       },
       "textureResolution": 256,
@@ -6443,13 +6775,13 @@
         }
       ],
       "roughness": {
-        "base": 0.38,
+        "base": 0.4,
         "variation": 0.12,
         "map": "independent-procedural-field",
         "localResponse": "slightly rougher in cavities, smoother on worn edges"
       },
       "metalness": {
-        "base": 0.3,
+        "base": 0.25,
         "variation": 0.05
       },
       "normal": {
@@ -6493,7 +6825,7 @@
             "full-object"
           ],
           "confidence": 0.7,
-          "roughness": 0.25,
+          "roughness": 0.28,
           "note": "brushed sheen catching the key light"
         }
       ],
@@ -6501,7 +6833,7 @@
         "Stylized game prop: keep albedo flat-ish and readable at ~100 px; the procedural maps add only subtle breakup.",
         "Albedo, roughness, height/normal and AO are generated independently; albedo is never reused as another channel."
       ],
-      "notes": "Light silver-grey brushed blade. Real-time override of the registry prior: metalness 0.3, roughness 0.38 (the game renderer has no environment map).",
+      "notes": "Mid steel-grey brushed blade. Real-time override of the registry prior: metalness 0.25, roughness 0.4 (the game renderer has no environment map).",
       "evidenceRefs": [
         "full-object"
       ],
@@ -6544,7 +6876,7 @@
       },
       "referencePbr": {
         "version": "1.0",
-        "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/01-blade-steel.png",
+        "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/02-blade-steel.png",
         "extractor": "stage1_intake/extract_pbr_evidence.py",
         "method": "single-image pixel evidence with de-lighting estimate; not photogrammetry",
         "usable": false,
@@ -6555,31 +6887,31 @@
         "hardLimit": "A single image cannot uniquely recover true albedo/roughness/normal/AO; maps are reference-derived estimates.",
         "maps": {
           "albedo": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-blade-steel/steel_albedo.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-02-blade-steel/steel_albedo.png",
             "url": "steel_albedo.png",
             "channel": "albedo",
             "source": "reference-pixel-extraction"
           },
           "roughness": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-blade-steel/steel_roughness.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-02-blade-steel/steel_roughness.png",
             "url": "steel_roughness.png",
             "channel": "roughness",
             "source": "reference-pixel-extraction"
           },
           "height": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-blade-steel/steel_height.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-02-blade-steel/steel_height.png",
             "url": "steel_height.png",
             "channel": "height",
             "source": "reference-pixel-extraction"
           },
           "normal": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-blade-steel/steel_normal.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-02-blade-steel/steel_normal.png",
             "url": "steel_normal.png",
             "channel": "normal",
             "source": "reference-pixel-extraction"
           },
           "ao": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-01-blade-steel/steel_ao.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-02-blade-steel/steel_ao.png",
             "url": "steel_ao.png",
             "channel": "ao",
             "source": "reference-pixel-extraction"
@@ -6662,7 +6994,7 @@
         "componentId": "saw-blade",
         "regionId": "blade-steel",
         "crop": {
-          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/01-blade-steel.png",
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/02-blade-steel.png",
           "bbox": {
             "x": 525,
             "y": 190,
@@ -6698,21 +7030,21 @@
       "name": "Arbor iron",
       "type": "standard",
       "shaderModel": "MeshStandardMaterial / PBR approximation (stylized, low-amplitude variation)",
-      "baseColor": "#3e4046",
-      "color": "#3e4046",
+      "baseColor": "#4d4749",
+      "color": "#4d4749",
       "albedo": {
-        "dominant": "#3e4046",
+        "dominant": "#4d4749",
         "secondary": [
-          "#2d2e33",
-          "#585a61"
+          "#3a3537",
+          "#625b5c"
         ],
         "samplingNotes": "Sampled from the de-shaded mid tones of the reference region; highlights and core shadows of the illustration are lighting, not albedo."
       },
       "colorVariation": {
         "palette": [
-          "#3e4046",
-          "#2d2e33",
-          "#585a61"
+          "#4d4749",
+          "#3a3537",
+          "#625b5c"
         ],
         "pattern": "mottled",
         "amplitude": 0.08,
@@ -6749,13 +7081,13 @@
         }
       ],
       "roughness": {
-        "base": 0.5,
+        "base": 0.45,
         "variation": 0.12,
         "map": "independent-procedural-field",
         "localResponse": "slightly rougher in cavities, smoother on worn edges"
       },
       "metalness": {
-        "base": 0.45,
+        "base": 0.25,
         "variation": 0.05
       },
       "normal": {
@@ -6806,7 +7138,7 @@
         "Stylized game prop: keep albedo flat-ish and readable at ~100 px; the procedural maps add only subtle breakup.",
         "Albedo, roughness, height/normal and AO are generated independently; albedo is never reused as another channel."
       ],
-      "notes": "Dark iron hub and nut. Real-time override of the registry prior: metalness 0.45, roughness 0.5 (the game renderer has no environment map).",
+      "notes": "Dark warm-grey iron hub and nut. Real-time override of the registry prior: metalness 0.25, roughness 0.45 (the game renderer has no environment map).",
       "evidenceRefs": [
         "full-object"
       ],
@@ -6849,7 +7181,7 @@
       },
       "referencePbr": {
         "version": "1.0",
-        "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/02-hub-iron.png",
+        "sourceImage": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/03-hub-iron.png",
         "extractor": "stage1_intake/extract_pbr_evidence.py",
         "method": "single-image pixel evidence with de-lighting estimate; not photogrammetry",
         "usable": false,
@@ -6860,31 +7192,31 @@
         "hardLimit": "A single image cannot uniquely recover true albedo/roughness/normal/AO; maps are reference-derived estimates.",
         "maps": {
           "albedo": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-02-hub-iron/iron_albedo.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-03-hub-iron/iron_albedo.png",
             "url": "iron_albedo.png",
             "channel": "albedo",
             "source": "reference-pixel-extraction"
           },
           "roughness": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-02-hub-iron/iron_roughness.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-03-hub-iron/iron_roughness.png",
             "url": "iron_roughness.png",
             "channel": "roughness",
             "source": "reference-pixel-extraction"
           },
           "height": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-02-hub-iron/iron_height.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-03-hub-iron/iron_height.png",
             "url": "iron_height.png",
             "channel": "height",
             "source": "reference-pixel-extraction"
           },
           "normal": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-02-hub-iron/iron_normal.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-03-hub-iron/iron_normal.png",
             "url": "iron_normal.png",
             "channel": "normal",
             "source": "reference-pixel-extraction"
           },
           "ao": {
-            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-02-hub-iron/iron_ao.png",
+            "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/pbr-03-hub-iron/iron_ao.png",
             "url": "iron_ao.png",
             "channel": "ao",
             "source": "reference-pixel-extraction"
@@ -6963,7 +7295,7 @@
         "componentId": "hub",
         "regionId": "hub-iron",
         "crop": {
-          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/02-hub-iron.png",
+          "path": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-evidence/03-hub-iron.png",
           "bbox": {
             "x": 628,
             "y": 268,
@@ -8043,6 +8375,13 @@
       {
         "componentId": "top-board-5",
         "regionId": "bench-wood",
+        "specMaterialId": "wood-long",
+        "profileId": "wood.unfinished",
+        "status": "proceed"
+      },
+      {
+        "componentId": "stretcher-1",
+        "regionId": "stretcher-wood",
         "specMaterialId": "wood",
         "profileId": "wood.unfinished",
         "status": "proceed"
@@ -8089,7 +8428,7 @@
       "analysisArtifact": "/home/user/Scary-Night/assets-src/img2threejs/saw-bench/material-analysis.json",
       "status": "proceed",
       "unresolvedNotObservedMaterials": [],
-      "regions": 5
+      "regions": 6
     }
   ],
   "tier1Results": [
@@ -8934,6 +9273,126 @@
       "maskWarnings": [],
       "renderHash": "bf60d8971ea04957",
       "passId": "form-refinement"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "silhouetteIoU": 0.8946,
+        "aspectRatioDelta": 0.0057,
+        "scaleDelta": 0.0057,
+        "bilateralSymmetryError": 0.1484,
+        "colorDelta": {
+          "checked": 25,
+          "maxDeltaE": 17.58,
+          "perComponent": [
+            {
+              "componentId": null,
+              "deltaE": 3.42
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.42
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.42
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.42
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.42
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.42
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.42
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.42
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.42
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.42
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.42
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.42
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.42
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.42
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.42
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.42
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.42
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.42
+            },
+            {
+              "componentId": null,
+              "deltaE": 3.42
+            },
+            {
+              "componentId": null,
+              "deltaE": 11.54
+            },
+            {
+              "componentId": null,
+              "deltaE": 17.09
+            },
+            {
+              "componentId": null,
+              "deltaE": 17.09
+            },
+            {
+              "componentId": null,
+              "deltaE": 13.93
+            },
+            {
+              "componentId": null,
+              "deltaE": 7.43
+            },
+            {
+              "componentId": null,
+              "deltaE": 17.58
+            }
+          ],
+          "gated": true
+        }
+      },
+      "failures": [],
+      "maskWarnings": [],
+      "renderHash": "f5bcf341c897ee5c",
+      "passId": "material-pass"
     }
   ]
 }

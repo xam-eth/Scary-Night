@@ -37,6 +37,10 @@ function lights(scene, radius) {
   const modes = {
     neutral: () => { hemi.intensity = 1.35; key.color.set(0xfff1e0); key.intensity = 2.3; key.position.set(-3, 5, 4).multiplyScalar(radius); fill.intensity = 0.55; fill.position.set(4, 2, 2).multiplyScalar(radius); },
     grazing: () => { hemi.intensity = 0.35; key.color.set(0xfff4e8); key.intensity = 3.6; key.position.set(6, 0.9, 2.2).multiplyScalar(radius); fill.intensity = 0.12; fill.position.set(-4, 2, 2).multiplyScalar(radius); },
+    // studio: a concept-art product light (soft overhead key, low ambient so the space under a table top
+    // falls into deep occlusion, a frontal fill from the camera's right), for assets whose reference was
+    // lit that way (render-options.json fixedLight: 'studio')
+    studio: () => { hemi.intensity = 0.75; key.color.set(0xfff4e6); key.intensity = 3.1; key.position.set(-1.5, 7, 3.5).multiplyScalar(radius); fill.intensity = 0.9; fill.position.set(3.5, 2.5, 4.5).multiplyScalar(radius); },
     reference: () => { hemi.intensity = 1.1; key.color.set(0xffe2b8); key.intensity = 2.6; key.position.set(-4.5, 6.5, 5).multiplyScalar(radius); fill.intensity = 0.45; fill.position.set(5, 2.5, 1).multiplyScalar(radius); },
   };
   return (mode) => (modes[mode] || modes.neutral)();

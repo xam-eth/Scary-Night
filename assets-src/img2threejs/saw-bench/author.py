@@ -37,35 +37,51 @@ BRUSHED = [
     {"id": "micro", "frequency": 40.0, "amplitude": 0.06, "role": "highlight breakup under grazing light"},
 ]
 
+# grain bands per UV orientation: box faces run u along a board's length; extruded boards, posts
+# (legs) and the log's cylinder run v along it, so their streak stretch is swapped
+GRAIN_V = [dict(band, stretch=[band["stretch"][1], band["stretch"][0]]) if "stretch" in band else band for band in GRAIN]
+
+# colours from the material evidence (material-analysis.json palettes) and region means of the
+# reference: the concept's wood is a muted grey-brown (#95623a front faces, #b8896a lit top, #8a6a50
+# legs), the blade a mid steel grey (#717177-#97979a), the hub a dark warm grey (#454044-#5f5959),
+# the cut face a pale peach (#e5c4a1)
 MATERIALS = {
-    "wood": Material("wood", "Bench wood", "#ad6a35", ["#8a5027", "#c88a52"], material_class="wood",
-                     roughness=0.86, normal=0.35, amplitude=0.2, edge_wear=0.2, dirt=0.1, bands=GRAIN,
+    "wood": Material("wood", "Bench wood", "#a26f47", ["#84583a", "#bb8c63"], material_class="wood",
+                     roughness=0.86, normal=0.35, amplitude=0.16, edge_wear=0.2, dirt=0.1, bands=GRAIN,
                      overrides=[dict(id="bench-grain", kind="groove", region="all bench boards, along their length",
-                                     evidenceRefs=["full-object"], confidence=0.7, albedoShift="#7a441f",
-                                     pattern="streaked along the board", amplitude=0.15),
+                                     evidenceRefs=["full-object"], confidence=0.7, albedoShift="#7a4f30",
+                                     pattern="streaked along the board", amplitude=0.12),
                                 dict(id="bench-edge-wear", kind="chip", region="top and leg edges", evidenceRefs=["full-object"],
-                                     confidence=0.6, albedoShift="#d29a62", roughnessDelta=-0.06, edgeWear=0.25)],
-                     notes="Warm orange-brown boards, lighter than the mine cart's wood."),
-    "bark": Material("bark", "Log wood", "#9b5c2c", ["#7d4722", "#b4733c"], material_class="wood",
-                     roughness=0.9, normal=0.45, amplitude=0.22, bands=GRAIN,
+                                     confidence=0.6, albedoShift="#c99a70", roughnessDelta=-0.06, edgeWear=0.25)],
+                     notes="Muted warm brown boards (stretchers, braces), grain along u (box faces)."),
+    "wood-long": Material("wood-long", "Bench wood (long grain on v)", "#a26f47", ["#84583a", "#bb8c63"],
+                          material_class="wood", roughness=0.86, normal=0.35, amplitude=0.16, edge_wear=0.2, dirt=0.1,
+                          bands=GRAIN_V,
+                          overrides=[dict(id="top-grain", kind="groove", region="top boards and legs, along their length",
+                                          evidenceRefs=["full-object"], confidence=0.7, albedoShift="#7a4f30",
+                                          pattern="streaked along the board", amplitude=0.12)],
+                          notes="The same wood for the extruded top boards and the legs, whose UVs run v along the "
+                                "grain (extrude side walls, post faces)."),
+    "bark": Material("bark", "Log wood", "#8c6548", ["#6e4c33", "#a27858"], material_class="wood",
+                     roughness=0.9, normal=0.45, amplitude=0.18, bands=GRAIN_V,
                      overrides=[dict(id="log-bark-streaks", kind="scratch", region="log side", evidenceRefs=["full-object"],
-                                     confidence=0.6, albedoShift="#6f3d1b", pattern="long streaks")],
-                     notes="The log's side: the same wood family, a little darker and rougher."),
-    "end-grain": Material("end-grain", "Log end grain", "#efc49a", ["#dba97a", "#f8dcbc"], material_class="wood",
-                          roughness=0.92, normal=0.25, amplitude=0.18, bands=RINGS,
+                                     confidence=0.6, albedoShift="#6f4a2e", pattern="long streaks along the log")],
+                     notes="The log's side: a lighter, greyer brown than the bench, streaks along its length."),
+    "end-grain": Material("end-grain", "Log end grain", "#e2be98", ["#d6b08a", "#e7c8a7"], material_class="wood",
+                          roughness=0.92, normal=0.25, amplitude=0.14, bands=RINGS,
                           overrides=[dict(id="log-end-rings", kind="decal", region="the log's cut face",
                                           evidenceRefs=["full-object"], confidence=0.7, pattern="growth rings")],
                           notes="Pale peach cut face with faint rings."),
-    "steel": Material("steel", "Saw steel", "#b6bac0", ["#9a9fa6", "#d3d7db"], material_class="metal",
-                      roughness=0.38, metalness=0.3, normal=0.12, amplitude=0.08, bands=BRUSHED,
+    "steel": Material("steel", "Saw steel", "#7c7d83", ["#66666c", "#96979b"], material_class="metal",
+                      roughness=0.4, metalness=0.25, normal=0.12, amplitude=0.1, bands=BRUSHED,
                       overrides=[dict(id="blade-sheen", kind="gloss", region="blade faces", evidenceRefs=["full-object"],
-                                      confidence=0.7, roughness=0.25, note="brushed sheen catching the key light")],
-                      notes="Light silver-grey brushed blade."),
-    "iron": Material("iron", "Arbor iron", "#3e4046", ["#2d2e33", "#585a61"], material_class="metal",
-                     roughness=0.5, metalness=0.45, normal=0.12, amplitude=0.08,
+                                      confidence=0.7, roughness=0.28, note="brushed sheen catching the key light")],
+                      notes="Mid steel-grey brushed blade."),
+    "iron": Material("iron", "Arbor iron", "#4d4749", ["#3a3537", "#625b5c"], material_class="metal",
+                     roughness=0.45, metalness=0.25, normal=0.12, amplitude=0.08,
                      overrides=[dict(id="arbor-edge", kind="bevel", region="hub rim", evidenceRefs=["full-object"],
                                      confidence=0.6, roughnessDelta=-0.15)],
-                     notes="Dark iron hub and nut."),
+                     notes="Dark warm-grey iron hub and nut."),
     "slot": Material("slot", "Blade slot shadow", "#2c2622", ["#1e1a17", "#3a332d"], material_class="wood",
                      roughness=0.95, normal=0.1, amplitude=0.05,
                      overrides=[dict(id="slot-ao", kind="stain", region="the slot in the top", evidenceRefs=["full-object"],
@@ -73,8 +89,8 @@ MATERIALS = {
                      notes="The dark gap the blade runs through."),
 }
 FLAT_SHADED: set[str] = set()
-METAL_OVERRIDES = {"steel": {"metalness": 0.3, "roughness": 0.38}, "iron": {"metalness": 0.45, "roughness": 0.5}}
-ROUGHNESS_OVERRIDES = {"wood": 0.88, "bark": 0.92, "end-grain": 0.93, "slot": 0.96}
+METAL_OVERRIDES = {"steel": {"metalness": 0.25, "roughness": 0.4}, "iron": {"metalness": 0.25, "roughness": 0.45}}
+ROUGHNESS_OVERRIDES = {"wood": 0.88, "wood-long": 0.88, "bark": 0.92, "end-grain": 0.93, "slot": 0.96}
 
 # ---- geometry -----------------------------------------------------------------------------------
 TOP_Y = 0.57          # table top surface
@@ -87,10 +103,14 @@ LEG = 0.13
 BLADE_C = (0.0, TOP_Y + 0.01, 0.0)
 R_TIP, R_ROOT = 0.37, 0.31
 TEETH = 20
-LOG_Y = TOP_Y + 0.1
-LOG_R = 0.1
-LOG_Z = 0.12          # the log lies just in front of the blade plane (it hides the blade's right teeth in the reference)
-LOG_X = (0.2, 0.7)
+LOG_R = 0.085
+LOG_Y = TOP_Y + LOG_R
+# the log lies on the top in front of the blade plane, turned ~20 deg toward the viewer so its pale
+# cut face looks at the camera as in the reference (its far end clears the blade: z - r > 0.011)
+LOG_YAW = math.radians(28.0)
+LOG_A = (0.4, 0.105)                      # (x, z) of the end near the blade
+LOG_LEN = 0.5
+LOG_B = (LOG_A[0] + LOG_LEN * math.cos(LOG_YAW), LOG_A[1] + LOG_LEN * math.sin(LOG_YAW))
 
 
 BOARD_CHAMFER = 0.014
@@ -127,7 +147,7 @@ def build_components() -> SpecBuilder:
         x0 = -TOP_LEN / 2 + 0.01 * (i % 2)
         length = TOP_LEN - 0.02 * (i % 2)
         return b.add(cid, name, parent=parent, primitive="extrude", world=(x0, TOP_Y - TOP_T / 2 + dy, zs[i]),
-                     rot=(0.0, math.pi / 2, 0.0), scale=None, material="wood", topology="assembled-solid",
+                     rot=(0.0, math.pi / 2, 0.0), scale=None, material="wood-long", topology="assembled-solid",
                      descriptor={"profile2D": {"points": board_profile(PLANK_W, TOP_T, BOARD_CHAMFER), "depth": length}},
                      **kw)
     board("root", "Top board 3", None, 2, level="macro", role="body", anim="root", importance=0.8, confidence=0.75,
@@ -148,7 +168,7 @@ def build_components() -> SpecBuilder:
         for z in (LEG_Z, -LEG_Z):
             leg_top = TOP_Y - TOP_T + 0.01
             b.box(f"leg-{n}", f"Leg {n}", parent="root", center=(x, (TOP_Y - TOP_T) / 2, z),
-                  size=(LEG, leg_top, LEG), level="macro", role="post", material="wood", importance=0.7,
+                  size=(LEG, leg_top, LEG), level="macro", role="post", material="wood-long", importance=0.7,
                   edge=("chamfer", 0.012, 1),
                   attachment={"parentId": "root", "parentSocket": "root:underside",
                               "localStart": b.local("root", (x, 0.0, z)), "localEnd": b.local("root", (x, leg_top, z)),
@@ -198,12 +218,13 @@ def build_components() -> SpecBuilder:
           rationale="Blade slot: the dark gap in the top the blade runs through, a thin flat box on the surface.",
           features=[feature("blade-slot", "seam", "dark slit along the blade line in the top")])
     # the log being cut, lying along X on the +X side of the blade
-    b.rod("log", "Log", parent="root", start=(LOG_X[0], LOG_Y, LOG_Z), end=(LOG_X[1], LOG_Y, LOG_Z), radius=LOG_R,
+    b.rod("log", "Log", parent="root", start=(LOG_A[0], LOG_Y, LOG_A[1]), end=(LOG_B[0], LOG_Y, LOG_B[1]), radius=LOG_R,
           level="macro", role="log", material="bark", contact="rests-on", embed=0.008, socket="root:top",
-          importance=0.8, anim="feed", pivot_axis=(1, 0, 0),
+          importance=0.8, anim="feed", pivot_axis=(round(math.cos(LOG_YAW), 4), 0, round(math.sin(LOG_YAW), 4)),
           rationale="Log: a round length of trunk, a cylinder lying on the top.",
           features=[feature("log-streaks", "scratch", "long grain streaks along the log", effect="material")])
-    b.rod("log-end", "Log cut face", parent="log", start=(LOG_X[1], LOG_Y, LOG_Z), end=(LOG_X[1] + 0.006, LOG_Y, LOG_Z), radius=LOG_R - 0.006,
+    b.rod("log-end", "Log cut face", parent="log", start=(LOG_B[0], LOG_Y, LOG_B[1]),
+          end=(LOG_B[0] + 0.006 * math.cos(LOG_YAW), LOG_Y, LOG_B[1] + 0.006 * math.sin(LOG_YAW)), radius=LOG_R - 0.006,
           level="micro", role="cap", material="end-grain", contact="flush", embed=0.002, socket="log:end",
           importance=0.4, rationale="Log cut face: the pale sawn end, a thin disc.",
           features=[feature("log-end-rings", "decal", "pale cut face with growth rings", effect="material")])
