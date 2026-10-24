@@ -1,0 +1,17 @@
+[
+  {
+    "id": "reference-material-system",
+    "score": 0.77,
+    "notes": "Materials unchanged from the lighting pass and distinct in the posed renders."
+  },
+  {
+    "id": "blade-read",
+    "score": 0.77,
+    "notes": "Pose check: turning the saw-blade pivot 0.55 rad about its local Z (the arbor axis, world Z) visibly moves the 20 teeth around the hub while the hub and nut turn with it and the top stays put."
+  },
+  {
+    "id": "log-read",
+    "score": 0.8,
+    "notes": "Pose check: translating the log pivot 0.1 along its own axis (22 deg yaw) slides the log and its cut face together along the top; nothing else moves."
+  }
+]

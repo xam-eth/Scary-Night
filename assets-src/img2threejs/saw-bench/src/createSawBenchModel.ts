@@ -612,7 +612,7 @@ function makeAttachmentEndpoint(attachment: unknown): AttachmentEndpoint | null 
 }
 
 // Generated from ObjectSculptSpec target: Saw bench
-// Sculpt build pass: lighting-pass
+// Sculpt build pass: interaction-pass
 // This factory is intentionally pass-gated. Finish browser screenshot review before unlocking deeper passes.
 export function createSawBenchModel(options: ProceduralModelOptions = {}): THREE.Group {
   const root = new THREE.Group();

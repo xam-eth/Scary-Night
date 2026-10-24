@@ -1,0 +1,19 @@
+{
+  "pass": "interaction-pass",
+  "fidelity": 0.75,
+  "aiVisionScore": 0.79,
+  "action": "continue",
+  "layerScores": {"silhouetteProportion": 0.85, "componentStructure": 0.85, "formDetail": 0.7, "materialSurface": 0.72, "lightingCamera": 0.8},
+  "featureReviews": [
+    {"id": "reference-material-system", "score": 0.77, "notes": "Materials unchanged from the lighting pass and distinct in the posed renders."},
+    {"id": "blade-read", "score": 0.77, "notes": "Pose check: turning the saw-blade pivot 0.55 rad about its local Z (the arbor axis, world Z) visibly moves the 20 teeth around the hub while the hub and nut turn with it and the top stays put."},
+    {"id": "log-read", "score": 0.8, "notes": "Pose check: translating the log pivot 0.1 along its own axis (22 deg yaw) slides the log and its cut face together along the top; nothing else moves."}
+  ],
+  "summary": "Interaction pass: the middle top board is the root (whole-prop placement), the blade is a spin pivot at the arbor (axis Z) carrying hub and nut, the log is a feed pivot along its axis carrying its cut face; every part keeps its collider proxy and destruction metadata. Pose check (pose-check.jpg): blade +0.55 rad and log +0.1 along its axis move only those parts. Tier-1 IoU 0.887, colour max dE 16.2.",
+  "matched": ["root on the middle top board", "blade spins about the arbor with hub and nut", "log feeds along its own axis with its cut face", "collider proxies on every part"],
+  "mismatches": ["none new; visual state as the lighting pass"],
+  "specFixes": ["optimization-pass: merge static parts per material in the game build, keep blade and log live"],
+  "codeFixes": ["none"],
+  "notes": "Viewed renders/interaction-pass/cmp.jpg, turntable.jpg and pose-check.jpg (rest vs posed, fixed and front views).",
+  "cameraView": "fixed: az 31, el 6, fov 24 (fitted), studio light, exposure 1.45"
+}

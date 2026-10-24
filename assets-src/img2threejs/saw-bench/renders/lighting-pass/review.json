@@ -1,0 +1,20 @@
+{
+  "pass": "lighting-pass",
+  "fidelity": 0.74,
+  "aiVisionScore": 0.79,
+  "action": "continue",
+  "layerScores": {"silhouetteProportion": 0.85, "componentStructure": 0.83, "formDetail": 0.7, "materialSurface": 0.72, "lightingCamera": 0.8},
+  "featureReviews": [
+    {"id": "reference-material-system", "score": 0.77, "notes": "Under the gate's studio light, the reference-matched light and a grazing key (renders/lighting-pass/lighting-checks.jpg) the materials stay distinct: muted brown wood with grain, mid steel-grey blade with a soft brushed sheen, dark iron hub, pale ringed cut face. The reference-matched light warms the wood; the grazing key shows grain and the blade's teeth edges rather than a plastic sheen."},
+    {"id": "blade-read", "score": 0.76, "notes": "Teeth, hub and nut hold under every light; no rim highlight (not modelled)."},
+    {"id": "table-structure", "score": 0.83, "notes": "The studio light's low ambience leaves the space under the top in shadow as in the reference; the contact shadow sits under and slightly behind the bench."},
+    {"id": "log-read", "score": 0.8, "notes": "The cut face stays lit pale peach under the gate light and the grazing key."}
+  ],
+  "summary": "Lighting pass: the spec now records the reference's lighting as the gate view reproduces it (studio key and fill, low hemisphere, ACES at exposure 1.45, contact shadow offset behind the bench, no environment map as in the game). Tier-1 IoU 0.887, colour max dE 16.2; materials hold under three light setups.",
+  "matched": ["lighting record matches the gate renders", "contact shadow under and behind the bench", "materials hold under studio, reference-matched and grazing light"],
+  "mismatches": ["blade rim highlight not modelled"],
+  "specFixes": ["interaction-pass: blade spin pivot at the arbor, log feed along its axis, root placement"],
+  "codeFixes": ["none"],
+  "notes": "Viewed renders/lighting-pass/cmp.jpg, turntable.jpg and lighting-checks.jpg.",
+  "cameraView": "fixed: az 31, el 6, fov 24 (fitted), studio light, exposure 1.45"
+}

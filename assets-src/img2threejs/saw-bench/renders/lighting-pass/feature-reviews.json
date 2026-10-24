@@ -1,0 +1,22 @@
+[
+  {
+    "id": "reference-material-system",
+    "score": 0.77,
+    "notes": "Under the gate's studio light, the reference-matched light and a grazing key (renders/lighting-pass/lighting-checks.jpg) the materials stay distinct: muted brown wood with grain, mid steel-grey blade with a soft brushed sheen, dark iron hub, pale ringed cut face. The reference-matched light warms the wood; the grazing key shows grain and the blade's teeth edges rather than a plastic sheen."
+  },
+  {
+    "id": "blade-read",
+    "score": 0.76,
+    "notes": "Teeth, hub and nut hold under every light; no rim highlight (not modelled)."
+  },
+  {
+    "id": "table-structure",
+    "score": 0.83,
+    "notes": "The studio light's low ambience leaves the space under the top in shadow as in the reference; the contact shadow sits under and slightly behind the bench."
+  },
+  {
+    "id": "log-read",
+    "score": 0.8,
+    "notes": "The cut face stays lit pale peach under the gate light and the grazing key."
+  }
+]

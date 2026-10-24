@@ -722,30 +722,21 @@
       "interaction-pass",
       "optimization-pass"
     ],
-    "currentPass": "lighting-pass",
+    "currentPass": "optimization-pass",
     "completedPasses": [
       "blockout",
       "structural-pass",
       "form-refinement",
       "material-pass",
-      "surface-pass"
+      "surface-pass",
+      "lighting-pass",
+      "interaction-pass"
     ],
-    "lastCompletedPass": "surface-pass",
+    "lastCompletedPass": "interaction-pass",
     "blockedReason": "",
     "nextRequiredEvidence": [
-      "lightingFromPhoto identifies key light direction/color/intensity, fill light, rim or environment light, and ambient color.",
-      "Exposure, tone mapping, background color/gradient, shadow softness, and contact shadow behavior are specified.",
-      "Lighting does not hide geometry/material gaps and screenshots can be compared fairly to the reference.",
-      "Neutral, grazing, and reference-matched lighting checks distinguish material errors from lighting errors.",
-      "AI vision comparison score meets selfCorrectLoop.visualAcceptance.threshold.",
-      "lightingFromPhoto with key/fill/rim or environment light",
-      "exposure, tone mapping, background, shadow softness, and contact shadow behavior",
-      "browser render screenshot from your agent's browser/screenshot tool",
-      "side-by-side reference/render comparison sheet for AI vision review",
-      "banded interior difference vs the reference baseline (forge/stage4_review/interior_difference.py --from/--to per region)",
-      "AI vision score at or above the visual acceptance threshold",
-      "all critical semantic feature scores from the shared image pair at or above their thresholds",
-      "self-correction review appended with action=continue before the next pass"
+      "Triangle count, draw calls, instancing, LOD strategy, and FPS target are documented or verified.",
+      "Repeated detail is instanced or simplified where possible without breaking silhouette/material believability."
     ]
   },
   "lookDevTargets": {
@@ -7961,6 +7952,85 @@
       "cameraView": "fixed: az 31, el 6, fov 24 (fitted), studio light, exposure 1.45",
       "notes": "",
       "aiVisionNotes": "Viewed renders/surface-pass/cmp.jpg, turntable.jpg and lighting-checks.jpg (fixed under the gate light, reference-matched light, grazing key, and a grazing close-up of the blade)."
+    },
+    {
+      "timestamp": "2026-10-24T04:15:51.324566+00:00",
+      "passId": "lighting-pass",
+      "estimatedFidelity": 0.74,
+      "aiVisionScore": 0.79,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.85,
+        "componentStructure": 0.83,
+        "formDetail": 0.7,
+        "materialSurface": 0.72,
+        "lightingCamera": 0.8
+      },
+      "featureReviews": [
+        {
+          "id": "reference-material-system",
+          "score": 0.77,
+          "notes": "Under the gate's studio light, the reference-matched light and a grazing key (renders/lighting-pass/lighting-checks.jpg) the materials stay distinct: muted brown wood with grain, mid steel-grey blade with a soft brushed sheen, dark iron hub, pale ringed cut face. The reference-matched light warms the wood; the grazing key shows grain and the blade's teeth edges rather than a plastic sheen."
+        },
+        {
+          "id": "blade-read",
+          "score": 0.76,
+          "notes": "Teeth, hub and nut hold under every light; no rim highlight (not modelled)."
+        },
+        {
+          "id": "table-structure",
+          "score": 0.83,
+          "notes": "The studio light's low ambience leaves the space under the top in shadow as in the reference; the contact shadow sits under and slightly behind the bench."
+        },
+        {
+          "id": "log-read",
+          "score": 0.8,
+          "notes": "The cut face stays lit pale peach under the gate light and the grazing key."
+        }
+      ],
+      "referenceScreenshot": "reference.png",
+      "renderScreenshot": "renders/lighting-pass/fixed.png",
+      "comparisonImage": "renders/lighting-pass/cmp.jpg",
+      "cameraView": "fixed: az 31, el 6, fov 24 (fitted), studio light, exposure 1.45",
+      "notes": "",
+      "aiVisionNotes": "Viewed renders/lighting-pass/cmp.jpg, turntable.jpg and lighting-checks.jpg."
+    },
+    {
+      "timestamp": "2026-10-24T04:17:25.977241+00:00",
+      "passId": "interaction-pass",
+      "estimatedFidelity": 0.75,
+      "aiVisionScore": 0.79,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.85,
+        "componentStructure": 0.85,
+        "formDetail": 0.7,
+        "materialSurface": 0.72,
+        "lightingCamera": 0.8
+      },
+      "featureReviews": [
+        {
+          "id": "reference-material-system",
+          "score": 0.77,
+          "notes": "Materials unchanged from the lighting pass and distinct in the posed renders."
+        },
+        {
+          "id": "blade-read",
+          "score": 0.77,
+          "notes": "Pose check: turning the saw-blade pivot 0.55 rad about its local Z (the arbor axis, world Z) visibly moves the 20 teeth around the hub while the hub and nut turn with it and the top stays put."
+        },
+        {
+          "id": "log-read",
+          "score": 0.8,
+          "notes": "Pose check: translating the log pivot 0.1 along its own axis (22 deg yaw) slides the log and its cut face together along the top; nothing else moves."
+        }
+      ],
+      "referenceScreenshot": "reference.png",
+      "renderScreenshot": "renders/interaction-pass/fixed.png",
+      "comparisonImage": "renders/interaction-pass/cmp.jpg",
+      "cameraView": "fixed: az 31, el 6, fov 24 (fitted), studio light, exposure 1.45",
+      "notes": "",
+      "aiVisionNotes": "Viewed renders/interaction-pass/cmp.jpg, turntable.jpg and pose-check.jpg (rest vs posed, fixed and front views)."
     }
   ],
   "reviewHistory": [
@@ -8525,6 +8595,125 @@
         "cameraView": "fixed: az 31, el 6, fov 24 (fitted), studio light, exposure 1.45",
         "notes": "",
         "aiVisionNotes": "Viewed renders/surface-pass/cmp.jpg, turntable.jpg and lighting-checks.jpg (fixed under the gate light, reference-matched light, grazing key, and a grazing close-up of the blade)."
+      }
+    },
+    {
+      "timestamp": "2026-10-24T04:15:51.324566+00:00",
+      "passId": "lighting-pass",
+      "estimatedFidelity": 0.74,
+      "aiVisionScore": 0.79,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.85,
+        "componentStructure": 0.83,
+        "formDetail": 0.7,
+        "materialSurface": 0.72,
+        "lightingCamera": 0.8
+      },
+      "featureReviews": [
+        {
+          "id": "reference-material-system",
+          "score": 0.77,
+          "notes": "Under the gate's studio light, the reference-matched light and a grazing key (renders/lighting-pass/lighting-checks.jpg) the materials stay distinct: muted brown wood with grain, mid steel-grey blade with a soft brushed sheen, dark iron hub, pale ringed cut face. The reference-matched light warms the wood; the grazing key shows grain and the blade's teeth edges rather than a plastic sheen."
+        },
+        {
+          "id": "blade-read",
+          "score": 0.76,
+          "notes": "Teeth, hub and nut hold under every light; no rim highlight (not modelled)."
+        },
+        {
+          "id": "table-structure",
+          "score": 0.83,
+          "notes": "The studio light's low ambience leaves the space under the top in shadow as in the reference; the contact shadow sits under and slightly behind the bench."
+        },
+        {
+          "id": "log-read",
+          "score": 0.8,
+          "notes": "The cut face stays lit pale peach under the gate light and the grazing key."
+        }
+      ],
+      "action": "continue",
+      "summary": "Lighting pass: the spec now records the reference's lighting as the gate view reproduces it (studio key and fill, low hemisphere, ACES at exposure 1.45, contact shadow offset behind the bench, no environment map as in the game). Tier-1 IoU 0.887, colour max dE 16.2; materials hold under three light setups.",
+      "matched": [
+        "lighting record matches the gate renders",
+        "contact shadow under and behind the bench",
+        "materials hold under studio, reference-matched and grazing light"
+      ],
+      "mismatches": [
+        "blade rim highlight not modelled"
+      ],
+      "specFixes": [
+        "interaction-pass: blade spin pivot at the arbor, log feed along its axis, root placement"
+      ],
+      "codeFixes": [
+        "none"
+      ],
+      "evidence": [],
+      "visualEvidence": {
+        "referenceScreenshot": "reference.png",
+        "renderScreenshot": "renders/lighting-pass/fixed.png",
+        "comparisonImage": "renders/lighting-pass/cmp.jpg",
+        "cameraView": "fixed: az 31, el 6, fov 24 (fitted), studio light, exposure 1.45",
+        "notes": "",
+        "aiVisionNotes": "Viewed renders/lighting-pass/cmp.jpg, turntable.jpg and lighting-checks.jpg."
+      }
+    },
+    {
+      "timestamp": "2026-10-24T04:17:25.977241+00:00",
+      "passId": "interaction-pass",
+      "estimatedFidelity": 0.75,
+      "aiVisionScore": 0.79,
+      "visualAcceptanceThreshold": 0.7,
+      "layerScores": {
+        "silhouetteProportion": 0.85,
+        "componentStructure": 0.85,
+        "formDetail": 0.7,
+        "materialSurface": 0.72,
+        "lightingCamera": 0.8
+      },
+      "featureReviews": [
+        {
+          "id": "reference-material-system",
+          "score": 0.77,
+          "notes": "Materials unchanged from the lighting pass and distinct in the posed renders."
+        },
+        {
+          "id": "blade-read",
+          "score": 0.77,
+          "notes": "Pose check: turning the saw-blade pivot 0.55 rad about its local Z (the arbor axis, world Z) visibly moves the 20 teeth around the hub while the hub and nut turn with it and the top stays put."
+        },
+        {
+          "id": "log-read",
+          "score": 0.8,
+          "notes": "Pose check: translating the log pivot 0.1 along its own axis (22 deg yaw) slides the log and its cut face together along the top; nothing else moves."
+        }
+      ],
+      "action": "continue",
+      "summary": "Interaction pass: the middle top board is the root (whole-prop placement), the blade is a spin pivot at the arbor (axis Z) carrying hub and nut, the log is a feed pivot along its axis carrying its cut face; every part keeps its collider proxy and destruction metadata. Pose check (pose-check.jpg): blade +0.55 rad and log +0.1 along its axis move only those parts. Tier-1 IoU 0.887, colour max dE 16.2.",
+      "matched": [
+        "root on the middle top board",
+        "blade spins about the arbor with hub and nut",
+        "log feeds along its own axis with its cut face",
+        "collider proxies on every part"
+      ],
+      "mismatches": [
+        "none new",
+        "visual state as the lighting pass"
+      ],
+      "specFixes": [
+        "optimization-pass: merge static parts per material in the game build, keep blade and log live"
+      ],
+      "codeFixes": [
+        "none"
+      ],
+      "evidence": [],
+      "visualEvidence": {
+        "referenceScreenshot": "reference.png",
+        "renderScreenshot": "renders/interaction-pass/fixed.png",
+        "comparisonImage": "renders/interaction-pass/cmp.jpg",
+        "cameraView": "fixed: az 31, el 6, fov 24 (fitted), studio light, exposure 1.45",
+        "notes": "",
+        "aiVisionNotes": "Viewed renders/interaction-pass/cmp.jpg, turntable.jpg and pose-check.jpg (rest vs posed, fixed and front views)."
       }
     }
   ],
@@ -10078,6 +10267,126 @@
       "maskWarnings": [],
       "renderHash": "baec38f26623e3b5",
       "passId": "lighting-pass"
+    },
+    {
+      "passed": true,
+      "checks": {
+        "silhouetteIoU": 0.8872,
+        "aspectRatioDelta": 0.0115,
+        "scaleDelta": 0.0115,
+        "bilateralSymmetryError": 0.1606,
+        "colorDelta": {
+          "checked": 25,
+          "maxDeltaE": 16.16,
+          "perComponent": [
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 2.75
+            },
+            {
+              "componentId": null,
+              "deltaE": 9.93
+            },
+            {
+              "componentId": null,
+              "deltaE": 16.16
+            },
+            {
+              "componentId": null,
+              "deltaE": 16.16
+            },
+            {
+              "componentId": null,
+              "deltaE": 12.19
+            },
+            {
+              "componentId": null,
+              "deltaE": 8.8
+            },
+            {
+              "componentId": null,
+              "deltaE": 15.57
+            }
+          ],
+          "gated": true
+        }
+      },
+      "failures": [],
+      "maskWarnings": [],
+      "renderHash": "baec38f26623e3b5",
+      "passId": "interaction-pass"
     }
   ]
 }
